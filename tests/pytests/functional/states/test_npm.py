@@ -78,8 +78,7 @@ def npm_version(shell, install_npm):
     return ret.stdout.strip()
 
 
-@pytest.mark.skipif(
-    True,
+@pytest.mark.skip(
     reason="This test tries to install from a git repo using ssh, at least now. Skipping.",
 )
 @pytest.mark.skip_if_not_root

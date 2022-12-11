@@ -335,7 +335,9 @@ backports.entry-points-selectable==1.1.0
 backports.zoneinfo==0.2.1
     # via tzlocal
 bcrypt==3.2.0
-    # via paramiko
+    # via
+    #   paramiko
+    #   passlib
 boto3==1.18.27 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
@@ -353,7 +355,7 @@ cachetools==4.2.2
     #   python-telegram-bot
 cassandra-driver==3.25.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2022.12.7
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -455,7 +457,7 @@ ipaddress==1.0.23
     # via kubernetes
 isodate==0.6.0
     # via msrest
-isort==4.3.17
+isort==4.3.21
     # via pylint
 jaraco.classes==3.2.1
     # via jaraco.collections
@@ -657,7 +659,7 @@ paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     #   ncclient
     #   netmiko
     #   scp
-passlib==1.7.4 ; sys_platform != "win32"
+passlib[bcrypt]==1.7.4
     # via
     #   -r requirements/static/ci/common.in
     #   ciscoconfparse
@@ -681,8 +683,6 @@ pycparser==2.20
     # via cffi
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
-pycurl==7.44.1 ; python_version <= "3.9"
-    # via -r requirements/static/ci/common.in
 pyeapi==0.8.4
     # via napalm
 pygit2==1.0.3 ; python_version <= "3.8"
@@ -839,6 +839,10 @@ six==1.16.0
     #   vcert
     #   virtualenv
     #   websocket-client
+slack-bolt==1.15.5
+    # via -r requirements/static/ci/linux.in
+slack-sdk==3.19.5
+    # via slack-bolt
 smmap==4.0.0
     # via gitdb
 sqlparse==0.4.2

@@ -1,10 +1,6 @@
 import logging
 
-import _pytest._version
 import pytest
-
-PYTEST_GE_7 = getattr(_pytest._version, "version_tuple", (-1, -1)) >= (7, 0)
-
 
 log = logging.getLogger(__name__)
 
@@ -80,14 +76,11 @@ RjsC7FDbL017qxS+ZVA/HGkyfiu4cpgV8VUnbql5eAZ+1Ll6Dw==
 @pytest.fixture
 def pkgrepo(states, grains):
     if grains["os_family"] != "RedHat":
-        exc_kwargs = {}
-        if PYTEST_GE_7:
-            exc_kwargs["_use_item_location"] = True
         raise pytest.skip.Exception(
             "Test only for CentOS platforms, not '{}' based distributions.".format(
                 grains["os_family"]
             ),
-            **exc_kwargs
+            _use_item_location=True,
         )
     return states.pkgrepo
 

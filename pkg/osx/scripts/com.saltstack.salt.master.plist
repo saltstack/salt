@@ -10,7 +10,7 @@
     <true/>
     <key>ProgramArguments</key>
     <array>
-        <string>/opt/salt/bin/start-salt-master.sh</string>
+        <string>/opt/salt/salt-master</string>
     </array>
     <key>SoftResourceLimits</key>
     <dict>

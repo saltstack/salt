@@ -15,7 +15,7 @@ if pgjsonb.HAS_PG:
 
 @pytest.fixture
 def configure_loader_modules():
-    return {pgjsonb: {"__opts__": {"keep_jobs": 1, "archive_jobs": 0}}}
+    return {pgjsonb: {"__opts__": {"keep_jobs_seconds": 3600, "archive_jobs": 0}}}
 
 
 def test_clean_old_jobs_purge():
