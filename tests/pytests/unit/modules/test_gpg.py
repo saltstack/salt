@@ -1073,15 +1073,3 @@ def test_gpg_receive_keys_no_user_id():
             res = gpg.receive_keys(keys="abc", user="abc")
             assert res["res"] is False
             assert "no user ID" in res["message"][0]
-
-
-def test_gpg_delete_key_honors_gnupghome():
-    with patch("salt.modules.gpg._create_gpg") as create:
-        with patch("salt.modules.gpg.get_key") as get_key:
-            gnupghome = "/pls_respect_me"
-            get_key.return_value = None
-            gpg.delete_key("foo", gnupghome=gnupghome)
-            create.assert_called_with(None, gnupghome)
-            get_key.assert_called_with(
-                keyid="foo", fingerprint=None, user=None, gnupghome=gnupghome
-            )

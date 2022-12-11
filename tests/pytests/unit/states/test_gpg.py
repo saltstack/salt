@@ -92,25 +92,6 @@ def gpg_receive(request):
         yield recv
 
 
-@pytest.fixture()
-def gpg_delete(request):
-    delete = Mock(spec="salt.modules.gpg.delete_key")
-    delete.return_value = getattr(
-        request, "param", {"res": True, "message": "Public key for A deleted"}
-    )
-    with patch.dict(gpg.__salt__, {"gpg.delete_key": delete}):
-        yield delete
-
-
-@pytest.mark.usefixtures("gpg_list_keys")
-def test_gpg_present_no_changes(gpg_receive, gpg_trust):
-    ret = gpg.present("A")
-    assert ret["result"]
-    assert not ret["changes"]
-    gpg_receive.assert_not_called()
-    gpg_trust.assert_not_called()
-
-
 @pytest.mark.usefixtures("gpg_list_keys")
 @pytest.mark.parametrize(
     "gpg_trust,expected",
@@ -122,8 +103,8 @@ def test_gpg_present_no_changes(gpg_receive, gpg_trust):
 )
 def test_gpg_present_trust_change(gpg_receive, gpg_trust, expected):
     ret = gpg.present("A", trust="marginally")
-    assert ret["result"] == expected
-    assert bool(ret["changes"]) == expected
+    assert ret["result"] is expected
+    assert bool(ret["changes"]) is expected
     gpg_trust.assert_called_once()
     gpg_receive.assert_not_called()
 
@@ -147,8 +128,8 @@ def test_gpg_present_trust_change(gpg_receive, gpg_trust, expected):
 )
 def test_gpg_present_new_key(gpg_receive, gpg_trust, expected):
     ret = gpg.present("new")
-    assert ret["result"] == expected
-    assert bool(ret["changes"]) == expected
+    assert ret["result"] is expected
+    assert bool(ret["changes"]) is expected
     gpg_receive.assert_called_once()
     gpg_trust.assert_not_called()
 
@@ -165,9 +146,9 @@ def test_gpg_present_new_key(gpg_receive, gpg_trust, expected):
 @pytest.mark.usefixtures("gpg_list_keys")
 def test_gpg_present_new_key_and_trust(gpg_receive, gpg_trust, expected):
     ret = gpg.present("new", trust="marginally")
-    assert ret["result"] == expected
+    assert ret["result"] is expected
     # the key is always marked as added
-    assert bool(ret["changes"])
+    assert ret["changes"]
     gpg_receive.assert_called_once()
     gpg_trust.assert_called_once()
 
@@ -180,60 +161,4 @@ def test_gpg_present_test_mode_no_changes(gpg_receive, gpg_trust, key, trust):
         gpg_receive.assert_not_called()
         gpg_trust.assert_not_called()
         assert ret["result"] is None
-        assert bool(ret["changes"])
-
-
-@pytest.mark.usefixtures("gpg_list_keys")
-def test_gpg_absent_no_changes(gpg_delete):
-    ret = gpg.absent("nonexistent")
-    assert ret["result"]
-    assert not ret["changes"]
-    gpg_delete.assert_not_called()
-
-
-@pytest.mark.usefixtures("gpg_list_keys")
-@pytest.mark.parametrize(
-    "gpg_delete,expected",
-    [
-        ({"res": True, "message": "Public key for A deleted"}, True),
-        (
-            {
-                "res": False,
-                "message": "Secret key exists, delete first or pass delete_secret=True.",
-            },
-            False,
-        ),
-    ],
-    indirect=["gpg_delete"],
-)
-@pytest.mark.usefixtures("gpg_list_keys")
-def test_gpg_absent_delete_key(gpg_delete, expected):
-    ret = gpg.absent("A")
-    assert ret["result"] == expected
-    assert bool(ret["changes"]) == expected
-    gpg_delete.assert_called_once()
-
-
-@pytest.mark.usefixtures("gpg_list_keys")
-def test_gpg_absent_test_mode_no_changes(gpg_delete):
-    with patch.dict(gpg.__opts__, {"test": True}):
-        ret = gpg.absent("A")
-        gpg_delete.assert_not_called()
-        assert ret["result"] is None
-        assert bool(ret["changes"])
-
-
-def test_gpg_absent_list_keys_with_gnupghome_and_user(gpg_list_keys):
-    gnupghome = "/pls_respect_me"
-    user = "imthereaswell"
-    gpg.absent("nonexistent", gnupghome=gnupghome, user=user)
-    gpg_list_keys.assert_called_with(gnupghome=gnupghome, user=user)
-
-
-@pytest.mark.usefixtures("gpg_list_keys")
-def test_gpg_absent_delete_key_called_with_correct_kwargs(gpg_delete):
-    key = "A"
-    user = "hellothere"
-    gnupghome = "/pls_sir"
-    gpg.absent(key, user=user, gnupghome=gnupghome)
-    gpg_delete.assert_called_with(keyid=key, gnupghome=gnupghome, user=user)
+        assert ret["changes"]
