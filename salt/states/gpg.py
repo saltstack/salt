@@ -97,7 +97,7 @@ def present(
                         )
                         if result["res"] is False:
                             ret["result"] = result["res"]
-                            ret["comment"].extend(result["message"])
+                            ret["comment"].append(result["message"])
                         else:
                             salt.utils.dictupdate.set_dict_key_value(
                                 ret, f"changes:{key}:trust", trust
@@ -146,7 +146,7 @@ def present(
                     )
                     if result["res"] is False:
                         ret["result"] = result["res"]
-                        ret["comment"].extend(result["message"])
+                        ret["comment"].append(result["message"])
                     else:
                         ret["comment"].append(f"Set trust level for {key} to {trust}")
                 else:
@@ -201,7 +201,7 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
             )
             if result["res"] is False:
                 ret["result"] = result["res"]
-                ret["comment"].extend(result["message"])
+                ret["comment"].append(result["message"])
             else:
                 ret["comment"].append(f"Deleted {key} from GPG keychain")
                 salt.utils.dictupdate.append_dict_key_value(ret, "changes:deleted", key)
