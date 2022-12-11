@@ -694,6 +694,7 @@ pyopenssl==22.1.0
 pyparsing==3.0.9
     # via
     #   -r requirements/base.txt
+    #   -r requirements/static/pkg/linux.in
     #   junos-eznc
     #   packaging
 pypsexec==0.3.0

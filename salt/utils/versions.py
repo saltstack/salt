@@ -46,9 +46,30 @@ except ImportError:
 class StrictVersion(pkg_version):
     def __init__(self, vstring):
         try:
+            if "." not in vstring:
+                raise ValueError(f"invalid version number '{vstring}'")
+
             super().__init__(vstring)
+            if len(self.release) == 2:
+                self.version = self.release + (0,)
+            else:
+                self.version = self.release
+            self.prerelease = self.pre
         except InvalidVersion:
             raise ValueError(f"invalid version number '{vstring}'")
+
+    def __str__(self):
+        if 0 == self.micro:
+            tver = self.release
+            vstring = "."
+            tvershort = str(tver[0])
+            if len(tver) >= 2:
+                tvershort = (str(tver[0]), str(tver[1]))
+
+            vstring = vstring.join(tvershort)
+            return vstring
+        else:
+            return super().__str__()
 
     def parse(self, vstring):
         try:
@@ -64,10 +85,10 @@ class StrictVersion(pkg_version):
         elif not isinstance(other, pkg_version):
             return NotImplemented
 
-        if self.release != other.release:
+        if self.version != other.version:
             # numeric versions don't match
             # prerelease stuff doesn't matter
-            if self.release < other.release:
+            if self.version < other.version:
                 return -1
             else:
                 return 1
@@ -93,12 +114,6 @@ class StrictVersion(pkg_version):
                 return 1
         else:
             assert False, "never get here"
-
-    def version(self):
-        return self.release
-
-    def prerelease(self):
-        return self.pre
 
 
 class LooseVersion(_LooseVersion):

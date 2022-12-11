@@ -651,7 +651,7 @@ oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
-packaging==21.0
+packaging==21.3
     # via
     #   -r requirements/base.txt
     #   pytest
@@ -704,9 +704,10 @@ pyopenssl==20.0.1
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==2.4.7
+pyparsing==3.0.9
     # via
     #   -r requirements/base.txt
+    #   -r requirements/static/pkg/linux.in
     #   junos-eznc
     #   packaging
 pypsexec==0.1.0

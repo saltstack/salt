@@ -5,8 +5,8 @@
   - unit.utils.test_doc
 
 setup.py:
- - pytests.scenarios.setup.test_man
- - pytests.scenarios.setup.test_install
+  - pytests.scenarios.setup.test_man
+  - pytests.scenarios.setup.test_install
 
 salt/_logging/(impl|handlers).py:
   - pytests.integration._logging.test_jid_logging

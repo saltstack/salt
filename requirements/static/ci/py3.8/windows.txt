@@ -195,7 +195,7 @@ multidict==6.0.2
     #   yarl
 ntlm-auth==1.5.0
     # via requests-ntlm
-packaging==19.2
+packaging==21.3
     # via
     #   -r requirements/base.txt
     #   pytest
@@ -243,7 +243,7 @@ pyopenssl==20.0.1
     # via
     #   -r requirements/windows.txt
     #   etcd3-py
-pyparsing==2.4.5
+pyparsing==3.0.9
     # via
     #   -r requirements/base.txt
     #   packaging
@@ -367,7 +367,6 @@ six==1.15.0
     #   jsonschema
     #   kubernetes
     #   mock
-    #   packaging
     #   pyopenssl
     #   python-dateutil
     #   pyvmomi

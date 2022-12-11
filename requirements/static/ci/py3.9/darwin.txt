@@ -647,7 +647,7 @@ oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
-packaging==19.2
+packaging==21.3
     # via
     #   -r requirements/base.txt
     #   pytest
@@ -704,7 +704,7 @@ pyopenssl==19.0.0
     # via
     #   -r requirements/darwin.txt
     #   etcd3-py
-pyparsing==2.4.5
+pyparsing==3.0.9
     # via
     #   -r requirements/base.txt
     #   junos-eznc
@@ -848,7 +848,6 @@ six==1.16.0
     #   mock
     #   msrestazure
     #   ncclient
-    #   packaging
     #   paramiko
     #   pynacl
     #   pyopenssl

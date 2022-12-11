@@ -75,7 +75,7 @@ more-itertools==9.0.0
     #   jaraco.text
 msgpack==1.0.4
     # via -r requirements/base.txt
-packaging==22.0
+packaging==21.3
     # via -r requirements/base.txt
 portend==3.1.0
     # via cherrypy
@@ -94,7 +94,9 @@ pydantic==1.10.2
 pyopenssl==22.1.0
     # via -r requirements/darwin.txt
 pyparsing==3.0.9
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   packaging
 python-dateutil==2.8.2
     # via -r requirements/darwin.txt
 python-gnupg==0.5.0

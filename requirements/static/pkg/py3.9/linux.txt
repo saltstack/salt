@@ -72,6 +72,7 @@ pyopenssl==19.1.0
 pyparsing==3.0.9
     # via
     #   -r requirements/base.txt
+    #   -r requirements/static/pkg/linux.in
     #   packaging
 python-dateutil==2.8.1
     # via -r requirements/static/pkg/linux.in

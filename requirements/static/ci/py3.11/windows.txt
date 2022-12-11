@@ -200,7 +200,7 @@ multidict==6.0.3
     #   yarl
 ntlm-auth==1.5.0
     # via requests-ntlm
-packaging==22.0
+packaging==21.3
     # via
     #   -r requirements/base.txt
     #   docker
@@ -250,7 +250,9 @@ pyopenssl==22.1.0
     #   -r requirements/windows.txt
     #   etcd3-py
 pyparsing==3.0.9
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   packaging
 pyrsistent==0.19.2
     # via jsonschema
 pytest-custom-exit-code==0.3.0
