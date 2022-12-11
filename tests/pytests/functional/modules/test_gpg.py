@@ -25,7 +25,7 @@ def gpghome(tmp_path):
     try:
         yield root
     finally:
-        # Make sure we don't leave any gpg-agent's running behind
+        # Make sure we don't leave any gpg-agents running behind
         gpg_connect_agent = shutil.which("gpg-connect-agent")
         if gpg_connect_agent:
             gnupghome = root / ".gnupg"
@@ -58,10 +58,7 @@ def gpghome(tmp_path):
 
 @pytest.fixture
 def gpg(loaders, modules, gpghome):
-    try:
-        yield modules.gpg
-    finally:
-        pass
+    yield modules.gpg
 
 
 @pytest.fixture
@@ -469,7 +466,7 @@ def test_list_secret_keys_in_keyring(gpghome, gpg, keyring_privkeys, gnupg_privk
 
 
 @pytest.mark.skip_unless_on_linux(reason="Test setup with private keys fails")
-@pytest.mark.requires_random_entropy()
+@pytest.mark.requires_random_entropy
 def test_create_key(gpghome, gpg, gnupg):
     res = gpg.create_key(gnupghome=str(gpghome))
     assert res
@@ -481,7 +478,7 @@ def test_create_key(gpghome, gpg, gnupg):
 
 
 @pytest.mark.skip_unless_on_linux(reason="Test setup with private keys fails")
-@pytest.mark.requires_random_entropy()
+@pytest.mark.requires_random_entropy
 def test_create_key_in_keyring(gpghome, gpg, gnupg, keyring, gnupg_keyring):
     res = gpg.create_key(gnupghome=str(gpghome), keyring=keyring)
     assert res
@@ -651,7 +648,7 @@ def test_trust_key_keyring(
 
 @pytest.mark.usefixtures("privkeys_present")
 @pytest.mark.skip_unless_on_linux(reason="Test setup with private keys fails")
-@pytest.mark.requires_random_entropy()
+@pytest.mark.requires_random_entropy
 def test_sign(gpghome, gpg, gnupg, key_a_fp):
     assert gnupg.list_keys(secret=True, keys=key_a_fp)
     res = gpg.sign(text="foo", keyid=key_a_fp, gnupghome=str(gpghome))
@@ -661,7 +658,7 @@ def test_sign(gpghome, gpg, gnupg, key_a_fp):
 
 
 @pytest.mark.skip_unless_on_linux(reason="Test setup with private keys fails")
-@pytest.mark.requires_random_entropy()
+@pytest.mark.requires_random_entropy
 def test_sign_with_keyring(
     gpghome, gpg, gnupg, key_a_fp, gnupg_privkeyring, keyring_privkeys
 ):
@@ -812,7 +809,7 @@ def test_verify_with_keyring(gpghome, gnupg, gpg, keyring, sig, signed_data, key
 
 
 @pytest.mark.usefixtures("pubkeys_present")
-@pytest.mark.requires_random_entropy()
+@pytest.mark.requires_random_entropy
 def test_encrypt(gpghome, gpg, gnupg, key_b_fp):
     assert gnupg.list_keys(keys=key_b_fp)
     res = gpg.encrypt(
@@ -828,7 +825,7 @@ def test_encrypt(gpghome, gpg, gnupg, key_b_fp):
     assert res["comment"].endswith(b"-----END PGP MESSAGE-----\n")
 
 
-@pytest.mark.requires_random_entropy()
+@pytest.mark.requires_random_entropy
 def test_encrypt_with_keyring(gpghome, gpg, gnupg, key_a_fp, keyring, gnupg_keyring):
     assert not gnupg.list_keys(keys=key_a_fp)
     assert gnupg_keyring.list_keys(keys=key_a_fp)
