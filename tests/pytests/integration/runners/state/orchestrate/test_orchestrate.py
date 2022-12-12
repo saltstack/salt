@@ -484,6 +484,7 @@ def test_orchestrate_batch_with_failhard_error(
     assert len(changes["ret"]) == 1
 
 
+@pytest.mark.skipif(True, reason="Skipping flaky test in 3005")
 def test_orchestrate_subset(
     salt_run_cli,
     salt_master,
