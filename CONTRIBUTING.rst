@@ -178,10 +178,8 @@ right before you open a pull request. And with that step, it's time to
 start hacking on Salt!
 
 
-.. _imagemagick-setup:
-
-Set up ``imagemagick``
-----------------------
+Set up imagemagick
+------------------
 One last prerequisite is to have ``imagemagick`` installed, as it is required
 by Sphinx for generating the HTML documentation.
 
@@ -267,7 +265,7 @@ Before approving code contributions, Salt requires:
 Documentation fixes just require correct documentation.
 
 What if I don't write tests or docs?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------------------
 
 If you aren't into writing documentation or tests, we still welcome your
 contributions! But your PR will be labeled ``Needs Testcase`` and
@@ -282,14 +280,65 @@ and Thursday morning, Central Time. If you'd like specific help with
 tests, bring them to the clinic. If no community members need help, you
 can also just watch tests written in real time.
 
-.. _docs-building:
 
 Documentation
 -------------
 
 Salt uses both docstrings, as well as normal reStructuredText files in
 the ``salt/doc`` folder for documentation. Sphinx is used to generate the
-documentation, and does require :ref:`setting up imagemagick on your OS.<imagemagick-setup>`
+documentation, and does require ``imagemagick``. See `Set up imagemagick`_ for
+more information.
+
+Before submitting a documentation PR, it helps to first build the Salt docs 
+locally on your machine and preview them. Local previews helps you:
+
+- Debug potential documentation output errors before submitting a PR.
+- Saves you time by not needing to use the Salt CI/CD test suite to debug, which takes
+  more than 30 minutes to run on a PR.
+- Ensures the final output looks the way you intended it to look.
+
+To set up your local environment to preview the core Salt and module 
+documentation:
+
+#. Install the documentation dependencies. For example, on Ubuntu:
+
+   ::
+   
+       sudo apt-get update
+
+       sudo apt-get install -y enchant-2 git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils inkscape
+
+#. Navigate to the folder where you store your Salt repository and remove any 
+   `.nox` directories that might be in that folder:
+
+   ::
+   
+       rm -rf .nox
+
+#. Install `pyenv` for the version of Python needed to run the docs. As of the 
+   time of writing, the Salt docs theme is not compatible with Python 3.10, so
+   you'll need to run 3.9 or earlier. For example:
+
+   ::
+   
+       pyenv install 3.7.15
+       pyenv virtualenv 3.7.15 salt-docs
+       echo 'salt-docs' > .python-version
+
+#. Activate `pyenv` if it's not auto-activated:
+
+   ::
+   
+       pyenv exec pip install -U pip setuptools wheel
+
+#. Install `nox` into your pyenv environment, which is the utility that will
+   build the Salt documentation:
+
+   ::
+   
+       pyenv exec pip install nox
+
+
 Since we use ``nox``, you can build your docs and view them in your browser
 with this one-liner:
 
@@ -297,9 +346,9 @@ with this one-liner:
 
    python -m nox -e 'docs-html(compress=False, clean=False)'; cd doc/_build/html; python -m webbrowser http://localhost:8000/contents.html; python -m http.server
 
-The first time this will take a while because there are a *lot* of
-modules. Maybe you should go grab some dessert if you already finished
-that sandwich. But once Sphinx is done building the docs, python should
+The first time you build the docs, it will take a while because there are a 
+*lot* of modules. Maybe you should go grab some dessert if you already finished
+that sandwich. But once nox and Sphinx are done building the docs, python should
 launch your default browser with the URL
 http://localhost:8000/contents.html. Now you can navigate to your docs
 and ensure your changes exist. If you make changes, you can simply run
@@ -312,9 +361,18 @@ this:
 And then refresh your browser to get your updated docs. This one should
 be quite a bit faster since Sphinx won't need to rebuild everything.
 
+Alternatively, you could build the docs on your local machine and then preview
+the build output. To build the docs locally:
+
+::
+
+    pyenv exec nox -e 'docs-html(compress=False, clean=True)'
+
+The output from this command will put the preview files in: ``doc > _build > html``.
+
 If your change is a docs-only change, you can go ahead and commit/push
 your code and open a PR. You can indicate that it's a docs-only change by
-adding ``[Documentation]`` to the title of your PR. Otherwise you'll
+adding ``[Documentation]`` to the title of your PR. Otherwise, you'll
 want to write some tests and code.
 
 

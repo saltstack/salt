@@ -1,3 +1,3 @@
-.. _contributing:
+.. _contributing-import:
 
 .. include:: ../../CONTRIBUTING.rst
