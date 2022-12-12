@@ -186,7 +186,7 @@ def present(name, entry=None, family="ipv4", **kwargs):
         if "timeout" in kwargs and "timeout" not in entry_opts:
             entry_opts = "timeout {} {}".format(kwargs["timeout"], entry_opts)
         if "comment" in kwargs and "comment" not in entry_opts:
-            entry_opts = '{} comment "{}"'.format(entry_opts, kwargs["comment"])
+            entry_opts = "{} comment {}".format(entry_opts, kwargs["comment"])
         _entry = " ".join([entry, entry_opts.lstrip()]).strip()
 
         if __salt__["ipset.check"](kwargs["set_name"], _entry, family) is True:
@@ -254,7 +254,7 @@ def absent(name, entry=None, entries=None, family="ipv4", **kwargs):
         if "timeout" in kwargs and "timeout" not in entry_opts:
             entry_opts = "timeout {} {}".format(kwargs["timeout"], entry_opts)
         if "comment" in kwargs and "comment" not in entry_opts:
-            entry_opts = '{} comment "{}"'.format(entry_opts, kwargs["comment"])
+            entry_opts = "{} comment {}".format(entry_opts, kwargs["comment"])
         _entry = " ".join([entry, entry_opts]).strip()
 
         log.debug("_entry %s", _entry)

@@ -5,9 +5,8 @@
 # Author: Shane Lee
 # Date: December 2020
 #
-# Description: This signs all binaries built by the `build_env.sh` script as
-#              well as those created by installing salt. It assumes a pyenv
-#              environment in /opt/salt/.pyenv with salt installed
+# Description: This signs all binaries built by the `build_python.sh` and the
+#              `installing_salt.sh` scripts.
 #
 # Requirements:
 #     - Xcode Command Line Tools (xcode-select --install)
@@ -19,7 +18,7 @@
 #
 #     Example:
 #
-#         sudo ./sign_binaries
+#         ./sign_binaries
 #
 # Environment Setup:
 #
@@ -41,50 +40,101 @@
 #         export DEV_APP_CERT="Developer ID Application: Salt Stack, Inc. (AB123ABCD1)"
 #
 ################################################################################
-echo "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
-echo "Signing Binaries"
 
-################################################################################
-# Make sure the script is launched with sudo
-################################################################################
-if [[ $(id -u) -ne 0 ]]; then
-    echo ">>>>>> Re-launching as sudo <<<<<<"
-    exec sudo -E /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
-fi
+#-------------------------------------------------------------------------------
+# Variables
+#-------------------------------------------------------------------------------
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+BUILD_DIR="$SCRIPT_DIR/build"
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+CMD_OUTPUT=$(mktemp -t cmd.log)
 
-################################################################################
-# Set to Exit on all Errors
-################################################################################
-trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
+#-------------------------------------------------------------------------------
+# Functions
+#-------------------------------------------------------------------------------
+# _usage
+#
+#   Prints out help text
+_usage() {
+     echo ""
+     echo "Script to sign binaries in preparation for packaging:"
+     echo ""
+     echo "usage: ${0}"
+     echo "             [-h|--help]"
+     echo ""
+     echo "  -h, --help      this message"
+     echo ""
+     echo "  To sign binaries:"
+     echo "      example: $0"
+}
 
-quit_on_error() {
-    echo "$(basename $0) caught error on line : $1 command was: $2"
+# _msg
+#
+#   Prints the message with a dash... no new line
+_msg() {
+    printf -- "- %s: " "$1"
+}
+
+# _success
+#
+#   Prints a green Success
+_success() {
+    printf '\e[32m%s\e[0m\n' "Success"
+}
+
+# _failure
+#
+#   Prints a red Failure and exits
+_failure() {
+    printf '\e[31m%s\e[0m\n' "Failure"
+    echo "output >>>>>>"
+    cat "$CMD_OUTPUT" 1>&2
+    echo "<<<<<< output"
     exit 1
 }
 
-################################################################################
-# Environment Variables
-################################################################################
-echo "**** Setting Variables"
-INSTALL_DIR=/opt/salt
-PY_VERSION=3.9
-PY_DOT_VERSION=3.9.12
-CMD_OUTPUT=$(mktemp -t cmd.log)
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+#-------------------------------------------------------------------------------
+# Get Parameters
+#-------------------------------------------------------------------------------
+while true; do
+    if [[ -z "$1" ]]; then break; fi
+    case "$1" in
+        -h | --help )
+            _usage
+            exit 0
+            ;;
+        -*)
+            echo "Invalid Option: $1"
+            echo ""
+            _usage
+            exit 1
+            ;;
+        * )
+            shift
+            ;;
+    esac
+done
 
-################################################################################
-# Add rpath to the Python binaries before signing
-################################################################################
-echo "**** Setting rpath in binaries"
-install_name_tool $INSTALL_DIR/bin/python${PY_VERSION} \
-    -add_rpath $INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/lib \
-    -add_rpath $INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/openssl/lib || echo "already present"
+#-------------------------------------------------------------------------------
+# Delete temporary files on exit
+#-------------------------------------------------------------------------------
+function finish {
+    rm "$CMD_OUTPUT"
+}
+trap finish EXIT
 
-################################################################################
+#-------------------------------------------------------------------------------
+# Script Start
+#-------------------------------------------------------------------------------
+printf "=%.0s" {1..80}; printf "\n"
+echo "Sign Binaries"
+printf -- "-%.0s" {1..80}; printf "\n"
+
+#-------------------------------------------------------------------------------
 # Sign python binaries in `bin` and `lib`
-################################################################################
-echo "**** Signing binaries that have entitlements (/opt/salt/.pyenv)"
-if ! find ${INSTALL_DIR}/.pyenv \
+#-------------------------------------------------------------------------------
+_msg "Signing binaries with entitlements"
+if find "$BUILD_DIR" \
     -type f \
     -perm -u=x \
     -follow \
@@ -102,16 +152,13 @@ if ! find ${INSTALL_DIR}/.pyenv \
                    --force \
                    --entitlements "$SCRIPT_DIR/entitlements.plist" \
                    --sign "$DEV_APP_CERT" "{}" \; > "$CMD_OUTPUT" 2>&1; then
-    echo "Failed to sign binaries"
-    echo "Failed to sign run with entitlements"
-    echo "output >>>>>>"
-    cat "$CMD_OUTPUT" 1>&2
-    echo "<<<<<< output"
-    exit 1
+    _success
+else
+    _failure
 fi
 
-echo "**** Signing dynamic libraries (*dylib) (/opt/salt/.pyenv)"
-if ! find ${INSTALL_DIR}/.pyenv \
+_msg "Signing dynamic libraries (*dylib)"
+if find "$BUILD_DIR" \
     -type f \
     -name "*dylib" \
     -follow \
@@ -120,15 +167,13 @@ if ! find ${INSTALL_DIR}/.pyenv \
                    --verbose \
                    --force \
                    --sign "$DEV_APP_CERT" "{}" \; > "$CMD_OUTPUT" 2>&1; then
-    echo "Failed to sign dynamic libraries"
-    echo "output >>>>>>"
-    cat "$CMD_OUTPUT" 1>&2
-    echo "<<<<<< output"
-    exit 1
+    _success
+else
+    _failure
 fi
 
-if ! echo "**** Signing shared libraries (*.so) (/opt/salt/.pyenv)"
-find ${INSTALL_DIR}/.pyenv \
+_msg "Signing shared libraries (*.so)"
+if find "$BUILD_DIR" \
     -type f \
     -name "*.so" \
     -follow \
@@ -137,12 +182,14 @@ find ${INSTALL_DIR}/.pyenv \
                    --verbose \
                    --force \
                    --sign "$DEV_APP_CERT" "{}" \;  > "$CMD_OUTPUT" 2>&1; then
-    echo "Failed to sign shared libraries"
-    echo "output >>>>>>"
-    cat "$CMD_OUTPUT" 1>&2
-    echo "<<<<<< output"
-    exit 1
+    _success
+else
+    _failure
 fi
 
-echo "**** Signing Binaries Completed Successfully"
-echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+#-------------------------------------------------------------------------------
+# Script Complete
+#-------------------------------------------------------------------------------
+printf -- "-%.0s" {1..80}; printf "\n"
+echo "Sign Binaries Complete"
+printf "=%.0s" {1..80}; printf "\n"

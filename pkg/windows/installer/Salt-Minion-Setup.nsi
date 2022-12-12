@@ -30,19 +30,27 @@ ${StrStrAdv}
 # Required by MoveFileFolder.nsh
 !insertmacro Locate
 
+# Get salt version from CLI argument /DSaltVersion
 !ifdef SaltVersion
     !define PRODUCT_VERSION "${SaltVersion}"
 !else
     !define PRODUCT_VERSION "Undefined Version"
 !endif
 
+# Get architecture from CLI argument /DPythonArchitecture
+# Should be x64, AMD64, or x86
 !ifdef PythonArchitecture
     !define PYTHON_ARCHITECTURE "${PythonArchitecture}"
 !else
+    # Default
     !define PYTHON_ARCHITECTURE "x64"
 !endif
 
+
+# x64 and AMD64 are AMD64, all others are x86
 !if "${PYTHON_ARCHITECTURE}" == "x64"
+    !define CPUARCH "AMD64"
+!else if "${PYTHON_ARCHITECTURE}" == "AMD64"
     !define CPUARCH "AMD64"
 !else
     !define CPUARCH "x86"
@@ -568,9 +576,9 @@ Section -install_ucrt
 
     ClearErrors
 
-    detailPrint "Unzipping UCRT dll files to $INSTDIR\bin\Scripts"
-    CreateDirectory $INSTDIR\bin\Scripts
-    nsisunz::UnzipToLog "$PLUGINSDIR\$UcrtFileName" "$INSTDIR\bin\Scripts"
+    detailPrint "Unzipping UCRT dll files to $INSTDIR\Scripts"
+    CreateDirectory $INSTDIR\Scripts
+    nsisunz::UnzipToLog "$PLUGINSDIR\$UcrtFileName" "$INSTDIR\Scripts"
 
     # Clean up the stack
     Pop $R0  # Get Error
@@ -932,10 +940,10 @@ Section -Post
         "EstimatedSize" "$0"
 
     # Write Commandline Registry Entries
-    WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "" "$INSTDIR\salt-call.bat"
-    WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "Path" "$INSTDIR\bin\Scripts\"
-    WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "" "$INSTDIR\salt-minion.bat"
-    WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "Path" "$INSTDIR\bin\Scripts\"
+    WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "" "$INSTDIR\salt-call.exe"
+    WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "Path" "$INSTDIR\"
+    WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "" "$INSTDIR\salt-minion.exe"
+    WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "Path" "$INSTDIR\"
 
     # Write Salt Configuration Registry Entries
     # We want to write EXPAND_SZ string types to allow us to use environment
@@ -970,12 +978,12 @@ Section -Post
     SetRegView 32  # Set it back to the 32 bit portion of the registry
 
     # Register the Salt-Minion Service
-    nsExec::Exec `$INSTDIR\bin\Scripts\ssm.exe install salt-minion "$INSTDIR\bin\Scripts\salt-minion.exe" -c """$RootDir\conf""" -l quiet`
-    nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion Description Salt Minion from saltstack.com"
-    nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion Start SERVICE_AUTO_START"
-    nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion AppStopMethodConsole 24000"
-    nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion AppStopMethodWindow 2000"
-    nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion AppRestartDelay 60000"
+    nsExec::Exec `$INSTDIR\ssm.exe install salt-minion "$INSTDIR\salt-minion.exe" -c """$RootDir\conf""" -l quiet`
+    nsExec::Exec "$INSTDIR\ssm.exe set salt-minion Description Salt Minion from saltstack.com"
+    nsExec::Exec "$INSTDIR\ssm.exe set salt-minion Start SERVICE_AUTO_START"
+    nsExec::Exec "$INSTDIR\ssm.exe set salt-minion AppStopMethodConsole 24000"
+    nsExec::Exec "$INSTDIR\ssm.exe set salt-minion AppStopMethodWindow 2000"
+    nsExec::Exec "$INSTDIR\ssm.exe set salt-minion AppRestartDelay 60000"
 
     # There is a default minion config laid down in the $INSTDIR directory
     ${Switch} $ConfigType
@@ -1009,7 +1017,7 @@ Function .onInstSuccess
 
     # If StartMinionDelayed is 1, then set the service to start delayed
     ${If} $StartMinionDelayed == 1
-        nsExec::Exec "$INSTDIR\bin\Scripts\ssm.exe set salt-minion Start SERVICE_DELAYED_AUTO_START"
+        nsExec::Exec "$INSTDIR\ssm.exe set salt-minion Start SERVICE_DELAYED_AUTO_START"
     ${EndIf}
 
     # If start-minion is 1, then start the service
@@ -1049,18 +1057,18 @@ Function ${un}uninstallSalt
 
     # WARNING: Any changes made here need to be reflected in the MSI uninstaller
     # Make sure we're in the right directory
-    ${If} $INSTDIR == "c:\salt\bin\Scripts"
+    ${If} $INSTDIR == "c:\salt\Scripts"
       StrCpy $INSTDIR "C:\salt"
     ${EndIf}
     # $ProgramFiles is different depending on the CPU Architecture
     # https://nsis.sourceforge.io/Reference/$PROGRAMFILES
     # x86 : C:\Program Files
     # x64 : C:\Program Files (x86)
-    ${If} $INSTDIR == "$ProgramFiles\Salt Project\Salt\bin\Scripts"
+    ${If} $INSTDIR == "$ProgramFiles\Salt Project\Salt\Scripts"
       StrCpy $INSTDIR "$ProgramFiles\Salt Project\Salt"
     ${EndIf}
     # $ProgramFiles64 is the C:\Program Files directory
-    ${If} $INSTDIR == "$ProgramFiles64\Salt Project\Salt\bin\Scripts"
+    ${If} $INSTDIR == "$ProgramFiles64\Salt Project\Salt\Scripts"
       StrCpy $INSTDIR "$ProgramFiles64\Salt Project\Salt"
     ${EndIf}
 
@@ -1099,7 +1107,11 @@ Function ${un}uninstallSalt
     Delete "$INSTDIR\ssm.exe"
     Delete "$INSTDIR\salt*"
     Delete "$INSTDIR\vcredist.exe"
-    RMDir /r "$INSTDIR\bin"
+    RMDir /r "$INSTDIR\DLLs"
+    RMDir /r "$INSTDIR\Include"
+    RMDir /r "$INSTDIR\Lib"
+    RMDir /r "$INSTDIR\libs"
+    RMDir /r "$INSTDIR\Scripts"
 
     # Remove everything in the 64 bit registry
 

@@ -33,6 +33,7 @@ display_help() {
 master=''
 minion_id=''
 changed=0
+CONF_DIR="/etc/salt"
 
 ############################################################################
 # Check for parameters
@@ -64,7 +65,7 @@ while [ $# -gt 0 ]; do
 done
 
 # Check for additional parameters
-if [ ! -z "$1" ] ; then
+if [ -n "$1" ] ; then
     echo "ERROR: Unknown Parameter Passed: $1"
     echo "       To see help use --help"
     exit 1
@@ -73,17 +74,17 @@ fi
 ############################################################################
 # minion.d directory
 ############################################################################
-if [ ! -d "/etc/salt/minion.d" ]; then
-    mkdir /etc/salt/minion.d
+if [ ! -d "$CONF_DIR/minion.d" ]; then
+    mkdir "$CONF_DIR/minion.d"
 fi
 
 ############################################################################
 # Minion ID
 ############################################################################
-if [ ! -z "$minion_id" ]; then
+if [ -n "$minion_id" ]; then
     echo "Changing minion ID: $minion_id"
-    sed -i '' -e '/id:/ s/^#*/#/' /etc/salt/minion
-    echo "id: $minion_id" > /etc/salt/minion.d/minion_id.conf
+    sed -i '' -e '/id:/ s/^#*/#/' $CONF_DIR/minion
+    echo "id: $minion_id" > $CONF_DIR/minion.d/minion_id.conf
     changed=1
 fi
 
@@ -92,8 +93,8 @@ fi
 ############################################################################
 if [ ! -z "$master" ]; then
     echo "Changing master: $master"
-    sed -i '' -e '/master:/ s/^#*/#/' /etc/salt/minion
-    echo "master: $master" > /etc/salt/minion.d/master_id.conf
+    sed -i '' -e '/master:/ s/^#*/#/' $CONF_DIR/minion
+    echo "master: $master" > $CONF_DIR/minion.d/master_id.conf
     changed=1
 fi
 

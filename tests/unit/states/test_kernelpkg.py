@@ -5,15 +5,14 @@
     versionadded:: 2018.3.0
 """
 # pylint: disable=invalid-name,no-member
+import pytest
 
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase
 
 try:
-    # Import Salt Testing Libs
-    # Import Salt Libs
     import salt.states.kernelpkg as kernelpkg
-    from tests.support.mixins import LoaderModuleMockMixin
-    from tests.support.mock import MagicMock, patch
-    from tests.support.unit import TestCase, skipIf
 
     HAS_MODULES = True
 except ImportError:
@@ -23,7 +22,7 @@ KERNEL_LIST = ["4.4.0-70-generic", "4.4.0-71-generic", "4.5.1-14-generic"]
 STATE_NAME = "kernelpkg-test"
 
 
-@skipIf(not HAS_MODULES, "Salt modules could not be loaded")
+@pytest.mark.skipif(not HAS_MODULES, reason="Salt modules could not be loaded")
 class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.states.aptpkg

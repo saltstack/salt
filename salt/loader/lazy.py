@@ -590,6 +590,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if key == "logger":
                 continue
             mod_opts[key] = val
+
+        if "__opts__" not in self.pack:
+            self.pack["__opts__"] = mod_opts
+
         return mod_opts
 
     def _iter_files(self, mod_name):

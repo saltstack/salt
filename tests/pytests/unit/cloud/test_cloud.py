@@ -1,20 +1,16 @@
-import copy
-
 import pytest
 
-import salt.config
 from salt.cloud import Cloud
 from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
-def master_config():
-    opts = copy.deepcopy(salt.config.DEFAULT_MASTER_OPTS)
-    opts["parallel"] = False
-    opts["providers"] = {
+def master_config(master_opts):
+    master_opts["parallel"] = False
+    master_opts["providers"] = {
         "test": {},
     }
-    return opts
+    return master_opts
 
 
 @pytest.fixture
@@ -125,5 +121,5 @@ def test_vm_config_merger():
         "size": "t2.micro",
         "name": "test_vm",
     }
-    vm = salt.cloud.Cloud.vm_config("test_vm", main, provider, profile, {})
+    vm = Cloud.vm_config("test_vm", main, provider, profile, {})
     assert expected == vm

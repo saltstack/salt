@@ -3,6 +3,8 @@ import os.path
 import sys
 from copy import deepcopy
 
+import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.boto_elb as boto_elb
@@ -10,7 +12,7 @@ import salt.utils.versions
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=import-error
 try:
@@ -103,11 +105,11 @@ def _has_required_moto():
     return True
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_moto() is False,
-    "The moto module must be >= to {} for PY2 or {} for PY3.".format(
+    reason="The moto module must be >= to {} for PY2 or {} for PY3.".format(
         required_moto, required_moto_py3
     ),
 )
@@ -250,9 +252,9 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
 
     @mock_ec2_deprecated
     @mock_elb_deprecated
-    @skipIf(
+    @pytest.mark.skipif(
         sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
+        reason="Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     def test_get_elb_config(self):
         """

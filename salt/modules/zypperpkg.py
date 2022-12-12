@@ -1616,7 +1616,7 @@ def install(
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     version_num = Wildcard(__zypper__(root=root))(name, version)

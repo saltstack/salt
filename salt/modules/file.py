@@ -3525,9 +3525,13 @@ def touch(name, atime=None, mtime=None):
     simply update the atime and mtime if it already does.
 
     atime:
-        Access time in Unix epoch time
+        Access time in Unix epoch time. Set it to 0 to set atime of the
+        file with Unix date of birth. If this parameter isn't set, atime
+        will be set with current time.
     mtime:
-        Last modification in Unix epoch time
+        Last modification in Unix epoch time. Set it to 0 to set mtime of
+        the file with Unix date of birth. If this parameter isn't set,
+        mtime will be set with current time.
 
     CLI Example:
 
@@ -3537,20 +3541,20 @@ def touch(name, atime=None, mtime=None):
     """
     name = os.path.expanduser(name)
 
-    if atime and atime.isdigit():
+    if atime and str(atime).isdigit():
         atime = int(atime)
-    if mtime and mtime.isdigit():
+    if mtime and str(mtime).isdigit():
         mtime = int(mtime)
     try:
         if not os.path.exists(name):
             with salt.utils.files.fopen(name, "a"):
                 pass
 
-        if not atime and not mtime:
+        if atime is None and mtime is None:
             times = None
-        elif not mtime and atime:
+        elif mtime is None and atime is not None:
             times = (atime, time.time())
-        elif not atime and mtime:
+        elif atime is None and mtime is not None:
             times = (time.time(), mtime)
         else:
             times = (atime, mtime)
