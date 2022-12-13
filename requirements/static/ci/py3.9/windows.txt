@@ -38,7 +38,7 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2022.12.7
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
@@ -230,10 +230,6 @@ pycparser==2.21 ; python_version >= "3.9"
     #   pythonnet
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
-pycurl==7.43.0.5 ; python_version <= "3.9"
-    # via
-    #   -r requirements/static/ci/common.in
-    #   -r requirements/windows.txt
 pygit2==1.9.1 ; python_version >= "3.7"
     # via -r requirements/static/ci/windows.in
 pymssql==2.2.1
@@ -257,7 +253,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc22 ; sys_platform == "win32"
+pytest-salt-factories==1.0.0rc21 ; sys_platform == "win32"
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.6.0
     # via pytest-salt-factories
@@ -306,7 +302,7 @@ pytz==2022.1
     #   tempora
 pyvmomi==6.7.1.2018.12
     # via -r requirements/static/ci/common.in
-pywin32==303
+pywin32==305
     # via
     #   -r requirements/windows.txt
     #   cherrypy

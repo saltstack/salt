@@ -351,7 +351,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     allow_insecure_key : True
         Whether to allow an insecure (e.g. http vs. https) key_url.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3006.0
     """
     if not salt.utils.path.which("apt-key"):
         aptkey = False

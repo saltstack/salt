@@ -67,6 +67,10 @@ def reg_pol():
         f.write(salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le"))
 
 
+def test_virtual_name():
+    assert lgpo_reg.__virtual__() == "lgpo_reg"
+
+
 def test_value_present(empty_reg_pol):
     """
     Test value.present
@@ -79,14 +83,13 @@ def test_value_present(empty_reg_pol):
     )
     expected = {
         "changes": {
-            "data": {
-                "new": 1,
-                "old": "",
+            "new": {
+                "name": "MyValue",
+                "key": "SOFTWARE\\MyKey",
+                "data": 1,
+                "type": "REG_DWORD",
             },
-            "type": {
-                "new": "REG_DWORD",
-                "old": "",
-            },
+            "old": {},
         },
         "comment": "Registry.pol value has been set",
         "name": "MyValue",
@@ -107,13 +110,17 @@ def test_value_present_existing_change(reg_pol):
     )
     expected = {
         "changes": {
-            "data": {
-                "new": 2,
-                "old": "squidward",
+            "new": {
+                "name": "MyValue1",
+                "key": "SOFTWARE\\MyKey1",
+                "data": 2,
+                "type": "REG_DWORD",
             },
-            "type": {
-                "new": "REG_DWORD",
-                "old": "REG_SZ",
+            "old": {
+                "name": "MyValue1",
+                "key": "SOFTWARE\\MyKey1",
+                "data": "squidward",
+                "type": "REG_SZ",
             },
         },
         "comment": "Registry.pol value has been set",
@@ -137,7 +144,7 @@ def test_value_present_existing_no_change(reg_pol):
         "changes": {},
         "comment": "Registry.pol value already present",
         "name": "MyValue1",
-        "result": False,
+        "result": True,
     }
     assert result == expected
 
@@ -174,13 +181,17 @@ def test_value_present_existing_disabled(reg_pol):
     )
     expected = {
         "changes": {
-            "data": {
-                "new": 2,
-                "old": "**del.MyValue2",
+            "new": {
+                "data": 2,
+                "key": "SOFTWARE\\MyKey1",
+                "name": "MyValue2",
+                "type": "REG_DWORD",
             },
-            "type": {
-                "new": "REG_DWORD",
-                "old": "REG_SZ",
+            "old": {
+                "data": "**del.MyValue2",
+                "key": "SOFTWARE\\MyKey1",
+                "name": "MyValue2",
+                "type": "REG_SZ",
             },
         },
         "comment": "Registry.pol value has been set",
@@ -200,14 +211,13 @@ def test_value_disabled(empty_reg_pol):
     )
     expected = {
         "changes": {
-            "data": {
-                "new": "**del.MyValue1",
-                "old": "",
+            "new": {
+                "data": "**del.MyValue1",
+                "key": "SOFTWARE\\MyKey1",
+                "name": "MyValue1",
+                "type": "REG_SZ",
             },
-            "type": {
-                "new": "REG_SZ",
-                "old": "",
-            },
+            "old": {},
         },
         "comment": "Registry.pol value enabled",
         "name": "MyValue1",
@@ -226,9 +236,15 @@ def test_value_disabled_existing_change(reg_pol):
     )
     expected = {
         "changes": {
-            "data": {
-                "new": "**del.MyValue1",
-                "old": "squidward",
+            "new": {
+                "data": "**del.MyValue1",
+                "key": "SOFTWARE\\MyKey1",
+                "name": "MyValue1",
+            },
+            "old": {
+                "data": "squidward",
+                "key": "SOFTWARE\\MyKey1",
+                "name": "MyValue1",
             },
         },
         "comment": "Registry.pol value enabled",
@@ -250,7 +266,7 @@ def test_value_disabled_existing_no_change(reg_pol):
         "changes": {},
         "comment": "Registry.pol value already disabled",
         "name": "MyValue2",
-        "result": False,
+        "result": True,
     }
     assert result == expected
 
@@ -280,13 +296,12 @@ def test_value_absent(reg_pol):
     result = lgpo_reg.value_absent(name="MyValue1", key="SOFTWARE\\MyKey1")
     expected = {
         "changes": {
-            "data": {
-                "new": "",
-                "old": "squidward",
-            },
-            "type": {
-                "new": "",
-                "old": "REG_SZ",
+            "new": {},
+            "old": {
+                "data": "squidward",
+                "key": "SOFTWARE\\MyKey1",
+                "name": "MyValue1",
+                "type": "REG_SZ",
             },
         },
         "comment": "Registry.pol value deleted",
@@ -305,7 +320,7 @@ def test_value_absent_no_change(empty_reg_pol):
         "changes": {},
         "comment": "Registry.pol value already absent",
         "name": "MyValue1",
-        "result": False,
+        "result": True,
     }
     assert result == expected
 
@@ -317,13 +332,12 @@ def test_value_absent_disabled(reg_pol):
     result = lgpo_reg.value_absent(name="MyValue2", key="SOFTWARE\\MyKey1")
     expected = {
         "changes": {
-            "data": {
-                "new": "",
-                "old": "**del.MyValue2",
-            },
-            "type": {
-                "new": "",
-                "old": "REG_SZ",
+            "new": {},
+            "old": {
+                "data": "**del.MyValue2",
+                "key": "SOFTWARE\\MyKey1",
+                "name": "MyValue2",
+                "type": "REG_SZ",
             },
         },
         "comment": "Registry.pol value deleted",

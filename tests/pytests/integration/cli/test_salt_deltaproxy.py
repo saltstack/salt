@@ -193,7 +193,7 @@ def test_exit_status_correct_usage(
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
             defaults=config_defaults,
-            extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+            extra_cli_arguments_after_first_start_failure=["--log-level=info"],
             start_timeout=240,
         )
 
@@ -296,7 +296,7 @@ def test_missing_pillar_file(
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
             defaults=config_defaults,
-            extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+            extra_cli_arguments_after_first_start_failure=["--log-level=info"],
             start_timeout=240,
         )
 
@@ -420,7 +420,7 @@ def test_invalid_connection(
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
             defaults=config_defaults,
-            extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+            extra_cli_arguments_after_first_start_failure=["--log-level=info"],
             start_timeout=240,
         )
 
@@ -550,7 +550,7 @@ def ping():
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
             defaults=config_defaults,
-            extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+            extra_cli_arguments_after_first_start_failure=["--log-level=info"],
             start_timeout=240,
         )
 

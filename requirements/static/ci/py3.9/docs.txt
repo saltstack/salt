@@ -355,7 +355,7 @@ cachetools==4.2.2
     #   python-telegram-bot
 cassandra-driver==3.25.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2022.12.7
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -684,8 +684,6 @@ pycparser==2.21 ; python_version >= "3.9"
     #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pycurl==7.44.1 ; python_version <= "3.9"
-    # via -r requirements/static/ci/common.in
 pyeapi==0.8.4
     # via napalm
 pygit2==1.6.1 ; python_version > "3.8"
@@ -841,6 +839,10 @@ six==1.16.0
     #   vcert
     #   virtualenv
     #   websocket-client
+slack-bolt==1.15.5
+    # via -r requirements/static/ci/linux.in
+slack-sdk==3.19.5
+    # via slack-bolt
 smmap==4.0.0
     # via gitdb
 snowballstemmer==2.1.0

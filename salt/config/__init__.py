@@ -3917,6 +3917,18 @@ def apply_master_config(overrides=None, defaults=None):
     _adjust_log_file_override(overrides, defaults["log_file"])
     if overrides:
         opts.update(overrides)
+    # `keep_acl_in_token` will be forced to True when using external authentication
+    # for REST API (`rest` is present under `external_auth`). This is because the REST API
+    # does not store the password, and can therefore not retroactively fetch the ACL, so
+    # the ACL must be stored in the token.
+    if "rest" in opts.get("external_auth", {}):
+        # Check current value and print out warning
+        if opts["keep_acl_in_token"] is False:
+            log.warning(
+                "The 'rest' external_auth backend requires 'keep_acl_in_token' to be True. "
+                "Setting 'keep_acl_in_token' to True."
+            )
+        opts["keep_acl_in_token"] = True
 
     opts["__cli"] = salt.utils.stringutils.to_unicode(os.path.basename(sys.argv[0]))
 

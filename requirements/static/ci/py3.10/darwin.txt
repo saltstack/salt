@@ -350,7 +350,7 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2022.12.7
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -659,8 +659,6 @@ pycparser==2.21 ; python_version >= "3.9"
     #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pycurl==7.44.1 ; python_version >= "3.10"
-    # via -r requirements/static/ci/common.in
 pygit2==1.9.1 ; python_version >= "3.7"
     # via -r requirements/static/ci/darwin.in
 pyjwt==2.4.0
@@ -688,7 +686,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories[docker]==1.0.0rc22 ; sys_platform != "win32" and python_version >= "3.7"
+pytest-salt-factories[docker]==1.0.0rc21 ; sys_platform != "win32"
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.6.0
     # via pytest-salt-factories

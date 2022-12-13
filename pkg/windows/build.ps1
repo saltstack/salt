@@ -58,7 +58,14 @@ param(
     # supported up to 3.8. So we're pinned to the latest version of Python 3.8.
     # We may have to drop support for pycurl.
     # Default is: 3.8.14
-    [String] $PythonVersion = "3.8.14"
+    [String] $PythonVersion = "3.8.14",
+
+    [Parameter(Mandatory=$false)]
+    [Alias("b")]
+    # Build python from source instead of fetching a tarball
+    # Requires VC Build Tools
+    [Switch] $Build
+
 )
 
 # Script Preferences
@@ -66,44 +73,10 @@ $ProgressPreference = "SilentlyContinue"
 $ErrorActionPreference = "Stop"
 
 #-------------------------------------------------------------------------------
-# Import Modules
-#-------------------------------------------------------------------------------
-$SCRIPT_DIR     = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
-Import-Module $SCRIPT_DIR\Modules\uac-module.psm1
-
-#-------------------------------------------------------------------------------
-# Check for Elevated Privileges
-#-------------------------------------------------------------------------------
-If (!(Get-IsAdministrator)) {
-    If (Get-IsUacEnabled) {
-        # We are not running "as Administrator" - so relaunch as administrator
-        # Create a new process object that starts PowerShell
-        $newProcess = new-object System.Diagnostics.ProcessStartInfo "PowerShell";
-
-        # Specify the current script path and name as a parameter
-        $newProcess.Arguments = $myInvocation.MyCommand.Definition
-
-        # Specify the current working directory
-        $newProcess.WorkingDirectory = "$SCRIPT_DIR"
-
-        # Indicate that the process should be elevated
-        $newProcess.Verb = "runas";
-
-        # Start the new process
-        [System.Diagnostics.Process]::Start($newProcess);
-
-        # Exit from the current, unelevated, process
-        Exit
-    } Else {
-        Throw "You must be administrator to run this script"
-    }
-}
-
-#-------------------------------------------------------------------------------
 # Variables
 #-------------------------------------------------------------------------------
+$SCRIPT_DIR     = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
 $PROJECT_DIR    = $(git rev-parse --show-toplevel)
-$SALT_REPO_URL  = "https://github.com/saltstack/salt"
 $SALT_SRC_DIR   = "$( (Get-Item $PROJECT_DIR).Parent.FullName )\salt"
 
 #-------------------------------------------------------------------------------
@@ -134,12 +107,12 @@ Write-Host "Build Salt Installer Packages" -ForegroundColor Cyan
 Write-Host "- Salt Version:   $Version"
 Write-Host "- Python Version: $PythonVersion"
 Write-Host "- Architecture:   $Architecture"
-Write-Host $("#" * 80)
+Write-Host $("v" * 80)
 
 #-------------------------------------------------------------------------------
 # Install NSIS
 #-------------------------------------------------------------------------------
-powershell -file "$SCRIPT_DIR\install_nsis.ps1"
+& "$SCRIPT_DIR\install_nsis.ps1"
 if ( ! $? ) {
     Write-Host "Failed to install NSIS"
     exit 1
@@ -148,7 +121,7 @@ if ( ! $? ) {
 #-------------------------------------------------------------------------------
 # Install Visual Studio Build Tools
 #-------------------------------------------------------------------------------
-powershell -file "$SCRIPT_DIR\install_vs_buildtools.ps1"
+& "$SCRIPT_DIR\install_vs_buildtools.ps1"
 if ( ! $? ) {
     Write-Host "Failed to install Visual Studio Build Tools"
     exit 1
@@ -157,9 +130,14 @@ if ( ! $? ) {
 #-------------------------------------------------------------------------------
 # Build Python
 #-------------------------------------------------------------------------------
-powershell -file "$SCRIPT_DIR\build_python.ps1" `
-           -Version $PythonVersion `
-           -Architecture $Architecture
+$KeywordArguments = @{
+    Version = $PythonVersion
+    Architecture = $Architecture
+}
+if ( $Build ) {
+    $KeywordArguments["Build"] = $true
+}
+& "$SCRIPT_DIR\build_python.ps1" @KeywordArguments
 if ( ! $? ) {
     Write-Host "Failed to build Python"
     exit 1
@@ -168,7 +146,7 @@ if ( ! $? ) {
 #-------------------------------------------------------------------------------
 # Install Salt
 #-------------------------------------------------------------------------------
-powershell -file "$SCRIPT_DIR\install_salt.ps1" -Architecture $Architecture
+& "$SCRIPT_DIR\install_salt.ps1"
 if ( ! $? ) {
     Write-Host "Failed to install Salt"
     exit 1
@@ -177,7 +155,7 @@ if ( ! $? ) {
 #-------------------------------------------------------------------------------
 # Build Package
 #-------------------------------------------------------------------------------
-$KeywordArguments = @{Architecture = $Architecture}
+$KeywordArguments = @{}
 if ( ! [String]::IsNullOrEmpty($Version) ) {
     $KeywordArguments.Add("Version", $Version)
 }
@@ -189,6 +167,6 @@ if ( ! $? ) {
     exit 1
 }
 
-Write-Host $("#" * 80)
+Write-Host $("^" * 80)
 Write-Host "Build Salt $Architecture Completed" -ForegroundColor Cyan
 Write-Host $("#" * 80)
