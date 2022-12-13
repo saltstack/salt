@@ -34,7 +34,6 @@ def get_test_versions():
     for version in (
         "3.9",
         "3.10",
-        "3.11",
     ):
         test_versions.append(
             RabbitMQImage(name=name, tag=version),
