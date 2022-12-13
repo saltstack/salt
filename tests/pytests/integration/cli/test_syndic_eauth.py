@@ -69,7 +69,9 @@ def source_path():
 
 @pytest.fixture(scope="module")
 def config(source_path):
-    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp_path:
+    # 3.10>= will allow the below line
+    # with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp_path:
+    with tempfile.TemporaryDirectory() as tmp_path:
         tmp_path = pathlib.Path(tmp_path)
         master_dir = tmp_path / "master"
         minion_dir = tmp_path / "minion"
