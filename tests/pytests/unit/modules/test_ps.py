@@ -486,6 +486,21 @@ def test_status_when_access_denied_from_psutil_it_should_CommandExecutionError(
             actual_result = salt.modules.ps.status(status="fnord")
 
 
+def test_status_when_no_filter_is_provided_then_raise_invocation_error():
+    with pytest.raises(SaltInvocationError) as invoc_issue:
+        actual_result = salt.modules.ps.status(status="")
+
+
+def test_status_when_access_denied_from_psutil_then_raise_exception():
+    with patch(
+        "salt.utils.psutil_compat.process_iter",
+        autospec=True,
+        return_value=salt.utils.psutil_compat.AccessDenied(pid="9999", name="whatever"),
+    ):
+        with pytest.raises(Exception) as general_issue:
+            actual_result = salt.modules.ps.status(status="fnord")
+
+
 ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
 # @skipIf(not HAS_UTMP, "The utmp module must be installed to run test_get_users_utmp()")
 # @patch('salt.utils.psutil_compat.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
