@@ -34,7 +34,7 @@ idna==2.8
     #   requests
 immutables==0.15
     # via contextvars
-importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+importlib-metadata==4.6.4 ; python_version < "3.10"
     # via -r requirements/darwin.txt
 jaraco.classes==3.2.1
     # via jaraco.collections
@@ -53,6 +53,8 @@ jmespath==1.0.1
     # via -r requirements/base.txt
 linode-python==1.1.1
     # via -r requirements/darwin.txt
+looseversion==1.0.2
+    # via -r requirements/base.txt
 mako==1.2.2
     # via -r requirements/darwin.txt
 markupsafe==2.0.1
@@ -68,6 +70,8 @@ more-itertools==8.2.0
     #   jaraco.functools
 msgpack==1.0.2
     # via -r requirements/base.txt
+packaging==21.3
+    # via -r requirements/base.txt
 portend==2.6
     # via cherrypy
 psutil==5.8.0
@@ -82,6 +86,10 @@ pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pyopenssl==19.0.0
     # via -r requirements/darwin.txt
+pyparsing==3.0.9
+    # via
+    #   -r requirements/base.txt
+    #   packaging
 python-dateutil==2.8.0
     # via -r requirements/darwin.txt
 python-gnupg==0.4.8

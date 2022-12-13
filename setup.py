@@ -12,6 +12,7 @@ import glob
 import os
 import platform
 import sys
+import warnings
 from ctypes.util import find_library
 from datetime import datetime
 
@@ -224,14 +225,22 @@ class WriteSaltVersion(Command):
                 salt_version = (
                     __saltstack_version__  # pylint: disable=undefined-variable
                 )
+                ## print(
+                ##     f"DGM setup write_salt_version a salt_version '{salt_version}', __saltstack_version__ '{__saltstack_version__}'"
+                ## )
             else:
                 from salt.version import SaltStackVersion
 
                 salt_version = SaltStackVersion.parse(
                     self.distribution.with_salt_version
                 )
+                ## print(f"DGM setup write_salt_version b salt_version '{salt_version}'")
 
             # pylint: disable=E0602
+            print(
+                f"DGM setup write_salt_version all versions '{salt_version.full_info_all_versions}'"
+            )
+
             open(self.distribution.salt_version_hardcoded_path, "w").write(
                 INSTALL_VERSION_TEMPLATE.format(
                     date=DATE, full_version_info=salt_version.full_info_all_versions
@@ -905,6 +914,7 @@ class SaltDistribution(distutils.dist.Distribution):
     )
 
     def __init__(self, attrs=None):
+        print(f"DGM setup __init__  attrs'{attrs}'")
         distutils.dist.Distribution.__init__(self, attrs)
 
         self.ssh_packaging = PACKAGED_FOR_SALT_SSH
@@ -934,6 +944,7 @@ class SaltDistribution(distutils.dist.Distribution):
         self.with_salt_version = None
 
         self.name = "salt-ssh" if PACKAGED_FOR_SALT_SSH else "salt"
+        ## print(f"DGM setup __init__ __version__ '{__version__}'")
         self.salt_version = __version__  # pylint: disable=undefined-variable
         self.description = (
             "Portable, distributed, remote execution and configuration management"
@@ -942,17 +953,16 @@ class SaltDistribution(distutils.dist.Distribution):
         with open(SALT_LONG_DESCRIPTION_FILE, encoding="utf-8") as f:
             self.long_description = f.read()
         self.long_description_content_type = "text/x-rst"
-        self.python_requires = ">=3.5"
+        self.python_requires = ">=3.7"
         self.classifiers = [
             "Programming Language :: Python",
             "Programming Language :: Cython",
             "Programming Language :: Python :: 3",
             "Programming Language :: Python :: 3 :: Only",
-            "Programming Language :: Python :: 3.5",
-            "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
             "Development Status :: 5 - Production/Stable",
             "Environment :: Console",
             "Intended Audience :: Developers",
@@ -1375,6 +1385,8 @@ class SaltDistribution(distutils.dist.Distribution):
 
 # <---- Custom Distribution Class ------------------------------------------------------------------------------------
 
-
 if __name__ == "__main__":
+    warnings.warn(
+        "Warning: distutils is deprecated and shall be removed in Python 3.12, advise migrate to using setuptools"
+    )
     setup(distclass=SaltDistribution)

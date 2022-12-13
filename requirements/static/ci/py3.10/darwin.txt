@@ -486,6 +486,8 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 linode-python==1.1.1
     # via -r requirements/darwin.txt
+looseversion==1.0.2
+    # via -r requirements/base.txt
 lxml==4.9.1
     # via
     #   junos-eznc
@@ -620,8 +622,10 @@ oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
-packaging==19.2
-    # via pytest
+packaging==21.3
+    # via
+    #   -r requirements/base.txt
+    #   pytest
 paramiko==2.10.1
     # via
     #   junos-eznc
@@ -669,8 +673,9 @@ pyopenssl==19.0.0
     # via
     #   -r requirements/darwin.txt
     #   etcd3-py
-pyparsing==2.4.5
+pyparsing==3.0.9
     # via
+    #   -r requirements/base.txt
     #   junos-eznc
     #   packaging
 pyrsistent==0.17.3
@@ -806,7 +811,6 @@ six==1.16.0
     #   mock
     #   msrestazure
     #   ncclient
-    #   packaging
     #   paramiko
     #   pynacl
     #   pyopenssl

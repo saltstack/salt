@@ -273,6 +273,7 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
 
         # Setuptools installs pre-release packages if we don't pin to an exact version
         # Let's download and install requirements before, running salt's install test
+        print(f"DGM test_sdist cache_dir '{cache_dir}', src_dir '{src_dir}'")
         venv.run(
             venv.venv_python,
             "-m",
@@ -296,6 +297,7 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
                 fname.unlink()
                 continue
             packages.append(fname)
+        print(f"DGM test_sdist packages '{packages}'")
         venv.install(*[str(pkg) for pkg in packages])
         for package in packages:
             package.unlink()
@@ -307,6 +309,7 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
             # pre-installed before installing salt
             venv.install("pycurl==7.43.0.5")
 
+        print(f"DGM test_sdist for sdist cache_dir '{cache_dir}', src_dir '{src_dir}'")
         venv.run(
             venv.venv_python,
             "setup.py",
@@ -315,9 +318,21 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
             str(cache_dir),
             cwd=src_dir,
         )
+
+        ## dgm_dir = "/home/david/tmp_salt_gen"
+        ## print(f"DGM test_sdist for sdist dgm_dir '{dgm_dir}', src_dir '{src_dir}'")
+        ## venv.run(
+        ##     venv.venv_python,
+        ##     "setup.py",
+        ##     "sdist",
+        ##     "--dist-dir",
+        ##     dgm_dir,
+        ##     cwd=src_dir,
+        ## )
         venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
 
         salt_generated_package = list(cache_dir.glob("*.tar.gz"))
+        print(f"DGM test_sdist salt_generated_package '{salt_generated_package}'")
         if not salt_generated_package:
             pytest.fail("Could not find the generated sdist file")
         salt_generated_package = salt_generated_package[0]
@@ -327,11 +342,24 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
         sdist_ver_cmp = salt_generated_package.name.split(".tar.gz")[0].split("salt-")[
             -1
         ]
+        dgm_version = dir(salt.version)
+        print(
+            f"DGM test_sdist  dgm_version '{dgm_version}', sdist_ver_cmp '{sdist_ver_cmp}', salt.version.__version__ '{salt.version.__version__}'"
+        )
         assert sdist_ver_cmp == salt.version.__version__, "{} != {}".format(
             sdist_ver_cmp, salt.version.__version__
         )
 
+        print(
+            f"DGM test_sdist venv.install salt_generated_package '{salt_generated_package}'"
+        )
+        cmd = venv.run(venv.venv_python, "-m", "pip", "list", "--format", "json")
+        print(f"DGM test_sdist pre-install pip3 list output '{cmd}'")
         venv.install(str(salt_generated_package))
+
+        ## dgm_abspath = "/home/david/tmp_salt_manual/salt-3005.1+1561.g7e544dd3bd.tar.gz"
+        ## print(f"DGM test_sdist attempting install with dgm_abspath '{dgm_abspath}'")
+        ## venv.install(dgm_abspath)
 
         # Let's also ensure we have a salt/_version.py from the installed salt wheel
         subdir = [
@@ -347,12 +375,17 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
         installed_salt_path = installed_salt_path.joinpath(*subdir)
         assert installed_salt_path.is_dir()
         salt_generated_version_file_path = installed_salt_path / "_version.py"
+        print(
+            f"DGM test_sdist  salt_generated_version_file_path '{salt_generated_version_file_path}'"
+        )
         assert salt_generated_version_file_path.is_file()
         with salt_generated_version_file_path.open() as rfh:
+            print("DGM _version.py contents to follow:")
             log.debug("_version.py contents:\n >>>>>>\n%s\n <<<<<<", rfh.read())
 
         # Let's ensure the version is correct
         cmd = venv.run(venv.venv_python, "-m", "pip", "list", "--format", "json")
+        print(f"DGM test_sdist pip3 list output '{cmd.stdout}'")
         for details in json.loads(cmd.stdout):
             if details["name"] != "salt":
                 continue
@@ -362,6 +395,10 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
             pytest.fail("Salt was not found installed")
 
         # Let's compare the installed version with the version salt reports
+        dgm_version = dir(salt.version)
+        print(
+            f"DGM test_sdist  dgm_version '{dgm_version}', installed_version '{installed_version}', salt.version.__version__ '{salt.version.__version__}'"
+        )
         assert installed_version == salt.version.__version__, "{} != {}".format(
             installed_version, salt.version.__version__
         )
