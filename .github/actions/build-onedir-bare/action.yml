@@ -34,3 +34,15 @@ runs:
       run: |
         python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
         python3 -m relenv create --arch=${{ inputs.arch }} artifacts/${{ inputs.package-name }}
+
+    - name: Upgrade Setuptools & Pip
+      shell: bash
+      if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
+      run: |
+        if [ "${{ inputs.platform }}" != "windows" ]; then
+          artifacts/${{ inputs.package-name }}/bin/python3 -m pip install -U "pip>=22.3.1,<23.0"
+          artifacts/${{ inputs.package-name }}/bin/python3 -m pip install -U "setuptools>=65.6.3,<66"
+        else
+          artifacts/${{ inputs.package-name }}/Scripts/python -m pip install -U "pip>=22.3.1,<23.0"
+          artifacts/${{ inputs.package-name }}/Scripts/python -m pip install -U "setuptools>=65.6.3,<66"
+        fi

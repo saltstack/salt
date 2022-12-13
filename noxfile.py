@@ -297,8 +297,9 @@ def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
         install_command.append("-U")
     install_command.extend(
         [
-            "pip>=20.2.4,<21.2",
-            "setuptools!=50.*,!=51.*,!=52.*,<59",
+            "pip>=22.3.1,<23.0",
+            # https://github.com/pypa/setuptools/commit/137ab9d684075f772c322f455b0dd1f992ddcd8f
+            "setuptools>=65.6.3,<66",
             "wheel",
         ]
     )
