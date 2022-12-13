@@ -4,31 +4,52 @@
 Salt Syndic
 ===========
 
+.. warning::
+
+    Salt Syndic with :ref:`external auth or publisher_acl<acl-eauth>`
+    should not be used for security purposes.
+
+    The long-term goal for Syndics is that they work correctly with
+    authentication and authorization, but with Salt's current architecture that
+    Syndics work with publisher_acl/external auth at all should be considered a
+    convenience. Syndics with external auth or publisher_acl should not used
+    anywhere that security is considered essential. With the changes resulting
+    from `issue #62618 on GitHub
+    <https://github.com/saltstack/salt/issues/62618>`_, there have been some
+    improvements, but currently Syndic functionality is only fully supported
+    when running ``salt`` on the Master of Masters as the root/service user.
+
+    Additionally, it's technically possible to have minions of the same
+    name on different Syndics. In that case, Salt's behavior is completely
+    undefined and subject to change.
+
+    It may also be possible for a Syndic to itself be a Master of Masters, but
+    that behavior is also undocumented and should not yet be considered a
+    supported feature.
+
 The most basic or typical Salt topology consists of a single Master node
 controlling a group of Minion nodes.  An intermediate node type, called Syndic,
 when used offers greater structural flexibility and scalability in the
 construction of Salt topologies than topologies constructed only out of Master
 and Minion node types.
 
-A Syndic node can be thought of as a special passthrough Minion node.  A Syndic
-node consists of a ``salt-syndic`` daemon and a ``salt-master`` daemon running
-on the same system.  The ``salt-master`` daemon running on the Syndic node
-controls a group of lower level Minion nodes and the ``salt-syndic`` daemon
-connects higher level Master node, sometimes called a Master of Masters.
+.. note::
+
+    While Syndics have been around in Salt for several years, they should
+    largely be considered experiemental. They have a tendency to interact
+    with other Salt features in surprising ways.
+
+A Syndic node is a special passthrough Minion node.  A Syndic node consists of
+a ``salt-syndic`` daemon and a ``salt-master`` daemon running on the same
+system.  The ``salt-master`` daemon running on the Syndic node controls a group
+of lower level Minion nodes and the ``salt-syndic`` daemon connects higher
+level Master node, sometimes called a Master of Masters.
 
 The ``salt-syndic`` daemon relays publications and events between the Master
 node and the local ``salt-master`` daemon.  This gives the Master node control
 over the Minion nodes attached to the ``salt-master`` daemon running on the
 Syndic node.
 
-.. warning::
-
-    Salt does not officially support Syndic and :ref:`external auth or
-    publisher_acl<acl-eauth>`. It's possible that it might work under certain
-    circumstances, but comprehensive support is lacking. See `issue #62618 on
-    GitHub <https://github.com/saltstack/salt/issues/62618>`_ for more
-    information. Currently Syndic is only expected to work when running Salt as
-    root, though work is scheduled to fix this in Salt 3006 (Sulfur).
 
 Configuring the Syndic
 ======================
