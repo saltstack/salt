@@ -4,7 +4,7 @@ Manage X.509 certificates
 
 :depends: cryptography
 
-.. versionadded:: 3006
+.. versionadded:: 3006.0
 
     This module represents a complete rewrite of the original ``x509`` modules
     and is named ``x509_v2`` since it introduces breaking changes.

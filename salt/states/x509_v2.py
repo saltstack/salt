@@ -2,7 +2,7 @@
 Manage X.509 certificates
 =========================
 
-.. versionadded:: 3006
+.. versionadded:: 3006.0
 
     This module represents a complete rewrite of the original ``x509`` modules
     and is named ``x509_v2`` since it introduces breaking changes.
@@ -706,7 +706,7 @@ def crl_managed(
 
     encoding
         Specify the encoding of the resulting certificate revocation list.
-        It can serialized as a ``pem`` text or binary ``der`` file.
+        It can be serialized as a ``pem`` text or binary ``der`` file.
         Defaults to ``pem``.
 
     extensions
@@ -962,7 +962,7 @@ def csr_managed(
 
     encoding
         Specify the encoding of the resulting certificate revocation list.
-        It can serialized as a ``pem`` text or binary ``der`` file.
+        It can be serialized as a ``pem`` text or binary ``der`` file.
         Defaults to ``pem``.
 
     kwargs

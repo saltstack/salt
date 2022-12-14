@@ -5,7 +5,7 @@ Manage X509 certificates
 
 :depends: M2Crypto
 
-.. deprecated:: 3006
+.. deprecated:: 3006.0
 
 .. warning::
     This module has been deprecated and will be removed
