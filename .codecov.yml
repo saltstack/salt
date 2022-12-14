@@ -107,6 +107,29 @@ flags:
     paths:
       - tests/
     carryforward: true
+  unit:
+    paths:
+      - tests/unit
+      - tests/pytests/unit
+    carryforward: true
+  functional:
+    paths:
+      - tests/pytests/functional
+    carryforward: true
+  scenarios:
+    paths:
+      - tests/pytests/scenarios
+    carryforward: true
+  integration:
+    paths:
+      - tests/integration
+      - tests/pytests/integration
+    carryforward: true
+  system:
+    paths:
+      - tests/integration
+      - tests/pytests/integration
+    carryforward: true
 
 #comment:
 #  layout: "reach, diff, flags, files"

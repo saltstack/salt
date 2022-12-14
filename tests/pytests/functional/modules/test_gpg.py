@@ -483,3 +483,16 @@ def test_gpg_verify_signed_by_all(
         signed_by_all=fps,
     )
     assert res["res"] is expected
+
+
+@pytest.mark.usefixtures("pubkeys_present")
+def test_verify(gpghome, gpg, sig, signed_data, key_a_fp):
+    res = gpg.verify(
+        filename=str(signed_data),
+        signature=str(sig),
+        gnupghome=str(gpghome),
+    )
+    assert res["res"]
+    assert "is verified" in res["message"]
+    assert "key_id" in res
+    assert res["key_id"] == key_a_fp[-16:]

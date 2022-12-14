@@ -2,16 +2,16 @@
 Test the win_wusa execution module
 """
 
+import pytest
 
 import salt.modules.win_wusa as win_wusa
-import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
-@skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+@pytest.mark.skip_unless_on_windows
 class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
     """
     test the functions in the win_wusa execution module

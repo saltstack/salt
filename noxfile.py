@@ -6,10 +6,11 @@ Nox configuration script
 """
 # pylint: disable=resource-leakage,3rd-party-module-not-gated
 
-
 import datetime
+import json
 import os
 import pathlib
+import sqlite3
 import sys
 import tempfile
 
@@ -25,6 +26,17 @@ if __name__ == "__main__":
 import nox  # isort:skip
 from nox.command import CommandFailed  # isort:skip
 
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parent
+ENV_FILE = REPO_ROOT / ".ci-env"
+if ENV_FILE.exists():
+    print("Found .ci-env file. Updating environment...", flush=True)
+    for key, value in json.loads(ENV_FILE.read_text()).items():
+        print(f"  {key}={value}", flush=True)
+        os.environ[key] = value
+    print("Deleting .ci-env file", flush=True)
+    ENV_FILE.unlink()
+
 # Be verbose when runing under a CI context
 CI_RUN = (
     os.environ.get("JENKINS_URL")
@@ -32,15 +44,32 @@ CI_RUN = (
     or os.environ.get("DRONE") is not None
 )
 PIP_INSTALL_SILENT = CI_RUN is False
+PRINT_TEST_SELECTION = os.environ.get("PRINT_TEST_SELECTION")
+if PRINT_TEST_SELECTION is None:
+    PRINT_TEST_SELECTION = CI_RUN
+else:
+    PRINT_TEST_SELECTION = PRINT_TEST_SELECTION == "1"
+PRINT_TEST_PLAN_ONLY = os.environ.get("PRINT_TEST_PLAN_ONLY")
+if PRINT_TEST_PLAN_ONLY is None:
+    PRINT_TEST_PLAN_ONLY = PRINT_TEST_SELECTION
+else:
+    PRINT_TEST_PLAN_ONLY = PRINT_TEST_PLAN_ONLY == "1"
+PRINT_SYSTEM_INFO = os.environ.get("PRINT_SYSTEM_INFO")
+if PRINT_SYSTEM_INFO is None:
+    PRINT_SYSTEM_INFO = CI_RUN
+else:
+    PRINT_SYSTEM_INFO = PRINT_SYSTEM_INFO == "1"
 SKIP_REQUIREMENTS_INSTALL = os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
 EXTRA_REQUIREMENTS_INSTALL = os.environ.get("EXTRA_REQUIREMENTS_INSTALL")
 COVERAGE_REQUIREMENT = os.environ.get("COVERAGE_REQUIREMENT")
 
 # Global Path Definitions
 REPO_ROOT = pathlib.Path(os.path.dirname(__file__)).resolve()
-SITECUSTOMIZE_DIR = str(REPO_ROOT / "tests" / "support" / "coverage")
 ARTIFACTS_DIR = REPO_ROOT / "artifacts"
 COVERAGE_OUTPUT_DIR = ARTIFACTS_DIR / "coverage"
+COVERAGE_FILE = os.environ.get("COVERAGE_FILE")
+if COVERAGE_FILE is None:
+    COVERAGE_FILE = str(COVERAGE_OUTPUT_DIR / ".coverage")
 IS_DARWIN = sys.platform.lower().startswith("darwin")
 IS_WINDOWS = sys.platform.lower().startswith("win")
 IS_FREEBSD = sys.platform.lower().startswith("freebsd")
@@ -132,11 +161,14 @@ def _get_session_python_version_info(session):
             "python",
             "-c",
             'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
+            stderr=None,
             silent=True,
             log=False,
         )
         version_info = tuple(
-            int(part) for part in session_py_version.split(".") if part.isdigit()
+            int(part)
+            for part in session_py_version.strip().split(".")
+            if part.isdigit()
         )
         session._runner._real_python_version_info = version_info
     return version_info
@@ -305,7 +337,7 @@ def _install_requirements(
     return True
 
 
-def _run_with_coverage(session, *test_cmd, env=None):
+def _install_coverage_requirement(session):
     if SKIP_REQUIREMENTS_INSTALL is False:
         coverage_requirement = COVERAGE_REQUIREMENT
         if coverage_requirement is None:
@@ -313,34 +345,61 @@ def _run_with_coverage(session, *test_cmd, env=None):
         session.install(
             "--progress-bar=off", coverage_requirement, silent=PIP_INSTALL_SILENT
         )
-    session.run("coverage", "erase")
-    python_path_env_var = os.environ.get("PYTHONPATH") or None
-    if python_path_env_var is None:
-        python_path_env_var = SITECUSTOMIZE_DIR
-    else:
-        python_path_entries = python_path_env_var.split(os.pathsep)
-        if SITECUSTOMIZE_DIR in python_path_entries:
-            python_path_entries.remove(SITECUSTOMIZE_DIR)
-        python_path_entries.insert(0, SITECUSTOMIZE_DIR)
-        python_path_env_var = os.pathsep.join(python_path_entries)
 
-    coverage_base_env = {
-        # The full path to the .coverage data file. Makes sure we always write
-        # them to the same directory
-        "COVERAGE_FILE": str(COVERAGE_OUTPUT_DIR / ".coverage")
-    }
+
+def _run_with_coverage(session, *test_cmd, env=None):
+    _install_coverage_requirement(session)
+    session.run("coverage", "erase")
+
     if env is None:
         env = {}
 
-    env.update(
-        {
-            # The updated python path so that sitecustomize is importable
-            "PYTHONPATH": python_path_env_var,
-            # Instruct sub processes to also run under coverage
-            "COVERAGE_PROCESS_START": str(REPO_ROOT / ".coveragerc"),
-        },
-        **coverage_base_env,
+    coverage_base_env = {}
+
+    sitecustomize_dir = session.run(
+        "salt-factories", "--coverage", silent=True, log=True, stderr=None
     )
+    if sitecustomize_dir is not None:
+        sitecustomize_dir = pathlib.Path(sitecustomize_dir.strip()).resolve()
+        if not sitecustomize_dir.exists():
+            session.error(
+                f"The path to 'sitecustomize.py', '{str(sitecustomize_dir)}', does not exist."
+            )
+
+    if sitecustomize_dir:
+        try:
+            relative_sitecustomize_dir = sitecustomize_dir.relative_to(REPO_ROOT)
+        except ValueError:
+            relative_sitecustomize_dir = sitecustomize_dir
+        log_msg = f"Discovered salt-factories coverage 'sitecustomize.py' path: {relative_sitecustomize_dir}"
+        try:
+            session.debug(log_msg)
+        except AttributeError:
+            # Older nox
+            session.log(log_msg)
+        python_path_env_var = os.environ.get("PYTHONPATH") or None
+        if python_path_env_var is None:
+            python_path_env_var = str(sitecustomize_dir)
+        else:
+            python_path_entries = python_path_env_var.split(os.pathsep)
+            if str(sitecustomize_dir) in python_path_entries:
+                python_path_entries.remove(str(sitecustomize_dir))
+            python_path_entries.insert(0, str(sitecustomize_dir))
+            python_path_env_var = os.pathsep.join(python_path_entries)
+
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        coverage_base_env["COVERAGE_FILE"] = COVERAGE_FILE
+
+        env.update(
+            {
+                # The updated python path so that sitecustomize is importable
+                "PYTHONPATH": python_path_env_var,
+                # Instruct sub processes to also run under coverage
+                "COVERAGE_PROCESS_START": str(REPO_ROOT / ".coveragerc"),
+            },
+            **coverage_base_env,
+        )
 
     try:
         session.run(*test_cmd, env=env)
@@ -375,15 +434,12 @@ def _run_with_coverage(session, *test_cmd, env=None):
 
 
 def _report_coverage(session):
-    if SKIP_REQUIREMENTS_INSTALL is False:
-        session.install(
-            "--progress-bar=off", COVERAGE_REQUIREMENT, silent=PIP_INSTALL_SILENT
-        )
+    _install_coverage_requirement(session)
 
     env = {
         # The full path to the .coverage data file. Makes sure we always write
         # them to the same directory
-        "COVERAGE_FILE": str(COVERAGE_OUTPUT_DIR / ".coverage"),
+        "COVERAGE_FILE": COVERAGE_FILE,
     }
 
     report_section = None
@@ -404,6 +460,18 @@ def _report_coverage(session):
         # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
         # exception
         pass
+
+    if not IS_WINDOWS:
+        # The coverage file might have come from a windows machine, fix paths
+        with sqlite3.connect(COVERAGE_FILE) as db:
+            res = db.execute(r"SELECT * FROM file WHERE path LIKE '%salt\%'")
+            if res.fetchone():
+                session_warn(
+                    session,
+                    "Replacing backwards slashes with forward slashes on file "
+                    "paths in the coverage database",
+                )
+                db.execute(r"UPDATE OR IGNORE file SET path=replace(path, '\', '/');")
 
     if report_section == "salt":
         json_coverage_file = (
@@ -900,11 +968,14 @@ def pytest_tornado(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
-def _pytest(session, coverage, cmd_args):
+def _pytest(session, coverage, cmd_args, env=None):
     # Create required artifacts directories
     _create_ci_directories()
 
-    env = {"CI_RUN": "1" if CI_RUN else "0"}
+    if env is None:
+        env = {}
+
+    env["CI_RUN"] = "1" if CI_RUN else "0"
 
     args = [
         "--rootdir",
@@ -913,6 +984,7 @@ def _pytest(session, coverage, cmd_args):
         "--show-capture=no",
         "-ra",
         "-s",
+        "-vv",
         "--showlocals",
     ]
     for arg in cmd_args:
@@ -922,13 +994,18 @@ def _pytest(session, coverage, cmd_args):
         args.append("--log-file={}".format(RUNTESTS_LOGFILE))
     args.extend(cmd_args)
 
-    if CI_RUN:
+    if PRINT_SYSTEM_INFO and "--sysinfo" not in args:
+        args.append("--sysinfo")
+
+    if PRINT_TEST_SELECTION:
         # We'll print out the collected tests on CI runs.
         # This will show a full list of what tests are going to run, in the right order, which, in case
         # of a test suite hang, helps us pinpoint which test is hanging
         session.run(
             "python", "-m", "pytest", *(args + ["--collect-only", "-qqq"]), env=env
         )
+        if PRINT_TEST_PLAN_ONLY:
+            return
 
     if coverage is True:
         _run_with_coverage(
@@ -946,9 +1023,173 @@ def _pytest(session, coverage, cmd_args):
         session.run("python", "-m", "pytest", *args, env=env)
 
 
+def _ci_test(session, transport):
+    # Install requirements
+    _install_requirements(session, transport)
+    chunks = {
+        "unit": [
+            "tests/unit",
+            "tests/pytests/unit",
+        ],
+        "functional": [
+            "tests/pytests/functional",
+        ],
+        "scenarios": ["tests/pytests/scenarios"],
+    }
+
+    if not session.posargs:
+        chunk_cmd = []
+        junit_report_filename = "test-results"
+        runtests_log_filename = "runtests"
+    else:
+        chunk = session.posargs.pop(0)
+        if chunk in ["unit", "functional", "integration", "scenarios", "all"]:
+            if chunk == "all":
+                chunk_cmd = []
+                junit_report_filename = "test-results"
+                runtests_log_filename = "runtests"
+            elif chunk == "integration":
+                chunk_cmd = []
+                for values in chunks.values():
+                    for value in values:
+                        chunk_cmd.append(f"--ignore={value}")
+                junit_report_filename = f"test-results-{chunk}"
+                runtests_log_filename = f"runtests-{chunk}"
+            else:
+                chunk_cmd = chunks[chunk]
+                junit_report_filename = f"test-results-{chunk}"
+                runtests_log_filename = f"runtests-{chunk}"
+            if session.posargs:
+                if session.posargs[0] == "--":
+                    session.posargs.pop(0)
+                chunk_cmd.extend(session.posargs)
+            else:
+                if CI_RUN and IS_DARWIN and chunk in ("functional", "integration"):
+                    chunk_cmd.extend(["-k", "mac or darwin"])
+        else:
+            chunk_cmd = [chunk] + session.posargs
+            junit_report_filename = "test-results"
+            runtests_log_filename = "runtests"
+
+    rerun_failures = os.environ.get("RERUN_FAILURES", "0") == "1"
+    track_code_coverage = os.environ.get("SKIP_CODE_COVERAGE", "0") == "0"
+
+    common_pytest_args = [
+        "--color=yes",
+        "--run-slow",
+        "--ssh-tests",
+        "--sys-stats",
+        "--run-destructive",
+        f"--output-columns={os.environ.get('OUTPUT_COLUMNS') or 120}",
+    ]
+    try:
+        pytest_args = (
+            common_pytest_args[:]
+            + [
+                f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
+                f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+            ]
+            + chunk_cmd
+        )
+        _pytest(session, track_code_coverage, pytest_args)
+    except CommandFailed:
+        if rerun_failures is False:
+            raise
+
+        # Don't print the system information, not the test selection on reruns
+        global PRINT_TEST_SELECTION
+        global PRINT_SYSTEM_INFO
+        PRINT_TEST_SELECTION = False
+        PRINT_SYSTEM_INFO = False
+
+        pytest_args = (
+            common_pytest_args[:]
+            + [
+                "--lf",
+                f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}-rerun.xml",
+                f"--log-file=artifacts/logs/{runtests_log_filename}-rerun.log",
+            ]
+            + chunk_cmd
+        )
+        _pytest(session, track_code_coverage, pytest_args)
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="ci-test")
+def ci_test(session):
+    _ci_test(session, "zeromq")
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="ci-test-tcp")
+def ci_test_tcp(session):
+    _ci_test(session, "tcp")
+
+
 @nox.session(python="3", name="report-coverage")
 def report_coverage(session):
     _report_coverage(session)
+
+
+@nox.session(python=False, name="decompress-dependencies")
+def decompress_dependencies(session):
+    if not session.posargs:
+        session.error(
+            "Please pass the distro-slug to run tests against. "
+            "Check cicd/images.yml for what's available."
+        )
+    distro_slug = session.posargs.pop(0)
+    if IS_WINDOWS:
+        nox_dependencies_tarball = f"nox.{distro_slug}.tar.gz"
+    else:
+        nox_dependencies_tarball = f"nox.{distro_slug}.tar.xz"
+    nox_dependencies_tarball_path = REPO_ROOT / nox_dependencies_tarball
+    if not nox_dependencies_tarball_path.exists():
+        session.error(
+            f"The {nox_dependencies_tarball} file"
+            "does not exist. Not decompressing anything."
+        )
+
+    session_run_always(session, "tar", "xpf", nox_dependencies_tarball)
+    nox_dependencies_tarball_path.unlink()
+
+
+@nox.session(python=False, name="compress-dependencies")
+def compress_dependencies(session):
+    if not session.posargs:
+        session.error(
+            "Please pass the distro-slug to run tests against. "
+            "Check cicd/images.yml for what's available."
+        )
+    distro_slug = session.posargs.pop(0)
+    if IS_WINDOWS:
+        nox_dependencies_tarball = f"nox.{distro_slug}.tar.gz"
+    else:
+        nox_dependencies_tarball = f"nox.{distro_slug}.tar.xz"
+    nox_dependencies_tarball_path = REPO_ROOT / nox_dependencies_tarball
+    if nox_dependencies_tarball_path.exists():
+        session_warn(
+            session, f"Found existing {nox_dependencies_tarball}. Deleting it."
+        )
+        nox_dependencies_tarball_path.unlink()
+
+    session_run_always(session, "tar", "-caf", nox_dependencies_tarball, ".nox")
+
+
+@nox.session(python="3", name="combine-coverage")
+def combine_coverage(session):
+    _install_coverage_requirement(session)
+    env = {
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        "COVERAGE_FILE": str(COVERAGE_FILE),
+    }
+
+    # Always combine and generate the XML coverage report
+    try:
+        session.run("coverage", "combine", env=env)
+    except CommandFailed:
+        # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
+        # exception
+        pass
 
 
 class Tee:

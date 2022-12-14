@@ -193,15 +193,20 @@ class UwsgiDaemon(Daemon):
         if salt.utils.platform.is_freebsd():
             git_core = "/usr/local/libexec/git-core"
         else:
-            git_core = "/usr/libexec/git-core"
-        if not os.path.exists(git_core):
-            git_core = "/usr/lib/git-core"
-
-        if not os.path.exists(git_core):
-            pytest.fail(
-                "{} not found. Either git is not installed, or the test "
-                "class needs to be updated.".format(git_core)
+            known_paths = (
+                "/usr/libexec/git-core",
+                "/usr/lib/git-core",
+                "/usr/share/git-core",
             )
+            for path in known_paths:
+                if os.path.exists(path):
+                    git_core = path
+                    break
+            else:
+                pytest.fail(
+                    "'git-core' not found. Either git is not installed, or the test "
+                    f"class needs to be updated. Tried: {', '.join(known_paths)}"
+                )
 
         pillar["git_pillar"]["git-http-backend"] = os.path.join(
             git_core, "git-http-backend"
@@ -343,6 +348,12 @@ def webserver_pillar_tests_prep(request, salt_master, salt_minion):
     Stand up an nginx + uWSGI + git-http-backend webserver to
     serve up git repos for tests.
     """
+    nginx = shutil.which("nginx")
+    if nginx is None:
+        raise pytest.skip.Exception(
+            "The 'nginx' binary was not found", _use_item_location=True
+        )
+
     salt_call_cli = salt_minion.salt_call_cli()
 
     root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
@@ -366,7 +377,7 @@ def webserver_pillar_tests_prep(request, salt_master, salt_minion):
         )
         uwsgi_proc.start()
         nginx_proc = NginxDaemon(
-            script_name="nginx",
+            script_name=nginx,
             config_dir=config_dir,
             start_timeout=120,
             uwsgi_port=uwsgi_proc.listen_port,
@@ -458,7 +469,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
                 ext_pillar_conf.format(
                     cachedir=cachedir,
                     extmods=os.path.join(cachedir, "extmods"),
-                    **self.ext_opts
+                    **self.ext_opts,
                 )
             )
         )

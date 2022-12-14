@@ -1,0 +1,1 @@
+Fix salt-ssh when using imports with extra-filerefs.

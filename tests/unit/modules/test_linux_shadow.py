@@ -5,10 +5,9 @@ import textwrap
 
 import pytest
 
-import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import DEFAULT, MagicMock, mock_open, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import spwd
@@ -38,8 +37,8 @@ _HASHES = dict(
 )
 
 
-@skipIf(not salt.utils.platform.is_linux(), "minion is not Linux")
-@skipIf(not HAS_SHADOW, "shadow module is not available")
+@pytest.mark.skip_unless_on_linux
+@pytest.mark.skipif(HAS_SHADOW is False, reason="shadow module is not available")
 class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {shadow: {}}

@@ -7,7 +7,6 @@ from saltfactories.utils import random_string
 
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on
 
 # Create group name strings for tests
 ADD_GROUP = random_string("RS-", lowercase=False)
@@ -18,8 +17,8 @@ REP_USER_GROUP = random_string("RS-", lowercase=False)
 
 
 @pytest.mark.skip_if_not_root
-@runs_on(kernel="Darwin")
 @pytest.mark.destructive_test
+@pytest.mark.skip_unless_on_darwin
 class MacGroupModuleTest(ModuleCase):
     """
     Integration tests for the mac_group module

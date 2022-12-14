@@ -8,7 +8,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import skipIf
 
 GET_ZONE_FILE = "salt.modules.timezone._get_zone_file"
 GET_LOCALTIME_PATH = "salt.modules.timezone._get_localtime_path"
@@ -198,7 +197,7 @@ def test_get_zone_os_family_aix():
                 assert timezone.get_zone() == TEST_TZ
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_set_zone_os_family_nilinuxrt(patch_os):
     """
     Test zone set on NILinuxRT
@@ -210,7 +209,7 @@ def test_set_zone_os_family_nilinuxrt(patch_os):
         assert timezone.set_zone(TEST_TZ)
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_set_zone_os_family_allbsd_slackware(patch_os):
     """
     Test zone set on *BSD and Slackware
@@ -221,7 +220,7 @@ def test_set_zone_os_family_allbsd_slackware(patch_os):
             assert timezone.set_zone(TEST_TZ)
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_set_zone_redhat(patch_os):
     """
     Test zone set on RH series
@@ -233,7 +232,7 @@ def test_set_zone_redhat(patch_os):
         assert args == ("/etc/sysconfig/clock", "^ZONE=.*", 'ZONE="UTC"')
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_set_zone_suse(patch_os):
     """
     Test zone set on SUSE series
@@ -245,7 +244,7 @@ def test_set_zone_suse(patch_os):
         assert args == ("/etc/sysconfig/clock", "^TIMEZONE=.*", 'TIMEZONE="UTC"')
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_set_zone_gentoo(patch_os):
     """
     Test zone set on Gentoo series
@@ -259,7 +258,7 @@ def test_set_zone_gentoo(patch_os):
             assert fh_.write_calls == ["UTC", "\n"], fh_.write_calls
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_set_zone_debian(patch_os):
     """
     Test zone set on Debian series
@@ -273,7 +272,7 @@ def test_set_zone_debian(patch_os):
             assert fh_.write_calls == ["UTC", "\n"], fh_.write_calls
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_get_hwclock_timedate_utc():
     """
     Test get hwclock UTC/localtime
@@ -295,7 +294,7 @@ def test_get_hwclock_timedate_utc():
                         assert timezone.get_hwclock() == "localtime"
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_get_hwclock_suse(patch_os):
     """
     Test get hwclock on SUSE
@@ -308,7 +307,7 @@ def test_get_hwclock_suse(patch_os):
         assert kwarg == {"python_shell": False}
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_get_hwclock_redhat(patch_os):
     """
     Test get hwclock on RedHat
@@ -335,7 +334,7 @@ def _test_get_hwclock_debian(
         assert kwarg == {"python_shell": False}
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_get_hwclock_solaris(patch_os):
     """
     Test get hwclock on Solaris
@@ -348,7 +347,7 @@ def test_get_hwclock_solaris(patch_os):
             assert timezone.get_hwclock() == "localtime"
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_get_hwclock_aix(patch_os):
     """
     Test get hwclock on AIX
@@ -362,7 +361,7 @@ def test_get_hwclock_aix(patch_os):
         assert timezone.get_hwclock() == hwclock
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_get_hwclock_slackware_with_adjtime(patch_os):
     """
     Test get hwclock on Slackware with /etc/adjtime present
@@ -375,7 +374,7 @@ def test_get_hwclock_slackware_with_adjtime(patch_os):
         assert kwarg == {"python_shell": False}
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_get_hwclock_slackware_without_adjtime():
     """
     Test get hwclock on Slackware without /etc/adjtime present
@@ -396,7 +395,7 @@ def test_get_hwclock_slackware_without_adjtime():
                             assert timezone.get_hwclock() == "localtime"
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_set_hwclock_timedatectl():
     """
     Test set hwclock with timedatectl
@@ -414,7 +413,7 @@ def test_set_hwclock_timedatectl():
     assert args == (["timedatectl", "set-local-rtc", "true"],)
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_set_hwclock_aix_nilinuxrt(patch_os):
     """
     Test set hwclock on AIX and NILinuxRT
@@ -427,7 +426,7 @@ def test_set_hwclock_aix_nilinuxrt(patch_os):
             assert timezone.set_hwclock("UTC")
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_set_hwclock_solaris(patch_os):
     """
     Test set hwclock on Solaris
@@ -447,7 +446,7 @@ def test_set_hwclock_solaris(patch_os):
             assert kwargs == {"python_shell": False}
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_set_hwclock_arch(patch_os):
     """
     Test set hwclock on arch
@@ -463,7 +462,7 @@ def test_set_hwclock_arch(patch_os):
             assert kwargs == {"python_shell": False}
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_set_hwclock_redhat(patch_os):
     """
     Test set hwclock on RedHat
@@ -478,7 +477,7 @@ def test_set_hwclock_redhat(patch_os):
             assert args == ("/etc/sysconfig/clock", "^ZONE=.*", 'ZONE="TEST_TIMEZONE"')
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_set_hwclock_suse(patch_os):
     """
     Test set hwclock on SUSE
@@ -497,7 +496,7 @@ def test_set_hwclock_suse(patch_os):
             )
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_set_hwclock_debian(patch_os):
     """
     Test set hwclock on Debian
@@ -516,7 +515,7 @@ def test_set_hwclock_debian(patch_os):
             assert args == ("/etc/default/rcS", "^UTC=.*", "UTC=no")
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_set_hwclock_gentoo(patch_os):
     """
     Test set hwclock on Gentoo
@@ -538,7 +537,7 @@ def test_set_hwclock_gentoo(patch_os):
             assert args == ("/etc/conf.d/hwclock", "^clock=.*", 'clock="local"')
 
 
-@skipIf(salt.utils.platform.is_windows(), "os.symlink not available in Windows")
+@pytest.mark.skip_on_windows(reason="os.symlink not available in Windows")
 def test_set_hwclock_slackware(patch_os):
     """
     Test set hwclock on Slackware

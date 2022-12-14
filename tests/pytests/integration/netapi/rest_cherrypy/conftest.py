@@ -10,6 +10,7 @@ cherrypy = pytest.importorskip("cherrypy")
 @pytest.fixture
 def client_config(client_config, netapi_port):
     client_config["rest_cherrypy"] = {"port": netapi_port, "debug": True}
+    client_config["netapi_enable_clients"] = ["local", "runner"]
     return client_config
 
 

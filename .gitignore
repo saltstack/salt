@@ -121,3 +121,9 @@ requirements/static/*/py*/*.log
 
 # Vim's default session file
 Session.vim
+
+# VM task state directory
+.vms-state/
+
+# Nox requirements archives
+nox.*.tar.bzip2
