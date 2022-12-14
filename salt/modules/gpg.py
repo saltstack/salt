@@ -22,6 +22,7 @@ import time
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -1149,7 +1150,7 @@ def verify(
         keys signed the data, verification will fail. Optional.
         Note that this does not take into account trust.
 
-        .. versionadded:: 3007.0
+        .. versionadded:: 3006.0
 
     signed_by_all
         A list of key fingerprints whose signatures are required
@@ -1157,7 +1158,7 @@ def verify(
         not sign the data, verification will fail. Optional.
         Note that this does not take into account trust.
 
-        .. versionadded:: 3007.0
+        .. versionadded:: 3006.0
 
     CLI Example:
 
@@ -1189,12 +1190,9 @@ def verify(
         # This ensures all signatures are evaluated for validity.
         extra_args.append("--no-batch")
         # workaround https://github.com/vsajip/python-gnupg/issues/214
-        # Until the issue is resolved, bad signatures would not actually be
-        # included in `sig_info`, but override the previous one's information
-        # (the same would be valid for signatures with missing pubkeys).
-        # `keyid`, `username` and `status` would always be overwritten,
-        # while missing pubkeys would also overwrite `fingerprint`.
-        gpg.result_map["verify"] = FixedVerify
+        # This issue should be fixed in versions greater than 0.5.0.
+        if salt.utils.versions.version_cmp(gnupg.__version__, "0.5.0") <= 0:
+            gpg.result_map["verify"] = FixedVerify
 
     if text:
         verified = gpg.verify(text, extra_args=extra_args)
