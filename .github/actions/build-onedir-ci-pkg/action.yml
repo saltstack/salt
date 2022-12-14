@@ -1,0 +1,140 @@
+---
+name: build-linux-onedir
+description: Build Linux Onedir Package
+inputs:
+  platform:
+    required: true
+    type: string
+    description: The platform to build
+  arch:
+    required: true
+    type: string
+    description: The platform arch to build
+  package-name:
+    required: false
+    type: string
+    description: The onedir package name to create
+    default: salt
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Download Onedir Tarball as an Artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz
+        path: artifacts/${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz
+
+    - name: Decompress Onedir Tarball
+      shell: bash
+      run: |
+        cd artifacts
+        tar xvf ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz
+
+    - name: Cache nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+      id: nox-dependencies-cache
+      uses: actions/cache@v3
+      with:
+        path: nox.${{ inputs.distro-slug }}.tar.*
+        key: testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+
+    # Skip jobs if nox.*.tar.* is already cached
+    - name: Set up Python ${{ inputs.python-version }}
+      if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+      uses: actions/setup-python@v4
+      with:
+        python-version: "${{ inputs.python-version }}"
+
+    - name: Install System Dependencies
+      if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+      run: |
+        brew install openssl@3
+
+    - name: Install Nox
+      if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+      env:
+        PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+        PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+      run: |
+        python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
+
+    - name: Define Nox Session
+      if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+      run: |
+        if [ "${{ matrix.transport }}" != "tcp" ]; then
+          echo NOX_SESSION=${{ inputs.nox-session}}-3 >> $GITHUB_ENV
+        else
+          echo NOX_SESSION=${{ inputs.nox-session}}-tcp-3 >> $GITHUB_ENV
+        fi
+
+    - name: Install Dependencies
+      if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+      env:
+        PRINT_TEST_SELECTION: "0"
+        PRINT_SYSTEM_INFO: "0"
+        PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+        PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+      run: |
+        export PYCURL_SSL_LIBRARY=openssl
+        export LDFLAGS="-L/usr/local/opt/openssl@3/lib"
+        export CPPFLAGS="-I/usr/local/opt/openssl@3/include"
+        export PKG_CONFIG_PATH="/usr/local/opt/openssl@3/lib/pkgconfig"
+        nox --install-only -e ${{ env.NOX_SESSION }}
+
+    - name: Compress .nox Directory
+      if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+      run: |
+        nox -e compress-dependencies -- ${{ inputs.distro-slug }}
+
+    - name: Set Exit Status
+      if: always()
+      run: |
+        mkdir exitstatus
+        echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-deps
+
+    - name: Upload Exit Status
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: exitstatus
+        path: exitstatus
+        if-no-files-found: error
+
+    - name: Create Onedir Directory
+      shell: bash
+      run: |
+        ${{ inputs.package-name }}/bin/python3 -m relenv create --arch=${{ inputs.arch }} ${{ inputs.package-name }}-ci
+
+    - name: Install Salt Into Onedir
+      shell: bash
+      run: |
+        ${{ inputs.package-name }}-ci/bin/python3 -m pip install -r requirements/static/ci/py3.10/${{ inputs.platform }}.txt
+
+    - name: Create Tarball
+      shell: bash
+      run: |
+        tar -cJf ${{ inputs.package-name }}-ci-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz  ${{ inputs.package-name }}-ci
+
+    - name: Upload Onedir Tarball as an Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: onedir-${{ inputs.platform }}-ci-package
+        path: ${{ inputs.package-name }}-ci-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz
+        retention-days: 7
+
+    - name: Set Exit Status
+      if: always()
+      shell: bash
+      run: |
+        mkdir exitstatus
+        echo "${{ job.status }}" > exitstatus/${{ github.job }}-build-onedir-ci-${{ inputs.platform }}-${{ inputs.arch }}
+
+    - name: Upload Exit Status
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: exitstatus
+        path: exitstatus
+        if-no-files-found: error

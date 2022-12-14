@@ -945,11 +945,17 @@ class VM:
             "--exclude",
             ".pytest_cache/",
             "--exclude",
-            "artifacts/",
-            "--exclude",
             f"{STATE_DIR.relative_to(REPO_ROOT)}{os.path.sep}",
             "--exclude",
             "*.py~",
+            # We need to include artifacts/ to be able to include artifacts/salt
+            "--include",
+            "artifacts/",
+            "--include",
+            "artifacts/salt",
+            # But we also want to exclude all other entries under artifacts/
+            "--exclude",
+            "artifacts/*",
         ]
         if self.is_windows:
             # Symlinks aren't handled properly on windows, just replace the
