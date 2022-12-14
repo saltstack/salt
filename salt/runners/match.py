@@ -15,15 +15,18 @@ log = logging.getLogger(__name__)
 def compound_matches(expr, minion_id):
     """
     Check whether a minion is matched by a given compound match expression.
-    Pillar values will be matched literally only since this function is intended
-    for remote calling. This also applies to node groups defined on the master.
+    On success, this function will return the minion ID, otherwise False.
 
     .. note::
+
+        Pillar values will be matched literally only since this function is intended
+        for remote calling. This also applies to node groups defined on the master.
+        Custom matchers are not respected.
+
+    .. note::
+
         If a module calls this runner from a minion, you will need to explicitly
         allow the remote call. See :conf_master:`peer_run`.
-
-    .. note::
-        Custom matchers are not respected.
 
     CLI Example:
 
@@ -51,7 +54,7 @@ def compound_matches(expr, minion_id):
         if not salt.utils.verify.valid_id(__opts__, minion_id):
             log.warning("Got invalid minion ID.")
             return False
-        log.debug(f"Evaluating if minion '{minion_id}' is matched by '{expr}'.")
+        log.debug("Evaluating if minion '%s' is matched by '%s'.", minion_id, expr)
         ckminions = salt.utils.minions.CkMinions(__opts__)
         # Compound expressions are usually evaluated in greedy mode since you
         # want to make sure the executing user has privileges to run a command on
@@ -63,7 +66,8 @@ def compound_matches(expr, minion_id):
         minions = ckminions._check_compound_pillar_exact_minions(
             expr, DEFAULT_TARGET_DELIM, greedy=False
         )
-        return minion_id in minions["minions"]
+        if minion_id in minions["minions"]:
+            return minion_id
     except Exception:  # pylint: disable=broad-except
         pass
     return False

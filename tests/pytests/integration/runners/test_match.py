@@ -136,7 +136,7 @@ class TestMatchCompoundRunner:
         ret = match_salt_run_cli.run("cache.clear_all", "match-minion-alice")
         assert ret.returncode == 0
         yield
-        ret = match_salt_minion_alice.salt_call_cli().run("pillar.items")
+        match_salt_minion_alice.salt_call_cli().run("pillar.items")
 
     @pytest.fixture
     def eve_cached(self, match_salt_minion_eve):
@@ -174,7 +174,7 @@ class TestMatchCompoundRunner:
             "match.compound_matches", expr, "match-minion-alice"
         )
         assert ret.returncode == 0
-        assert ret.data is expected
+        assert bool(ret.data) is expected
 
     @pytest.mark.usefixtures("eve_cached")
     def test_match_compound_matches_only_allows_exact_pillar_matching(
@@ -211,7 +211,7 @@ class TestMatchCompoundRunner:
             "match.compound_matches", expr, "match-minion-alice"
         )
         assert ret.returncode == 0
-        assert ret.data is expected
+        assert bool(ret.data) is expected
 
     @pytest.mark.parametrize(
         "expr,expected",
@@ -232,7 +232,7 @@ class TestMatchCompoundRunner:
             "match.compound_matches", expr, "match-minion-alice"
         )
         assert ret.returncode == 0
-        assert ret.data is expected
+        assert bool(ret.data) is expected
 
     @pytest.mark.parametrize(
         "minion_id",
@@ -267,7 +267,7 @@ class TestMatchCompoundRunner:
             "publish.runner", "match.compound_matches", [expr, "match-minion-alice"]
         )
         assert ret.returncode == 0
-        assert ret.data is expected
+        assert bool(ret.data) is expected
 
 
 class TestMatchCompoundRunnerWithoutMinionDataCache:
