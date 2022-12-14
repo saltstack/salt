@@ -1283,7 +1283,7 @@ def verify(
             return ret
         all_check = True
 
-    if bool(signed_by_any) == any_check and bool(signed_by_all) == all_check:
+    if bool(signed_by_any) is any_check and bool(signed_by_all) is all_check:
         ret["res"] = True
         ret["message"] = "All required keys have provided a signature"
         return ret
