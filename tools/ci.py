@@ -1,6 +1,7 @@
 """
 These commands are used in the CI pipeline.
 """
+# pylint: disable=resource-leakage,broad-except
 from __future__ import annotations
 
 import json
@@ -14,7 +15,7 @@ from ptscripts import Context, command_group
 
 log = logging.getLogger(__name__)
 
-REPO_ROOT = pathlib.Path(__file__).parent.parent
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # Define the command group
 ci = command_group(name="ci", help="CI Related Commands", description=__doc__)
@@ -27,7 +28,10 @@ ci = command_group(name="ci", help="CI Related Commands", description=__doc__)
             "help": "The name of the GitHub event being processed.",
         },
         "changed_files": {
-            "help": "JSON payload of changed files from the 'dorny/paths-filter' GitHub action.",
+            "help": (
+                "Path to '.json' file containing the payload of changed files "
+                "from the 'dorny/paths-filter' GitHub action."
+            ),
         },
     },
 )
@@ -144,6 +148,91 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"jobs={json.dumps(jobs)}")
     ctx.exit(0)
+
+
+@ci.command(
+    name="define-testrun",
+    arguments={
+        "event_name": {
+            "help": "The name of the GitHub event being processed.",
+        },
+        "changed_files": {
+            "help": (
+                "Path to '.json' file containing the payload of changed files "
+                "from the 'dorny/paths-filter' GitHub action."
+            ),
+        },
+    },
+)
+def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
+    """
+    Set GH Actions outputs for what and how Salt should be tested.
+    """
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is None:
+        ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event_path is not None
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    try:
+        gh_event = json.loads(open(gh_event_path).read())
+    except Exception as exc:
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
+        ctx.exit(1)
+
+    ctx.info("GH Event Payload:")
+    ctx.print(gh_event, soft_wrap=True)
+    # Let it print until the end
+    time.sleep(1)
+
+    if not changed_files.exists():
+        ctx.error(f"The '{changed_files}' file does not exist.")
+        ctx.exit(1)
+    try:
+        changed_files_contents = json.loads(changed_files.read_text())
+    except Exception as exc:
+        ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
+        ctx.exit(1)
+
+    if event_name == "push":
+        # In this case, a full test run is in order
+        ctx.info("Writing 'testrun' to the github outputs file")
+        testrun = {"type": "full"}
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"testrun={json.dumps(testrun)}\n")
+        return
+
+    # So, it's a pull request...
+    # Based on which files changed, or other things like PR comments we can
+    # decide what to run, or even if the full test run should be running on the
+    # pull request, etc...
+    testrun_changed_files_path = REPO_ROOT / "testrun-changed-files.txt"
+    testrun = {
+        "type": "changed",
+        "from-filenames": str(testrun_changed_files_path.relative_to(REPO_ROOT)),
+    }
+    ctx.info(f"Writing {testrun_changed_files_path.name} ...")
+    selected_changed_files = []
+    for fpath in json.loads(changed_files_contents["testrun_files"]):
+        if fpath.startswith(("tools/", "tasks/")):
+            continue
+        if fpath in ("noxfile.py",):
+            continue
+        selected_changed_files.append(fpath)
+    testrun_changed_files_path.write_text("\n".join(sorted(selected_changed_files)))
+    ctx.info("Writing 'testrun' to the github outputs file")
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"testrun={json.dumps(testrun)}\n")
 
 
 @ci.command(
