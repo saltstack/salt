@@ -227,7 +227,8 @@ jobs:
         run: |
           tools --timestamps --no-output-timeout-secs=18000 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --run-slow --from-filenames=testrun-changed-files.txt
+            ${{ matrix.tests-chunk }} -- --run-slow --suppress-no-test-exit-code \
+            --from-filenames=testrun-changed-files.txt
 
       - name: Run Fast Tests
         id: run-fast-tests
