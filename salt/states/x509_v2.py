@@ -246,7 +246,7 @@ def certificate_managed(
     **kwargs,
 ):
     """
-    Make sure an X.509 certificate is present as specified.
+    Ensure an X.509 certificate is present as specified.
 
     This function accepts the same arguments as :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>`,
     as well as most ones for `:py:func:`file.managed <salt.states.file.managed>`.
@@ -634,7 +634,7 @@ def crl_managed(
     **kwargs,
 ):
     """
-    Make sure a certificate revocation list is present as specified.
+    Ensure a certificate revocation list is present as specified.
 
     This function accepts the same arguments as :py:func:`x509.create_crl <salt.modules.x509_v2.create_crl>`,
     as well as most ones for `:py:func:`file.managed <salt.states.file.managed>`.
@@ -939,7 +939,7 @@ def csr_managed(
     **kwargs,
 ):
     """
-    Make sure a certificate signing request is present as specified.
+    Ensure a certificate signing request is present as specified.
 
     This function accepts the same arguments as :py:func:`x509.create_csr <salt.modules.x509_v2.create_csr>`,
     as well as most ones for :py:func:`file.managed <salt.states.file.managed>`.
@@ -1147,7 +1147,10 @@ def pem_managed(name, text, **kwargs):
     if extra_args:
         raise SaltInvocationError(f"Unrecognized keyword arguments: {list(extra_args)}")
 
-    file_args["contents"] = __salt__["x509.get_pem_entry"](text=text)
+    try:
+        file_args["contents"] = __salt__["x509.get_pem_entry"](text=text)
+    except (CommandExecutionError, SaltInvocationError) as err:
+        return {"name": name, "result": False, "comment": str(err), "changes": {}}
     return _file_managed(name, **file_args)
 
 
@@ -1163,7 +1166,7 @@ def private_key_managed(
     **kwargs,
 ):
     """
-    Make sure a private key is present as specified.
+    Ensure a private key is present as specified.
 
     This function accepts the same arguments as :py:func:`x509.create_private_key <salt.modules.x509_v2.create_private_key>`,
     as well as most ones for :py:func:`file.managed <salt.states.file.managed>`.
@@ -1655,9 +1658,9 @@ def _getattr_safe(obj, attr):
     try:
         return getattr(obj, attr)
     except AttributeError as err:
-        # since we cannot get the certificate object without signing,
+        # Since we cannot get the certificate object without signing,
         # we need to compare attributes marked as internal. At least
-        # convert possible exceptions into some description
+        # convert possible exceptions into some description.
         raise CommandExecutionError(
             f"Could not get attribute {attr} from {obj.__class__.__name__}. "
             "Did the internal API of cryptography change?"
@@ -1673,8 +1676,8 @@ def _compareattr_safe(obj, attr, comp):
 
 def _safe_atomic_write(dst, data, backup):
     """
-    create temporary file with only user r/w perms and atomically
-    copy it to the destination, honoring backup
+    Create a temporary file with only user r/w perms and atomically
+    copy it to the destination, honoring ``backup``.
     """
     tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
     with salt.utils.files.fopen(tmp, "wb") as tmp_:

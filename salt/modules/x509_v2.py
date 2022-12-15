@@ -1268,7 +1268,7 @@ def get_pem_entry(text, pem_type=None):
 
     _match = _valid_pem(text, pem_type)
     if not _match:
-        raise salt.exceptions.SaltInvocationError(errmsg)
+        raise SaltInvocationError(errmsg)
 
     _match_dict = _match.groupdict()
     pem_header = _match_dict["pem_header"]
@@ -1595,9 +1595,14 @@ def sign_remote_certificate(
         signing_policy.pop("signing_private_key_passphrase", None)
         # ensure to deliver the signing cert as well, not a file path
         if "signing_cert" in signing_policy:
-            signing_policy["signing_cert"] = x509util.to_der(
-                x509util.load_cert(signing_policy["signing_cert"])
-            )
+            try:
+                signing_policy["signing_cert"] = x509util.to_der(
+                    x509util.load_cert(signing_policy["signing_cert"])
+                )
+            except (CommandExecutionError, SaltInvocationError) as err:
+                ret["data"] = None
+                ret["errors"].append(str(err))
+                return ret
         ret["data"] = signing_policy
         return ret
     x509util.merge_signing_policy(signing_policy, kwargs)
@@ -1605,7 +1610,7 @@ def sign_remote_certificate(
     kwargs.pop("ca_server", None)
     try:
         cert, _ = _create_certificate_local(**kwargs)
-        ret["data"] = cert.public_bytes(serialization.Encoding.DER)
+        ret["data"] = x509util.to_der(cert)
         return ret
     except Exception as err:  # pylint: disable=broad-except
         ret["data"] = None
@@ -1621,7 +1626,7 @@ def _query_remote(ca_server, signing_policy, kwargs, get_signing_policy_only=Fal
     )
 
     if not result:
-        raise salt.exceptions.SaltInvocationError(
+        raise SaltInvocationError(
             "ca_server did not respond."
             " Salt master must permit peers to"
             " call the sign_remote_certificate function."
@@ -1630,7 +1635,9 @@ def _query_remote(ca_server, signing_policy, kwargs, get_signing_policy_only=Fal
     if not isinstance(result, dict) or "data" not in result:
         raise CommandExecutionError("Received invalid return value from ca_server")
     if result.get("errors"):
-        raise CommandExecutionError("\n".join(result["errors"]))
+        raise CommandExecutionError(
+            "ca_server reported errors:\n" + "\n".join(result["errors"])
+        )
     return result["data"]
 
 
@@ -1791,12 +1798,12 @@ def write_pem(text, path, overwrite=True, pem_type=None):
             _filecontents = x509util.load_file_or_bytes(path).decode()
             try:
                 _dhparams = get_pem_entry(_filecontents, "DH PARAMETERS")
-            except salt.exceptions.SaltInvocationError as err:
+            except SaltInvocationError as err:
                 log.debug("Error while retrieving DH PARAMETERS: %s", err)
                 log.trace(err, exc_info=err)
             try:
                 _private_key = get_pem_entry(_filecontents, "(?:RSA )?PRIVATE KEY")
-            except salt.exceptions.SaltInvocationError as err:
+            except SaltInvocationError as err:
                 log.debug("Error while retrieving PRIVATE KEY: %s", err)
                 log.trace(err, exc_info=err)
         with salt.utils.files.fopen(path, "w") as _fp:
