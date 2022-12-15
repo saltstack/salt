@@ -220,7 +220,7 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
-            -k "mac or darwin" --run-slow --from-filenames=testrun-changed-files.txt
+            -k "mac or darwin" --suppress-no-test-exit-code --run-slow --from-filenames=testrun-changed-files.txt
 
       - name: Run Fast Tests
         id: run-fast-tests
