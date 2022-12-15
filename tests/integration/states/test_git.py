@@ -177,14 +177,13 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         git.latest
         """
 
-        log_format = "[%(levelname)-8s] %(jid)s %(message)s"
-        self.handler = TstSuiteLoggingHandler(format=log_format, level=logging.DEBUG)
+        handler = TstSuiteLoggingHandler(level=logging.DEBUG)
         ret_code_err = "failed with return code: 1"
-        with self.handler:
+        with handler:
             ret = self.run_state("git.latest", name=TEST_REPO, target=target)
             self.assertSaltTrueReturn(ret)
             self.assertTrue(os.path.isdir(os.path.join(target, ".git")))
-            assert any(ret_code_err in s for s in self.handler.messages) is False, False
+            assert any(ret_code_err in s for s in handler.messages) is False
 
     @with_tempdir(create=False)
     @pytest.mark.slow_test
