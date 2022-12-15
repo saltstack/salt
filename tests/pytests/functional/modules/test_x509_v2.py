@@ -9,7 +9,12 @@ from salt.utils.odict import OrderedDict
 try:
     import cryptography
     import cryptography.x509 as cx509
-    from cryptography.hazmat.primitives.serialization import pkcs7, pkcs12
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.serialization import (
+        load_pem_private_key,
+        pkcs7,
+        pkcs12,
+    )
 
     HAS_LIBS = True
 except ImportError:
@@ -48,6 +53,12 @@ def minion_config_overrides():
             },
             "testnosubjectpolicy": {
                 "basicConstraints": "critical, CA:FALSE",
+            },
+            "testdeprecatednamepolicy": {
+                "commonName": "deprecated",
+            },
+            "testdeprecatedextpolicy": {
+                "X509v3 Basic Constraints": "critical CA:FALSE",
             },
         },
         "features": {
@@ -673,6 +684,62 @@ def test_create_certificate_self_signed(x509, algo, request):
     assert cert.subject.rfc4514_string() == "CN=success"
 
 
+@pytest.mark.parametrize("encoding", ["pem", "der"])
+def test_create_certificate_write_to_path(x509, encoding, rsa_privkey, tmp_path):
+    tgt = tmp_path / "cert"
+    x509.create_certificate(
+        signing_private_key=rsa_privkey, CN="success", encoding=encoding, path=str(tgt)
+    )
+    assert tgt.exists()
+    if encoding == "pem":
+        assert tgt.read_text().startswith("-----BEGIN CERTIFICATE-----")
+    cert = _get_cert(tgt.read_bytes(), encoding=encoding)
+    assert cert.subject.rfc4514_string() == "CN=success"
+
+
+@pytest.mark.parametrize("encoding", ["pem", "der"])
+def test_create_certificate_write_to_path_overwrite(
+    x509, encoding, rsa_privkey, tmp_path
+):
+    tgt = tmp_path / "cert"
+    tgt.write_text("occupied")
+    assert tgt.exists()
+    x509.create_certificate(
+        signing_private_key=rsa_privkey, CN="success", encoding=encoding, path=str(tgt)
+    )
+    if encoding == "pem":
+        assert tgt.read_text().startswith("-----BEGIN CERTIFICATE-----")
+    cert = _get_cert(tgt.read_bytes(), encoding=encoding)
+    assert cert.subject.rfc4514_string() == "CN=success"
+
+
+@pytest.mark.parametrize("encoding", ["pem", "der"])
+def test_create_certificate_write_to_path_overwrite_false(
+    x509, encoding, rsa_privkey, tmp_path
+):
+    tgt = tmp_path / "cert"
+    tgt.write_text("occupied")
+    assert tgt.exists()
+    x509.create_certificate(
+        signing_private_key=rsa_privkey,
+        CN="success",
+        encoding=encoding,
+        path=str(tgt),
+        overwrite=False,
+    )
+    assert tgt.read_text() == "occupied"
+
+
+def test_create_certificate_raw(x509, rsa_privkey):
+    res = x509.create_certificate(
+        signing_private_key=rsa_privkey, CN="success", raw=True
+    )
+    assert isinstance(res, bytes)
+    assert res.startswith(b"-----BEGIN CERTIFICATE-----")
+    cert = _get_cert(res)
+    assert cert.subject.rfc4514_string() == "CN=success"
+
+
 @pytest.mark.parametrize("algo", ["rsa", "ec", "ed25519", "ed448"])
 def test_create_certificate_from_privkey(x509, ca_key, ca_cert, algo, request):
     privkey = request.getfixturevalue(f"{algo}_privkey")
@@ -1230,6 +1297,35 @@ def test_create_crl_from_certificate(x509, ca_cert, ca_key, cert_exts):
     assert res.startswith("-----BEGIN X509 CRL-----")
 
 
+@pytest.mark.parametrize("encoding", ["pem", "der"])
+def test_create_crl_write_to_path(x509, encoding, crl_args, tmp_path):
+    tgt = tmp_path / "crl"
+    crl_args["encoding"] = encoding
+    crl_args["path"] = str(tgt)
+    x509.create_crl(**crl_args)
+    assert tgt.exists()
+    if encoding == "pem":
+        assert tgt.read_text().startswith("-----BEGIN X509 CRL-----")
+
+
+@pytest.mark.parametrize("encoding", ["pem", "der"])
+def test_create_crl_write_to_path_overwrite(x509, encoding, crl_args, tmp_path):
+    tgt = tmp_path / "cert"
+    crl_args["encoding"] = encoding
+    crl_args["path"] = str(tgt)
+    tgt.write_text("occupied")
+    assert tgt.exists()
+    x509.create_crl(**crl_args)
+    if encoding == "pem":
+        assert tgt.read_text().startswith("-----BEGIN X509 CRL-----")
+
+
+def test_create_crl_raw(x509, crl_args):
+    res = x509.create_crl(**crl_args, raw=True)
+    assert isinstance(res, bytes)
+    assert res.startswith(b"-----BEGIN X509 CRL-----")
+
+
 @pytest.mark.parametrize("algo", ["rsa", "ec", "ed25519", "ed448"])
 def test_create_csr(x509, algo, request):
     privkey = request.getfixturevalue(f"{algo}_privkey")
@@ -1263,6 +1359,31 @@ def test_create_csr_with_extensions(x509, rsa_privkey):
     assert res.startswith("-----BEGIN CERTIFICATE REQUEST-----")
 
 
+@pytest.mark.parametrize("encoding", ["pem", "der"])
+def test_create_csr_write_to_path(x509, encoding, rsa_privkey, tmp_path):
+    tgt = tmp_path / "csr"
+    x509.create_csr(private_key=rsa_privkey, encoding=encoding, path=str(tgt))
+    assert tgt.exists()
+    if encoding == "pem":
+        assert tgt.read_text().startswith("-----BEGIN CERTIFICATE REQUEST-----")
+
+
+@pytest.mark.parametrize("encoding", ["pem", "der"])
+def test_create_csr_write_to_path_overwrite(x509, encoding, rsa_privkey, tmp_path):
+    tgt = tmp_path / "cert"
+    tgt.write_text("occupied")
+    assert tgt.exists()
+    x509.create_csr(private_key=rsa_privkey, encoding=encoding, path=str(tgt))
+    if encoding == "pem":
+        assert tgt.read_text().startswith("-----BEGIN CERTIFICATE REQUEST-----")
+
+
+def test_create_csr_raw(x509, rsa_privkey):
+    res = x509.create_csr(private_key=rsa_privkey, raw=True)
+    assert isinstance(res, bytes)
+    assert res.startswith(b"-----BEGIN CERTIFICATE REQUEST-----")
+
+
 @pytest.mark.slow_test
 @pytest.mark.parametrize("algo", ["rsa", "ec", "ed25519", "ed448"])
 def test_create_private_key(x509, algo):
@@ -1291,6 +1412,31 @@ def test_create_private_key_der(x509):
 def test_create_private_key_pkcs12(x509, passphrase):
     res = x509.create_private_key(algo="ec", encoding="pkcs12", passphrase=passphrase)
     assert base64.b64decode(res)
+
+
+@pytest.mark.parametrize("encoding", ["pem", "der"])
+def test_create_private_key_write_to_path(x509, encoding, tmp_path):
+    tgt = tmp_path / "csr"
+    x509.create_private_key(encoding=encoding, path=str(tgt))
+    assert tgt.exists()
+    if encoding == "pem":
+        assert tgt.read_text().startswith("-----BEGIN PRIVATE KEY-----")
+
+
+@pytest.mark.parametrize("encoding", ["pem", "der"])
+def test_create_private_key_write_to_path_overwrite(x509, encoding, tmp_path):
+    tgt = tmp_path / "cert"
+    tgt.write_text("occupied")
+    assert tgt.exists()
+    x509.create_private_key(encoding=encoding, path=str(tgt))
+    if encoding == "pem":
+        assert tgt.read_text().startswith("-----BEGIN PRIVATE KEY-----")
+
+
+def test_create_private_key_raw(x509):
+    res = x509.create_private_key(raw=True)
+    assert isinstance(res, bytes)
+    assert res.startswith(b"-----BEGIN PRIVATE KEY-----")
 
 
 @pytest.mark.parametrize(
@@ -1519,6 +1665,167 @@ def test_read_certificates(x509, cert_exts, cert_exts_read, tmp_path):
     res = x509.read_certificates(str(tmp_path / "*"))
     assert res
     assert res == {str(cert): cert_exts_read}
+
+
+# Deprecated arguments
+
+
+@pytest.mark.parametrize("arg", [{"version": 3}, {"serial_bits": 64}, {"text": True}])
+def test_create_certificate_should_not_fail_with_removed_args(x509, arg, rsa_privkey):
+    with pytest.deprecated_call():
+        res = x509.create_certificate(
+            signing_private_key=rsa_privkey, CN="success", days_valid=1, **arg
+        )
+    assert res.startswith("-----BEGIN CERTIFICATE-----")
+    cert = _get_cert(res)
+    assert cert.subject.rfc4514_string() == "CN=success"
+
+
+def test_create_certificate_warns_about_algorithm_renaming(x509, rsa_privkey):
+    with pytest.deprecated_call():
+        res = x509.create_certificate(
+            signing_private_key=rsa_privkey, days_valid=1, algorithm="sha512"
+        )
+    assert res.startswith("-----BEGIN CERTIFICATE-----")
+    cert = _get_cert(res)
+    assert isinstance(cert.signature_hash_algorithm, hashes.SHA512)
+
+
+def test_create_certificate_warns_about_long_name_attributes(x509, rsa_privkey):
+    with pytest.deprecated_call():
+        res = x509.create_certificate(
+            signing_private_key=rsa_privkey, days_valid=1, commonName="success"
+        )
+    assert res.startswith("-----BEGIN CERTIFICATE-----")
+    cert = _get_cert(res)
+    assert cert.subject.rfc4514_string() == "CN=success"
+
+
+def test_create_certificate_warns_about_long_extensions(x509, rsa_privkey):
+    kwarg = {"X509v3 Basic Constraints": "critical CA:TRUE, pathlen:1"}
+    with pytest.deprecated_call():
+        res = x509.create_certificate(
+            signing_private_key=rsa_privkey, days_valid=1, **kwarg
+        )
+    assert res.startswith("-----BEGIN CERTIFICATE-----")
+    cert = _get_cert(res)
+    assert len(cert.extensions) == 1
+    assert isinstance(cert.extensions[0].value, cx509.BasicConstraints)
+    assert cert.extensions[0].critical
+    assert cert.extensions[0].value.ca
+    assert cert.extensions[0].value.path_length == 1
+
+
+@pytest.mark.parametrize("arg", [{"version": 1}, {"text": True}])
+def test_create_csr_should_not_fail_with_removed_args(x509, arg, rsa_privkey):
+    with pytest.deprecated_call():
+        res = x509.create_csr(private_key=rsa_privkey, CN="success", **arg)
+    assert res.startswith("-----BEGIN CERTIFICATE REQUEST-----")
+
+
+def test_create_csr_warns_about_algorithm_renaming(x509, rsa_privkey):
+    with pytest.deprecated_call():
+        res = x509.create_csr(private_key=rsa_privkey, algorithm="sha512")
+    assert res.startswith("-----BEGIN CERTIFICATE REQUEST-----")
+    csr = cx509.load_pem_x509_csr(res.encode())
+    assert isinstance(csr.signature_hash_algorithm, hashes.SHA512)
+
+
+def test_create_csr_warns_about_long_name_attributes(x509, rsa_privkey):
+    with pytest.deprecated_call():
+        res = x509.create_csr(private_key=rsa_privkey, commonName="success")
+    assert res.startswith("-----BEGIN CERTIFICATE REQUEST-----")
+    csr = cx509.load_pem_x509_csr(res.encode())
+    assert csr.subject.rfc4514_string() == "CN=success"
+
+
+def test_create_csr_warns_about_long_extensions(x509, rsa_privkey):
+    kwarg = {"X509v3 Basic Constraints": "critical CA:FALSE"}
+    with pytest.deprecated_call():
+        res = x509.create_csr(private_key=rsa_privkey, **kwarg)
+    assert res.startswith("-----BEGIN CERTIFICATE REQUEST-----")
+    csr = cx509.load_pem_x509_csr(res.encode())
+    assert len(csr.extensions) == 1
+    assert isinstance(csr.extensions[0].value, cx509.BasicConstraints)
+    assert csr.extensions[0].critical
+    assert csr.extensions[0].value.ca is False
+    assert csr.extensions[0].value.path_length is None
+
+
+@pytest.mark.parametrize("arg", [{"text": True}])
+def test_create_crl_should_not_fail_with_removed_args(x509, arg, crl_args):
+    crl_args["days_valid"] = 7
+    with pytest.deprecated_call():
+        res = x509.create_crl(**crl_args, **arg)
+    assert res.startswith("-----BEGIN X509 CRL-----")
+
+
+def test_create_crl_should_recognize_old_style_revoked(x509, crl_args, crl_revoked):
+    revoked = [
+        {f"key_{i}": [{"serial_number": rev["serial_number"]}]}
+        for i, rev in enumerate(crl_revoked)
+    ]
+    crl_args["revoked"] = revoked
+    crl_args["days_valid"] = 7
+    with pytest.deprecated_call():
+        res = x509.create_crl(**crl_args)
+    crl = cx509.load_pem_x509_crl(res.encode())
+    assert len(crl) == len(crl_revoked)
+
+
+def test_create_crl_should_recognize_old_style_reason(x509, crl_args):
+    revoked = [{"key_1": [{"serial_number": "01337A"}, {"reason": "keyCompromise"}]}]
+    crl_args["revoked"] = revoked
+    crl_args["days_valid"] = 7
+    with pytest.deprecated_call():
+        res = x509.create_crl(**crl_args)
+    crl = cx509.load_pem_x509_crl(res.encode())
+    assert len(crl) == 1
+    rev = crl.get_revoked_certificate_by_serial_number(78714)
+    assert rev
+    assert rev.extensions
+    assert len(rev.extensions) == 1
+    assert isinstance(rev.extensions[0].value, cx509.CRLReason)
+
+
+@pytest.mark.parametrize(
+    "arg", [{"cipher": "aes_256_cbc"}, {"verbose": True}, {"text": True}]
+)
+def test_create_private_key_should_not_fail_with_removed_args(x509, arg, crl_args):
+    with pytest.deprecated_call():
+        res = x509.create_private_key(**arg)
+    assert res.startswith("-----BEGIN PRIVATE KEY-----")
+
+
+def test_create_private_key_warns_about_bits_renaming(x509):
+    with pytest.deprecated_call():
+        res = x509.create_private_key(bits=3072)
+    pk = load_pem_private_key(res.encode(), None)
+    assert pk.key_size == 3072
+
+
+def test_get_public_key_should_not_fail_with_removed_arg(x509, rsa_privkey):
+    with pytest.deprecated_call():
+        res = x509.get_public_key(rsa_privkey, asObj=True)
+    assert res.startswith("-----BEGIN PUBLIC KEY-----")
+
+
+def test_get_signing_policy_warns_about_long_names(x509):
+    with pytest.deprecated_call():
+        res = x509.get_signing_policy("testdeprecatednamepolicy")
+    assert res
+    assert "commonName" not in res
+    assert "CN" in res
+    assert res["CN"] == "deprecated"
+
+
+def test_get_signing_policy_warns_about_long_exts(x509):
+    with pytest.deprecated_call():
+        res = x509.get_signing_policy("testdeprecatedextpolicy")
+    assert res
+    assert "X509v3 Basic Constraints" not in res
+    assert "basicConstraints" in res
+    assert res["basicConstraints"] == "critical CA:FALSE"
 
 
 def _get_cert(cert, encoding="pem", passphrase=None):

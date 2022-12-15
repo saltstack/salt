@@ -154,6 +154,12 @@ def ca_minion_config(x509_minion_id, ca_cert, ca_key, ca_key_enc):
                 "signing_private_key": ca_key,
                 "subject": "CN=from_signing_policy",
             },
+            "testdeprecatednamepolicy": {
+                "commonName": "deprecated",
+            },
+            "testdeprecatedextpolicy": {
+                "X509v3 Basic Constraints": "critical CA:FALSE",
+            },
         },
         "features": {
             "x509_v2": True,
@@ -598,6 +604,34 @@ def test_get_signing_policy_remote(x509_salt_call_cli, cert_args, ca_minion_conf
     )
     assert ret.data
     assert ret.data == testpolicy
+
+
+def test_get_signing_policy_remote_deprecated_name(
+    x509_salt_call_cli, cert_args, ca_minion_config
+):
+    ret = x509_salt_call_cli.run(
+        "x509.get_signing_policy",
+        "testdeprecatednamepolicy",
+        ca_server=cert_args["ca_server"],
+    )
+    assert ret.data
+    assert "commonName" not in ret.data
+    assert "CN" in ret.data
+    assert ret.data["CN"] == "deprecated"
+
+
+def test_get_signing_policy_remote_deprecated_ext(
+    x509_salt_call_cli, cert_args, ca_minion_config
+):
+    ret = x509_salt_call_cli.run(
+        "x509.get_signing_policy",
+        "testdeprecatedextpolicy",
+        ca_server=cert_args["ca_server"],
+    )
+    assert ret.data
+    assert "X509v3 Basic Constraints" not in ret.data
+    assert "basicConstraints" in ret.data
+    assert ret.data["basicConstraints"] == "critical CA:FALSE"
 
 
 def test_sign_remote_certificate_ext_override(
