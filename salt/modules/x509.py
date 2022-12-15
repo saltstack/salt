@@ -37,7 +37,6 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
-from salt.features import features
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.utils.odict import OrderedDict
 
@@ -92,7 +91,8 @@ def __virtual__():
     """
     only load this module if m2crypto is available
     """
-    if features.get("x509_v2"):
+    # salt.features appears to not be setup when invoked via peer publishing
+    if not __opts__.get("features").get("x509_v2"):
         return (False, "Superseded, using x509_v2")
     if HAS_M2:
         salt.utils.versions.warn_until(

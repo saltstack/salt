@@ -18,6 +18,7 @@ from cryptography.x509.oid import SubjectInformationAccessOID
 
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.odict import OrderedDict
 
@@ -32,102 +33,19 @@ CRYPTOGRAPHY_VERSION = tuple(int(x) for x in cryptography.__version__.split(".")
 
 log = logging.getLogger(__name__)
 
+NAME_ATTRS_ALT_NAMES = {
+    "CN": ("commonName",),
+    "L": ("localityName",),
+    "ST": ("stateOrProvinceName",),
+    "O": ("organizationName",),
+    "OU": ("organizationUnitName",),
+    "GN": ("givenName",),
+    "SN": ("surname",),
+    "MAIL": ("Email", "emailAddress"),
+    "SERIALNUMBER": ("serialNumber",),
+}
 
-EXTNAMES = [
-    (
-        "basicConstraints",
-        "X509v3 Basic Constraints",
-        cx509.ExtensionOID.BASIC_CONSTRAINTS,
-    ),
-    ("keyUsage", "X509v3 Key Usage", cx509.ExtensionOID.KEY_USAGE),
-    (
-        "extendedKeyUsage",
-        "X509v3 Extended Key Usage",
-        cx509.ExtensionOID.EXTENDED_KEY_USAGE,
-    ),
-    (
-        "subjectKeyIdentifier",
-        "X509v3 Subject Key Identifier",
-        cx509.ExtensionOID.SUBJECT_KEY_IDENTIFIER,
-    ),
-    (
-        "authorityKeyIdentifier",
-        "X509v3 Authority Key Identifier",
-        cx509.ExtensionOID.AUTHORITY_KEY_IDENTIFIER,
-    ),
-    (
-        "issuerAltName",
-        "X509v3 Issuer Alternative Name",
-        cx509.ExtensionOID.ISSUER_ALTERNATIVE_NAME,
-    ),
-    (
-        "authorityInfoAccess",
-        "Authority Information Access",
-        cx509.ExtensionOID.AUTHORITY_INFORMATION_ACCESS,
-    ),
-    (
-        "subjectAltName",
-        "X509v3 Subject Alternative Name",
-        cx509.ExtensionOID.SUBJECT_ALTERNATIVE_NAME,
-    ),
-    (
-        "crlDistributionPoints",
-        "X509v3 CRL Distribution Points",
-        cx509.ExtensionOID.CRL_DISTRIBUTION_POINTS,
-    ),
-    (
-        "issuingDistributionPoint",
-        "X509v3 Issuing Distribution Point",
-        cx509.ExtensionOID.ISSUING_DISTRIBUTION_POINT,
-    ),
-    (
-        "certificatePolicies",
-        "X509v3 Certificate Policies",
-        cx509.ExtensionOID.CERTIFICATE_POLICIES,
-    ),
-    (
-        "policyConstraints",
-        "X509v3 Policy Constraints",
-        cx509.ExtensionOID.POLICY_CONSTRAINTS,
-    ),
-    (
-        "inhibitAnyPolicy",
-        "X509v3 Inhibit Any Policy",
-        cx509.ExtensionOID.INHIBIT_ANY_POLICY,
-    ),
-    ("nameConstraints", "X509v3 Name Constraints", cx509.ExtensionOID.NAME_CONSTRAINTS),
-    ("noCheck", "OCSP No Check", cx509.ExtensionOID.OCSP_NO_CHECK),
-    ("tlsfeature", "TLS Feature", cx509.ExtensionOID.TLS_FEATURE),
-    ("nsComment", "Netscape Comment", None),
-    ("nsCertType", "Netscape Certificate Type", None),
-    ("cRLNumber", "X509v3 CRLNumber", cx509.ExtensionOID.CRL_NUMBER),
-    (
-        "deltaCRLIndicator",
-        "X509v3 Delta CRL Indicator",
-        cx509.ExtensionOID.DELTA_CRL_INDICATOR,
-    ),
-    ("freshestCRL", "x509v3 Freshest CRL", cx509.ExtensionOID.FRESHEST_CRL),
-]
-
-EXTNAMES_CRL_ENTRY = [
-    (
-        "certificateIssuer",
-        "x509v3 Certificate Issuer",
-        cx509.CRLEntryExtensionOID.CERTIFICATE_ISSUER,
-    ),
-    ("CRLReason", "X509v3 CRL Reason Code", cx509.CRLEntryExtensionOID.CRL_REASON),
-    ("invalidityDate", "Invalidity Date", cx509.CRLEntryExtensionOID.INVALIDITY_DATE),
-]
-
-
-class KEY_TYPE(Enum):
-    RSA = 1
-    EC = 2
-    ED25519 = 3
-    ED448 = 4
-
-
-NAME_OID = OrderedDict(
+NAME_ATTRS_OID = OrderedDict(
     [
         ("C", cx509.NameOID.COUNTRY_NAME),
         ("ST", cx509.NameOID.STATE_OR_PROVINCE_NAME),
@@ -143,6 +61,62 @@ NAME_OID = OrderedDict(
         ("SERIALNUMBER", cx509.NameOID.SERIAL_NUMBER),
     ]
 )
+
+EXTENSIONS_ALT_NAMES = {
+    "basicConstraints": ("X509v3 Basic Constraints",),
+    "keyUsage": ("X509v3 Key Usage",),
+    "extendedKeyUsage": ("X509v3 Extended Key Usage",),
+    "subjectKeyIdentifier": ("X509v3 Subject Key Identifier",),
+    "authorityKeyIdentifier": ("X509v3 Authority Key Identifier",),
+    # issuserAltName was a typo in the old x509 modules
+    "issuerAltName": ("X509v3 Issuer Alternative Name", "issuserAltName"),
+    "authorityInfoAccess": ("Authority Information Access",),
+    "subjectAltName": ("X509v3 Subject Alternative Name",),
+    "crlDistributionPoints": ("X509v3 CRL Distribution Points",),
+    "issuingDistributionPoint": ("X509v3 Issuing Distribution Point",),
+    "certificatePolicies": ("X509v3 Certificate Policies",),
+    "policyConstraints": ("X509v3 Policy Constraints",),
+    "inhibitAnyPolicy": ("X509v3 Inhibit Any Policy",),
+    "nameConstraints": ("X509v3 Name Constraints",),
+    "noCheck": ("OCSP No Check",),
+    "tlsfeature": ("TLS Feature",),
+    "nsComment": ("Netscape Comment",),
+    "nsCertType": ("Netscape Certificate Type",),
+    "cRLNumber": ("X509v3 CRLNumber",),
+    "deltaCRLIndicator": ("X509v3 Delta CRL Indicator",),
+    "freshestCRL": ("x509v3 Freshest CRL",),
+}
+
+EXTENSIONS_OID = {
+    "basicConstraints": cx509.ExtensionOID.BASIC_CONSTRAINTS,
+    "keyUsage": cx509.ExtensionOID.KEY_USAGE,
+    "extendedKeyUsage": cx509.ExtensionOID.EXTENDED_KEY_USAGE,
+    "subjectKeyIdentifier": cx509.ExtensionOID.SUBJECT_KEY_IDENTIFIER,
+    "authorityKeyIdentifier": cx509.ExtensionOID.AUTHORITY_KEY_IDENTIFIER,
+    "issuerAltName": cx509.ExtensionOID.ISSUER_ALTERNATIVE_NAME,
+    "authorityInfoAccess": cx509.ExtensionOID.AUTHORITY_INFORMATION_ACCESS,
+    "subjectAltName": cx509.ExtensionOID.SUBJECT_ALTERNATIVE_NAME,
+    "crlDistributionPoints": cx509.ExtensionOID.CRL_DISTRIBUTION_POINTS,
+    "issuingDistributionPoint": cx509.ExtensionOID.ISSUING_DISTRIBUTION_POINT,
+    "certificatePolicies": cx509.ExtensionOID.CERTIFICATE_POLICIES,
+    "policyConstraints": cx509.ExtensionOID.POLICY_CONSTRAINTS,
+    "inhibitAnyPolicy": cx509.ExtensionOID.INHIBIT_ANY_POLICY,
+    "nameConstraints": cx509.ExtensionOID.NAME_CONSTRAINTS,
+    "noCheck": cx509.ExtensionOID.OCSP_NO_CHECK,
+    "tlsfeature": cx509.ExtensionOID.TLS_FEATURE,
+    "nsComment": None,
+    "nsCertType": None,
+    "cRLNumber": cx509.ExtensionOID.CRL_NUMBER,
+    "deltaCRLIndicator": cx509.ExtensionOID.DELTA_CRL_INDICATOR,
+    "freshestCRL": cx509.ExtensionOID.FRESHEST_CRL,
+}
+
+EXTENSIONS_CRL_ENTRY_OID = {
+    "certificateIssuer": cx509.CRLEntryExtensionOID.CERTIFICATE_ISSUER,
+    "CRLReason": cx509.CRLEntryExtensionOID.CRL_REASON,
+    "invalidityDate": cx509.CRLEntryExtensionOID.INVALIDITY_DATE,
+}
+
 
 EXTENDED_KEY_USAGE_OID = {
     "serverAuth": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.1"),
@@ -196,12 +170,6 @@ CRL_EXTS = (
     "issuingDistributionPoint",
 )
 
-CRL_ENTRY_EXTS = (
-    "certificateIssuer",
-    "CRLReason",
-    "invalidityDate",
-)
-
 CSR_FORBIDDEN = (
     "authorityInfoAccess",
     "authorityKeyIdentifier",
@@ -210,10 +178,42 @@ CSR_FORBIDDEN = (
 )
 
 
+class KEY_TYPE(Enum):
+    RSA = 1
+    EC = 2
+    ED25519 = 3
+    ED448 = 4
+
+
 PEM_BEGIN = b"-----BEGIN"
 PEM_END = b"-----END"
 
 TIME_FMT = "%Y-%m-%d %H:%M:%S"
+
+
+def ensure_cert_kwargs_compat(kwargs):
+    """
+    Ensures the deprecated long form of Name Attribute and
+    extension definitions is still recognized, but warned about.
+    """
+    for name, long_names in NAME_ATTRS_ALT_NAMES.items():
+        for long_name in long_names:
+            if long_name in kwargs:
+                salt.utils.versions.warn_until(
+                    "Potassium",
+                    f"Found {long_name} in keyword args. Please migrate to the short name: {name}",
+                )
+                kwargs[name] = kwargs.pop(long_name)
+
+    for extname, long_names in EXTENSIONS_ALT_NAMES.items():
+        for long_name in long_names:
+            if long_name in kwargs:
+                salt.utils.versions.warn_until(
+                    "Potassium",
+                    f"Found {long_name} in keyword args. Please migrate to the short name: {extname}",
+                )
+                kwargs[extname] = kwargs.pop(long_name)
+    return kwargs
 
 
 def build_crt(
@@ -310,14 +310,11 @@ def build_crt(
     builder = builder.not_valid_before(not_before).not_valid_after(not_after)
 
     ext_present = []
-    for extname, extlongname, _ in EXTNAMES:
+    for extname in EXTENSIONS_OID:
         if extname not in CERT_EXTS:
             continue
-        if extname in kwargs or extlongname in kwargs:
-            try:
-                val = kwargs[extname]
-            except KeyError:
-                val = kwargs[extlongname]
+        if extname in kwargs:
+            val = kwargs[extname]
             # signing policies need to be able to force-unset extensions
             if val is None:
                 continue
@@ -334,7 +331,7 @@ def build_crt(
             )
             ext_present.append(extname)
     if csr:
-        for extname, _, oid in EXTNAMES:
+        for extname, oid in EXTENSIONS_OID.items():
             if any(
                 (
                     extname in ext_present,
@@ -363,7 +360,7 @@ def build_csr(private_key, private_key_passphrase=None, subject=None, **kwargs):
     builder = cx509.CertificateSigningRequestBuilder()
     subject_name = _get_dn(subject or kwargs)
     builder = builder.subject_name(subject_name)
-    for extname, extlongname, oid in EXTNAMES:
+    for extname, oid in EXTENSIONS_OID.items():
         if any(
             (
                 extname not in CERT_EXTS,
@@ -371,9 +368,10 @@ def build_csr(private_key, private_key_passphrase=None, subject=None, **kwargs):
             )
         ):
             continue
-        if extname in kwargs or extlongname in kwargs:
-            val = kwargs.get(extname) or kwargs[extlongname]
-            ext, critical = _create_extension(extname, val, subject_pubkey=public_key)
+        if extname in kwargs:
+            ext, critical = _create_extension(
+                extname, kwargs[extname], subject_pubkey=public_key
+            )
             builder = builder.add_extension(
                 ext,
                 critical=critical,
@@ -440,21 +438,21 @@ def build_crl(
             serial_number=serial_number, revocation_date=revocation_date
         )
         for extname, val in rev.get("extensions", {}).items():
-            if extname not in CRL_ENTRY_EXTS:
+            if extname not in EXTENSIONS_CRL_ENTRY_OID:
+                log.warning("Ignoring invalid CRL entry extension: %s", extname)
                 continue
             ext, critical = _create_extension(extname, val)
             revoked_cert = revoked_cert.add_extension(ext, critical=critical)
         builder = builder.add_revoked_certificate(revoked_cert.build())
-    for extname, _, _ in EXTNAMES:
+    for extname, val in extensions.items():
         if extname not in CRL_EXTS:
+            log.warning("Ignoring invalid CRL extension: %s", extname)
             continue
-        if extname in extensions:
-            val = extensions[extname]
-            ext, critical = _create_extension(extname, val, ca_crt=signing_cert)
-            builder = builder.add_extension(
-                ext,
-                critical=critical,
-            )
+        ext, critical = _create_extension(extname, val, ca_crt=signing_cert)
+        builder = builder.add_extension(
+            ext,
+            critical=critical,
+        )
     return builder, signing_private_key
 
 
@@ -562,9 +560,30 @@ def merge_signing_policy(policy, kwargs):
         return kwargs
     # ensure we don't modify data that is used elsewhere
     policy = copy.deepcopy(policy)
+
+    # Don't immediately break for the long form of name attributes
+    for name, long_names in NAME_ATTRS_ALT_NAMES.items():
+        for long_name in long_names:
+            if long_name in kwargs:
+                salt.utils.versions.warn_until(
+                    "Potassium",
+                    f"Found {long_name} in keyword args. Please migrate to the short name: {name}",
+                )
+                kwargs[name] = kwargs.pop(long_name)
+
+    # Don't immediately break for the long form of extensions
+    for extname, long_names in EXTENSIONS_ALT_NAMES.items():
+        for long_name in long_names:
+            if long_name in kwargs:
+                salt.utils.versions.warn_until(
+                    "Potassium",
+                    f"Found {long_name} in keyword args. Please migrate to the short name: {extname}",
+                )
+                kwargs[extname] = kwargs.pop(long_name)
+
     if "subject" in kwargs:
         # a) ensure subject in kwargs does not override CN etc from signing policy
-        if any(x in policy for x in NAME_OID):
+        if any(x in policy for x in NAME_ATTRS_OID):
             kwargs.pop("subject")
         # b) subject is not enforced or if it is a string, it cannot be overridden
         elif "subject" not in policy or not isinstance(policy["subject"], (dict, list)):
@@ -1784,7 +1803,7 @@ def _get_dn(dn):
         return cx509.Name([_get_rdn(x) for x in dn])
     elif isinstance(dn, dict):
         parsed = []
-        for name, oid in NAME_OID.items():
+        for name, oid in NAME_ATTRS_OID.items():
             if name in dn:
                 parsed.append(cx509.NameAttribute(oid, dn[name]))
         return cx509.Name(parsed)

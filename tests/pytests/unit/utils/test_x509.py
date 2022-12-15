@@ -1221,9 +1221,9 @@ def test_parse_general_names_rejects_invalid(inpt):
         pytest.param(
             "CN=example.com,O=Example Inc,C=US",
             [
-                cx509.NameAttribute(x509.NAME_OID["C"], "US"),
-                cx509.NameAttribute(x509.NAME_OID["O"], "Example Inc"),
-                cx509.NameAttribute(x509.NAME_OID["CN"], "example.com"),
+                cx509.NameAttribute(x509.NAME_ATTRS_OID["C"], "US"),
+                cx509.NameAttribute(x509.NAME_ATTRS_OID["O"], "Example Inc"),
+                cx509.NameAttribute(x509.NAME_ATTRS_OID["CN"], "example.com"),
             ],
             marks=pytest.mark.skipif(
                 CRYPTOGRAPHY_VERSION[0] < 37,
@@ -1233,9 +1233,9 @@ def test_parse_general_names_rejects_invalid(inpt):
         pytest.param(
             ["C=US", "O=Example Inc", "CN=example.com"],
             [
-                cx509.NameAttribute(x509.NAME_OID["C"], "US"),
-                cx509.NameAttribute(x509.NAME_OID["O"], "Example Inc"),
-                cx509.NameAttribute(x509.NAME_OID["CN"], "example.com"),
+                cx509.NameAttribute(x509.NAME_ATTRS_OID["C"], "US"),
+                cx509.NameAttribute(x509.NAME_ATTRS_OID["O"], "Example Inc"),
+                cx509.NameAttribute(x509.NAME_ATTRS_OID["CN"], "example.com"),
             ],
             marks=pytest.mark.skipif(
                 CRYPTOGRAPHY_VERSION[0] < 37,
@@ -1245,12 +1245,12 @@ def test_parse_general_names_rejects_invalid(inpt):
         pytest.param(
             ["C=US", "O=Example Inc", "OU=foo+CN=example.com"],
             [
-                cx509.NameAttribute(x509.NAME_OID["C"], "US"),
-                cx509.NameAttribute(x509.NAME_OID["O"], "Example Inc"),
+                cx509.NameAttribute(x509.NAME_ATTRS_OID["C"], "US"),
+                cx509.NameAttribute(x509.NAME_ATTRS_OID["O"], "Example Inc"),
                 cx509.RelativeDistinguishedName(
                     {
-                        cx509.NameAttribute(x509.NAME_OID["CN"], "example.com"),
-                        cx509.NameAttribute(x509.NAME_OID["OU"], "foo"),
+                        cx509.NameAttribute(x509.NAME_ATTRS_OID["CN"], "example.com"),
+                        cx509.NameAttribute(x509.NAME_ATTRS_OID["OU"], "foo"),
                     }
                 ),
             ],
@@ -1262,9 +1262,9 @@ def test_parse_general_names_rejects_invalid(inpt):
         (
             {"CN": "example.com", "O": "Example Inc", "C": "US", "irrelevant": "bar"},
             [
-                cx509.NameAttribute(x509.NAME_OID["C"], "US"),
-                cx509.NameAttribute(x509.NAME_OID["O"], "Example Inc"),
-                cx509.NameAttribute(x509.NAME_OID["CN"], "example.com"),
+                cx509.NameAttribute(x509.NAME_ATTRS_OID["C"], "US"),
+                cx509.NameAttribute(x509.NAME_ATTRS_OID["O"], "Example Inc"),
+                cx509.NameAttribute(x509.NAME_ATTRS_OID["CN"], "example.com"),
             ],
         ),
     ],
