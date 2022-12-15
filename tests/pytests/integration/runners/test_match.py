@@ -170,11 +170,15 @@ class TestMatchCompoundRunner:
         ],
     )
     def test_match_compound_matches(self, match_salt_run_cli, expr, expected):
+        if expected:
+            expected = "match-minion-alice"
         ret = match_salt_run_cli.run(
             "match.compound_matches", expr, "match-minion-alice"
         )
         assert ret.returncode == 0
-        assert bool(ret.data) is expected
+        assert ret.data
+        assert "res" in ret.data
+        assert ret.data["res"] == expected
 
     @pytest.mark.usefixtures("eve_cached")
     def test_match_compound_matches_only_allows_exact_pillar_matching(
@@ -188,7 +192,9 @@ class TestMatchCompoundRunner:
             "match.compound_matches", "I@name:alic*", "match-minion-eve"
         )
         assert ret.returncode == 0
-        assert ret.data is False
+        assert ret.data
+        assert "res" in ret.data
+        assert ret.data["res"] is False
 
     @pytest.mark.parametrize(
         "expr,expected",
@@ -207,11 +213,15 @@ class TestMatchCompoundRunner:
     def test_match_compound_matches_with_uncached_minion_data(
         self, match_salt_run_cli, expr, expected
     ):
+        if expected:
+            expected = "match-minion-alice"
         ret = match_salt_run_cli.run(
             "match.compound_matches", expr, "match-minion-alice"
         )
         assert ret.returncode == 0
-        assert bool(ret.data) is expected
+        assert ret.data
+        assert "res" in ret.data
+        assert ret.data["res"] == expected
 
     @pytest.mark.parametrize(
         "expr,expected",
@@ -228,18 +238,22 @@ class TestMatchCompoundRunner:
     def test_match_compound_matches_when_minion_is_down(
         self, match_salt_run_cli, expr, expected
     ):
+        if expected:
+            expected = "match-minion-alice"
         ret = match_salt_run_cli.run(
             "match.compound_matches", expr, "match-minion-alice"
         )
         assert ret.returncode == 0
-        assert bool(ret.data) is expected
+        assert ret.data
+        assert "res" in ret.data
+        assert ret.data["res"] == expected
 
     @pytest.mark.parametrize(
         "minion_id",
         [
             "hi\\there",
             "my/minion",
-            "nonexistent",
+            "../../../../../../../../../etc/shadow",
         ],
     )
     def test_match_compound_matches_with_invalid_minion_id(
@@ -247,7 +261,9 @@ class TestMatchCompoundRunner:
     ):
         ret = match_salt_run_cli.run("match.compound_matches", "*", minion_id)
         assert ret.returncode == 0
-        assert ret.data is False
+        assert ret.data
+        assert "res" in ret.data
+        assert ret.data["res"] is False
 
     @pytest.mark.parametrize(
         "expr,expected",
@@ -263,11 +279,15 @@ class TestMatchCompoundRunner:
     def test_match_compound_matches_as_peer_run(
         self, match_salt_call_cli, expr, expected
     ):
+        if expected:
+            expected = "match-minion-alice"
         ret = match_salt_call_cli.run(
             "publish.runner", "match.compound_matches", [expr, "match-minion-alice"]
         )
         assert ret.returncode == 0
-        assert bool(ret.data) is expected
+        assert ret.data
+        assert "res" in ret.data
+        assert ret.data["res"] == expected
 
 
 class TestMatchCompoundRunnerWithoutMinionDataCache:
@@ -293,4 +313,6 @@ class TestMatchCompoundRunnerWithoutMinionDataCache:
             "match.compound_matches", expr, "match-minion-alice"
         )
         assert ret.returncode == 0
-        assert ret.data is False
+        assert ret.data
+        assert "res" in ret.data
+        assert ret.data["res"] is False
