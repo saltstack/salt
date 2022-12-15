@@ -775,6 +775,10 @@ def crl_managed(
             - extensions:
                 cRLNumber: auto
     """
+    if "text" in kwargs:
+        salt.utils.versions.kwargs_warn_until(["text"], "Potassium")
+        kwargs.pop("text")
+
     if days_valid is None:
         try:
             salt.utils.versions.warn_until(
@@ -794,6 +798,27 @@ def crl_managed(
             days_remaining = 30
         except RuntimeError:
             days_remaining = 3
+
+    revoked_parsed = []
+    for rev in revoked:
+        parsed = {}
+        if len(rev) == 1 and isinstance(rev[next(iter(rev))], list):
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "Revoked certificates should be specified as a simple list of dicts.",
+            )
+            for val in rev[next(iter(rev))]:
+                parsed.update(val)
+        if "reason" in (parsed or rev):
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `reason` parameter for revoked certificates should be specified in extensions:CRLReason.",
+            )
+            salt.utils.dictupdate.set_dict_key_value(
+                (parsed or rev), "extensions:CRLReason", (parsed or rev).pop("reason")
+            )
+        revoked_parsed.append(parsed or rev)
+    revoked = revoked_parsed
 
     ret = {
         "name": name,
@@ -1295,6 +1320,25 @@ def private_key_managed(
               - x509: /etc/pki/www.crt
         {%- endif %}
     """
+    # Deprecation checks vs the old x509 module
+    if "bits" in kwargs:
+        salt.utils.versions.warn_until(
+            "Potassium",
+            "`bits` has been renamed to `keysize`. Please update your code.",
+        )
+        keysize = kwargs.pop("bits")
+
+    ignored_params = {"cipher", "verbose", "text"}.intersection(
+        kwargs
+    )  # path, overwrite
+    if ignored_params:
+        salt.utils.versions.kwargs_warn_until(ignored_params, "Potassium")
+        for x in ignored_params:
+            kwargs.pop(x)
+
+    if kwargs:
+        raise SaltInvocationError(f"Unrecognized keyword arguments: {list(kwargs)}")
+
     ret = {
         "name": name,
         "changes": {},

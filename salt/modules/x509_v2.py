@@ -512,6 +512,11 @@ def create_certificate(
             "Creating a PKCS12-encoded certificate without embedded private key "
             "is unsupported"
         )
+    if "signing_private_key" not in kwargs and not ca_server:
+        raise SaltInvocationError(
+            "Creating a certificate locally at least requires a signing private key."
+        )
+
     if path and not overwrite and __salt__["file.file_exists"](path):
         return f"The file at {path} exists and overwrite was set to false"
     if ca_server:
@@ -927,7 +932,7 @@ def create_crl(
             salt.utils.dictupdate.set_dict_key_value(
                 (parsed or rev), "extensions:CRLReason", (parsed or rev).pop("reason")
             )
-        revoked_parsed.append(rev)
+        revoked_parsed.append(parsed or rev)
     revoked = revoked_parsed
 
     if encoding not in ["der", "pem"]:
@@ -1222,11 +1227,13 @@ def create_private_key(
         )
         keysize = kwargs.pop("bits")
 
-    ignored_params = {"cipher", "verbose"}.intersection(kwargs)  # path, overwrite
+    ignored_params = {"cipher", "verbose", "text"}.intersection(
+        kwargs
+    )  # path, overwrite
     if ignored_params:
         salt.utils.versions.kwargs_warn_until(ignored_params, "Potassium")
         for x in ignored_params:
-            kwargs.pop("x")
+            kwargs.pop(x)
 
     if kwargs:
         raise SaltInvocationError(f"Unrecognized keyword arguments: {list(kwargs)}")
