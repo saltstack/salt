@@ -286,6 +286,7 @@ import os
 import posixpath
 import re
 import shutil
+import stat
 import sys
 import time
 import traceback
@@ -1537,6 +1538,7 @@ def symlink(
     win_inheritance=None,
     atomic=False,
     disallow_copy_and_unlink=False,
+    inherit_user_and_group=False,
     **kwargs
 ):
     """
@@ -1581,11 +1583,13 @@ def symlink(
 
     user
         The user to own the file, this defaults to the user salt is running as
-        on the minion
+        on the minion unless the link already exists and
+        ``inherit_user_and_group`` is set
 
     group
         The group ownership set for the file, this defaults to the group salt
-        is running as on the minion. On Windows, this is ignored
+        is running as on the minion unless the link already exists and
+        ``inherit_user_and_group`` is set. On Windows, this is ignored
 
     mode
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
@@ -1631,6 +1635,15 @@ def symlink(
         unlink" approach, which is required for moving across filesystems.
 
         .. versionadded:: 3006.0
+
+    inherit_user_and_group
+        If set to ``True``, the link already exists, and either ``user`` or
+        ``group`` are not set, this parameter will inform Salt to pull the user
+        and group information from the existing link and use it where ``user``
+        or ``group`` is not set. The ``user`` and ``group`` parameters will
+        override this behavior.
+
+        .. versionadded:: 3006.0
     """
     name = os.path.expanduser(name)
 
@@ -1642,6 +1655,18 @@ def symlink(
     mode = salt.utils.files.normalize_mode(mode)
 
     user = _test_owner(kwargs, user=user)
+
+    if (
+        inherit_user_and_group
+        and (user is None or group is None)
+        and __salt__["file.is_link"](name)
+    ):
+        cur_user, cur_group = _get_symlink_ownership(name)
+        if user is None:
+            user = cur_user
+        if group is None:
+            group = cur_group
+
     if user is None:
         user = __opts__["user"]
 
@@ -2049,15 +2074,18 @@ def tidied(
 
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    if age_size_logical_operator.upper() not in ["AND", "OR"]:
+    age_size_logical_operator = age_size_logical_operator.upper()
+    if age_size_logical_operator not in ["AND", "OR"]:
         age_size_logical_operator = "OR"
         log.warning("Logical operator must be 'AND' or 'OR'. Defaulting to 'OR'...")
 
-    if age_size_only and age_size_only.lower() not in ["age", "size"]:
-        age_size_only = None
-        log.warning(
-            "age_size_only parameter must be 'age' or 'size' if set. Defaulting to 'None'..."
-        )
+    if age_size_only:
+        age_size_only = age_size_only.lower()
+        if age_size_only not in ["age", "size"]:
+            age_size_only = None
+            log.warning(
+                "age_size_only parameter must be 'age' or 'size' if set. Defaulting to 'None'..."
+            )
 
     # Check preconditions
     if not os.path.isabs(name):
@@ -2110,44 +2138,41 @@ def tidied(
             path = os.path.join(root, elem)
             try:
                 if os.path.islink(path):
-                    # Get timestamp of symlink (not symlinked file)
-                    if time_comparison == "ctime":
-                        mytimestamp = os.lstat(path).st_ctime
-                    elif time_comparison == "mtime":
-                        mytimestamp = os.lstat(path).st_mtime
-                    else:
-                        mytimestamp = os.lstat(path).st_atime
                     if not rmlinks:
                         deleteme = False
+                    # Get info of symlink (not symlinked file)
+                    mystat = os.lstat(path)
                 else:
-                    # Get timestamp of file or directory
-                    if time_comparison == "ctime":
-                        mytimestamp = os.path.getctime(path)
-                    elif time_comparison == "mtime":
-                        mytimestamp = os.path.getmtime(path)
-                    else:
-                        mytimestamp = os.path.getatime(path)
+                    mystat = os.stat(path)
 
-                    if elem in dirs:
+                    if stat.S_ISDIR(mystat.st_mode):
                         # Check if directories should be deleted at all
                         deleteme = rmdirs
                     else:
                         # Get size of regular file
-                        mysize = os.path.getsize(path)
+                        mysize = mystat.st_size
+
+                if time_comparison == "ctime":
+                    mytimestamp = mystat.st_ctime
+                elif time_comparison == "mtime":
+                    mytimestamp = mystat.st_mtime
+                else:
+                    mytimestamp = mystat.st_atime
 
                 # Calculate the age and set the name to match
                 myage = abs(today - date.fromtimestamp(mytimestamp))
+
                 filename = elem
                 if full_path_match:
                     filename = path
 
                 # Verify against given criteria, collect all elements that should be removed
-                if age_size_only and age_size_only.lower() in ["age", "size"]:
-                    if age_size_only.lower() == "age":
+                if age_size_only and age_size_only in {"age", "size"}:
+                    if age_size_only == "age":
                         compare_age_size = myage.days >= age
                     else:
                         compare_age_size = mysize >= size
-                elif age_size_logical_operator.upper() == "AND":
+                elif age_size_logical_operator == "AND":
                     compare_age_size = mysize >= size and myage.days >= age
                 else:
                     compare_age_size = mysize >= size or myage.days >= age
@@ -2156,6 +2181,8 @@ def tidied(
                     todelete.append(path)
             except FileNotFoundError:
                 continue
+            except PermissionError:
+                log.warning("Unable to read %s due to permissions error.", path)
 
     # Now delete the stuff
     if todelete:
@@ -2168,7 +2195,7 @@ def tidied(
         # Iterate over collected items
         try:
             for path in todelete:
-                __salt__["file.remove"](path, force=True)
+                __salt__["file.remove"](path)
                 ret["changes"]["removed"].append(path)
         except CommandExecutionError as exc:
             return _error(ret, "{}".format(exc))
@@ -3916,9 +3943,15 @@ def directory(
     if tchanges:
         ret["changes"].update(tchanges)
 
-    # Don't run through the reset of the function if there are no changes to be
-    # made
-    if __opts__["test"] or not ret["changes"]:
+    if __opts__["test"]:
+        ret["result"] = tresult
+        ret["comment"] = tcomment
+        return ret
+
+    # Don't run through the rest of the function if there are no changes to be
+    # made, except on windows since _check_directory_win just basically checks
+    # ownership and permissions
+    if not salt.utils.platform.is_windows() and not ret["changes"]:
         ret["result"] = tresult
         ret["comment"] = tcomment
         return ret
@@ -7401,7 +7434,7 @@ def copy_(
         process. For existing files and directories it's not enforced.
 
     dir_mode
-        .. versionadded:: 3006
+        .. versionadded:: 3006.0
 
         If directories are to be created, passing this option specifies the
         permissions for those directories. If this is not set, directories

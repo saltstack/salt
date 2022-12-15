@@ -7,12 +7,7 @@ import datetime
 import salt.utils.ssdp as ssdp
 import salt.utils.stringutils
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError:
-    pytest = None
+from tests.support.unit import TestCase
 
 
 class Mocks:
@@ -66,7 +61,6 @@ class Mocks:
         return factory
 
 
-@skipIf(pytest is None, "PyTest is missing")
 class SSDPBaseTestCase(TestCase, Mocks):
     """
     TestCase for SSDP-related parts.
@@ -145,7 +139,6 @@ class SSDPBaseTestCase(TestCase, Mocks):
             assert base.get_self_ip() == expected_ip
 
 
-@skipIf(pytest is None, "PyTest is missing")
 class SSDPFactoryTestCase(TestCase, Mocks):
     """
     Test socket protocol
@@ -377,7 +370,6 @@ class SSDPFactoryTestCase(TestCase, Mocks):
             assert 'Received "%s" from %s:%s' in factory.log.debug.call_args[0][0]
 
 
-@skipIf(pytest is None, "PyTest is missing")
 class SSDPServerTestCase(TestCase, Mocks):
     """
     Server-related test cases
@@ -452,7 +444,6 @@ class SSDPServerTestCase(TestCase, Mocks):
                 )
 
 
-@skipIf(pytest is None, "PyTest is missing")
 class SSDPClientTestCase(TestCase, Mocks):
     """
     Client-related test cases

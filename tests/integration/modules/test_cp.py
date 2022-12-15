@@ -20,7 +20,6 @@ import salt.utils.stringutils
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempfile
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -64,10 +63,7 @@ class CPModuleTest(ModuleCase):
         self.assertNotIn("bacon", data)
 
     @with_tempfile()
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "This test hangs on Windows on Py3",
-    )
+    @pytest.mark.skip_on_windows(reason="This test hangs on Windows on Py3")
     def test_get_file_templated_paths(self, tgt):
         """
         cp.get_file
@@ -417,7 +413,7 @@ class CPModuleTest(ModuleCase):
         with salt.utils.files.fopen(ret, "r") as cp_:
             self.assertEqual(salt.utils.stringutils.to_unicode(cp_.read()), "foo")
 
-    @skipIf(not salt.utils.path.which("nginx"), "nginx not installed")
+    @pytest.mark.skip_if_binaries_missing("nginx")
     @pytest.mark.slow_test
     @pytest.mark.skip_if_not_root
     def test_cache_remote_file(self):

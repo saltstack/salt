@@ -26,15 +26,15 @@ def salt_mm_failover_master_1(request, salt_factories):
         "mm-failover-master-1",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
-    with factory.started(start_timeout=120):
+    with factory.started(start_timeout=180):
         yield factory
 
 
 @pytest.fixture(scope="package")
 def mm_failover_master_1_salt_cli(salt_mm_failover_master_1):
-    return salt_mm_failover_master_1.salt_cli(timeout=120)
+    return salt_mm_failover_master_1.salt_cli(timeout=180)
 
 
 @pytest.fixture(scope="package")
@@ -61,7 +61,7 @@ def salt_mm_failover_master_2(salt_factories, salt_mm_failover_master_1):
         "mm-failover-master-2",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
 
     # Both masters will share the same signing key pair
@@ -70,13 +70,13 @@ def salt_mm_failover_master_2(salt_factories, salt_mm_failover_master_1):
             os.path.join(salt_mm_failover_master_1.config["pki_dir"], keyfile),
             os.path.join(factory.config["pki_dir"], keyfile),
         )
-    with factory.started(start_timeout=120):
+    with factory.started(start_timeout=180):
         yield factory
 
 
 @pytest.fixture(scope="package")
 def mm_failover_master_2_salt_cli(salt_mm_failover_master_2):
-    return salt_mm_failover_master_2.salt_cli(timeout=120)
+    return salt_mm_failover_master_2.salt_cli(timeout=180)
 
 
 @pytest.fixture(scope="package")
@@ -96,7 +96,7 @@ def salt_mm_failover_minion_1(salt_mm_failover_master_1, salt_mm_failover_master
         ],
         "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
-        "master_alive_interval": 10,
+        "master_alive_interval": 5,
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
         "retry_dns": 1,
@@ -105,14 +105,14 @@ def salt_mm_failover_minion_1(salt_mm_failover_master_1, salt_mm_failover_master
         "mm-failover-minion-1",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     # Need to grab the public signing key from the master, either will do
     shutil.copyfile(
         os.path.join(salt_mm_failover_master_1.config["pki_dir"], "master_sign.pub"),
         os.path.join(factory.config["pki_dir"], "master_sign.pub"),
     )
-    with factory.started(start_timeout=120):
+    with factory.started(start_timeout=180):
         yield factory
 
 
@@ -134,7 +134,7 @@ def salt_mm_failover_minion_2(salt_mm_failover_master_1, salt_mm_failover_master
         ],
         "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
-        "master_alive_interval": 10,
+        "master_alive_interval": 5,
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
         "retry_dns": 1,
@@ -143,14 +143,14 @@ def salt_mm_failover_minion_2(salt_mm_failover_master_1, salt_mm_failover_master
         "mm-failover-minion-2",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     # Need to grab the public signing key from the master, either will do
     shutil.copyfile(
         os.path.join(salt_mm_failover_master_1.config["pki_dir"], "master_sign.pub"),
         os.path.join(factory.config["pki_dir"], "master_sign.pub"),
     )
-    with factory.started(start_timeout=120):
+    with factory.started(start_timeout=180):
         yield factory
 
 

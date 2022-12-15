@@ -1,10 +1,6 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-import sys
-
-import pytest
-
 import salt.modules.djangomod as djangomod
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -192,9 +188,6 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 runas=None,
             )
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 6), reason="Py3.5 dictionaries are not ordered"
-    )
     def test_django_admin_cli_createsuperuser(self):
         mock = MagicMock()
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):

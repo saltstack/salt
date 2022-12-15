@@ -23,13 +23,15 @@ attrs==20.3.0
     #   pytest-system-statistics
 backports.entry-points-selectable==1.1.0
     # via virtualenv
-boto3==1.17.67 ; python_version >= "3.6"
+bcrypt==4.0.1
+    # via passlib
+boto3==1.17.80 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
     #   moto
 boto==2.49.0
     # via -r requirements/static/ci/common.in
-botocore==1.20.67
+botocore==1.20.80
     # via
     #   boto3
     #   moto
@@ -40,7 +42,7 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2022.12.7
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
@@ -111,7 +113,7 @@ genshi==0.7.5
     # via -r requirements/static/ci/common.in
 geomet==0.1.2
     # via cassandra-driver
-gitdb==4.0.5
+gitdb==4.0.7
     # via gitpython
 gitpython==3.1.18
     # via
@@ -144,7 +146,7 @@ ipaddress==1.0.22
     # via kubernetes
 jaraco.classes==3.2.1
     # via jaraco.collections
-jaraco.collections==3.2.0
+jaraco.collections==3.3.0
     # via cherrypy
 jaraco.functools==2.0
     # via
@@ -205,6 +207,8 @@ ntlm-auth==1.5.0
     # via requests-ntlm
 packaging==19.2
     # via pytest
+passlib[bcrypt]==1.7.4
+    # via -r requirements/static/ci/common.in
 patch==1.16
     # via -r requirements/static/ci/windows.in
 pathspec==0.9.0
@@ -235,12 +239,8 @@ pycparser==2.21
     #   -r requirements/windows.txt
     #   cffi
     #   pythonnet
-pycryptodomex==3.9.8
+pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
-pycurl==7.43.0.5 ; python_version <= "3.9"
-    # via
-    #   -r requirements/static/ci/common.in
-    #   -r requirements/windows.txt
 pygit2==1.9.1 ; python_version >= "3.7"
     # via -r requirements/static/ci/windows.in
 pymssql==2.2.1
@@ -264,7 +264,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc21 ; sys_platform == "win32"
+pytest-salt-factories==1.0.0rc23 ; sys_platform == "win32"
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.6.0
     # via pytest-salt-factories
@@ -313,7 +313,7 @@ pytz==2022.1
     #   tempora
 pyvmomi==6.7.1.2018.12
     # via -r requirements/static/ci/common.in
-pywin32==303
+pywin32==305
     # via
     #   -r requirements/windows.txt
     #   cherrypy
@@ -326,6 +326,7 @@ pyyaml==5.4.1
     #   -r requirements/base.txt
     #   clustershell
     #   kubernetes
+    #   pytest-salt-factories
     #   yamllint
 pyzmq==22.0.3 ; python_version < "3.9" and sys_platform == "win32"
     # via
@@ -360,7 +361,7 @@ semantic-version==2.9.0
     # via etcd3-py
 setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/windows.txt
-six==1.16.0
+six==1.15.0
     # via
     #   cassandra-driver
     #   cheroot
@@ -381,7 +382,7 @@ six==1.16.0
     #   responses
     #   virtualenv
     #   websocket-client
-smmap==3.0.4
+smmap==4.0.0
     # via gitdb
 sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
@@ -395,7 +396,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
     # via pytest
-typing-extensions==3.10.0.0
+typing-extensions==4.2.0
     # via
     #   aiohttp
     #   async-timeout

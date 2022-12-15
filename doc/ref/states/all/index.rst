@@ -229,6 +229,7 @@ state modules
     nxos_upgrade
     openstack_config
     openvswitch_bridge
+    openvswitch_db
     openvswitch_port
     opsgenie
     pagerduty
