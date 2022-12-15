@@ -1336,9 +1336,6 @@ def private_key_managed(
         for x in ignored_params:
             kwargs.pop(x)
 
-    if kwargs:
-        raise SaltInvocationError(f"Unrecognized keyword arguments: {list(kwargs)}")
-
     ret = {
         "name": name,
         "changes": {},
@@ -1348,7 +1345,11 @@ def private_key_managed(
     current = current_encoding = None
     changes = {}
     verb = "create"
-    file_args, _ = _split_file_kwargs(kwargs)
+    file_args, extra_args = _split_file_kwargs(kwargs)
+
+    if extra_args:
+        raise SaltInvocationError(f"Unrecognized keyword arguments: {list(extra_args)}")
+
     if not file_args.get("mode"):
         # ensure secure defaults
         file_args["mode"] = "0400"
