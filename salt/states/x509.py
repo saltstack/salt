@@ -15,7 +15,7 @@ Manage X509 Certificates
 
     They will become the default ``x509`` modules in Salt 3008 (Argon).
     You can explicitly switch to the new modules before that release
-    by setting ``x509_v2: true`` in your minion configuration.
+    by setting ``features: {x509_v2: true}`` in your minion configuration.
 
 
 This module can enable managing a complete PKI infrastructure including creating private keys, CAs,
@@ -191,6 +191,7 @@ import re
 
 import salt.exceptions
 import salt.utils.versions
+from salt.features import features
 
 try:
     from M2Crypto.RSA import RSAError
@@ -204,7 +205,7 @@ def __virtual__():
     """
     only load this module if the corresponding execution module is loaded
     """
-    if __opts__.get("x509_v2"):
+    if features.get("x509_v2"):
         return (False, "Superseded, using x509_v2")
     if "x509.get_pem_entry" in __salt__:
         salt.utils.versions.warn_until(
