@@ -2339,6 +2339,8 @@ class ClearFuncs(TransportMethods):
         jid = jid or self._prep_jid(clear_load, extra)
         if jid is None:
             return {"enc": "clear", "load": {"error": "Master failed to assign jid"}}
+        if self.opts["order_masters"]:
+            clear_load["syndics"] = syndics
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
         # Send it!
@@ -2364,15 +2366,6 @@ class ClearFuncs(TransportMethods):
             valid_tgts = ["*"]
             valid_tgt_type = "glob"
 
-        syndic_request = {
-            "cmd": "_list_valid_minions",
-            "tgt": clear_load["tgt"],
-            "tgt_type": clear_load["tgt_type"],
-            "valid_tgt": valid_tgts,
-            "valid_tgt_type": valid_tgt_type,
-            "jid": jid,
-        }
-
         log.debug("Sending request for valid minions")
         event_watcher = salt.utils.event.get_event(
             "master",
@@ -2385,10 +2378,22 @@ class ClearFuncs(TransportMethods):
         syndics = set(self.ckminions.syndic_minions())
         missing_syndics = syndics.copy()
         with event_watcher as event_bus:
+            syndic_request = {
+                "cmd": "_list_valid_minions",
+                "tgt": clear_load["tgt"],
+                "tgt_type": clear_load["tgt_type"],
+                "valid_tgt": valid_tgts,
+                "valid_tgt_type": valid_tgt_type,
+                "jid": jid,
+                "syndics": syndics,
+            }
             self._send_pub(syndic_request)
-            timeout = time.time() + clear_load.get(
-                "to", 5
+            timeout = (
+                time.time() + clear_load.get("to", 5) - 1
             )  # 'to' is the provided timeout. Default to 5s
+            if not missing_syndics:
+                look_anyway = True
+                missing_syndics.add(object())
             while time.time() < timeout:
                 ret = event_bus.get_event(full=True, auto_reconnect=True)
                 if ret and ret.get("tag", "").endswith(f"/{jid}/tgt_match_return"):
@@ -2398,6 +2403,7 @@ class ClearFuncs(TransportMethods):
                     syndic_id = data.get("syndic_id")
                     if syndic_id:
                         missing_syndics.discard(syndic_id)
+                        syndics.add(syndic_id)  # maybe we got a new syndic
                 if not missing_syndics:
                     # Found all the syndics before the timeout!
                     break
@@ -2635,6 +2641,8 @@ class ClearFuncs(TransportMethods):
             load["tgt_type"] = clear_load["tgt_type"]
         if "to" in clear_load:
             load["to"] = clear_load["to"]
+        if "syndics" in clear_load:
+            load["syndics"] = clear_load["syndics"]
 
         if "kwargs" in clear_load:
             if "ret_config" in clear_load["kwargs"]:

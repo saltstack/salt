@@ -3269,10 +3269,16 @@ class Syndic(Minion):
         data["to"] = int(data.get("to", self.opts["timeout"])) - 1
         # Only forward the command if it didn't originate from ourselves
         if data.get("master_id", 0) != self.opts.get("master_id", 1):
-            if "cmd" in data:
+            if "cmd" in data and data["cmd"] == "_list_valid_minions":
                 self.forward_to_localclient(data)
-            else:
+            elif ("syndics" in data and self.opts["id"] in data["syndics"]) or data.get(
+                "fun"
+            ) in ("test.ping", "saltutil.find_job"):
                 self.syndic_cmd(data)
+            else:
+                log.debug(
+                    "Syndic %r not in event - not forwarding %r", self.opts["id"], data
+                )
 
     def forward_to_localclient(self, data):
         """
