@@ -49,11 +49,11 @@ def compound_matches(expr, minion_id):
             log.warning(
                 "Minion data cache is disabled. Cannot evaluate compound matcher expression."
             )
-            return False
-        # Ensure the passed minion ID is valid and exists.
+            return {"res": False}
+        # Ensure the passed minion ID is valid.
         if not salt.utils.verify.valid_id(__opts__, minion_id):
             log.warning("Got invalid minion ID.")
-            return False
+            return {"res": False}
         log.debug("Evaluating if minion '%s' is matched by '%s'.", minion_id, expr)
         ckminions = salt.utils.minions.CkMinions(__opts__)
         # Compound expressions are usually evaluated in greedy mode since you
@@ -67,7 +67,7 @@ def compound_matches(expr, minion_id):
             expr, DEFAULT_TARGET_DELIM, greedy=False
         )
         if minion_id in minions["minions"]:
-            return minion_id
+            return {"res": minion_id}
     except Exception:  # pylint: disable=broad-except
         pass
-    return False
+    return {"res": False}
