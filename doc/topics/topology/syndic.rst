@@ -33,12 +33,6 @@ when used offers greater structural flexibility and scalability in the
 construction of Salt topologies than topologies constructed only out of Master
 and Minion node types.
 
-.. note::
-
-    While Syndics have been around in Salt for several years, they should
-    largely be considered experiemental. They have a tendency to interact
-    with other Salt features in surprising ways.
-
 A Syndic node is a special passthrough Minion node.  A Syndic node consists of
 a ``salt-syndic`` daemon and a ``salt-master`` daemon running on the same
 system.  The ``salt-master`` daemon running on the Syndic node controls a group
