@@ -107,7 +107,8 @@ the certificate to the mine, where it can be easily retrieved by other minions.
     # /srv/salt/x509.conf
 
     # enable x509_v2
-    x509_v2: true
+    features:
+      x509_v2: true
 
     # publish the CA certificate to the mine
     mine_functions:
@@ -187,6 +188,7 @@ import os.path
 
 import salt.utils.files
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.features import features
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 try:
@@ -209,11 +211,11 @@ __virtualname__ = "x509"
 def __virtual__():
     if not HAS_CRYPTOGRAPHY:
         return (False, "Could not load cryptography")
-    if not __opts__.get("x509_v2"):
+    if not features.get("x509_v2"):
         return (
             False,
             "x509_v2 needs to be explicitly enabled by setting `x509_v2: true` "
-            "in the minion configuration until Salt 3008 (Argon).",
+            "in the minion configuration value `features` until Salt 3008 (Argon).",
         )
     return __virtualname__
 
