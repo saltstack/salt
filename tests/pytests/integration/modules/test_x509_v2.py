@@ -155,7 +155,9 @@ def ca_minion_config(x509_minion_id, ca_cert, ca_key, ca_key_enc):
                 "subject": "CN=from_signing_policy",
             },
         },
-        "x509_v2": True,
+        "features": {
+            "x509_v2": True,
+        },
     }
 
 
@@ -179,7 +181,11 @@ def x509_salt_minion(x509_salt_master, x509_minion_id):
     assert x509_salt_master.is_running()
     factory = x509_salt_master.salt_minion_daemon(
         x509_minion_id,
-        defaults={"open_mode": True, "x509_v2": True, "grains": {"testgrain": "foo"}},
+        defaults={
+            "open_mode": True,
+            "features": {"x509_v2": True},
+            "grains": {"testgrain": "foo"},
+        },
     )
     with factory.started():
         # Sync All
