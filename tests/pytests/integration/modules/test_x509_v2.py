@@ -25,10 +25,6 @@ except ImportError:
 
 CRYPTOGRAPHY_VERSION = tuple(int(x) for x in cryptography.__version__.split("."))
 
-pytestmark = [
-    pytest.mark.skipif(HAS_LIBS is False, reason="Needs cryptography library")
-]
-
 log = logging.getLogger(__name__)
 
 
