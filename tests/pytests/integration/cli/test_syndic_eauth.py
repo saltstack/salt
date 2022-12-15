@@ -44,7 +44,11 @@ def accept_keys(container, required_minions):
 
 @pytest.fixture(scope="module")
 def syndic_network():
-    client = docker.from_env()
+    try:
+        client = docker.from_env()
+    except docker.errors.DockerException as e:
+        # Docker failed, it's gonna be an environment issue, let's just skip
+        pytest.skip(f"Docker failed with error {e}")
     pool = docker.types.IPAMPool(
         subnet="172.27.13.0/24",
         gateway="172.27.13.1",
