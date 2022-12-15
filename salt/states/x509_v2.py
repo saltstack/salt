@@ -222,7 +222,7 @@ def __virtual__():
 
 def certificate_managed(
     name,
-    days_remaining=7,
+    days_remaining=None,
     ca_server=None,
     signing_policy=None,
     encoding="pem",
@@ -241,7 +241,7 @@ def certificate_managed(
     serial_number=None,
     not_before=None,
     not_after=None,
-    days_valid=30,
+    days_valid=None,
     pkcs12_passphrase=None,
     pkcs12_encryption_compat=False,
     pkcs12_friendlyname=None,
@@ -258,7 +258,8 @@ def certificate_managed(
 
     days_remaining
         The certificate will be recreated once the remaining certificate validity
-        period is less than this number of days. Defaults to 7.
+        period is less than this number of days.
+        Defaults to ``90`` (until v3009) or ``7`` (from v3009 onwards).
 
     ca_server
         Request a remotely signed certificate from ca_server. For this to
@@ -361,7 +362,8 @@ def certificate_managed(
 
     days_valid
         If ``not_after`` is unspecified, the number of days from the time of issuance
-        the certificate should be valid for. Defaults to ``30``.
+        the certificate should be valid for.
+        Defaults to ``365`` (until v3009) or ``30`` (from v3009 onwards).
 
     pkcs12_passphrase
         When encoding a certificate as ``pkcs12``, encrypt it with this passphrase.
@@ -384,6 +386,35 @@ def certificate_managed(
         :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>`
         for an overview.
     """
+    # Deprecation checks vs the old x509 module
+    if days_valid is None and not_after is None:
+        try:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The default value for `days_valid` will change to 30. Please adapt your code accordingly.",
+            )
+            days_valid = 365
+        except RuntimeError:
+            days_valid = 30
+
+    if days_remaining is None:
+        try:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The default value for `days_remaining` will change to 7. Please adapt your code accordingly.",
+            )
+            days_remaining = 90
+        except RuntimeError:
+            days_remaining = 7
+
+    if "algorithm" in kwargs:
+        salt.utils.versions.warn_until(
+            "Potassium",
+            "`algorithm` has been renamed to `digest`. Please update your code.",
+        )
+        digest = kwargs.pop("algorithm")
+    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
+
     ret = {
         "name": name,
         "changes": {},
@@ -625,11 +656,11 @@ def crl_managed(
     name,
     signing_private_key,
     revoked,
-    days_remaining=7,
+    days_remaining=None,
     signing_cert=None,
     signing_private_key_passphrase=None,
     include_expired=False,
-    days_valid=100,
+    days_valid=None,
     digest="sha256",
     encoding="pem",
     extensions=None,
@@ -685,7 +716,9 @@ def crl_managed(
 
     days_remaining
         The certificate revocation list will be recreated once the remaining
-        CRL validity period is less than this number of days. Defaults to 7.
+        CRL validity period is less than this number of days.
+        Defaults to ``30`` (until v3009) or ``3`` (from v3009 onwards).
+        Set to 0 to disable automatic renewal without anything changing.
 
     signing_cert
         The CA certificate to be used for signing the issued certificate.
@@ -697,8 +730,8 @@ def crl_managed(
         Also include already expired certificates in the CRL. Defaults to false.
 
     days_valid
-        The number of days that the CRL should be valid. This sets the ``Next Update``
-        field in the CRL. Defaults to 100.
+        The number of days that the CRL should be valid for. This sets the ``Next Update``
+        field in the CRL. Defaults to ``100`` (until v3009) or ``7`` (from v3009 onwards).
 
     digest
         The hashing algorithm to use for the signature. Valid values are:
@@ -742,6 +775,26 @@ def crl_managed(
             - extensions:
                 cRLNumber: auto
     """
+    if days_valid is None:
+        try:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The default value for `days_valid` will change to 7. Please adapt your code accordingly.",
+            )
+            days_valid = 100
+        except RuntimeError:
+            days_valid = 7
+
+    if days_remaining is None:
+        try:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The default value for `days_remaining` will change to 3. Please adapt your code accordingly.",
+            )
+            days_remaining = 30
+        except RuntimeError:
+            days_remaining = 3
+
     ret = {
         "name": name,
         "changes": {},
@@ -975,6 +1028,15 @@ def csr_managed(
         (``authorityInfoAccess``, ``authorityKeyIdentifier``,
         ``issuerAltName``, ``crlDistributionPoints``).
     """
+    # Deprecation checks vs the old x509 module
+    if "algorithm" in kwargs:
+        salt.utils.versions.warn_until(
+            "Potassium",
+            "`algorithm` has been renamed to `digest`. Please update your code.",
+        )
+        digest = kwargs.pop("algorithm")
+    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
+
     ret = {
         "name": name,
         "changes": {},

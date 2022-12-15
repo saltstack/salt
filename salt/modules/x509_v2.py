@@ -102,7 +102,7 @@ or compound matcher (for the latter, see the notes above).
 
 .. note::
 
-    The following semantics are applied regarding order of preference
+    The following semantics are applied regarding the order of preference
     for specifying the subject name:
 
     * If neither ``subject`` nor any name attributes (like ``CN``) are part of the policy,
@@ -115,49 +115,20 @@ or compound matcher (for the latter, see the notes above).
       is taken from the signing policy. Dicts are merged and list items are appended,
       with the items taken from the signing policy having priority.
 
+
 Breaking changes versus the previous ``x509`` modules
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-General
-^^^^^^^
-* ``path`` and ``text`` parameters have been removed for all ``create_*`` functions.
-* The output format has changed for all ``read_*`` functions.
+* The output format has changed for all ``read_*`` functions as well as the state return dict.
+* The formatting of some extension definitions might have changed, but should
+  be stable for most basic use cases.
+* The default ordering of RDNs/Name Attributes in the subject's Distinguished Name
+  has been adapted to industry standards. This might cause a reissuance
+  during the first state run.
+* For ``x509.private_key_managed``, the file mode defaults to ``0400``. This should
+  be considered a bug fix because writing private keys with world-readable
+  permissions by default is a security issue.
 
-``create_certificate``
-~~~~~~~~~~~~~~~~~~~~~~
-* ``overwrite``, ``version`` and ``serial_bits`` parameters have been removed.
-* Name attributes must be specified as their short variant (e.g. ``CN``, not ``commonName``).
-* ``algorithm`` has been renamed to ``digest``.
-* ``days_valid`` defaults to 30 instead of 365.
-* The formatting of some extensions might have changed.
-
-``create_csr``
-^^^^^^^^^^^^^^
-See above.
-
-``create_crl``
-^^^^^^^^^^^^^^
-* ``revoked`` is to be specified as a simple list of dicts, each dict representing a revoked certificate.
-* ``reason`` per revoked certificate has been moved to ``extensions:CRLReason``.
-
-``create_private_key``
-^^^^^^^^^^^^^^^^^^^^^^
-* ``cipher`` and ``verbose`` have been removed.
-* ``bits`` has been renamed to ``keysize``.
-
-``get_public_key``
-^^^^^^^^^^^^^^^^^^
-* ``asObj`` has been removed.
-
-``sign_remote_certificate``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* The expected input and output format have changed.
-
-State module
-^^^^^^^^^^^^
-* The ``comment`` and ``changes`` fields of the return dict are different.
-* For ``certificate_managed`` and ``crl_managed``, ``days_remaining`` defaults to 7 instead of 90/30.
-* For ``crl_managed``, setting days_remaining=0 does not disable reissuance
-* For ``private_key_managed``, the file mode defaults to ``0400``.
+Note that when a ``ca_server`` is involved, both peers must use the updated module version.
 
 .. _x509-setup:
 """
@@ -179,10 +150,10 @@ try:
 except ImportError:
     HAS_CRYPTOGRAPHY = False
 
+import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.features import features
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -194,7 +165,8 @@ __virtualname__ = "x509"
 def __virtual__():
     if not HAS_CRYPTOGRAPHY:
         return (False, "Could not load cryptography")
-    if not features.get("x509_v2"):
+    # salt.features appears to not be setup when invoked via peer publishing
+    if not __opts__.get("features").get("x509_v2"):
         return (
             False,
             "x509_v2 needs to be explicitly enabled by setting `x509_v2: true` "
@@ -211,6 +183,9 @@ def create_certificate(
     pkcs12_passphrase=None,
     pkcs12_encryption_compat=False,
     pkcs12_friendlyname=None,
+    path=None,
+    overwrite=True,
+    raw=False,
     **kwargs,
 ):
     """
@@ -274,6 +249,16 @@ def create_certificate(
 
     pkcs12_friendlyname
         When encoding a certificate as ``pkcs12``, a name for the certificate can be included.
+
+    path
+        Instead of returning the certificate, write it to this file path.
+
+    overwrite
+        If ``path`` is specified and the file exists, do not overwrite it.
+        Defaults to false.
+
+    raw
+        Return the encoded raw bytes instead of a string. Defaults to false.
 
     digest
         The hashing algorithm to use for the signature. Valid values are:
@@ -469,6 +454,31 @@ def create_certificate(
 
         For more information, visit the `OpenSSL docs <https://www.openssl.org/docs/man3.0/man5/x509v3_config.html>`_.
     """
+    # Deprecation checks vs the old x509 module
+    if "algorithm" in kwargs:
+        salt.utils.versions.warn_until(
+            "Potassium",
+            "`algorithm` has been renamed to `digest`. Please update your code.",
+        )
+        kwargs["digest"] = kwargs.pop("algorithm")
+
+    ignored_params = {"text", "version", "serial_bits"}.intersection(
+        kwargs
+    )  # path, overwrite
+    if ignored_params:
+        salt.utils.versions.kwargs_warn_until(ignored_params, "Potassium")
+    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
+
+    if "days_valid" not in kwargs and "not_after" not in kwargs:
+        try:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The default value for `days_valid` will change to 30. Please adapt your code accordingly.",
+            )
+            kwargs["days_valid"] = 365
+        except RuntimeError:
+            pass
+
     if encoding not in ["der", "pem", "pkcs7_der", "pkcs7_pem", "pkcs12"]:
         raise CommandExecutionError(
             f"Invalid value '{encoding}' for encoding. Valid: "
@@ -501,6 +511,8 @@ def create_certificate(
             "Creating a PKCS12-encoded certificate without embedded private key "
             "is unsupported"
         )
+    if path and not overwrite and __salt__["file.file_exists"](path):
+        return f"The file at {path} exists and overwrite was set to false"
     if ca_server:
         if signing_policy is None:
             raise SaltInvocationError(
@@ -515,7 +527,7 @@ def create_certificate(
         cert, private_key_loaded = _create_certificate_local(**kwargs)
 
     if encoding == "pkcs12":
-        return encode_certificate(
+        out = encode_certificate(
             cert,
             append_certs=append_certs,
             encoding=encoding,
@@ -523,8 +535,23 @@ def create_certificate(
             pkcs12_passphrase=pkcs12_passphrase,
             pkcs12_encryption_compat=pkcs12_encryption_compat,
             pkcs12_friendlyname=pkcs12_friendlyname,
+            raw=bool(path) or raw,
         )
-    return encode_certificate(cert, append_certs=append_certs, encoding=encoding)
+    else:
+        out = encode_certificate(
+            cert, append_certs=append_certs, encoding=encoding, raw=bool(path) or raw
+        )
+
+    if path is None:
+        return out
+
+    if encoding == "pem":
+        return write_pem(
+            out.decode(), path, overwrite=overwrite, pem_type="CERTIFICATE"
+        )
+    with salt.utils.files.fopen(path, "wb") as fp_:
+        fp_.write(out)
+    return f"Certificate written to {path}"
 
 
 def _create_certificate_remote(
@@ -569,7 +596,7 @@ def _create_certificate_local(
         if prepend_cn:
             try:
                 prepend = (
-                    cert.subject.get_attributes_for_oid(x509util.NAME_OID["CN"])[
+                    cert.subject.get_attributes_for_oid(x509util.NAME_ATTRS_OID["CN"])[
                         0
                     ].value
                     + "-"
@@ -593,6 +620,7 @@ def encode_certificate(
     pkcs12_passphrase=None,
     pkcs12_encryption_compat=False,
     pkcs12_friendlyname=None,
+    raw=False,
 ):
     """
     Create an encoded representation of a certificate, optionally including
@@ -641,6 +669,9 @@ def encode_certificate(
 
     pkcs12_friendlyname
         When encoding a certificate as ``pkcs12``, a name for the certificate can be included.
+
+    raw
+        Return the encoded raw bytes instead of a string. Defaults to false.
     """
     if encoding not in ["der", "pem", "pkcs7_der", "pkcs7_pem", "pkcs12"]:
         raise CommandExecutionError(
@@ -717,6 +748,8 @@ def encode_certificate(
                 "Serialization to pkcs7 requires at least cryptography release 37."
             ) from err
 
+    if raw:
+        return crt_bytes
     if encoding in ["pem", "pkcs7_pem"]:
         return crt_bytes.decode()
     return base64.b64encode(crt_bytes).decode()
@@ -728,10 +761,13 @@ def create_crl(
     signing_cert=None,
     signing_private_key_passphrase=None,
     include_expired=False,
-    days_valid=100,
+    days_valid=None,
     digest="sha256",
     encoding="pem",
     extensions=None,
+    path=None,
+    raw=False,
+    **kwargs,
 ):
     """
     Create a certificate revocation list.
@@ -794,7 +830,7 @@ def create_crl(
 
     days_valid
         The number of days the CRL should be valid for. This sets the ``Next Update``
-        field. Defaults to 100.
+        field. Defaults to ``100`` (until v3009) or ``7`` (from v3009 onwards).
 
     digest
         The hashing algorithm to use for the signature. Valid values are:
@@ -847,7 +883,52 @@ def create_crl(
                   onlyCA: true
                   onlyAA: true
                   indirectCRL: false
+    path
+        Instead of returning the CRL, write it to this file path.
+
+    raw
+        Return the encoded raw bytes instead of a string. Defaults to false.
     """
+    # Deprecation checks vs the old x509 module
+    if kwargs:
+        if "text" in kwargs:
+            salt.utils.versions.kwargs_warn_until(["text"], "Potassium")
+            kwargs.pop("text")
+
+        if kwargs:
+            raise SaltInvocationError(f"Unrecognized keyword arguments: {list(kwargs)}")
+
+    if days_valid is None:
+        try:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The default value for `days_valid` will change to 7. Please adapt your code accordingly.",
+            )
+            days_valid = 100
+        except RuntimeError:
+            days_valid = 7
+
+    revoked_parsed = []
+    for rev in revoked:
+        parsed = {}
+        if len(rev) == 1 and isinstance(rev[next(iter(rev))], list):
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "Revoked certificates should be specified as a simple list of dicts.",
+            )
+            for val in rev[next(iter(rev))]:
+                parsed.update(val)
+        if "reason" in (parsed or rev):
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `reason` parameter for revoked certificates should be specified in extensions:CRLReason.",
+            )
+            salt.utils.dictupdate.set_dict_key_value(
+                (parsed or rev), "extensions:CRLReason", (parsed or rev).pop("reason")
+            )
+        revoked_parsed.append(rev)
+    revoked = revoked_parsed
+
     if encoding not in ["der", "pem"]:
         raise CommandExecutionError(
             f"Invalid value '{encoding}' for encoding. Valid: der, pem"
@@ -886,10 +967,19 @@ def create_crl(
     ]:
         algorithm = x509util.get_hashing_algorithm(digest)
     crl = builder.sign(signing_private_key, algorithm=algorithm)
-    return encode_crl(crl, encoding=encoding)
+    out = encode_crl(crl, encoding=encoding, raw=bool(path) or raw)
+
+    if path is None:
+        return out
+
+    if encoding == "pem":
+        return write_pem(out.decode(), path, pem_type="X509 CRL")
+    with salt.utils.files.fopen(path, "wb") as fp_:
+        fp_.write(out)
+    return f"CRL written to {path}"
 
 
-def encode_crl(crl, encoding="pem"):
+def encode_crl(crl, encoding="pem", raw=False):
     """
     Create an encoded representation of a certificate revocation list.
 
@@ -906,6 +996,9 @@ def encode_crl(crl, encoding="pem"):
         Specify the encoding of the resulting certificate revocation list.
         It can be returned as a ``pem`` string or base64-encoded ``der``.
         Defaults to ``pem``.
+
+    raw
+        Return the encoded raw bytes instead of a string. Defaults to false.
     """
     if encoding not in ["der", "pem"]:
         raise CommandExecutionError(
@@ -916,13 +1009,22 @@ def encode_crl(crl, encoding="pem"):
     crl_encoding = getattr(serialization.Encoding, encoding.upper())
     crl_bytes = crl.public_bytes(crl_encoding)
 
+    if raw:
+        return crl_bytes
+
     if encoding == "pem":
         return crl_bytes.decode()
     return base64.b64encode(crl_bytes).decode()
 
 
 def create_csr(
-    private_key, private_key_passphrase=None, digest="sha256", encoding="pem", **kwargs
+    private_key,
+    private_key_passphrase=None,
+    digest="sha256",
+    encoding="pem",
+    path=None,
+    raw=False,
+    **kwargs,
 ):
     """
     Create a certificate signing request.
@@ -951,6 +1053,12 @@ def create_csr(
         It can be returned as a ``pem`` string or base64-encoded ``der``.
         Defaults to ``pem``.
 
+    path
+        Instead of returning the CSR, write it to this file path.
+
+    raw
+        Return the encoded raw bytes instead of a string. Defaults to false.
+
     kwargs
         Embedded X.509v3 extensions and the subject's distinguished name can be
         controlled via supplemental keyword arguments.
@@ -959,6 +1067,19 @@ def create_csr(
         (``authorityInfoAccess``, ``authorityKeyIdentifier``,
         ``issuerAltName``, ``crlDistributionPoints``).
     """
+    # Deprecation checks vs the old x509 module
+    if "algorithm" in kwargs:
+        salt.utils.versions.warn_until(
+            "Potassium",
+            "`algorithm` has been renamed to `digest`. Please update your code.",
+        )
+        digest = kwargs.pop("algorithm")
+
+    ignored_params = {"text", "version"}.intersection(kwargs)  # path, overwrite
+    if ignored_params:
+        salt.utils.versions.kwargs_warn_until(ignored_params, "Potassium")
+    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
+
     if encoding not in ["der", "pem"]:
         raise CommandExecutionError(
             f"Invalid value '{encoding}' for encoding. Valid: der, pem"
@@ -991,10 +1112,19 @@ def create_csr(
     ]:
         algorithm = x509util.get_hashing_algorithm(digest)
     csr = builder.sign(private_key, algorithm=algorithm)
-    return encode_csr(csr, encoding=encoding)
+    out = encode_csr(csr, encoding=encoding, raw=bool(path) or raw)
+
+    if path is None:
+        return out
+
+    if encoding == "pem":
+        return write_pem(out.decode(), path, pem_type="CERTIFICATE REQUEST")
+    with salt.utils.files.fopen(path, "wb") as fp_:
+        fp_.write(out)
+    return f"CSR written to {path}"
 
 
-def encode_csr(csr, encoding="pem"):
+def encode_csr(csr, encoding="pem", raw=False):
     """
     Create an encoded representation of a certificate signing request.
 
@@ -1011,6 +1141,9 @@ def encode_csr(csr, encoding="pem"):
         Specify the encoding of the resulting certificate signing request.
         It can be returned as a ``pem`` string or base64-encoded ``der``.
         Defaults to ``pem``.
+
+    raw
+        Return the encoded raw bytes instead of a string. Defaults to false.
     """
     if encoding not in ["der", "pem"]:
         raise CommandExecutionError(
@@ -1021,6 +1154,8 @@ def encode_csr(csr, encoding="pem"):
     csr_encoding = getattr(serialization.Encoding, encoding.upper())
     csr_bytes = csr.public_bytes(csr_encoding)
 
+    if raw:
+        return csr_bytes
     if encoding == "pem":
         return csr_bytes.decode()
     return base64.b64encode(csr_bytes).decode()
@@ -1032,6 +1167,9 @@ def create_private_key(
     passphrase=None,
     encoding="pem",
     pkcs12_encryption_compat=False,
+    path=None,
+    raw=False,
+    **kwargs,
 ):
     """
     Create a private key.
@@ -1067,21 +1205,59 @@ def create_private_key(
         for PKCS12 used since OpenSSL v3. This switch triggers a fallback to
         ``PBESv1SHA1And3KeyTripleDESCBC``.
         Please consider the `notes on PKCS12 encryption <https://cryptography.io/en/stable/hazmat/primitives/asymmetric/serialization/#cryptography.hazmat.primitives.serialization.pkcs12.serialize_key_and_certificates>`_.
+
+    path
+        Instead of returning the private key, write it to this file path.
+        Note that this does not use safe permissions and should be avoided.
+
+    raw
+        Return the encoded raw bytes instead of a string. Defaults to false.
     """
+    # Deprecation checks vs the old x509 module
+    if "bits" in kwargs:
+        salt.utils.versions.warn_until(
+            "Potassium",
+            "`bits` has been renamed to `keysize`. Please update your code.",
+        )
+        keysize = kwargs.pop("bits")
+
+    ignored_params = {"cipher", "verbose"}.intersection(kwargs)  # path, overwrite
+    if ignored_params:
+        salt.utils.versions.kwargs_warn_until(ignored_params, "Potassium")
+        for x in ignored_params:
+            kwargs.pop("x")
+
+    if kwargs:
+        raise SaltInvocationError(f"Unrecognized keyword arguments: {list(kwargs)}")
+
     if encoding not in ["der", "pem", "pkcs12"]:
         raise CommandExecutionError(
             f"Invalid value '{encoding}' for encoding. Valid: der, pem, pkcs12"
         )
-    return encode_private_key(
+    out = encode_private_key(
         _generate_pk(algo=algo, keysize=keysize),
         encoding=encoding,
         passphrase=passphrase,
         pkcs12_encryption_compat=pkcs12_encryption_compat,
+        raw=bool(path) or raw,
     )
+
+    if path is None:
+        return out
+
+    if encoding == "pem":
+        return write_pem(out.decode(), path, pem_type="(?:RSA )?PRIVATE KEY")
+    with salt.utils.files.fopen(path, "wb") as fp_:
+        fp_.write(out)
+    return
 
 
 def encode_private_key(
-    private_key, encoding="pem", passphrase=None, pkcs12_encryption_compat=False
+    private_key,
+    encoding="pem",
+    passphrase=None,
+    pkcs12_encryption_compat=False,
+    raw=False,
 ):
     """
     Create an encoded representation of a private key.
@@ -1099,6 +1275,9 @@ def encode_private_key(
         Specify the encoding of the resulting private key. It can be returned
         as a ``pem`` string, base64-encoded ``der`` and base64-encoded ``pkcs12``.
         Defaults to ``pem``.
+
+    raw
+        Return the encoded raw bytes instead of a string. Defaults to false.
     """
     if encoding not in ["der", "pem", "pkcs12"]:
         raise CommandExecutionError(
@@ -1134,6 +1313,8 @@ def encode_private_key(
             name=None, key=private_key, cert=None, cas=None, encryption_algorithm=cipher
         )
 
+    if raw:
+        return pk_bytes
     if encoding == "pem":
         return pk_bytes.decode()
     return base64.b64encode(pk_bytes).decode()
@@ -1184,7 +1365,7 @@ def expired(certificate):
         ret["path"] = certificate
     cert = x509util.load_cert(certificate)
     try:
-        ret["cn"] = cert.subject.get_attributes_for_oid(x509util.NAME_OID["CN"])[
+        ret["cn"] = cert.subject.get_attributes_for_oid(x509util.NAME_ATTRS_OID["CN"])[
             0
         ].value
     except IndexError:
@@ -1318,7 +1499,7 @@ def get_private_key_size(private_key, passphrase=None):
     return privkey.key_size
 
 
-def get_public_key(key, passphrase=None):
+def get_public_key(key, passphrase=None, asObj=None):
     """
     Returns a PEM-encoded public key derived from some reference.
     The reference should be a public key, certificate, private key or CSR.
@@ -1335,6 +1516,10 @@ def get_public_key(key, passphrase=None):
     passphrase
         If ``key`` is encrypted, the passphrase to decrypt it.
     """
+    # Deprecation checks vs the old x509 module
+    if asObj is not None:
+        salt.utils.versions.kwargs_warn_until(["asObj"], "Potassium")
+
     try:
         return x509util.to_pem(x509util.load_pubkey(key)).decode()
     except (CommandExecutionError, SaltInvocationError):
@@ -1378,13 +1563,36 @@ def get_signing_policy(signing_policy, ca_server=None):
         signing policy instead of looking it up locally.
     """
     if ca_server is None:
-        return _get_signing_policy(signing_policy)
-    result = _query_remote(ca_server, signing_policy, {}, get_signing_policy_only=True)
-    if "signing_cert" in result:
-        result["signing_cert"] = x509util.to_pem(
-            x509util.load_cert(result["signing_cert"])
-        ).decode()
-    return result
+        policy = _get_signing_policy(signing_policy)
+    else:
+        policy = _query_remote(
+            ca_server, signing_policy, {}, get_signing_policy_only=True
+        )
+        if "signing_cert" in policy:
+            policy["signing_cert"] = x509util.to_pem(
+                x509util.load_cert(policy["signing_cert"])
+            ).decode()
+
+    # Don't immediately break for the long form of name attributes
+    for name, long_names in x509util.NAME_ATTRS_ALT_NAMES.items():
+        for long_name in long_names:
+            if long_name in policy:
+                salt.utils.versions.warn_until(
+                    "Potassium",
+                    f"Found {long_name} in {signing_policy}. Please migrate to the short name: {name}",
+                )
+                policy[name] = policy.pop(long_name)
+
+    # Don't immediately break for the long form of extensions
+    for extname, long_names in x509util.EXTENSIONS_ALT_NAMES.items():
+        for long_name in long_names:
+            if long_name in policy:
+                salt.utils.versions.warn_until(
+                    "Potassium",
+                    f"Found {long_name} in {signing_policy}. Please migrate to the short name: {extname}",
+                )
+                policy[extname] = policy.pop(long_name)
+    return policy
 
 
 def read_certificate(certificate):
@@ -1574,42 +1782,57 @@ def sign_remote_certificate(
         Only return the named signing policy. Defaults to false.
     """
     ret = {"data": None, "errors": []}
-    signing_policy = _get_signing_policy(signing_policy)
-    if not signing_policy:
-        ret["errors"].append(
-            "signing_policy must be specified and defined on signing minion"
-        )
-        return ret
-    if "minions" in signing_policy:
-        if "__pub_id" not in more_kwargs:
-            ret["errors"].append("minion sending this request could not be identified")
+    try:
+        signing_policy = _get_signing_policy(signing_policy)
+        if not signing_policy:
+            ret["errors"].append(
+                "signing_policy must be specified and defined on signing minion"
+            )
             return ret
-        # also pop "minions" to avoid leaking more details than necessary
-        if not _match_minions(signing_policy.pop("minions"), more_kwargs["__pub_id"]):
-            ret["errors"].append("minion not permitted to use specified signing policy")
-            return ret
-
-    if get_signing_policy_only:
-        # This is relevant for the state module to be able to check for changes
-        # without generating and signing a new certificate every time.
-        # remove unnecessary sensitive information
-        signing_policy.pop("signing_private_key", None)
-        signing_policy.pop("signing_private_key_passphrase", None)
-        # ensure to deliver the signing cert as well, not a file path
-        if "signing_cert" in signing_policy:
-            try:
-                signing_policy["signing_cert"] = x509util.to_der(
-                    x509util.load_cert(signing_policy["signing_cert"])
+        if "minions" in signing_policy:
+            if "__pub_id" not in more_kwargs:
+                ret["errors"].append(
+                    "minion sending this request could not be identified"
                 )
-            except (CommandExecutionError, SaltInvocationError) as err:
-                ret["data"] = None
-                ret["errors"].append(str(err))
                 return ret
-        ret["data"] = signing_policy
-        return ret
-    x509util.merge_signing_policy(signing_policy, kwargs)
-    # ensure the certificate will be issued from this minion
-    kwargs.pop("ca_server", None)
+            # also pop "minions" to avoid leaking more details than necessary
+            if not _match_minions(
+                signing_policy.pop("minions"), more_kwargs["__pub_id"]
+            ):
+                ret["errors"].append(
+                    "minion not permitted to use specified signing policy"
+                )
+                return ret
+
+        if get_signing_policy_only:
+            # This is relevant for the state module to be able to check for changes
+            # without generating and signing a new certificate every time.
+            # remove unnecessary sensitive information
+            signing_policy.pop("signing_private_key", None)
+            signing_policy.pop("signing_private_key_passphrase", None)
+            # ensure to deliver the signing cert as well, not a file path
+            if "signing_cert" in signing_policy:
+                try:
+                    signing_policy["signing_cert"] = x509util.to_der(
+                        x509util.load_cert(signing_policy["signing_cert"])
+                    )
+                except (CommandExecutionError, SaltInvocationError) as err:
+                    ret["data"] = None
+                    ret["errors"].append(str(err))
+                    return ret
+            ret["data"] = signing_policy
+            return ret
+        x509util.merge_signing_policy(signing_policy, kwargs)
+        # ensure the certificate will be issued from this minion
+        kwargs.pop("ca_server", None)
+    except Exception as err:  # pylint: disable=broad-except
+        log.error(str(err))
+        return {
+            "data": None,
+            "errors": [
+                "Failed building the signing policy. See CA server log for details."
+            ],
+        }
     try:
         cert, _ = _create_certificate_local(**kwargs)
         ret["data"] = x509util.to_der(cert)
@@ -1618,6 +1841,10 @@ def sign_remote_certificate(
         ret["data"] = None
         ret["errors"].append(str(err))
         return ret
+
+    err_message = "Internal error. This is most likely a bug."
+    log.error(err_message)
+    return {"data": None, "errors": [err_message]}
 
 
 def _query_remote(ca_server, signing_policy, kwargs, get_signing_policy_only=False):
@@ -1635,7 +1862,10 @@ def _query_remote(ca_server, signing_policy, kwargs, get_signing_policy_only=Fal
         )
     result = result[next(iter(result))]
     if not isinstance(result, dict) or "data" not in result:
-        raise CommandExecutionError("Received invalid return value from ca_server")
+        log.error(f"Received invalid return value from ca_server: {result}")
+        raise CommandExecutionError(
+            "Received invalid return value from ca_server. See minion log for details"
+        )
     if result.get("errors"):
         raise CommandExecutionError(
             "ca_server reported errors:\n" + "\n".join(result["errors"])
@@ -1751,7 +1981,7 @@ def will_expire(certificate, days):
         ret["path"] = certificate
     cert = x509util.load_cert(certificate)
     try:
-        ret["cn"] = cert.subject.get_attributes_for_oid(x509util.NAME_OID["CN"])[
+        ret["cn"] = cert.subject.get_attributes_for_oid(x509util.NAME_ATTRS_OID["CN"])[
             0
         ].value
     except IndexError:
@@ -1874,7 +2104,7 @@ def _parse_dn(subject):
     Returns a dict containing all values in an X509 Subject
     """
     ret = OrderedDict()
-    for nid_name, oid in x509util.NAME_OID.items():
+    for nid_name, oid in x509util.NAME_ATTRS_OID.items():
         try:
             ret[nid_name] = subject.get_attributes_for_oid(oid)[0].value
         except IndexError:
@@ -1904,7 +2134,7 @@ def _get_name_hash(name, digest="sha1"):
 
 def _parse_extensions(extensions):
     ret = {}
-    for extname, _, oid in x509util.EXTNAMES:
+    for extname, oid in x509util.EXTENSIONS_OID.items():
         try:
             ext = extensions.get_extension_for_oid(oid)
         except cx509.ExtensionNotFound:
@@ -1915,7 +2145,7 @@ def _parse_extensions(extensions):
 
 def _parse_crl_entry_extensions(extensions):
     ret = {}
-    for extname, _, oid in x509util.EXTNAMES_CRL_ENTRY:
+    for extname, oid in x509util.EXTENSIONS_CRL_ENTRY_OID.items():
         try:
             ext = extensions.get_extension_for_oid(oid)
         except cx509.ExtensionNotFound:
