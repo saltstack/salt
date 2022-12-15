@@ -776,7 +776,7 @@ def psaux(name):
 
 def status(status):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     Returns a list of processes according to their state.
 
