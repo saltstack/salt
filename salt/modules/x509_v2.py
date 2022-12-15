@@ -133,6 +133,7 @@ Note that when a ``ca_server`` is involved, both peers must use the updated modu
 .. _x509-setup:
 """
 import base64
+import copy
 import datetime
 import glob
 import logging
@@ -1565,13 +1566,24 @@ def get_signing_policy(signing_policy, ca_server=None):
     if ca_server is None:
         policy = _get_signing_policy(signing_policy)
     else:
-        policy = _query_remote(
-            ca_server, signing_policy, {}, get_signing_policy_only=True
-        )
-        if "signing_cert" in policy:
-            policy["signing_cert"] = x509util.to_pem(
-                x509util.load_cert(policy["signing_cert"])
-            ).decode()
+        # Cache signing policies from remote during this run
+        # to reduce unnecessary resource usage.
+        ckey = "_x509_policies"
+        if ckey not in __context__:
+            __context__[ckey] = {}
+        if ca_server not in __context__[ckey]:
+            __context__[ckey][ca_server] = {}
+        if signing_policy not in __context__[ckey][ca_server]:
+            policy_ = _query_remote(
+                ca_server, signing_policy, {}, get_signing_policy_only=True
+            )
+            if "signing_cert" in policy_:
+                policy_["signing_cert"] = x509util.to_pem(
+                    x509util.load_cert(policy_["signing_cert"])
+                ).decode()
+            __context__[ckey][ca_server][signing_policy] = policy_
+        # only hand out copies of the cached policy
+        policy = copy.deepcopy(__context__[ckey][ca_server][signing_policy])
 
     # Don't immediately break for the long form of name attributes
     for name, long_names in x509util.NAME_ATTRS_ALT_NAMES.items():
