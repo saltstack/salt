@@ -228,6 +228,9 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             continue
         if fpath in ("noxfile.py",):
             continue
+        if fpath == "tests/conftest.py":
+            # In this particular case, just run the full test suite
+            testrun["type"] = "full"
         selected_changed_files.append(fpath)
     testrun_changed_files_path.write_text("\n".join(sorted(selected_changed_files)))
     ctx.info("Writing 'testrun' to the github outputs file")
