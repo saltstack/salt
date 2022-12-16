@@ -433,12 +433,17 @@ def all_the_docker(
             docker_minion_b1,
             docker_minion_b2,
         ):
-            container.run("rm -rfv /etc/salt/")
-            # If you need to debug this ^^^^^^^
-            # use this vvvvvv
-            # res = container.run('rm -rfv /etc/salt/')
-            # print(container)
-            # print(res.stdout)
+            try:
+                container.run("rm -rfv /etc/salt/")
+                # If you need to debug this ^^^^^^^
+                # use this vvvvvv
+                # res = container.run('rm -rfv /etc/salt/')
+                # print(container)
+                # print(res.stdout)
+            except docker.errors.APIError as e:
+                # if the container isn't running, there's not thing we can do
+                # at this point.
+                print(f"Docker failed removing /etc/salt: {e}")
 
 
 @pytest.fixture(
