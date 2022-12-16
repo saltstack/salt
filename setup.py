@@ -832,6 +832,9 @@ class SaltDistribution(distutils.dist.Distribution):
             * salt-cloud
             * salt-run
 
+    To build all binaries on Windows set the SALT_BUILD_ALL_BINS environment
+    variable to `1`
+
     Under *nix, all scripts should be installed
     """
 
@@ -1061,13 +1064,13 @@ class SaltDistribution(distutils.dist.Distribution):
         ]
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             data_files[0][1].append("doc/man/salt-ssh.1")
-            if IS_WINDOWS_PLATFORM:
+            if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
                 return data_files
             data_files[0][1].append("doc/man/salt-cloud.1")
 
             return data_files
 
-        if IS_WINDOWS_PLATFORM:
+        if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
             data_files[0][1].extend(
                 [
                     "doc/man/salt-cp.1",
@@ -1141,12 +1144,12 @@ class SaltDistribution(distutils.dist.Distribution):
         scripts = ["scripts/salt-call"]
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             scripts.append("scripts/salt-ssh")
-            if IS_WINDOWS_PLATFORM:
+            if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
                 return scripts
             scripts.extend(["scripts/salt-cloud", "scripts/spm"])
             return scripts
 
-        if IS_WINDOWS_PLATFORM:
+        if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
             scripts.extend(
                 [
                     "scripts/salt-cp",
@@ -1187,13 +1190,13 @@ class SaltDistribution(distutils.dist.Distribution):
         ]
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             scripts.append("salt-ssh = salt.scripts:salt_ssh")
-            if IS_WINDOWS_PLATFORM:
+            if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
                 return {"console_scripts": scripts}
             scripts.append("salt-cloud = salt.scripts:salt_cloud")
             entrypoints["console_scripts"] = scripts
             return entrypoints
 
-        if IS_WINDOWS_PLATFORM:
+        if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
             scripts.extend(
                 [
                     "salt-cp = salt.scripts:salt_cp",
