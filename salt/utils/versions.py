@@ -18,19 +18,16 @@ import numbers
 import sys
 import warnings
 
+from setuptools._distutils.version import LooseVersion as _LooseVersion
+from setuptools._distutils.version import StrictVersion as _StrictVersion
+
 # pylint: enable=blacklisted-module
 import salt.version
 
 # pylint: disable=blacklisted-module
 
-## from distutils.version import StrictVersion as _StrictVersion
-## from distutils.version import LooseVersion as _LooseVersion
-
 
 log = logging.getLogger(__name__)
-
-from setuptools._distutils.version import LooseVersion as _LooseVersion
-from setuptools._distutils.version import StrictVersion as _StrictVersion
 
 
 class StrictVersion(_StrictVersion):

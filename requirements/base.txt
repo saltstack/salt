@@ -9,10 +9,3 @@ psutil>=5.0.0
 
 # We need contextvars for salt-ssh
 contextvars
-
-# since removal of distutils support
-setuptools
-looseversion
-# pyparsing!=3.0.5,>=2.0.2
-pyparsing==3.0.9
-packaging==21.3

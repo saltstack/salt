@@ -157,8 +157,6 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.8.0
     # via -r requirements/windows.txt
-looseversion==1.0.2
-    # via -r requirements/base.txt
 lxml==4.9.1
     # via -r requirements/windows.txt
 mako==1.2.2
@@ -193,9 +191,7 @@ multidict==6.0.2
 ntlm-auth==1.5.0
     # via requests-ntlm
 packaging==21.3
-    # via
-    #   -r requirements/base.txt
-    #   pytest
+    # via pytest
 passlib[bcrypt]==1.7.4
     # via -r requirements/static/ci/common.in
 patch==1.16
@@ -242,9 +238,7 @@ pyopenssl==20.0.1
     #   -r requirements/windows.txt
     #   etcd3-py
 pyparsing==3.0.9
-    # via
-    #   -r requirements/base.txt
-    #   packaging
+    # via packaging
 pyrsistent==0.17.3
     # via jsonschema
 pytest-custom-exit-code==0.3.0

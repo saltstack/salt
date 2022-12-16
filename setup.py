@@ -34,6 +34,7 @@ from setuptools.command.sdist import sdist
 
 # pylint: enable=no-name-in-module
 
+
 try:
     from urllib2 import urlopen
 except ImportError:
@@ -177,7 +178,6 @@ exec(compile(open(SALT_VERSION).read(), SALT_VERSION, "exec"))
 
 
 def _parse_requirements_file(requirements_file):
-
     parsed_requirements = []
     with open(requirements_file) as rfh:
         for line in rfh.readlines():
@@ -188,7 +188,6 @@ def _parse_requirements_file(requirements_file):
                 if "libcloud" in line:
                     continue
             parsed_requirements.append(line)
-
     return parsed_requirements
 
 
@@ -239,7 +238,6 @@ class WriteSaltVersion(Command):
                     date=DATE, full_version_info=salt_version.full_info_all_versions
                 )
             )
-
             # pylint: enable=E0602
 
 
@@ -415,7 +413,6 @@ class DownloadWindowsDlls(Command):
                 from pip._internal.utils.logging import (  # pylint: disable=no-name-in-module
                     indent_log,
                 )
-
         except ImportError:
             # TODO: Impliment indent_log here so we don't require pip
             @contextlib.contextmanager
@@ -1336,7 +1333,6 @@ class SaltDistribution(distutils.dist.Distribution):
 
     # ----- Overridden Methods -------------------------------------------------------------------------------------->
     def parse_command_line(self):
-
         args = distutils.dist.Distribution.parse_command_line(self)
 
         if not self.ssh_packaging and PACKAGED_FOR_SALT_SSH:
@@ -1370,6 +1366,7 @@ class SaltDistribution(distutils.dist.Distribution):
 
 
 # <---- Custom Distribution Class ------------------------------------------------------------------------------------
+
 
 if __name__ == "__main__":
     warnings.warn(
