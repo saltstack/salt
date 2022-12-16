@@ -27,7 +27,7 @@ and Minion node types.
 A Syndic node is a special passthrough Minion node.  A Syndic node consists of
 a ``salt-syndic`` daemon and a ``salt-master`` daemon running on the same
 system.  The ``salt-master`` daemon running on the Syndic node controls a group
-of lower level Minion nodes and the ``salt-syndic`` daemon connects higher
+of lower level Minion nodes and the ``salt-syndic`` daemon connects to a higher
 level Master node, sometimes called a Master of Masters.
 
 The ``salt-syndic`` daemon relays publications and events between the Master
