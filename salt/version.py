@@ -287,11 +287,10 @@ class SaltStackVersion:
                 minor = None
             else:
                 minor = int(minor)
-
         if self.can_have_dot_zero(major):
             minor = minor if minor else 0
 
-        if bugfix is None and not self.new_version_scheme(major=major):
+        if bugfix is None and not self.new_version(major=major):
             bugfix = 0
         elif isinstance(bugfix, str):
             if not bugfix:
@@ -324,7 +323,7 @@ class SaltStackVersion:
         self.mbugfix = mbugfix
         self.pre_type = pre_type
         self.pre_num = pre_num
-        if self.new_version_scheme(major):
+        if self.new_version(major):
             vnames_key = (major,)
         else:
             vnames_key = (major, minor)
@@ -332,7 +331,7 @@ class SaltStackVersion:
         self.noc = noc
         self.sha = sha
 
-    def new_version_scheme(self, major):
+    def new_version(self, major):
         """
         determine if using new versioning scheme
         """
@@ -393,7 +392,7 @@ class SaltStackVersion:
 
     def min_info(self):
         info = [self.major]
-        if self.new_version_scheme(self.major):
+        if self.new_version(self.major):
             if self.minor:
                 info.append(self.minor)
             elif self.can_have_dot_zero(self.major):
@@ -445,7 +444,7 @@ class SaltStackVersion:
 
     @property
     def string(self):
-        if self.new_version_scheme(self.major):
+        if self.new_version(self.major):
             version_string = "{}".format(self.major)
             if self.minor:
                 version_string = "{}.{}".format(self.major, self.minor)
@@ -481,7 +480,7 @@ class SaltStackVersion:
 
     @property
     def pre_index(self):
-        if self.new_version_scheme(self.major):
+        if self.new_version(self.major):
             pre_type = 2
             if not isinstance(self.minor, int):
                 pre_type = 1
@@ -507,7 +506,7 @@ class SaltStackVersion:
         other_noc_info = list(other.noc_info)
         noc_info = list(self.noc_info)
 
-        if self.new_version_scheme(self.major):
+        if self.new_version(self.major):
             if self.minor and not other.minor:
                 # We have minor information, the other side does not
                 if self.minor > 0:
@@ -552,7 +551,7 @@ class SaltStackVersion:
             parts.append("name='{}'".format(self.name))
         parts.extend(["major={}".format(self.major), "minor={}".format(self.minor)])
 
-        if self.new_version_scheme(self.major):
+        if self.new_version(self.major):
             if not self.minor:
                 parts.remove("".join([x for x in parts if re.search("^minor*", x)]))
         else:
@@ -614,7 +613,7 @@ def __discover_version(saltstack_version):
                 "v[0-9]*",
                 "--always",
             ],
-            **kwargs,
+            **kwargs
         )
 
         out, err = process.communicate()
@@ -639,7 +638,6 @@ def __discover_version(saltstack_version):
             # specified), raise the exception so it can be catch by the
             # developers
             raise
-
     return saltstack_version
 
 
@@ -648,7 +646,6 @@ def __get_version(saltstack_version):
     If we can get a version provided at installation time or from Git, use
     that instead, otherwise we carry on.
     """
-
     try:
         # Try to import the version information provided at install time
         from salt._version import __saltstack_version__  # pylint: disable=E0611,F0401
@@ -662,7 +659,6 @@ def __get_version(saltstack_version):
 
 # Get additional version information if available
 __saltstack_version__ = __get_version(__saltstack_version__)
-
 if __saltstack_version__.name:
     # Set SaltVersionsInfo._current_release to avoid lookups when finding previous and next releases
     SaltVersionsInfo._current_release = getattr(
@@ -672,6 +668,7 @@ if __saltstack_version__.name:
 # This function has executed once, we're done with it. Delete it!
 del __get_version
 # <---- Dynamic/Runtime Salt Version Information ---------------------------------------------------------------------
+
 
 # ----- Common version related attributes - NO NEED TO CHANGE ------------------------------------------------------->
 __version_info__ = __saltstack_version__.info

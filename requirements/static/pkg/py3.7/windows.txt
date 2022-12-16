@@ -57,8 +57,6 @@ jmespath==1.0.1
     # via -r requirements/base.txt
 libnacl==1.8.0
     # via -r requirements/windows.txt
-looseversion==1.0.2
-    # via -r requirements/base.txt
 lxml==4.9.1
     # via -r requirements/windows.txt
 mako==1.2.2
@@ -75,8 +73,6 @@ more-itertools==8.2.0
     #   jaraco.classes
     #   jaraco.functools
 msgpack==1.0.2
-    # via -r requirements/base.txt
-packaging==21.3
     # via -r requirements/base.txt
 portend==2.6
     # via cherrypy
@@ -97,10 +93,6 @@ pymysql==1.0.2
     # via -r requirements/windows.txt
 pyopenssl==20.0.1
     # via -r requirements/windows.txt
-pyparsing==3.0.9
-    # via
-    #   -r requirements/base.txt
-    #   packaging
 python-dateutil==2.8.1
     # via -r requirements/windows.txt
 python-gnupg==0.4.8
