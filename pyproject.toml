@@ -1,3 +1,7 @@
+## [build-system]
+## requires = ["setuptools", "wheel", "packaging", "looseversion"]
+## build-backend = "setuptools.build_meta"
+
 [tool.black]
 exclude= """
 /(
