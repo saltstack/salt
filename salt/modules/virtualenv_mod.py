@@ -350,7 +350,6 @@ def get_site_packages(venv):
     # note: platlib and purelib could differ
     ret = __salt__["cmd.exec_code_all"](
         bin_path,
-        ## DGM "from distutils import sysconfig; print(sysconfig.get_python_lib())",
         'import sysconfig; print(sysconfig.get_path("purelib"))',
     )
 

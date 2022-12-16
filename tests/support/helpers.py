@@ -1643,18 +1643,7 @@ class VirtualEnv:
         shutil.rmtree(str(self.venv_dir), ignore_errors=True)
 
     def install(self, *args, **kwargs):
-        print(f"DGM helper install args '{args}, kwargs '{kwargs}'")
-        return self.run(
-            self.venv_python,
-            "-m",
-            "pip",
-            "-vvv",
-            "install",
-            "--ignore-installed",
-            "--force-reinstall",
-            *args,
-            **kwargs,
-        )
+        return self.run(self.venv_python, "-m", "pip", "install", *args, **kwargs)
 
     def uninstall(self, *args, **kwargs):
         return self.run(
