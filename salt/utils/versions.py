@@ -18,16 +18,147 @@ import numbers
 import sys
 import warnings
 
-# pylint: disable=blacklisted-module
-from distutils.version import LooseVersion as _LooseVersion
-from distutils.version import StrictVersion as _StrictVersion
-
 # pylint: enable=blacklisted-module
 import salt.version
 
+# DGM
+## import re
+
+
+# pylint: disable=blacklisted-module
+
+## from distutils.version import StrictVersion as _StrictVersion
+## from distutils.version import LooseVersion as _LooseVersion
+
+
 log = logging.getLogger(__name__)
 
+## DGM from distutils.version import StrictVersion as _StrictVersion
+## DGM from distutils.version import StrictVersion as _StrictVersion
+# basically distutils.version.Looseversion with deps handled, uses setuptools
+## DGM from distutils.version import LooseVersion as _LooseVersion
+from setuptools._distutils.version import LooseVersion as _LooseVersion
+from setuptools._distutils.version import StrictVersion as _StrictVersion
 
+## try:
+##     from looseversion import LooseVersion as _LooseVersion
+## except ImportError:
+##     log.debug("unable to import LooseVersion from looseversion")
+##     raise ImportError()
+
+
+## try:
+##     from packaging.version import InvalidVersion
+##     from packaging.version import Version as pkg_version
+## except ImportError:
+##     log.debug("unable to import from packaging.version")
+##     raise ImportError()
+
+
+## class StrictVersion(pkg_version):
+##     def __init__(self, vstring):
+##         print(f"DGM StrictVersion __init__ vstring '{vstring}'")
+##         try:
+##             if "." not in vstring:
+##                 raise ValueError(f"invalid version number '{vstring}'")
+##
+##             super().__init__(vstring)
+##             if len(self.release) == 2:
+##                 self.version = self.release + (0,)
+##             else:
+##                 self.version = self.release
+##             self.prerelease = self.pre
+##         except InvalidVersion:
+##             raise ValueError(f"invalid version number '{vstring}'")
+##
+##     def __str__(self):
+##         if 0 == self.micro:
+##             tver = self.release
+##             vstring = "."
+##             tvershort = str(tver[0])
+##             if len(tver) >= 2:
+##                 tvershort = (str(tver[0]), str(tver[1]))
+##
+##             vstring = vstring.join(tvershort)
+##         else:
+##             vstring = super().__str__()
+##         print(f"DGM StrictVersion __str__ vstring '{vstring}'")
+##         return vstring
+## ##             return vstring
+## ##         else:
+## ##             return super().__str__()
+##
+##
+##
+## ##    def parse(self, vstring):
+## ##        try:
+## ##            self.__init__(vstring)
+## ##
+## ##        except InvalidVersion:
+## ##            raise ValueError(f"invalid version number '{vstring}'")
+## ##            ## raise ValueError("invalid version number '%s'" % vstring)
+##     version_re = re.compile(r'^(\d+) \. (\d+) (\. (\d+))? ([ab](\d+))?$', re.VERBOSE | re.ASCII)
+##
+##     def parse (self, vstring):
+##         print(f"DGM StrictVersion parse vstring '{vstring}'")
+##
+##         match = self.version_re.match(vstring)
+##         if not match:
+##             raise ValueError("invalid version number '%s'" % vstring)
+##
+##         (major, minor, patch, prerelease, prerelease_num) = match.group(1, 2, 4, 5, 6)
+##
+##         if patch:
+##             self.version = tuple(map(int, [major, minor, patch]))
+##         else:
+##             self.version = tuple(map(int, [major, minor])) + (0,)
+##
+##         if prerelease:
+##             self.prerelease = (prerelease[0], int(prerelease_num))
+##         else:
+##             self.prerelease = None
+##
+##
+##     def _cmp(self, other):
+##         if isinstance(other, str):
+##             other = StrictVersion(other)
+##         elif not isinstance(other, StrictVersion):
+##             return NotImplemented
+##
+##         print(f"DGM StrictVersion _cmd self.version '{self.version}', other.version '{other.version}'")
+##
+##         if self.version != other.version:
+##             # numeric versions don't match
+##             # prerelease stuff doesn't matter
+##             if self.version < other.version:
+##                 return -1
+##             else:
+##                 return 1
+##
+##         # have to compare prerelease
+##         # case 1: neither has prerelease; they're equal
+##         # case 2: self has prerelease, other doesn't; other is greater
+##         # case 3: self doesn't have prerelease, other does: self is greater
+##         # case 4: both have prerelease: must compare them!
+##
+##         if (not self.prerelease and not other.prerelease):
+##             return 0
+##         elif (self.prerelease and not other.prerelease):
+##             return -1
+##         elif (not self.prerelease and other.prerelease):
+##             return 1
+##         elif (self.prerelease and other.prerelease):
+##             if self.prerelease == other.prerelease:
+##                 return 0
+##             elif self.prerelease < other.prerelease:
+##                 return -1
+##             else:
+##                 return 1
+##         else:
+##             assert False, "never get here"
+
+
+## DGM old StrictVerson usage
 class StrictVersion(_StrictVersion):
     def parse(self, vstring):
         _StrictVersion.parse(self, vstring)

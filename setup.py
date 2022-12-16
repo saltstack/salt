@@ -12,6 +12,9 @@ import glob
 import os
 import platform
 import sys
+
+# DGM
+import traceback
 import warnings
 from ctypes.util import find_library
 from datetime import datetime
@@ -34,6 +37,7 @@ from setuptools.command.sdist import sdist
 
 # pylint: enable=no-name-in-module
 
+## DGM assert __version__ != '3006.0'
 
 try:
     from urllib2 import urlopen
@@ -96,6 +100,8 @@ else:
 USE_STATIC_REQUIREMENTS = os.environ.get("USE_STATIC_REQUIREMENTS")
 if USE_STATIC_REQUIREMENTS is not None:
     USE_STATIC_REQUIREMENTS = USE_STATIC_REQUIREMENTS == "1"
+
+## DGM assert __version__ != '3006.0'
 
 try:
     # Add the esky bdist target if the module is available
@@ -170,7 +176,10 @@ PACKAGED_FOR_SALT_SSH = os.path.isfile(PACKAGED_FOR_SALT_SSH_FILE)
 
 
 # pylint: disable=W0122
-exec(compile(open(SALT_VERSION).read(), SALT_VERSION, "exec"))
+print(f"DGM setup open read, compile, exec of file '{SALT_VERSION}'")
+exec(
+    compile(open(SALT_VERSION).read(), SALT_VERSION, "exec")
+)  # DGM this is were _get_version is being called from
 # pylint: enable=W0122
 
 
@@ -178,6 +187,8 @@ exec(compile(open(SALT_VERSION).read(), SALT_VERSION, "exec"))
 
 
 def _parse_requirements_file(requirements_file):
+    ## DGM assert __version__ != '3006.0'
+
     parsed_requirements = []
     with open(requirements_file) as rfh:
         for line in rfh.readlines():
@@ -188,6 +199,8 @@ def _parse_requirements_file(requirements_file):
                 if "libcloud" in line:
                     continue
             parsed_requirements.append(line)
+    ## DGM assert __version__ != '3006.0'
+
     return parsed_requirements
 
 
@@ -199,6 +212,11 @@ class WriteSaltVersion(Command):
 
     description = "Write salt's hardcoded version file"
     user_options = []
+    ## tbsummary = traceback.StackSummary.extract(traceback.walk_stack(None))
+    ## print(
+    ##     f"DGM setup WriteSaltVersion, __version__ '{__version__}', backtrace_ '{tbsummary}'"
+    ## )
+    ## DGM assert __version__ != '3006.0'
 
     def initialize_options(self):
         """
@@ -211,6 +229,12 @@ class WriteSaltVersion(Command):
         """
 
     def run(self):
+        ## tbsummary = traceback.StackSummary.extract(traceback.walk_stack(None))
+        ## print(
+        ##     f"DGM setup WriteSaltVersion, run with version '{__version__}', backtrace_ '{tbsummary}'"
+        ## )
+        ## DGM assert __version__ != '3006.0'
+
         if (
             not os.path.exists(SALT_VERSION_HARDCODED)
             or self.distribution.with_salt_version
@@ -228,30 +252,43 @@ class WriteSaltVersion(Command):
                 ## print(
                 ##     f"DGM setup write_salt_version a salt_version '{salt_version}', __saltstack_version__ '{__saltstack_version__}'"
                 ## )
+                ## DGM assert __version__ != '3006.0'
+
             else:
                 from salt.version import SaltStackVersion
 
                 salt_version = SaltStackVersion.parse(
                     self.distribution.with_salt_version
                 )
-                ## print(f"DGM setup write_salt_version b salt_version '{salt_version}'")
+                print(f"DGM setup write_salt_version b salt_version '{salt_version}'")
+
+                ## DGM assert __version__ != '3006.0'
 
             # pylint: disable=E0602
             print(
                 f"DGM setup write_salt_version all versions '{salt_version.full_info_all_versions}'"
             )
+            ## DGM assert __version__ != '3006.0'
 
             open(self.distribution.salt_version_hardcoded_path, "w").write(
                 INSTALL_VERSION_TEMPLATE.format(
                     date=DATE, full_version_info=salt_version.full_info_all_versions
                 )
             )
+
+            ## DGM assert __version__ != '3006.0'
+
             # pylint: enable=E0602
 
 
 class GenerateSaltSyspaths(Command):
 
     description = "Generate salt's hardcoded syspaths file"
+    ## tbsummary = traceback.StackSummary.extract(traceback.walk_stack(None))
+    ## print(
+    ##     f"DGM setup GenerateSaltSyspaths, __version__ '{__version__}', backtrace_ '{tbsummary}'"
+    ## )
+    ## DGM assert __version__ != '3006.0'
 
     def initialize_options(self):
         pass
@@ -260,6 +297,11 @@ class GenerateSaltSyspaths(Command):
         pass
 
     def run(self):
+        ## tbsummary = traceback.StackSummary.extract(traceback.walk_stack(None))
+        ## print(
+        ##     f"DGM setup GenerateSaltSyspaths, run with version '{__version__}', backtrace_ '{tbsummary}'"
+        ## )
+        ## DGM assert __version__ != '3006.0'
         # Write the syspaths file
         if getattr(self.distribution, "salt_syspaths_hardcoded_path", None) is None:
             print("This command is not meant to be called on it's own")
@@ -289,12 +331,18 @@ class GenerateSaltSyspaths(Command):
                 home_dir=self.distribution.salt_home_dir,
             )
         )
+        ## DGM assert __version__ != '3006.0'
 
 
 class WriteSaltSshPackagingFile(Command):
 
     description = "Write salt's ssh packaging file"
     user_options = []
+    ## tbsummary = traceback.StackSummary.extract(traceback.walk_stack(None))
+    ## print(
+    ##     f"DGM setup WriteSaltSshPackagingFile, __version__ '{__version__}', backtrace_ '{tbsummary}'"
+    ## )
+    ## DGM assert __version__ != '3006.0'
 
     def initialize_options(self):
         """
@@ -307,6 +355,11 @@ class WriteSaltSshPackagingFile(Command):
         """
 
     def run(self):
+        ## tbsummary = traceback.StackSummary.extract(traceback.walk_stack(None))
+        ## print(
+        ##     f"DGM setup WriteSaltSshPackagingFile, run with version '{__version__}', backtrace_ '{tbsummary}'"
+        ## )
+        ## DGM assert __version__ != '3006.0'
         if not os.path.exists(PACKAGED_FOR_SALT_SSH_FILE):
             # Write the salt-ssh packaging file
             if getattr(self.distribution, "salt_ssh_packaging_file", None) is None:
@@ -318,9 +371,11 @@ class WriteSaltSshPackagingFile(Command):
                 "Packaged for Salt-SSH\n"
             )
             # pylint: enable=E0602
+        ## DGM assert __version__ != '3006.0'
 
 
 class Develop(develop):
+    ## DGM assert __version__ != '3006.0'
     user_options = develop.user_options + [
         (
             "write-salt-version",
@@ -349,6 +404,7 @@ class Develop(develop):
             "switched to True.",
         ),
     ]
+    ## DGM assert __version__ != '3006.0'
     boolean_options = develop.boolean_options + [
         "write-salt-version",
         "generate-salt-syspaths",
@@ -356,12 +412,17 @@ class Develop(develop):
     ]
 
     def initialize_options(self):
+        ## DGM assert __version__ != '3006.0'
+
         develop.initialize_options(self)
         self.write_salt_version = False
         self.generate_salt_syspaths = False
         self.mimic_salt_install = False
+        ## DGM assert __version__ != '3006.0'
 
     def finalize_options(self):
+        ## DGM assert __version__ != '3006.0'
+
         develop.finalize_options(self)
         if "WRITE_SALT_VERSION" in os.environ:
             self.write_salt_version = True
@@ -373,8 +434,11 @@ class Develop(develop):
         if self.mimic_salt_install:
             self.write_salt_version = True
             self.generate_salt_syspaths = True
+        ## DGM assert __version__ != '3006.0'
 
     def run(self):
+        ## DGM assert __version__ != '3006.0'
+
         if IS_WINDOWS_PLATFORM:
             # Download the required DLLs
             self.distribution.salt_download_windows_dlls = True
@@ -390,11 +454,21 @@ class Develop(develop):
             self.distribution.salt_syspaths_hardcoded_path = SALT_SYSPATHS_HARDCODED
             self.run_command("generate_salt_syspaths")
 
+        ## DGM assert __version__ != '3006.0'
+
         # Resume normal execution
         develop.run(self)
+        ## DGM assert __version__ != '3006.0'
 
 
 class DownloadWindowsDlls(Command):
+
+    ## tbsummary = traceback.StackSummary.extract(traceback.walk_stack(None))
+    ## print(
+    ##     f"DGM setup DownloadWindowsDlls, __version__ '{__version__}', backtrace_ '{tbsummary}'"
+    ## )
+    ## DGM assert __version__ != '3006.0'
+    ## DGM assert __version__ != '3006.0'
 
     description = "Download required DLL's for windows"
 
@@ -405,12 +479,19 @@ class DownloadWindowsDlls(Command):
         pass
 
     def run(self):
+        ## tbsummary = traceback.StackSummary.extract(traceback.walk_stack(None))
+        ## print(
+        ##     f"DGM setup DownloadWindowsDlls, run with version '{__version__}', backtrace_ '{tbsummary}'"
+        ## )
+        ## DGM assert __version__ != '3006.0'
+
         if getattr(self.distribution, "salt_download_windows_dlls", None) is None:
             print("This command is not meant to be called on it's own")
             exit(1)
         try:
             import pip
 
+            ## DGM assert __version__ != '3006.0'
             # pip has moved many things to `_internal` starting with pip 10
             if LooseVersion(pip.__version__) < LooseVersion("10.0"):
                 # pylint: disable=no-name-in-module
@@ -421,11 +502,15 @@ class DownloadWindowsDlls(Command):
                 from pip._internal.utils.logging import (  # pylint: disable=no-name-in-module
                     indent_log,
                 )
+            ## DGM assert __version__ != '3006.0'
+
         except ImportError:
             # TODO: Impliment indent_log here so we don't require pip
             @contextlib.contextmanager
             def indent_log():
                 yield
+
+        ## DGM assert __version__ != '3006.0'
 
         platform_bits, _ = platform.architecture()
         url = "https://repo.saltproject.io/windows/dependencies/{bits}/{fname}"
@@ -479,38 +564,54 @@ class DownloadWindowsDlls(Command):
                                 )
                             )
 
+        ## DGM assert __version__ != '3006.0'
+
 
 class Sdist(sdist):
+    ## DGM assert __version__ != '3006.0'
     def make_release_tree(self, base_dir, files):
+        ## DGM assert __version__ != '3006.0'
+
         if self.distribution.ssh_packaging:
             self.distribution.salt_ssh_packaging_file = PACKAGED_FOR_SALT_SSH_FILE
             self.run_command("write_salt_ssh_packaging_file")
             self.filelist.files.append(os.path.basename(PACKAGED_FOR_SALT_SSH_FILE))
 
+        ## DGM assert __version__ != '3006.0'
         sdist.make_release_tree(self, base_dir, files)
 
+        ## DGM assert __version__ != '3006.0'
         # Let's generate salt/_version.py to include in the sdist tarball
         self.distribution.running_salt_sdist = True
         self.distribution.salt_version_hardcoded_path = os.path.join(
             base_dir, "salt", "_version.py"
         )
+        ## DGM assert __version__ != '3006.0'
         self.run_command("write_salt_version")
+        ## DGM assert __version__ != '3006.0'
 
     def make_distribution(self):
+        ## DGM assert __version__ != '3006.0'
         sdist.make_distribution(self)
         if self.distribution.ssh_packaging:
             os.unlink(PACKAGED_FOR_SALT_SSH_FILE)
+        ## DGM assert __version__ != '3006.0'
 
 
 class BDistEgg(bdist_egg):
+    ## DGM assert __version__ != '3006.0'
     def finalize_options(self):
+        ## DGM assert __version__ != '3006.0'
         bdist_egg.finalize_options(self)
         self.distribution.build_egg = True
         if not self.skip_build:
+            ## DGM assert __version__ != '3006.0'
             self.run_command("build")
+        ## DGM assert __version__ != '3006.0'
 
 
 class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
+    ## DGM assert __version__ != '3006.0'
     user_options = Sdist.user_options + [
         (
             "download-bootstrap-script",
@@ -523,12 +624,17 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
     boolean_options = Sdist.boolean_options + ["download-bootstrap-script"]
 
     def initialize_options(self):
+        ## DGM assert __version__ != '3006.0'
+
         Sdist.initialize_options(self)
         self.skip_bootstrap_download = True
         self.download_bootstrap_script = False
+        ## DGM assert __version__ != '3006.0'
 
     def finalize_options(self):
+        ## DGM assert __version__ != '3006.0'
         Sdist.finalize_options(self)
+        ## DGM assert __version__ != '3006.0'
         if "SKIP_BOOTSTRAP_DOWNLOAD" in os.environ:
             # pylint: disable=not-callable
             log(
@@ -540,8 +646,10 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
         if "DOWNLOAD_BOOTSTRAP_SCRIPT" in os.environ:
             download_bootstrap_script = os.environ.get("DOWNLOAD_BOOTSTRAP_SCRIPT", "0")
             self.download_bootstrap_script = download_bootstrap_script == "1"
+        ## DGM assert __version__ != '3006.0'
 
     def run(self):
+        ## DGM assert __version__ != '3006.0'
         if self.download_bootstrap_script is True:
             # Let's update the bootstrap-script to the version defined to be
             # distributed. See BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION above.
@@ -586,9 +694,12 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
                 log.error("Failed to write the updated script: {}".format(err))
 
         # Let's the rest of the build command
+        ## DGM assert __version__ != '3006.0'
         Sdist.run(self)
+        ## DGM assert __version__ != '3006.0'
 
     def write_manifest(self):
+        ## DGM assert __version__ != '3006.0'
         # We only need to ship the scripts which are supposed to be installed
         dist_scripts = self.distribution.scripts
         for script in self.filelist.files[:]:
@@ -596,10 +707,12 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
                 continue
             if script not in dist_scripts:
                 self.filelist.files.remove(script)
+        ## DGM assert __version__ != '3006.0'
         return Sdist.write_manifest(self)
 
 
 class TestCommand(Command):
+    ## DGM assert __version__ != '3006.0'
     description = "Run tests"
     user_options = [
         ("runtests-opts=", "R", "Command line options to pass to runtests.py")
@@ -617,7 +730,9 @@ class TestCommand(Command):
         # This should either be removed or migrated to use nox
         import subprocess
 
+        ## DGM assert __version__ != '3006.0'
         self.run_command("build")
+        ## DGM assert __version__ != '3006.0'
         build_cmd = self.get_finalized_command("build_ext")
         runner = os.path.abspath("tests/runtests.py")
         test_cmd = [sys.executable, runner]
@@ -625,6 +740,7 @@ class TestCommand(Command):
             test_cmd.extend(self.runtests_opts.split())
 
         print("running test")
+        ## DGM assert __version__ != '3006.0'
         ret = subprocess.run(
             test_cmd,
             stdout=sys.stdout,
@@ -632,26 +748,33 @@ class TestCommand(Command):
             cwd=build_cmd.build_lib,
             check=False,
         )
+        ## DGM assert __version__ != '3006.0'
         sys.exit(ret.returncode)
 
 
 class Clean(clean):
+    ## DGM assert __version__ != '3006.0'
     def run(self):
+        ## DGM assert __version__ != '3006.0'
         clean.run(self)
+        ## DGM assert __version__ != '3006.0'
         # Let's clean compiled *.py[c,o]
         for subdir in ("salt", "tests", "doc"):
             root = os.path.join(os.path.dirname(__file__), subdir)
             for dirname, _, _ in os.walk(root):
                 for to_remove_filename in glob.glob("{}/*.py[oc]".format(dirname)):
                     os.remove(to_remove_filename)
+        ## DGM assert __version__ != '3006.0'
 
 
 if HAS_BDIST_WHEEL:
 
     class BDistWheel(bdist_wheel):
         def finalize_options(self):
+            ## DGM assert __version__ != '3006.0'
             bdist_wheel.finalize_options(self)
             self.distribution.build_wheel = True
+            ## DGM assert __version__ != '3006.0'
 
 
 INSTALL_VERSION_TEMPLATE = """\
@@ -691,46 +814,63 @@ HOME_DIR = {home_dir!r}
 class Build(build):
     def run(self):
         # Run build.run function
+        ## DGM assert __version__ != '3006.0'
         build.run(self)
+        ## DGM assert __version__ != '3006.0'
         salt_build_ver_file = os.path.join(self.build_lib, "salt", "_version.py")
 
         if getattr(self.distribution, "with_salt_version", False):
             # Write the hardcoded salt version module salt/_version.py
             self.distribution.salt_version_hardcoded_path = salt_build_ver_file
+            ## DGM assert __version__ != '3006.0'
             self.run_command("write_salt_version")
+            ## DGM assert __version__ != '3006.0'
 
         if getattr(self.distribution, "build_egg", False):
             # we are building an egg package. need to include _version.py
             self.distribution.salt_version_hardcoded_path = salt_build_ver_file
+            ## DGM assert __version__ != '3006.0'
             self.run_command("write_salt_version")
+            ## DGM assert __version__ != '3006.0'
 
         if getattr(self.distribution, "build_wheel", False):
             # we are building a wheel package. need to include _version.py
             self.distribution.salt_version_hardcoded_path = salt_build_ver_file
+            ## DGM assert __version__ != '3006.0'
             self.run_command("write_salt_version")
+            ## DGM assert __version__ != '3006.0'
 
         if getattr(self.distribution, "running_salt_install", False):
             # If our install attribute is present and set to True, we'll go
             # ahead and write our install time python modules.
 
             # Write the hardcoded salt version module salt/_version.py
+            ## DGM assert __version__ != '3006.0'
             self.run_command("write_salt_version")
+            ## DGM assert __version__ != '3006.0'
 
             # Write the system paths file
             self.distribution.salt_syspaths_hardcoded_path = os.path.join(
                 self.build_lib, "salt", "_syspaths.py"
             )
+            ## DGM assert __version__ != '3006.0'
             self.run_command("generate_salt_syspaths")
+            ## DGM assert __version__ != '3006.0'
 
 
 class Install(install):
     def initialize_options(self):
+        ## DGM assert __version__ != '3006.0'
         install.initialize_options(self)
+        ## DGM assert __version__ != '3006.0'
 
     def finalize_options(self):
+        ## DGM assert __version__ != '3006.0'
         install.finalize_options(self)
+        ## DGM assert __version__ != '3006.0'
 
     def run(self):
+        ## DGM assert __version__ != '3006.0'
         if LooseVersion(setuptools.__version__) < LooseVersion("9.1"):
             sys.stderr.write(
                 "\n\nInstalling Salt requires setuptools >= 9.1\n"
@@ -745,6 +885,7 @@ class Install(install):
         self.distribution.salt_version_hardcoded_path = os.path.join(
             self.build_lib, "salt", "_version.py"
         )
+        ## DGM assert __version__ != '3006.0'
         if IS_WINDOWS_PLATFORM:
             # Download the required DLLs
             self.distribution.salt_download_windows_dlls = True
@@ -754,10 +895,14 @@ class Install(install):
         if not os.path.exists(os.path.join(self.build_lib)):
             if not self.skip_build:
                 self.run_command("build")
+            ## DGM assert __version__ != '3006.0'
         else:
+            ## DGM assert __version__ != '3006.0'
             self.run_command("write_salt_version")
+            ## DGM assert __version__ != '3006.0'
         # Run install.run
         install.run(self)
+        ## DGM assert __version__ != '3006.0'
 
     @staticmethod
     def _called_from_setup(run_frame):
@@ -770,9 +915,14 @@ class Install(install):
         called by 'run_commands'. Return True in that case or if a call stack
         is unavailable. Return False otherwise.
         """
+        ## DGM assert __version__ != '3006.0'
+
         if run_frame is None:
             # If run_frame is None, just call the parent class logic
-            return install._called_from_setup(run_frame)
+            ## return install._called_from_setup(run_frame)
+            mydgm = install._called_from_setup(run_frame)
+            ## DGM assert __version__ != '3006.0'
+            return mydgm
 
         # Because Salt subclasses the setuptools install command, it needs to
         # override this static method to provide the right frame for the logic
@@ -780,12 +930,16 @@ class Install(install):
 
         # We first try the current run_frame in case the issue
         # https://github.com/pypa/setuptools/issues/456 is fixed.
+        ## DGM assert __version__ != '3006.0'
         first_call = install._called_from_setup(run_frame)
+        ## DGM assert __version__ != '3006.0'
         if first_call:
             return True
 
         # Fallback to providing the parent frame to have the right logic kick in
+        ## DGM assert __version__ != '3006.0'
         second_call = install._called_from_setup(run_frame.f_back)
+        ## DGM assert __version__ != '3006.0'
         if second_call is None:
             # There was no parent frame?!
             return first_call
@@ -794,11 +948,14 @@ class Install(install):
 
 class InstallLib(install_lib):
     def run(self):
+        ## DGM assert __version__ != '3006.0'
+
         executables = [
             "salt/templates/git/ssh-id-wrapper",
             "salt/templates/lxc/salt_tarball",
         ]
         install_lib.run(self)
+        ## DGM assert __version__ != '3006.0'
 
         # input and outputs match 1-1
         inp = self.get_inputs()
@@ -845,6 +1002,8 @@ class SaltDistribution(distutils.dist.Distribution):
 
     Under *nix, all scripts should be installed
     """
+
+    ## DGM assert __version__ != '3006.0'
 
     global_options = (
         distutils.dist.Distribution.global_options
@@ -914,8 +1073,15 @@ class SaltDistribution(distutils.dist.Distribution):
     )
 
     def __init__(self, attrs=None):
-        print(f"DGM setup __init__  attrs'{attrs}'")
+        ## print(f"DGM setup __init__  attrs'{attrs}'")
+        ## print(f"DGM setup __init__ initial  __version__ '{__version__}'")
+        ## tbsummary = traceback.StackSummary.extract(traceback.walk_stack(None))
+        ## print(
+        ##     f"DGM setup __init__  __version__ '{__version__}', backtrace_ '{tbsummary}'"
+        ## )
+        ## DGM assert __version__ != '3006.0'
         distutils.dist.Distribution.__init__(self, attrs)
+        ## DGM assert __version__ != '3006.0'
 
         self.ssh_packaging = PACKAGED_FOR_SALT_SSH
         self.salt_transport = None
@@ -976,6 +1142,8 @@ class SaltDistribution(distutils.dist.Distribution):
         self.author = "Thomas S Hatch"
         self.author_email = "thatch45@gmail.com"
         self.url = "https://saltproject.io"
+        ## DGM assert __version__ != '3006.0'
+        ## print(f"DGM setup __init__ pre cmdclass.update, __version__ '{__version__}'")
         self.cmdclass.update(
             {
                 "test": TestCommand,
@@ -990,6 +1158,8 @@ class SaltDistribution(distutils.dist.Distribution):
                 "write_salt_ssh_packaging_file": WriteSaltSshPackagingFile,
             }
         )
+        ## print(f"DGM setup __init__ post cmdclass.update, __version__ '{__version__}'")
+        ## DGM assert __version__ != '3006.0'
         if not IS_WINDOWS_PLATFORM:
             self.cmdclass.update({"sdist": CloudSdist, "install_lib": InstallLib})
         if IS_WINDOWS_PLATFORM:
@@ -1007,6 +1177,10 @@ class SaltDistribution(distutils.dist.Distribution):
         self.update_metadata()
 
     def update_metadata(self):
+        tbsummary = traceback.StackSummary.extract(traceback.walk_stack(None))
+        print(f"DGM setup update_metadata, backtrace_ '{tbsummary}'")
+        ## DGM assert __version__ != '3006.0'
+
         for attrname in dir(self):
             if attrname.startswith("__"):
                 continue
@@ -1024,6 +1198,7 @@ class SaltDistribution(distutils.dist.Distribution):
                     pass
 
     def discover_packages(self):
+        ## DGM assert __version__ != '3006.0'
         modules = []
         for root, _, files in os.walk(os.path.join(SETUP_DIRNAME, "salt")):
             if "__init__.py" not in files:
@@ -1351,6 +1526,8 @@ class SaltDistribution(distutils.dist.Distribution):
 
     # ----- Overridden Methods -------------------------------------------------------------------------------------->
     def parse_command_line(self):
+        ## DGM assert __version__ != '3006.0'
+
         args = distutils.dist.Distribution.parse_command_line(self)
 
         if not self.ssh_packaging and PACKAGED_FOR_SALT_SSH:
@@ -1377,6 +1554,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 continue
             property_name = funcname.split("_property_", 1)[-1]
             setattr(self, property_name, getattr(self, funcname))
+        ## DGM assert __version__ != '3006.0'
 
         return args
 
