@@ -6,26 +6,17 @@ Salt Syndic
 
 .. warning::
 
-    Salt Syndic with :ref:`external auth or publisher_acl<acl-eauth>`
-    should not be used for security purposes.
+    Syndics are supported when running ``salt`` as the root/service user on the
+    Master of Masters, but :ref:`external auth or publisher_acl<acl-eauth>`
+    may be unstable or not fully supported.
 
-    The long-term goal for Syndics is that they work correctly with
-    authentication and authorization, but with Salt's current architecture that
-    Syndics work with publisher_acl/external auth at all should be considered a
-    convenience. Syndics with external auth or publisher_acl should not used
-    anywhere that security is considered essential. With the changes resulting
-    from `issue #62618 on GitHub
-    <https://github.com/saltstack/salt/issues/62618>`_, there have been some
-    improvements, but currently Syndic functionality is only fully supported
-    when running ``salt`` on the Master of Masters as the root/service user.
+    Ensure minions have unique names under different Syndics. Using the same
+    name for minions under different Syndics is not supported as currently
+    documented. For example, if ``syndic_a`` and ``syndic_b`` both have a
+    ``minion_1``, this behavior is undocumented and unsupported.
 
-    Additionally, it's technically possible to have minions of the same
-    name on different Syndics. In that case, Salt's behavior is completely
-    undefined and subject to change.
-
-    It may also be possible for a Syndic to itself be a Master of Masters, but
-    that behavior is also undocumented and should not yet be considered a
-    supported feature.
+    Any other undocumented Syndic implementation should be considered
+    unsupported, such as using a Syndic as a Master of Masters.
 
 The most basic or typical Salt topology consists of a single Master node
 controlling a group of Minion nodes.  An intermediate node type, called Syndic,
