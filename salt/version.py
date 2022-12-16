@@ -6,9 +6,6 @@ import operator
 import platform
 import re
 import sys
-
-# DGM
-import traceback
 from collections import namedtuple
 from functools import total_ordering
 
@@ -196,23 +193,15 @@ class SaltVersionsInfo(type):
                 (getattr(cls, name) for name in dir(cls) if name.isupper()),
                 key=operator.attrgetter("info"),
             )
-        ## print(f"DGM salt version SaltVersionsInfo cls versions '{cls._sorted_versions}'")
         return cls._sorted_versions
 
     @classmethod
     def current_release(cls):
-        tbsummary = traceback.StackSummary.extract(traceback.walk_stack(None))
-        print(
-            f"DGM salt version saltversionsinfo cls current_release chk cls._current_release, '{cls._current_release}', backtrace_ '{tbsummary}'"
-        )
         if cls._current_release is None:
             for version in cls.versions():
                 if version.released is False:
                     cls._current_release = version
                     break
-        print(
-            f"DGM salt version saltversionsinfo cls current_release '{cls._current_release}'"
-        )
         return cls._current_release
 
     @classmethod
@@ -225,9 +214,6 @@ class SaltVersionsInfo(type):
                     break
                 if version == cls.current_release():
                     next_release_ahead = True
-        print(
-            f"DGM salt version saltversionsinfo cls next_release '{cls._next_release}'"
-        )
         return cls._next_release
 
     @classmethod
@@ -239,9 +225,6 @@ class SaltVersionsInfo(type):
                     break
                 previous = version
             cls._previous_release = previous
-        print(
-            f"DGM salt version saltversionsinfo cls previous_release '{cls._previous_release}'"
-        )
         return cls._previous_release
 
 
@@ -295,10 +278,6 @@ class SaltStackVersion:
         noc=0,
         sha=None,
     ):
-        tbsummary = traceback.StackSummary.extract(traceback.walk_stack(None))
-        print(
-            f"DGM salt version entry, major '{major}', minor '{minor}', pre_type '{pre_type}', sha '{sha}',  backtrace_ '{tbsummary}'"
-        )
         if isinstance(major, str):
             major = int(major)
 
@@ -596,9 +575,6 @@ class SaltStackVersion:
 #   There's no need to do anything here. The last released codename will be picked up
 # --------------------------------------------------------------------------------------------------------------------
 __saltstack_version__ = SaltStackVersion.current_release()
-print(
-    f"DGM salt version current_release returned  __saltstack_version__ '{__saltstack_version__}'"
-)
 # <---- Hardcoded Salt Version Information ---------------------------------------------------------------------------
 
 
@@ -609,28 +585,16 @@ def __discover_version(saltstack_version):
     import os
     import subprocess
 
-    my_sver = dir(saltstack_version)
-    tbsummary = traceback.StackSummary.extract(traceback.walk_stack(None))
-    print(
-        f"DGM salt version __discover_version '{my_sver}', saltstack_version '{saltstack_version}', backtrace_ '{tbsummary}'"
-    )
-
     if "SETUP_DIRNAME" in globals():
         # This is from the exec() call in Salt's setup.py
         cwd = SETUP_DIRNAME  # pylint: disable=E0602
         if not os.path.exists(os.path.join(cwd, ".git")):
             # This is not a Salt git checkout!!! Don't even try to parse...
-            print(
-                f"DGM salt version __get_discover A  saltstack_version '{saltstack_version}', cwd '{cwd}"
-            )
             return saltstack_version
     else:
         cwd = os.path.abspath(os.path.dirname(__file__))
         if not os.path.exists(os.path.join(os.path.dirname(cwd), ".git")):
             # This is not a Salt git checkout!!! Don't even try to parse...
-            print(
-                f"DGM salt version __get_discover B  saltstack_version '{saltstack_version}'"
-            )
             return saltstack_version
 
     try:
@@ -659,36 +623,23 @@ def __discover_version(saltstack_version):
         err = err.decode().strip()
 
         if not out or err:
-            print(
-                f"DGM salt version __get_discover C saltstack_version '{saltstack_version}'"
-            )
             return saltstack_version
 
         if SaltStackVersion.git_sha_regex.match(out):
             # We only define the parsed SHA and set NOC as ??? (unknown)
             saltstack_version.sha = out.strip()
             saltstack_version.noc = -1
-            print(
-                f"DGM salt version __get_discover D  saltstack_version '{saltstack_version}'"
-            )
             return saltstack_version
 
-        ## DGM return SaltStackVersion.parse(out)
-        mydver = SaltStackVersion.parse(out)
-        print(
-            f"DGM salt version __get_discover out '{out}' produced parsed saltstack_version '{mydver}'"
-        )
-        return mydver
+        return SaltStackVersion.parse(out)
 
     except OSError as os_err:
-        print(f"DGM salt version __get_discover OSError '{os_err}'")
         if os_err.errno != 2:
             # If the errno is not 2(The system cannot find the file
             # specified), raise the exception so it can be catch by the
             # developers
             raise
 
-    print(f"DGM salt version __get_discover E  saltstack_version '{saltstack_version}'")
     return saltstack_version
 
 
@@ -698,56 +649,30 @@ def __get_version(saltstack_version):
     that instead, otherwise we carry on.
     """
 
-    my_sver = dir(saltstack_version)
-    print(
-        f"DGM salt version __get_version '{my_sver}', saltstack_version '{saltstack_version}'"
-    )
-
     try:
         # Try to import the version information provided at install time
-        print("DGM salt version __get_version attempt to import from salt._version")
-
         from salt._version import __saltstack_version__  # pylint: disable=E0611,F0401
-
-        print(f"DGM salt version __get_version imported '{__saltstack_version__}'")
 
         return __saltstack_version__
 
-    ## except ImportError:
-    except ImportError as exc:
-        ## exc_type, exc_Value, exc_traceback = sys.exc_info()
-        ## traceback_in_var = exc_traceback.format_tb(exc_traceback)
-        print(
-            f"DGM salt version __get_version import error try discover version for saltstack_version '{saltstack_version}', import error traceback '{traceback.format_exc()}'"
-        )
+    except ImportError:
+        ## except ImportError as exc:
         return __discover_version(saltstack_version)
 
 
 # Get additional version information if available
 __saltstack_version__ = __get_version(__saltstack_version__)
-print(
-    f"DGM salt version check _get_version returned __saltstack_version__ '{__saltstack_version__}'"
-)
 
 if __saltstack_version__.name:
     # Set SaltVersionsInfo._current_release to avoid lookups when finding previous and next releases
-    ## SaltVersionsInfo._current_release = getattr(
-    ##     SaltVersionsInfo, __saltstack_version__.name.upper()
-    ## )
-    dgm_attr = getattr(SaltVersionsInfo, __saltstack_version__.name.upper())
-    print(
-        f"DGM salt version name check __saltstack_version__ '{__saltstack_version__}', getattr returned '{dgm_attr}'"
+    SaltVersionsInfo._current_release = getattr(
+        SaltVersionsInfo, __saltstack_version__.name.upper()
     )
-    SaltVersionsInfo._current_release = dgm_attr
 
 # This function has executed once, we're done with it. Delete it!
 del __get_version
 # <---- Dynamic/Runtime Salt Version Information ---------------------------------------------------------------------
 
-
-print(
-    f"DGM salt/version.py __saltstack_version__ '{__saltstack_version__}', info '{__saltstack_version__.info}', string '{__saltstack_version__.string}'"
-)
 # ----- Common version related attributes - NO NEED TO CHANGE ------------------------------------------------------->
 __version_info__ = __saltstack_version__.info
 __version__ = __saltstack_version__.string
@@ -981,5 +906,4 @@ def versions_report(include_salt_cloud=False, include_extensions=True):
 
 
 if __name__ == "__main__":
-    print(f"DGM salt/version.py __version__ '{__version__}'")
     print(__version__)
