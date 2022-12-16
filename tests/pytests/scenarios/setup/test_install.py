@@ -328,15 +328,11 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
         sdist_ver_cmp = salt_generated_package.name.split(".tar.gz")[0].split("salt-")[
             -1
         ]
-
         assert sdist_ver_cmp == salt.version.__version__, "{} != {}".format(
             sdist_ver_cmp, salt.version.__version__
         )
 
         venv.install(str(salt_generated_package))
-
-        # Let's ensure the version is correct
-        cmd = venv.run(venv.venv_python, "-m", "pip", "list", "--format", "json")
 
         # Let's also ensure we have a salt/_version.py from the installed salt wheel
         subdir = [
