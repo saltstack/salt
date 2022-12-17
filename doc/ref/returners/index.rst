@@ -95,7 +95,7 @@ Using Custom Returner Modules
 Place custom returners in a ``_returners/`` directory within the
 :conf_master:`file_roots` specified by the master config file.
 
-Custom returners are distributed when any of the following are called:
+Custom returners are distributed when any of the following execution modules are called:
 
 - :mod:`state.apply <salt.modules.state.apply_>`
 - :mod:`saltutil.sync_returners <salt.modules.saltutil.sync_returners>`
