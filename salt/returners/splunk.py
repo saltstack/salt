@@ -14,6 +14,8 @@ Requires the following config values to be specified in config or pillar:
 
 Run a test by using ``salt-call test.ping --return splunk``
 
+Port defaults to 8088, but can be configured through `splunk_http_forwarder.port`.
+
 Written by Scott Pack (github.com/scottjpack)
 
 """
@@ -45,7 +47,6 @@ def __virtual__():
 def returner(ret):
     """
     Send a message to Splunk via the HTTP Event Collector.
-    Requires the Splunk HTTP Event Collector running on port 8088.
     This is available on Splunk Enterprise version 6.3 or higher.
 
     """
@@ -66,7 +67,6 @@ def returner(ret):
 def event_return(events):
     """
     Return events to Splunk via the HTTP Event Collector.
-    Requires the Splunk HTTP Event Collector running on port 8088.
     This is available on Splunk Enterprise version 6.3 or higher.
     """
 
@@ -91,6 +91,7 @@ def _get_options():
         indexer = __salt__["config.get"]("splunk_http_forwarder:indexer")
         sourcetype = __salt__["config.get"]("splunk_http_forwarder:sourcetype")
         index = __salt__["config.get"]("splunk_http_forwarder:index")
+        port = __salt__["config.get"]("splunk_http_forwarder:port", default="8088")
         verify_ssl = __salt__["config.get"](
             "splunk_http_forwarder:verify_ssl", default=True
         )
@@ -102,6 +103,7 @@ def _get_options():
         "indexer": indexer,
         "sourcetype": sourcetype,
         "index": index,
+        "port": port,
         "verify_ssl": verify_ssl,
     }
     return splunk_opts
@@ -115,11 +117,14 @@ def _create_http_event_collector(opts):
 
     http_event_collector_key = opts["token"]
     http_event_collector_host = opts["indexer"]
+    http_event_collector_port = opts["port"]
     http_event_collector_verify_ssl = opts["verify_ssl"]
+
     # Return the collector
     return http_event_collector(
         http_event_collector_key,
         http_event_collector_host,
+        http_event_collector_port,
         verify_ssl=http_event_collector_verify_ssl,
     )
 
@@ -153,8 +158,8 @@ class http_event_collector:
         self,
         token,
         http_event_server,
+        http_event_port,
         host="",
-        http_event_port="8088",
         http_event_server_ssl=True,
         max_bytes=_max_content_bytes,
         verify_ssl=True,
@@ -173,15 +178,10 @@ class http_event_collector:
 
         # Build and set server_uri for http event collector
         # Defaults to SSL if flag not passed
-        # Defaults to port 8088 if port not passed
-
-        if http_event_server_ssl:
-            buildURI = ["https://"]
-        else:
-            buildURI = ["http://"]
-        for i in [http_event_server, ":", http_event_port, "/services/collector/event"]:
-            buildURI.append(i)
-        self.server_uri = "".join(buildURI)
+        self.server_uri = ""
+        self.server_uri += "https://" if http_event_server_ssl else "http://"
+        self.server_uri += http_event_server + ":" + str(http_event_port)
+        self.server_uri += "/services/collector/event"
 
         if http_event_collector_debug:
             log.debug(self.token)
