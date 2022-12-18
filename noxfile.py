@@ -400,33 +400,36 @@ def _run_with_coverage(session, *test_cmd, env=None):
     try:
         session.run(*test_cmd, env=env)
     finally:
-        # Always combine and generate the XML coverage report
-        try:
-            session.run("coverage", "combine", env=coverage_base_env)
-        except CommandFailed:
-            # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
-            # exception
-            pass
-        # Generate report for tests code coverage
-        session.run(
-            "coverage",
-            "xml",
-            "-o",
-            str(COVERAGE_OUTPUT_DIR.joinpath("tests.xml").relative_to(REPO_ROOT)),
-            "--omit=salt/*",
-            "--include=tests/*",
-            env=coverage_base_env,
-        )
-        # Generate report for salt code coverage
-        session.run(
-            "coverage",
-            "xml",
-            "-o",
-            str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
-            "--omit=tests/*",
-            "--include=salt/*",
-            env=coverage_base_env,
-        )
+        if os.environ.get("GITHUB_ACTIONS_PIPELINE", "0") == "0":
+            # Always combine and generate the XML coverage report
+            try:
+                session.run(
+                    "coverage", "combine", "--debug=pathmap", env=coverage_base_env
+                )
+            except CommandFailed:
+                # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
+                # exception
+                pass
+            # Generate report for tests code coverage
+            session.run(
+                "coverage",
+                "xml",
+                "-o",
+                str(COVERAGE_OUTPUT_DIR.joinpath("tests.xml").relative_to(REPO_ROOT)),
+                "--omit=salt/*",
+                "--include=tests/*",
+                env=coverage_base_env,
+            )
+            # Generate report for salt code coverage
+            session.run(
+                "coverage",
+                "xml",
+                "-o",
+                str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
+                "--omit=tests/*",
+                "--include=salt/*",
+                env=coverage_base_env,
+            )
 
 
 def _report_coverage(session):
