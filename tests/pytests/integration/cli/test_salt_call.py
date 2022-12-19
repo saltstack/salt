@@ -423,24 +423,20 @@ def test_local_salt_call_no_function_no_retcode(salt_call_cli):
 
     Also ensure we don't get an exception.
     """
-    with pytest.helpers.temp_file() as filename:
+    ret = salt_call_cli.run("--local", "test")
+    assert ret.returncode == 1
 
-        ret = salt_call_cli.run("--local", "test")
-        assert ret.returncode == 1
+    state_run_dict = ret.data
+    assert "test" in state_run_dict
+    assert state_run_dict["test"] == "'test' is not available."
 
-        state_run_dict = ret.data
-        assert "test" in state_run_dict
-        assert state_run_dict["test"] == "'test' is not available."
+    assert "test.recho" in state_run_dict
 
-        assert "test.recho" in state_run_dict
-
-        expected = """
+    expected = """
     Return a reversed string
 
     CLI Example:
 
         salt '*' test.recho 'foo bar baz quo qux'
     """
-        a = state_run_dict["test.recho"]
-        b = expected
-        assert state_run_dict["test.recho"] == expected
+    assert state_run_dict["test.recho"] == expected
