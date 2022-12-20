@@ -20,7 +20,7 @@ Configuration
 In addition to the module configuration, it is required for the Salt master
 to be configured to allow peer runs in order to use the Vault integration.
 
-.. versionchanged:: 3006
+.. versionchanged:: 3007.0
 
     The ``vault`` configuration structure has changed significantly to account
     for many new features. If found, the old structure will be automatically
@@ -236,12 +236,12 @@ All possible master configuration options with defaults:
 Contains authentication information for the local machine.
 
 approle_mount
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     The name of the AppRole authentication mount point. Defaults to ``approle``.
 
 approle_name
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     The name of the AppRole. Defaults to ``salt-master``.
 
@@ -262,7 +262,7 @@ method
 role_id
     The role ID of the AppRole. Required if ``auth:method`` == ``approle``.
 
-    .. versionchanged:: 3006
+    .. versionchanged:: 3007.0
 
         In addition to a plain string, this can also be specified as a
         dictionary that includes ``wrap_info``, i.e. the return payload
@@ -272,7 +272,7 @@ secret_id
     The secret ID of the AppRole.
     Only required if the configured AppRole requires it.
 
-    .. versionchanged:: 3006
+    .. versionchanged:: 3007.0
 
         In addition to a plain string, this can also be specified as a
         dictionary that includes ``wrap_info``, i.e. the return payload
@@ -304,7 +304,7 @@ token
 
        export VAULT_TOKEN=11111111-1111-1111-1111-1111111111111
 
-    .. versionchanged:: 3006
+    .. versionchanged:: 3007.0
 
         In addition to a plain string, this can also be specified as a
         dictionary that includes ``wrap_info``, i.e. the return payload
@@ -316,7 +316,7 @@ Configures configuration cache on minions and secret cache on all hosts as well
 as metadata cache for KV secrets.
 
 backend
-    .. versionchanged:: 3006
+    .. versionchanged:: 3007.0
 
         This used to be found in ``auth:token_backend``.
 
@@ -329,13 +329,13 @@ backend
     as well.
 
 config
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     The time in seconds to cache queried configuration from the master.
     Defaults to ``3600`` (one hour).
 
 kv_metadata
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     The time in seconds to cache KV metadata used to determine if a path
     is using version 1/2 for. Defaults to ``connection``, which will clear
@@ -344,7 +344,7 @@ kv_metadata
     indefinitely until the cache is cleared manually.
 
 secret
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     The time in seconds to cache tokens/secret-ids for. Defaults to ``ttl``,
     which caches the secret for as long as it is valid, unless a new configuration
@@ -355,7 +355,7 @@ secret
 Configures authentication data issued by the master to minions.
 
 type
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     The type of authentication to issue to minions. Can be ``token`` or ``approle``.
     Defaults to ``token``.
@@ -365,7 +365,7 @@ type
     It is strongly encouraged to create a separate mount dedicated to minions.
 
 approle
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     Configuration regarding issued AppRoles.
 
@@ -380,13 +380,13 @@ approle
     will be updated automatically during a request by a minion as well.
 
 token
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     Configuration regarding issued tokens.
 
     ``role_name`` specifies the role name for minion tokens created. Optional.
 
-    .. versionchanged:: 3006
+    .. versionchanged:: 3007.0
 
         This used to be found in ``role_name``.
 
@@ -401,7 +401,7 @@ token
 
     ``params`` configures the tokens the master issues to minions.
 
-    .. versionchanged:: 3006
+    .. versionchanged:: 3007.0
 
         This used to be found in ``auth:ttl`` and ``auth:uses``.
 
@@ -414,7 +414,7 @@ token
 
 
 allow_minion_override_params
-    .. versionchanged:: 3006
+    .. versionchanged:: 3007.0
 
         This used to be found in ``auth:allow_minion_override``.
 
@@ -430,7 +430,7 @@ allow_minion_override_params
         ``bind_secret_id`` can not be overridden.
 
 wrap
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     The time a minion has to unwrap a wrapped secret issued by the master.
     Set this to false to disable wrapping, otherwise a time string like ``30s``
@@ -442,7 +442,7 @@ wrap
 
 ``metadata``
 ~~~~~~~~~~~~
-.. versionadded:: 3006
+.. versionadded:: 3007.0
 
 Configures metadata for the issued entities/secrets. Values have to be strings
 and can be templated with the following variables:
@@ -469,7 +469,7 @@ secret
 
 ``policies``
 ~~~~~~~~~~~~
-.. versionchanged:: 3006
+.. versionchanged:: 3007.0
 
     This used to specify the list of policies associated with a minion token only.
     The equivalent is found in ``assign``.
@@ -511,7 +511,7 @@ assign
         types which work well.
 
 cache_time
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     Number of seconds compiled templated policies are cached on the master.
     This is important when using pillar values in templates, since compiling
@@ -530,7 +530,7 @@ cache_time
         (if allow_minion_override_params is True).
 
 refresh_pillar
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     Whether to refresh the minion pillar when compiling templated policies
     that contain pillar variables.
@@ -559,7 +559,7 @@ refresh_pillar
 
 ``server``
 ~~~~~~~~~~
-.. versionchanged:: 3006
+.. versionchanged:: 3007.0
 
     The values found in here were found in the ``vault`` root namespace previously.
 
@@ -576,7 +576,7 @@ verify
 
     .. versionadded:: 2018.3.0
 
-    .. versionchanged:: 3006
+    .. versionchanged:: 3007.0
 
         Minions again respect the master configuration value, which was changed
         implicitly in v3001. If this value is set in the minion configuration
@@ -608,7 +608,7 @@ issue_params
     See the master configuration ``issue:token:params`` or ``issue:approle:params``
     for reference.
 
-    .. versionchanged:: 3006
+    .. versionchanged:: 3007.0
 
         For token issuance, this used to be found in ``auth:ttl`` and ``auth:uses``.
 
@@ -830,7 +830,7 @@ def delete_secret(path, *args):
     path
         The path to the secret, including mount.
 
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
         For KV v2, you can specify versions to soft-delete as supplemental
         positional arguments.
@@ -919,7 +919,7 @@ def list_secrets(path, default=NOT_SET, keys_only=False):
         is provided here.
 
     keys_only
-        .. versionadded:: 3006
+        .. versionadded:: 3007.0
 
         This function used to return a dictionary like ``{"keys": ["some/", "some/key"]}``.
         Setting this to True will only return the list of keys.
@@ -955,7 +955,7 @@ def clear_token_cache(connection_only=True):
         salt '*' vault.clear_token_cache
 
     connection_only
-        .. versionadded:: 3006
+        .. versionadded:: 3007.0
 
         Only delete cache data scoped to a connection configuration.
         This includes config and secret cache always and KV metadata
@@ -969,7 +969,7 @@ def clear_token_cache(connection_only=True):
 
 def policy_fetch(policy):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     Fetch the rules associated with an ACL policy. Returns None if the policy
     does not exist.
@@ -1006,7 +1006,7 @@ def policy_fetch(policy):
 
 def policy_write(policy, rules):
     r"""
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     Create or update an ACL policy.
 
@@ -1040,7 +1040,7 @@ def policy_write(policy, rules):
 
 def policy_delete(policy):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     Delete an ACL policy. Returns False if the policy did not exist.
 
@@ -1073,7 +1073,7 @@ def policy_delete(policy):
 
 def policies_list():
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     List all ACL policies.
 
@@ -1099,7 +1099,7 @@ def policies_list():
 
 def query(method, endpoint, payload=None):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     Issue arbitrary queries against the Vault API.
 
