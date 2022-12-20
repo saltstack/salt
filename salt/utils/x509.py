@@ -17,6 +17,7 @@ from cryptography.hazmat.primitives.serialization import pkcs7, pkcs12
 from cryptography.x509.oid import SubjectInformationAccessOID
 
 import salt.utils.files
+import salt.utils.immutabletypes as immutabletypes
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -33,112 +34,126 @@ CRYPTOGRAPHY_VERSION = tuple(int(x) for x in cryptography.__version__.split(".")
 
 log = logging.getLogger(__name__)
 
-NAME_ATTRS_ALT_NAMES = {
-    "CN": ("commonName",),
-    "L": ("localityName",),
-    "ST": ("stateOrProvinceName",),
-    "O": ("organizationName",),
-    "OU": ("organizationUnitName",),
-    "GN": ("givenName",),
-    "SN": ("surname",),
-    "MAIL": ("Email", "emailAddress"),
-    "SERIALNUMBER": ("serialNumber",),
-}
-
-NAME_ATTRS_OID = OrderedDict(
-    [
-        ("C", cx509.NameOID.COUNTRY_NAME),
-        ("ST", cx509.NameOID.STATE_OR_PROVINCE_NAME),
-        ("L", cx509.NameOID.LOCALITY_NAME),
-        ("STREET", cx509.NameOID.STREET_ADDRESS),
-        ("O", cx509.NameOID.ORGANIZATION_NAME),
-        ("OU", cx509.NameOID.ORGANIZATIONAL_UNIT_NAME),
-        ("CN", cx509.NameOID.COMMON_NAME),
-        ("MAIL", cx509.NameOID.EMAIL_ADDRESS),
-        ("SN", cx509.NameOID.SURNAME),
-        ("GN", cx509.NameOID.GIVEN_NAME),
-        ("UID", cx509.NameOID.USER_ID),
-        ("SERIALNUMBER", cx509.NameOID.SERIAL_NUMBER),
-    ]
+NAME_ATTRS_ALT_NAMES = immutabletypes.freeze(
+    {
+        "CN": ("commonName",),
+        "L": ("localityName",),
+        "ST": ("stateOrProvinceName",),
+        "O": ("organizationName",),
+        "OU": ("organizationUnitName",),
+        "GN": ("givenName",),
+        "SN": ("surname",),
+        "MAIL": ("Email", "emailAddress"),
+        "SERIALNUMBER": ("serialNumber",),
+    }
 )
 
-EXTENSIONS_ALT_NAMES = {
-    "basicConstraints": ("X509v3 Basic Constraints",),
-    "keyUsage": ("X509v3 Key Usage",),
-    "extendedKeyUsage": ("X509v3 Extended Key Usage",),
-    "subjectKeyIdentifier": ("X509v3 Subject Key Identifier",),
-    "authorityKeyIdentifier": ("X509v3 Authority Key Identifier",),
-    # issuserAltName was a typo in the old x509 modules
-    "issuerAltName": ("X509v3 Issuer Alternative Name", "issuserAltName"),
-    "authorityInfoAccess": ("Authority Information Access",),
-    "subjectAltName": ("X509v3 Subject Alternative Name",),
-    "crlDistributionPoints": ("X509v3 CRL Distribution Points",),
-    "issuingDistributionPoint": ("X509v3 Issuing Distribution Point",),
-    "certificatePolicies": ("X509v3 Certificate Policies",),
-    "policyConstraints": ("X509v3 Policy Constraints",),
-    "inhibitAnyPolicy": ("X509v3 Inhibit Any Policy",),
-    "nameConstraints": ("X509v3 Name Constraints",),
-    "noCheck": ("OCSP No Check",),
-    "tlsfeature": ("TLS Feature",),
-    "nsComment": ("Netscape Comment",),
-    "nsCertType": ("Netscape Certificate Type",),
-    "cRLNumber": ("X509v3 CRLNumber",),
-    "deltaCRLIndicator": ("X509v3 Delta CRL Indicator",),
-    "freshestCRL": ("x509v3 Freshest CRL",),
-}
+NAME_ATTRS_OID = immutabletypes.freeze(
+    OrderedDict(
+        [
+            ("C", cx509.NameOID.COUNTRY_NAME),
+            ("ST", cx509.NameOID.STATE_OR_PROVINCE_NAME),
+            ("L", cx509.NameOID.LOCALITY_NAME),
+            ("STREET", cx509.NameOID.STREET_ADDRESS),
+            ("O", cx509.NameOID.ORGANIZATION_NAME),
+            ("OU", cx509.NameOID.ORGANIZATIONAL_UNIT_NAME),
+            ("CN", cx509.NameOID.COMMON_NAME),
+            ("MAIL", cx509.NameOID.EMAIL_ADDRESS),
+            ("SN", cx509.NameOID.SURNAME),
+            ("GN", cx509.NameOID.GIVEN_NAME),
+            ("UID", cx509.NameOID.USER_ID),
+            ("SERIALNUMBER", cx509.NameOID.SERIAL_NUMBER),
+        ]
+    )
+)
 
-EXTENSIONS_OID = {
-    "basicConstraints": cx509.ExtensionOID.BASIC_CONSTRAINTS,
-    "keyUsage": cx509.ExtensionOID.KEY_USAGE,
-    "extendedKeyUsage": cx509.ExtensionOID.EXTENDED_KEY_USAGE,
-    "subjectKeyIdentifier": cx509.ExtensionOID.SUBJECT_KEY_IDENTIFIER,
-    "authorityKeyIdentifier": cx509.ExtensionOID.AUTHORITY_KEY_IDENTIFIER,
-    "issuerAltName": cx509.ExtensionOID.ISSUER_ALTERNATIVE_NAME,
-    "authorityInfoAccess": cx509.ExtensionOID.AUTHORITY_INFORMATION_ACCESS,
-    "subjectAltName": cx509.ExtensionOID.SUBJECT_ALTERNATIVE_NAME,
-    "crlDistributionPoints": cx509.ExtensionOID.CRL_DISTRIBUTION_POINTS,
-    "issuingDistributionPoint": cx509.ExtensionOID.ISSUING_DISTRIBUTION_POINT,
-    "certificatePolicies": cx509.ExtensionOID.CERTIFICATE_POLICIES,
-    "policyConstraints": cx509.ExtensionOID.POLICY_CONSTRAINTS,
-    "inhibitAnyPolicy": cx509.ExtensionOID.INHIBIT_ANY_POLICY,
-    "nameConstraints": cx509.ExtensionOID.NAME_CONSTRAINTS,
-    "noCheck": cx509.ExtensionOID.OCSP_NO_CHECK,
-    "tlsfeature": cx509.ExtensionOID.TLS_FEATURE,
-    "nsComment": None,
-    "nsCertType": None,
-    "cRLNumber": cx509.ExtensionOID.CRL_NUMBER,
-    "deltaCRLIndicator": cx509.ExtensionOID.DELTA_CRL_INDICATOR,
-    "freshestCRL": cx509.ExtensionOID.FRESHEST_CRL,
-}
+EXTENSIONS_ALT_NAMES = immutabletypes.freeze(
+    {
+        "basicConstraints": ("X509v3 Basic Constraints",),
+        "keyUsage": ("X509v3 Key Usage",),
+        "extendedKeyUsage": ("X509v3 Extended Key Usage",),
+        "subjectKeyIdentifier": ("X509v3 Subject Key Identifier",),
+        "authorityKeyIdentifier": ("X509v3 Authority Key Identifier",),
+        # issuserAltName was a typo in the old x509 modules
+        "issuerAltName": ("X509v3 Issuer Alternative Name", "issuserAltName"),
+        "authorityInfoAccess": ("Authority Information Access",),
+        "subjectAltName": ("X509v3 Subject Alternative Name",),
+        "crlDistributionPoints": ("X509v3 CRL Distribution Points",),
+        "issuingDistributionPoint": ("X509v3 Issuing Distribution Point",),
+        "certificatePolicies": ("X509v3 Certificate Policies",),
+        "policyConstraints": ("X509v3 Policy Constraints",),
+        "inhibitAnyPolicy": ("X509v3 Inhibit Any Policy",),
+        "nameConstraints": ("X509v3 Name Constraints",),
+        "noCheck": ("OCSP No Check",),
+        "tlsfeature": ("TLS Feature",),
+        "nsComment": ("Netscape Comment",),
+        "nsCertType": ("Netscape Certificate Type",),
+        "cRLNumber": ("X509v3 CRLNumber",),
+        "deltaCRLIndicator": ("X509v3 Delta CRL Indicator",),
+        "freshestCRL": ("x509v3 Freshest CRL",),
+    }
+)
 
-EXTENSIONS_CRL_ENTRY_OID = {
-    "certificateIssuer": cx509.CRLEntryExtensionOID.CERTIFICATE_ISSUER,
-    "CRLReason": cx509.CRLEntryExtensionOID.CRL_REASON,
-    "invalidityDate": cx509.CRLEntryExtensionOID.INVALIDITY_DATE,
-}
+EXTENSIONS_OID = immutabletypes.freeze(
+    {
+        "basicConstraints": cx509.ExtensionOID.BASIC_CONSTRAINTS,
+        "keyUsage": cx509.ExtensionOID.KEY_USAGE,
+        "extendedKeyUsage": cx509.ExtensionOID.EXTENDED_KEY_USAGE,
+        "subjectKeyIdentifier": cx509.ExtensionOID.SUBJECT_KEY_IDENTIFIER,
+        "authorityKeyIdentifier": cx509.ExtensionOID.AUTHORITY_KEY_IDENTIFIER,
+        "issuerAltName": cx509.ExtensionOID.ISSUER_ALTERNATIVE_NAME,
+        "authorityInfoAccess": cx509.ExtensionOID.AUTHORITY_INFORMATION_ACCESS,
+        "subjectAltName": cx509.ExtensionOID.SUBJECT_ALTERNATIVE_NAME,
+        "crlDistributionPoints": cx509.ExtensionOID.CRL_DISTRIBUTION_POINTS,
+        "issuingDistributionPoint": cx509.ExtensionOID.ISSUING_DISTRIBUTION_POINT,
+        "certificatePolicies": cx509.ExtensionOID.CERTIFICATE_POLICIES,
+        "policyConstraints": cx509.ExtensionOID.POLICY_CONSTRAINTS,
+        "inhibitAnyPolicy": cx509.ExtensionOID.INHIBIT_ANY_POLICY,
+        "nameConstraints": cx509.ExtensionOID.NAME_CONSTRAINTS,
+        "noCheck": cx509.ExtensionOID.OCSP_NO_CHECK,
+        "tlsfeature": cx509.ExtensionOID.TLS_FEATURE,
+        "nsComment": None,
+        "nsCertType": None,
+        "cRLNumber": cx509.ExtensionOID.CRL_NUMBER,
+        "deltaCRLIndicator": cx509.ExtensionOID.DELTA_CRL_INDICATOR,
+        "freshestCRL": cx509.ExtensionOID.FRESHEST_CRL,
+    }
+)
+
+EXTENSIONS_CRL_ENTRY_OID = immutabletypes.freeze(
+    {
+        "certificateIssuer": cx509.CRLEntryExtensionOID.CERTIFICATE_ISSUER,
+        "CRLReason": cx509.CRLEntryExtensionOID.CRL_REASON,
+        "invalidityDate": cx509.CRLEntryExtensionOID.INVALIDITY_DATE,
+    }
+)
 
 
-EXTENDED_KEY_USAGE_OID = {
-    "serverAuth": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.1"),
-    "clientAuth": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.2"),
-    "codeSigning": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.3"),
-    "emailProtection": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.4"),
-    "timeStamping": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.8"),
-    "OCSPSigning": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.9"),
-    "msSmartcardLogin": cx509.ObjectIdentifier("1.3.6.1.4.1.311.20.2.2"),
-    "pkInitKDC": cx509.ObjectIdentifier("1.3.6.1.5.2.3.5"),
-    "ipsecIKE": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.17"),
-    "msCodeInd": cx509.ObjectIdentifier("1.3.6.1.4.1.311.2.1.21"),
-    "msCodeCom": cx509.ObjectIdentifier("1.3.6.1.4.1.311.2.1.22"),
-    "msCTLSign": cx509.ObjectIdentifier("1.3.6.1.4.1.311.10.3.1"),
-    "msEFS": cx509.ObjectIdentifier("1.3.6.1.4.1.311.10.3.4"),
-}
+EXTENDED_KEY_USAGE_OID = immutabletypes.freeze(
+    {
+        "serverAuth": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.1"),
+        "clientAuth": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.2"),
+        "codeSigning": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.3"),
+        "emailProtection": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.4"),
+        "timeStamping": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.8"),
+        "OCSPSigning": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.9"),
+        "msSmartcardLogin": cx509.ObjectIdentifier("1.3.6.1.4.1.311.20.2.2"),
+        "pkInitKDC": cx509.ObjectIdentifier("1.3.6.1.5.2.3.5"),
+        "ipsecIKE": cx509.ObjectIdentifier("1.3.6.1.5.5.7.3.17"),
+        "msCodeInd": cx509.ObjectIdentifier("1.3.6.1.4.1.311.2.1.21"),
+        "msCodeCom": cx509.ObjectIdentifier("1.3.6.1.4.1.311.2.1.22"),
+        "msCTLSign": cx509.ObjectIdentifier("1.3.6.1.4.1.311.10.3.1"),
+        "msEFS": cx509.ObjectIdentifier("1.3.6.1.4.1.311.10.3.4"),
+    }
+)
 
-ACCESS_OID = {
-    "OCSP": cx509.AuthorityInformationAccessOID.OCSP,
-    "caIssuers": cx509.AuthorityInformationAccessOID.CA_ISSUERS,
-    "caRepository": SubjectInformationAccessOID.CA_REPOSITORY,
-}
+ACCESS_OID = immutabletypes.freeze(
+    {
+        "OCSP": cx509.AuthorityInformationAccessOID.OCSP,
+        "caIssuers": cx509.AuthorityInformationAccessOID.CA_ISSUERS,
+        "caRepository": SubjectInformationAccessOID.CA_REPOSITORY,
+    }
+)
 
 CERT_EXTS = (
     "basicConstraints",
@@ -1616,32 +1631,34 @@ def _create_invalidity_date(val, **kwargs):
 # Map canonical name of extension to builder function.
 # This is done globally to avoid having to instantiate this
 # over and over.
-EXTENSION_BUILDERS = {
-    "basicConstraints": _create_basic_constraints,
-    "keyUsage": _create_key_usage,
-    "extendedKeyUsage": _create_extended_key_usage,
-    "subjectKeyIdentifier": _create_subject_key_identifier,
-    "authorityKeyIdentifier": _create_authority_key_identifier,
-    "issuerAltName": _create_issuer_alt_name,
-    "certificateIssuer": _create_certificate_issuer,
-    "authorityInfoAccess": _create_authority_info_access,
-    "subjectAltName": _create_subject_alt_name,
-    "crlDistributionPoints": _create_crl_distribution_points,
-    "freshestCRL": _create_freshest_crl,
-    "issuingDistributionPoint": _create_issuing_distribution_point,
-    "certificatePolicies": _create_certificate_policies,
-    "policyConstraints": _create_policy_constraints,
-    "inhibitAnyPolicy": _create_inhibit_any_policy,
-    "nameConstraints": _create_name_constraints,
-    "noCheck": _create_no_check,
-    "tlsfeature": _create_tlsfeature,
-    "nsComment": _create_ns_comment,
-    "nsCertType": _create_ns_cert_type,
-    "cRLNumber": _create_crl_number,
-    "deltaCRLIndicator": _create_delta_crl_indicator,
-    "CRLReason": _create_crl_reason,
-    "invalidityDate": _create_invalidity_date,
-}
+EXTENSION_BUILDERS = immutabletypes.freeze(
+    {
+        "basicConstraints": _create_basic_constraints,
+        "keyUsage": _create_key_usage,
+        "extendedKeyUsage": _create_extended_key_usage,
+        "subjectKeyIdentifier": _create_subject_key_identifier,
+        "authorityKeyIdentifier": _create_authority_key_identifier,
+        "issuerAltName": _create_issuer_alt_name,
+        "certificateIssuer": _create_certificate_issuer,
+        "authorityInfoAccess": _create_authority_info_access,
+        "subjectAltName": _create_subject_alt_name,
+        "crlDistributionPoints": _create_crl_distribution_points,
+        "freshestCRL": _create_freshest_crl,
+        "issuingDistributionPoint": _create_issuing_distribution_point,
+        "certificatePolicies": _create_certificate_policies,
+        "policyConstraints": _create_policy_constraints,
+        "inhibitAnyPolicy": _create_inhibit_any_policy,
+        "nameConstraints": _create_name_constraints,
+        "noCheck": _create_no_check,
+        "tlsfeature": _create_tlsfeature,
+        "nsComment": _create_ns_comment,
+        "nsCertType": _create_ns_cert_type,
+        "cRLNumber": _create_crl_number,
+        "deltaCRLIndicator": _create_delta_crl_indicator,
+        "CRLReason": _create_crl_reason,
+        "invalidityDate": _create_invalidity_date,
+    }
+)
 
 
 def _deserialize_openssl_confstring(conf, multiple=False):
@@ -2063,27 +2080,29 @@ def _render_invalidity_date(ext):
     return {"value": ext.value.invalidity_date.strftime(TIME_FMT)}
 
 
-EXTENSION_RENDERERS = {
-    cx509.BasicConstraints: _render_basic_constraints,
-    cx509.KeyUsage: _render_key_usage,
-    cx509.ExtendedKeyUsage: _render_extended_key_usage,
-    cx509.SubjectKeyIdentifier: _render_subject_key_identifier,
-    cx509.AuthorityKeyIdentifier: _render_authority_key_identifier,
-    cx509.IssuerAlternativeName: _render_general_names,
-    cx509.CertificateIssuer: _render_general_names,
-    cx509.AuthorityInformationAccess: _render_authority_info_access,
-    cx509.SubjectAlternativeName: _render_general_names,
-    cx509.CRLDistributionPoints: _render_distribution_points,
-    cx509.FreshestCRL: _render_distribution_points,
-    cx509.IssuingDistributionPoint: _render_issuing_distribution_point,
-    cx509.CertificatePolicies: _render_certificate_policies,
-    cx509.PolicyConstraints: _render_policy_constraints,
-    cx509.InhibitAnyPolicy: _render_inhibit_any_policy,
-    cx509.NameConstraints: _render_name_constraints,
-    cx509.OCSPNoCheck: _render_no_check,
-    cx509.TLSFeature: _render_tlsfeature,
-    cx509.CRLNumber: _render_crl_number,
-    cx509.DeltaCRLIndicator: _render_crl_number,
-    cx509.CRLReason: _render_crl_reason,
-    cx509.InvalidityDate: _render_invalidity_date,
-}
+EXTENSION_RENDERERS = immutabletypes.freeze(
+    {
+        cx509.BasicConstraints: _render_basic_constraints,
+        cx509.KeyUsage: _render_key_usage,
+        cx509.ExtendedKeyUsage: _render_extended_key_usage,
+        cx509.SubjectKeyIdentifier: _render_subject_key_identifier,
+        cx509.AuthorityKeyIdentifier: _render_authority_key_identifier,
+        cx509.IssuerAlternativeName: _render_general_names,
+        cx509.CertificateIssuer: _render_general_names,
+        cx509.AuthorityInformationAccess: _render_authority_info_access,
+        cx509.SubjectAlternativeName: _render_general_names,
+        cx509.CRLDistributionPoints: _render_distribution_points,
+        cx509.FreshestCRL: _render_distribution_points,
+        cx509.IssuingDistributionPoint: _render_issuing_distribution_point,
+        cx509.CertificatePolicies: _render_certificate_policies,
+        cx509.PolicyConstraints: _render_policy_constraints,
+        cx509.InhibitAnyPolicy: _render_inhibit_any_policy,
+        cx509.NameConstraints: _render_name_constraints,
+        cx509.OCSPNoCheck: _render_no_check,
+        cx509.TLSFeature: _render_tlsfeature,
+        cx509.CRLNumber: _render_crl_number,
+        cx509.DeltaCRLIndicator: _render_crl_number,
+        cx509.CRLReason: _render_crl_reason,
+        cx509.InvalidityDate: _render_invalidity_date,
+    }
+)

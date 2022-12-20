@@ -9,7 +9,6 @@ from pathlib import Path
 
 import pytest
 from saltfactories.utils import random_string
-from saltfactories.utils.tempfiles import temp_file
 
 import salt.utils.x509 as x509util
 
@@ -55,10 +54,10 @@ def x509_data(
     rsa_pubkey,
     csr,
 ):
-    with temp_file("key", rsa_privkey, x509_pkidir):
-        with temp_file("key_enc", rsa_privkey_enc, x509_pkidir):
-            with temp_file("key_pub", rsa_pubkey, x509_pkidir):
-                with temp_file("csr", csr, x509_pkidir):
+    with pytest.helpers.temp_file("key", rsa_privkey, x509_pkidir):
+        with pytest.helpers.temp_file("key_enc", rsa_privkey_enc, x509_pkidir):
+            with pytest.helpers.temp_file("key_pub", rsa_pubkey, x509_pkidir):
+                with pytest.helpers.temp_file("csr", csr, x509_pkidir):
                     yield x509_pkidir
 
 
