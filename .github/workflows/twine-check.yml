@@ -24,10 +24,12 @@ jobs:
       run: |
         pip install --upgrade pip setuptools wheel
         pip install twine>=3.4.1
+        # pip install build     # add build when implement pyproject.toml
 
     - name: Create Source Tarball
       run: |
         python3 setup.py sdist
+        # TBD python3 -m build --sdist  # replace with build when implement pyproject.toml
 
     - name: Twine check
       run: |

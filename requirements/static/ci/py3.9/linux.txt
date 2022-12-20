@@ -654,7 +654,7 @@ oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
-packaging==19.2
+packaging==21.3
     # via
     #   ansible-core
     #   pytest
@@ -719,7 +719,7 @@ pyopenssl==19.1.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==2.4.5
+pyparsing==3.0.9
     # via
     #   junos-eznc
     #   packaging
@@ -738,7 +738,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories[docker]==1.0.0rc23 ; sys_platform != "win32" and python_version > "3.6"
+pytest-salt-factories[docker]==1.0.0rc21 ; sys_platform != "win32"
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.6.0
     # via pytest-salt-factories
@@ -806,7 +806,6 @@ pyyaml==5.4.1
     #   junos-eznc
     #   kubernetes
     #   napalm
-    #   pytest-salt-factories
     #   yamllint
     #   yamlordereddictloader
 pyzmq==23.2.0 ; python_version >= "3.9"
@@ -883,7 +882,6 @@ six==1.16.0
     #   mock
     #   more-itertools
     #   ncclient
-    #   packaging
     #   paramiko
     #   pynacl
     #   pyopenssl

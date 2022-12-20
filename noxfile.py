@@ -49,11 +49,7 @@ if PRINT_TEST_SELECTION is None:
     PRINT_TEST_SELECTION = CI_RUN
 else:
     PRINT_TEST_SELECTION = PRINT_TEST_SELECTION == "1"
-PRINT_TEST_PLAN_ONLY = os.environ.get("PRINT_TEST_PLAN_ONLY")
-if PRINT_TEST_PLAN_ONLY is None:
-    PRINT_TEST_PLAN_ONLY = PRINT_TEST_SELECTION
-else:
-    PRINT_TEST_PLAN_ONLY = PRINT_TEST_PLAN_ONLY == "1"
+PRINT_TEST_PLAN_ONLY = os.environ.get("PRINT_TEST_PLAN_ONLY", "0") == "1"
 PRINT_SYSTEM_INFO = os.environ.get("PRINT_SYSTEM_INFO")
 if PRINT_SYSTEM_INFO is None:
     PRINT_SYSTEM_INFO = CI_RUN
@@ -404,33 +400,36 @@ def _run_with_coverage(session, *test_cmd, env=None):
     try:
         session.run(*test_cmd, env=env)
     finally:
-        # Always combine and generate the XML coverage report
-        try:
-            session.run("coverage", "combine", env=coverage_base_env)
-        except CommandFailed:
-            # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
-            # exception
-            pass
-        # Generate report for tests code coverage
-        session.run(
-            "coverage",
-            "xml",
-            "-o",
-            str(COVERAGE_OUTPUT_DIR.joinpath("tests.xml").relative_to(REPO_ROOT)),
-            "--omit=salt/*",
-            "--include=tests/*",
-            env=coverage_base_env,
-        )
-        # Generate report for salt code coverage
-        session.run(
-            "coverage",
-            "xml",
-            "-o",
-            str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
-            "--omit=tests/*",
-            "--include=salt/*",
-            env=coverage_base_env,
-        )
+        if os.environ.get("GITHUB_ACTIONS_PIPELINE", "0") == "0":
+            # Always combine and generate the XML coverage report
+            try:
+                session.run(
+                    "coverage", "combine", "--debug=pathmap", env=coverage_base_env
+                )
+            except CommandFailed:
+                # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
+                # exception
+                pass
+            # Generate report for tests code coverage
+            session.run(
+                "coverage",
+                "xml",
+                "-o",
+                str(COVERAGE_OUTPUT_DIR.joinpath("tests.xml").relative_to(REPO_ROOT)),
+                "--omit=salt/*",
+                "--include=tests/*",
+                env=coverage_base_env,
+            )
+            # Generate report for salt code coverage
+            session.run(
+                "coverage",
+                "xml",
+                "-o",
+                str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
+                "--omit=tests/*",
+                "--include=salt/*",
+                env=coverage_base_env,
+            )
 
 
 def _report_coverage(session):
@@ -1309,6 +1308,7 @@ def lint_salt(session):
     if session.posargs:
         paths = session.posargs
     else:
+        # TBD replace paths entries when implement pyproject.toml
         paths = ["setup.py", "noxfile.py", "salt/", "tasks/"]
     _lint(session, ".pylintrc", flags, paths)
 
