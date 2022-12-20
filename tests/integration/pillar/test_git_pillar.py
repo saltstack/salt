@@ -745,6 +745,9 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
     skip=_check_skip,
     reason="AlmaLinux/CentOS Stream 9 has RSA keys disabled by default",
 )
+@pytest.mark.skipif(
+    'grains["os"] in ("AlmaLinux", "CentOS Stream") and grains["osmajorrelease"] == 9'
+)
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 @pytest.mark.skipif(
