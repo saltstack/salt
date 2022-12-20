@@ -25,6 +25,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.validate.path
+import salt.utils.versions
 import salt.utils.xdg
 import salt.utils.yaml
 from salt._logging import (
@@ -490,7 +491,10 @@ VALID_OPTS = immutabletypes.freeze(
         # to send returns.
         "ret_port": int,
         # The number of hours to keep jobs around in the job cache on the master
+        # This option is deprecated by keep_jobs_seconds
         "keep_jobs": int,
+        # The number of seconds to keep jobs around in the job cache on the master
+        "keep_jobs_seconds": int,
         # If the returner supports `clean_old_jobs`, then at cleanup time,
         # archive the job data before deleting it.
         "archive_jobs": bool,
@@ -1296,6 +1300,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "ret_port": 4506,
         "timeout": 5,
         "keep_jobs": 24,
+        "keep_jobs_seconds": 86400,
         "archive_jobs": False,
         "root_dir": salt.syspaths.ROOT_DIR,
         "pki_dir": os.path.join(salt.syspaths.LIB_STATE_DIR, "pki", "master"),
@@ -3912,6 +3917,18 @@ def apply_master_config(overrides=None, defaults=None):
     _adjust_log_file_override(overrides, defaults["log_file"])
     if overrides:
         opts.update(overrides)
+    # `keep_acl_in_token` will be forced to True when using external authentication
+    # for REST API (`rest` is present under `external_auth`). This is because the REST API
+    # does not store the password, and can therefore not retroactively fetch the ACL, so
+    # the ACL must be stored in the token.
+    if "rest" in opts.get("external_auth", {}):
+        # Check current value and print out warning
+        if opts["keep_acl_in_token"] is False:
+            log.warning(
+                "The 'rest' external_auth backend requires 'keep_acl_in_token' to be True. "
+                "Setting 'keep_acl_in_token' to True."
+            )
+        opts["keep_acl_in_token"] = True
 
     opts["__cli"] = salt.utils.stringutils.to_unicode(os.path.basename(sys.argv[0]))
 

@@ -1824,6 +1824,7 @@ _OS_FAMILY_MAP = {
     "Devuan": "Debian",
     "antiX": "Debian",
     "Kali": "Debian",
+    "Parrot OS": "Debian",
     "neon": "Debian",
     "Cumulus": "Debian",
     "Deepin": "Debian",
@@ -3086,6 +3087,7 @@ def _hw_data(osdata):
     Provides
         biosversion
         biosvendor
+        boardname
         productname
         manufacturer
         serialnumber
@@ -3105,6 +3107,7 @@ def _hw_data(osdata):
         sysfs_firmware_info = {
             "biosversion": "bios_version",
             "biosvendor": "bios_vendor",
+            "boardname": "board_name",
             "productname": "product_name",
             "manufacturer": "sys_vendor",
             "biosreleasedate": "bios_date",

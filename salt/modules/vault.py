@@ -489,7 +489,7 @@ assign
 
     Defaults to ``[saltstack/minions, saltstack/{minion}]``.
 
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
         Policies can be templated with pillar values as well: ``salt_role_{pillar[roles]}``.
         Make sure to only reference pillars that are not sourced from Vault since the latter
@@ -600,7 +600,7 @@ config_location
     will force vault to use the connection details from the master or the
     local config. Can only be either ``master`` or ``local``.
 
-  .. versionadded:: 3006
+  .. versionadded:: 3006.0
 
 issue_params
     Request overrides for token/AppRole issuance. This needs to be allowed

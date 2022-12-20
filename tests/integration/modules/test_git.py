@@ -24,7 +24,6 @@ import salt.utils.platform
 from salt.utils.versions import LooseVersion
 from tests.support.case import ModuleCase
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -869,8 +868,9 @@ class GitModuleTest(ModuleCase):
             "refs/heads/master",
         )
 
-    @skipIf(
-        not _worktrees_supported(), "Git 2.5 or newer required for worktree support"
+    @pytest.mark.skipif(
+        not _worktrees_supported(),
+        reason="Git 2.5 or newer required for worktree support",
     )
     @pytest.mark.slow_test
     def test_worktree_add_rm(self):

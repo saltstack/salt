@@ -11,7 +11,7 @@ as created by the Python installer. This includes all header files, scripts,
 dlls, library files, and pip.
 
 .EXAMPLE
-build_python.ps1 -Version 3.8.14 -Architecture x86
+build_python.ps1 -Version 3.8.16 -Architecture x86
 
 #>
 param(
@@ -24,6 +24,7 @@ param(
         #"3.9.13",
         #"3.9.12",
         #"3.9.11",
+        "3.8.16",
         "3.8.15",
         "3.8.14",
         "3.8.13",
@@ -36,15 +37,22 @@ param(
     # 3.8 for now. Pycurl stopped building wheel files after 7.43.0.5 which
     # supported up to 3.8. So we're pinned to the latest version of Python 3.8.
     # We may have to drop support for pycurl or build it ourselves.
-    # Default is: 3.8.15
-    [String] $Version = "3.8.15",
+    # Default is: 3.8.16
+    [String] $Version = "3.8.16",
 
     [Parameter(Mandatory=$false)]
     [ValidateSet("x64", "x86")]
     [Alias("a")]
     # The System Architecture to build. "x86" will build a 32-bit installer.
     # "x64" will build a 64-bit installer. Default is: x64
-    $Architecture = "x64"
+    [String] $Architecture = "x64",
+
+    [Parameter(Mandatory=$false)]
+    [Alias("b")]
+    # Build python from source instead of fetching a tarball
+    # Requires VC Build Tools
+    [Switch] $Build
+
 )
 
 # Script Preferences
@@ -53,47 +61,19 @@ $ProgressPreference = "SilentlyContinue"
 $ErrorActionPreference = "Stop"
 
 #-------------------------------------------------------------------------------
-# Import Modules
-#-------------------------------------------------------------------------------
-$SCRIPT_DIR = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
-Import-Module $SCRIPT_DIR\Modules\uac-module.psm1
-
-#-------------------------------------------------------------------------------
-# Check for Elevated Privileges
-#-------------------------------------------------------------------------------
-If (!(Get-IsAdministrator)) {
-    If (Get-IsUacEnabled) {
-        # We are not running "as Administrator" - so relaunch as administrator
-        # Create a new process object that starts PowerShell
-        $newProcess = new-object System.Diagnostics.ProcessStartInfo "PowerShell";
-
-        # Specify the current script path and name as a parameter
-        $newProcess.Arguments = $myInvocation.MyCommand.Definition
-
-        # Specify the current working directory
-        $newProcess.WorkingDirectory = "$SCRIPT_DIR"
-
-        # Indicate that the process should be elevated
-        $newProcess.Verb = "runas";
-
-        # Start the new process
-        [System.Diagnostics.Process]::Start($newProcess);
-
-        # Exit from the current, unelevated, process
-        Exit
-    } Else {
-        Throw "You must be administrator to run this script"
-    }
-}
-
-#-------------------------------------------------------------------------------
 # Start the Script
 #-------------------------------------------------------------------------------
 
 Write-Host $("=" * 80)
-Write-Host "Build Python with Relenv" -ForegroundColor Cyan
+if ( $Build ) {
+    $SCRIPT_MSG = "Build Python with Relenv"
+} else {
+    $SCRIPT_MSG = "Fetch Python with Relenv"
+}
+Write-Host "$SCRIPT_MSG" -ForegroundColor Cyan
 Write-Host "- Python Version: $Version"
 Write-Host "- Architecture:   $Architecture"
+Write-Host "- Build:          $Build"
 Write-Host $("-" * 80)
 
 #-------------------------------------------------------------------------------
@@ -137,33 +117,13 @@ Write-Host "Creating Temporary PowerShell Profile: " -NoNewline
 Write-Host "Success" -ForegroundColor Green
 
 #-------------------------------------------------------------------------------
-# Script Variables
+# Make sure we're not in a virtual environment
 #-------------------------------------------------------------------------------
-
-$RELENV_DIR   = "$SCRIPT_DIR\relative-environment-for-python"
-$RELENV_URL   = "https://github.com/saltstack/relative-environment-for-python"
-$BIN_DIR      = "$SCRIPT_DIR\buildenv\bin"
-$SCRIPTS_DIR  = "$BIN_DIR\Scripts"
-$BUILD_DIR    = "${env:LOCALAPPDATA}\relenv\build"
-$SALT_DEP_URL = "https://repo.saltproject.io/windows/dependencies"
-
-if ( $Architecture -eq "x64" ) {
-    $SALT_DEP_URL = "$SALT_DEP_URL/64"
-    $BUILD_DIR    = "$BUILD_DIR\amd64-win"
-    $ARCH         = "amd64"
-} else {
-    $SALT_DEP_URL = "$SALT_DEP_URL/32"
-    $BUILD_DIR    = "$BUILD_DIR\x86-win"
-    $ARCH         = "x86"
-}
-
-#-------------------------------------------------------------------------------
-# Prepping Environment
-#-------------------------------------------------------------------------------
-if ( Test-Path -Path "$RELENV_DIR" ) {
-    Write-Host "Removing existing relenv directory: " -NoNewline
-    Remove-Item -Path "$RELENV_DIR" -Recurse -Force
-    if ( Test-Path -Path "$RELENV_DIR" ) {
+if ( $env:VIRTUAL_ENV ) {
+    Write-Host "Deactivating virtual environment"
+    . deactivate
+    Write-Host $env:VIRTUAL_ENV
+    if ( $env:VIRTUAL_ENV ) {
         Write-Host "Failed" -ForegroundColor Red
         exit 1
     } else {
@@ -171,10 +131,43 @@ if ( Test-Path -Path "$RELENV_DIR" ) {
     }
 }
 
-if ( Test-Path -Path "$BIN_DIR" ) {
-    Write-Host "Removing existing bin directory: " -NoNewline
-    Remove-Item -Path "$BIN_DIR" -Recurse -Force
-    if ( Test-Path -Path "$BIN_DIR" ) {
+#-------------------------------------------------------------------------------
+# Script Variables
+#-------------------------------------------------------------------------------
+$SCRIPT_DIR   = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
+$BUILD_DIR    = "$SCRIPT_DIR\buildenv"
+$SCRIPTS_DIR  = "$BUILD_DIR\Scripts"
+$RELENV_DIR   = "${env:LOCALAPPDATA}\relenv"
+$SYS_PY_BIN   = (cmd /c "where python")
+$BLD_PY_BIN   = "$BUILD_DIR\Scripts\python.exe"
+$SALT_DEP_URL = "https://repo.saltproject.io/windows/dependencies"
+
+if ( $Architecture -eq "x64" ) {
+    $SALT_DEP_URL = "$SALT_DEP_URL/64"
+    $ARCH         = "amd64"
+} else {
+    $SALT_DEP_URL = "$SALT_DEP_URL/32"
+    $ARCH         = "x86"
+}
+
+#-------------------------------------------------------------------------------
+# Prepping Environment
+#-------------------------------------------------------------------------------
+if ( Test-Path -Path "$SCRIPT_DIR\venv" ) {
+    Write-Host "Removing virtual environment directory: " -NoNewline
+    Remove-Item -Path "$SCRIPT_DIR\venv" -Recurse -Force
+    if ( Test-Path -Path "$SCRIPT_DIR\venv" ) {
+        Write-Host "Failed" -ForegroundColor Red
+        exit 1
+    } else {
+        Write-Host "Success" -ForegroundColor Green
+    }
+}
+
+if ( Test-Path -Path "$RELENV_DIR" ) {
+    Write-Host "Removing existing relenv directory: " -NoNewline
+    Remove-Item -Path "$RELENV_DIR" -Recurse -Force
+    if ( Test-Path -Path "$RELENV_DIR" ) {
         Write-Host "Failed" -ForegroundColor Red
         exit 1
     } else {
@@ -194,17 +187,23 @@ if ( Test-Path -Path "$BUILD_DIR" ) {
 }
 
 #-------------------------------------------------------------------------------
-# Downloading Relenv
+# Setting Up Virtual Environment
 #-------------------------------------------------------------------------------
-# TODO: Eventually we should just download the tarball from a release, but since
-# TODO: there is no release yet, we'll just clone the directory
-
-Write-Host "Cloning Relenv: " -NoNewline
-$args = "clone", "--depth", "1", "$RELENV_URL", "$RELENV_DIR"
-Start-Process -FilePath git `
-              -ArgumentList $args `
+Write-Host "Installing virtual environment: " -NoNewline
+Start-Process -FilePath "$SYS_PY_BIN" `
+              -ArgumentList "-m", "venv", "venv" `
+              -WorkingDirectory "$SCRIPT_DIR" `
               -Wait -WindowStyle Hidden
-if ( Test-Path -Path "$RELENV_DIR\relenv") {
+if ( Test-Path -Path "$SCRIPT_DIR\venv" ) {
+    Write-Host "Success" -ForegroundColor Green
+} else {
+    Write-Host "Failed"
+    exit 1
+}
+
+Write-Host "Activating virtual environment: " -NoNewline
+. "$SCRIPT_DIR\venv\Scripts\activate.ps1"
+if ( $env:VIRTUAL_ENV ) {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
@@ -215,7 +214,7 @@ if ( Test-Path -Path "$RELENV_DIR\relenv") {
 # Installing Relenv
 #-------------------------------------------------------------------------------
 Write-Host "Installing Relenv: " -NoNewLine
-$output = pip install -e "$RELENV_DIR\." --disable-pip-version-check
+pip install relenv --disable-pip-version-check | Out-Null
 $output = pip list --disable-pip-version-check
 if ("relenv" -in $output.split()) {
     Write-Host "Success" -ForegroundColor Green
@@ -227,9 +226,14 @@ if ("relenv" -in $output.split()) {
 #-------------------------------------------------------------------------------
 # Building Python with Relenv
 #-------------------------------------------------------------------------------
-Write-Host "Building Python with Relenv (long-running): " -NoNewLine
-$output = python -m relenv build --clean --arch $ARCH
-if ( Test-Path -Path "$BUILD_DIR\Scripts\python.exe") {
+if ( $Build ) {
+    Write-Host "Building Python with Relenv (long-running): " -NoNewLine
+    $output = relenv build --clean --arch $ARCH
+} else {
+    Write-Host "Fetching Python with Relenv: " -NoNewLine
+    relenv fetch --arch $ARCH | Out-Null
+}
+if ( Test-Path -Path "$RELENV_DIR\build\$ARCH-win.tar.xz") {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
@@ -237,22 +241,11 @@ if ( Test-Path -Path "$BUILD_DIR\Scripts\python.exe") {
 }
 
 #-------------------------------------------------------------------------------
-# Moving Python to Bin Dir
+# Extracting Python environment
 #-------------------------------------------------------------------------------
-if ( !( Test-Path -Path $BIN_DIR ) ) {
-    Write-Host "Creating the bin directory: " -NoNewLine
-    New-Item -Path $BIN_DIR -ItemType Directory | Out-Null
-    if ( Test-Path -Path $BIN_DIR ) {
-        Write-Host "Success" -ForegroundColor Green
-    } else {
-        Write-Host "Failed" -ForegroundColor Red
-        exit 1
-    }
-}
-
-Write-Host "Moving Python to bin: " -NoNewLine
-Move-Item -Path "$BUILD_DIR\*" -Destination "$BIN_DIR"
-if ( Test-Path -Path "$SCRIPTS_DIR\python.exe") {
+Write-Host "Extracting Python environment: " -NoNewLine
+relenv create --arch $ARCH "$BUILD_DIR"
+If ( Test-Path -Path "$BLD_PY_BIN" ) {
     Write-Host "Success" -ForegroundColor Green
 } else {
     Write-Host "Failed" -ForegroundColor Red
@@ -281,26 +274,28 @@ if ( Test-Path -Path "$SCRIPTS_DIR\ssleay32.dll" ) {
 #-------------------------------------------------------------------------------
 # Removing Unneeded files from Python
 #-------------------------------------------------------------------------------
-Write-Host "Removing Unneeded Files from Python: " -NoNewline
 $remove = "idlelib",
           "test",
           "tkinter",
           "turtledemo"
 $remove | ForEach-Object {
-    Remove-Item -Path "$BIN_DIR\Lib\$_" -Recurse -Force
-    if ( Test-Path -Path "$BIN_DIR\Lib\$_" ) {
-        Write-Host "Failed" -ForegroundColor Red
-        Write-Host "Failed to remove: $BIN_DIR\Lib\$_"
-        exit 1
+    if ( Test-Path -Path "$BUILD_DIR\Lib\$_" ) {
+        Write-Host "Removing $_`: " -NoNewline
+        Remove-Item -Path "$BUILD_DIR\Lib\$_" -Recurse -Force
+        if (Test-Path -Path "$BUILD_DIR\Lib\$_") {
+            Write-Host "Failed" -ForegroundColor Red
+            exit 1
+        } else {
+            Write-Host "Success" -ForegroundColor Green
+        }
     }
 }
-Write-Host "Success" -ForegroundColor Green
 
 #-------------------------------------------------------------------------------
 # Restoring Original Global Script Preferences
 #-------------------------------------------------------------------------------
 if ( $CREATED_POWERSHELL_PROFILE_DIRECTORY ) {
-    Write-Host "Removing PowerShell Profile Directory"
+    Write-Host "Removing PowerShell Profile Directory: " -NoNewline
     Remove-Item -Path "$(Split-Path "$profile" -Parent)" -Recurse -Force
     if ( !  (Test-Path -Path "$(Split-Path "$profile" -Parent)") ) {
         Write-Host "Success" -ForegroundColor Green
@@ -336,7 +331,6 @@ if ( Test-Path -Path "$profile.salt_bak" ) {
 # Finished
 #-------------------------------------------------------------------------------
 Write-Host $("-" * 80)
-Write-Host "Build Python $Architecture with Relenv Completed" `
-    -ForegroundColor Cyan
-Write-Host "Environment Location: $BIN_DIR"
+Write-Host "$SCRIPT_MSG Completed" -ForegroundColor Cyan
+Write-Host "Environment Location: $BUILD_DIR"
 Write-Host $("=" * 80)

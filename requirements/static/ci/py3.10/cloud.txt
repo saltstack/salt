@@ -350,7 +350,7 @@ cachetools==4.2.2
     # via google-auth
 cassandra-driver==3.25.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2022.12.7
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -659,8 +659,6 @@ pycparser==2.21 ; python_version >= "3.9"
     #   cffi
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
-pycurl==7.44.1 ; python_version >= "3.10"
-    # via -r requirements/static/ci/common.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
 pyjwt==2.4.0

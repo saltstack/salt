@@ -21,16 +21,20 @@
 # The default version to be built
 # TODO: The is not selectable via RELENV yet. This has to match whatever relenv
 # TODO: is building
-PY_VERSION="3.10.7"
+PY_VERSION="3.10.9"
 
 # Valid versions supported by macOS
 PY_VERSIONS=(
+    "3.10.9"
+    "3.10.8"
     "3.10.7"
+    "3.9.16"
     "3.9.15"
     "3.9.14"
     "3.9.13"
     "3.9.12"
     "3.9.11"
+    "3.8.16"
     "3.8.15"
     "3.8.14"
     "3.8.13"

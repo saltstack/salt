@@ -1,5 +1,7 @@
 import os
 
+import pytest
+
 import salt.utils.boto3mod as boto3mod
 import salt.utils.botomod as botomod
 from salt.exceptions import SaltInvocationError
@@ -7,7 +9,7 @@ from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=import-error
 try:
@@ -178,11 +180,11 @@ class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
         self.assertEqual(cache_id(resource_name), resource_id)
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}".format(
+    reason="The boto module must be greater than or equal to version {}".format(
         required_boto_version
     ),
 )
@@ -222,10 +224,10 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
         self.assertTrue(conn in botomod.__context__.values())
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}".format(
+    reason="The boto module must be greater than or equal to version {}".format(
         required_boto_version
     ),
 )
@@ -263,17 +265,17 @@ class BotoUtilsGetErrorTestCase(BotoUtilsTestCaseBase):
         self.assertEqual(r, expected)
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}".format(
+    reason="The boto module must be greater than or equal to version {}".format(
         required_boto_version
     ),
 )
-@skipIf(HAS_BOTO3 is False, "The boto3 module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO3 is False, reason="The boto3 module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto3() is False,
-    "The boto3 module must be greater than or equal to version {}".format(
+    reason="The boto3 module must be greater than or equal to version {}".format(
         required_boto3_version
     ),
 )
