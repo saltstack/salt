@@ -1,8 +1,11 @@
+import glob
 import os
 import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import sleep
+
+from setuptools import sandbox
 
 from salt.exceptions import SaltException
 from salt.utils import yaml
@@ -23,11 +26,20 @@ def build_wheel():
     """ """
     global WHEEL_PATH
     if WHEEL_PATH is None:
-        # TODO get right tar and build
-        # WHEEL_PATH = glob.glob(os.path.join(SALT_DIR, "dist", "*.tar.gz"))[0]
-        pass
-    return "/home/ch44d/Desktop/salt/dist/salt-3005.1+1451.g8ef9b100c4.tar.gz"
-    # return WHEEL_PATH
+        setup = Path(Path(__file__).parents[2], "setup.py")
+        if not setup.is_file():
+            raise SaltException("Can't fine setup!")
+        sandbox.run_setup(
+            setup,
+            (
+                "-q",
+                "sdist",
+            ),
+        )
+        WHEEL_PATH = glob.glob(
+            os.path.join(Path(__file__).parents[2], "dist", "salt-*.tar.gz")
+        )[0]
+    return WHEEL_PATH
 
 
 def _make_file(docker_dir, tag, file_name, data, mode="w"):
@@ -129,9 +141,6 @@ class Bundle:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def __del__(self):  # pylint: disable=no-dunder-del
-        self.close()
-
     def close(self):
         if self._open:
             self._open = False
@@ -162,9 +171,6 @@ class Bundles:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-
-    def __del__(self):  # pylint: disable=no-dunder-del
         self.close()
 
     def __contains__(self, item):
