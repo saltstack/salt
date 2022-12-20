@@ -22,7 +22,7 @@
 #         The following will build Salt version 3006.1-1 and stage all files in
 #         the ./build directory relative to this script
 #
-#         ./build_pkg.sh 3006.1-1
+#         ./package.sh 3006.1-1
 #
 # Environment Setup:
 #
@@ -61,7 +61,6 @@ CPU_ARCH="$(uname -m)"
 SRC_DIR="$(git rev-parse --show-toplevel)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="$SCRIPT_DIR/build"
-CONF_DIR="$BUILD_DIR/etc/salt"
 PKG_RESOURCES=$SRC_DIR/pkg/osx
 CMD_OUTPUT=$(mktemp -t cmd.log)
 
@@ -76,12 +75,13 @@ _usage() {
      echo "Script to build the Salt package:"
      echo ""
      echo "usage: ${0}"
-     echo "             [-h|--help]"
+     echo "             [-h|--help] [-v|--version]"
      echo ""
      echo "  -h, --help      this message"
+     echo "  -v, --version   version of Salt display in the package"
      echo ""
      echo "  To build the Salt package:"
-     echo "      example: $0"
+     echo "      example: $0 3006.1-1"
 }
 
 # _msg
@@ -155,111 +155,6 @@ if [[ ! -e "$SRC_DIR/.git" ]] && [[ ! -e "$SRC_DIR/scripts/salt" ]]; then
     echo "Run this script from the 'pkg/osx' directory of the Git checkout."
     exit 1
 fi
-
-#-------------------------------------------------------------------------------
-# Copy salt-config from Salt Repo to /opt/salt
-#-------------------------------------------------------------------------------
-SALT_DIR="$BUILD_DIR/opt/salt"
-if ! [ -f "$SALT_DIR/salt-config.sh" ]; then
-    _msg "Staging Salt config script"
-    cp "$PKG_RESOURCES/scripts/salt-config.sh" "$SALT_DIR/"
-    if [ -f "$SALT_DIR/salt-config.sh" ]; then
-        _success
-    else
-        _failure
-    fi
-fi
-
-#-------------------------------------------------------------------------------
-# Copy Service Definitions from Salt Repo to the Package Directory
-#-------------------------------------------------------------------------------
-if ! [ -d "$BUILD_DIR/Library/LaunchDaemons" ]; then
-    _msg "Creating LaunchDaemons directory"
-    mkdir -p "$BUILD_DIR/Library/LaunchDaemons"
-    if [ -d "$BUILD_DIR/Library/LaunchDaemons" ]; then
-        _success
-    else
-        _failure
-    fi
-fi
-
-ITEMS=(
-    "minion"
-    "master"
-    "syndic"
-    "api"
-)
-for i in "${ITEMS[@]}"; do
-    FILE="$BUILD_DIR/Library/LaunchDaemons/com.saltstack.salt.$i.plist"
-    if ! [ -f "$FILE" ]; then
-        _msg "Copying $i service definition"
-        cp "$PKG_RESOURCES/scripts/com.saltstack.salt.$i.plist" "$FILE"
-        if [ -f "$FILE" ]; then
-            _success
-        else
-            _failure
-        fi
-    fi
-done
-
-#-------------------------------------------------------------------------------
-# Remove unnecessary files from the package
-#-------------------------------------------------------------------------------
-ITEMS=(
-    "pkgconfig"
-    "share"
-    "__pycache__"
-)
-
-for i in "${ITEMS[@]}"; do
-    if [[ -n $(find "$BUILD_DIR" -name "$i" -type d) ]]; then
-        _msg "Removing $i directories"
-        find "$BUILD_DIR" -name "$i" -type d -prune -exec rm -rf {} \;
-        if [[ -z $(find "$BUILD_DIR" -name "$i" -type d) ]]; then
-            _success
-        else
-            _failure
-        fi
-    fi
-done
-
-if [[ -n $(find "$BUILD_DIR" -name "*.pyc" -type f) ]]; then
-    _msg "Removing *.pyc files"
-    find "$BUILD_DIR" -name "*.pyc" -type f -delete
-    if [[ -z $(find "$BUILD_DIR" -name "*.pyc" -type f) ]]; then
-        _success
-    else
-        _failure
-    fi
-fi
-
-#-------------------------------------------------------------------------------
-# Copy Config Files from Salt Repo to the Package Directory
-#-------------------------------------------------------------------------------
-if ! [ -d "$CONF_DIR" ]; then
-    _msg "Creating config directory"
-    mkdir -p "$CONF_DIR"
-    if [ -d "$CONF_DIR" ]; then
-        _success
-    else
-        _failure
-    fi
-fi
-ITEMS=(
-  "minion"
-  "master"
-)
-for i in "${ITEMS[@]}"; do
-    if ! [ -f "$CONF_DIR/$i.dist" ]; then
-        _msg "Copying $i config"
-        cp "$SRC_DIR/conf/$i" "$CONF_DIR/$i.dist"
-        if [ -f "$CONF_DIR/$i.dist" ]; then
-            _success
-        else
-            _failure
-        fi
-    fi
-done
 
 #-------------------------------------------------------------------------------
 # Add Title, Description, Version and CPU Arch to distribution.xml
