@@ -508,7 +508,7 @@ def get_context(template, line, num_lines=5, marker=None):
     return "---\n{}\n---".format("\n".join(buf))
 
 
-def get_diff(a, b, *args, **kwargs):
+def get_diff_list(a, b, *args, **kwargs):
     """
     Perform diff on two iterables containing lines from two files, and return
     the diff as as string. Lines are normalized to str types to avoid issues
@@ -518,14 +518,60 @@ def get_diff(a, b, *args, **kwargs):
     # Late import to avoid circular import
     import salt.utils.data
 
-    return "".join(
-        difflib.unified_diff(
-            salt.utils.data.decode_list(a, encoding=encoding),
-            salt.utils.data.decode_list(b, encoding=encoding),
-            *args,
-            **kwargs
-        )
+    return difflib.unified_diff(
+        salt.utils.data.decode_list(a, encoding=encoding),
+        salt.utils.data.decode_list(b, encoding=encoding),
+        *args,
+        **kwargs
     )
+
+
+def get_diff(a, b, *args, **kwargs):
+    """
+    Perform diff on two iterables containing lines from two files, and return
+    the diff as as string. Lines are normalized to str types to avoid issues
+    with unicode on PY2.
+    """
+    return "".join(get_diff_list(a, b, *args, **kwargs))
+
+
+def get_conditional_diff(
+    a, b, *args, ignore_ordering=True, ignore_whitespace=True, **kwargs
+):
+    """
+    Perform diff on two iterables containing lines from two files, and return
+    the diff as as string. Lines are normalized to str types to avoid issues
+    with unicode on PY2.
+    """
+    diff = list(get_diff_list(a, b, *args, **kwargs))
+
+    has_changes = False
+    if any([ignore_whitespace, ignore_ordering]):
+        adds = []
+        subs = []
+        for line in diff:
+            if line.startswith("+++") or line.startswith("---"):
+                continue
+            if line.startswith("+") or line.startswith("-"):
+                if ignore_ordering:
+                    if ignore_whitespace and line.startswith("+"):
+                        if line[1:].strip():
+                            adds.append(line[1:].strip())
+                    elif ignore_whitespace and line.startswith("-"):
+                        if line[1:].strip():
+                            subs.append(line[1:].strip())
+                    elif line.startswith("+"):
+                        adds.append(line[1:])
+                    elif line.startswith("-"):
+                        subs.append(line[1:])
+                elif ignore_whitespace and line[1:].strip():
+                    has_changes = True
+        if sorted(adds) != sorted(subs):
+            has_changes = True
+    else:
+        has_changes = bool(diff)
+
+    return has_changes, "".join(diff)
 
 
 @jinja_filter("to_snake_case")
