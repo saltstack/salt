@@ -649,7 +649,7 @@ oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
-packaging==20.9
+packaging==21.3
     # via
     #   ansible-core
     #   sphinx
@@ -705,7 +705,7 @@ pyopenssl==19.1.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==2.4.7
+pyparsing==3.0.9
     # via
     #   junos-eznc
     #   packaging
