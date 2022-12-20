@@ -25,6 +25,7 @@ import salt.utils.dictupdate
 import salt.utils.json
 import salt.utils.versions
 from salt.defaults import NOT_SET
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 logging.getLogger("requests").setLevel(logging.WARNING)
@@ -314,6 +315,17 @@ def _get_cache_backend(config, opts):
     return salt.cache.factory(opts)
 
 
+def get_lease_cache(opts, context, cbank, ckey):
+    """
+    Return an instance of VaultLeaseCache, which can be used
+    to handle caching-related functions of leases like
+    authentication credentials.
+    """
+    auth_cbank = _get_cache_bank(opts)
+    config, _ = _get_connection_config(auth_cbank, opts, context)
+    return VaultLeaseCache(config, opts, context, cbank, ckey)
+
+
 def expand_pattern_lists(pattern, **mappings):
     """
     Expands the pattern for any list-valued mappings, such that for any list of
@@ -362,6 +374,37 @@ def expand_pattern_lists(pattern, **mappings):
                 expanded_patterns += result
             return expanded_patterns
     return [pattern]
+
+
+def timestring_map(val):
+    """
+    Turn a time string (like ``60m``) into a float with seconds as a unit.
+    """
+    if val is None:
+        return val
+    if isinstance(val, (int, float)):
+        return float(val)
+    try:
+        return float(val)
+    except ValueError:
+        pass
+    if not isinstance(val, str):
+        raise SaltInvocationError("Expected integer or time string")
+    if not re.match(r"^\d+(?:\.\d+)?[smhd]$", val):
+        raise SaltInvocationError(f"Invalid time string format: {val}")
+    raw, unit = float(val[:-1]), val[-1]
+    if unit == "s":
+        return raw
+    raw *= 60
+    if unit == "m":
+        return raw
+    raw *= 60
+    if unit == "h":
+        return raw
+    raw *= 24
+    if unit == "d":
+        return raw
+    raise RuntimeError("This path should not have been hit")
 
 
 SALT_RUNTYPE_MASTER = 0
@@ -1491,6 +1534,80 @@ class AuthenticatedVaultClient(VaultClient):
         return headers
 
 
+class VaultLease:
+    """
+    Base class for Vault leases that expire with time.
+    """
+
+    def __init__(
+        self,
+        lease_id,
+        renewable,
+        lease_duration,
+        creation_time=None,
+        auth=None,
+        data=None,
+        **kwargs,  # pylint: disable=unused-argument
+    ):
+        self.id = lease_id
+        self.renewable = renewable
+        self.lease_duration = lease_duration
+        if creation_time is not None:
+            try:
+                creation_time = int(creation_time)
+            except ValueError:
+                creation_time = _fromisoformat(creation_time)
+        self.creation_time = (
+            creation_time if creation_time is not None else int(round(time.time()))
+        )
+        self.auth = auth
+        self.data = data
+
+    def is_valid(self, valid_for=0):
+        """
+        Checks whether the lease is valid
+
+        valid_for
+            Allows to check whether the lease will still be valid in the future.
+            This can be an integer, which will be interpreted as seconds, or a
+            time string using the same format as Vault does:
+            Suffix ``s`` for seconds, ``m`` for minuts, ``h`` for hours, ``d`` for days.
+            Defaults to 0.
+        """
+        if not self.lease_duration:
+            return True
+        return self.creation_time + self.lease_duration > time.time() + timestring_map(
+            valid_for
+        )
+
+    def with_(self, **kwargs):
+        """
+        Partially update the contained data
+        """
+        attrs = copy.copy(self.__dict__)
+        attrs.update(kwargs)
+        return type(self)(**attrs)
+
+    def __str__(self):
+        return self.id
+
+    def __repr__(self):
+        return repr(self.to_dict())
+
+    def __eq__(self, other):
+        try:
+            data = other.__dict__
+        except AttributeError:
+            data = other
+        return self.__dict__ == data
+
+    def to_dict(self):
+        """
+        Return a dict of all contained attributes
+        """
+        return self.__dict__
+
+
 class VaultCache:
     """
     Encapsulates session and other cache backends for a single domain
@@ -1638,31 +1755,25 @@ class VaultConfigCache(VaultCache):
         super().store(value)
 
 
-class VaultAuthCache(VaultCache):
-    """
-    Implements authentication secret-specific caches. Checks whether
-    the cached secrets are still valid before returning.
-    """
-
-    def __init__(self, config, opts, context, cbank, ckey, auth_cls, ttl=None):
-        if ttl is None:
-            if config["cache"]["secret"] != "ttl":
-                ttl = config["cache"]["secret"]
+class VaultLeaseCache(VaultCache):
+    def __init__(
+        self, config, opts, context, cbank, ckey, lease_cls=VaultLease, ttl=None
+    ):
         super().__init__(config, opts, context, cbank, ckey, ttl=ttl)
-        self.auth_cls = auth_cls
+        self.lease_cls = lease_cls
 
-    def get(self, seconds_future=0):  # pylint: disable=arguments-differ
+    def get(self, valid_for=0):  # pylint: disable=arguments-differ
         """
         Returns valid cached authentication data or None
         """
         if not self.exists():
             return None
         data = super().get()
-        auth = self.auth_cls(**data)
-        if auth.is_valid(seconds_future):
-            log.debug("Using cached secret.")
-            return auth
-        log.debug("Cached secret not valid anymore.")
+        lease = self.lease_cls(**data)
+        if lease.is_valid(valid_for):
+            log.debug("Using cached lease.")
+            return lease
+        log.debug("Cached lease not valid anymore.")
         self.flush()
         return None
 
@@ -1673,6 +1784,21 @@ class VaultAuthCache(VaultCache):
         if isinstance(value, VaultLease):
             value = value.to_dict()
         return super().store(value)
+
+
+class VaultAuthCache(VaultLeaseCache):
+    """
+    Implements authentication secret-specific caches. Checks whether
+    the cached secrets are still valid before returning.
+    """
+
+    def __init__(self, config, opts, context, cbank, ckey, auth_cls, ttl=None):
+        if ttl is None:
+            if config["cache"]["secret"] != "ttl":
+                ttl = config["cache"]["secret"]
+        super().__init__(
+            config, opts, context, cbank, ckey, lease_cls=auth_cls, ttl=ttl
+        )
 
 
 class VaultTokenAuth:
@@ -1697,11 +1823,11 @@ class VaultTokenAuth:
         """
         return self.is_valid() and self.token.renewable
 
-    def is_valid(self, seconds_future=0):
+    def is_valid(self, valid_for=0):
         """
         Check whether the contained token is valid
         """
-        return self.token.is_valid(seconds_future)
+        return self.token.is_valid(valid_for)
 
     def get_token(self):
         """
@@ -1763,14 +1889,12 @@ class VaultAppRoleAuth:
         """
         return self.token.is_renewable()
 
-    def is_valid(self, seconds_future=0):
+    def is_valid(self, valid_for=0):
         """
         Check whether the contained authentication data can be used
         to issue a valid token
         """
-        return self.token.is_valid(seconds_future) or self.approle.is_valid(
-            seconds_future
-        )
+        return self.token.is_valid(valid_for) or self.approle.is_valid(valid_for)
 
     def get_token(self):
         """
@@ -1819,71 +1943,6 @@ class VaultAppRoleAuth:
 
     def _replace_token(self, auth):
         self.token.replace_token(VaultToken(**auth))
-
-
-class VaultLease:
-    """
-    Base class for Vault leases that expire with time.
-    """
-
-    def __init__(
-        self,
-        lease_id,
-        renewable,
-        lease_duration,
-        creation_time=None,
-        **kwargs,  # pylint: disable=unused-argument
-    ):
-        self.id = lease_id
-        self.renewable = renewable
-        self.lease_duration = lease_duration
-        if creation_time is not None:
-            try:
-                creation_time = int(creation_time)
-            except ValueError:
-                creation_time = _fromisoformat(creation_time)
-        self.creation_time = (
-            creation_time if creation_time is not None else int(round(time.time()))
-        )
-
-    def is_valid(self, seconds_future=0):
-        """
-        Checks whether the lease is currently valid
-
-        seconds_future
-            Allows to check whether the lease will still be valid
-            x seconds from now on. Defaults to 0.
-        """
-        if not self.lease_duration:
-            return True
-        return self.creation_time + self.lease_duration > time.time() + seconds_future
-
-    def with_(self, **kwargs):
-        """
-        Partially update the contained data
-        """
-        attrs = copy.copy(self.__dict__)
-        attrs.update(kwargs)
-        return type(self)(**attrs)
-
-    def __str__(self):
-        return self.id
-
-    def __repr__(self):
-        return repr(self.to_dict())
-
-    def __eq__(self, other):
-        try:
-            data = other.__dict__
-        except AttributeError:
-            data = other
-        return self.__dict__ == data
-
-    def to_dict(self):
-        """
-        Return a dict of all contained attributes
-        """
-        return self.__dict__
 
 
 def _fromisoformat(creation_time):
@@ -1991,16 +2050,19 @@ class VaultAppRoleSecretId(VaultLease):
         """
         return {"secret_id": str(self)}
 
-    def is_valid(self, seconds_future=0):
+    def is_valid(self, valid_for=0):
         """
-        Check whether this secret-id is still valid. Takes into account
+        Check whether this secret ID is valid. Takes into account
         the maximum number of uses, if they are known, and lease duration.
 
-        seconds_future
-            Allows to check whether the lease will still be valid
-            x seconds from now on. Defaults to 0.
+        valid_for
+            Allows to check whether the secret ID will still be valid in the future.
+            This can be an integer, which will be interpreted as seconds, or a
+            time string using the same format as Vault does:
+            Suffix ``s`` for seconds, ``m`` for minuts, ``h`` for hours, ``d`` for days.
+            Defaults to 0.
         """
-        return super().is_valid(seconds_future) and (
+        return super().is_valid(valid_for) and (
             self.num_uses is None
             or self.num_uses == 0
             or self.num_uses - self.use_count > 0
@@ -2064,16 +2126,19 @@ class VaultToken(VaultLease):
         # this is needed to make new copies with updated params
         self.client_token = self.id
 
-    def is_valid(self, seconds_future=0):
+    def is_valid(self, valid_for=0):
         """
-        Check whether this token is still valid. Takes into account
+        Check whether this token is valid. Takes into account
         the maximum number of uses, and lease duration.
 
-        seconds_future
-            Allows to check whether the lease will still be valid
-            x seconds from now on. Defaults to 0.
+        valid_for
+            Allows to check whether the secret ID will still be valid in the future.
+            This can be an integer, which will be interpreted as seconds, or a
+            time string using the same format as Vault does:
+            Suffix ``s`` for seconds, ``m`` for minuts, ``h`` for hours, ``d`` for days.
+            Defaults to 0.
         """
-        return super().is_valid(seconds_future) and (
+        return super().is_valid(valid_for) and (
             self.num_uses == 0 or self.num_uses - self.use_count > 0
         )
 
@@ -2118,15 +2183,22 @@ class VaultAppRole:
         """
         self.secret_id = secret_id
 
-    def is_valid(self, seconds_future=0):
+    def is_valid(self, valid_for=0):
         """
         Checks whether the contained data can be used to authenticate
-        to Vault. secret-ids might not be required by the server when
+        to Vault. Secret IDs might not be required by the server when
         bind_secret_id is set to false.
+
+        valid_for
+            Allows to check whether the AppRole will still be valid in the future.
+            This can be an integer, which will be interpreted as seconds, or a
+            time string using the same format as Vault does:
+            Suffix ``s`` for seconds, ``m`` for minuts, ``h`` for hours, ``d`` for days.
+            Defaults to 0.
         """
         if self.secret_id is None:
             return True
-        return self.secret_id.is_valid(seconds_future)
+        return self.secret_id.is_valid(valid_for)
 
     def used(self):
         if self.secret_id is not None:
@@ -2149,7 +2221,7 @@ class InvalidVaultToken(VaultToken):
         self.use_count = 0
         self.num_uses = 0
 
-    def is_valid(self, seconds_future=0):
+    def is_valid(self, valid_for=0):
         return False
 
 
@@ -2157,7 +2229,7 @@ class InvalidVaultAppRoleSecretId(VaultAppRoleSecretId):
     def __init__(self, *args, **kwargs):  # pylint: disable=super-init-not-called
         pass
 
-    def is_valid(self, seconds_future=0):
+    def is_valid(self, valid_for=0):
         return False
 
 

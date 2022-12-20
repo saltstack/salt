@@ -3813,6 +3813,26 @@ def test_expand_pattern_lists(pattern, expected):
     assert output == expected
 
 
+@pytest.mark.parametrize(
+    "inpt,expected",
+    [
+        (60.0, 60.0),
+        (60, 60.0),
+        ("60", 60.0),
+        ("60s", 60.0),
+        ("2m", 120.0),
+        ("1h", 3600.0),
+        ("1d", 86400.0),
+        ("1.5s", 1.5),
+        ("1.5m", 90.0),
+        ("1.5h", 5400.0),
+        ("7.5d", 648000.0),
+    ],
+)
+def test_timestring_map(inpt, expected):
+    assert vault.timestring_map(inpt) == expected
+
+
 ############################################
 # Deprecation tests
 ############################################
