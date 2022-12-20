@@ -1605,6 +1605,7 @@ class VirtualEnv:
     setuptools_requirement = attr.ib(
         default="setuptools!=50.*,!=51.*,!=52.*", repr=False
     )
+    # TBD build_requirement = attr.ib(default="build!=0.6.*", repr=False)   # add build when implement pyproject.toml
     environ = attr.ib(init=False, repr=False)
     venv_python = attr.ib(init=False, repr=False)
     venv_bin_dir = attr.ib(init=False, repr=False)
@@ -1741,7 +1742,12 @@ class VirtualEnv:
             cmd.append("--system-site-packages")
         cmd.append(str(self.venv_dir))
         self.run(*cmd, cwd=str(self.venv_dir.parent))
-        self.install("-U", self.pip_requirement, self.setuptools_requirement)
+        self.install(
+            "-U",
+            self.pip_requirement,
+            self.setuptools_requirement,
+            # TBD self.build_requirement, # add build when implement pyproject.toml
+        )
         log.debug("Created virtualenv in %s", self.venv_dir)
 
 

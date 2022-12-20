@@ -1,11 +1,3 @@
-"""
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-    tests.conftest
-    ~~~~~~~~~~~~~~
-
-    Prepare py.test for our test suite
-"""
 # pylint: disable=wrong-import-order,wrong-import-position,3rd-party-local-module-not-gated
 # pylint: disable=redefined-outer-name,invalid-name,3rd-party-module-not-gated
 
@@ -487,6 +479,19 @@ def pytest_runtest_protocol(item, nextitem):
             fixturedef.finish(request, nextitem=nextitem)
     del request
     del used_fixture_defs
+
+
+def pytest_markeval_namespace(config):
+    """
+    Called when constructing the globals dictionary used for evaluating string conditions in xfail/skipif markers.
+
+    This is useful when the condition for a marker requires objects that are expensive or impossible to obtain during
+    collection time, which is required by normal boolean conditions.
+
+    :param config: The pytest config object.
+    :returns: A dictionary of additional globals to add.
+    """
+    return {"grains": _grains_for_marker()}
 
 
 # <---- PyTest Tweaks ------------------------------------------------------------------------------------------------
