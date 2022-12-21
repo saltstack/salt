@@ -1201,6 +1201,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 [
                     "salt-cp = salt.scripts:salt_cp",
                     "salt-minion = salt.scripts:salt_minion",
+                    "salt-pip = salt.scripts:salt_pip",
                 ]
             )
             entrypoints["console_scripts"] = scripts
@@ -1221,6 +1222,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 "salt-syndic = salt.scripts:salt_syndic",
                 "spm = salt.scripts:salt_spm",
                 "salt-proxy = salt.scripts:salt_proxy",
+                "salt-pip = salt.scripts:salt_pip",
             ]
         )
         entrypoints["console_scripts"] = scripts
