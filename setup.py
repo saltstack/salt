@@ -426,7 +426,6 @@ class DownloadWindowsDlls(Command):
             for fname in (
                 "openssl/1.1.1k/ssleay32.dll",
                 "openssl/1.1.1k/libeay32.dll",
-                "libsodium/1.0.18/libsodium.dll",
             ):
                 # See if the library is already on the system
                 if find_library(fname):
