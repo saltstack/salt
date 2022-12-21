@@ -289,7 +289,7 @@ python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.4.8
     # via -r requirements/windows.txt
-pythonnet==2.5.2
+pythonnet==3.0.1
     # via -r requirements/windows.txt
 pytz==2022.1
     # via
