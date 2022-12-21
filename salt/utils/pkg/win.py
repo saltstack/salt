@@ -75,9 +75,14 @@ except ImportError:
 try:
     from salt.utils.versions import LooseVersion
 except ImportError:
-    from setuptools._distutils.version import (
-        LooseVersion,  # pylint: disable=blacklisted-module
-    )
+    try:
+        from setuptools.distutils.version import (
+            LooseVersion,  # pylint: disable=blacklisted-module
+        )
+    except ImportError:
+        from setuptools._distutils.version import (
+            LooseVersion,  # pylint: disable=blacklisted-module
+        )
 
 # pylint: disable=too-many-instance-attributes
 
