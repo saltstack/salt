@@ -80,9 +80,13 @@ except ImportError:
             LooseVersion,  # pylint: disable=blacklisted-module
         )
     except ImportError:
-        from setuptools._distutils.version import (
-            LooseVersion,  # pylint: disable=blacklisted-module
-        )
+        try:
+            from setuptools._distutils.version import (
+                LooseVersion,  # pylint: disable=blacklisted-module
+            )
+        except ImportError:
+            # pylint: disable=blacklisted-module
+            from distutils.version import LooseVersion
 
 # pylint: disable=too-many-instance-attributes
 

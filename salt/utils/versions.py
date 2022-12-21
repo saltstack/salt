@@ -30,9 +30,15 @@ except ImportError:
     try:
         from setuptools._distutils.version import LooseVersion as _LooseVersion
         from setuptools._distutils.version import StrictVersion as _StrictVersion
-    except:
+    except ImportError:
         log.debug("unable to import from setuptools._distutils.version")
-        raise ImportError()
+        try:
+            # pylint: disable=blacklisted-module
+            from distutils.version import LooseVersion as _LooseVersion
+            from distutils.version import StrictVersion as _StrictVersion
+        except ImportError:
+            log.debug("unable to import from distutils.version")
+            raise ImportError()
 
 
 # pylint: enable=blacklisted-module
