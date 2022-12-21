@@ -90,6 +90,7 @@ done
 #-------------------------------------------------------------------------------
 printf "=%.0s" {1..80}; printf "\n"
 echo "Install Salt into Build Environment"
+echo "Python Version: $PYTHON_DOT_VER"
 printf -- "-%.0s" {1..80}; printf "\n"
 
 #-------------------------------------------------------------------------------
@@ -125,15 +126,6 @@ fi
 #-------------------------------------------------------------------------------
 # Install Requirements into the Python Environment
 #-------------------------------------------------------------------------------
-_msg "Installing wheel"
-$PIP_BIN install "wheel" > /dev/null 2>&1
-TEST_DIR="$SCRIPT_DIR/build/opt/salt/lib/python3.*/site-packages/wheel*"
-if compgen -G "$TEST_DIR" > /dev/null; then
-    _success
-else
-    _failure
-fi
-
 _msg "Installing Salt requirements"
 $PIP_BIN install -r "$REQ_FILE" > /dev/null 2>&1
 if [ -f "$BUILD_DIR/bin/distro" ]; then
@@ -154,6 +146,9 @@ else
     _failure
 fi
 
+#-------------------------------------------------------------------------------
+# Script Complete
+#-------------------------------------------------------------------------------
 printf -- "-%.0s" {1..80}; printf "\n"
 echo "Install Salt into Build Environment Completed"
 printf "=%.0s" {1..80}; printf "\n"

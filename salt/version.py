@@ -278,7 +278,6 @@ class SaltStackVersion:
         noc=0,
         sha=None,
     ):
-
         if isinstance(major, str):
             major = int(major)
 
@@ -652,7 +651,9 @@ def __get_version(saltstack_version):
         from salt._version import __saltstack_version__  # pylint: disable=E0611,F0401
 
         return __saltstack_version__
+
     except ImportError:
+        ## except ImportError as exc:
         return __discover_version(saltstack_version)
 
 

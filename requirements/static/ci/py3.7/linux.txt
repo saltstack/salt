@@ -662,7 +662,7 @@ oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
-packaging==19.2
+packaging==21.3
     # via
     #   ansible-core
     #   pytest
@@ -724,7 +724,7 @@ pyopenssl==19.1.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==2.4.5
+pyparsing==3.0.9
     # via
     #   junos-eznc
     #   packaging
@@ -887,7 +887,6 @@ six==1.16.0
     #   mock
     #   more-itertools
     #   ncclient
-    #   packaging
     #   paramiko
     #   pynacl
     #   pyopenssl

@@ -48,10 +48,17 @@
 #         Builds python using the relenv project:
 #         https://github.com/saltstack/relative-environment-for-python
 #
+#     install_salt.sh
+#         Installs Salt into the python environment
+#
 #     sign_binaries.sh
 #         Signs all the binaries with the Developer App certificate specified in
 #         the DEV_APP_CERT environment variable. It signs all binaries in the
 #         ./build directory. It also signs all .dylib and .so files.
+#
+#     prep_salt.sh
+#         Prepare the build environment for packaging. Stages config files and
+#         service definitions. Removes files we don't want in the package.
 #
 #     package.sh
 #         Builds a package file from the contents of ./build and signs it with
@@ -193,6 +200,11 @@ printf "v%.0s" {1..80}; printf "\n"
 # Sign Binaries built by Salt
 #-------------------------------------------------------------------------------
 "$SCRIPT_DIR/sign_binaries.sh"
+
+#-------------------------------------------------------------------------------
+# Prepare the Salt environment for packaging
+#-------------------------------------------------------------------------------
+"$SCRIPT_DIR/prep_salt.sh"
 
 #-------------------------------------------------------------------------------
 # Build and Sign Package
