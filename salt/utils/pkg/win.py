@@ -72,21 +72,7 @@ try:
 except ImportError:
     from collections import OrderedDict
 
-try:
-    from salt.utils.versions import LooseVersion
-except ImportError:
-    try:
-        from setuptools.distutils.version import (
-            LooseVersion,  # pylint: disable=blacklisted-module
-        )
-    except ImportError:
-        try:
-            from setuptools._distutils.version import (
-                LooseVersion,  # pylint: disable=blacklisted-module
-            )
-        except ImportError:
-            # pylint: disable=blacklisted-module
-            from distutils.version import LooseVersion
+from salt.utils.versions import LooseVersion
 
 # pylint: disable=too-many-instance-attributes
 

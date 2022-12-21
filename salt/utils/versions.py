@@ -18,33 +18,24 @@ import numbers
 import sys
 import warnings
 
-log = logging.getLogger(__name__)
-
+# pylint: disable=blacklisted-module
 try:
     from setuptools.distutils.version import LooseVersion as _LooseVersion
     from setuptools.distutils.version import StrictVersion as _StrictVersion
 except ImportError:
-    log.debug(
-        "unable to import from setuptools.distutils.version, will attempt setuptools._distutils.version"
-    )
     try:
         from setuptools._distutils.version import LooseVersion as _LooseVersion
         from setuptools._distutils.version import StrictVersion as _StrictVersion
     except ImportError:
-        log.debug("unable to import from setuptools._distutils.version")
-        try:
-            # pylint: disable=blacklisted-module
-            from distutils.version import LooseVersion as _LooseVersion
-            from distutils.version import StrictVersion as _StrictVersion
-        except ImportError:
-            log.debug("unable to import from distutils.version")
-            raise ImportError()
+        from distutils.version import LooseVersion as _LooseVersion
+        from distutils.version import StrictVersion as _StrictVersion
 
 
 # pylint: enable=blacklisted-module
 import salt.version
 
 # pylint: disable=blacklisted-module
+log = logging.getLogger(__name__)
 
 
 class StrictVersion(_StrictVersion):
