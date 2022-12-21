@@ -190,7 +190,7 @@ multidict==6.0.2
     #   yarl
 ntlm-auth==1.5.0
     # via requests-ntlm
-packaging==19.2
+packaging==21.3
     # via pytest
 passlib[bcrypt]==1.7.4
     # via -r requirements/static/ci/common.in
@@ -237,7 +237,7 @@ pyopenssl==20.0.1
     # via
     #   -r requirements/windows.txt
     #   etcd3-py
-pyparsing==2.4.5
+pyparsing==3.0.9
     # via packaging
 pyrsistent==0.17.3
     # via jsonschema
@@ -358,7 +358,6 @@ six==1.15.0
     #   jsonschema
     #   kubernetes
     #   mock
-    #   packaging
     #   pyopenssl
     #   python-dateutil
     #   pyvmomi

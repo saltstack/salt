@@ -204,6 +204,7 @@ jobs:
           PRINT_TEST_SELECTION: "1"
           PRINT_TEST_PLAN_ONLY: "1"
           PRINT_SYSTEM_INFO: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- -k "mac or darwin"
@@ -217,6 +218,7 @@ jobs:
           PRINT_TEST_PLAN_ONLY: "0"
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
@@ -231,6 +233,7 @@ jobs:
           PRINT_TEST_PLAN_ONLY: "0"
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
@@ -245,6 +248,7 @@ jobs:
           PRINT_TEST_PLAN_ONLY: "0"
           PRINT_SYSTEM_INFO: "0"
           RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \

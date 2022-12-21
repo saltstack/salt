@@ -48,6 +48,7 @@ SYS_PY_BIN="$(which python3)"
 BUILD_DIR="$SCRIPT_DIR/build"
 BLD_PY_BIN="$BUILD_DIR/opt/salt/bin/python3"
 RELENV_DIR="$HOME/.local/relenv"
+BUILD=0
 
 #-------------------------------------------------------------------------------
 # Functions
@@ -63,6 +64,7 @@ _usage() {
      echo "             [-h|--help] [-v|--version]"
      echo ""
      echo "  -h, --help      this message"
+     echo "  -b, --build     build python instead of fetching"
      echo "  -v, --version   version of python to install"
      echo "                  python version must be one of:"
      for i in "${PY_VERSIONS[@]}"; do
@@ -110,6 +112,10 @@ while true; do
             PY_VERSION="$*"
             shift
             ;;
+        -b | --build )
+            BUILD=1
+            shift
+            ;;
         -*)
             echo "Invalid Option: $1"
             echo ""
@@ -134,7 +140,11 @@ fi
 # Script Start
 #-------------------------------------------------------------------------------
 printf "=%.0s" {1..80}; printf "\n"
-echo "Build Python with Relenv"
+if [ $BUILD -gt 0 ]; then
+    echo "Build Python with Relenv"
+else
+    echo "Fetch Python with Relenv"
+fi
 echo "- Python Version: $PY_VERSION"
 printf -- "-%.0s" {1..80}; printf "\n"
 
@@ -214,16 +224,19 @@ fi
 #-------------------------------------------------------------------------------
 # Building Python with Relenv
 #-------------------------------------------------------------------------------
-#echo "- Building python (relenv):"
-#relenv build --clean
-# We want to suppress the output here so it looks nice
-# To see the output, remove the output redirection
-_msg "Fetching python (relenv)"
-relenv fetch >/dev/null 2>&1
-if [ -f "$RELENV_DIR/build/x86_64-macos.tar.xz" ]; then
-    _success
+if [ $BUILD -gt 0 ]; then
+    echo "- Building python (relenv):"
+    relenv build --clean
 else
-    _failure
+    # We want to suppress the output here so it looks nice
+    # To see the output, remove the output redirection
+    _msg "Fetching python (relenv)"
+    relenv fetch >/dev/null 2>&1
+    if [ -f "$RELENV_DIR/build/x86_64-macos.tar.xz" ]; then
+        _success
+    else
+        _failure
+    fi
 fi
 
 _msg "Extracting python environment"
