@@ -22,26 +22,16 @@ log = logging.getLogger(__name__)
 
 try:
     from setuptools.distutils.version import LooseVersion as _LooseVersion
-except ImportError:
-    log.debug(
-        "unable to import LooseVersion from setuptools.distutils.version, will attempt setuptools._distutils.version"
-    )
-    try:
-        from setuptools._distutils.version import LooseVersion as _LooseVersion
-    except:
-        log.debug("unable to import LooseVersion from setuptools._distutils.version")
-        raise ImportError()
-
-try:
     from setuptools.distutils.version import StrictVersion as _StrictVersion
 except ImportError:
     log.debug(
-        "unable to import StrictVersion from setuptools.distutils.version, will attempt setuptools._distutils.version"
+        "unable to import from setuptools.distutils.version, will attempt setuptools._distutils.version"
     )
     try:
+        from setuptools._distutils.version import LooseVersion as _LooseVersion
         from setuptools._distutils.version import StrictVersion as _StrictVersion
     except:
-        log.debug("unable to import StrictVersion from setuptools._distutils.version")
+        log.debug("unable to import from setuptools._distutils.version")
         raise ImportError()
 
 
