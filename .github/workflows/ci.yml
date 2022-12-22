@@ -191,6 +191,15 @@ jobs:
     with:
       changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
 
+  twine-check:
+    name: Twine Check
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
+    uses: ./.github/workflows/twine-check-action.yml
+    needs:
+      - prepare-ci
+    with:
+      changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
+
 
 
   windows-2016:
@@ -457,6 +466,7 @@ jobs:
       - pre-commit
       - docs
       - lint
+      - twine-check
       - almalinux-8
       - almalinux-9
       - amazonlinux-2
