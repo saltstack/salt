@@ -597,11 +597,5 @@ def salt_pip():
         "-m",
         "pip",
     ] + sys.argv[1:]
-    proc = subprocess.Popen(command)
-    ret = None
-    while ret is None:
-        try:
-            ret = proc.wait(0.1)
-        except subprocess.TimeoutExpired:
-            pass
-    sys.exit(ret)
+    ret = subprocess.run(command, shell=False, check=False)
+    sys.exit(ret.returncode)
