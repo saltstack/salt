@@ -48,7 +48,8 @@ os.chdir(str(CODE_DIR))
 # Make sure the current directory is the first item in sys.path
 if str(CODE_DIR) in sys.path:
     sys.path.remove(str(CODE_DIR))
-sys.path.insert(0, str(CODE_DIR))
+if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
+    sys.path.insert(0, str(CODE_DIR))
 
 os.environ["REPO_ROOT_DIR"] = str(CODE_DIR)
 
@@ -754,15 +755,22 @@ def salt_factories_config():
         start_timeout = 120
     else:
         start_timeout = 60
+
+    if "ONEDIR_TESTRUN" in os.environ:
+        code_dir = None
+    else:
+        code_dir = str(CODE_DIR)
+
     kwargs = {
-        "code_dir": str(CODE_DIR),
+        "code_dir": code_dir,
         "start_timeout": start_timeout,
+        "inject_sitecustomize": MAYBE_RUN_COVERAGE,
     }
     if MAYBE_RUN_COVERAGE:
         kwargs["coverage_rc_path"] = str(COVERAGERC_FILE)
-    coverage_db_path = os.environ.get("COVERAGE_FILE")
-    if coverage_db_path:
-        kwargs["coverage_db_path"] = coverage_db_path
+    else:
+        kwargs["coverage_rc_path"] = None
+    kwargs["coverage_db_path"] = os.environ.get("COVERAGE_FILE")
     return kwargs
 
 
