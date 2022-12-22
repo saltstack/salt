@@ -69,6 +69,7 @@ if COVERAGE_FILE is None:
 IS_DARWIN = sys.platform.lower().startswith("darwin")
 IS_WINDOWS = sys.platform.lower().startswith("win")
 IS_FREEBSD = sys.platform.lower().startswith("freebsd")
+IS_LINUX = sys.platform.lower().startswith("linux")
 ONEDIR_ARTIFACT_PATH = ARTIFACTS_DIR / "salt"
 if IS_WINDOWS:
     ONEDIR_PYTHON_PATH = ONEDIR_ARTIFACT_PATH / "Scripts" / "python.exe"
@@ -314,11 +315,11 @@ def _install_requirements(
     requirements_type="ci",
     onedir=False,
 ):
+    if onedir and IS_LINUX:
+        session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
+
     if not _upgrade_pip_setuptools_and_wheel(session):
         return False
-
-    if onedir and not IS_WINDOWS and not IS_DARWIN and not IS_FREEBSD:
-        session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
 
     # Install requirements
     requirements_file = _get_pip_requirements_file(
