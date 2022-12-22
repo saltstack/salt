@@ -315,6 +315,7 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
             str(cache_dir),
             cwd=src_dir,
         )
+
         venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
 
         salt_generated_package = list(cache_dir.glob("*.tar.gz"))

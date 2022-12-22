@@ -19,12 +19,22 @@ import sys
 import warnings
 
 # pylint: disable=blacklisted-module
-from distutils.version import LooseVersion as _LooseVersion
-from distutils.version import StrictVersion as _StrictVersion
+try:
+    from setuptools.distutils.version import LooseVersion as _LooseVersion
+    from setuptools.distutils.version import StrictVersion as _StrictVersion
+except ImportError:
+    try:
+        from setuptools._distutils.version import LooseVersion as _LooseVersion
+        from setuptools._distutils.version import StrictVersion as _StrictVersion
+    except ImportError:
+        from distutils.version import LooseVersion as _LooseVersion
+        from distutils.version import StrictVersion as _StrictVersion
+
 
 # pylint: enable=blacklisted-module
 import salt.version
 
+# pylint: disable=blacklisted-module
 log = logging.getLogger(__name__)
 
 

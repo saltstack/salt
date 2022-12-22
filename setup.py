@@ -12,6 +12,7 @@ import glob
 import os
 import platform
 import sys
+import warnings
 from ctypes.util import find_library
 from datetime import datetime
 
@@ -943,17 +944,17 @@ class SaltDistribution(distutils.dist.Distribution):
         with open(SALT_LONG_DESCRIPTION_FILE, encoding="utf-8") as f:
             self.long_description = f.read()
         self.long_description_content_type = "text/x-rst"
-        self.python_requires = ">=3.5"
+        self.python_requires = ">=3.6"
         self.classifiers = [
             "Programming Language :: Python",
             "Programming Language :: Cython",
             "Programming Language :: Python :: 3",
             "Programming Language :: Python :: 3 :: Only",
-            "Programming Language :: Python :: 3.5",
             "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
             "Development Status :: 5 - Production/Stable",
             "Environment :: Console",
             "Intended Audience :: Developers",
@@ -1368,4 +1369,7 @@ class SaltDistribution(distutils.dist.Distribution):
 
 
 if __name__ == "__main__":
+    warnings.warn(
+        "Warning: distutils is deprecated and shall be removed in Python 3.12, advise migrate to using setuptools"
+    )
     setup(distclass=SaltDistribution)
