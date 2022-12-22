@@ -1,0 +1,5 @@
+salt (3006.0) stable; urgency=medium
+
+  * Build of Salt with Relenv
+
+ -- SaltStack Packaging Team <packaging@saltstack.com>  Mon, 03 Jul 2017 20:44:29 +0000

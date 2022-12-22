@@ -1,0 +1,5 @@
+usr/opt/saltstack/salt/salt-master /usr/bin/salt-master
+usr/opt/saltstack/salt/salt usr/bin/salt
+usr/opt/saltstack/salt/salt-cp usr/bin/salt-cp
+usr/opt/saltstack/salt/salt-key usr/bin/salt-key
+usr/opt/saltstack/salt/salt-run usr/bin/salt-run
