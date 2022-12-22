@@ -293,6 +293,7 @@ rm -rf %{buildroot}
 
 %post
 ln -s -f /opt/saltstack/salt/spm %{_bindir}/spm
+ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
 
 %post master
 %systemd_post salt-master.service
