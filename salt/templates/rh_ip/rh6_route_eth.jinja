@@ -9,4 +9,6 @@
 {%- endif %}
 {%- if route.metric %} metric {{route.metric}}
 {%- endif %}
+{%- if route.source %} src {{route.source}}
+{%- endif %}
 {% endfor -%}
