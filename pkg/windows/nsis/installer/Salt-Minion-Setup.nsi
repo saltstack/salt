@@ -523,7 +523,7 @@ Section -copy_prereqs
     # These files are downloaded by build_pkg.bat
     # This directory gets removed upon completion
     SetOutPath "$PLUGINSDIR\"
-    File /r "..\prereqs\"
+    File /r "..\..\prereqs\"
 SectionEnd
 
 # Check if the Windows 10 Universal C Runtime (KB2999226) is installed. Python
@@ -721,7 +721,7 @@ Section "MainSection" SEC01
     # Install files to the Installation Directory
     SetOutPath "$INSTDIR\"
     SetOverwrite off
-    File /r "..\buildenv\"
+    File /r "..\..\buildenv\"
 
     # Set up Root Directory
     CreateDirectory "$RootDir\conf\pki\minion"
