@@ -98,7 +98,7 @@ def _present_test(
             )
     else:
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -171,7 +171,7 @@ def _absent_test(
             return (True, f"All host keys in file {source} are already absent")
     else:
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -268,7 +268,7 @@ def present(
 
     if source == "":
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -482,7 +482,7 @@ def absent(
                 )
     else:
         # Get just the key
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
