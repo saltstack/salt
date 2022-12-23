@@ -155,8 +155,6 @@ keyring==5.7.1
     # via -r requirements/static/ci/common.in
 kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
-libnacl==1.8.0
-    # via -r requirements/windows.txt
 lxml==4.9.1
     # via -r requirements/windows.txt
 mako==1.2.2
