@@ -317,7 +317,10 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: testrun-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
-          path: artifacts
+          path: |
+            artifacts
+            !artifacts/salt/*
+            !artifacts/salt-*.tar.*
 
 #      - name: Publish Test Report
 #        uses: mikepenz/action-junit-report@v3
