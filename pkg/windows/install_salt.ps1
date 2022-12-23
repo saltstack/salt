@@ -94,19 +94,6 @@ if ( Test-Path -Path "$SCRIPTS_DIR\distro.exe" ) {
 }
 
 #-------------------------------------------------------------------------------
-# Installing Libsodium DLL
-#-------------------------------------------------------------------------------
-Write-Host "Installing Libsodium DLL: " -NoNewline
-$libsodium_url = "$SALT_DEP_URL/libsodium/1.0.18/libsodium.dll"
-Invoke-WebRequest -Uri $libsodium_url -OutFile "$SCRIPTS_DIR\libsodium.dll"
-if ( Test-Path -Path "$SCRIPTS_DIR\libsodium.dll" ) {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-
-#-------------------------------------------------------------------------------
 # Cleaning Up Installation
 #-------------------------------------------------------------------------------
 
