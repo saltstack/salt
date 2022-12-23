@@ -1,5 +1,3 @@
-@echo off
-del *.wixobj
-del CustomAction01\*.pdb
-del CustomAction01\*.dll
-del Product-discovered-files-*.wxs
+@ echo off
+Set "CurDir=%~dp0"
+PowerShell -ExecutionPolicy RemoteSigned -File "%CurDir%\clean.ps1" %*

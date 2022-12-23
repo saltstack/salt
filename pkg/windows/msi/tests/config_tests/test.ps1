@@ -1,8 +1,13 @@
 Set-PSDebug -Strict
-Set-strictmode -version latest
+Set-StrictMode -Version latest
 
-$oldrootdir = "C:\Salt"
-$newrootdir = "C:\ProgramData\Salt Project\Salt"
+$PROJECT_DIR  = Resolve-Path -Path $(git rev-parse --show-toplevel)
+$SCRIPT_DIR   = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
+$BUILD_DIR    = "$PROJECT_DIR\pkg\windows\build"
+$MSI_DIR      = "$PROJECT_DIR\pkg\windows\msi"
+$TEST_MSI     = "$MSI_DIR\test.msi"
+$OLD_ROOT_DIR = "C:\Salt"
+$NEW_ROOT_DIR = "C:\ProgramData\Salt Project\Salt"
 
 #==============================================================================
 # Check for Salt installation
@@ -16,13 +21,13 @@ if (Test-Path $scrambled_salt_upgradecode) {
 #==============================================================================
 # Check for Salt folders
 #==============================================================================
-if (Test-Path $newrootdir) {
-    Write-Host -ForegroundColor Red "`"$newrootdir`" must not exist"
+if (Test-Path $NEW_ROOT_DIR) {
+    Write-Host -ForegroundColor Red "`"$NEW_ROOT_DIR`" must not exist"
     exit 1
 }
 
-if (Test-Path $oldrootdir) {
-    Write-Host -ForegroundColor Red "$oldrootdir must not exist"
+if (Test-Path $OLD_ROOT_DIR) {
+    Write-Host -ForegroundColor Red "$OLD_ROOT_DIR must not exist"
     exit 1
 }
 
@@ -32,33 +37,35 @@ if (Test-Path *.output) {
 }
 
 
-$msis = Get-ChildItem ..\..\*.msi
+$MSIs = Get-ChildItem "$BUILD_DIR\*.msi"
 
-$nof_msis = ($msis | Measure-Object).Count
+$MSI_COUNT = ($MSIs | Measure-Object).Count
 
-if ($nof_msis -eq 0) {
+if ($MSI_COUNT -eq 0) {
     Write-Host -ForegroundColor Red *.msi must exist
     exit 1
 }
 
-if ($nof_msis -gt 1) {
+if ($MSI_COUNT -gt 1) {
     Write-Host -ForegroundColor Red Only one *.msi must exist
     exit 1
 }
 
-$msi = $msis[0]
-Write-Host -ForegroundColor Yellow Testing ([System.IO.Path]::GetFileName($msi))
-Copy-Item -Path $msi -Destination "test.msi"
+$MSI = $MSIs[0]
+Write-Host -ForegroundColor Yellow Testing ([System.IO.Path]::GetFileName($MSI))
+Copy-Item -Path $MSI -Destination $TEST_MSI
 
 $array_allowed_test_words = "dormant", "properties"
 $exit_code = 0
-foreach ($testfilename in Get-ChildItem *.test) {
+foreach ( $testfilename in Get-ChildItem "$SCRIPT_DIR\*.test" ) {
     $dormant = $false    # test passes if and only if configuration is deleted on uninstall
-    $rootdir = $newrootdir     # default for each test
+    $rootdir = $NEW_ROOT_DIR     # default for each test
     $test_name = $testfilename.basename
-    $batchfile = $test_name + ".bat"
-    $config_input = $test_name + ".input"
-    $minion_id = $test_name + ".minion_id"
+    $batchfile = "$SCRIPT_DIR\$test_name.bat"
+    $config_input = "$SCRIPT_DIR\$test_name.input"
+    $minion_id = "$SCRIPT_DIR\$test_name.minion_id"
+    $expected = "$SCRIPT_DIR\$test_name.expected"
+    $generated = "$SCRIPT_DIR\$test_name.output"
     Write-Host -ForegroundColor Yellow -NoNewline ("{0,-65}" -f $test_name)
 
     foreach($line in Get-Content $testfilename) {
@@ -75,9 +82,9 @@ foreach ($testfilename in Get-ChildItem *.test) {
                 $dormant = $true
             }
             if ($head -eq "properties") {
-                Set-Content -Path $batchfile -Value "msiexec /i $msi $tail /l*v $test_name.install.log /qb"
+                Set-Content -Path $batchfile -Value "msiexec /i $TEST_MSI $tail /l*v `"$SCRIPT_DIR\$test_name.install.log`" /qb"
                 if($tail.Contains("ROOTDIR=c:\salt")){
-                    $rootdir = $oldrootdir
+                    $rootdir = $OLD_ROOT_DIR
                 }
             }
         } else {
@@ -114,8 +121,6 @@ foreach ($testfilename in Get-ChildItem *.test) {
     }
 
     # Compare expected and generated configuration
-    $expected = $test_name + ".expected"
-    $generated = $test_name + ".output"
     Copy-Item -Path "$rootdir\conf\minion" -Destination $generated
 
      if((Get-Content -Raw $expected) -eq (Get-Content -Raw $generated)){
@@ -132,10 +137,10 @@ foreach ($testfilename in Get-ChildItem *.test) {
         "FilePath" = "$Env:SystemRoot\system32\msiexec.exe"
         "ArgumentList" = @(
             "/X"
-            "test.msi"
+            "$TEST_MSI"
             "/qb"
             "/l*v"
-            "$test_name.uninstall.log"
+            "$SCRIPT_DIR\$test_name.uninstall.log"
         )
         "Verb" = "runas"
         "PassThru" = $true
@@ -157,12 +162,12 @@ foreach ($testfilename in Get-ChildItem *.test) {
     }
 
     # Clean up system from the last test config
-    Remove-Item -Path $oldrootdir -Recurse -Force -ErrorAction Ignore | Out-Null
-    Remove-Item -Path $newrootdir -Recurse -Force -ErrorAction Ignore | Out-Null
+    Remove-Item -Path $OLD_ROOT_DIR -Recurse -Force -ErrorAction Ignore | Out-Null
+    Remove-Item -Path $NEW_ROOT_DIR -Recurse -Force -ErrorAction Ignore | Out-Null
 }
 
 # Clean up copied msi
-Remove-Item test.msi
+Remove-Item $TEST_MSI
 
 if ($exit_code -eq 0) {
     Write-Host "All tests completed successfully" -ForegroundColor Green

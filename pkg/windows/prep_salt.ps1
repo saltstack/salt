@@ -33,7 +33,7 @@ function Write-Result($result, $ForegroundColor="Green") {
 }
 
 #-------------------------------------------------------------------------------
-# Variables
+# Script Variables
 #-------------------------------------------------------------------------------
 
 $PROJECT_DIR    = $(git rev-parse --show-toplevel)

@@ -1,1 +1,3 @@
-PowerShell -ExecutionPolicy RemoteSigned -File test.ps1
+@ echo off
+Set "CurDir=%~dp0"
+PowerShell -ExecutionPolicy RemoteSigned -File "%CurDir%\test.ps1"
