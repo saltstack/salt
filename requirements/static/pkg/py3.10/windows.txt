@@ -11,6 +11,7 @@ certifi==2022.12.7
 cffi==1.14.6
     # via
     #   -r requirements/windows.txt
+    #   clr-loader
     #   cryptography
 chardet==3.0.4
     # via requests
@@ -18,6 +19,8 @@ cheroot==8.5.2
     # via cherrypy
 cherrypy==18.6.1
     # via -r requirements/windows.txt
+clr-loader==0.2.4
+    # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
 cryptography==3.4.7
@@ -78,7 +81,6 @@ pycparser==2.21
     # via
     #   -r requirements/windows.txt
     #   cffi
-    #   pythonnet
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
 pymssql==2.2.7
