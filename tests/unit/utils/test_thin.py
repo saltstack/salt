@@ -80,6 +80,8 @@ class SSHThinTestCase(TestCase):
             "msgpack": str(code_dir / "msgpack"),
             "certifi": str(code_dir / "certifi"),
             "singledispatch": str(code_dir / "singledispatch.py"),
+            "looseversion": str(code_dir / "looseversion.py"),
+            "packaging": str(code_dir / "packaging"),
         }
         self.exc_libs = ["jinja2", "yaml"]
 
@@ -436,6 +438,14 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.py_contextvars",
         type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
     )
+    @patch(
+        "salt.utils.thin.packaging",
+        type("packaging", (), {"__file__": "/site-packages/packaging"}),
+    )
+    @patch(
+        "salt.utils.thin.looseversion",
+        type("looseversion", (), {"__file__": "/site-packages/looseversion"}),
+    )
     @patch_if(
         salt.utils.thin.has_immutables,
         "salt.utils.thin.immutables",
@@ -462,6 +472,8 @@ class SSHThinTestCase(TestCase):
             "backports_abc",
             "concurrent",
             "contextvars",
+            "looseversion",
+            "packaging",
         ]
         if salt.utils.thin.has_immutables:
             base_tops.extend(["immutables"])
@@ -531,6 +543,14 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.py_contextvars",
         type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
     )
+    @patch(
+        "salt.utils.thin.packaging",
+        type("packaging", (), {"__file__": "/site-packages/packaging"}),
+    )
+    @patch(
+        "salt.utils.thin.looseversion",
+        type("looseversion", (), {"__file__": "/site-packages/looseversion"}),
+    )
     @patch_if(
         salt.utils.thin.has_immutables,
         "salt.utils.thin.immutables",
@@ -557,6 +577,8 @@ class SSHThinTestCase(TestCase):
             "markupsafe",
             "backports_abc",
             "contextvars",
+            "looseversion",
+            "packaging",
             "foo",
             "bar.py",
         ]
@@ -636,6 +658,14 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.py_contextvars",
         type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
     )
+    @patch(
+        "salt.utils.thin.packaging",
+        type("packaging", (), {"__file__": "/site-packages/packaging"}),
+    )
+    @patch(
+        "salt.utils.thin.looseversion",
+        type("looseversion", (), {"__file__": "/site-packages/looseversion"}),
+    )
     @patch_if(
         salt.utils.thin.has_immutables,
         "salt.utils.thin.immutables",
@@ -662,6 +692,8 @@ class SSHThinTestCase(TestCase):
             "markupsafe",
             "backports_abc",
             "contextvars",
+            "looseversion",
+            "packaging",
             "foo.so",
             "bar.so",
         ]
@@ -1098,6 +1130,8 @@ class SSHThinTestCase(TestCase):
                     (bts(""), bts("")),
                     (bts(""), bts("")),
                     (bts(""), bts("")),
+                    (bts("looseversion.py"), bts("")),
+                    (bts("packaging/__init__.py"), bts("")),
                     (bts("distro.py"), bts("")),
                 ],
             ),
@@ -1138,6 +1172,8 @@ class SSHThinTestCase(TestCase):
                     (bts(""), bts("")),
                     (bts(""), bts("")),
                     (bts(""), bts("")),
+                    (bts("looseversion.py"), bts("")),
+                    (bts("packaging/__init__.py"), bts("")),
                     (bts("distro.py"), bts("")),
                 ],
             ),
@@ -1181,6 +1217,8 @@ class SSHThinTestCase(TestCase):
                     (bts(""), bts("")),
                     (bts(""), bts("")),
                     (bts(""), bts("")),
+                    (bts("looseversion.py"), bts("")),
+                    (bts("packaging/__init__.py"), bts("")),
                 ],
             ),
         )

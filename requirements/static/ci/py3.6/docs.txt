@@ -511,6 +511,8 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
+looseversion==1.0.3
+    # via -r requirements/base.txt
 lxml==4.9.1
     # via
     #   junos-eznc
@@ -643,6 +645,7 @@ oscrypto==1.2.1
     # via certvalidator
 packaging==21.3
     # via
+    #   -r requirements/base.txt
     #   ansible-core
     #   sphinx
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
@@ -691,7 +694,7 @@ pyopenssl==19.1.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==3.0.9
+pyparsing==3.0.6
     # via
     #   junos-eznc
     #   packaging
