@@ -1,5 +1,6 @@
-import pytest
 import os
+
+import pytest
 
 
 @pytest.fixture(scope="module")
@@ -34,4 +35,3 @@ def test_config_correct(install):
         result = f.readlines()
 
     assert result == expected
-

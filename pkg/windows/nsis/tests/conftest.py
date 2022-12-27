@@ -1,10 +1,11 @@
 import os
-import psutil
-import pytest
 import shutil
 import subprocess
 import time
 import winreg
+
+import psutil
+import pytest
 
 pytest_plugins = ["helpers_namespace"]
 
@@ -17,7 +18,7 @@ existing_content = [
     "# Existing config from test suite line 3/6\n",
     "# Existing config from test suite line 4/6\n",
     "# Existing config from test suite line 5/6\n",
-    "# Existing config from test suite line 6/6\n"
+    "# Existing config from test suite line 6/6\n",
 ]
 
 # \n characters are converted to os.linesep
@@ -29,7 +30,7 @@ custom_content = [
     "# Custom config from test suite line 3/6\n",
     "# Custom config from test suite line 4/6\n",
     "# Custom config from test suite line 5/6\n",
-    "# Custom config from test suite line 6/6\n"
+    "# Custom config from test suite line 6/6\n",
 ]
 
 # \n characters are converted to os.linesep
@@ -41,7 +42,7 @@ old_content = [
     "# Old config from test suite line 3/6\n",
     "# Old config from test suite line 4/6\n",
     "# Old config from test suite line 5/6\n",
-    "# Old config from test suite line 6/6\n"
+    "# Old config from test suite line 6/6\n",
 ]
 
 INST_DIR = r"C:\Program Files\Salt Project\Salt"
@@ -92,7 +93,7 @@ def clean_env(inst_dir=INST_DIR):
                     for proc in psutil.process_iter():
                         if proc.name() == "Un_A.exe":
                             proc.kill()
-                time.sleep(.1)
+                time.sleep(0.1)
 
     # This is needed to avoid a race condition where the installer isn't closed
     start_time = time.time()
@@ -102,7 +103,7 @@ def clean_env(inst_dir=INST_DIR):
             for proc in psutil.process_iter():
                 if proc.name() == os.path.basename(INST_BIN):
                     proc.kill()
-                time.sleep(.1)
+                time.sleep(0.1)
 
     # Remove root_dir
     if os.path.exists(DATA_DIR):
@@ -158,11 +159,11 @@ def old_install():
         # \n characters are converted to os.linesep
         f.writelines(old_content)
     while not (os.path.exists(f"{OLD_DIR}\\bin\\python.exe")):
-        time.sleep(.1)
+        time.sleep(0.1)
     while not (os.path.exists(f"{OLD_DIR}\\bin\\ssm.exe")):
-        time.sleep(.1)
+        time.sleep(0.1)
     while not (os.path.exists(f"{OLD_DIR}\\conf\\minion")):
-        time.sleep(.1)
+        time.sleep(0.1)
     assert os.path.exists(f"{OLD_DIR}\\bin\\python.exe")
     assert os.path.exists(f"{OLD_DIR}\\bin\\ssm.exe")
     assert os.path.exists(f"{OLD_DIR}\\conf\\minion")

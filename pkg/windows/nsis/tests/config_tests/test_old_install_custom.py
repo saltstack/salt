@@ -39,4 +39,3 @@ def test_config_correct(install):
         result = f.readlines()
 
     assert result == expected
-

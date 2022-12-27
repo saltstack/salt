@@ -1,5 +1,6 @@
-import pytest
 import os
+
+import pytest
 
 
 @pytest.fixture(scope="module")
@@ -9,7 +10,9 @@ def install():
     # Create a custom config
     pytest.helpers.custom_config()
 
-    pytest.helpers.run_command([pytest.INST_BIN, "/custom-config=custom_conf", "/master=cli_master"])
+    pytest.helpers.run_command(
+        [pytest.INST_BIN, "/custom-config=custom_conf", "/master=cli_master"]
+    )
     yield
     pytest.helpers.clean_env()
 
@@ -32,11 +35,10 @@ def test_config_correct(install):
         "# Custom config from test suite line 3/6\n",
         "# Custom config from test suite line 4/6\n",
         "# Custom config from test suite line 5/6\n",
-        "# Custom config from test suite line 6/6\n"
+        "# Custom config from test suite line 6/6\n",
     ]
 
     with open(f"{pytest.DATA_DIR}\\conf\\minion") as f:
         result = f.readlines()
 
     assert result == expected
-
