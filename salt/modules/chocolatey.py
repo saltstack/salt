@@ -21,7 +21,7 @@ from salt.exceptions import (
     SaltInvocationError,
 )
 from salt.utils.data import CaseInsensitiveDict
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ def _yes():
     """
     if "chocolatey._yes" in __context__:
         return __context__["chocolatey._yes"]
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.9.9"):
+    if Version(chocolatey_version()) >= Version("0.9.9"):
         answer = ["--yes"]
     else:
         answer = []
@@ -83,7 +83,7 @@ def _no_progress():
     """
     if "chocolatey._no_progress" in __context__:
         return __context__["chocolatey._no_progress"]
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.10.4"):
+    if Version(chocolatey_version()) >= Version("0.10.4"):
         answer = ["--no-progress"]
     else:
         log.warning("--no-progress unsupported in choco < 0.10.4")
@@ -778,7 +778,7 @@ def install_missing(name, version=None, source=None):
         salt '*' chocolatey.install_missing <package name>
         salt '*' chocolatey.install_missing <package name> version=<package version>
     """
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.9.8.24"):
+    if Version(chocolatey_version()) >= Version("0.9.8.24"):
         log.warning("installmissing is deprecated, using install")
         return install(name, version=version)
 
@@ -1049,7 +1049,7 @@ def update(name, source=None, pre_versions=False):
         salt "*" chocolatey.update <package name> pre_versions=True
     """
     # chocolatey helpfully only supports a single package argument
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.9.8.24"):
+    if Version(chocolatey_version()) >= Version("0.9.8.24"):
         log.warning("update is deprecated, using upgrade")
         return upgrade(name, source=source, pre_versions=pre_versions)
 
