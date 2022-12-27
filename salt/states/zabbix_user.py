@@ -12,7 +12,7 @@ from copy import deepcopy
 
 import salt.utils.json
 from salt.exceptions import SaltException
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -313,7 +313,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
         if update_usrgrps or password_reset or update_medias:
             ret["comment"] = comment_user_updated
 
-            if _LooseVersion(zabbix_version) > _LooseVersion("3.4"):
+            if Version(zabbix_version) > Version("3.4"):
                 updates = deepcopy(connection_args)
                 if update_usrgrps:
                     updates["usrgrps"] = usrgrps

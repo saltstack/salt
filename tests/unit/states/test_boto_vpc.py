@@ -8,7 +8,7 @@ import pytest
 import salt.config
 import salt.states.boto_vpc as boto_vpc
 import salt.utils.botomod as botomod
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
@@ -86,7 +86,7 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
+    elif Version(boto.__version__) < Version(required_boto_version):
         return False
     else:
         return True
