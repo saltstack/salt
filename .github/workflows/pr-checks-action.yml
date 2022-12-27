@@ -1,20 +1,27 @@
 name: PR Checks
 
 on:
-  pull_request:
-    types: [opened, synchronize]
+  workflow_call:
+    inputs:
+      changed-files:
+        required: true
+        type: string
+        description: JSON string containing information about changed files
+    secrets:
+      github-token:
+        description: The GitHub token to use to comment on PRs
+        required: true
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
 
   Check-Changed-Files-Docstrings:
-    permissions:
-      contents: read
-      pull-requests: write
     name: Check Docstrings For Changed Files On PR
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['salt'] }}
 
     steps:
       - uses: actions/checkout@v3
@@ -33,33 +40,21 @@ jobs:
         run: |
           pre-commit install --install-hooks
 
-      - id: changed-files
-        name: Get Changed Files
-        uses: dorny/paths-filter@v2
-        with:
-          token: ${{ github.token }}
-          list-files: json
-          filters: |
-            salt:
-              - added|modified:
-                - 'salt/**'
-
-      - name: Check Docstrings For Changed Files On PR
+      - name: Check Docstrings
         id: check-known-missing-docstrings
-        if: github.event_name == 'pull_request_target' && steps.changed-files.outputs.salt == 'true'
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
           pre-commit run --hook-stage manual check-known-missing-docstrings \
             --show-diff-on-failure --color=never \
-            --files ${{ join(fromJSON(steps.changed-files.outputs.salt_files), ' ') }} | tee output.txt
+            --files ${{ join(fromJSON(inputs.changed-files)['salt_files'], ' ') }} | tee output.txt
 
       - name: Comment on PR
         # Comment on PRs if pre-commit triggered a failure
         if: steps.check-known-missing-docstrings.outcome == 'failure'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.github-token }}
         run: |
           python .github/workflows/scripts/pr-docstring-comments.py \
             --org ${{ github.repository_owner }} \
