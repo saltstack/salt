@@ -1,5 +1,6 @@
-import pytest
 import os
+
+import pytest
 
 
 @pytest.fixture(scope="module")
@@ -11,7 +12,9 @@ def install():
 
     full_path_conf = rf"{pytest.REPO_DIR}\custom_conf"
 
-    pytest.helpers.run_command([pytest.INST_BIN, "/S", f"/custom-config={full_path_conf}"])
+    pytest.helpers.run_command(
+        [pytest.INST_BIN, "/S", f"/custom-config={full_path_conf}"]
+    )
     yield
     pytest.helpers.clean_env()
 

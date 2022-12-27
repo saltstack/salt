@@ -1,5 +1,6 @@
-import pytest
 import os
+
+import pytest
 
 
 @pytest.fixture(scope="module")
@@ -28,7 +29,7 @@ def test_config_correct(install):
         "# Default config from test suite line 3/6\n",
         "# Default config from test suite line 4/6\n",
         "# Default config from test suite line 5/6\n",
-        "# Default config from test suite line 6/6\n"
+        "# Default config from test suite line 6/6\n",
     ]
 
     with open(rf"{pytest.DATA_DIR}\conf\minion") as f:

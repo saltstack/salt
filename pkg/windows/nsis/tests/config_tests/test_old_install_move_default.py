@@ -1,5 +1,6 @@
-import pytest
 import os
+
+import pytest
 
 
 @pytest.fixture(scope="module")
@@ -9,7 +10,9 @@ def install():
     # Create old config
     pytest.helpers.old_install()
 
-    pytest.helpers.run_command([pytest.INST_BIN, "/S", "/move-config", "/default-config"])
+    pytest.helpers.run_command(
+        [pytest.INST_BIN, "/S", "/move-config", "/default-config"]
+    )
     yield
     pytest.helpers.clean_env()
 

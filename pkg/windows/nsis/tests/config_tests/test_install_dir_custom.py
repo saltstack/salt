@@ -1,5 +1,6 @@
-import pytest
 import os
+
+import pytest
 
 
 @pytest.fixture(scope="module")
@@ -14,7 +15,14 @@ def install(inst_dir):
     # Create a custom config
     pytest.helpers.custom_config()
 
-    pytest.helpers.run_command([pytest.INST_BIN, "/S", f"/install-dir={inst_dir}", "/custom-config=custom_conf"])
+    pytest.helpers.run_command(
+        [
+            pytest.INST_BIN,
+            "/S",
+            f"/install-dir={inst_dir}",
+            "/custom-config=custom_conf",
+        ]
+    )
     yield
     pytest.helpers.clean_env(inst_dir)
 

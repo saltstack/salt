@@ -1,5 +1,6 @@
-import pytest
 import os
+
+import pytest
 
 
 @pytest.fixture(scope="module")
@@ -14,7 +15,9 @@ def install(inst_dir):
     # Create old install
     pytest.helpers.old_install()
 
-    pytest.helpers.run_command([pytest.INST_BIN, "/S", f"/install-dir={inst_dir}", "/move-config"])
+    pytest.helpers.run_command(
+        [pytest.INST_BIN, "/S", f"/install-dir={inst_dir}", "/move-config"]
+    )
     yield
     pytest.helpers.clean_env()
 

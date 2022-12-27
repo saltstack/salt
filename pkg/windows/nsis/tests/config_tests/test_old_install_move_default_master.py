@@ -1,5 +1,6 @@
-import pytest
 import os
+
+import pytest
 
 
 @pytest.fixture(scope="module")
@@ -9,7 +10,9 @@ def install():
     # Create old config
     pytest.helpers.old_install()
 
-    pytest.helpers.run_command([pytest.INST_BIN, "/S", "/default-config", "/move-config", "/master=cli_master"])
+    pytest.helpers.run_command(
+        [pytest.INST_BIN, "/S", "/default-config", "/move-config", "/master=cli_master"]
+    )
     yield
     pytest.helpers.clean_env()
 
@@ -36,7 +39,7 @@ def test_config_correct(install):
         "# Default config from test suite line 3/6\n",
         "# Default config from test suite line 4/6\n",
         "# Default config from test suite line 5/6\n",
-        "# Default config from test suite line 6/6\n"
+        "# Default config from test suite line 6/6\n",
     ]
 
     with open(rf"{pytest.DATA_DIR}\conf\minion") as f:
