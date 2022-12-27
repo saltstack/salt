@@ -320,7 +320,9 @@ jobs:
   report:
     name: Reports for ${{ inputs.distro-slug }}(${{ matrix.transport }})
     runs-on: ubuntu-latest
-    needs: test
+    needs:
+      - test
+      - generate-matrix
     if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     strategy:
       fail-fast: false
