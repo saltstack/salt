@@ -69,7 +69,6 @@ import sys
 
 import pytest
 
-from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.utils.gitfs import (
     GITPYTHON_MINVER,
     GITPYTHON_VERSION,
@@ -708,9 +707,6 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
 )
 @pytest.mark.usefixtures("webserver_pillar_tests_prep")
-@pytest.mark.skip_if_not_root
-@pytest.mark.skip_if_binaries_missing("nginx")
-@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
 class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
     """
     Test git_pillar with GitPython using unauthenticated HTTP
@@ -721,9 +717,6 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
     not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
 )
 @pytest.mark.usefixtures("webserver_pillar_tests_prep_authenticated")
-@pytest.mark.skip_if_not_root
-@pytest.mark.skip_if_binaries_missing("nginx")
-@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
 class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
     """
     Test git_pillar with GitPython using authenticated HTTP
@@ -2364,9 +2357,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
     ),
 )
 @pytest.mark.usefixtures("webserver_pillar_tests_prep")
-@pytest.mark.skip_if_not_root
-@pytest.mark.skip_if_binaries_missing("nginx")
-@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
 class TestPygit2HTTP(GitPillarHTTPTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
@@ -2930,9 +2920,6 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
     ),
 )
 @pytest.mark.usefixtures("webserver_pillar_tests_prep_authenticated")
-@pytest.mark.skip_if_not_root
-@pytest.mark.skip_if_binaries_missing("nginx")
-@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
 class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
