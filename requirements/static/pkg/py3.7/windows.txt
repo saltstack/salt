@@ -133,7 +133,7 @@ urllib3==1.26.6
     # via
     #   -r requirements/windows.txt
     #   requests
-wheel==0.36.2
+wheel==0.38.4
     # via -r requirements/windows.txt
 wmi==1.5.1
     # via -r requirements/windows.txt

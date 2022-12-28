@@ -167,7 +167,7 @@ def __virtual__():
     if not HAS_CRYPTOGRAPHY:
         return (False, "Could not load cryptography")
     # salt.features appears to not be setup when invoked via peer publishing
-    if not __opts__.get("features").get("x509_v2"):
+    if not __opts__.get("features", {}).get("x509_v2"):
         return (
             False,
             "x509_v2 needs to be explicitly enabled by setting `x509_v2: true` "
