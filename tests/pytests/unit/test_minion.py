@@ -140,13 +140,11 @@ async def test_send_req_async_regression_62453(minion_opts):
         assert rtn is False
 
 
-@patch("salt.channel.client.ReqChannel.factory")
-def test_mine_send_tries(req_channel_factory):
+def test_mine_send_tries():
     channel_enter = MagicMock()
     channel_enter.send.side_effect = lambda load, timeout, tries: tries
     channel = MagicMock()
     channel.__enter__.return_value = channel_enter
-    req_channel_factory.return_value = channel
 
     opts = {
         "random_startup_delay": 0,
@@ -154,7 +152,9 @@ def test_mine_send_tries(req_channel_factory):
         "return_retry_tries": 20,
         "minion_sign_messages": False,
     }
-    with patch("salt.loader.grains"):
+    with patch("salt.channel.client.ReqChannel.factory", return_value=channel), patch(
+        "salt.loader.grains"
+    ):
         minion = salt.minion.Minion(opts)
         minion.tok = "token"
 
