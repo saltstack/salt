@@ -1068,12 +1068,11 @@ def test_valid_ipv4_master_address_ipv6_enabled(minion_opts):
         assert salt.minion.resolve_dns(minion_opts) == expected
 
 
-async def test_master_type_disable():
+async def test_master_type_disable(minion_opts):
     """
     Tests master_type "disable" to not even attempt connecting to a master.
     """
-    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    mock_opts.update(
+    minion_opts.update(
         {
             "master_type": "disable",
             "master": None,
@@ -1083,11 +1082,11 @@ async def test_master_type_disable():
         }
     )
 
-    minion = salt.minion.Minion(mock_opts)
+    minion = salt.minion.Minion(minion_opts)
     try:
 
         try:
-            minion_man = salt.minion.MinionManager(mock_opts)
+            minion_man = salt.minion.MinionManager(minion_opts)
             minion_man._connect_minion(minion)
         except RuntimeError:
             pytest.fail("_connect_minion(minion) threw an error, This was not expected")

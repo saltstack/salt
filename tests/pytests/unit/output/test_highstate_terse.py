@@ -3,23 +3,22 @@ import re
 
 import pytest
 
-import salt.config
 import salt.output.highstate as highstate
 
 log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def configure_loader_modules():
-    minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    overrides = {
-        "extension_modules": "",
-        "optimization_order": [0, 1, 2],
-        "color": False,
-        "state_output_pct": True,
-        "state_output": "terse",
-    }
-    minion_opts.update(overrides)
+def configure_loader_modules(minion_opts):
+    minion_opts.update(
+        {
+            "extension_modules": "",
+            "optimization_order": [0, 1, 2],
+            "color": False,
+            "state_output_pct": True,
+            "state_output": "terse",
+        }
+    )
     return {highstate: {"__opts__": minion_opts}}
 
 
