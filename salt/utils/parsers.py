@@ -2809,6 +2809,18 @@ class SaltCallOptionParser(
 
     def _mixin_setup(self):
         self.add_option(
+            "-o",
+            "--option",
+            default=[],
+            dest="opts",
+            action="append",
+            help=(
+                "Specify one or more minion option overrides. "
+                "Multiple options can be provided by passing "
+                "`-o/--option` multiple times."
+            ),
+        )
+        self.add_option(
             "-g",
             "--grains",
             dest="grains_run",

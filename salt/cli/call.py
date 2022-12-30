@@ -1,9 +1,12 @@
+import logging
 import os
 
 import salt.cli.caller
 import salt.defaults.exitcodes
 import salt.utils.parsers
 from salt.config import _expand_glob_path
+
+log = logging.getLogger(__name__)
 
 
 class SaltCall(salt.utils.parsers.SaltCallOptionParser):
@@ -36,6 +39,12 @@ class SaltCall(salt.utils.parsers.SaltCallOptionParser):
             self.config["file_client"] = "local"
         if self.options.master:
             self.config["master"] = self.options.master
+
+        # This must come after all of the above overrides
+        if self.options.opts:
+            ov = salt.utils.args.parse_input(self.options.opts, condition=False)[1]
+            log.debug("Minion option overrides: %s", ov)
+            self.config.update(ov)
 
         caller = salt.cli.caller.Caller.factory(self.config)
 
