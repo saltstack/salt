@@ -1,0 +1,1 @@
+Fix passing --update=.. args to raid.present state function

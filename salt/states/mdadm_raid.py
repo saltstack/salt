@@ -138,6 +138,14 @@ def present(name, level, devices, **kwargs):
         do_create = True
         verb = "created"
 
+    # --update isn't valid when creating an array; only during assembly
+    if "update" in kwargs:
+        if do_assemble:
+            if isinstance(kwargs["update"], list):
+                kwargs["update"] = ",".join(kwargs["update"])
+        else:
+            del kwargs["update"]
+
     # If running with test use the test_mode with create or assemble
     if __opts__["test"]:
         if do_assemble:

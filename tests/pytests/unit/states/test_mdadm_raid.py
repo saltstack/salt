@@ -73,6 +73,12 @@ def test_present():
             "name": "salt",
             "result": False,
         },
+        {
+            "changes": {"uuid": "6be5fc45:05802bba:1c2d6722:666f0e03"},
+            "comment": "Raid salt assembled.",
+            "name": "salt",
+            "result": True,
+        },
     ]
 
     mock_raid_list_exists = MagicMock(
@@ -135,7 +141,10 @@ def test_present():
         },
     ):
         with patch.dict(mdadm.__opts__, {"test": True}):
-            assert mdadm.present("salt", 5, "dev0") == ret[2]
+            assert mdadm.present("salt", 5, ["dev0"], update="ignored") == ret[2]
+            mock_raid_create_success.assert_called_with(
+                "salt", 5, ["dev0"], test_mode=True
+            )
 
     with patch.dict(
         mdadm.__salt__,
@@ -215,6 +224,25 @@ def test_present():
     ):
         with patch.dict(mdadm.__opts__, {"test": False}):
             assert mdadm.present("salt", 5, ["dev0", "dev1"]) == ret[7]
+
+    mock_raid_list_create = MagicMock(
+        side_effect=[{}, {"salt": {"uuid": "6be5fc45:05802bba:1c2d6722:666f0e03"}}]
+    )
+    with patch.dict(
+        mdadm.__salt__,
+        {
+            "raid.list": mock_raid_list_create,
+            "file.access": mock_file_access_ok,
+            "raid.examine": mock_raid_examine_ok,
+            "raid.assemble": mock_raid_assemble_success,
+            "raid.save_config": mock_raid_save_config,
+        },
+    ):
+        with patch.dict(mdadm.__opts__, {"test": False}):
+            assert mdadm.present("salt", 5, ["dev0"], update=["foo", "bar"]) == ret[8]
+            mock_raid_assemble_success.assert_called_with(
+                "salt", ["dev0"], update="foo,bar"
+            )
 
 
 def test_absent():
