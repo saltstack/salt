@@ -36,6 +36,9 @@ authenticated against.  This defaults to `login`
 
 
 import logging
+import subprocess
+import sys
+import os
 from ctypes import (
     CDLL,
     CFUNCTYPE,
@@ -52,7 +55,11 @@ from ctypes import (
 )
 from ctypes.util import find_library
 
-import salt.utils.user
+HAS_USER = True
+try:
+    import salt.utils.user
+except ImportError:
+    HAS_USER = False
 
 log = logging.getLogger(__name__)
 
@@ -163,7 +170,7 @@ def __virtual__():
     return HAS_LIBC and HAS_PAM
 
 
-def authenticate(username, password):
+def _authenticate(username, password, service):
     """
     Returns True if the given username and password authenticate for the
     given service.  Returns False otherwise
@@ -172,7 +179,6 @@ def authenticate(username, password):
 
     ``password``: the password in plain text
     """
-    service = __opts__.get("auth.pam.service", "login")
 
     if isinstance(username, str):
         username = username.encode(__salt_system_encoding__)
@@ -214,6 +220,17 @@ def authenticate(username, password):
     return retval == 0
 
 
+def authenticate(username, password):
+    env = os.environ.copy()
+    env["SALT_PAM_USERNAME"] = username
+    env["SALT_PAM_PASSWORD"] = password
+    env["SALT_PAM_SERVICE"] = __opts__.get("auth.pam.service", "login")
+    ret = subprocess.run(["python3", __file__], env=env)
+    if ret.returncode == 0:
+        return True
+    return False
+
+
 def auth(username, password, **kwargs):
     """
     Authenticate via pam
@@ -228,3 +245,13 @@ def groups(username, *args, **kwargs):
     Uses system groups
     """
     return salt.utils.user.get_group_list(username)
+
+
+if __name__ == "__main__":
+    if _authenticate(
+        os.environ["SALT_PAM_USERNAME"],
+        os.environ["SALT_PAM_PASSWORD"],
+        os.environ["SALT_PAM_SERVICE"],
+    ):
+        sys.exit(0)
+    sys.exit(1)
