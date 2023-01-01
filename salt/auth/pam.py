@@ -36,7 +36,6 @@ authenticated against.  This defaults to `login`
 
 import logging
 import os
-import shutil
 import subprocess
 import sys
 from ctypes import (
@@ -171,7 +170,14 @@ def __virtual__():
 
 
 def _authenticate(username, password, service):
+    """
+    Returns True if the given username and password authenticate for the
+    given service.  Returns False otherwise
 
+    ``username``: the username to authenticate
+
+    ``password``: the password in plain text
+    """
     if isinstance(username, str):
         username = username.encode(__salt_system_encoding__)
     if isinstance(password, str):
@@ -225,9 +231,7 @@ def authenticate(username, password):
     env["SALT_PAM_USERNAME"] = username
     env["SALT_PAM_PASSWORD"] = password
     env["SALT_PAM_SERVICE"] = __opts__.get("auth.pam.service", "login")
-    ret = subprocess.run(
-        [shutil.which("env"), "python3", __file__], env=env, check=False, shell=False
-    )
+    ret = subprocess.run(["python3", __file__], env=env)
     if ret.returncode == 0:
         return True
     return False
