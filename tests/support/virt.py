@@ -5,7 +5,7 @@ import attr
 from pytestshellutils.utils import ports
 from saltfactories.daemons.container import SaltMinion
 
-from tests.support.runtests import RUNTIME_VARS
+from tests.conftest import CODE_DIR
 
 
 @attr.s(kw_only=True, slots=True)
@@ -52,11 +52,11 @@ class SaltVirtMinionContainerFactory(SaltMinion):
             self.container_run_kwargs["volumes"] = {}
         self.container_run_kwargs["volumes"].update(
             {
-                RUNTIME_VARS.CODE_DIR: {"bind": "/salt", "mode": "z"},
-                RUNTIME_VARS.CODE_DIR: {"bind": RUNTIME_VARS.CODE_DIR, "mode": "z"},
+                str(CODE_DIR): {"bind": "/salt", "mode": "z"},
+                str(CODE_DIR): {"bind": str(CODE_DIR), "mode": "z"},
             }
         )
-        self.container_run_kwargs["working_dir"] = RUNTIME_VARS.CODE_DIR
+        self.container_run_kwargs["working_dir"] = str(CODE_DIR)
         self.container_run_kwargs["network_mode"] = "host"
         self.container_run_kwargs["cap_add"] = ["ALL"]
         self.container_run_kwargs["privileged"] = True

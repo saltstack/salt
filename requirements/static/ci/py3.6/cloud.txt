@@ -434,10 +434,6 @@ genshi==0.7.5
     # via -r requirements/static/ci/common.in
 geomet==0.2.1.post1
     # via cassandra-driver
-gitdb==4.0.7
-    # via gitpython
-gitpython==3.1.18
-    # via -r requirements/static/ci/common.in
 google-auth==2.1.0
     # via kubernetes
 idna-ssl==1.1.0
@@ -506,8 +502,6 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
-looseversion==1.0.2
-    # via -r requirements/base.txt
 lxml==4.9.1
     # via
     #   junos-eznc
@@ -647,9 +641,7 @@ oauthlib==3.2.1
 oscrypto==1.2.1
     # via certvalidator
 packaging==21.3
-    # via
-    #   -r requirements/base.txt
-    #   pytest
+    # via pytest
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
@@ -697,7 +689,6 @@ pyopenssl==20.0.1
     #   etcd3-py
 pyparsing==3.0.9
     # via
-    #   -r requirements/base.txt
     #   junos-eznc
     #   packaging
 pypsexec==0.1.0
@@ -857,8 +848,6 @@ six==1.16.0
     #   websocket-client
 smbprotocol==0.1.1
     # via pypsexec
-smmap==4.0.0
-    # via gitdb
 sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
@@ -879,7 +868,6 @@ typing-extensions==3.10.0.0
     # via
     #   aiohttp
     #   async-timeout
-    #   gitpython
     #   immutables
     #   importlib-metadata
     #   pytest-shell-utilities

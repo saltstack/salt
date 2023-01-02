@@ -26,7 +26,7 @@ def configure_loader_modules():
         None,
     ],
 )
-def test_gen_xml_for_xen_default_profile(loader):
+def test_gen_xml_for_xen_default_profile(loader, minion_opts):
     """
     Test virt._gen_xml(), XEN PV default profile case
     """
@@ -68,7 +68,7 @@ def test_gen_xml_for_xen_default_profile(loader):
                 disks = root.findall(".//disk")
                 assert len(disks) == 1
                 disk = disks[0]
-                root_dir = salt.config.DEFAULT_MINION_OPTS.get("root_dir")
+                root_dir = salt.syspaths.ROOT_DIR
                 assert disk.find("source").attrib["file"].startswith(root_dir)
                 assert "hello_system" in disk.find("source").attrib["file"]
                 assert disk.find("target").attrib["dev"] == "xvda"
