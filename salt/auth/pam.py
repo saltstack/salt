@@ -272,11 +272,16 @@ def groups(username, *args, **kwargs):
 
 
 if __name__ == "__main__":
-    if _authenticate(
-        os.environ["SALT_PAM_USERNAME"],
-        os.environ["SALT_PAM_PASSWORD"],
-        os.environ["SALT_PAM_SERVICE"],
-        os.environ["SALT_PAM_ENCODING"],
-    ):
-        sys.exit(0)
+    try:
+        if _authenticate(
+            os.environ["SALT_PAM_USERNAME"],
+            os.environ["SALT_PAM_PASSWORD"],
+            os.environ["SALT_PAM_SERVICE"],
+            os.environ["SALT_PAM_ENCODING"],
+        ):
+            sys.exit(0)
+    except Exception as exc:
+        sys.stderr.write(exc)
+        sys.stderr.flush()
+        sys.exit(3)
     sys.exit(1)
