@@ -32,10 +32,15 @@ authenticated against.  This defaults to `login`
     This should not be needed with python >= 3.3, because the `os` modules has the
     `getgrouplist` function.
 
+
+.. note:: This module executes itself in a subprocess in order to user the system python
+    and pam libraries. We do this to avoid openssl version conflicts when
+    running under a salt onedir build.
 """
 
 import logging
 import os
+import pathlib
 import subprocess
 import sys
 from ctypes import (
@@ -169,7 +174,7 @@ def __virtual__():
     return HAS_LIBC and HAS_PAM
 
 
-def _authenticate(username, password, service):
+def _authenticate(username, password, service, encoding="utf-8"):
     """
     Returns True if the given username and password authenticate for the
     given service.  Returns False otherwise
@@ -179,11 +184,11 @@ def _authenticate(username, password, service):
     ``password``: the password in plain text
     """
     if isinstance(username, str):
-        username = username.encode(__salt_system_encoding__)
+        username = username.encode(encoding)
     if isinstance(password, str):
-        password = password.encode(__salt_system_encoding__)
+        password = password.encode(encoding)
     if isinstance(service, str):
-        service = service.encode(__salt_system_encoding__)
+        service = service.encode(encoding)
 
     @CONV_FUNC
     def my_conv(n_messages, messages, p_response, app_data):
@@ -231,9 +236,21 @@ def authenticate(username, password):
     env["SALT_PAM_USERNAME"] = username
     env["SALT_PAM_PASSWORD"] = password
     env["SALT_PAM_SERVICE"] = __opts__.get("auth.pam.service", "login")
-    ret = subprocess.run(["python3", __file__], env=env)
+    env["SALT_PAM_ENCODING"] = __salt_system_encoding__
+    pyexe = pathlib.Path(__opts__.get("auth.pam.python", "/usr/bin/python3")).resolve()
+    pyfile = pathlib.Path(__file__).resolve()
+    if not pyexe.exists():
+        log.error("Error 'auth.pam.python' config value does not exist: %s", pyexe)
+        return False
+    ret = subprocess.run(
+        [str(pyexe), str(pyfile)],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
     if ret.returncode == 0:
         return True
+    log.error("Pam auth failed for %s: %s %s", username, ret.stdout, ret.stderr)
     return False
 
 
@@ -254,10 +271,16 @@ def groups(username, *args, **kwargs):
 
 
 if __name__ == "__main__":
-    if _authenticate(
-        os.environ["SALT_PAM_USERNAME"],
-        os.environ["SALT_PAM_PASSWORD"],
-        os.environ["SALT_PAM_SERVICE"],
-    ):
-        sys.exit(0)
+    try:
+        if _authenticate(
+            os.environ["SALT_PAM_USERNAME"],
+            os.environ["SALT_PAM_PASSWORD"],
+            os.environ["SALT_PAM_SERVICE"],
+            os.environ["SALT_PAM_ENCODING"],
+        ):
+            sys.exit(0)
+    except Exception as exc:
+        sys.stderr.write(exc)
+        sys.stderr.flush()
+        sys.exit(3)
     sys.exit(1)
