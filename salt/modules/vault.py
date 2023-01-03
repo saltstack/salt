@@ -419,7 +419,7 @@ approle
     to the Salt master.
 
     ``params`` configures the AppRole the master creates for minions. See the
-    `Vault API docs <https://www.vaultproject.io/api-docs/auth/approle#create-update-approle>`_
+    `Vault AppRole API docs <https://www.vaultproject.io/api-docs/auth/approle#create-update-approle>`_
     for details. If you update these params, you can update the minion AppRoles
     manually using the vault runner: ``salt-run vault.sync_approles``, but they
     will be updated automatically during a request by a minion as well.
@@ -447,7 +447,7 @@ token
 
         This used to be found in ``auth:ttl`` and ``auth:uses``.
 
-    See the `Vault API docs <https://developer.hashicorp.com/vault/api-docs/auth/token#create-token>`_
+    See the `Vault token API docs <https://developer.hashicorp.com/vault/api-docs/auth/token#create-token>`_
     for details. To make full use of multi-use tokens, you should configure a cache
     that survives a single session.
 
