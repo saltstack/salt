@@ -9,7 +9,6 @@ import pytest
 import salt.modules.event as event
 import salt.utils.event
 from tests.support.mock import MagicMock, patch
-from tests.support.paths import SALT_CODE_DIR
 
 
 @pytest.fixture
@@ -17,8 +16,6 @@ def minion_opts(minion_opts):
     minion_opts.update(
         {
             "id": "id",
-            "sock_dir": SALT_CODE_DIR,
-            "transport": "zeromq",
         }
     )
     return minion_opts
