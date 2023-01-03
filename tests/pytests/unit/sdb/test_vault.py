@@ -15,42 +15,42 @@ def configure_loader_modules():
     return {vault: {}}
 
 
-@pytest.fixture()
+@pytest.fixture
 def data():
     return {"bar": "super awesome"}
 
 
-@pytest.fixture()
+@pytest.fixture
 def read_kv(data):
     with patch("salt.utils.vault.read_kv", autospec=True) as read:
         read.return_value = data
         yield read
 
 
-@pytest.fixture()
+@pytest.fixture
 def read_kv_not_found(read_kv):
     read_kv.side_effect = vaultutil.VaultNotFoundError
 
 
-@pytest.fixture()
+@pytest.fixture
 def read_kv_not_found_once(read_kv, data):
     read_kv.side_effect = (vaultutil.VaultNotFoundError, data)
     yield read_kv
 
 
-@pytest.fixture()
+@pytest.fixture
 def read_kv_err(read_kv):
     read_kv.side_effect = vaultutil.VaultPermissionDeniedError("damn")
     yield read_kv
 
 
-@pytest.fixture()
+@pytest.fixture
 def write_kv():
     with patch("salt.utils.vault.write_kv", autospec=True) as write:
         yield write
 
 
-@pytest.fixture()
+@pytest.fixture
 def write_kv_err(write_kv):
     write_kv.side_effect = vaultutil.VaultPermissionDeniedError("damn")
     yield write_kv

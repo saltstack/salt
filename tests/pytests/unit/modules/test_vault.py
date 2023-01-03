@@ -8,7 +8,7 @@ import salt.utils.vault as vaultutil
 from tests.support.mock import ANY, patch
 
 
-@pytest.fixture()
+@pytest.fixture
 def configure_loader_modules():
     return {
         vault: {
@@ -17,12 +17,12 @@ def configure_loader_modules():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def data():
     return {"foo": "bar"}
 
 
-@pytest.fixture()
+@pytest.fixture
 def policy_response():
     return {
         "name": "test-policy",
@@ -30,93 +30,93 @@ def policy_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def policies_list_response():
     return {
         "policies": ["default", "root", "test-policy"],
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def data_list():
     return ["foo"]
 
 
-@pytest.fixture()
+@pytest.fixture
 def read_kv(data):
     with patch("salt.utils.vault.read_kv", autospec=True) as read:
         read.return_value = data
         yield read
 
 
-@pytest.fixture()
+@pytest.fixture
 def list_kv(data_list):
     with patch("salt.utils.vault.list_kv", autospec=True) as list:
         list.return_value = data_list
         yield list
 
 
-@pytest.fixture()
+@pytest.fixture
 def read_kv_not_found(read_kv):
     read_kv.side_effect = vaultutil.VaultNotFoundError
     yield read_kv
 
 
-@pytest.fixture()
+@pytest.fixture
 def list_kv_not_found(list_kv):
     list_kv.side_effect = vaultutil.VaultNotFoundError
     yield list_kv
 
 
-@pytest.fixture()
+@pytest.fixture
 def write_kv():
     with patch("salt.utils.vault.write_kv", autospec=True) as write:
         yield write
 
 
-@pytest.fixture()
+@pytest.fixture
 def write_kv_err(write_kv):
     write_kv.side_effect = vaultutil.VaultPermissionDeniedError("damn")
     yield write_kv
 
 
-@pytest.fixture()
+@pytest.fixture
 def patch_kv():
     with patch("salt.utils.vault.patch_kv", autospec=True) as patch_kv:
         yield patch_kv
 
 
-@pytest.fixture()
+@pytest.fixture
 def patch_kv_err(patch_kv):
     patch_kv.side_effect = vaultutil.VaultPermissionDeniedError("damn")
     yield patch_kv
 
 
-@pytest.fixture()
+@pytest.fixture
 def delete_kv():
     with patch("salt.utils.vault.delete_kv", autospec=True) as delete_kv:
         yield delete_kv
 
 
-@pytest.fixture()
+@pytest.fixture
 def delete_kv_err(delete_kv):
     delete_kv.side_effect = vaultutil.VaultPermissionDeniedError("damn")
     yield delete_kv
 
 
-@pytest.fixture()
+@pytest.fixture
 def destroy_kv():
     with patch("salt.utils.vault.destroy_kv", autospec=True) as destroy_kv:
         yield destroy_kv
 
 
-@pytest.fixture()
+@pytest.fixture
 def destroy_kv_err(destroy_kv):
     destroy_kv.side_effect = vaultutil.VaultPermissionDeniedError("damn")
     yield destroy_kv
 
 
-@pytest.fixture()
+@pytest.fixture
 def query():
     with patch("salt.utils.vault.query", autospec=True) as query:
         yield query

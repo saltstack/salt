@@ -15,7 +15,7 @@ def configure_loader_modules():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def default_config():
     return {
         "auth": {
@@ -81,7 +81,7 @@ def default_config():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def token_response():
     return {
         "request_id": "0e8c388e-2cb6-bcb2-83b7-625127d568bb",
@@ -99,7 +99,7 @@ def token_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def secret_id_response():
     return {
         "request_id": "0e8c388e-2cb6-bcb2-83b7-625127d568bb",
@@ -114,7 +114,7 @@ def secret_id_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def wrapped_response():
     return {
         "request_id": "",
@@ -134,7 +134,7 @@ def wrapped_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def token_serialized(token_response):
     return {
         "client_token": token_response["auth"]["client_token"],
@@ -146,7 +146,7 @@ def token_serialized(token_response):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def secret_id_serialized(secret_id_response):
     return {
         "secret_id": secret_id_response["data"]["secret_id"],
@@ -157,7 +157,7 @@ def secret_id_serialized(secret_id_response):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def secret_id_lookup_accessor_response():
     return {
         "request_id": "28f2f9fb-26c0-6022-4970-baeb6366b085",
@@ -179,7 +179,7 @@ def secret_id_lookup_accessor_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def wrapped_serialized(wrapped_response):
     return {
         "wrap_info": {
@@ -191,7 +191,7 @@ def wrapped_serialized(wrapped_response):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def approle_meta(token_serialized, secret_id_serialized):
     return {
         "bind_secret_id": True,
@@ -211,7 +211,7 @@ def approle_meta(token_serialized, secret_id_serialized):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def entity_lookup_response():
     return {
         "data": {
@@ -230,7 +230,7 @@ def entity_lookup_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def entity_fetch_response():
     return {
         "data": {
@@ -256,12 +256,12 @@ def entity_fetch_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def policies_default():
     return ["saltstack/minions", "saltstack/minion/test-minion"]
 
 
-@pytest.fixture()
+@pytest.fixture
 def metadata_secret_default():
     return {
         "saltstack-jid": "<no jid set>",
@@ -270,12 +270,12 @@ def metadata_secret_default():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def metadata_entity_default():
     return {"minion-id": "test-minion"}
 
 
-@pytest.fixture()
+@pytest.fixture
 def grains():
     return {
         "id": "test-minion",
@@ -286,7 +286,7 @@ def grains():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def pillar():
     return {
         "mixedcase": "UP-low-UP",
@@ -294,7 +294,7 @@ def pillar():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def client():
     with patch("salt.runners.vault._get_master_client", autospec=True) as get_client:
         client = Mock(vaultutil.AuthenticatedVaultClient)
@@ -302,7 +302,7 @@ def client():
         yield client
 
 
-@pytest.fixture()
+@pytest.fixture
 def client_token(client, token_response, wrapped_response):
     def res_or_wrap(*args, **kwargs):
         nonlocal token_response
@@ -315,7 +315,7 @@ def client_token(client, token_response, wrapped_response):
     yield client
 
 
-@pytest.fixture()
+@pytest.fixture
 def config(request, default_config):
     def rec(config, path, val=None):
         ptr = config
@@ -348,7 +348,7 @@ def config(request, default_config):
         yield config
 
 
-@pytest.fixture()
+@pytest.fixture
 def policies(request, policies_default):
     policies_list = getattr(request, "param", policies_default)
     with patch(
@@ -360,7 +360,7 @@ def policies(request, policies_default):
             yield
 
 
-@pytest.fixture()
+@pytest.fixture
 def metadata(request, metadata_entity_default, metadata_secret_default):
     def _get_metadata(minion_id, metadata_patterns, *args, **kwargs):
         nonlocal request
@@ -377,7 +377,7 @@ def metadata(request, metadata_entity_default, metadata_secret_default):
         yield get_metadata
 
 
-@pytest.fixture()
+@pytest.fixture
 def validate_signature():
     with patch(
         "salt.runners.vault._validate_signature", autospec=True, return_value=None

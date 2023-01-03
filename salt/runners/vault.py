@@ -549,7 +549,7 @@ def show_policies(minion_id, refresh_pillar=NOT_SET, expire=None):
 
         salt-run vault.show_policies myminion
     """
-    if "approle" == _config("issue:type"):
+    if _config("issue:type") == "approle":
         meta = _lookup_approle(minion_id)
         return meta["token_policies"]
 
@@ -595,7 +595,7 @@ def sync_approles(minions=None, up=False, down=False):
         Find all minions that are down and update their AppRoles.
         Defaults to False.
     """
-    if "approle" != _config("issue:type"):
+    if _config("issue:type") != "approle":
         raise SaltRunnerError("Master does not issue AppRoles to minions.")
     if minions is not None:
         if not isinstance(minions, list):
@@ -625,7 +625,7 @@ def list_approles():
 
         salt-run vault.list_approles
     """
-    if "approle" != _config("issue:type"):
+    if _config("issue:type") != "approle":
         raise SaltRunnerError("Master does not issue AppRoles to minions.")
     endpoint = "auth/{}/role".format(_config("issue:approle:mount"))
     client = _get_master_client()
@@ -661,7 +661,7 @@ def sync_entities(minions=None, up=False, down=False):
         Find all minions that are down and update their associated entities.
         Defaults to False.
     """
-    if "approle" != _config("issue:type"):
+    if _config("issue:type") != "approle":
         raise SaltRunnerError(
             "Master is not configured to issue AppRoles to minions, which is a "
             "requirement to use managed entities with Salt."
@@ -681,7 +681,7 @@ def sync_entities(minions=None, up=False, down=False):
     for minion in set(minions) & set(list_approles()):
         _manage_entity(minion)
         entity = _lookup_entity_by_alias(minion)
-        if not entity or not entity["name"] == f"salt_minion_{minion}":
+        if not entity or entity["name"] != f"salt_minion_{minion}":
             log.info(
                 "Fixing association of minion AppRole to minion entity for %s.", minion
             )
@@ -700,7 +700,7 @@ def list_entities():
 
         salt-run vault.list_entities
     """
-    if "approle" != _config("issue:type"):
+    if _config("issue:type") != "approle":
         raise SaltRunnerError("Master does not issue AppRoles to minions.")
     endpoint = "identity/entity/name"
     client = _get_master_client()
@@ -718,7 +718,7 @@ def show_entity(minion_id):
 
         salt-run vault.show_entity db1
     """
-    if "approle" != _config("issue:type"):
+    if _config("issue:type") != "approle":
         raise SaltRunnerError("Master does not issue AppRoles to minions.")
     endpoint = f"identity/entity/name/salt_minion_{minion_id}"
     client = _get_master_client()
@@ -735,7 +735,7 @@ def show_approle(minion_id):
 
         salt-run vault.show_approle db1
     """
-    if "approle" != _config("issue:type"):
+    if _config("issue:type") != "approle":
         raise SaltRunnerError("Master does not issue AppRoles to minions.")
     endpoint = "auth/{}/role/{}".format(_config("issue:approle:mount"), minion_id)
     client = _get_master_client()

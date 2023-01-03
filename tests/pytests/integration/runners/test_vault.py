@@ -213,7 +213,7 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
         with top_file, roles_file:
             yield
 
-    @pytest.fixture()
+    @pytest.fixture
     def pillar_exe_loop(self, pillar_state_tree, pillar_salt_minion):
         top_file = f"""
         base:
@@ -232,7 +232,7 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
         with top_tempfile, exe_loop_tempfile:
             yield
 
-    @pytest.fixture()
+    @pytest.fixture
     def pillar_sdb_loop(self, pillar_state_tree, pillar_salt_minion):
         top_file = f"""
         base:
@@ -399,7 +399,7 @@ class TestVaultPillarPolicyTemplatesWithCache:
         assert "pillar" in cached.data
         assert "grains" in cached.data
         assert "roles" in cached.data["pillar"]
-        assert ["minion", "web"] == cached.data["pillar"]["roles"]
+        assert cached.data["pillar"]["roles"] == ["minion", "web"]
         with roles_file:
             yield
 
@@ -553,7 +553,7 @@ def vault_testing_values(vault_container_version):
         vault_delete_secret("secret/path/foo")
 
 
-@pytest.fixture()
+@pytest.fixture
 def minion_conn_cachedir(vault_salt_call_cli):
     ret = vault_salt_call_cli.run("config.get", "cachedir")
     assert ret.returncode == 0
@@ -564,7 +564,7 @@ def minion_conn_cachedir(vault_salt_call_cli):
     yield cachedir
 
 
-@pytest.fixture()
+@pytest.fixture
 def missing_auth_cache(minion_conn_cachedir):
     token_cachefile = minion_conn_cachedir / "token.p"
     secret_id_cachefile = minion_conn_cachedir / "secret_id.p"
@@ -595,7 +595,7 @@ def minion_data_cache_present(
     yield
 
 
-@pytest.fixture()
+@pytest.fixture
 def conn_cache_absent(minion_conn_cachedir):
     for file in os.listdir(minion_conn_cachedir):
         (minion_conn_cachedir / file).unlink()
@@ -711,7 +711,7 @@ class TestAppRoleIssuance:
             "secret_id_ttl": 1338,
         }
 
-    @pytest.fixture()
+    @pytest.fixture
     def cache_auth_outdated(self, missing_auth_cache, minion_conn_cachedir, vault_port):
         vault_url = f"http://127.0.0.1:{vault_port}"
         config_data = b"\xdf\x00\x00\x00\x03\xa4auth\xdf\x00\x00\x00\x04\xadapprole_mount\xa7approle\xacapprole_name\xbavault-approle-int-minion-1\xa6method\xa5token\xa9secret_id\xc0\xa5cache\xdf\x00\x00\x00\x03\xa7backend\xa4disk\xa6config\xcd\x0e\x10\xa6secret\xa3ttl\xa6server\xdf\x00\x00\x00\x03\xa9namespace\xc0\xa6verify\xc0\xa3url"
@@ -725,7 +725,7 @@ class TestAppRoleIssuance:
             if config_cachefile.exists():
                 config_cachefile.unlink()
 
-    @pytest.fixture()
+    @pytest.fixture
     def cache_server_outdated(self, missing_auth_cache, minion_conn_cachedir):
         config_data = b"\xdf\x00\x00\x00\x03\xa4auth\xdf\x00\x00\x00\x05\xadapprole_mount\xa7approle\xacapprole_name\xbavault-approle-int-minion-1\xa6method\xa7approle\xa7role_id\xactest-role-id\xa9secret_id\xc3\xa5cache\xdf\x00\x00\x00\x03\xa7backend\xa4disk\xa6config\xcd\x0e\x10\xa6secret\xa3ttl\xa6server\xdf\x00\x00\x00\x03\xa9namespace\xc0\xa6verify\xc0\xa3url\xb2http://127.0.0.1:8"
         config_cachefile = minion_conn_cachedir / "config.p"
@@ -919,7 +919,7 @@ class TestTokenIssuance:
             "minion_data_cache": True,
         }
 
-    @pytest.fixture()
+    @pytest.fixture
     def cache_auth_outdated(self, missing_auth_cache, minion_conn_cachedir, vault_port):
         vault_url = f"http://127.0.0.1:{vault_port}"
         config_data = b"\xdf\x00\x00\x00\x03\xa4auth\xdf\x00\x00\x00\x05\xadapprole_mount\xa7approle\xacapprole_name\xbavault-approle-int-minion-1\xa6method\xa7approle\xa7role_id\xactest-role-id\xa9secret_id\xc3\xa5cache\xdf\x00\x00\x00\x03\xa7backend\xa4disk\xa6config\xcd\x0e\x10\xa6secret\xa3ttl\xa6server\xdf\x00\x00\x00\x03\xa9namespace\xc0\xa6verify\xc0\xa3url"

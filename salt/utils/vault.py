@@ -156,7 +156,7 @@ def query_raw(
     if not retry:
         return res
 
-    if 403 == res.status_code:
+    if res.status_code == 403:
         # in case cached authentication data was revoked
         clear_cache(opts, context)
         vault = get_authd_client(opts, context)
@@ -303,7 +303,7 @@ def clear_cache(opts, context, ckey=None, connection=True):
 
 
 def _get_cache_backend(config, opts):
-    if "session" == config["cache"]["backend"]:
+    if config["cache"]["backend"] == "session":
         return None
     if config["cache"]["backend"] in ["localfs", "disk", "file"]:
         # cache.Cache does not allow setting the type of cache by param
@@ -425,14 +425,14 @@ def _get_salt_run_type(opts):
             "Invalid vault configuration: config_location must be either local or master"
         )
 
-    if "master" == config_location:
+    if config_location == "master":
         pass
     elif any(
         (
             opts.get("local", None),
             opts.get("file_client", None) == "local",
             opts.get("master_type", None) == "disable",
-            "local" == config_location,
+            config_location == "local",
         )
     ):
         return SALT_RUNTYPE_MINION_LOCAL
@@ -1071,10 +1071,10 @@ def parse_config(config, validate=True, opts=None):
 
 
 def _get_expected_creation_path(secret_type, config=None):
-    if "token" == secret_type:
+    if secret_type == "token":
         return r"auth/token/create(/[^/]+)?"
 
-    if "secret_id" == secret_type:
+    if secret_type == "secret_id":
         if config is not None:
             return r"auth/{}/role/{}/secret\-id".format(
                 re.escape(config["auth"]["approle_mount"]),
@@ -1082,7 +1082,7 @@ def _get_expected_creation_path(secret_type, config=None):
             )
         return r"auth/[^/]+/role/[^/]+/secret\-id"
 
-    if "role_id" == secret_type:
+    if secret_type == "role_id":
         if config is not None:
             return r"auth/{}/role/{}/role\-id".format(
                 re.escape(config["auth"]["approle_mount"]),
@@ -1605,7 +1605,7 @@ def iso_to_timestamp(iso_time):
         if all(x == 0 for x in (tz_hour, tz_minute)):
             tz = datetime.timezone.utc
         else:
-            tz_sign = -1 if "-" == tstr[tz_pos] else 1
+            tz_sign = -1 if tstr[tz_pos] == "-" else 1
             td = datetime.timedelta(hours=tz_hour, minutes=tz_minute)
             tz = datetime.timezone(tz_sign * td)
         return int(
@@ -1721,7 +1721,7 @@ class VaultLease(DurationMixin, BaseLease):
             data = other.__dict__
         except AttributeError:
             data = other
-        return self.__dict__ == data
+        return data == self.__dict__
 
     def is_valid(self, valid_for=0):
         return self.is_valid_for(valid_for)
@@ -2637,7 +2637,7 @@ def make_request(
 
     vault = _get_client(token, vault_url, namespace, args)
     res = vault.request_raw(method, endpoint, payload=payload, wrap=False, **args)
-    if 403 == res.status_code and not retry:
+    if res.status_code == 403 and not retry:
         # retry was used to indicate to only try once more
         clear_cache(opts, context)
         vault = _get_client(token, vault_url, namespace, args)

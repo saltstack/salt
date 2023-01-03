@@ -12,7 +12,7 @@ import salt.utils.vault as vault
 from tests.support.mock import ANY, MagicMock, Mock, patch
 
 
-@pytest.fixture()
+@pytest.fixture
 def server_config():
     return {
         "url": "http://127.0.0.1:8200",
@@ -83,22 +83,22 @@ def test_config(server_config, request):
         "server": server_config,
     }
 
-    if "token" == request.param:
+    if request.param == "token":
         defaults["auth"]["token"] = "test-token"
         return defaults
 
-    if "wrapped_token" == request.param:
+    if request.param == "wrapped_token":
         defaults["auth"]["method"] = "wrapped_token"
         defaults["auth"]["token"] = "test-wrapped-token"
         return defaults
 
-    if "approle" == request.param:
+    if request.param == "approle":
         defaults["auth"]["method"] = "approle"
         defaults["auth"]["role_id"] = "test-role-id"
         defaults["auth"]["secret_id"] = "test-secret-id"
         return defaults
 
-    if "approle_no_secretid" == request.param:
+    if request.param == "approle_no_secretid":
         defaults["auth"]["method"] = "approle"
         defaults["auth"]["role_id"] = "test-role-id"
         return defaults
@@ -126,20 +126,20 @@ def test_remote_config(server_config, request):
         "server": server_config,
     }
 
-    if "token" == request.param:
+    if request.param == "token":
         defaults["auth"]["token"] = "test-token"
         return defaults
 
-    if "wrapped_token" == request.param:
+    if request.param == "wrapped_token":
         defaults["auth"]["method"] = "wrapped_token"
         defaults["auth"]["token"] = "test-wrapped-token"
         return defaults
 
-    if "token_changed" == request.param:
+    if request.param == "token_changed":
         defaults["auth"]["token"] = "test-token-changed"
         return defaults
 
-    if "approle" == request.param:
+    if request.param == "approle":
         defaults["auth"]["method"] = "approle"
         defaults["auth"]["role_id"] = "test-role-id"
         # actual remote config would not contain secret_id, but
@@ -147,13 +147,13 @@ def test_remote_config(server_config, request):
         defaults["auth"]["secret_id"] = "test-secret-id"
         return defaults
 
-    if "approle_no_secretid" == request.param:
+    if request.param == "approle_no_secretid":
         defaults["auth"]["method"] = "approle"
         defaults["auth"]["role_id"] = "test-role-id"
         return defaults
 
     # this happens when wrapped role_ids are merged by _query_master
-    if "approle_wrapped_roleid" == request.param:
+    if request.param == "approle_wrapped_roleid":
         defaults["auth"]["method"] = "approle"
         defaults["auth"]["role_id"] = {"role_id": "test-role-id"}
         # actual remote config does not contain secret_id
@@ -161,7 +161,7 @@ def test_remote_config(server_config, request):
         return defaults
 
 
-@pytest.fixture()
+@pytest.fixture
 def role_id_response():
     return {
         "request_id": "c85838c5-ecfe-6d07-4b28-1935ac2e304a",
@@ -173,7 +173,7 @@ def role_id_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def secret_id_response():
     return {
         "request_id": "c85838c5-ecfe-6d07-4b28-1935ac2e304a",
@@ -189,7 +189,7 @@ def secret_id_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def secret_id_meta_response():
     return {
         "request_id": "7c97d03d-2166-6217-8da1-19604febae5c",
@@ -211,7 +211,7 @@ def secret_id_meta_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def wrapped_role_id_response():
     return {
         "request_id": "",
@@ -231,7 +231,7 @@ def wrapped_role_id_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def wrapped_secret_id_response():
     return {
         "request_id": "",
@@ -251,7 +251,7 @@ def wrapped_secret_id_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def wrapped_role_id_lookup_response():
     return {
         "request_id": "31e7020e-3ce3-2c63-e453-d5da8a9890f1",
@@ -269,7 +269,7 @@ def wrapped_role_id_lookup_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def wrapped_token_auth_response():
     return {
         "request_id": "",
@@ -289,7 +289,7 @@ def wrapped_token_auth_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def token_lookup_self_response():
     return {
         "request_id": "0e8c388e-2cb6-bcb2-83b7-625127d568bb",
@@ -319,7 +319,7 @@ def token_lookup_self_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def token_renew_self_response():
     return {
         "auth": {
@@ -332,7 +332,7 @@ def token_renew_self_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def token_renew_other_response():
     return {
         "auth": {
@@ -345,7 +345,7 @@ def token_renew_other_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def token_renew_accessor_response():
     return {
         "auth": {
@@ -358,7 +358,7 @@ def token_renew_accessor_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def token_auth():
     return {
         "request_id": "0e8c388e-2cb6-bcb2-83b7-625127d568bb",
@@ -375,7 +375,7 @@ def token_auth():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def kvv1_meta_response():
     return {
         "request_id": "b82f2df7-a9b6-920c-0ed2-a3463b996f9e",
@@ -404,7 +404,7 @@ def kvv1_meta_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def kvv2_meta_response():
     return {
         "request_id": "b82f2df7-a9b6-920c-0ed2-a3463b996f9e",
@@ -435,7 +435,7 @@ def kvv2_meta_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def kvv1_info():
     return {
         "v2": False,
@@ -446,7 +446,7 @@ def kvv1_info():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def kvv2_info():
     return {
         "v2": True,
@@ -459,7 +459,7 @@ def kvv2_info():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def no_kv_info():
     return {
         "v2": False,
@@ -470,7 +470,7 @@ def no_kv_info():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def kvv1_response():
     return {
         "request_id": "35df4df1-c3d8-b270-0682-ddb0160c7450",
@@ -486,7 +486,7 @@ def kvv1_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def kvv2_response():
     return {
         "request_id": "35df4df1-c3d8-b270-0682-ddb0160c7450",
@@ -508,7 +508,7 @@ def kvv2_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def kv_list_response():
     return {
         "request_id": "35df4df1-c3d8-b270-0682-ddb0160c7450",
@@ -524,7 +524,7 @@ def kv_list_response():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def req_unwrapping(wrapped_role_id_lookup_response, role_id_response, req):
     req.side_effect = (
         lambda method, url, **kwargs: _mock_json_response(
@@ -540,14 +540,14 @@ def req_unwrapping(wrapped_role_id_lookup_response, role_id_response, req):
 def client(server_config, request):
     if request.param is None:
         return vault.VaultClient(**server_config)
-    if "valid_token" == request.param:
+    if request.param == "valid_token":
         token = request.getfixturevalue(request.param)
         auth = Mock(spec=vault.VaultTokenAuth)
         auth.is_renewable.return_value = True
         auth.is_valid.return_value = True
         auth.get_token.return_value = token
         return vault.AuthenticatedVaultClient(auth, **server_config)
-    if "invalid_token" == request.param:
+    if request.param == "invalid_token":
         token = request.getfixturevalue(request.param)
         auth = Mock(spec=vault.VaultTokenAuth)
         auth.is_renewable.return_value = True
@@ -556,7 +556,7 @@ def client(server_config, request):
         return vault.AuthenticatedVaultClient(auth, **server_config)
 
 
-@pytest.fixture()
+@pytest.fixture
 def valid_token(token_auth):
     token = MagicMock(spec=vault.VaultToken, **token_auth["auth"])
     token.is_valid.return_value = True
@@ -566,13 +566,13 @@ def valid_token(token_auth):
     return token
 
 
-@pytest.fixture()
+@pytest.fixture
 def invalid_token(valid_token):
     valid_token.is_valid.return_value = False
     return valid_token
 
 
-@pytest.fixture()
+@pytest.fixture
 def metadata_nocache():
     cache = Mock(spec=vault.VaultCache)
     cache.get.return_value = None
@@ -582,7 +582,7 @@ def metadata_nocache():
 @pytest.fixture(params=["v1", "v2"])
 def kv_meta(request, metadata_nocache):
     client = Mock(spec=vault.AuthenticatedVaultClient)
-    if "invalid" == request.param:
+    if request.param == "invalid":
         res = {"wrap_info": {}}
     else:
         res = request.getfixturevalue(f"kv{request.param}_meta_response")
@@ -600,7 +600,7 @@ def kv_meta_cached(request):
     return vault.VaultKV(client, cache)
 
 
-@pytest.fixture()
+@pytest.fixture
 def kvv1(kvv1_info, kvv1_response, metadata_nocache, kv_list_response):
     client = Mock(spec=vault.AuthenticatedVaultClient)
     client.get.return_value = kvv1_response
@@ -612,7 +612,7 @@ def kvv1(kvv1_info, kvv1_response, metadata_nocache, kv_list_response):
         yield vault.VaultKV(client, metadata_nocache)
 
 
-@pytest.fixture()
+@pytest.fixture
 def kvv2(kvv2_info, kvv2_response, metadata_nocache, kv_list_response):
     client = Mock(spec=vault.AuthenticatedVaultClient)
     client.get.return_value = kvv2_response
@@ -624,20 +624,20 @@ def kvv2(kvv2_info, kvv2_response, metadata_nocache, kv_list_response):
         yield vault.VaultKV(client, metadata_nocache)
 
 
-@pytest.fixture()
+@pytest.fixture
 def req():
     with patch("requests.request", autospec=True) as req:
         yield req
 
 
-@pytest.fixture()
+@pytest.fixture
 def req_failed(req, request):
     status_code = getattr(request, "param", 502)
     req.return_value = _mock_json_response({"errors": ["foo"]}, status_code=status_code)
     yield req
 
 
-@pytest.fixture()
+@pytest.fixture
 def req_success(req):
     req.return_value = _mock_json_response(None, status_code=204)
     yield req
@@ -765,19 +765,19 @@ def test_kv_wrapper_handles_auth_exceptions(wrapper, param, result, exception):
 
 
 class TestGetAuthdClient:
-    @pytest.fixture()
+    @pytest.fixture
     def client_valid(self):
         client = Mock(spec=vault.AuthenticatedVaultClient)
         client.token_valid.return_value = True
         return client
 
-    @pytest.fixture()
+    @pytest.fixture
     def client_invalid(self):
         client = Mock(spec=vault.AuthenticatedVaultClient)
         client.token_valid.return_value = False
         return client
 
-    @pytest.fixture()
+    @pytest.fixture
     def client_renewable(self):
         client = Mock(spec=vault.AuthenticatedVaultClient)
         client.auth.get_token.return_value.is_renewable.return_value = True
@@ -1040,7 +1040,7 @@ class TestBuildAuthdClient:
                 approle.get.return_value = vault.VaultSecretId(
                     **secret_id_response["data"]
                 )
-            return token if "token" == ckey else approle
+            return token if ckey == "token" else approle
 
         cache = MagicMock(spec=vault.VaultAuthCache)
         cache.side_effect = _cache
@@ -1061,7 +1061,7 @@ class TestBuildAuthdClient:
         conn_config.return_value = (test_remote_config, None)
         client, config = vault._build_authd_client({}, {})
         assert client.token_valid(remote=False)
-        if "approle" == test_remote_config["auth"]["method"]:
+        if test_remote_config["auth"]["method"] == "approle":
             if (
                 not test_remote_config["auth"]["secret_id"]
                 or cached(None, None, None, None, "token").get()
@@ -1075,7 +1075,7 @@ class TestBuildAuthdClient:
 
 
 class TestGetConnectionConfig:
-    @pytest.fixture()
+    @pytest.fixture
     def cached(self, test_remote_config):
         cache = Mock(spec=vault.VaultConfigCache)
         # cached config does not include tokens
@@ -1085,7 +1085,7 @@ class TestGetConnectionConfig:
             factory.return_value = cache
             yield cache
 
-    @pytest.fixture()
+    @pytest.fixture
     def uncached(self):
         cache = Mock(spec=vault.VaultConfigCache)
         cache.get.return_value = None
@@ -1093,18 +1093,18 @@ class TestGetConnectionConfig:
             factory.return_value = cache
             yield cache
 
-    @pytest.fixture()
+    @pytest.fixture
     def local(self):
         with patch("salt.utils.vault._use_local_config", autospec=True) as local:
             yield local
 
-    @pytest.fixture()
+    @pytest.fixture
     def remote(self, test_remote_config):
         with patch("salt.utils.vault._query_master") as query:
             query.return_value = test_remote_config
             yield query
 
-    @pytest.fixture()
+    @pytest.fixture
     def remote_unused(self):
         with patch("salt.utils.vault._query_master") as query:
             yield query
@@ -1178,19 +1178,19 @@ class TestGetConnectionConfig:
 
 
 class TestFetchSecretId:
-    @pytest.fixture()
+    @pytest.fixture
     def cached(self, secret_id_response):
         cache = Mock(spec=vault.VaultAuthCache)
         cache.get.return_value = vault.VaultSecretId(**secret_id_response["data"])
         return cache
 
-    @pytest.fixture()
+    @pytest.fixture
     def uncached(self):
         cache = Mock(spec=vault.VaultConfigCache)
         cache.get.return_value = None
         return cache
 
-    @pytest.fixture()
+    @pytest.fixture
     def remote(self, secret_id_response, server_config):
         with patch("salt.utils.vault._query_master") as query:
             query.return_value = {
@@ -1199,12 +1199,12 @@ class TestFetchSecretId:
             }
             yield query
 
-    @pytest.fixture()
+    @pytest.fixture
     def remote_unused(self):
         with patch("salt.utils.vault._query_master") as query:
             yield query
 
-    @pytest.fixture()
+    @pytest.fixture
     def local(self):
         with patch("salt.utils.vault._use_local_config", autospec=True) as local:
             yield local
@@ -1332,30 +1332,30 @@ class TestFetchSecretId:
 
 
 class TestFetchToken:
-    @pytest.fixture()
+    @pytest.fixture
     def cached(self, token_auth):
         cache = Mock(spec=vault.VaultAuthCache)
         cache.get.return_value = vault.VaultToken(**token_auth["auth"])
         return cache
 
-    @pytest.fixture()
+    @pytest.fixture
     def uncached(self):
         cache = Mock(spec=vault.VaultConfigCache)
         cache.get.return_value = None
         return cache
 
-    @pytest.fixture()
+    @pytest.fixture
     def remote(self, token_auth, server_config):
         with patch("salt.utils.vault._query_master", autospec=True) as query:
             query.return_value = {"auth": token_auth["auth"], "server": server_config}
             yield query
 
-    @pytest.fixture()
+    @pytest.fixture
     def remote_unused(self):
         with patch("salt.utils.vault._query_master") as query:
             yield query
 
-    @pytest.fixture()
+    @pytest.fixture
     def local(self):
         with patch("salt.utils.vault._use_local_config", autospec=True) as local:
             yield local
@@ -1476,10 +1476,10 @@ class TestFetchToken:
                 force_local=force_local,
                 embedded_token=embedded_token,
             )
-            if "test-token" == embedded_token:
+            if embedded_token == "test-token":
                 token_lookup.assert_not_called()
                 assert res == cached.get()
-            elif "test-token-changed" == embedded_token:
+            elif embedded_token == "test-token-changed":
                 token_lookup.assert_called_once()
                 assert res == vault.VaultToken(
                     lease_id=embedded_token,
@@ -1669,7 +1669,7 @@ class TestQueryMaster:
 
     @pytest.fixture(params=["minion"])
     def opts(self, request):
-        if "no_role" == request.param:
+        if request.param == "no_role":
             return {
                 "grains": {"id": "test-minion"},
                 "pki_dir": "/var/cache/salt/minion",
@@ -2211,7 +2211,7 @@ def test_vault_client_token_valid(client, remote, req_any):
     should_be_valid = client.auth.is_valid() and (
         not remote or req_any("POST", "abc").status_code == 200
     )
-    assert valid == should_be_valid
+    assert valid is should_be_valid
 
 
 @pytest.mark.parametrize("func", ["get", "delete", "post", "list"])
@@ -2422,7 +2422,7 @@ def test_vault_client_request_raw_increases_use_count_when_necessary_depending_o
     https://github.com/hashicorp/vault/blob/d467681e15898041b6dd5f2bf7789bd7c236fb16/vault/logical_system.go#L119-L155
     """
     client.request_raw("GET", endpoint)
-    assert client.auth.used.called == use
+    assert client.auth.used.called is use
 
 
 @pytest.mark.parametrize("client", ["valid_token"], indirect=True)
@@ -2709,7 +2709,7 @@ def test_vault_token_is_valid_accounts_for_num_uses(num_uses, uses, expected):
     }
     with patch("salt.utils.vault.VaultLease.is_valid", Mock(return_value=True)):
         res = vault.VaultToken(**data)
-        assert res.is_valid() == expected
+        assert res.is_valid() is expected
 
 
 @pytest.mark.parametrize(
@@ -2737,7 +2737,7 @@ def test_vault_approle_secret_id_is_valid_accounts_for_time(
     }
     with patch("salt.utils.vault.time.time", return_value=tock):
         res = vault.VaultSecretId(**data)
-        assert res.is_valid(offset) == expected
+        assert res.is_valid(offset) is expected
 
 
 @pytest.mark.parametrize(
@@ -2760,7 +2760,7 @@ def test_vault_approle_secret_id_is_valid_accounts_for_num_uses(
     }
     with patch("salt.utils.vault.VaultLease.is_valid", Mock(return_value=True)):
         res = vault.VaultSecretId(**data)
-        assert res.is_valid() == expected
+        assert res.is_valid() is expected
 
 
 ############################################
@@ -2769,26 +2769,26 @@ def test_vault_approle_secret_id_is_valid_accounts_for_num_uses(
 
 
 class TestAuthMethods:
-    @pytest.fixture()
+    @pytest.fixture
     def token(self, token_auth):
         return vault.VaultToken(**token_auth["auth"])
 
-    @pytest.fixture()
+    @pytest.fixture
     def token_invalid(self, token_auth):
         token_auth["auth"]["num_uses"] = 1
         token_auth["auth"]["use_count"] = 1
         return vault.VaultToken(**token_auth["auth"])
 
-    @pytest.fixture()
+    @pytest.fixture
     def token_unrenewable(self, token_auth):
         token_auth["auth"]["renewable"] = False
         return vault.VaultToken(**token_auth["auth"])
 
-    @pytest.fixture()
+    @pytest.fixture
     def secret_id(self, secret_id_response):
         return vault.VaultSecretId(**secret_id_response["data"])
 
-    @pytest.fixture()
+    @pytest.fixture
     def secret_id_invalid(self, secret_id_response):
         secret_id_response["data"]["secret_id_num_uses"] = 1
         secret_id_response["data"]["use_count"] = 1
@@ -2801,43 +2801,43 @@ class TestAuthMethods:
             secret_id = request.getfixturevalue(secret_id)
         return vault.VaultAppRole("test-role-id", secret_id)
 
-    @pytest.fixture()
+    @pytest.fixture
     def approle_invalid(self, secret_id_invalid):
         return vault.VaultAppRole("test-role-id", secret_id_invalid)
 
-    @pytest.fixture()
+    @pytest.fixture
     def token_store(self, token):
         store = Mock(spec=vault.VaultTokenAuth)
         store.is_valid.return_value = True
         store.get_token.return_value = token
         return store
 
-    @pytest.fixture()
+    @pytest.fixture
     def token_store_empty(self, token_store):
         token_store.is_valid.return_value = False
         token_store.get_token.side_effect = vault.VaultAuthExpired
         return token_store
 
-    @pytest.fixture()
+    @pytest.fixture
     def token_store_empty_first(self, token_store, token):
         token_store.is_valid.side_effect = (False, True)
         token_store.get_token.side_effect = (token, vault.VaultException)
         return token_store
 
-    @pytest.fixture()
+    @pytest.fixture
     def uncached(self):
         cache = Mock(spec=vault.VaultAuthCache)
         cache.exists.return_value = False
         cache.get.return_value = None
         return cache
 
-    @pytest.fixture()
+    @pytest.fixture
     def cached_token(self, uncached, token):
         uncached.exists.return_value = True
         uncached.get.return_value = token
         return uncached
 
-    @pytest.fixture()
+    @pytest.fixture
     def client(self, token_auth):
         token_auth["auth"]["client_token"] = "new-test-token"
         with patch("salt.utils.vault.VaultClient", autospec=True) as client:
@@ -2944,7 +2944,7 @@ class TestAuthMethods:
         approle = Mock(spec=vault.VaultSecretId)
         approle.is_valid.return_value = approle
         auth = vault.VaultAppRoleAuth(approle, None, token_store=token)
-        assert auth.is_valid() == (token or approle)
+        assert auth.is_valid() is (token or approle)
 
     def test_approle_auth_get_token_store_available(self, token_store, approle, token):
         """
@@ -3110,28 +3110,28 @@ class TestVaultCache:
             }
         }
 
-    @pytest.fixture()
+    @pytest.fixture
     def cbank(self):
         return "vault/connection"
 
-    @pytest.fixture()
+    @pytest.fixture
     def ckey(self):
         return "test"
 
-    @pytest.fixture()
+    @pytest.fixture
     def data(self):
         return {"foo": "bar"}
 
-    @pytest.fixture()
+    @pytest.fixture
     def context(self, cbank, ckey, data):
         return {cbank: {ckey: data}}
 
-    @pytest.fixture()
+    @pytest.fixture
     def cache_factory(self):
         with patch("salt.cache.factory", autospec=True) as factory:
             yield factory
 
-    @pytest.fixture()
+    @pytest.fixture
     def cached(self, cache_factory, data):
         cache = Mock(spec=salt.cache.Cache)
         cache.contains.return_value = True
@@ -3140,7 +3140,7 @@ class TestVaultCache:
         cache_factory.return_value = cache
         return cache
 
-    @pytest.fixture()
+    @pytest.fixture
     def cached_outdated(self, cache_factory, data):
         cache = Mock(spec=salt.cache.Cache)
         cache.contains.return_value = True
@@ -3149,7 +3149,7 @@ class TestVaultCache:
         cache_factory.return_value = cache
         return cache
 
-    @pytest.fixture()
+    @pytest.fixture
     def uncached(self, cache_factory):
         cache = Mock(spec=salt.cache.Cache)
         cache.contains.return_value = False
@@ -3244,15 +3244,15 @@ class TestVaultConfigCache:
             }
         }
 
-    @pytest.fixture()
+    @pytest.fixture
     def cbank(self):
         return "vault/connection"
 
-    @pytest.fixture()
+    @pytest.fixture
     def ckey(self):
         return "test"
 
-    @pytest.fixture()
+    @pytest.fixture
     def data(self, config):
         return {
             "cache": {
@@ -3262,17 +3262,17 @@ class TestVaultConfigCache:
             }
         }
 
-    @pytest.fixture()
+    @pytest.fixture
     def context(self, cbank, ckey, data):
         return {cbank: {ckey: data}}
 
     # TODO: most of the following fixtures should patch the parent class
-    @pytest.fixture()
+    @pytest.fixture
     def cache_factory(self):
         with patch("salt.cache.factory", autospec=True) as factory:
             yield factory
 
-    @pytest.fixture()
+    @pytest.fixture
     def cached(self, cache_factory, data):
         cache = Mock(spec=salt.cache.Cache)
         cache.contains.return_value = True
@@ -3281,7 +3281,7 @@ class TestVaultConfigCache:
         cache_factory.return_value = cache
         return cache
 
-    @pytest.fixture()
+    @pytest.fixture
     def cached_outdated(self, cache_factory, data):
         cache = Mock(spec=salt.cache.Cache)
         cache.contains.return_value = True
@@ -3290,7 +3290,7 @@ class TestVaultConfigCache:
         cache_factory.return_value = cache
         return cache
 
-    @pytest.fixture()
+    @pytest.fixture
     def uncached(self, cache_factory):
         cache = Mock(spec=salt.cache.Cache)
         cache.contains.return_value = False
@@ -3383,10 +3383,12 @@ class TestVaultConfigCache:
         unless the configuration has not been initialized.
         Also, it should uninitialize the instance.
         """
+        if config is None:
+            context_old = deepcopy(context)
         cache = vault.VaultConfigCache({}, context, cbank, ckey, config)
         cache.flush()
         if config is None:
-            assert context == context
+            assert context == context_old
             cached.flush.assert_not_called()
         else:
             if config["cache"]["backend"] == "session":
@@ -3412,7 +3414,7 @@ class TestVaultConfigCache:
 
 
 class TestVaultAuthCache:
-    @pytest.fixture()
+    @pytest.fixture
     def config(self):
         return {
             "cache": {
@@ -3422,21 +3424,21 @@ class TestVaultAuthCache:
             }
         }
 
-    @pytest.fixture()
+    @pytest.fixture
     def uncached(self):
         with patch("salt.utils.vault.VaultCache") as cache:
             cache.exists.return_value = False
             cache.get.return_value = None
             yield cache
 
-    @pytest.fixture()
+    @pytest.fixture
     def cached(self, token_auth):
         with patch("salt.utils.vault.VaultCache.exists", return_value=True):
             with patch("salt.utils.vault.VaultCache.get") as get:
                 get.return_value = token_auth["auth"]
                 yield get
 
-    @pytest.fixture()
+    @pytest.fixture
     def cached_invalid_flush(self, token_auth, cached):
         with patch("salt.utils.vault.VaultCache.flush") as flush:
             token_auth["auth"]["num_uses"] = 1
@@ -3520,7 +3522,7 @@ def test_vault_kv_is_v2_no_cache(kv_meta, expected, request):
     kv_meta.client.get.assert_called_once_with(
         "sys/internal/ui/mounts/secret/some/path"
     )
-    if "no_kv_info" != expected:
+    if expected != "no_kv_info":
         kv_meta.metadata_cache.store.assert_called_once()
     assert res == expected_val
 

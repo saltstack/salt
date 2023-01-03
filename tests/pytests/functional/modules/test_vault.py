@@ -229,7 +229,7 @@ def test_patch_secret(vault, vault_container_version):
     assert ret == {"user": "foo", "password": "baz"}
 
 
-@pytest.fixture()
+@pytest.fixture
 def policy_rules():
     return """\
 path "secret/some/thing" {
@@ -238,7 +238,7 @@ path "secret/some/thing" {
     """
 
 
-@pytest.fixture()
+@pytest.fixture
 def existing_policy(policy_rules, vault_container_version):
     vault_write_policy("functional_test_policy", policy_rules)
     try:

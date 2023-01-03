@@ -20,24 +20,24 @@ def configure_loader_modules():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def data():
     return {"foo": "bar"}
 
 
-@pytest.fixture()
+@pytest.fixture
 def read_kv(data):
     with patch("salt.utils.vault.read_kv", autospec=True) as read:
         read.return_value = data
         yield read
 
 
-@pytest.fixture()
+@pytest.fixture
 def read_kv_not_found(read_kv):
     read_kv.side_effect = vaultutil.VaultNotFoundError
 
 
-@pytest.fixture()
+@pytest.fixture
 def role_a():
     return {
         "from_db": True,
@@ -46,7 +46,7 @@ def role_a():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def role_b():
     return {
         "from_web": True,

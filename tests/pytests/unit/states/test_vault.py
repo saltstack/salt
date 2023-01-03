@@ -5,19 +5,19 @@ import salt.states.vault as vault
 from tests.support.mock import Mock, patch
 
 
-@pytest.fixture()
+@pytest.fixture
 def configure_loader_modules():
     return {vault: {}}
 
 
-@pytest.fixture()
+@pytest.fixture
 def policy_fetch():
     fetch = Mock(return_value="test-rules", spec=vaultexe.policy_fetch)
     with patch.dict(vault.__salt__, {"vault.policy_fetch": fetch}):
         yield fetch
 
 
-@pytest.fixture()
+@pytest.fixture
 def policy_write():
     write = Mock(return_value=True, spec=vaultexe.policy_write)
     with patch.dict(vault.__salt__, {"vault.policy_write": write}):

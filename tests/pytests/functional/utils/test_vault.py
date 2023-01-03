@@ -36,7 +36,7 @@ def minion_config_overrides(vault_port):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def vault(loaders):
     return loaders.utils.vault
 
