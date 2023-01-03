@@ -172,8 +172,6 @@ def existing_secret(vault, vault_container_version):
 
 @pytest.fixture
 def existing_secret_version(existing_secret, vault, vault_container_version):
-    if vault_container_version == "0.9.6":
-        pytest.skip(f"Test not applicable to vault=={vault_container_version}")
     ret = vault.write_secret("secret/my/secret", user="foo", password="hunter1")
     assert ret
     assert ret["version"] == 2
@@ -189,9 +187,8 @@ def test_delete_secret(vault):
 
 
 @pytest.mark.usefixtures("existing_secret_version")
+@pytest.mark.parametrize("vault_container_version", ["1.3.1", "latest"], indirect=True)
 def test_delete_secret_versions(vault, vault_container_version):
-    if vault_container_version == "0.9.6":
-        pytest.skip(f"Test not applicable to vault=={vault_container_version}")
     ret = vault.delete_secret("secret/my/secret", 1)
     assert ret is True
     ret = vault.read_secret("secret/my/secret")
@@ -212,17 +209,15 @@ def test_list_secrets(vault):
 
 
 @pytest.mark.usefixtures("existing_secret")
+@pytest.mark.parametrize("vault_container_version", ["1.3.1", "latest"], indirect=True)
 def test_destroy_secret_kv2(vault, vault_container_version):
-    if vault_container_version == "0.9.6":
-        pytest.skip(f"Test not applicable to vault=={vault_container_version}")
     ret = vault.destroy_secret("secret/my/secret", "1")
     assert ret is True
 
 
 @pytest.mark.usefixtures("existing_secret")
+@pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
 def test_patch_secret(vault, vault_container_version):
-    if vault_container_version != "latest":
-        pytest.skip(f"Test not applicable to vault=={vault_container_version}")
     ret = vault.patch_secret("secret/my/secret", password="baz")
     assert ret
     expected_write = {"destroyed": False, "deletion_time": ""}

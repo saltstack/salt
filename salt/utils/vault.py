@@ -291,8 +291,8 @@ def clear_cache(opts, context, ckey=None, connection=True):
     if cbank in context:
         if ckey is None:
             context.pop(cbank)
-        elif ckey in context[cbank]:
-            context[cbank].pop(ckey)
+        else:
+            context[cbank].pop(ckey, None)
     cache = salt.cache.factory(opts)
     if cache.contains(cbank, ckey):
         return cache.flush(cbank, ckey)
@@ -464,14 +464,39 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
     except (VaultAuthExpired, VaultConfigExpired, VaultPermissionDeniedError):
         retry = True
 
-    # do not check the vault server for token validity because that consumes a use
-    if retry or not client.token_valid(remote=False):
+    # First, check if the token needs to be and can be renewed.
+    # Since this needs to check the possibly active session and does not care
+    # about valid secret IDs etc, we need to inspect the actual token.
+    if (
+        not retry
+        and config["auth"]["token_lifecycle"]["renew_increment"] is not False
+        and client.auth.get_token().is_renewable()
+        and not client.auth.get_token().is_valid(
+            config["auth"]["token_lifecycle"]["minimum_ttl"]
+        )
+    ):
+        log.debug("Renewing token")
+        client.token_renew(
+            increment=config["auth"]["token_lifecycle"]["renew_increment"]
+        )
+
+    if retry or not client.token_valid(
+        config["auth"]["token_lifecycle"]["minimum_ttl"] or 0, remote=False
+    ):
+        log.debug("Deleting cache and requesting new authentication credentials")
         clear_cache(opts, context)
         client, config = _build_authd_client(opts, context, force_local=force_local)
-        if not client.token_valid(remote=False):
-            raise VaultException(
-                "Could not build valid client. This is most likely a bug."
-            )
+        if not client.token_valid(
+            config["auth"]["token_lifecycle"]["minimum_ttl"] or 0, remote=False
+        ):
+            if config["auth"]["token_lifecycle"]["minimum_ttl"]:
+                log.warning(
+                    "Configuration error: auth:token_lifecycle:minimum_ttl cannot be honored because fresh tokens are issued with less ttl. Continuing anyways."
+                )
+            else:
+                raise VaultException(
+                    "Could not build valid client. This is most likely a bug."
+                )
 
     if get_config:
         return client, config
@@ -493,16 +518,16 @@ def _build_authd_client(opts, context, force_local=False):
         secret_id_cache = None
         if secret_id:
             secret_id_cache = VaultAuthCache(
-                config, opts, context, cbank, "secret_id", VaultAppRoleSecretId
+                config, opts, context, cbank, "secret_id", VaultSecretId
             )
             secret_id = secret_id_cache.get()
-            # only fetch secret-id if there is no cached valid token
+            # Only fetch secret ID if there is no cached valid token
             if cached_token is None and secret_id is None:
                 secret_id = _fetch_secret_id(
                     config, opts, secret_id_cache, force_local=force_local
                 )
             if secret_id is None:
-                secret_id = InvalidVaultAppRoleSecretId()
+                secret_id = InvalidVaultSecretId()
         role_id = config["auth"]["role_id"]
         # this happens with wrapped response merging
         if isinstance(role_id, dict):
@@ -606,7 +631,7 @@ def _fetch_secret_id(config, opts, secret_id_cache, force_local=False):
         if secret_id is not None:
             return secret_id
 
-        log.debug("Fetching new Vault AppRole secret-id.")
+        log.debug("Fetching new Vault AppRole secret ID.")
         secret_id = _query_master(
             "generate_secret_id",
             opts,
@@ -619,9 +644,9 @@ def _fetch_secret_id(config, opts, secret_id_cache, force_local=False):
             ]
             or None,
         )
-        secret_id = VaultAppRoleSecretId(**secret_id["data"])
-        # do not cache single-use secret-ids
-        if secret_id.secret_id_num_uses != 1:
+        secret_id = VaultSecretId(**secret_id["data"])
+        # Do not cache single-use secret IDs
+        if secret_id.num_uses != 1:
             secret_id_cache.store(secret_id)
         return secret_id
 
@@ -640,15 +665,15 @@ def _fetch_secret_id(config, opts, secret_id_cache, force_local=False):
                     ),
                 )
                 secret_id = secret_id["data"]
-            return LocalVaultAppRoleSecretId(**secret_id)
+            return LocalVaultSecretId(**secret_id)
         if secret_id:
             # assume locally configured secret_ids do not expire
-            return LocalVaultAppRoleSecretId(
-                config["auth"]["secret_id"],
+            return LocalVaultSecretId(
+                secret_id=config["auth"]["secret_id"],
                 secret_id_ttl=config["cache"]["config"],
-                secret_id_num_uses=None,
+                secret_id_num_uses=0,
             )
-        # when secret_id is falsey, the approle does not require secret ids,
+        # When secret_id is falsey, the approle does not require secret IDs,
         # hence a call to this function is superfluous
         raise salt.exceptions.SaltException("This code path should not be hit at all.")
 
@@ -721,7 +746,9 @@ def _fetch_token(config, opts, token_cache, force_local=False, embedded_token=No
                     )
                 token_meta = token_info.json()["data"]
                 token = VaultToken(
-                    embedded_token, lease_duration=token_meta["ttl"], **token_meta
+                    lease_id=embedded_token,
+                    lease_duration=token_meta["ttl"],
+                    **token_meta,
                 )
                 token_cache.store(token)
         if token is not None:
@@ -780,8 +807,8 @@ def _query_master(
             config_expired = True
 
         if "server" in result:
-            # make sure locally overridden verify parameter does not
-            # always invalidate cache
+            # Ensure locally overridden verify parameter does not
+            # always invalidate cache.
             nonlocal opts
             reported_server = parse_config(result["server"], validate=False, opts=opts)[
                 "server"
@@ -796,7 +823,7 @@ def _query_master(
             config_expired = True
             unwrap_expected_creation_path = None
 
-        # this is used to augment some vault responses with data fetched by the master
+        # This is used to augment some vault responses with data fetched by the master
         # e.g. secret_id_num_uses
         misc_data = result.get("misc_data", {})
 
@@ -805,7 +832,7 @@ def _query_master(
                 "server"
             ):
                 unwrap_client = None
-                # make sure to fetch wrapped data anyways for security reasons
+                # Ensure to fetch wrapped data anyways for security reasons
                 config_expired = True
 
             if unwrap_client is None:
@@ -917,6 +944,10 @@ def parse_config(config, validate=True, opts=None):
             "approle_name": "salt-master",
             "method": "token",
             "secret_id": None,
+            "token_lifecycle": {
+                "minimum_ttl": 10,
+                "renew_increment": None,
+            },
         },
         "cache": {
             "backend": "session",
@@ -933,15 +964,15 @@ def parse_config(config, validate=True, opts=None):
                     "bind_secret_id": True,
                     "secret_id_num_uses": 1,
                     "secret_id_ttl": 60,
-                    "ttl": 60,
-                    "uses": 10,
+                    "token_explicit_max_ttl": 60,
+                    "token_num_uses": 10,
                 },
             },
             "token": {
                 "role_name": None,
                 "params": {
-                    "ttl": None,
-                    "uses": 1,
+                    "explicit_max_ttl": None,
+                    "num_uses": 1,
                 },
             },
             "wrap": "30s",
@@ -973,7 +1004,7 @@ def parse_config(config, validate=True, opts=None):
     try:
         # Policy generation has params, the new config groups them together.
         if isinstance(config.get("policies", {}), list):
-            config["policies"] = {"assign": config["policies"]}
+            config["policies"] = {"assign": config.pop("policies")}
         merged = salt.utils.dictupdate.merge(
             default_config,
             config,
@@ -982,31 +1013,39 @@ def parse_config(config, validate=True, opts=None):
         )
         # ttl, uses were used as configuration for issuance and minion overrides as well
         # as token meta information. The new configuration splits those semantics.
-        for old_token_conf in ["ttl", "uses"]:
+        for old_token_conf, new_token_conf in [
+            ("ttl", "explicit_max_ttl"),
+            ("uses", "num_uses"),
+        ]:
             if old_token_conf in merged["auth"]:
-                merged["issue"]["token"]["params"][old_token_conf] = merged[
+                merged["issue"]["token"]["params"][new_token_conf] = merged[
                     "issue_params"
-                ][old_token_conf] = merged["auth"][old_token_conf]
+                ][old_token_conf] = merged["auth"].pop(old_token_conf)
         # Those were found in the root namespace, but grouping them together
         # makes semantic and practical sense.
         for old_server_conf in ["namespace", "url", "verify"]:
             if old_server_conf in merged:
-                merged["server"][old_server_conf] = merged[old_server_conf]
+                merged["server"][old_server_conf] = merged.pop(old_server_conf)
         if "role_name" in merged:
-            merged["issue"]["token"]["role_name"] = merged["role_name"]
+            merged["issue"]["token"]["role_name"] = merged.pop("role_name")
         if "token_backend" in merged["auth"]:
-            merged["cache"]["backend"] = merged["auth"]["token_backend"]
+            merged["cache"]["backend"] = merged["auth"].pop("token_backend")
         if "allow_minion_override" in merged["auth"]:
-            merged["issue"]["allow_minion_override_params"] = merged["auth"][
+            merged["issue"]["allow_minion_override_params"] = merged["auth"].pop(
                 "allow_minion_override"
-            ]
+            )
         if opts is not None and "vault" in opts:
             local_config = opts["vault"]
-            # make sure to respect locally configured verify parameter
+            # Respect locally configured verify parameter
             if local_config.get("verify", NOT_SET) != NOT_SET:
                 merged["server"]["verify"] = local_config["verify"]
             elif local_config.get("server", {}).get("verify", NOT_SET) != NOT_SET:
                 merged["server"]["verify"] = local_config["server"]["verify"]
+            # same for token_lifecycle
+            if local_config.get("auth", {}).get("token_lifecycle"):
+                merged["auth"]["token_lifecycle"] = local_config["auth"][
+                    "token_lifecycle"
+                ]
 
         if not validate:
             return merged
@@ -1245,8 +1284,10 @@ class VaultClient:
         """
         url = self._get_url(endpoint)
         headers = self._get_headers(wrap)
-        if isinstance(add_headers, dict):
+        try:
             headers.update(add_headers)
+        except TypeError:
+            pass
         res = requests.request(
             method, url, headers=headers, json=payload, verify=self.verify, **kwargs
         )
@@ -1347,7 +1388,7 @@ class VaultClient:
         self._raise_status(res)
         return res.json()["data"]
 
-    def token_valid(self, remote=True):  # pylint: disable=unused-argument
+    def token_valid(self, valid_for=0, remote=True):  # pylint: disable=unused-argument
         return False
 
     def get_config(self):
@@ -1408,11 +1449,13 @@ class AuthenticatedVaultClient(VaultClient):
     This should be used for most operations.
     """
 
+    auth = None
+
     def __init__(self, auth, url, **kwargs):
         self.auth = auth
         super().__init__(url, **kwargs)
 
-    def token_valid(self, remote=True):
+    def token_valid(self, valid_for=0, remote=True):
         """
         Check whether this client's authentication information is
         still valid.
@@ -1421,7 +1464,7 @@ class AuthenticatedVaultClient(VaultClient):
             Check with the remote Vault server as well. This consumes
             a token use. Defaults to true.
         """
-        if not self.auth.is_valid():
+        if not self.auth.is_valid(valid_for):
             return False
         if not remote:
             return True
@@ -1534,59 +1577,138 @@ class AuthenticatedVaultClient(VaultClient):
         return headers
 
 
-class VaultLease:
+def iso_to_timestamp(iso_time):
     """
-    Base class for Vault leases that expire with time.
+    Most endpoints respond with RFC3339-formatted strings
+    This is a hacky way to use inbuilt tools only for converting
+    to a timestamp
+    """
+    # drop subsecond precision to make it easier on us
+    # (length would need to be 3, 6 or 9)
+    iso_time = re.sub(r"\.[\d]+", "", iso_time)
+    iso_time = re.sub(r"Z$", "+00:00", iso_time)
+    try:
+        # Python >=v3.7
+        return int(datetime.datetime.fromisoformat(iso_time).timestamp())
+    except AttributeError:
+        # Python < v3.7
+        dstr, tstr = iso_time.split("T")
+        year = int(dstr[:4])
+        month = int(dstr[5:7])
+        day = int(dstr[8:10])
+        hour = int(tstr[:2])
+        minute = int(tstr[3:5])
+        second = int(tstr[6:8])
+        tz_pos = (tstr.find("-") + 1 or tstr.find("+") + 1) - 1
+        tz_hour = int(tstr[tz_pos + 1 : tz_pos + 3])
+        tz_minute = int(tstr[tz_pos + 4 : tz_pos + 6])
+        if all(x == 0 for x in (tz_hour, tz_minute)):
+            tz = datetime.timezone.utc
+        else:
+            tz_sign = -1 if "-" == tstr[tz_pos] else 1
+            td = datetime.timedelta(hours=tz_hour, minutes=tz_minute)
+            tz = datetime.timezone(tz_sign * td)
+        return int(
+            datetime.datetime(year, month, day, hour, minute, second, 0, tz).timestamp()
+        )
+
+
+class DurationMixin:
+    """
+    Mixin that handles expiration with time
     """
 
     def __init__(
         self,
-        lease_id,
-        renewable,
-        lease_duration,
+        renewable=False,
+        duration=0,
         creation_time=None,
-        auth=None,
-        data=None,
-        **kwargs,  # pylint: disable=unused-argument
+        expire_time=None,
+        **kwargs,
     ):
-        self.id = lease_id
+        if "lease_duration" in kwargs:
+            duration = kwargs.pop("lease_duration")
         self.renewable = renewable
-        self.lease_duration = lease_duration
-        if creation_time is not None:
-            try:
-                creation_time = int(creation_time)
-            except ValueError:
-                creation_time = _fromisoformat(creation_time)
-        self.creation_time = (
-            creation_time if creation_time is not None else int(round(time.time()))
+        self.duration = duration
+        creation_time = (
+            creation_time if creation_time is not None else round(time.time())
         )
-        self.auth = auth
-        self.data = data
+        try:
+            creation_time = int(creation_time)
+        except ValueError:
+            creation_time = iso_to_timestamp(creation_time)
+        self.creation_time = creation_time
 
-    def is_valid(self, valid_for=0):
+        expire_time = (
+            expire_time if expire_time is not None else round(time.time()) + duration
+        )
+        try:
+            expire_time = int(expire_time)
+        except ValueError:
+            expire_time = iso_to_timestamp(expire_time)
+        self.expire_time = expire_time
+        super().__init__(**kwargs)
+
+    def is_renewable(self):
         """
-        Checks whether the lease is valid
+        Checks whether the lease is renewable
+        """
+        return self.renewable
+
+    def is_valid_for(self, valid_for=0):
+        """
+        Checks whether the entity is valid
 
         valid_for
-            Allows to check whether the lease will still be valid in the future.
+            Check whether the entity will still be valid in the future.
             This can be an integer, which will be interpreted as seconds, or a
             time string using the same format as Vault does:
-            Suffix ``s`` for seconds, ``m`` for minuts, ``h`` for hours, ``d`` for days.
+            Suffix ``s`` for seconds, ``m`` for minutes, ``h`` for hours, ``d`` for days.
             Defaults to 0.
         """
-        if not self.lease_duration:
+        if not self.duration:
             return True
-        return self.creation_time + self.lease_duration > time.time() + timestring_map(
-            valid_for
-        )
+        return self.expire_time > time.time() + timestring_map(valid_for)
 
-    def with_(self, **kwargs):
+
+class UseCountMixin:
+    """
+    Mixin that handles expiration with number of uses
+    """
+
+    def __init__(self, num_uses=0, use_count=0, **kwargs):
+        self.num_uses = num_uses
+        self.use_count = use_count
+        super().__init__(**kwargs)
+
+    def used(self):
         """
-        Partially update the contained data
+        Increment the use counter by one.
         """
-        attrs = copy.copy(self.__dict__)
-        attrs.update(kwargs)
-        return type(self)(**attrs)
+        self.use_count += 1
+
+    def has_uses_left(self, uses=1):
+        """
+        Check whether this entity has uses left.
+        """
+        return self.num_uses == 0 or self.num_uses - (self.use_count + uses) >= 0
+
+
+class BaseLease:
+    def __init__(self, **kwargs):
+        # eat irrelevant kwargs
+        pass
+
+
+class VaultLease(DurationMixin, BaseLease):
+    """
+    Base class for Vault leases that expire with time.
+    """
+
+    def __init__(self, lease_id, accessor=None, **kwargs):
+        self.id = self.lease_id = lease_id
+        self.accessor = accessor
+        super().__init__(**kwargs)
 
     def __str__(self):
         return self.id
@@ -1601,11 +1723,154 @@ class VaultLease:
             data = other
         return self.__dict__ == data
 
+    def is_valid(self, valid_for=0):
+        return self.is_valid_for(valid_for)
+
+    def with_renewed(self, **kwargs):
+        """
+        Partially update the contained data after lease renewal
+        """
+        attrs = copy.copy(self.__dict__)
+        # ensure expire_time is reset properly
+        attrs.pop("expire_time")
+        attrs.update(kwargs)
+        return type(self)(**attrs)
+
     def to_dict(self):
         """
         Return a dict of all contained attributes
         """
         return self.__dict__
+
+
+class VaultToken(UseCountMixin, VaultLease):
+    """
+    Data object representing an authentication token
+    """
+
+    def __init__(self, **kwargs):
+        if "client_token" in kwargs:
+            # Ensure response data from Vault is accepted as well
+            kwargs["lease_id"] = kwargs.pop("client_token")
+        super().__init__(**kwargs)
+
+    def is_valid(self, valid_for=0, uses=1):  # pylint: disable=arguments-differ
+        """
+        Checks whether the token is valid for an amount of time and number of uses
+
+        valid_for
+            Check whether the token will still be valid in the future.
+            This can be an integer, which will be interpreted as seconds, or a
+            time string using the same format as Vault does:
+            Suffix ``s`` for seconds, ``m`` for minutes, ``h`` for hours, ``d`` for days.
+            Defaults to 0.
+
+        uses
+            Check whether the token has at least this number of uses left. Defaults to 1.
+        """
+        return self.is_valid_for(valid_for) and self.has_uses_left(uses)
+
+    def payload(self):
+        """
+        Return the payload to use for POST requests using this token
+        """
+        return {"token": str(self)}
+
+    def serialize_for_minion(self):
+        """
+        Serialize all necessary data to recreate this object
+        into a dict that can be sent to a minion.
+        """
+        return {
+            "client_token": self.id,
+            "renewable": self.renewable,
+            "lease_duration": self.duration,
+            "num_uses": self.num_uses,
+            "creation_time": self.creation_time,
+            "expire_time": self.expire_time,
+        }
+
+
+class VaultSecretId(UseCountMixin, VaultLease):
+    """
+    Data object representing an AppRole secret ID.
+    """
+
+    def __init__(self, **kwargs):
+        if "secret_id" in kwargs:
+            # Ensure response data from Vault is accepted as well
+            kwargs["lease_id"] = kwargs.pop("secret_id")
+            kwargs["lease_duration"] = kwargs.pop("secret_id_ttl")
+            kwargs["num_uses"] = kwargs.pop("secret_id_num_uses", 0)
+            kwargs["accessor"] = kwargs.pop("secret_id_accessor", None)
+        super().__init__(**kwargs)
+
+    def is_valid(self, valid_for=0, uses=1):  # pylint: disable=arguments-differ
+        """
+        Checks whether the secret ID is valid for an amount of time and number of uses
+
+        valid_for
+            Check whether the secret ID will still be valid in the future.
+            This can be an integer, which will be interpreted as seconds, or a
+            time string using the same format as Vault does:
+            Suffix ``s`` for seconds, ``m`` for minutes, ``h`` for hours, ``d`` for days.
+            Defaults to 0.
+
+        uses
+            Check whether the secret ID has at least this number of uses left. Defaults to 1.
+        """
+        return self.is_valid_for(valid_for) and self.has_uses_left(uses)
+
+    def payload(self):
+        """
+        Return the payload to use for POST requests using this secret ID
+        """
+        return {"secret_id": str(self)}
+
+    def serialize_for_minion(self):
+        """
+        Serialize all necessary data to recreate this object
+        into a dict that can be sent to a minion.
+        """
+        return {
+            "secret_id": self.id,
+            "secret_id_ttl": self.duration,
+            "secret_id_num_uses": self.num_uses,
+            "creation_time": self.creation_time,
+            "expire_time": self.expire_time,
+        }
+
+
+class VaultWrappedResponse(VaultLease):
+    """
+    Data object representing a wrapped response
+    """
+
+    def __init__(
+        self,
+        token,
+        ttl,
+        creation_path,
+        wrapped_accessor=None,
+        **kwargs,
+    ):
+        super().__init__(lease_id=token, lease_duration=ttl, renewable=False, **kwargs)
+        self.creation_path = creation_path
+        self.wrapped_accessor = wrapped_accessor
+
+    def serialize_for_minion(self):
+        """
+        Serialize all necessary data to recreate this object
+        into a dict that can be sent to a minion.
+        """
+        return {
+            "wrap_info": {
+                "token": self.id,
+                "ttl": self.duration,
+                "creation_time": self.creation_time,
+                "creation_path": self.creation_path,
+            },
+        }
 
 
 class VaultCache:
@@ -1781,8 +2046,10 @@ class VaultLeaseCache(VaultCache):
         """
         Store auth data
         """
-        if isinstance(value, VaultLease):
+        try:
             value = value.to_dict()
+        except AttributeError:
+            pass
         return super().store(value)
 
 
@@ -1821,7 +2088,7 @@ class VaultTokenAuth:
         Check whether the contained token is renewable,
         which requires it to be valid and renewable
         """
-        return self.is_valid() and self.token.renewable
+        return self.is_valid() and self.token.is_renewable()
 
     def is_valid(self, valid_for=0):
         """
@@ -1850,7 +2117,7 @@ class VaultTokenAuth:
         """
         Partially update the contained token (e.g. after renewal)
         """
-        self.token = self.token.with_(**auth)
+        self.token = self.token.with_renewed(**auth)
         self._write_cache()
 
     def replace_token(self, token):
@@ -1885,7 +2152,7 @@ class VaultAppRoleAuth:
     def is_renewable(self):
         """
         Check whether the currently used token is renewable.
-        Secret IDs are not renewable.
+        Secret IDs are not renewable anyways.
         """
         return self.token.is_renewable()
 
@@ -1932,11 +2199,11 @@ class VaultAppRoleAuth:
 
     def _write_cache(self):
         if self.cache is not None and self.approle.secret_id is not None:
-            if isinstance(self.approle.secret_id, LocalVaultAppRoleSecretId):
+            if isinstance(self.approle.secret_id, LocalVaultSecretId):
                 pass
-            elif self.approle.secret_id.secret_id_num_uses == 0:
+            elif self.approle.secret_id.num_uses == 0:
                 pass
-            elif self.approle.is_valid():
+            elif self.approle.secret_id.is_valid():
                 self.cache.store(self.approle.secret_id)
             else:
                 self.cache.flush()
@@ -1945,227 +2212,10 @@ class VaultAppRoleAuth:
         self.token.replace_token(VaultToken(**auth))
 
 
-def _fromisoformat(creation_time):
-    """
-    Most endpoints respond with RFC3339-formatted strings
-    This is a hacky way to use inbuilt tools only
-    """
-    # drop subsecond precision to make it easier on us
-    # (length would need to be 3, 6 or 9)
-    creation_time = re.sub(r"\.[\d]+", "", creation_time)
-    creation_time = re.sub(r"Z$", "+00:00", creation_time)
-    try:
-        # Python >=v3.7
-        return int(datetime.datetime.fromisoformat(creation_time).timestamp())
-    except AttributeError:
-        # Python < v3.7
-        dstr, tstr = creation_time.split("T")
-        year = int(dstr[:4])
-        month = int(dstr[5:7])
-        day = int(dstr[8:10])
-        hour = int(tstr[:2])
-        minute = int(tstr[3:5])
-        second = int(tstr[6:8])
-        tz_pos = (tstr.find("-") + 1 or tstr.find("+") + 1) - 1
-        tz_hour = int(tstr[tz_pos + 1 : tz_pos + 3])
-        tz_minute = int(tstr[tz_pos + 4 : tz_pos + 6])
-        if all(x == 0 for x in (tz_hour, tz_minute)):
-            tz = datetime.timezone.utc
-        else:
-            tz_sign = -1 if "-" == tstr[tz_pos] else 1
-            td = datetime.timedelta(hours=tz_hour, minutes=tz_minute)
-            tz = datetime.timezone(tz_sign * td)
-        return int(
-            datetime.datetime(year, month, day, hour, minute, second, 0, tz).timestamp()
-        )
-
-
-class VaultWrappedResponse(VaultLease):
-    """
-    Data object representing a wrapped response
-    """
-
-    def __init__(
-        self,
-        token,
-        ttl,
-        creation_time,
-        creation_path,
-        accessor=None,
-        wrapped_accessor=None,
-        **kwargs,
-    ):
-        self.accessor = accessor
-        self.wrapped_accessor = wrapped_accessor
-        self.creation_path = creation_path
-        super().__init__(
-            token,
-            renewable=False,
-            lease_duration=ttl,
-            creation_time=creation_time,
-            **kwargs,
-        )
-        self.token = self.id
-        self.ttl = self.lease_duration
-
-    def serialize_for_minion(self):
-        return {
-            "wrap_info": {
-                "token": self.id,
-                "ttl": self.ttl,
-                "creation_time": self.creation_time,
-                "creation_path": self.creation_path,
-            },
-        }
-
-
-class VaultAppRoleSecretId(VaultLease):
-    """
-    Data object representing an AppRole secret-id.
-    """
-
-    def __init__(
-        self,
-        secret_id,
-        secret_id_ttl,
-        secret_id_num_uses=None,
-        creation_time=None,
-        use_count=0,
-        **kwargs,
-    ):
-        self.num_uses = self.secret_id_num_uses = secret_id_num_uses
-        self.use_count = use_count
-        super().__init__(
-            secret_id,
-            renewable=False,
-            lease_duration=secret_id_ttl,
-            creation_time=creation_time,
-        )
-        self.secret_id_ttl = self.lease_duration
-        self.secret_id = self.id
-
-    def payload(self):
-        """
-        Return the payload to use for POST requests using this secret-id
-        """
-        return {"secret_id": str(self)}
-
-    def is_valid(self, valid_for=0):
-        """
-        Check whether this secret ID is valid. Takes into account
-        the maximum number of uses, if they are known, and lease duration.
-
-        valid_for
-            Allows to check whether the secret ID will still be valid in the future.
-            This can be an integer, which will be interpreted as seconds, or a
-            time string using the same format as Vault does:
-            Suffix ``s`` for seconds, ``m`` for minuts, ``h`` for hours, ``d`` for days.
-            Defaults to 0.
-        """
-        return super().is_valid(valid_for) and (
-            self.num_uses is None
-            or self.num_uses == 0
-            or self.num_uses - self.use_count > 0
-        )
-
-    def used(self):
-        """
-        Increment the use counter of this secret-id by one.
-        """
-        self.use_count += 1
-
-    def serialize_for_minion(self):
-        """
-        Serialize all necessary data to recreate this object
-        into a dict that can be sent to a minion.
-        """
-        data = {
-            "secret_id": self.secret_id,
-            "secret_id_ttl": self.secret_id_ttl,
-            "creation_time": self.creation_time,
-        }
-        if self.secret_id_num_uses is not None:
-            data["secret_id_num_uses"] = self.secret_id_num_uses
-        return data
-
-
-class LocalVaultAppRoleSecretId(VaultAppRoleSecretId):
+class LocalVaultSecretId(VaultSecretId):
     """
     Represents a secret ID from local configuration and should not be cached.
     """
-
-
-class VaultToken(VaultLease):
-    """
-    Data object representing an authentication token
-    """
-
-    def __init__(
-        self,
-        client_token,
-        renewable,
-        lease_duration,
-        num_uses,
-        accessor=None,
-        entity_id=None,
-        creation_time=None,
-        use_count=0,
-        **kwargs,
-    ):
-        self.accessor = accessor
-        self.num_uses = num_uses
-        self.entity_id = entity_id
-        self.use_count = use_count
-        super().__init__(
-            client_token,
-            renewable=renewable,
-            lease_duration=lease_duration,
-            creation_time=creation_time,
-        )
-        # instantiation is currently suboptimal
-        # this is needed to make new copies with updated params
-        self.client_token = self.id
-
-    def is_valid(self, valid_for=0):
-        """
-        Check whether this token is valid. Takes into account
-        the maximum number of uses, and lease duration.
-
-        valid_for
-            Allows to check whether the secret ID will still be valid in the future.
-            This can be an integer, which will be interpreted as seconds, or a
-            time string using the same format as Vault does:
-            Suffix ``s`` for seconds, ``m`` for minuts, ``h`` for hours, ``d`` for days.
-            Defaults to 0.
-        """
-        return super().is_valid(valid_for) and (
-            self.num_uses == 0 or self.num_uses - self.use_count > 0
-        )
-
-    def used(self):
-        """
-        Increment the use counter of this token by one.
-        """
-        self.use_count += 1
-
-    def payload(self):
-        """
-        Return the payload to use for POST requests using this token
-        """
-        return {"token": str(self)}
-
-    def serialize_for_minion(self):
-        """
-        Serialize all necessary data to recreate this object
-        into a dict that can be sent to a minion.
-        """
-        return {
-            "client_token": self.client_token,
-            "renewable": self.renewable,
-            "lease_duration": self.lease_duration,
-            "num_uses": self.num_uses,
-            "creation_time": self.creation_time,
-        }
 
 
 class VaultAppRole:
@@ -2179,11 +2229,11 @@ class VaultAppRole:
 
     def replace_secret_id(self, secret_id):
         """
-        Replace the contained secret-id with a new one
+        Replace the contained secret ID with a new one
         """
         self.secret_id = secret_id
 
-    def is_valid(self, valid_for=0):
+    def is_valid(self, valid_for=0, uses=1):
         """
         Checks whether the contained data can be used to authenticate
         to Vault. Secret IDs might not be required by the server when
@@ -2193,12 +2243,15 @@ class VaultAppRole:
             Allows to check whether the AppRole will still be valid in the future.
             This can be an integer, which will be interpreted as seconds, or a
             time string using the same format as Vault does:
-            Suffix ``s`` for seconds, ``m`` for minuts, ``h`` for hours, ``d`` for days.
+            Suffix ``s`` for seconds, ``m`` for minutes, ``h`` for hours, ``d`` for days.
             Defaults to 0.
+
+        uses
+            Check whether the AppRole has at least this number of uses left. Defaults to 1.
         """
         if self.secret_id is None:
             return True
-        return self.secret_id.is_valid(valid_for)
+        return self.secret_id.is_valid(valid_for=valid_for, uses=uses)
 
     def used(self):
         if self.secret_id is not None:
@@ -2221,15 +2274,15 @@ class InvalidVaultToken(VaultToken):
         self.use_count = 0
         self.num_uses = 0
 
-    def is_valid(self, valid_for=0):
+    def is_valid(self, valid_for=0, uses=1):
         return False
 
 
-class InvalidVaultAppRoleSecretId(VaultAppRoleSecretId):
+class InvalidVaultSecretId(VaultSecretId):
     def __init__(self, *args, **kwargs):  # pylint: disable=super-init-not-called
         pass
 
-    def is_valid(self, valid_for=0):
+    def is_valid(self, valid_for=0, uses=1):
         return False
 
 

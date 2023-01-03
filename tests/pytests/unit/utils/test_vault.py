@@ -1,7 +1,7 @@
 import time
 from copy import deepcopy
 
-# this needs to be from! see test_fromisoformat_polyfill
+# this needs to be from! see test_iso_to_timestamp_polyfill
 from datetime import datetime
 
 import pytest
@@ -29,6 +29,10 @@ def test_config(server_config, request):
             "approle_name": "salt-master",
             "method": "token",
             "secret_id": None,
+            "token_lifecycle": {
+                "minimum_ttl": 10,
+                "renew_increment": None,
+            },
         },
         "cache": {
             "backend": "session",
@@ -44,15 +48,15 @@ def test_config(server_config, request):
                     "bind_secret_id": True,
                     "secret_id_num_uses": 1,
                     "secret_id_ttl": 60,
-                    "ttl": 60,
-                    "uses": 10,
+                    "token_explicit_max_ttl": 60,
+                    "token_num_uses": 10,
                 },
             },
             "token": {
                 "role_name": None,
                 "params": {
-                    "ttl": None,
-                    "uses": 1,
+                    "explicit_max_ttl": None,
+                    "num_uses": 1,
                 },
             },
             "wrap": "30s",
@@ -108,6 +112,10 @@ def test_remote_config(server_config, request):
             "approle_name": "salt-master",
             "method": "token",
             "secret_id": None,
+            "token_lifecycle": {
+                "minimum_ttl": 10,
+                "renew_increment": None,
+            },
         },
         "cache": {
             "backend": "session",
@@ -770,9 +778,37 @@ class TestGetAuthdClient:
         return client
 
     @pytest.fixture()
-    def build_succeeds(self, client_valid):
+    def client_renewable(self):
+        client = Mock(spec=vault.AuthenticatedVaultClient)
+        client.auth.get_token.return_value.is_renewable.return_value = True
+        client.auth.get_token.return_value.is_valid.return_value = False
+        client.token_valid.return_value = True
+        return client
+
+    @pytest.fixture
+    def client_unrenewable(self):
+        client = Mock(spec=vault.AuthenticatedVaultClient)
+        client.auth.get_token.return_value.is_renewable.return_value = False
+        client.auth.get_token.return_value.is_valid.return_value = False
+        client.token_valid.side_effect = (False, True)
+        return client
+
+    @pytest.fixture
+    def client_renewable_max_ttl(self):
+        client = Mock(spec=vault.AuthenticatedVaultClient)
+        client.auth.get_token.return_value.is_renewable.return_value = True
+        client.auth.get_token.return_value.is_valid.return_value = False
+        client.token_valid.side_effect = (False, True)
+        return client
+
+    @pytest.fixture(
+        params=[
+            {"auth": {"token_lifecycle": {"minimum_ttl": 10, "renew_increment": False}}}
+        ]
+    )
+    def build_succeeds(self, client_valid, request):
         with patch("salt.utils.vault._build_authd_client", autospec=True) as build:
-            build.return_value = (client_valid, {})
+            build.return_value = (client_valid, request.param)
             yield build
 
     @pytest.fixture(
@@ -792,17 +828,61 @@ class TestGetAuthdClient:
         with patch("salt.utils.vault._build_authd_client", autospec=True) as build:
             build.side_effect = (
                 getattr(vault, exception),
-                (client_valid, {}),
+                (
+                    client_valid,
+                    {
+                        "auth": {
+                            "token_lifecycle": {
+                                "minimum_ttl": 10,
+                                "renew_increment": False,
+                            }
+                        }
+                    },
+                ),
             )
             yield build
 
-    @pytest.fixture()
-    def build_invalid_first(self, client_valid, client_invalid):
+    @pytest.fixture(
+        params=[
+            {"auth": {"token_lifecycle": {"minimum_ttl": 10, "renew_increment": False}}}
+        ]
+    )
+    def build_invalid_first(self, client_valid, client_invalid, request):
         with patch("salt.utils.vault._build_authd_client", autospec=True) as build:
             build.side_effect = (
-                (client_invalid, {}),
-                (client_valid, {}),
+                (client_invalid, request.param),
+                (client_valid, request.param),
             )
+            yield build
+
+    @pytest.fixture(
+        params=[
+            {"auth": {"token_lifecycle": {"minimum_ttl": 10, "renew_increment": 60}}}
+        ]
+    )
+    def build_renewable(self, client_renewable, request):
+        with patch("salt.utils.vault._build_authd_client", autospec=True) as build:
+            build.return_value = (client_renewable, request.param)
+            yield build
+
+    @pytest.fixture(
+        params=[
+            {"auth": {"token_lifecycle": {"minimum_ttl": 10, "renew_increment": 60}}}
+        ]
+    )
+    def build_unrenewable(self, client_unrenewable, request):
+        with patch("salt.utils.vault._build_authd_client", autospec=True) as build:
+            build.return_value = (client_unrenewable, request.param)
+            yield build
+
+    @pytest.fixture(
+        params=[
+            {"auth": {"token_lifecycle": {"minimum_ttl": 10, "renew_increment": 60}}}
+        ]
+    )
+    def build_renewable_max_ttl(self, client_renewable_max_ttl, request):
+        with patch("salt.utils.vault._build_authd_client", autospec=True) as build:
+            build.return_value = (client_renewable_max_ttl, request.param)
             yield build
 
     @pytest.fixture(autouse=True)
@@ -819,12 +899,16 @@ class TestGetAuthdClient:
         client = vault.get_authd_client({}, {}, get_config=get_config)
         if get_config:
             client, config = client
-        client.token_valid.assert_called_with(remote=False)
+        client.token_valid.assert_called_with(10, remote=False)
         assert client.token_valid()
         clear_cache.assert_not_called()
         assert build_succeeds.call_count == 1
         if get_config:
-            assert config == {}
+            assert config == {
+                "auth": {
+                    "token_lifecycle": {"minimum_ttl": 10, "renew_increment": False}
+                }
+            }
 
     @pytest.mark.parametrize("get_config", [False, True])
     def test_get_authd_client_invalid(
@@ -837,12 +921,16 @@ class TestGetAuthdClient:
         client = vault.get_authd_client({}, {}, get_config=get_config)
         if get_config:
             client, config = client
-        client.token_valid.assert_called_with(remote=False)
+        client.token_valid.assert_called_with(10, remote=False)
         assert client.token_valid()
         clear_cache.assert_called_once_with({}, {})
         assert build_invalid_first.call_count == 2
         if get_config:
-            assert config == {}
+            assert config == {
+                "auth": {
+                    "token_lifecycle": {"minimum_ttl": 10, "renew_increment": False}
+                }
+            }
 
     @pytest.mark.parametrize("get_config", [False, True])
     def test_get_authd_client_exception(
@@ -855,12 +943,16 @@ class TestGetAuthdClient:
         client = vault.get_authd_client({}, {}, get_config=get_config)
         if get_config:
             client, config = client
-        client.token_valid.assert_called_with(remote=False)
+        client.token_valid.assert_called_with(10, remote=False)
         assert client.token_valid()
         clear_cache.assert_called_once_with({}, {})
         assert build_exception_first.call_count == 2
         if get_config:
-            assert config == {}
+            assert config == {
+                "auth": {
+                    "token_lifecycle": {"minimum_ttl": 10, "renew_increment": False}
+                }
+            }
 
     def test_get_authd_client_fails(self, build_fails, clear_cache):
         """
@@ -869,6 +961,37 @@ class TestGetAuthdClient:
         with pytest.raises(build_fails.side_effect):
             vault.get_authd_client({}, {})
             clear_cache.assert_called_once()
+
+    @pytest.mark.usefixtures("build_renewable")
+    def test_get_authd_client_renews_token(self, clear_cache):
+        """
+        Ensure renewable tokens are renewed when necessary.
+        """
+        client = vault.get_authd_client({}, {}, get_config=False)
+        client.token_renew.assert_called_once_with(increment=60)
+        clear_cache.assert_not_called()
+
+    @pytest.mark.usefixtures("build_unrenewable")
+    def test_get_authd_client_unrenewable_new_token(self, clear_cache):
+        """
+        Ensure minimum_ttl is respected such that a new token is requested,
+        even though the current one would still be valid for some time.
+        """
+        client = vault.get_authd_client({}, {}, get_config=False)
+        client.token_renew.assert_not_called()
+        clear_cache.assert_called_once()
+
+    @pytest.mark.usefixtures("build_renewable_max_ttl")
+    def test_get_authd_client_renewable_token_max_ttl_insufficient(
+        self, build_renewable_max_ttl, clear_cache
+    ):
+        """
+        Ensure minimum_ttl is respected when a token can be renewed, but the
+        new ttl does not satisfy it.
+        """
+        client = vault.get_authd_client({}, {}, get_config=False)
+        client.token_renew.assert_called_once_with(increment=60)
+        clear_cache.assert_called_once()
 
 
 class TestBuildAuthdClient:
@@ -888,7 +1011,7 @@ class TestBuildAuthdClient:
     @pytest.fixture(autouse=True)
     def fetch_secret_id(self, secret_id_response):
         with patch("salt.utils.vault._fetch_secret_id") as fetch_secret_id:
-            fetch_secret_id.return_value = vault.VaultAppRoleSecretId(
+            fetch_secret_id.return_value = vault.VaultSecretId(
                 **secret_id_response["data"]
             )
             yield fetch_secret_id
@@ -899,7 +1022,7 @@ class TestBuildAuthdClient:
             fetch_token.return_value = vault.VaultToken(**token_auth["auth"])
             yield fetch_token
 
-    @pytest.fixture(params=["token", "secret_id", "both"])
+    @pytest.fixture(params=["token", "secret_id", "both", "none"])
     def cached(self, token_auth, secret_id_response, request):
         cached_what = request.param
 
@@ -914,7 +1037,7 @@ class TestBuildAuthdClient:
             if cached_what in ["token", "both"]:
                 token.get.return_value = vault.VaultToken(**token_auth["auth"])
             if cached_what in ["secret_id", "both"]:
-                approle.get.return_value = vault.VaultAppRoleSecretId(
+                approle.get.return_value = vault.VaultSecretId(
                     **secret_id_response["data"]
                 )
             return token if "token" == ckey else approle
@@ -924,19 +1047,12 @@ class TestBuildAuthdClient:
         with patch("salt.utils.vault.VaultAuthCache", cache):
             yield cache
 
-    @pytest.fixture()
-    def uncached(self):
-        cache = Mock(spec=vault.VaultConfigCache)
-        cache.return_value.get.return_value = None
-        with patch("salt.utils.vault.VaultAuthCache", cache):
-            yield cache
-
     @pytest.mark.parametrize(
         "test_remote_config",
         ["token", "approle", "approle_no_secretid", "approle_wrapped_roleid"],
         indirect=True,
     )
-    def test_build_authd_client_cached(
+    def test_build_authd_client(
         self, test_remote_config, conn_config, fetch_secret_id, cached
     ):
         """
@@ -956,20 +1072,6 @@ class TestBuildAuthdClient:
                 fetch_secret_id.assert_not_called()
             else:
                 fetch_secret_id.assert_called_once()
-
-    @pytest.mark.usefixtures("uncached")
-    @pytest.mark.parametrize(
-        "test_remote_config",
-        ["token", "approle", "approle_no_secretid", "approle_wrapped_roleid"],
-        indirect=True,
-    )
-    def test_build_authd_client_uncached(self, test_remote_config, conn_config):
-        """
-        Ensure requested credentials are treated correctly.
-        """
-        conn_config.return_value = (test_remote_config, None)
-        client, config = vault._build_authd_client({}, {})
-        assert client.token_valid(remote=False)
 
 
 class TestGetConnectionConfig:
@@ -1079,9 +1181,7 @@ class TestFetchSecretId:
     @pytest.fixture()
     def cached(self, secret_id_response):
         cache = Mock(spec=vault.VaultAuthCache)
-        cache.get.return_value = vault.VaultAppRoleSecretId(
-            **secret_id_response["data"]
-        )
+        cache.get.return_value = vault.VaultSecretId(**secret_id_response["data"])
         return cache
 
     @pytest.fixture()
@@ -1154,12 +1254,12 @@ class TestFetchSecretId:
                     unwrap.assert_not_called()
                 else:
                     secret_id = secret_id_response["data"]
-                assert res == vault.VaultAppRoleSecretId(**secret_id)
+                assert res == vault.VaultSecretId(**secret_id)
             else:
-                assert res == vault.VaultAppRoleSecretId(
-                    secret_id,
+                assert res == vault.VaultSecretId(
+                    secret_id=secret_id,
                     secret_id_ttl=test_remote_config["cache"]["config"],
-                    secret_id_num_uses=None,
+                    secret_id_num_uses=0,
                 )
             uncached.get.assert_not_called()
             uncached.store.assert_not_called()
@@ -1183,7 +1283,7 @@ class TestFetchSecretId:
         uncached.store.assert_called_once()
         remote.assert_called_once()
         data = remote()
-        assert res == vault.VaultAppRoleSecretId(**data["data"])
+        assert res == vault.VaultSecretId(**data["data"])
 
     @pytest.mark.parametrize("test_remote_config", ["approle"], indirect=True)
     def test_fetch_secret_id_uncached_single_use(
@@ -1201,7 +1301,7 @@ class TestFetchSecretId:
         uncached.store.assert_not_called()
         remote.assert_called_once()
         data = remote()
-        assert res == vault.VaultAppRoleSecretId(**data["data"])
+        assert res == vault.VaultSecretId(**data["data"])
 
     @pytest.mark.usefixtures("local")
     @pytest.mark.parametrize("test_remote_config", ["approle"], indirect=True)
@@ -1329,7 +1429,7 @@ class TestFetchToken:
                     unwrap.assert_not_called()
                     token_lookup.assert_called_once()
                     assert res == vault.VaultToken(
-                        token,
+                        client_token=token,
                         lease_duration=token_lookup_self_response["data"]["ttl"],
                         **token_lookup_self_response["data"],
                     )
@@ -1382,7 +1482,7 @@ class TestFetchToken:
             elif "test-token-changed" == embedded_token:
                 token_lookup.assert_called_once()
                 assert res == vault.VaultToken(
-                    embedded_token,
+                    lease_id=embedded_token,
                     lease_duration=token_lookup_self_response["data"]["ttl"],
                     **token_lookup_self_response["data"],
                 )
@@ -1485,6 +1585,10 @@ class TestFetchToken:
                     "approle_name": "salt-master",
                     "method": "token",
                     "secret_id": None,
+                    "token_lifecycle": {
+                        "minimum_ttl": 10,
+                        "renew_increment": None,
+                    },
                 },
                 "cache": {
                     "backend": "session",
@@ -1508,6 +1612,10 @@ class TestFetchToken:
                     "method": "approle",
                     "role_id": "test-role-id",
                     "secret_id": "test-secret-id",
+                    "token_lifecycle": {
+                        "minimum_ttl": 10,
+                        "renew_increment": None,
+                    },
                 },
                 "cache": {
                     "backend": "session",
@@ -2487,7 +2595,7 @@ def test_vault_client_token_renew_increment_is_honored(
         ("2022-08-22T17:16:21+12:30", 1661143581),
     ],
 )
-def test_fromisoformat_polyfill(creation_time, expected):
+def test_iso_to_timestamp_polyfill(creation_time, expected):
     with patch("salt.utils.vault.datetime.datetime") as d:
         d.fromisoformat.side_effect = AttributeError
         # needs from datetime import datetime, otherwise results
@@ -2495,7 +2603,7 @@ def test_fromisoformat_polyfill(creation_time, expected):
 
         # pylint: disable=unnecessary-lambda
         d.side_effect = lambda *args: datetime(*args)
-        res = vault._fromisoformat(creation_time)
+        res = vault.iso_to_timestamp(creation_time)
         assert res == expected
 
 
@@ -2550,10 +2658,11 @@ def test_vault_lease_is_valid_accounts_for_time(tock, duration, offset, expected
         "renewable": False,
         "lease_duration": duration,
         "creation_time": 0,
+        "expire_time": duration,
     }
     with patch("salt.utils.vault.time.time", return_value=tock):
         res = vault.VaultLease(**data)
-        assert res.is_valid(offset) == expected
+        assert res.is_valid(offset) is expected
 
 
 @pytest.mark.parametrize(
@@ -2575,10 +2684,11 @@ def test_vault_token_is_valid_accounts_for_time(tock, duration, offset, expected
         "lease_duration": duration,
         "num_uses": 0,
         "creation_time": 0,
+        "expire_time": duration,
     }
     with patch("salt.utils.vault.time.time", return_value=tock):
         res = vault.VaultToken(**data)
-        assert res.is_valid(offset) == expected
+        assert res.is_valid(offset) is expected
 
 
 @pytest.mark.parametrize(
@@ -2621,11 +2731,12 @@ def test_vault_approle_secret_id_is_valid_accounts_for_time(
         "secret_id": "test-secret-id",
         "renewable": False,
         "creation_time": 0,
+        "expire_time": duration,
         "secret_id_num_uses": 0,
         "secret_id_ttl": duration,
     }
     with patch("salt.utils.vault.time.time", return_value=tock):
-        res = vault.VaultAppRoleSecretId(**data)
+        res = vault.VaultSecretId(**data)
         assert res.is_valid(offset) == expected
 
 
@@ -2648,7 +2759,7 @@ def test_vault_approle_secret_id_is_valid_accounts_for_num_uses(
         "use_count": uses,
     }
     with patch("salt.utils.vault.VaultLease.is_valid", Mock(return_value=True)):
-        res = vault.VaultAppRoleSecretId(**data)
+        res = vault.VaultSecretId(**data)
         assert res.is_valid() == expected
 
 
@@ -2675,13 +2786,13 @@ class TestAuthMethods:
 
     @pytest.fixture()
     def secret_id(self, secret_id_response):
-        return vault.VaultAppRoleSecretId(**secret_id_response["data"])
+        return vault.VaultSecretId(**secret_id_response["data"])
 
     @pytest.fixture()
     def secret_id_invalid(self, secret_id_response):
         secret_id_response["data"]["secret_id_num_uses"] = 1
         secret_id_response["data"]["use_count"] = 1
-        return vault.VaultAppRoleSecretId(**secret_id_response["data"])
+        return vault.VaultSecretId(**secret_id_response["data"])
 
     @pytest.fixture(params=["secret_id"])
     def approle(self, request):
@@ -2781,7 +2892,7 @@ class TestAuthMethods:
         Ensure that cache writes for use count are only done when
         num_uses is not 0 (= unlimited)
         """
-        token = token.with_(num_uses=num_uses)
+        token = token.with_renewed(num_uses=num_uses)
         auth = vault.VaultTokenAuth(cache=uncached, token=token)
         auth.used()
         if num_uses > 1:
@@ -2800,11 +2911,11 @@ class TestAuthMethods:
         """
         auth = vault.VaultTokenAuth(cache=uncached, token=token)
         old_token = token
-        old_token_ttl = old_token.lease_duration
+        old_token_ttl = old_token.duration
         auth.update_token({"num_uses": num_uses, "ttl": 8483})
-        updated_token = token.with_(num_uses=num_uses, ttl=8483)
+        updated_token = token.with_renewed(num_uses=num_uses, ttl=8483)
         assert auth.token == updated_token
-        assert old_token.lease_duration == old_token_ttl
+        assert old_token.duration == old_token_ttl
         uncached.store.assert_called_once_with(updated_token)
 
     def test_token_auth_replace_token(self, uncached, token):
@@ -2830,7 +2941,7 @@ class TestAuthMethods:
         """
         token = Mock(spec=vault.VaultToken)
         token.is_valid.return_value = token
-        approle = Mock(spec=vault.VaultAppRoleSecretId)
+        approle = Mock(spec=vault.VaultSecretId)
         approle.is_valid.return_value = approle
         auth = vault.VaultAppRoleAuth(approle, None, token_store=token)
         assert auth.is_valid() == (token or approle)
@@ -2900,7 +3011,7 @@ class TestAuthMethods:
         Ensure that cache writes for use count are only done when
         num_uses is not 0 (= unlimited)
         """
-        approle.secret_id = approle.secret_id.with_(secret_id_num_uses=num_uses)
+        approle.secret_id = approle.secret_id.with_renewed(num_uses=num_uses)
         auth = vault.VaultAppRoleAuth(
             approle, client, cache=uncached, token_store=token_store_empty_first
         )
@@ -2920,9 +3031,7 @@ class TestAuthMethods:
         """
         Ensure that locally configured secret IDs are not cached.
         """
-        approle.secret_id = vault.LocalVaultAppRoleSecretId(
-            **approle.secret_id.to_dict()
-        )
+        approle.secret_id = vault.LocalVaultSecretId(**approle.secret_id.to_dict())
         auth = vault.VaultAppRoleAuth(
             approle, client, cache=uncached, token_store=token_store_empty_first
         )
@@ -3059,7 +3168,6 @@ class TestVaultCache:
         if config["cache"]["backend"] != "session":
             uncached.contains.assert_called_once_with(cbank, ckey)
 
-    @pytest.mark.parametrize("config", ["session"], indirect=True)
     def test_get_cached(self, config, context, cached, cbank, ckey, data):
         """
         Ensure that cached data in __context__ is respected, regardless
@@ -3070,12 +3178,13 @@ class TestVaultCache:
         assert res == data
         cached.fetch.assert_not_called()
 
-    @pytest.mark.parametrize("config", ["other"], indirect=True)
-    def test_get_cached_not_outdated(self, config, cached, cbank, ckey, data):
+    def test_get_cached_not_outdated(self, config, cached, cbank, ckey, context, data):
         """
         Ensure that cached data that is still valid is returned.
         """
-        cache = vault.VaultCache(config, {}, {}, cbank, ckey, ttl=3600)
+        if config["cache"]["backend"] != "session":
+            context = {}
+        cache = vault.VaultCache(config, {}, context, cbank, ckey, ttl=3600)
         res = cache.get()
         assert res == data
         if config["cache"]["backend"] == "session":
@@ -3085,7 +3194,6 @@ class TestVaultCache:
             cached.updated.assert_called_once_with(cbank, ckey)
             cached.fetch.assert_called_once_with(cbank, ckey)
 
-    @pytest.mark.parametrize("config", ["other"], indirect=True)
     def test_get_cached_outdated(self, config, cached_outdated, cbank, ckey):
         """
         Ensure that cached data that is not valid anymore is flushed
@@ -3842,8 +3950,8 @@ def test_timestring_map(inpt, expected):
     "old,new",
     [
         ("policies", "policies:assign"),
-        ("auth:ttl", "issue:token:params:ttl"),
-        ("auth:uses", "issue:token:params:uses"),
+        ("auth:ttl", "issue:token:params:explicit_max_ttl"),
+        ("auth:uses", "issue:token:params:num_uses"),
         ("url", "server:url"),
         ("namespace", "server:namespace"),
         ("verify", "server:verify"),

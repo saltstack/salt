@@ -18,6 +18,7 @@ import salt.crypt
 import salt.exceptions
 import salt.pillar
 import salt.utils.data
+import salt.utils.immutabletypes as immutabletypes
 import salt.utils.json
 import salt.utils.vault as vault
 import salt.utils.versions
@@ -25,6 +26,47 @@ from salt.defaults import NOT_SET
 from salt.exceptions import SaltInvocationError, SaltRunnerError
 
 log = logging.getLogger(__name__)
+
+VALID_PARAMS = immutabletypes.freeze(
+    {
+        "approle": [
+            "bind_secret_id",
+            "secret_id_bound_cidrs",
+            "secret_id_num_uses",
+            "secret_id_ttl",
+            "token_ttl",
+            "token_max_ttl",
+            "token_explicit_max_ttl",
+            "token_num_uses",
+            "token_no_default_policy",
+            "token_period",
+            "token_bound_cidrs",
+        ],
+        "token": [
+            "ttl",
+            "period",
+            "explicit_max_ttl",
+            "num_uses",
+            "no_default_policy",
+            "renewable",
+        ],
+    }
+)
+
+NO_OVERRIDE_PARAMS = immutabletypes.freeze(
+    {
+        "approle": [
+            "bind_secret_id",
+            "token_policies",
+            "policies",
+        ],
+        "token": [
+            "role_name",
+            "policies",
+            "meta",
+        ],
+    }
+)
 
 
 def generate_token(
@@ -36,7 +78,7 @@ def generate_token(
     upgrade_request=False,
 ):
     """
-    .. deprecated:: 3006
+    .. deprecated:: 3007.0
 
     Generate a Vault token for minion <minion_id>.
 
@@ -67,7 +109,7 @@ def generate_token(
             "Detected minion fallback to old vault.generate_token peer run function. "
             "Please update your master peer_run configuration."
         )
-        issue_params = {"ttl": ttl, "uses": uses}
+        issue_params = {"explicit_max_ttl": ttl, "num_uses": uses}
         return get_config(
             minion_id, signature, impersonated_by_master, issue_params=issue_params
         )
@@ -92,9 +134,9 @@ def generate_token(
 
         issue_params = {}
         if ttl is not None:
-            issue_params["ttl"] = ttl
+            issue_params["explicit_max_ttl"] = ttl
         if uses is not None:
-            issue_params["uses"] = uses
+            issue_params["num_uses"] = uses
 
         token, _ = _generate_token(
             minion_id, issue_params=issue_params or None, wrap=False
@@ -121,7 +163,7 @@ def generate_new_token(
     minion_id, signature, impersonated_by_master=False, issue_params=None
 ):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     Generate a Vault token for minion <minion_id>.
 
@@ -204,7 +246,7 @@ def _generate_token(minion_id, issue_params, wrap):
 
 def get_config(minion_id, signature, impersonated_by_master=False, issue_params=None):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     Return Vault configuration for minion <minion_id>.
 
@@ -269,7 +311,7 @@ def get_config(minion_id, signature, impersonated_by_master=False, issue_params=
 
 def get_role_id(minion_id, signature, impersonated_by_master=False, issue_params=None):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
     Return the Vault role-id for minion <minion_id>. Requires the master to be configured
     to generate AppRoles for minions (configuration: ``vault:issue:type``).
@@ -367,13 +409,13 @@ def generate_secret_id(
     minion_id, signature, impersonated_by_master=False, issue_params=None
 ):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3007.0
 
-    Generate a Vault secret-id for minion <minion_id>. Requires the master to be configured
+    Generate a Vault secret ID for minion <minion_id>. Requires the master to be configured
     to generate AppRoles for minions (configuration: ``vault:issue:type``).
 
     minion_id
-        The ID of the minion that requests a secret-id.
+        The ID of the minion that requests a secret ID.
 
     signature
         Cryptographic signature which validates that the request is indeed sent
@@ -390,7 +432,7 @@ def generate_secret_id(
         setting to be effective.
     """
     log.debug(
-        "secret-id generation request for %s (impersonated by master: %s)",
+        "Secret ID generation request for %s (impersonated by master: %s)",
         minion_id,
         impersonated_by_master,
     )
@@ -399,7 +441,7 @@ def generate_secret_id(
         if _config("issue:type") != "approle":
             return {
                 "expire_cache": True,
-                "error": "Master does not issue AppRoles nor secret-ids.",
+                "error": "Master does not issue AppRoles nor secret IDs.",
             }
 
         approle_meta = _lookup_approle_cached(minion_id)
@@ -915,35 +957,16 @@ def _get_metadata(minion_id, metadata_patterns, refresh_pillar=None):
 
 
 def _parse_issue_params(params, issue_type=None):
-    if not _config("issue:allow_minion_override_params") or params is None:
+    if not _config("issue:allow_minion_override_params") or not isinstance(
+        params, dict
+    ):
         params = {}
-
-    no_override_params = [
-        "bind_secret_id",
-        "secret_id_bound_cidrs",
-        "token_policies",
-        "token_bound_cidrs",
-    ]
 
     # issue_type is used to override the configured type for minions using the old endpoint
     # TODO: remove this once the endpoint has been removed
     issue_type = issue_type or _config("issue:type")
-    if "token" == issue_type:
-        valid_params = {
-            "ttl": "explicit_max_ttl",
-            "uses": "num_uses",
-        }
-    elif "approle" == issue_type:
-        valid_params = {
-            "bind_secret_id": "bind_secret_id",
-            "secret_id_bound_cidrs": "secret_id_bound_cidrs",
-            "secret_id_num_uses": "secret_id_num_uses",
-            "secret_id_ttl": "secret_id_ttl",
-            "token_bound_cidrs": "token_bound_cidrs",
-            "ttl": "token_explicit_max_ttl",
-            "uses": "token_num_uses",
-        }
-    else:
+
+    if issue_type not in VALID_PARAMS:
         raise SaltRunnerError(
             "Invalid configuration for minion Vault authentication issuance."
         )
@@ -951,18 +974,18 @@ def _parse_issue_params(params, issue_type=None):
     configured_params = _config(f"issue:{issue_type}:params")
     ret = {}
 
-    for valid_param, vault_param in valid_params.items():
+    for valid_param in VALID_PARAMS[issue_type]:
         if (
             valid_param in configured_params
             and configured_params[valid_param] is not None
         ):
-            ret[vault_param] = configured_params[valid_param]
+            ret[valid_param] = configured_params[valid_param]
         if (
             valid_param in params
-            and vault_param not in no_override_params
+            and valid_param not in NO_OVERRIDE_PARAMS[issue_type]
             and params[valid_param] is not None
         ):
-            ret[vault_param] = params[valid_param]
+            ret[valid_param] = params[valid_param]
 
     return ret
 
@@ -1023,7 +1046,7 @@ def _lookup_approle_cached(minion_id, expire=3600, refresh=False):
             expire=expire,
             minion_id=minion_id,
         )
-    # falsey values are always refreshed by salt.cache.Cache
+    # Falsey values are always refreshed by salt.cache.Cache
     return meta
 
 
@@ -1053,15 +1076,15 @@ def _get_secret_id(minion_id, wrap, meta_info=False):
     )
     response = client.post(endpoint, payload=payload, wrap=wrap)
     if wrap:
-        # wrapped responses are always VaultWrappedResponse objects
+        # Wrapped responses are always VaultWrappedResponse objects
         secret_id = response.serialize_for_minion()
         accessor = response.wrapped_accessor
     else:
-        secret_id = vault.VaultAppRoleSecretId(**response["data"])
+        secret_id = vault.VaultSecretId(**response["data"])
         accessor = response["data"]["secret_id_accessor"]
     if not meta_info:
         return secret_id
-    # sadly, secret_id_num_uses is not part of the information returned
+    # Sadly, secret_id_num_uses is not part of the information returned
     meta_info = client.post(
         endpoint + "-accessor/lookup", payload={"secret_id_accessor": accessor}
     )["data"]
@@ -1168,7 +1191,7 @@ def _revoke_token(token=None, accessor=None):
 def _destroy_secret_id(minion_id, mount, secret_id=None, accessor=None):
     if not secret_id and not accessor:
         raise SaltInvocationError(
-            "Need either secret_id or accessor to destroy secret-id."
+            "Need either secret_id or accessor to destroy secret ID."
         )
     if secret_id:
         endpoint = f"auth/{mount}/role/{minion_id}/secret-id/destroy"

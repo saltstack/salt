@@ -56,7 +56,7 @@ def pillar_salt_master(salt_factories, pillar_state_tree, vault_port):
                         # otherwise the tests might fail because of
                         # cached tokens (should not, because by default,
                         # the cache is valid for one session only)
-                        "uses": 1,
+                        "num_uses": 1,
                     },
                 },
             },
@@ -98,7 +98,7 @@ def pillar_caching_salt_master(salt_factories, pillar_state_tree, vault_port):
                     "params": {
                         # otherwise the tests might fail because of
                         # cached tokens
-                        "uses": 1,
+                        "num_uses": 1,
                     },
                 },
             },
@@ -678,8 +678,8 @@ class TestAppRoleIssuance:
                         "params": {
                             "secret_id_num_uses": 0,
                             "secret_id_ttl": 1800,
-                            "ttl": 1800,
-                            "uses": 0,
+                            "token_explicit_max_ttl": 1800,
+                            "token_num_uses": 0,
                         }
                     },
                 },
@@ -704,7 +704,12 @@ class TestAppRoleIssuance:
 
     @pytest.fixture(scope="class")
     def issue_overrides(self):
-        return {"ttl": 1337, "uses": 42, "secret_id_num_uses": 3, "secret_id_ttl": 1338}
+        return {
+            "token_explicit_max_ttl": 1337,
+            "token_num_uses": 42,
+            "secret_id_num_uses": 3,
+            "secret_id_ttl": 1338,
+        }
 
     @pytest.fixture()
     def cache_auth_outdated(self, missing_auth_cache, minion_conn_cachedir, vault_port):
@@ -859,8 +864,11 @@ class TestAppRoleIssuance:
         )
         assert ret.returncode == 0
         assert ret.data
-        assert ret.data["token_explicit_max_ttl"] == issue_overrides["ttl"]
-        assert ret.data["token_num_uses"] == issue_overrides["uses"]
+        assert (
+            ret.data["token_explicit_max_ttl"]
+            == issue_overrides["token_explicit_max_ttl"]
+        )
+        assert ret.data["token_num_uses"] == issue_overrides["token_num_uses"]
         assert ret.data["secret_id_num_uses"] == issue_overrides["secret_id_num_uses"]
         assert ret.data["secret_id_ttl"] == issue_overrides["secret_id_ttl"]
 
@@ -892,7 +900,7 @@ class TestTokenIssuance:
                     "type": "token",
                     "token": {
                         "params": {
-                            "uses": 0,
+                            "num_uses": 0,
                         }
                     },
                 },
@@ -927,10 +935,10 @@ class TestTokenIssuance:
 
     @pytest.fixture(scope="class")
     def issue_overrides(self):
-        # only ttl and uses are respected, the rest is for testing purposes
+        # only explicit_max_ttl and num_uses are respected, the rest is for testing purposes
         return {
-            "ttl": 1337,
-            "uses": 42,
+            "explicit_max_ttl": 1337,
+            "num_uses": 42,
             "secret_id_num_uses": 3,
             "secret_id_ttl": 1338,
             "irrelevant_setting": "abc",
@@ -1058,8 +1066,8 @@ class TestAppRoleIssuanceWithoutSecretId:
                             # "at least one constraint should be enabled on the role"
                             # this should be quite secure :)
                             "token_bound_cidrs": "0.0.0.0/0",
-                            "ttl": 1800,
-                            "uses": 0,
+                            "token_explicit_max_ttl": 1800,
+                            "token_num_uses": 0,
                         }
                     },
                 },

@@ -147,7 +147,7 @@ class TestSDB:
                 "issue": {
                     "token": {
                         "params": {
-                            "uses": 0,
+                            "num_uses": 0,
                         }
                     }
                 },
@@ -208,7 +208,7 @@ class TestGetOrSetHashSingleUseToken:
                     "type": "token",
                     "token": {
                         "params": {
-                            "uses": 1,
+                            "num_uses": 1,
                         }
                     },
                 },

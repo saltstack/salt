@@ -41,15 +41,15 @@ def default_config():
                     "bind_secret_id": True,
                     "secret_id_num_uses": 1,
                     "secret_id_ttl": 60,
-                    "ttl": 9999999999,
-                    "uses": 1,
+                    "token_explicit_max_ttl": 9999999999,
+                    "token_num_uses": 1,
                 },
             },
             "token": {
                 "role_name": None,
                 "params": {
-                    "ttl": 9999999999,
-                    "uses": 1,
+                    "explicit_max_ttl": 9999999999,
+                    "num_uses": 1,
                 },
             },
             "wrap": "30s",
@@ -94,6 +94,7 @@ def token_response():
             "lease_duration": 9999999999,
             "num_uses": 1,
             "creation_time": 1661188581,
+            # "expire_time": 11661188580,
         },
     }
 
@@ -141,6 +142,7 @@ def token_serialized(token_response):
         "lease_duration": token_response["auth"]["lease_duration"],
         "num_uses": token_response["auth"]["num_uses"],
         "creation_time": token_response["auth"]["creation_time"],
+        # "expire_time": token_response["auth"]["expire_time"],
     }
 
 
@@ -148,9 +150,10 @@ def token_serialized(token_response):
 def secret_id_serialized(secret_id_response):
     return {
         "secret_id": secret_id_response["data"]["secret_id"],
-        "secret_id_accessor": secret_id_response["data"]["secret_id_accessor"],
         "secret_id_ttl": secret_id_response["data"]["secret_id_ttl"],
         "secret_id_num_uses": 1,
+        # + creation_time
+        # + expire_time
     }
 
 
@@ -406,10 +409,10 @@ def test_generate_token(
     endpoint = "auth/token/create"
     role_name = config("issue:token:role_name")
     payload = {}
-    if config("issue:token:params:ttl"):
-        payload["explicit_max_ttl"] = config("issue:token:params:ttl")
-    if config("issue:token:params:uses"):
-        payload["num_uses"] = config("issue:token:params:uses")
+    if config("issue:token:params:explicit_max_ttl"):
+        payload["explicit_max_ttl"] = config("issue:token:params:explicit_max_ttl")
+    if config("issue:token:params:num_uses"):
+        payload["num_uses"] = config("issue:token:params:num_uses")
     payload["meta"] = metadata_secret_default
     payload["policies"] = policies_default
     if role_name:
@@ -420,6 +423,7 @@ def test_generate_token(
             endpoint, payload=payload, wrap=config("issue:wrap")
         )
     else:
+        res_token.pop("expire_time")
         assert res_token == token_serialized
     assert res_num_uses == 1
 
@@ -448,10 +452,10 @@ def test_generate_token_deprecated(
     issue_params = {}
     if ttl is not None:
         token_serialized["lease_duration"] = ttl
-        issue_params["ttl"] = ttl
+        issue_params["explicit_max_ttl"] = ttl
     if uses is not None:
         token_serialized["num_uses"] = uses
-        issue_params["uses"] = uses
+        issue_params["num_uses"] = uses
     expected = {
         "token": token_serialized["client_token"],
         "lease_duration": token_serialized["lease_duration"],
@@ -468,13 +472,17 @@ def test_generate_token_deprecated(
         res = vault.generate_token("test-minion", "sig", ttl=ttl, uses=uses)
         validate_signature.assert_called_once_with("test-minion", "sig", False)
         assert res == expected
-        gen.assert_called_once_with("test-minion", issue_params or None, wrap=False)
+        gen.assert_called_once_with(
+            "test-minion", issue_params=issue_params or None, wrap=False
+        )
         if config("issue:type") != "token":
             assert "Master is not configured to issue tokens" in caplog.text
 
 
 @pytest.mark.parametrize("config", [{}, {"issue:wrap": False}], indirect=True)
-@pytest.mark.parametrize("issue_params", [None, {"ttl": 120, "uses": 3}])
+@pytest.mark.parametrize(
+    "issue_params", [None, {"explicit_max_ttl": 120, "num_uses": 3}]
+)
 def test_generate_new_token(
     issue_params, config, validate_signature, token_serialized, wrapped_serialized
 ):
@@ -482,10 +490,10 @@ def test_generate_new_token(
     Ensure generate_new_token returns data as expected
     """
     if issue_params is not None:
-        if issue_params.get("ttl") is not None:
-            token_serialized["lease_duration"] = issue_params["ttl"]
-        if issue_params.get("uses") is not None:
-            token_serialized["num_uses"] = issue_params["uses"]
+        if issue_params.get("explicit_max_ttl") is not None:
+            token_serialized["lease_duration"] = issue_params["explicit_max_ttl"]
+        if issue_params.get("num_uses") is not None:
+            token_serialized["num_uses"] = issue_params["num_uses"]
     expected = {"server": config("server"), "auth": {}}
     if config("issue:wrap"):
         expected.update(wrapped_serialized)
@@ -523,7 +531,9 @@ def test_generate_new_token_refuses_if_not_configured(config):
 
 
 @pytest.mark.parametrize("config", [{}, {"issue:wrap": False}], indirect=True)
-@pytest.mark.parametrize("issue_params", [None, {"ttl": 120, "uses": 3}])
+@pytest.mark.parametrize(
+    "issue_params", [None, {"explicit_max_ttl": 120, "num_uses": 3}]
+)
 def test_get_config_token(
     config, validate_signature, token_serialized, wrapped_serialized, issue_params
 ):
@@ -540,10 +550,10 @@ def test_get_config_token(
     }
 
     if issue_params is not None:
-        if issue_params.get("ttl") is not None:
-            token_serialized["lease_duration"] = issue_params["ttl"]
-        if issue_params.get("uses") is not None:
-            token_serialized["num_uses"] = issue_params["uses"]
+        if issue_params.get("explicit_max_ttl") is not None:
+            token_serialized["lease_duration"] = issue_params["explicit_max_ttl"]
+        if issue_params.get("num_uses") is not None:
+            token_serialized["num_uses"] = issue_params["num_uses"]
     if config("issue:wrap"):
         expected["auth"].update({"token": wrapped_serialized})
         expected.update(
@@ -588,7 +598,11 @@ def test_get_config_token(
 )
 @pytest.mark.parametrize(
     "issue_params",
-    [None, {"ttl": 120, "uses": 3}, {"secret_id_num_uses": 2, "secret_id_ttl": 120}],
+    [
+        None,
+        {"token_explicit_max_ttl": 120, "token_num_uses": 3},
+        {"secret_id_num_uses": 2, "secret_id_ttl": 120},
+    ],
 )
 def test_get_config_approle(
     config, validate_signature, wrapped_serialized, issue_params
@@ -638,7 +652,11 @@ def test_get_config_approle(
 )
 @pytest.mark.parametrize(
     "issue_params",
-    [None, {"ttl": 120, "uses": 3}, {"secret_id_num_uses": 2, "secret_id_ttl": 120}],
+    [
+        None,
+        {"token_explicit_max_ttl": 120, "token_num_uses": 3},
+        {"secret_id_num_uses": 2, "secret_id_ttl": 120},
+    ],
 )
 def test_get_role_id(config, validate_signature, wrapped_serialized, issue_params):
     """
@@ -757,7 +775,9 @@ class TestGetRoleId:
         ],
         indirect=True,
     )
-    @pytest.mark.parametrize("issue_params", [None, {"ttl": 120, "uses": 3}])
+    @pytest.mark.parametrize(
+        "issue_params", [None, {"token_explicit_max_ttl": 120, "token_num_uses": 3}]
+    )
     def test_get_role_id_generate_new(
         self,
         config,
@@ -1078,97 +1098,111 @@ def test_get_metadata_list():
 @pytest.mark.parametrize(
     "config,issue_params,expected",
     [
-        ({"issue:token:params": {"ttl": None, "uses": None}}, None, {}),
         (
-            {"issue:token:params": {"ttl": 1337, "uses": None}},
+            {"issue:token:params": {"explicit_max_ttl": None, "num_uses": None}},
             None,
-            {"explicit_max_ttl": 1337},
-        ),
-        ({"issue:token:params": {"ttl": None, "uses": 3}}, None, {"num_uses": 3}),
-        (
-            {"issue:token:params": {"ttl": 1337, "uses": 3}},
-            None,
-            {"explicit_max_ttl": 1337, "num_uses": 3},
-        ),
-        (
-            {"issue:token:params": {"ttl": 1337, "uses": 3, "invalid": True}},
-            None,
-            {"explicit_max_ttl": 1337, "num_uses": 3},
-        ),
-        (
-            {"issue:token:params": {"ttl": None, "uses": None}},
-            {"uses": 42, "ttl": 1338},
             {},
         ),
         (
-            {"issue:token:params": {"ttl": 1337, "uses": None}},
-            {"uses": 42, "ttl": 1338},
+            {"issue:token:params": {"explicit_max_ttl": 1337, "num_uses": None}},
+            None,
             {"explicit_max_ttl": 1337},
         ),
         (
-            {"issue:token:params": {"ttl": None, "uses": 3}},
-            {"uses": 42, "ttl": 1338},
+            {"issue:token:params": {"explicit_max_ttl": None, "num_uses": 3}},
+            None,
             {"num_uses": 3},
         ),
         (
-            {"issue:token:params": {"ttl": 1337, "uses": 3}},
-            {"uses": 42, "ttl": 1338, "invalid": True},
+            {"issue:token:params": {"explicit_max_ttl": 1337, "num_uses": 3}},
+            None,
             {"explicit_max_ttl": 1337, "num_uses": 3},
         ),
         (
             {
-                "issue:token:params": {"ttl": None, "uses": None},
+                "issue:token:params": {
+                    "explicit_max_ttl": 1337,
+                    "num_uses": 3,
+                    "invalid": True,
+                }
+            },
+            None,
+            {"explicit_max_ttl": 1337, "num_uses": 3},
+        ),
+        (
+            {"issue:token:params": {"explicit_max_ttl": None, "num_uses": None}},
+            {"num_uses": 42, "explicit_max_ttl": 1338},
+            {},
+        ),
+        (
+            {"issue:token:params": {"explicit_max_ttl": 1337, "num_uses": None}},
+            {"num_uses": 42, "explicit_max_ttl": 1338},
+            {"explicit_max_ttl": 1337},
+        ),
+        (
+            {"issue:token:params": {"explicit_max_ttl": None, "num_uses": 3}},
+            {"num_uses": 42, "explicit_max_ttl": 1338},
+            {"num_uses": 3},
+        ),
+        (
+            {"issue:token:params": {"explicit_max_ttl": 1337, "num_uses": 3}},
+            {"num_uses": 42, "explicit_max_ttl": 1338, "invalid": True},
+            {"explicit_max_ttl": 1337, "num_uses": 3},
+        ),
+        (
+            {
+                "issue:token:params": {"explicit_max_ttl": None, "num_uses": None},
                 "issue:allow_minion_override_params": True,
             },
-            {"uses": None, "ttl": None},
+            {"num_uses": None, "explicit_max_ttl": None},
             {},
         ),
         (
             {
-                "issue:token:params": {"ttl": None, "uses": 3},
+                "issue:token:params": {"explicit_max_ttl": None, "num_uses": 3},
                 "issue:allow_minion_override_params": True,
             },
-            {"uses": 42, "ttl": None},
+            {"num_uses": 42, "explicit_max_ttl": None},
             {"num_uses": 42},
         ),
         (
             {
-                "issue:token:params": {"ttl": 1337, "uses": None},
+                "issue:token:params": {"explicit_max_ttl": 1337, "num_uses": None},
                 "issue:allow_minion_override_params": True,
             },
-            {"uses": None, "ttl": 1338},
+            {"num_uses": None, "explicit_max_ttl": 1338},
             {"explicit_max_ttl": 1338},
         ),
         (
             {
-                "issue:token:params": {"ttl": 1337, "uses": None},
+                "issue:token:params": {"explicit_max_ttl": 1337, "num_uses": None},
                 "issue:allow_minion_override_params": True,
             },
-            {"uses": 42, "ttl": None},
+            {"num_uses": 42, "explicit_max_ttl": None},
             {"num_uses": 42, "explicit_max_ttl": 1337},
         ),
         (
             {
-                "issue:token:params": {"ttl": None, "uses": 3},
+                "issue:token:params": {"explicit_max_ttl": None, "num_uses": 3},
                 "issue:allow_minion_override_params": True,
             },
-            {"uses": None, "ttl": 1338},
+            {"num_uses": None, "explicit_max_ttl": 1338},
             {"num_uses": 3, "explicit_max_ttl": 1338},
         ),
         (
             {
-                "issue:token:params": {"ttl": None, "uses": None},
+                "issue:token:params": {"explicit_max_ttl": None, "num_uses": None},
                 "issue:allow_minion_override_params": True,
             },
-            {"uses": 42, "ttl": 1338},
+            {"num_uses": 42, "explicit_max_ttl": 1338},
             {"num_uses": 42, "explicit_max_ttl": 1338},
         ),
         (
             {
-                "issue:token:params": {"ttl": 1337, "uses": 3},
+                "issue:token:params": {"explicit_max_ttl": 1337, "num_uses": 3},
                 "issue:allow_minion_override_params": True,
             },
-            {"uses": 42, "ttl": 1338, "invalid": True},
+            {"num_uses": 42, "explicit_max_ttl": 1338, "invalid": True},
             {"num_uses": 42, "explicit_max_ttl": 1338},
         ),
         ({"issue:type": "approle", "issue:approle:params": {}}, None, {}),
@@ -1176,8 +1210,8 @@ def test_get_metadata_list():
             {
                 "issue:type": "approle",
                 "issue:approle:params": {
-                    "ttl": 1337,
-                    "uses": 3,
+                    "token_explicit_max_ttl": 1337,
+                    "token_num_uses": 3,
                     "secret_id_num_uses": 3,
                     "secret_id_ttl": 60,
                 },
@@ -1194,13 +1228,18 @@ def test_get_metadata_list():
             {
                 "issue:type": "approle",
                 "issue:approle:params": {
-                    "ttl": 1337,
-                    "uses": 3,
+                    "token_explicit_max_ttl": 1337,
+                    "token_num_uses": 3,
                     "secret_id_num_uses": 3,
                     "secret_id_ttl": 60,
                 },
             },
-            {"ttl": 1338, "uses": 42, "secret_id_num_uses": 42, "secret_id_ttl": 1338},
+            {
+                "token_explicit_max_ttl": 1338,
+                "token_num_uses": 42,
+                "secret_id_num_uses": 42,
+                "secret_id_ttl": 1338,
+            },
             {
                 "token_explicit_max_ttl": 1337,
                 "token_num_uses": 3,
@@ -1214,7 +1253,12 @@ def test_get_metadata_list():
                 "issue:allow_minion_override_params": True,
                 "issue:approle:params": {},
             },
-            {"ttl": 1338, "uses": 42, "secret_id_num_uses": 42, "secret_id_ttl": 1338},
+            {
+                "token_explicit_max_ttl": 1338,
+                "token_num_uses": 42,
+                "secret_id_num_uses": 42,
+                "secret_id_ttl": 1338,
+            },
             {
                 "token_explicit_max_ttl": 1338,
                 "token_num_uses": 42,
@@ -1227,13 +1271,18 @@ def test_get_metadata_list():
                 "issue:type": "approle",
                 "issue:allow_minion_override_params": True,
                 "issue:approle:params": {
-                    "ttl": 1337,
-                    "uses": 3,
+                    "token_explicit_max_ttl": 1337,
+                    "token_num_uses": 3,
                     "secret_id_num_uses": 3,
                     "secret_id_ttl": 60,
                 },
             },
-            {"ttl": 1338, "uses": 42, "secret_id_num_uses": 42, "secret_id_ttl": 1338},
+            {
+                "token_explicit_max_ttl": 1338,
+                "token_num_uses": 42,
+                "secret_id_num_uses": 42,
+                "secret_id_ttl": 1338,
+            },
             {
                 "token_explicit_max_ttl": 1338,
                 "token_num_uses": 42,
@@ -1395,7 +1444,7 @@ def test_get_secret_id(client, wrapped_response, secret_id_response, wrap):
             ).serialize_for_minion()
         )
     else:
-        assert res == vaultutil.VaultAppRoleSecretId(**secret_id_response["data"])
+        assert res == vaultutil.VaultSecretId(**secret_id_response["data"])
     client.post.assert_called_once_with(
         "auth/salt-minions/role/test-minion/secret-id", payload=ANY, wrap=wrap
     )
@@ -1434,7 +1483,7 @@ def test_get_secret_id_meta_info(
         )
     else:
         assert res == (
-            vaultutil.VaultAppRoleSecretId(**secret_id_response["data"]),
+            vaultutil.VaultSecretId(**secret_id_response["data"]),
             secret_id_lookup_accessor_response["data"],
         )
     payload = {"secret_id_accessor": wrapped_response["wrap_info"]["wrapped_accessor"]}

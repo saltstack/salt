@@ -4,6 +4,7 @@ Tests for the Vault module
 
 import logging
 import shutil
+import time
 
 import pytest
 from saltfactories.utils import random_string
@@ -48,11 +49,11 @@ def vault_salt_master(
 
 
 @pytest.fixture(scope="class")
-def vault_salt_minion(vault_salt_master):
+def vault_salt_minion(vault_salt_master, vault_minion_config):
     assert vault_salt_master.is_running()
     factory = vault_salt_master.salt_minion_daemon(
         random_string("vault-exeminion", uppercase=False),
-        defaults={"open_mode": True, "grains": {}},
+        defaults=vault_minion_config,
     )
     with factory.started():
         # Sync All
@@ -60,6 +61,11 @@ def vault_salt_minion(vault_salt_master):
         ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
         assert ret.returncode == 0, ret
         yield factory
+
+
+@pytest.fixture(scope="class")
+def vault_minion_config():
+    return {"open_mode": True, "grains": {}}
 
 
 @pytest.fixture(scope="class")
@@ -146,7 +152,7 @@ class TestSingleUseToken:
                     "type": "token",
                     "token": {
                         "params": {
-                            "uses": 1,
+                            "num_uses": 1,
                         }
                     },
                 },
@@ -218,3 +224,152 @@ class TestSingleUseToken:
         assert ret.returncode == 0
         assert ret.data
         assert "delete" not in vault_list_secrets("secret/test")
+
+
+class TestTokenMinimumTTLUnrenewable:
+    """
+    Test that a new token is requested when the current one does not
+    fulfill minimum_ttl and cannot be renewed
+    """
+
+    @pytest.fixture(scope="class")
+    def vault_master_config(self, vault_port):
+        return {
+            "pillar_roots": {},
+            "open_mode": True,
+            "peer_run": {
+                ".*": [
+                    "vault.get_config",
+                    "vault.generate_new_token",
+                ],
+            },
+            "vault": {
+                "auth": {"token": "testsecret"},
+                "cache": {
+                    "backend": "file",
+                },
+                "issue": {
+                    "type": "token",
+                    "token": {
+                        "params": {
+                            "num_uses": 0,
+                            "explicit_max_ttl": 180,
+                        }
+                    },
+                },
+                "policies": {
+                    "assign": [
+                        "salt_minion",
+                    ]
+                },
+                "server": {
+                    "url": f"http://127.0.0.1:{vault_port}",
+                },
+            },
+            "minion_data_cache": False,
+        }
+
+    @pytest.fixture(scope="class")
+    def vault_minion_config(self):
+        return {
+            "open_mode": True,
+            "grains": {},
+            "vault": {
+                "auth": {
+                    "token_lifecycle": {"minimum_ttl": 178, "renew_increment": None}
+                }
+            },
+        }
+
+    def test_minimum_ttl_is_respected(self, vault_salt_call_cli):
+        # create token by looking it up
+        ret = vault_salt_call_cli.run("vault.query", "GET", "auth/token/lookup-self")
+        assert ret.data
+        assert ret.returncode == 0
+        # wait
+        time_before = time.time()
+        while time.time() - time_before < 3:
+            time.sleep(0.1)
+        # reissue token by looking it up
+        ret_new = vault_salt_call_cli.run(
+            "vault.query", "GET", "auth/token/lookup-self"
+        )
+        assert ret_new.returncode == 0
+        assert ret_new.data
+        # ensure a new token was created, even though the previous one would have been
+        # valid still
+        assert ret_new.data["data"]["id"] != ret.data["data"]["id"]
+
+
+class TestTokenMinimumTTLRenewable:
+    """
+    Test that tokens are renewed and minimum_ttl is respected
+    """
+
+    @pytest.fixture(scope="class")
+    def vault_master_config(self, vault_port):
+        return {
+            "pillar_roots": {},
+            "open_mode": True,
+            "peer_run": {
+                ".*": [
+                    "vault.get_config",
+                    "vault.generate_new_token",
+                ],
+            },
+            "vault": {
+                "auth": {"token": "testsecret"},
+                "cache": {
+                    "backend": "file",
+                },
+                "issue": {
+                    "type": "token",
+                    "token": {
+                        "params": {
+                            "num_uses": 0,
+                            "ttl": 180,
+                        }
+                    },
+                },
+                "policies": {
+                    "assign": [
+                        "salt_minion",
+                    ]
+                },
+                "server": {
+                    "url": f"http://127.0.0.1:{vault_port}",
+                },
+            },
+            "minion_data_cache": False,
+        }
+
+    @pytest.fixture(scope="class")
+    def vault_minion_config(self):
+        return {
+            "open_mode": True,
+            "grains": {},
+            "vault": {
+                "auth": {
+                    "token_lifecycle": {"minimum_ttl": 177, "renew_increment": None}
+                }
+            },
+        }
+
+    def test_minimum_ttl_is_respected(self, vault_salt_call_cli):
+        # create token by looking it up
+        ret = vault_salt_call_cli.run("vault.query", "GET", "auth/token/lookup-self")
+        assert ret.data
+        assert ret.returncode == 0
+        # wait
+        time_before = time.time()
+        while time.time() - time_before < 4:
+            time.sleep(0.1)
+        # renew token by looking it up
+        ret_new = vault_salt_call_cli.run(
+            "vault.query", "GET", "auth/token/lookup-self"
+        )
+        assert ret_new.returncode == 0
+        assert ret_new.data
+        # ensure the current token's validity has been extended
+        assert ret_new.data["data"]["id"] == ret.data["data"]["id"]
+        assert ret_new.data["data"]["expire_time"] > ret.data["data"]["expire_time"]

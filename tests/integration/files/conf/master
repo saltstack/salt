@@ -109,7 +109,7 @@ vault:
   issue:
     token:
       params:
-        uses: 0
+        num_uses: 0
   policies:
     assign:
       - salt_minion
