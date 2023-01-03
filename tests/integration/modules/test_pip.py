@@ -591,7 +591,7 @@ class PipModuleTest(ModuleCase):
         shutil.which("/bin/pip3") is None, reason="Could not find /bin/pip3"
     )
     @pytest.mark.skip_on_windows(reason="test specific for linux usage of /bin/python")
-    @pytest.mark.skip(
+    @pytest.mark.skip_initial_gh_actions_failure(
         reason="This was skipped on older golden images and is failing on newer."
     )
     def test_system_pip3(self):
@@ -599,8 +599,9 @@ class PipModuleTest(ModuleCase):
         self.run_function(
             "pip.install", pkgs=["lazyimport==0.0.1"], bin_env="/bin/pip3"
         )
-        ret1 = self.run_function("cmd.run", "/bin/pip3 freeze | grep lazyimport")
+        ret1 = self.run_function("cmd.run_all", ["/bin/pip3 freeze | grep lazyimport"])
+        assert "lazyimport==0.0.1" in ret1["stdout"]
+
         self.run_function("pip.uninstall", pkgs=["lazyimport"], bin_env="/bin/pip3")
-        ret2 = self.run_function("cmd.run", "/bin/pip3 freeze | grep lazyimport")
-        assert "lazyimport==0.0.1" in ret1
-        assert ret2 == ""
+        ret2 = self.run_function("cmd.run_all", ["/bin/pip3 freeze | grep lazyimport"])
+        assert ret2["stdout"] == ""

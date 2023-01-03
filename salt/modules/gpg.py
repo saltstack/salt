@@ -1146,7 +1146,7 @@ def verify(
         salt '*' gpg.verify filename='/path/to/important.file' trustmodel=direct
 
     """
-    gpg = _create_gpg(user)
+    gpg = _create_gpg(user, gnupghome)
     trustmodels = ("pgp", "classic", "tofu", "tofu+pgp", "direct", "always", "auto")
 
     if trustmodel and trustmodel not in trustmodels:

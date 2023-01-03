@@ -5,9 +5,8 @@ import salt.loader
 
 
 @pytest.fixture
-def matchers():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    return salt.loader.matchers(opts)
+def matchers(minion_opts):
+    return salt.loader.matchers(minion_opts)
 
 
 def test_sanity(matchers):

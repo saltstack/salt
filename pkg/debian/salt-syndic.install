@@ -1,0 +1,1 @@
+pkg/common/salt-syndic.service /lib/systemd/system
