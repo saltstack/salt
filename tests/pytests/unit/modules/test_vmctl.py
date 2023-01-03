@@ -121,7 +121,7 @@ def test_start_existing_vm():
     mock_cmd = MagicMock(return_value=ret)
     expected = {"changes": True, "console": "/dev/ttyp4"}
     with patch.dict(vmctl.__salt__, {"cmd.run_all": mock_cmd}):
-        assert expected == vmctl.start("4")
+        assert vmctl.start("4") == expected
 
 
 def test_start_new_vm():
@@ -151,7 +151,7 @@ def test_start_new_vm():
                 output_loglevel="trace",
                 python_shell=False,
             )
-            assert expected == res
+            assert res == expected
 
 
 def test_status():
@@ -200,7 +200,7 @@ def test_status():
         },
     }
     with patch.dict(vmctl.__salt__, {"cmd.run_all": mock_cmd}):
-        assert expected == vmctl.status()
+        assert vmctl.status() == expected
 
 
 def test_status_single():
@@ -228,7 +228,7 @@ def test_status_single():
         },
     }
     with patch.dict(vmctl.__salt__, {"cmd.run_all": mock_cmd}):
-        assert expected == vmctl.status("web4")
+        assert vmctl.status("web4") == expected
 
 
 def test_stop_when_running():
