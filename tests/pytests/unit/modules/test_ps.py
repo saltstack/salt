@@ -9,9 +9,9 @@ import salt.utils.data
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, Mock, call, patch
 
-# TestCase Exceptions are tested in tests/unit/modules/test_ps.py
-
 psutil = pytest.importorskip("salt.utils.psutil_compat")
+
+# TestCase Exceptions are tested in tests/unit/modules/test_ps.py
 
 
 @pytest.fixture
