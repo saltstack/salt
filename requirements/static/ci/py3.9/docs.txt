@@ -347,6 +347,8 @@ botocore==1.21.27
     #   boto3
     #   moto
     #   s3transfer
+cached-property==1.5.2
+    # via pygit2
 cachetools==4.2.2
     # via
     #   google-auth
@@ -438,7 +440,7 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.7
     # via gitpython
-gitpython==3.1.29 ; python_version >= "3.7"
+gitpython==3.1.30 ; python_version >= "3.7"
     # via -r requirements/static/ci/common.in
 google-auth==2.0.1
     # via kubernetes

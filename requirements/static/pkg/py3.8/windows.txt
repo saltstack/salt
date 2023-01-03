@@ -28,7 +28,7 @@ distro==1.5.0
     # via -r requirements/base.txt
 gitdb==4.0.7
     # via gitpython
-gitpython==3.1.29 ; python_version >= "3.7"
+gitpython==3.1.30 ; python_version >= "3.7"
     # via -r requirements/windows.txt
 idna==2.8
     # via requests
@@ -131,7 +131,7 @@ urllib3==1.26.6
     # via
     #   -r requirements/windows.txt
     #   requests
-wheel==0.36.2
+wheel==0.38.4
     # via -r requirements/windows.txt
 wmi==1.5.1
     # via -r requirements/windows.txt
