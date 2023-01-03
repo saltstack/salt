@@ -79,10 +79,6 @@ def test_keyspaces():
         def list_keyspaces(self):
             return mock_keyspaces
 
-    @pytest.fixture
-    def configure_keyspaces():
-        return MockSystemManager()
-
     mock_sys_mgr = MagicMock(return_value=MockSystemManager())
 
     with patch.object(cassandra, "_sys_mgr", mock_sys_mgr):
@@ -104,10 +100,6 @@ def test_column_families():
                 return {"a": "saltines", "b": "biscuits"}
             if keyspace == "B":
                 return {"c": "cheese", "d": "crackers"}
-
-    @pytest.fixture
-    def configure_keyspaces():
-        return MockSystemManager()
 
     mock_sys_mgr = MagicMock(return_value=MockSystemManager())
 
