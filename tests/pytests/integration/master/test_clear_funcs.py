@@ -170,7 +170,7 @@ def test_clearfuncs_config(salt_master, clear_channel, user_info):
         "file_name": "good",
         "yaml_contents": "win: true",
     }
-    ret = clear_channel.send(good_msg, timeout=5)
+    ret = clear_channel.send(good_msg, timeout=15)
     assert "Wrote" in ret["data"]["return"]
     assert good_file_path.exists()
     good_file_path.unlink()
@@ -182,7 +182,7 @@ def test_clearfuncs_config(salt_master, clear_channel, user_info):
             "file_name": "../evil",
             "yaml_contents": "win: true",
         }
-        ret = clear_channel.send(evil_msg, timeout=5)
+        ret = clear_channel.send(evil_msg, timeout=15)
         assert not evil_file_path.exists(), "Wrote file via directory traversal"
         assert ret["data"]["return"] == "Invalid path"
     finally:
