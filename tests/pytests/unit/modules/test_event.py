@@ -13,16 +13,20 @@ from tests.support.paths import SALT_CODE_DIR
 
 
 @pytest.fixture
-def configure_loader_modules():
-    return {
-        event: {
-            "__opts__": {
-                "id": "id",
-                "sock_dir": SALT_CODE_DIR,
-                "transport": "zeromq",
-            }
+def minion_opts(minion_opts):
+    minion_opts.update(
+        {
+            "id": "id",
+            "sock_dir": SALT_CODE_DIR,
+            "transport": "zeromq",
         }
-    }
+    )
+    return minion_opts
+
+
+@pytest.fixture()
+def configure_loader_modules(minion_opts):
+    return {event: {"__opts__": minion_opts}}
 
 
 def test_fire_master():
