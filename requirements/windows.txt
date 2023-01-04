@@ -4,7 +4,7 @@
 
 pywin32>=305
 wmi>=1.5.1
-pythonnet>=2.5.2
+pythonnet>=3.0.1
 
 backports.ssl-match-hostname>=3.7.0.1; python_version < '3.7'
 certifi>=2022.12.07
