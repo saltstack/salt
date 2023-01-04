@@ -243,39 +243,6 @@ def test_pillar_items_masterless(salt_minion, salt_call_cli):
         assert ret.data["monty"] == "python"
 
 
-def test_masterless_highstate(salt_minion, salt_call_cli, tmp_path):
-    """
-    test state.highstate in masterless mode
-    """
-    top_sls = """
-    base:
-      '*':
-        - core
-        """
-
-    testfile = tmp_path / "testfile"
-    core_state = """
-    {}:
-      file:
-        - managed
-        - source: salt://testfile
-        - makedirs: true
-        """.format(
-        testfile
-    )
-
-    expected_id = str(testfile)
-
-    with salt_minion.state_tree.base.temp_file(
-        "top.sls", top_sls
-    ), salt_minion.state_tree.base.temp_file("core.sls", core_state):
-        ret = salt_call_cli.run("--local", "state.highstate")
-        assert ret.returncode == 0
-        state_run_dict = next(iter(ret.data.values()))
-        assert state_run_dict["result"] is True
-        assert state_run_dict["__id__"] == expected_id
-
-
 @pytest.mark.skip_on_windows
 def test_syslog_file_not_found(salt_minion, salt_call_cli, tmp_path):
     """
@@ -443,3 +410,36 @@ def test_local_salt_call_no_function_no_retcode(salt_call_cli):
         a = state_run_dict["test.recho"]
         b = expected
         assert state_run_dict["test.recho"] == expected
+
+
+def test_masterless_highstate(salt_minion, salt_call_cli, tmp_path):
+    """
+    test state.highstate in masterless mode
+    """
+    top_sls = """
+    base:
+      '*':
+        - core
+        """
+
+    testfile = tmp_path / "testfile"
+    core_state = """
+    {}:
+      file:
+        - managed
+        - source: salt://testfile
+        - makedirs: true
+        """.format(
+        testfile
+    )
+
+    expected_id = str(testfile)
+
+    with salt_minion.state_tree.base.temp_file(
+        "top.sls", top_sls
+    ), salt_minion.state_tree.base.temp_file("core.sls", core_state):
+        ret = salt_call_cli.run("--local", "state.highstate")
+        assert ret.returncode == 0
+        state_run_dict = next(iter(ret.data.values()))
+        assert state_run_dict["result"] is True
+        assert state_run_dict["__id__"] == expected_id
