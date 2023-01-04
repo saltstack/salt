@@ -442,7 +442,7 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.7
     # via gitpython
-gitpython==3.1.18
+gitpython==3.1.30 ; python_version >= "3.7"
     # via -r requirements/static/ci/common.in
 google-auth==2.0.1
     # via kubernetes
@@ -649,7 +649,7 @@ oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
-packaging==20.9
+packaging==21.3
     # via
     #   ansible-core
     #   sphinx
@@ -705,7 +705,7 @@ pyopenssl==19.1.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==2.4.7
+pyparsing==3.0.9
     # via
     #   junos-eznc
     #   packaging

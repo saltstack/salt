@@ -32,16 +32,12 @@ ignore_errors = True
 [paths]
 salt =
   salt/
-  /tmp/kitchen/testing/salt/
-  /private/tmp/kitchen/testing/salt/
-  C:\Users\admini~1\AppData\Local\Temp\kitchen\testing\salt\
-  C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\salt\
+  **/testing/salt/
+  **\testing\salt
 tests =
   tests/
-  /tmp/kitchen/testing/tests/
-  /private/tmp/kitchen/testing/tests/
-  C:\Users\admini~1\AppData\Local\Temp\kitchen\testing\tests\
-  C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\tests\
+  **/testing/tests/
+  **\testing\tests
 extension_modules =
   tests/integration/files/extension_modules/
   */extension_modules/

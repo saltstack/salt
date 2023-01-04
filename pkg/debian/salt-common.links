@@ -1,0 +1,2 @@
+usr/opt/saltstack/salt/spm /usr/bin/spm
+usr/opt/saltstack/salt/salt-pip /usr/bin/salt-pip
