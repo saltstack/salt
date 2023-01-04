@@ -4,11 +4,7 @@ queries WMI to get the Fibre Channel WWN's available.
 
 .. versionadded:: 2018.3.0
 
-To enable these grains set ``fibre_channel_grains: True`` in the minion config.
-
-.. code-block:: yaml
-
-    fibre_channel_grains: True
+To enable these grains remove "fibre_channel" from "disabled_grains" in the minion config.
 """
 
 import glob
@@ -25,10 +21,7 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if __opts__.get("fibre_channel_grains", False) is False:
-        return False
-    else:
-        return __virtualname__
+    return __virtualname__ not in __opts__.get("disabled_grains", [])
 
 
 def _linux_wwns():

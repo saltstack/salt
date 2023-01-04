@@ -2793,22 +2793,13 @@ def fqdns():
     """
     Return all known FQDNs for the system by enumerating all interfaces and
     then trying to reverse resolve them (excluding 'lo' interface).
-    To disable the fqdns grain, set enable_fqdns_grains: False in the minion configuration file.
+    To disable the fqdns grain, add "fqdns" to "disabled_grains" in the minion
+    configuration file.
     """
     # Provides:
     # fqdns
     opt = {"fqdns": []}
-    if __opts__.get(
-        "enable_fqdns_grains",
-        False
-        if salt.utils.platform.is_windows()
-        or salt.utils.platform.is_proxy()
-        or salt.utils.platform.is_sunos()
-        or salt.utils.platform.is_aix()
-        or salt.utils.platform.is_junos()
-        or salt.utils.platform.is_darwin()
-        else True,
-    ):
+    if "fqdns" not in __opts__.get("disabled_grains", []):
         opt = __salt__["network.fqdns"]()
     return opt
 

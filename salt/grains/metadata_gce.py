@@ -7,12 +7,7 @@ google compute engine
 :depends: requests
 
 To enable these grains that pull from the http://169.254.169.254/computeMetadata/v1/
-metadata server set `metadata_server_grains: True` in the minion config.
-
-.. code-block:: yaml
-
-    metadata_server_grains: True
-
+metadata server remove "metadata_server" from "disabled_grains" in the minion config.
 """
 
 import logging
@@ -27,7 +22,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     # Check if metadata_server_grains minion option is enabled
-    if __opts__.get("metadata_server_grains", False) is False:
+    if "metadata_server" in __opts__.get("disabled_grains", []):
         return False
     googletest = http.query(HOST, status=True, headers=True)
     if (
