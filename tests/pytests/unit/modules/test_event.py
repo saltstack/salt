@@ -12,16 +12,6 @@ from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
-def minion_opts(minion_opts):
-    minion_opts.update(
-        {
-            "id": "id",
-        }
-    )
-    return minion_opts
-
-
-@pytest.fixture()
 def configure_loader_modules(minion_opts):
     return {event: {"__opts__": minion_opts}}
 
