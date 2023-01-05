@@ -15,14 +15,27 @@ prep_salt.ps1
 
 #>
 
+#-------------------------------------------------------------------------------
 # Script Preferences
+#-------------------------------------------------------------------------------
+
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
 $ProgressPreference = "SilentlyContinue"
 $ErrorActionPreference = "Stop"
 
 #-------------------------------------------------------------------------------
-# Variables
+# Script Functions
 #-------------------------------------------------------------------------------
+
+function Write-Result($result, $ForegroundColor="Green") {
+    $position = 80 - $result.Length - [System.Console]::CursorLeft
+    Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+}
+
+#-------------------------------------------------------------------------------
+# Script Variables
+#-------------------------------------------------------------------------------
+
 $PROJECT_DIR    = $(git rev-parse --show-toplevel)
 $SCRIPT_DIR     = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
 $BUILD_DIR      = "$SCRIPT_DIR\buildenv"
@@ -48,6 +61,7 @@ if ( $ARCH -eq "64bit" ) {
 #-------------------------------------------------------------------------------
 # Start the Script
 #-------------------------------------------------------------------------------
+
 Write-Host $("=" * 80)
 Write-Host "Prepare Salt for Packaging: " -ForegroundColor Cyan
 Write-Host "- Architecture: $ARCH"
@@ -56,32 +70,34 @@ Write-Host $("-" * 80)
 #-------------------------------------------------------------------------------
 # Verify Environment
 #-------------------------------------------------------------------------------
+
 Write-Host "Verifying Python Build: " -NoNewline
 if ( Test-Path -Path "$PYTHON_BIN" ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
 Write-Host "Verifying Salt Installation: " -NoNewline
 if ( Test-Path -Path "$BUILD_DIR\salt-minion.exe" ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
 #-------------------------------------------------------------------------------
 # Cleaning Build Environment
 #-------------------------------------------------------------------------------
+
 if ( Test-Path -Path $BUILD_CONF_DIR) {
     Write-Host "Removing Configs Directory: " -NoNewline
     Remove-Item -Path $BUILD_CONF_DIR -Recurse -Force
     if ( ! (Test-Path -Path $BUILD_CONF_DIR) ) {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     } else {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     }
 }
@@ -90,9 +106,9 @@ if ( Test-Path -Path $PREREQ_DIR ) {
     Write-Host "Removing PreReq Directory: " -NoNewline
     Remove-Item -Path $PREREQ_DIR -Recurse -Force
     if ( ! (Test-Path -Path $PREREQ_DIR) ) {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     } else {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     }
 }
@@ -100,22 +116,23 @@ if ( Test-Path -Path $PREREQ_DIR ) {
 #-------------------------------------------------------------------------------
 # Staging the Build Environment
 #-------------------------------------------------------------------------------
+
 Write-Host "Copying config files from Salt: " -NoNewline
 New-Item -Path $BUILD_CONF_DIR -ItemType Directory | Out-Null
 Copy-Item -Path "$PROJECT_DIR\conf\minion" -Destination "$BUILD_CONF_DIR"
 if ( Test-Path -Path "$BUILD_CONF_DIR\minion" ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
 Write-Host "Copying SSM to Bin: " -NoNewline
 Invoke-WebRequest -Uri "$SALT_DEP_URL/ssm-2.24-103-gdee49fc.exe" -OutFile "$BUILD_DIR\ssm.exe"
 if ( Test-Path -Path "$BUILD_DIR\ssm.exe" ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
@@ -124,9 +141,9 @@ Write-Host "Copying VCRedist 2013 $ARCH_X to prereqs: " -NoNewline
 $file = "vcredist_$ARCH_X`_2013.exe"
 Invoke-WebRequest -Uri "$SALT_DEP_URL/$file" -OutFile "$PREREQ_DIR\$file"
 if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
@@ -134,15 +151,16 @@ Write-Host "Copying Universal C Runtimes $ARCH_X to prereqs: " -NoNewline
 $file = "ucrt_$ARCH_X.zip"
 Invoke-WebRequest -Uri "$SALT_DEP_URL/$file" -OutFile "$PREREQ_DIR\$file"
 if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
 #-------------------------------------------------------------------------------
 # Remove binaries not needed by Salt
 #-------------------------------------------------------------------------------
+
 $binaries = @(
     "py.exe",
     "pyw.exe",
@@ -156,12 +174,12 @@ $binaries | ForEach-Object {
         # Use .net, the powershell function is asynchronous
         [System.IO.File]::Delete("$SCRIPTS_DIR\$_")
         if ( Test-Path -Path "$SCRIPTS_DIR\$_" ) {
-            Write-Host "Failed" -ForegroundColor Red
+            Write-Result "Failed" -ForegroundColor Red
             exit 1
         }
     }
 }
-Write-Host "Success" -ForegroundColor Green
+Write-Result "Success" -ForegroundColor Green
 
 #-------------------------------------------------------------------------------
 # Remove Non-Windows Execution Modules
@@ -302,12 +320,12 @@ $modules = "acme",
 $modules | ForEach-Object {
     Remove-Item -Path "$BUILD_SALT_DIR\modules\$_*" -Recurse
     if ( Test-Path -Path "$BUILD_SALT_DIR\modules\$_*" ) {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         Write-Host "Failed to remove: $BUILD_SALT_DIR\modules\$_"
         exit 1
     }
 }
-Write-Host "Success" -ForegroundColor Green
+Write-Result "Success" -ForegroundColor Green
 
 #-------------------------------------------------------------------------------
 # Remove Non-Windows State Modules
@@ -365,12 +383,12 @@ $states = "acme",
 $states | ForEach-Object {
     Remove-Item -Path "$BUILD_SALT_DIR\states\$_*" -Recurse
     if ( Test-Path -Path "$BUILD_SALT_DIR\states\$_*" ) {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         Write-Host "Failed to remove: $BUILD_SALT_DIR\states\$_"
         exit 1
     }
 }
-Write-Host "Success" -ForegroundColor Green
+Write-Result "Success" -ForegroundColor Green
 
 Write-Host "Removing unneeded files (.pyc, .chm): " -NoNewline
 $remove = "__pycache__",
@@ -381,13 +399,13 @@ $remove | ForEach-Object {
     $found | ForEach-Object {
         Remove-Item -Path "$_" -Recurse -Force
         if ( Test-Path -Path $_ ) {
-            Write-Host "Failed" -ForegroundColor Red
+            Write-Result "Failed" -ForegroundColor Red
             Write-Host "Failed to remove: $_"
             exit 1
         }
     }
 }
-Write-Host "Success" -ForegroundColor Green
+Write-Result "Success" -ForegroundColor Green
 
 #-------------------------------------------------------------------------------
 # Finished

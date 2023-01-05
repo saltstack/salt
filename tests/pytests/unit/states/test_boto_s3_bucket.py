@@ -175,8 +175,17 @@ class GlobalConfig:
 
 @pytest.fixture
 def global_config():
+    GlobalConfig.conn_parameters["key"] = "".join(
+        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
+    )
     params = GlobalConfig()
     return params
+
+
+@pytest.fixture
+def session_instance():
+    with patch("boto3.session.Session") as patched_session:
+        yield patched_session()
 
 
 @pytest.fixture
@@ -210,16 +219,10 @@ def configure_loader_modules(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_present_when_bucket_does_not_exist(global_config):
+def test_present_when_bucket_does_not_exist(global_config, session_instance):
     """
     Tests present on a bucket that does not exist.
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
 
@@ -244,13 +247,7 @@ def test_present_when_bucket_does_not_exist(global_config):
 
 
 @pytest.mark.slow_test
-def test_present_when_bucket_exists_no_mods(global_config):
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_present_when_bucket_exists_no_mods(global_config, session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
 
@@ -270,13 +267,7 @@ def test_present_when_bucket_exists_no_mods(global_config):
 
 
 @pytest.mark.slow_test
-def test_present_when_bucket_exists_all_mods(global_config):
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_present_when_bucket_exists_all_mods(global_config, session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
 
@@ -298,13 +289,7 @@ def test_present_when_bucket_exists_all_mods(global_config):
 
 
 @pytest.mark.slow_test
-def test_present_with_failure(global_config):
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_present_with_failure(global_config, session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
 
@@ -324,16 +309,10 @@ def test_present_with_failure(global_config):
     assert "Failed to create bucket" in result["comment"]
 
 
-def test_absent_when_bucket_does_not_exist(global_config):
+def test_absent_when_bucket_does_not_exist(global_config, session_instance):
     """
     Tests absent on a bucket that does not exist.
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
 
@@ -343,13 +322,7 @@ def test_absent_when_bucket_does_not_exist(global_config):
     assert result["changes"] == {}
 
 
-def test_absent_when_bucket_exists(global_config):
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_absent_when_bucket_exists(global_config, session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
 
@@ -358,13 +331,7 @@ def test_absent_when_bucket_exists(global_config):
     assert result["changes"]["new"]["bucket"] is None
 
 
-def test_absent_with_failure(global_config):
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_absent_with_failure(global_config, session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
 
