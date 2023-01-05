@@ -51,11 +51,19 @@ jobs:
             repo:
               - added|modified:
                 - '**'
+            doc-requirements:
+              - added|modified: &doc_requirements
+                - requirements/static/ci/py3.*/docs.txt
+            lint-requirements:
+              - added|modified: &lint_requirements
+                - requirements/static/ci/py3.*/lint.txt
             deleted:
               - deleted:
                 - '**'
             docs:
-              - doc/**
+              - added|modified:
+                - doc/**
+                - *doc_requirements
             salt:
               - added|modified: &salt_added_modified
                 - setup.py
@@ -66,9 +74,10 @@ jobs:
             tests:
               - added|modified: &tests_added_modified
                 - tests/**/*.py
-            pylintrc:
+            lint:
               - added|modified:
                 - .pylintrc
+                - *lint_requirements
             testrun:
               - added|modified:
                 - *salt_added_modified

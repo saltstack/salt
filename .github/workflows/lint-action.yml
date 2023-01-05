@@ -12,7 +12,7 @@ jobs:
   Salt:
     name: Lint Salt's Source Code
     runs-on: ubuntu-latest
-    if: ${{ fromJSON(inputs.changed-files)['salt'] || fromJSON(inputs.changed-files)['pylintrc'] }}
+    if: ${{ fromJSON(inputs.changed-files)['salt'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
       image: python:3.8.6-slim-buster
@@ -41,14 +41,14 @@ jobs:
           nox --install-only --forcecolor -e lint-salt
 
       - name: Lint Changed Files
-        if: github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['salt'] && ! fromJSON(inputs.changed-files)['pylintrc']
+        if: github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['salt'] && ! fromJSON(inputs.changed-files)['lint']
         env:
           SKIP_REQUIREMENTS_INSTALL: YES
         run: |
           nox --forcecolor -e lint-salt -- ${{ join(fromJSON(inputs.changed-files)['salt_files'], ' ') }}
 
       - name: Lint ALL Files
-        if: github.event_name != 'pull_request' || fromJSON(inputs.changed-files)['pylintrc']
+        if: github.event_name != 'pull_request' || fromJSON(inputs.changed-files)['lint']
         env:
           SKIP_REQUIREMENTS_INSTALL: YES
         run: |
@@ -71,7 +71,7 @@ jobs:
   Tests:
     name: Lint Salt's Test Suite
     runs-on: ubuntu-latest
-    if: ${{ fromJSON(inputs.changed-files)['tests'] || fromJSON(inputs.changed-files)['pylintrc'] }}
+    if: ${{ fromJSON(inputs.changed-files)['tests'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
       image: python:3.8.6-slim-buster
@@ -100,14 +100,14 @@ jobs:
           nox --install-only --forcecolor -e lint-tests
 
       - name: Lint Changed Files
-        if: github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['tests'] && ! fromJSON(inputs.changed-files)['pylintrc']
+        if: github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['tests'] && ! fromJSON(inputs.changed-files)['lint']
         env:
           SKIP_REQUIREMENTS_INSTALL: YES
         run: |
           nox --forcecolor -e lint-tests -- ${{ join(fromJSON(inputs.changed-files)['tests_files'], ' ') }}
 
       - name: Lint ALL Files
-        if: github.event_name != 'pull_request' || fromJSON(inputs.changed-files)['pylintrc']
+        if: github.event_name != 'pull_request' || fromJSON(inputs.changed-files)['lint']
         env:
           SKIP_REQUIREMENTS_INSTALL: YES
         run: |
