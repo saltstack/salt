@@ -57,6 +57,16 @@ jobs:
             lint-requirements:
               - added|modified: &lint_requirements
                 - requirements/static/ci/py3.*/lint.txt
+            test_requirements:
+              - added|modified: &test_requirements
+                - requirements/static/ci/py3.*/darwin.txt
+                - requirements/static/ci/py3.*/linux.txt
+                - requirements/static/ci/py3.*/freebsd.txt
+                - requirements/static/ci/py3.*/windows.txt
+                - requirements/static/ci/py3.*/darwin-crypto.txt
+                - requirements/static/ci/py3.*/linux-crypto.txt
+                - requirements/static/ci/py3.*/freebsd-crypto.txt
+                - requirements/static/ci/py3.*/windows-crypto.txt
             deleted:
               - deleted:
                 - '**'
@@ -126,12 +136,12 @@ jobs:
           echo '${{ steps.define-testrun.outputs.testrun }}' | jq -C '.'
 
       - name: Check Contents of generated testrun-changed-files.txt
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
         run:
-          cat testrun-changed-files.txt
+          cat testrun-changed-files.txt || true
 
       - name: Upload testrun-changed-files.txt
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
         uses: actions/upload-artifact@v3
         with:
           name: testrun-changed-files.txt
