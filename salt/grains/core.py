@@ -913,7 +913,13 @@ def _virtual(osdata):
                 grains["virtual_subtype"] = "Amazon EC2"
                 break
         elif command == "virt-what":
-            for line in output.splitlines():
+            lines = output.splitlines()
+            # If there's any ovirt mention at all ... we know enough
+            if "ovirt" in lines:
+                grains["virtual"] = "kvm"
+                grains["virtual_subtype"] = "ovirt"
+                break
+            for line in lines:
                 if line in ("kvm", "qemu", "uml", "xen"):
                     grains["virtual"] = line
                     break
