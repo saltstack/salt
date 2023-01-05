@@ -216,23 +216,26 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
     # Based on which files changed, or other things like PR comments we can
     # decide what to run, or even if the full test run should be running on the
     # pull request, etc...
-    testrun_changed_files_path = REPO_ROOT / "testrun-changed-files.txt"
-    testrun = {
-        "type": "changed",
-        "from-filenames": str(testrun_changed_files_path.relative_to(REPO_ROOT)),
-    }
-    ctx.info(f"Writing {testrun_changed_files_path.name} ...")
-    selected_changed_files = []
-    for fpath in json.loads(changed_files_contents["testrun_files"]):
-        if fpath.startswith(("tools/", "tasks/")):
-            continue
-        if fpath in ("noxfile.py",):
-            continue
-        if fpath == "tests/conftest.py":
-            # In this particular case, just run the full test suite
-            testrun["type"] = "full"
-        selected_changed_files.append(fpath)
-    testrun_changed_files_path.write_text("\n".join(sorted(selected_changed_files)))
+    if changed_files_contents["test_requirements_files"]:
+        testrun = {"type": "full"}
+    else:
+        testrun_changed_files_path = REPO_ROOT / "testrun-changed-files.txt"
+        testrun = {
+            "type": "changed",
+            "from-filenames": str(testrun_changed_files_path.relative_to(REPO_ROOT)),
+        }
+        ctx.info(f"Writing {testrun_changed_files_path.name} ...")
+        selected_changed_files = []
+        for fpath in json.loads(changed_files_contents["testrun_files"]):
+            if fpath.startswith(("tools/", "tasks/")):
+                continue
+            if fpath in ("noxfile.py",):
+                continue
+            if fpath == "tests/conftest.py":
+                # In this particular case, just run the full test suite
+                testrun["type"] = "full"
+            selected_changed_files.append(fpath)
+        testrun_changed_files_path.write_text("\n".join(sorted(selected_changed_files)))
     ctx.info("Writing 'testrun' to the github outputs file")
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"testrun={json.dumps(testrun)}\n")
