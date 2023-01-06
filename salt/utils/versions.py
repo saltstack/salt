@@ -55,6 +55,20 @@ class Version(packaging.version.Version):
         return super().__ne__(other)
 
 
+class StrictVersion(Version):
+    def __init__(self, *args, **kwargs):
+        warn_until(
+            3008,
+            f"'{__name__}.StrictVersion' is no longer a subclass of "
+            "'distutils.versions.StrictVersion'. It's usage has been "
+            "deprecated and should no longer be used. Please switch to "
+            f"'{__name__}.Version' which is a subclass of "
+            f"'packaging.version.Version'. '{__name__}.StrictVersion' will "
+            "be removed in {version}.",
+        )
+        super().__init__(*args, **kwargs)
+
+
 class LooseVersion(looseversion.LooseVersion):
     def parse(self, vstring):
         super().parse(vstring)
