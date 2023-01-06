@@ -687,7 +687,7 @@ def apply_(mods=None, **kwargs):
         This option starts a new thread for each queued state run, so use this
         option sparingly.
 
-        .. versionchanged:: 3007.0
+        .. versionchanged:: 3006.0
             This parameter can also be set via the ``state_queue`` configuration
             option. Additionally, it can now be set to an integer representing
             the maximum queue size which can be attained before the state runs
@@ -754,7 +754,7 @@ def apply_(mods=None, **kwargs):
         This option starts a new thread for each queued state run, so use this
         option sparingly.
 
-        .. versionchanged:: 3007.0
+        .. versionchanged:: 3006.0
             This parameter can also be set via the ``state_queue`` configuration
             option. Additionally, it can now be set to an integer representing
             the maximum queue size which can be attained before the state runs
@@ -1042,7 +1042,7 @@ def highstate(test=None, queue=None, **kwargs):
         This option starts a new thread for each queued state run, so use this
         option sparingly.
 
-        .. versionchanged:: 3007.0
+        .. versionchanged:: 3006.0
             This parameter can also be set via the ``state_queue`` configuration
             option. Additionally, it can now be set to an integer representing
             the maximum queue size which can be attained before the state runs
@@ -1235,7 +1235,7 @@ def sls(mods, test=None, exclude=None, queue=None, sync_mods=None, **kwargs):
         This option starts a new thread for each queued state run, so use this
         option sparingly.
 
-        .. versionchanged:: 3007.0
+        .. versionchanged:: 3006.0
             This parameter can also be set via the ``state_queue`` configuration
             option. Additionally, it can now be set to an integer representing
             the maximum queue size which can be attained before the state runs
@@ -1491,7 +1491,7 @@ def top(topfn, test=None, queue=None, **kwargs):
         This option starts a new thread for each queued state run, so use this
         option sparingly.
 
-        .. versionchanged:: 3007.0
+        .. versionchanged:: 3006.0
             This parameter can also be set via the ``state_queue`` configuration
             option. Additionally, it can now be set to an integer representing
             the maximum queue size which can be attained before the state runs
