@@ -912,6 +912,36 @@ def test_get_conditional_diff_ordering():
         assert has_changes is True
         assert diff == mock_diff
 
+        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
+            "",
+            "",
+            ignore_ordering=False,
+            ignore_whitespace=False,
+            ignore_comment_characters="#",
+        )
+        assert has_changes is True
+        assert diff == mock_diff
+
+        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
+            "",
+            "",
+            ignore_ordering=False,
+            ignore_whitespace=True,
+            ignore_comment_characters="#",
+        )
+        assert has_changes is True
+        assert diff == mock_diff
+
+        has_changes, diff = salt.utils.stringutils.get_conditional_diff(
+            "",
+            "",
+            ignore_ordering=False,
+            ignore_whitespace=True,
+            ignore_comment_characters=None,
+        )
+        assert has_changes is True
+        assert diff == mock_diff
+
 
 def test_get_conditional_diff_whitespace():
     mock_diff = textwrap.dedent(
