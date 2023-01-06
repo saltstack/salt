@@ -14,13 +14,25 @@ install_salt.ps1
 
 #>
 
+#-------------------------------------------------------------------------------
 # Script Preferences
+#-------------------------------------------------------------------------------
+
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
 $ProgressPreference = "SilentlyContinue"
 $ErrorActionPreference = "Stop"
 
 #-------------------------------------------------------------------------------
-# Define Variables
+# Script Functions
+#-------------------------------------------------------------------------------
+
+function Write-Result($result, $ForegroundColor="Green") {
+    $position = 80 - $result.Length - [System.Console]::CursorLeft
+    Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+}
+
+#-------------------------------------------------------------------------------
+# Script Variables
 #-------------------------------------------------------------------------------
 
 # Python Variables
@@ -57,9 +69,9 @@ Write-Host $("-" * 80)
 # it is
 Write-Host "Checking for existing Salt installation: " -NoNewline
 if ( ! (Test-Path -Path "$SCRIPTS_DIR\salt-minion.exe") ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
@@ -70,9 +82,9 @@ $remove | ForEach-Object {
         Write-Host "Removing $_`:" -NoNewline
         Remove-Item -Path "$PROJECT_DIR\$_" -Recurse -Force
         if ( ! (Test-Path -Path "$PROJECT_DIR\$_") ) {
-            Write-Host "Success" -ForegroundColor Green
+            Write-Result "Success" -ForegroundColor Green
         } else {
-            Write-Host "Failed" -ForegroundColor Red
+            Write-Result "Failed" -ForegroundColor Red
             exit 1
         }
     }
@@ -87,22 +99,9 @@ Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
               -WorkingDirectory "$PROJECT_DIR" `
               -Wait -WindowStyle Hidden
 if ( Test-Path -Path "$SCRIPTS_DIR\distro.exe" ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-
-#-------------------------------------------------------------------------------
-# Installing Libsodium DLL
-#-------------------------------------------------------------------------------
-Write-Host "Installing Libsodium DLL: " -NoNewline
-$libsodium_url = "$SALT_DEP_URL/libsodium/1.0.18/libsodium.dll"
-Invoke-WebRequest -Uri $libsodium_url -OutFile "$SCRIPTS_DIR\libsodium.dll"
-if ( Test-Path -Path "$SCRIPTS_DIR\libsodium.dll" ) {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
@@ -114,9 +113,9 @@ if ( Test-Path -Path "$SCRIPTS_DIR\libsodium.dll" ) {
 Write-Host "Removing wmitest scripts: " -NoNewline
 Remove-Item -Path "$SCRIPTS_DIR\wmitest*" -Force | Out-Null
 if ( ! (Test-Path -Path "$SCRIPTS_DIR\wmitest*") ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
@@ -128,23 +127,24 @@ if ( ! (Test-Path -Path "$SCRIPTS_DIR\wmitest*") ) {
 
 # Move DLL's to Python Root and win32
 # The dlls have to be in Python directory and the site-packages\win32 directory
+# TODO: Change this to 310... maybe
 $dlls = "pythoncom38.dll",
         "pywintypes38.dll"
 $dlls | ForEach-Object {
     Write-Host "Copying $_ to Scripts: " -NoNewline
     Copy-Item "$SITE_PKGS_DIR\pywin32_system32\$_" "$SCRIPTS_DIR" -Force | Out-Null
     if ( Test-Path -Path "$SCRIPTS_DIR\$_") {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     } else {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     }
     Write-Host "Moving $_ to win32: " -NoNewline
     Move-Item "$SITE_PKGS_DIR\pywin32_system32\$_" "$SITE_PKGS_DIR\win32" -Force | Out-Null
     if ( Test-Path -Path "$SITE_PKGS_DIR\win32\$_" ){
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     } else {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     }
 }
@@ -153,9 +153,9 @@ $dlls | ForEach-Object {
 Write-Host "Removing pywin32_system32 directory: " -NoNewline
 Remove-Item -Path "$SITE_PKGS_DIR\pywin32_system32" | Out-Null
 if ( ! (Test-Path -Path "$SITE_PKGS_DIR\pywin32_system32") ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
@@ -163,9 +163,9 @@ if ( ! (Test-Path -Path "$SITE_PKGS_DIR\pywin32_system32") ) {
 Write-Host "Removing pywin32 post-install scripts: " -NoNewline
 Remove-Item -Path "$SCRIPTS_DIR\pywin32_*" -Force | Out-Null
 if ( ! (Test-Path -Path "$SCRIPTS_DIR\pywin32_*") ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
@@ -173,9 +173,9 @@ if ( ! (Test-Path -Path "$SCRIPTS_DIR\pywin32_*") ) {
 Write-Host "Creating gen_py directory: " -NoNewline
 New-Item -Path "$SITE_PKGS_DIR\win32com\gen_py" -ItemType Directory -Force | Out-Null
 if ( Test-Path -Path "$SITE_PKGS_DIR\win32com\gen_py" ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
@@ -194,9 +194,9 @@ try {
     Remove-Item env:\RELENV_PIP_DIR
 }
 if ( Test-Path -Path "$BUILD_DIR\salt-minion.exe" ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
@@ -216,9 +216,9 @@ $remove | ForEach-Object {
         Write-Host "Removing $_`: " -NoNewline
         Remove-Item -Path "$BUILD_DIR\$_*" -Recurse
         if ( ! ( Test-Path -Path "$BUILD_DIR\$_*" ) ) {
-            Write-Host "Success" -ForegroundColor Green
+            Write-Result "Success" -ForegroundColor Green
         } else {
-            Write-Host "Failed" -ForegroundColor Red
+            Write-Result "Failed" -ForegroundColor Red
             exit 1
         }
     }
