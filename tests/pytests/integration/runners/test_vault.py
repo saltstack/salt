@@ -568,7 +568,7 @@ def minion_conn_cachedir(vault_salt_call_cli):
 
 @pytest.fixture
 def missing_auth_cache(minion_conn_cachedir):
-    token_cachefile = minion_conn_cachedir / "token.p"
+    token_cachefile = minion_conn_cachedir / "session" / "token.p"
     secret_id_cachefile = minion_conn_cachedir / "secret_id.p"
     for file in [secret_id_cachefile, token_cachefile]:
         if file.exists():
@@ -599,9 +599,7 @@ def minion_data_cache_present(
 
 @pytest.fixture
 def conn_cache_absent(minion_conn_cachedir):
-    for file in os.listdir(minion_conn_cachedir):
-        (minion_conn_cachedir / file).unlink()
-    minion_conn_cachedir.rmdir()
+    shutil.rmtree(minion_conn_cachedir)
     assert not minion_conn_cachedir.exists()
     yield
 
@@ -819,10 +817,15 @@ class TestAppRoleIssuance:
         Test that remote configuration, tokens acquired by authenticating with an AppRole
         and issued secret IDs are written to cache.
         """
-        if f"{ctype}.p" not in os.listdir(minion_conn_cachedir):
+        cache = minion_conn_cachedir
+        if ctype == "token":
+            cache = cache / "session"
+            if not cache.exists():
+                cache.mkdir()
+        if f"{ctype}.p" not in os.listdir(cache):
             ret = vault_salt_call_cli.run("vault.read_secret", "secret/path/foo")
             assert ret.returncode == 0
-        assert f"{ctype}.p" in os.listdir(minion_conn_cachedir)
+        assert f"{ctype}.p" in os.listdir(cache)
 
     @pytest.mark.parametrize("ctype", ["config", "token", "secret_id"])
     def test_cache_is_used_on_the_impersonating_master(
@@ -833,9 +836,10 @@ class TestAppRoleIssuance:
         and issued secret IDs are written to cache when a master is impersonating
         a minion during pillar rendering.
         """
-        ret = vault_salt_run_cli.run(
-            "cache.list", f"minions/{vault_salt_minion.id}/vault/connection"
-        )
+        cbank = f"minions/{vault_salt_minion.id}/vault/connection"
+        if ctype == "token":
+            cbank += "/session"
+        ret = vault_salt_run_cli.run("cache.list", cbank)
         assert ret.returncode == 0
         assert ret.data
         assert ctype in ret.data
@@ -844,7 +848,7 @@ class TestAppRoleIssuance:
         """
         Test that a locally configured token is cached, including meta information.
         """
-        ret = vault_salt_run_cli.run("cache.list", "vault/connection")
+        ret = vault_salt_run_cli.run("cache.list", "vault/connection/session")
         assert ret.returncode == 0
         assert ret.data
         assert "token" in ret.data
@@ -924,7 +928,7 @@ class TestTokenIssuance:
         return {
             "pillar_roots": {"base": [str(pillar_state_tree)]},
             "open_mode": True,
-            "ext_pillar": [{"vault": "path=secrets/path/foo"}],
+            "ext_pillar": [{"vault": "path=secret/path/foo"}],
             "peer_run": {
                 ".*": [
                     "vault.get_config",
@@ -1045,10 +1049,15 @@ class TestTokenIssuance:
         """
         Test that remote configuration and tokens are written to cache.
         """
-        if f"{ctype}.p" not in os.listdir(minion_conn_cachedir):
+        cache = minion_conn_cachedir
+        if ctype == "token":
+            cache = cache / "session"
+            if not cache.exists():
+                cache.mkdir()
+        if f"{ctype}.p" not in os.listdir(cache):
             ret = vault_salt_call_cli.run("vault.read_secret", "secret/path/foo")
             assert ret.returncode == 0
-        assert f"{ctype}.p" in os.listdir(minion_conn_cachedir)
+        assert f"{ctype}.p" in os.listdir(cache)
 
     @pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
     @pytest.mark.parametrize("ctype", ["config", "token"])
@@ -1059,9 +1068,10 @@ class TestTokenIssuance:
         Test that remote configuration and tokens are written to cache when a
         master is impersonating a minion during pillar rendering.
         """
-        ret = vault_salt_run_cli.run(
-            "cache.list", f"minions/{vault_salt_minion.id}/vault/connection"
-        )
+        cbank = f"minions/{vault_salt_minion.id}/vault/connection"
+        if ctype == "token":
+            cbank += "/session"
+        ret = vault_salt_run_cli.run("cache.list", cbank)
         assert ret.returncode == 0
         assert ret.data
         assert ctype in ret.data

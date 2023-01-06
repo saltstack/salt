@@ -283,16 +283,23 @@ def _get_kv(opts, context):
     return VaultKV(client, metadata_cache)
 
 
-def clear_cache(opts, context, ckey=None, connection=True):
+def clear_cache(opts, context, ckey=None, connection=True, session=False):
     """
     Clears connection cache.
     """
-    cbank = _get_cache_bank(opts, connection=connection)
+    cbank = _get_cache_bank(
+        opts, connection=connection, session=session and not connection
+    )
     if cbank in context:
         if ckey is None:
             context.pop(cbank)
         else:
             context[cbank].pop(ckey, None)
+    # also remove sub-banks from context to mimic cache bevavior
+    if ckey is None:
+        for bank in list(context):
+            if bank.startswith(cbank):
+                context.pop(bank)
     cache = salt.cache.factory(opts)
     if cache.contains(cbank, ckey):
         return cache.flush(cbank, ckey)
@@ -315,15 +322,17 @@ def _get_cache_backend(config, opts):
     return salt.cache.factory(opts)
 
 
-def get_lease_cache(opts, context, cbank, ckey):
+def get_lease_cache(opts, context, ckey):
     """
     Return an instance of VaultLeaseCache, which can be used
     to handle caching-related functions of leases like
-    authentication credentials.
+    authentication credentials that are tied to the currently
+    active token.
     """
-    auth_cbank = _get_cache_bank(opts)
-    config, _ = _get_connection_config(auth_cbank, opts, context)
-    return VaultLeaseCache(config, opts, context, cbank, ckey)
+    connection_cbank = _get_cache_bank(opts)
+    config, _ = _get_connection_config(connection_cbank, opts, context)
+    session_cbank = _get_cache_bank(opts, session=True)
+    return VaultLeaseCache(config, opts, context, session_cbank, ckey)
 
 
 def expand_pattern_lists(pattern, **mappings):
@@ -442,7 +451,7 @@ def _get_salt_run_type(opts):
     return SALT_RUNTYPE_MINION_REMOTE
 
 
-def _get_cache_bank(opts, force_local=False, connection=True):
+def _get_cache_bank(opts, force_local=False, connection=True, session=False):
     minion_id = None
     # force_local is necessary because pillar compilation would otherwise
     # leak tokens between master and minions
@@ -452,6 +461,8 @@ def _get_cache_bank(opts, force_local=False, connection=True):
     ]:
         minion_id = opts["grains"]["id"]
     prefix = "vault" if minion_id is None else f"minions/{minion_id}/vault"
+    if session:
+        return prefix + "/connection/session"
     if connection:
         return prefix + "/connection"
     return prefix
@@ -466,7 +477,6 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
         client, config = _build_authd_client(opts, context, force_local=force_local)
     except (VaultAuthExpired, VaultConfigExpired, VaultPermissionDeniedError):
         retry = True
-
     # First, check if the token needs to be and can be renewed.
     # Since this needs to check the possibly active session and does not care
     # about valid secret IDs etc, we need to inspect the actual token.
@@ -507,11 +517,15 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
 
 
 def _build_authd_client(opts, context, force_local=False):
-    cbank = _get_cache_bank(opts, force_local=force_local)
+    connection_cbank = _get_cache_bank(opts, force_local=force_local)
     config, embedded_token = _get_connection_config(
-        cbank, opts, context, force_local=force_local
+        connection_cbank, opts, context, force_local=force_local
     )
-    token_cache = VaultAuthCache(config, opts, context, cbank, "token", VaultToken)
+    # Tokens are cached in a distinct scope to enable cache per session
+    session_cbank = _get_cache_bank(opts, force_local=force_local, session=True)
+    token_cache = VaultAuthCache(
+        config, opts, context, session_cbank, "token", VaultToken
+    )
 
     client = None
 
@@ -521,7 +535,7 @@ def _build_authd_client(opts, context, force_local=False):
         secret_id_cache = None
         if secret_id:
             secret_id_cache = VaultAuthCache(
-                config, opts, context, cbank, "secret_id", VaultSecretId
+                config, opts, context, connection_cbank, "secret_id", VaultSecretId
             )
             secret_id = secret_id_cache.get()
             # Only fetch secret ID if there is no cached valid token
@@ -1921,14 +1935,22 @@ class VaultCache:
             return self.cache.fetch(self.cbank, self.ckey)
         raise RuntimeError("This code path should not have been hit.")
 
-    def flush(self):
+    def flush(self, cbank=False):
         """
         Flush the cache for this domain
         """
         if self.cache is not None:
-            self.cache.flush(self.cbank, self.ckey)
+            self.cache.flush(self.cbank, self.ckey if not cbank else None)
         if self.cbank in self.context:
-            self.context[self.cbank].pop(self.ckey, None)
+            if cbank:
+                self.context.pop(self.cbank)
+            else:
+                self.context[self.cbank].pop(self.ckey, None)
+        # also remove sub-banks from context to mimic cache bevavior
+        if cbank:
+            for bank in list(self.context):
+                if bank.startswith(self.cbank):
+                    self.context.pop(bank)
 
     def store(self, value):
         """
@@ -1989,7 +2011,7 @@ class VaultConfigCache(VaultCache):
             return None
         return super().get()
 
-    def flush(self):
+    def flush(self):  # pylint: disable=arguments-differ
         """
         Flush all connection-scoped data
         """
@@ -1999,10 +2021,7 @@ class VaultConfigCache(VaultCache):
             )
             return
         # flush the whole connection-scoped cache
-        if self.cache is not None:
-            self.cache.flush(self.cbank)
-        if self.cbank in self.context:
-            self.context.pop(self.cbank, None)
+        super().flush(cbank=True)
         self.config = None
         self.cache = None
         self.ttl = None
@@ -2069,6 +2088,10 @@ class VaultAuthCache(VaultLeaseCache):
         super().__init__(
             config, opts, context, cbank, ckey, lease_cls=auth_cls, ttl=ttl
         )
+
+    def flush(self):  # pylint: disable=arguments-differ
+        # flush the whole cbank (session-scope) if this is a token cache
+        super().flush(cbank=self.lease_cls is VaultToken)
 
 
 class VaultTokenAuth:

@@ -3402,7 +3402,7 @@ class TestVaultConfigCache:
             if config["cache"]["backend"] == "session":
                 assert context == {}
             else:
-                cached.flush.assert_called_once_with(cbank)
+                cached.flush.assert_called_once_with(cbank, None)
             assert cache.ttl is None
             assert cache.cache is None
             assert cache.config is None
