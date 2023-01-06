@@ -3,6 +3,9 @@ name: CI
 on:
   push: {}
   pull_request: {}
+  schedule:
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
+    - cron: '0 */8 * * *'  # Run every 8 hours
   workflow_dispatch:
     inputs:
       testrun-type:

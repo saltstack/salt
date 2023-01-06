@@ -204,7 +204,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
         ctx.exit(1)
 
-    if event_name == "push":
+    if event_name in ("push", "schedule"):
         # In this case, a full test run is in order
         ctx.info("Writing 'testrun' to the github outputs file")
         testrun = {"type": "full"}
