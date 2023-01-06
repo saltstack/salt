@@ -560,6 +560,7 @@ def client(server_config, request):
 def valid_token(token_auth):
     token = MagicMock(spec=vault.VaultToken, **token_auth["auth"])
     token.is_valid.return_value = True
+    token.is_renewable.return_value = True
     token.payload.return_value = {"token": token_auth["auth"]["client_token"]}
     token.__str__.return_value = token_auth["auth"]["client_token"]
     token.to_dict.return_value = token_auth["auth"]
@@ -569,6 +570,7 @@ def valid_token(token_auth):
 @pytest.fixture
 def invalid_token(valid_token):
     valid_token.is_valid.return_value = False
+    valid_token.is_renewable.return_value = False
     return valid_token
 
 

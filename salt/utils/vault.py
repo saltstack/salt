@@ -295,7 +295,7 @@ def clear_cache(opts, context, ckey=None, connection=True, session=False):
             context.pop(cbank)
         else:
             context[cbank].pop(ckey, None)
-    # also remove sub-banks from context to mimic cache bevavior
+    # also remove sub-banks from context to mimic cache behavior
     if ckey is None:
         for bank in list(context):
             if bank.startswith(cbank):
@@ -1787,6 +1787,15 @@ class VaultToken(UseCountMixin, VaultLease):
         """
         return self.is_valid_for(valid_for) and self.has_uses_left(uses)
 
+    def is_renewable(self):
+        """
+        Check whether the token is renewable, which requires it
+        to be currently valid for at least two uses and renewable
+        """
+        # Renewing a token deducts a use, hence it does not make sense to
+        # renew a token on the last use
+        return self.renewable and self.is_valid(uses=2)
+
     def payload(self):
         """
         Return the payload to use for POST requests using this token
@@ -1946,7 +1955,7 @@ class VaultCache:
                 self.context.pop(self.cbank)
             else:
                 self.context[self.cbank].pop(self.ckey, None)
-        # also remove sub-banks from context to mimic cache bevavior
+        # also remove sub-banks from context to mimic cache behavior
         if cbank:
             for bank in list(self.context):
                 if bank.startswith(self.cbank):
@@ -2111,10 +2120,10 @@ class VaultTokenAuth:
 
     def is_renewable(self):
         """
-        Check whether the contained token is renewable,
-        which requires it to be valid and renewable
+        Check whether the contained token is renewable, which requires it
+        to be currently valid for at least two uses and renewable
         """
-        return self.is_valid() and self.token.is_renewable()
+        return self.token.is_renewable()
 
     def is_valid(self, valid_for=0):
         """

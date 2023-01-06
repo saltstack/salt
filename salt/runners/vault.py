@@ -806,7 +806,7 @@ def _config(key=None, default=vault.VaultException):
     if key is None:
         return __context__[ckey]
     val = salt.utils.data.traverse_dict(__context__[ckey], key, default)
-    if val == vault.VaultException:
+    if val is vault.VaultException:
         raise vault.VaultException(
             f"Requested configuration value {key} does not exist."
         )
