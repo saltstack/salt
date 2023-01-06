@@ -1239,7 +1239,7 @@ def list_freeze_parse(
     prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwargs
 ):
     """
-    .. versionadded:: 3007.0
+    .. versionadded:: 3006.0
 
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
@@ -1307,7 +1307,7 @@ def list_freeze_parse(
 
 def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwargs):
     """
-    .. versionchanged:: 3007.0
+    .. versionchanged:: 3006.0
 
     Output list of installed apps from ``pip list`` in JSON format and check to
     see if ``prefix`` exists in the list of packages installed.
@@ -1497,7 +1497,7 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
 def is_installed(pkgname, bin_env=None, user=None, cwd=None):
     """
     .. versionadded:: 2018.3.0
-    .. versionchanged:: 3007.0
+    .. versionchanged:: 3006.0
 
     Filter list of installed modules and return True if ``pkgname`` exists in
     the list of packages installed.
