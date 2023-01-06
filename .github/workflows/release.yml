@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: python:3.8.6-slim-buster
+      image: python:3.8-slim-buster
 
     steps:
 
@@ -93,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: python:3.8.6-slim-buster
+      image: python:3.8-slim-buster
 
     steps:
 
@@ -159,7 +159,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: python:3.8.6-slim-buster
+      image: python:3.8-slim-buster
 
     steps:
     - name: Install System Deps

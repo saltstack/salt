@@ -15,7 +15,7 @@ jobs:
     if: ${{ fromJSON(inputs.changed-files)['salt'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
-      image: python:3.8.6-slim-buster
+      image: python:3.8-slim-buster
 
     steps:
       - name: Install System Deps
@@ -74,7 +74,7 @@ jobs:
     if: ${{ fromJSON(inputs.changed-files)['tests'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
-      image: python:3.8.6-slim-buster
+      image: python:3.8-slim-buster
 
     steps:
       - name: Install System Deps
