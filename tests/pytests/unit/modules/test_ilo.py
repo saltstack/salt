@@ -5,17 +5,13 @@
 """
 
 
-import logging
 import tempfile
+
+import pytest
 
 import salt.modules.file
 import salt.modules.ilo as ilo
 from tests.support.mock import MagicMock, patch
-
-log = logging.getLogger(__name__)
-
-
-import pytest
 
 
 @pytest.fixture
