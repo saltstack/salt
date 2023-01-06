@@ -26,7 +26,7 @@ runs:
       uses: actions/cache@v3
       with:
         path: artifacts/${{ inputs.package-name }}
-        key: relenv|${{ env.RELENV_VERSION }}|bare|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles('.relenv/**/*.xz') }}
+        key: ${{ env.CACHE_SEED }}|relenv|${{ env.RELENV_VERSION }}|bare|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles('.relenv/**/*.xz') }}
 
     - name: Create Onedir Directory
       shell: bash

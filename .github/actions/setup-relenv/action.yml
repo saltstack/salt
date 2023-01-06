@@ -32,7 +32,7 @@ runs:
       uses: actions/cache@v3
       with:
         path: ${{ env.RELENV_DATA }}
-        key: relenv|${{ env.RELENV_VERSION }}|${{ inputs.platform }}|${{ inputs.arch }} }}
+        key: ${{ env.CACHE_SEED }}|relenv|${{ env.RELENV_VERSION }}|${{ inputs.platform }}|${{ inputs.arch }} }}
 
     - name: Fetch Toolchain
       if: ${{ inputs.platform == 'linux' }}
