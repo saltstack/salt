@@ -35,6 +35,12 @@ class TornadoImporter:
         sys.modules[name] = mod
         return mod
 
+    def create_module(self, spec):
+        return self.load_module(spec.name)
+
+    def exec_module(self, module):
+        return None
+
 
 class SixRedirectImporter:
     def find_module(self, module_name, package_path=None):
@@ -46,6 +52,12 @@ class SixRedirectImporter:
         mod = importlib.import_module(name[9:])
         sys.modules[name] = mod
         return mod
+
+    def create_module(self, spec):
+        return self.load_module(spec.name)
+
+    def exec_module(self, module):
+        return None
 
 
 # Try our importer first
