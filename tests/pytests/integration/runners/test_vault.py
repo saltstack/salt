@@ -312,6 +312,7 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
         ]
         assert "Pillar render error: Rendering SLS 'exe_loop' failed" in ret.stderr
         assert "Cyclic dependency detected while refreshing pillar" in ret.stderr
+        assert "RecursionError" not in ret.stderr
 
     @pytest.mark.usefixtures("pillar_sdb_loop")
     def test_policy_compilation_prevents_loop_for_sdb_module(
@@ -333,6 +334,7 @@ class TestVaultPillarPolicyTemplatesWithoutCache:
         ]
         assert "Pillar render error: Rendering SLS 'sdb_loop' failed" in ret.stderr
         assert "Cyclic dependency detected while refreshing pillar" in ret.stderr
+        assert "RecursionError" not in ret.stderr
 
 
 @pytest.mark.usefixtures("vault_pillar_values_policy")
@@ -864,13 +866,53 @@ class TestAppRoleIssuance:
         )
         assert ret.returncode == 0
         assert ret.data
+        for val in [
+            "token_explicit_max_ttl",
+            "token_num_uses",
+            "secret_id_num_uses",
+            "secret_id_ttl",
+        ]:
+            assert ret.data[val] == issue_overrides[val]
+
+    def test_impersonating_master_does_not_override_issue_param_overrides(
+        self, overriding_vault_salt_minion, vault_salt_run_cli, issue_overrides
+    ):
+        """
+        Test that rendering the pillar does not remove issue param overrides
+        requested by a minion
+        """
+        # ensure the minion requests a new configuration
+        ret = overriding_vault_salt_minion.salt_call_cli().run(
+            "vault.clear_token_cache"
+        )
+        assert ret.returncode == 0
+        # check that the overrides are applied
+        ret = overriding_vault_salt_minion.salt_call_cli().run(
+            "vault.query", "GET", "auth/token/lookup-self"
+        )
+        assert ret.returncode == 0
+        assert ret.data
+        assert (
+            ret.data["data"]["explicit_max_ttl"]
+            == issue_overrides["token_explicit_max_ttl"]
+        )
+        # ensure the master does not have cached authentication
+        ret = vault_salt_run_cli.run("vault.clear_cache")
+        assert ret.returncode == 0
+        ret = vault_salt_run_cli.run(
+            "pillar.show_pillar", overriding_vault_salt_minion.id
+        )
+        assert ret.returncode == 0
+        # check that issue overrides are still present
+        ret = vault_salt_run_cli.run(
+            "vault.show_approle", overriding_vault_salt_minion.id
+        )
+        assert ret.returncode == 0
+        assert ret.data
         assert (
             ret.data["token_explicit_max_ttl"]
             == issue_overrides["token_explicit_max_ttl"]
         )
-        assert ret.data["token_num_uses"] == issue_overrides["token_num_uses"]
-        assert ret.data["secret_id_num_uses"] == issue_overrides["secret_id_num_uses"]
-        assert ret.data["secret_id_ttl"] == issue_overrides["secret_id_ttl"]
 
 
 @pytest.mark.usefixtures(

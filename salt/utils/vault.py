@@ -409,14 +409,17 @@ def timestring_map(val):
 
 SALT_RUNTYPE_MASTER = 0
 SALT_RUNTYPE_MASTER_IMPERSONATING = 1
-SALT_RUNTYPE_MINION_LOCAL = 2
-SALT_RUNTYPE_MINION_REMOTE = 3
+SALT_RUNTYPE_MASTER_PEER_RUN = 2
+SALT_RUNTYPE_MINION_LOCAL = 3
+SALT_RUNTYPE_MINION_REMOTE = 4
 
 
 def _get_salt_run_type(opts):
     if "vault" in opts and opts.get("__role", "minion") == "master":
-        if "grains" in opts and "id" in opts["grains"]:
+        if opts.get("minion_id"):
             return SALT_RUNTYPE_MASTER_IMPERSONATING
+        if "grains" in opts and "id" in opts["grains"]:
+            return SALT_RUNTYPE_MASTER_PEER_RUN
         return SALT_RUNTYPE_MASTER
 
     config_location = opts.get("vault", {}).get("config_location")
@@ -443,10 +446,10 @@ def _get_cache_bank(opts, force_local=False, connection=True):
     minion_id = None
     # force_local is necessary because pillar compilation would otherwise
     # leak tokens between master and minions
-    if (
-        not force_local
-        and _get_salt_run_type(opts) == SALT_RUNTYPE_MASTER_IMPERSONATING
-    ):
+    if not force_local and _get_salt_run_type(opts) in [
+        SALT_RUNTYPE_MASTER_IMPERSONATING,
+        SALT_RUNTYPE_MASTER_PEER_RUN,
+    ]:
         minion_id = opts["grains"]["id"]
     prefix = "vault" if minion_id is None else f"minions/{minion_id}/vault"
     if connection:
@@ -598,8 +601,8 @@ def _get_connection_config(cbank, opts, context, force_local=False):
         config = _query_master(
             "generate_token",
             opts,
-            ttl=issue_params.get("ttl"),
-            uses=issue_params.get("uses"),
+            ttl=issue_params.get("explicit_max_ttl"),
+            uses=issue_params.get("num_uses"),
             upgrade_request=True,
         )
     config = parse_config(config, opts=opts)
@@ -1020,7 +1023,7 @@ def parse_config(config, validate=True, opts=None):
             if old_token_conf in merged["auth"]:
                 merged["issue"]["token"]["params"][new_token_conf] = merged[
                     "issue_params"
-                ][old_token_conf] = merged["auth"].pop(old_token_conf)
+                ][new_token_conf] = merged["auth"].pop(old_token_conf)
         # Those were found in the root namespace, but grouping them together
         # makes semantic and practical sense.
         for old_server_conf in ["namespace", "url", "verify"]:
@@ -2542,6 +2545,7 @@ def get_vault_connection():
 
     if _get_salt_run_type(opts) in [
         SALT_RUNTYPE_MASTER_IMPERSONATING,
+        SALT_RUNTYPE_MASTER_PEER_RUN,
         SALT_RUNTYPE_MINION_REMOTE,
     ]:
         ret["lease_duration"] = token.explicit_max_ttl

@@ -317,7 +317,7 @@ def client_token(client, token_response, wrapped_response):
 
 @pytest.fixture
 def config(request, default_config):
-    def rec(config, path, val=None):
+    def rec(config, path, val=None, default=vaultutil.VaultException):
         ptr = config
         parts = path.split(":")
         while parts:
@@ -328,10 +328,14 @@ def config(request, default_config):
                 elif not parts:
                     ptr[cur] = val
                     return
+            if cur not in ptr:
+                if isinstance(default, Exception):
+                    raise default()
+                return default
             ptr = ptr[cur]
         return ptr
 
-    def get_config(key=None):
+    def get_config(key=None, default=vaultutil.VaultException):
         nonlocal request
         nonlocal default_config
         overrides = getattr(request, "param", {})
@@ -341,7 +345,7 @@ def config(request, default_config):
             return default_config
         if key in overrides:
             return overrides[key]
-        return rec(default_config, key)
+        return rec(default_config, key, default=default)
 
     with patch("salt.runners.vault._config", autospec=True) as config:
         config.side_effect = get_config

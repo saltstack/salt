@@ -363,7 +363,11 @@ def get_role_id(minion_id, signature, impersonated_by_master=False, issue_params
 def _get_role_id(minion_id, issue_params, wrap):
     approle = _lookup_approle_cached(minion_id)
     issue_params_parsed = _parse_issue_params(issue_params)
-    if approle is False or not _approle_params_match(approle, issue_params_parsed):
+
+    if approle is False or (
+        vault._get_salt_run_type(__opts__) != vault.SALT_RUNTYPE_MASTER_IMPERSONATING
+        and not _approle_params_match(approle, issue_params_parsed)
+    ):
         # This means the role has to be created/updated first
         # create/update AppRole with role name <minion_id>
         # token_policies are set on the AppRole
@@ -392,15 +396,12 @@ def _get_role_id(minion_id, issue_params, wrap):
 
 
 def _approle_params_match(current, issue_params):
+    """
+    Check if minion-overridable AppRole parameters match
+    """
     req = _parse_issue_params(issue_params)
-    for var in [
-        "bind_secret_id",
-        "secret_id_num_uses",
-        "secret_id_ttl",
-        "token_explicit_max_ttl",
-        "token_num_uses",
-    ]:
-        if req.get(var) is not None and current.get(var) != req.get(var):
+    for var in set(VALID_PARAMS["approle"]) - set(NO_OVERRIDE_PARAMS["approle"]):
+        if var in req and req[var] != current.get(var, NOT_SET):
             return False
     return True
 
@@ -448,7 +449,11 @@ def generate_secret_id(
         if approle_meta is False:
             raise vault.VaultNotFoundError(f"No AppRole found for minion {minion_id}.")
 
-        if not _approle_params_match(approle_meta, issue_params):
+        if vault._get_salt_run_type(
+            __opts__
+        ) != vault.SALT_RUNTYPE_MASTER_IMPERSONATING and not _approle_params_match(
+            approle_meta, issue_params
+        ):
             _manage_approle(minion_id, issue_params)
             approle_meta = _lookup_approle_cached(minion_id, refresh=True)
 
@@ -793,16 +798,18 @@ def clear_cache():
         cache.flush(f"minions/{minion}/vault")
 
 
-def _config(key=None):
+def _config(key=None, default=vault.VaultException):
     ckey = "vault_master_config"
     if ckey not in __context__:
         __context__[ckey] = vault.parse_config(__opts__.get("vault", {}))
 
     if key is None:
         return __context__[ckey]
-    val = salt.utils.data.traverse_dict(__context__[ckey], key, vault.VaultException)
+    val = salt.utils.data.traverse_dict(__context__[ckey], key, default)
     if val == vault.VaultException:
-        raise vault.VaultException("Requested configuration value does not exist.")
+        raise vault.VaultException(
+            f"Requested configuration value {key} does not exist."
+        )
     return val
 
 

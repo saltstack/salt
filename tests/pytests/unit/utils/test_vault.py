@@ -696,8 +696,16 @@ def opts_runtype(request):
             "__role": "master",
             "vault": {},
         },
+        "master_peer_run": {
+            "__role": "master",
+            "grains": {
+                "id": "test-minion",
+            },
+            "vault": {},
+        },
         "master_impersonating": {
             "__role": "master",
+            "minion_id": "test-minion",
             "grains": {
                 "id": "test-minion",
             },
@@ -3775,6 +3783,7 @@ class TestKVV2:
     "opts_runtype,expected",
     [
         ("master", vault.SALT_RUNTYPE_MASTER),
+        ("master_peer_run", vault.SALT_RUNTYPE_MASTER_PEER_RUN),
         ("master_impersonating", vault.SALT_RUNTYPE_MASTER_IMPERSONATING),
         ("minion_local_1", vault.SALT_RUNTYPE_MINION_LOCAL),
         ("minion_local_2", vault.SALT_RUNTYPE_MINION_LOCAL),
