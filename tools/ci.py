@@ -195,6 +195,14 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
     # Let it print until the end
     time.sleep(1)
 
+    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if github_step_summary is None:
+        ctx.warn("The 'GITHUB_STEP_SUMMARY' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_step_summary is not None
+
     if not changed_files.exists():
         ctx.error(f"The '{changed_files}' file does not exist.")
         ctx.exit(1)
@@ -210,6 +218,9 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         testrun = {"type": "full"}
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"testrun={json.dumps(testrun)}\n")
+
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write(f"* Full test run chosen due to event type of {event_name}\n")
         return
 
     # So, it's a pull request...
@@ -217,6 +228,11 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
     # decide what to run, or even if the full test run should be running on the
     # pull request, etc...
     if changed_files_contents["test_requirements_files"]:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                "* Full test run chosen because there was a change made "
+                "to the requirements files\n"
+            )
         testrun = {"type": "full"}
     else:
         testrun_changed_files_path = REPO_ROOT / "testrun-changed-files.txt"
@@ -226,6 +242,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         }
         ctx.info(f"Writing {testrun_changed_files_path.name} ...")
         selected_changed_files = []
+        step_summary_written = False
         for fpath in json.loads(changed_files_contents["testrun_files"]):
             if fpath.startswith(("tools/", "tasks/")):
                 continue
@@ -234,8 +251,21 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             if fpath == "tests/conftest.py":
                 # In this particular case, just run the full test suite
                 testrun["type"] = "full"
+                with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                    wfh.write(
+                        "* Full test run chosen because there was a change to 'tests/conftest.py'\n"
+                    )
+                    step_summary_written = True
             selected_changed_files.append(fpath)
         testrun_changed_files_path.write_text("\n".join(sorted(selected_changed_files)))
+        if step_summary_written is False:
+            with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                wfh.write("* Partial test run chosen\n")
+                wfh.write("* Selected changed files:\n")
+                for path in sorted(selected_changed_files):
+                    wfh.write("  * `{path}`\n")
+                step_summary_written = True
+
     ctx.info("Writing 'testrun' to the github outputs file")
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"testrun={json.dumps(testrun)}\n")
