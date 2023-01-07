@@ -1575,6 +1575,9 @@ class AuthenticatedVaultClient(VaultClient):
         is_unauthd=False,
         **kwargs,
     ):  # pylint: disable=arguments-differ
+        """
+        Issue an authenticated request against the Vault API. Returns the raw response object.
+        """
         ret = super().request_raw(
             method,
             endpoint,
@@ -2011,11 +2014,17 @@ class VaultConfigCache(VaultCache):
             self._load(init_config)
 
     def exists(self):
+        """
+        Check if a configuration has been loaded and cached
+        """
         if self.config is None:
             return False
         return super().exists()
 
     def get(self):
+        """
+        Return the current cached configuration
+        """
         if self.config is None:
             return None
         return super().get()
@@ -2047,6 +2056,9 @@ class VaultConfigCache(VaultCache):
         self.ttl = self.config["cache"]["config"]
 
     def store(self, value):
+        """
+        Reload cache configuration, then store the new Vault configuration
+        """
         self._load(value)
         super().store(value)
 
@@ -2058,9 +2070,10 @@ class VaultLeaseCache(VaultCache):
         super().__init__(config, opts, context, cbank, ckey, ttl=ttl)
         self.lease_cls = lease_cls
 
-    def get(self, valid_for=0):  # pylint: disable=arguments-differ
+    def get(self, valid_for=0, flush=True):  # pylint: disable=arguments-differ
         """
-        Returns valid cached authentication data or None
+        Returns valid cached authentication data or None.
+        Flushes cache if invalid by default.
         """
         if not self.exists():
             return None
@@ -2069,8 +2082,9 @@ class VaultLeaseCache(VaultCache):
         if lease.is_valid(valid_for):
             log.debug("Using cached lease.")
             return lease
-        log.debug("Cached lease not valid anymore.")
-        self.flush()
+        if flush:
+            log.debug("Cached lease not valid anymore. Flushing cache.")
+            self.flush()
         return None
 
     def store(self, value):
@@ -2099,6 +2113,10 @@ class VaultAuthCache(VaultLeaseCache):
         )
 
     def flush(self):  # pylint: disable=arguments-differ
+        """
+        Flush the cached auth credentials. If this is a token cache,
+        flushing it will delete the whole session-scoped cache bank.
+        """
         # flush the whole cbank (session-scope) if this is a token cache
         super().flush(cbank=self.lease_cls is VaultToken)
 
@@ -2289,6 +2307,9 @@ class VaultAppRole:
         return self.secret_id.is_valid(valid_for=valid_for, uses=uses)
 
     def used(self):
+        """
+        Increment the secret ID use counter by one, if this AppRole uses one.
+        """
         if self.secret_id is not None:
             self.secret_id.used()
 
