@@ -11,9 +11,8 @@ from tests.support.mock import MagicMock, patch
 
 @pytest.fixture
 def configure_loader_modules():
-    patcher = patch("salt.utils.path.which", lambda exe: exe)
-    patcher.start()
-    return {djangomod: {}}
+    with patch("salt.utils.path.which", lambda exe: exe):
+        yield {djangomod: {}}
 
 
 def test_command():
