@@ -23,7 +23,7 @@ pytest.importorskip("redis")
 def redis_container(salt_factories):
     container = salt_factories.get_container(
         random_string("redis-server-"),
-        image_name="redis:alpine",
+        image_name="ghcr.io/saltstack/salt-ci-containers/redis:alpine",
         container_run_kwargs={"ports": {"6379/tcp": None}},
     )
     with container.started() as factory:
