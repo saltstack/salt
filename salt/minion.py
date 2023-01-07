@@ -3278,7 +3278,8 @@ class Syndic(Minion):
         # Set up default tgt_type
         if "tgt_type" not in data:
             data["tgt_type"] = "glob"
-        kwargs = {}
+
+        kwargs = {"auth_list": data.pop("auth_list", [])}
 
         # optionally add a few fields to the publish data
         for field in (
@@ -3305,6 +3306,37 @@ class Syndic(Minion):
                 callback=lambda _: None,
                 **kwargs
             )
+
+    def _send_req_sync(self, load, timeout):
+        if self.opts["minion_sign_messages"]:
+            log.trace("Signing event to be published onto the bus.")
+            minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+            sig = salt.crypt.sign_message(
+                minion_privkey_path, salt.serializers.msgpack.serialize(load)
+            )
+            load["sig"] = sig
+
+        with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
+            ret = yield channel.send(
+                load, timeout=timeout, tries=self.opts["return_retry_tries"]
+            )
+            return ret
+
+    @salt.ext.tornado.gen.coroutine
+    def _send_req_async(self, load, timeout):
+        if self.opts["minion_sign_messages"]:
+            log.trace("Signing event to be published onto the bus.")
+            minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+            sig = salt.crypt.sign_message(
+                minion_privkey_path, salt.serializers.msgpack.serialize(load)
+            )
+            load["sig"] = sig
+
+        with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
+            ret = yield channel.send(
+                load, timeout=timeout, tries=self.opts["return_retry_tries"]
+            )
+            raise salt.ext.tornado.gen.Return(ret)
 
     def fire_master_syndic_start(self):
         # Send an event to the master that the minion is live

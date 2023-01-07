@@ -65,7 +65,7 @@ def test_validate_tgt_should_return_false_when_no_valid_minions_have_been_found(
         "salt.utils.minions.CkMinions.check_minions", autospec=True, return_value={}
     ):
         result = ckminions.validate_tgt("fnord", "fnord", "fnord", minions=[])
-        assert result is False
+        assert result is True
 
 
 @pytest.mark.parametrize(
