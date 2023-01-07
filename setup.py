@@ -1021,19 +1021,6 @@ class SaltDistribution(distutils.dist.Distribution):
             modules.append(os.path.relpath(root, SETUP_DIRNAME).replace(os.sep, "."))
         return modules
 
-    # ----- Static Data -------------------------------------------------------------------------------------------->
-    @property
-    def _property_dependency_links(self):
-        return [
-            "https://github.com/saltstack/salt-testing/tarball/develop#egg=SaltTesting"
-        ]
-
-    @property
-    def _property_tests_require(self):
-        return ["SaltTesting"]
-
-    # <---- Static Data ----------------------------------------------------------------------------------------------
-
     # ----- Dynamic Data -------------------------------------------------------------------------------------------->
     @property
     def _property_package_data(self):
@@ -1053,8 +1040,6 @@ class SaltDistribution(distutils.dist.Distribution):
         if not IS_WINDOWS_PLATFORM:
             package_data["salt.cloud"] = ["deploy/*.sh"]
 
-        if not self.ssh_packaging and not PACKAGED_FOR_SALT_SSH:
-            package_data["salt.daemons.flo"] = ["*.flo"]
         return package_data
 
     @property
