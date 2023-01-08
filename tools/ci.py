@@ -220,19 +220,28 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             wfh.write(f"testrun={json.dumps(testrun)}\n")
 
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write(f"* Full test run chosen due to event type of {event_name}\n")
+            wfh.write(f"Full test run chosen due to event type of {event_name!r}.\n")
         return
 
     # So, it's a pull request...
     # Based on which files changed, or other things like PR comments we can
     # decide what to run, or even if the full test run should be running on the
     # pull request, etc...
-    if changed_files_contents["test_requirements_files"]:
+    changed_requirements_files = json.loads(
+        changed_files_contents["test_requirements_files"]
+    )
+    if changed_requirements_files:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(
-                "* Full test run chosen because there was a change made "
-                "to the requirements files\n"
+                "Full test run chosen because there was a change made "
+                "to the requirements files.\n"
             )
+            wfh.write(
+                "<details>\n<summary>Changed Requirements Files (click me)</summary>\n"
+            )
+            for path in sorted(changed_requirements_files):
+                wfh.write(f"<pre>{path}</pre>\n")
+            wfh.write("</details>\n")
         testrun = {"type": "full"}
     else:
         testrun_changed_files_path = REPO_ROOT / "testrun-changed-files.txt"
@@ -253,18 +262,27 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
                 testrun["type"] = "full"
                 with open(github_step_summary, "a", encoding="utf-8") as wfh:
                     wfh.write(
-                        "* Full test run chosen because there was a change to 'tests/conftest.py'\n"
+                        "Full test run chosen because there was a change to 'tests/conftest.py'.\n"
                     )
                     step_summary_written = True
             selected_changed_files.append(fpath)
         testrun_changed_files_path.write_text("\n".join(sorted(selected_changed_files)))
         if step_summary_written is False:
             with open(github_step_summary, "a", encoding="utf-8") as wfh:
-                wfh.write("* Partial test run chosen\n")
-                wfh.write("* Selected changed files:\n")
+                wfh.write("Partial test run chosen.\n")
+                wfh.write(
+                    "<details>\n<summary>Selected Changed Files (click me)</summary>\n"
+                )
                 for path in sorted(selected_changed_files):
-                    wfh.write("  * `{path}`\n")
+                    wfh.write(f"<pre>{path}</pre>\n")
+                wfh.write("</details>\n")
                 step_summary_written = True
+
+    with open(github_step_summary, "a", encoding="utf-8") as wfh:
+        wfh.write("<details>\n<summary>All Changed Files (click me)</summary>\n")
+        for path in sorted(json.loads(changed_files_contents["repo_files"])):
+            wfh.write(f"<pre>{path}</pre>\n")
+        wfh.write("</details>\n")
 
     ctx.info("Writing 'testrun' to the github outputs file")
     with open(github_output, "a", encoding="utf-8") as wfh:
