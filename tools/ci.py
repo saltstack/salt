@@ -237,11 +237,11 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
                 "to the requirements files.\n"
             )
             wfh.write(
-                "<details>\n<summary>Changed Requirements Files (click me)</summary>\n"
+                "<details>\n<summary>Changed Requirements Files (click me)</summary>\n<pre>\n"
             )
             for path in sorted(changed_requirements_files):
-                wfh.write(f"<pre>{path}</pre>\n")
-            wfh.write("</details>\n")
+                wfh.write(f"{path}\n")
+            wfh.write("</pre>\n</details>\n")
         testrun = {"type": "full"}
     else:
         testrun_changed_files_path = REPO_ROOT / "testrun-changed-files.txt"
@@ -271,18 +271,18 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             with open(github_step_summary, "a", encoding="utf-8") as wfh:
                 wfh.write("Partial test run chosen.\n")
                 wfh.write(
-                    "<details>\n<summary>Selected Changed Files (click me)</summary>\n"
+                    "<details>\n<summary>Selected Changed Files (click me)</summary>\n<pre>\n"
                 )
                 for path in sorted(selected_changed_files):
-                    wfh.write(f"<pre>{path}</pre>\n")
-                wfh.write("</details>\n")
+                    wfh.write(f"{path}\n")
+                wfh.write("</pre>\n</details>\n")
                 step_summary_written = True
 
     with open(github_step_summary, "a", encoding="utf-8") as wfh:
-        wfh.write("<details>\n<summary>All Changed Files (click me)</summary>\n")
+        wfh.write("<details>\n<summary>All Changed Files (click me)</summary>\n<pre>\n")
         for path in sorted(json.loads(changed_files_contents["repo_files"])):
-            wfh.write(f"<pre>{path}</pre>\n")
-        wfh.write("</details>\n")
+            wfh.write(f"{path}\n")
+        wfh.write("</pre>\n</details>\n")
 
     ctx.info("Writing 'testrun' to the github outputs file")
     with open(github_output, "a", encoding="utf-8") as wfh:
