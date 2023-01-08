@@ -34,6 +34,8 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 # Make __salt__ available globally to avoid loading minion_mods multiple times
 __salt__ = {}
 
+TOKEN_CKEY = "__token"
+
 
 def query(
     method,
@@ -531,7 +533,7 @@ def _build_authd_client(opts, context, force_local=False):
     token_cache = VaultAuthCache(
         context,
         session_cbank,
-        "token",
+        TOKEN_CKEY,
         VaultToken,
         cache_backend=_get_cache_backend(config, opts),
         ttl=cache_ttl,

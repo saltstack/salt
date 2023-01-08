@@ -1047,7 +1047,7 @@ class TestBuildAuthdClient:
                 approle.get.return_value = vault.VaultSecretId(
                     **secret_id_response["data"]
                 )
-            return token if ckey == "token" else approle
+            return token if ckey == vault.TOKEN_CKEY else approle
 
         cache = MagicMock(spec=vault.VaultAuthCache)
         cache.side_effect = _cache
@@ -1071,7 +1071,7 @@ class TestBuildAuthdClient:
         if test_remote_config["auth"]["method"] == "approle":
             if (
                 not test_remote_config["auth"]["secret_id"]
-                or cached(None, None, "token").get()
+                or cached(None, None, vault.TOKEN_CKEY).get()
                 or cached(None, None, "secret_id").get()
             ):
                 # In case a secret_id is not necessary or only a cached token is available,

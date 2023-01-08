@@ -809,27 +809,27 @@ class TestAppRoleIssuance:
         assert ret.data.get("success") == "yeehaaw"
         assert "Mismatch of cached and reported server data detected" in caplog.text
 
-    @pytest.mark.parametrize("ctype", ["config", "token", "secret_id"])
+    @pytest.mark.parametrize("ckey", ["config", "__token", "secret_id"])
     def test_cache_is_used_on_the_minion(
-        self, ctype, vault_salt_call_cli, minion_conn_cachedir
+        self, ckey, vault_salt_call_cli, minion_conn_cachedir
     ):
         """
         Test that remote configuration, tokens acquired by authenticating with an AppRole
         and issued secret IDs are written to cache.
         """
         cache = minion_conn_cachedir
-        if ctype == "token":
+        if ckey == "__token":
             cache = cache / "session"
             if not cache.exists():
                 cache.mkdir()
-        if f"{ctype}.p" not in os.listdir(cache):
+        if f"{ckey}.p" not in os.listdir(cache):
             ret = vault_salt_call_cli.run("vault.read_secret", "secret/path/foo")
             assert ret.returncode == 0
-        assert f"{ctype}.p" in os.listdir(cache)
+        assert f"{ckey}.p" in os.listdir(cache)
 
-    @pytest.mark.parametrize("ctype", ["config", "token", "secret_id"])
+    @pytest.mark.parametrize("ckey", ["config", "__token", "secret_id"])
     def test_cache_is_used_on_the_impersonating_master(
-        self, ctype, vault_salt_run_cli, vault_salt_minion
+        self, ckey, vault_salt_run_cli, vault_salt_minion
     ):
         """
         Test that remote configuration, tokens acquired by authenticating with an AppRole
@@ -837,12 +837,12 @@ class TestAppRoleIssuance:
         a minion during pillar rendering.
         """
         cbank = f"minions/{vault_salt_minion.id}/vault/connection"
-        if ctype == "token":
+        if ckey == "__token":
             cbank += "/session"
         ret = vault_salt_run_cli.run("cache.list", cbank)
         assert ret.returncode == 0
         assert ret.data
-        assert ctype in ret.data
+        assert ckey in ret.data
 
     def test_cache_is_used_for_master_token_information(self, vault_salt_run_cli):
         """
@@ -1042,39 +1042,39 @@ class TestTokenIssuance:
         assert "Master returned error and requested cache expiration" in caplog.text
 
     @pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
-    @pytest.mark.parametrize("ctype", ["config", "token"])
+    @pytest.mark.parametrize("ckey", ["config", "__token"])
     def test_cache_is_used_on_the_minion(
-        self, ctype, vault_salt_call_cli, minion_conn_cachedir
+        self, ckey, vault_salt_call_cli, minion_conn_cachedir
     ):
         """
         Test that remote configuration and tokens are written to cache.
         """
         cache = minion_conn_cachedir
-        if ctype == "token":
+        if ckey == "__token":
             cache = cache / "session"
             if not cache.exists():
                 cache.mkdir()
-        if f"{ctype}.p" not in os.listdir(cache):
+        if f"{ckey}.p" not in os.listdir(cache):
             ret = vault_salt_call_cli.run("vault.read_secret", "secret/path/foo")
             assert ret.returncode == 0
-        assert f"{ctype}.p" in os.listdir(cache)
+        assert f"{ckey}.p" in os.listdir(cache)
 
     @pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
-    @pytest.mark.parametrize("ctype", ["config", "token"])
+    @pytest.mark.parametrize("ckey", ["config", "__token"])
     def test_cache_is_used_on_the_impersonating_master(
-        self, ctype, vault_salt_run_cli, vault_salt_minion
+        self, ckey, vault_salt_run_cli, vault_salt_minion
     ):
         """
         Test that remote configuration and tokens are written to cache when a
         master is impersonating a minion during pillar rendering.
         """
         cbank = f"minions/{vault_salt_minion.id}/vault/connection"
-        if ctype == "token":
+        if ckey == "__token":
             cbank += "/session"
         ret = vault_salt_run_cli.run("cache.list", cbank)
         assert ret.returncode == 0
         assert ret.data
-        assert ctype in ret.data
+        assert ckey in ret.data
 
     @pytest.mark.usefixtures("conn_cache_absent")
     @pytest.mark.parametrize("vault_container_version", ["latest"], indirect=True)
