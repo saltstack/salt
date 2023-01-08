@@ -305,8 +305,6 @@ def client():
 @pytest.fixture
 def client_token(client, token_response, wrapped_response):
     def res_or_wrap(*args, **kwargs):
-        nonlocal token_response
-        nonlocal wrapped_response
         if kwargs.get("wrap"):
             return vaultutil.VaultWrappedResponse(**wrapped_response["wrap_info"])
         return token_response
@@ -336,8 +334,6 @@ def config(request, default_config):
         return ptr
 
     def get_config(key=None, default=vaultutil.VaultException):
-        nonlocal request
-        nonlocal default_config
         overrides = getattr(request, "param", {})
         if key is None:
             for ovar, oval in overrides.items():
@@ -367,13 +363,10 @@ def policies(request, policies_default):
 @pytest.fixture
 def metadata(request, metadata_entity_default, metadata_secret_default):
     def _get_metadata(minion_id, metadata_patterns, *args, **kwargs):
-        nonlocal request
         if getattr(request, "param", None) is not None:
             return request.param
         if "saltstack-jid" not in metadata_patterns:
-            nonlocal metadata_entity_default
             return metadata_entity_default
-        nonlocal metadata_secret_default
         return metadata_secret_default
 
     with patch("salt.runners.vault._get_metadata", autospec=True) as get_metadata:
@@ -508,9 +501,7 @@ def test_generate_new_token(
     with patch("salt.runners.vault._generate_token", autospec=True) as gen:
 
         def res_or_wrap(*args, **kwargs):
-            nonlocal token_serialized
             if kwargs.get("wrap"):
-                nonlocal wrapped_serialized
                 return wrapped_serialized, token_serialized["num_uses"]
             return token_serialized, token_serialized["num_uses"]
 
@@ -572,9 +563,7 @@ def test_get_config_token(
     with patch("salt.runners.vault._generate_token", autospec=True) as gen:
 
         def res_or_wrap(*args, **kwargs):
-            nonlocal token_serialized
             if kwargs.get("wrap"):
-                nonlocal wrapped_serialized
                 return wrapped_serialized, token_serialized["num_uses"]
             return token_serialized, token_serialized["num_uses"]
 
@@ -636,7 +625,6 @@ def test_get_config_approle(
 
         def res_or_wrap(*args, **kwargs):
             if kwargs.get("wrap"):
-                nonlocal wrapped_serialized
                 return wrapped_serialized
             return "test-role-id"
 
@@ -675,7 +663,6 @@ def test_get_role_id(config, validate_signature, wrapped_serialized, issue_param
 
         def res_or_wrap(*args, **kwargs):
             if kwargs.get("wrap"):
-                nonlocal wrapped_serialized
                 return wrapped_serialized
             return "test-role-id"
 
@@ -850,7 +837,6 @@ def test_generate_secret_id(
 
         def res_or_wrap(*args, **kwargs):
             if kwargs.get("wrap"):
-                nonlocal wrapped_serialized
                 return wrapped_serialized
             secret_id = Mock()
             secret_id.serialize_for_minion.return_value = secret_id_serialized
@@ -1400,7 +1386,6 @@ def test_lookup_role_id(client, wrapped_response, wrap):
 
     def res_or_wrap(*args, **kwargs):
         if kwargs.get("wrap"):
-            nonlocal wrapped_response
             return vaultutil.VaultWrappedResponse(**wrapped_response["wrap_info"])
         return {"data": {"role_id": "test-role-id"}}
 
@@ -1434,7 +1419,6 @@ def test_get_secret_id(client, wrapped_response, secret_id_response, wrap):
 
     def res_or_wrap(*args, **kwargs):
         if kwargs.get("wrap"):
-            nonlocal wrapped_response
             return vaultutil.VaultWrappedResponse(**wrapped_response["wrap_info"])
         return secret_id_response
 
@@ -1469,10 +1453,8 @@ def test_get_secret_id_meta_info(
 
     def res_or_wrap(*args, **kwargs):
         if args[0].endswith("lookup"):
-            nonlocal secret_id_lookup_accessor_response
             return secret_id_lookup_accessor_response
         if kwargs.get("wrap"):
-            nonlocal wrapped_response
             return vaultutil.VaultWrappedResponse(**wrapped_response["wrap_info"])
         return secret_id_response
 

@@ -279,7 +279,9 @@ def _get_kv(opts, context):
         connection = False
     cbank = _get_cache_bank(opts, connection=connection)
     ckey = "secret_path_metadata"
-    metadata_cache = VaultCache(config, opts, context, cbank, ckey, ttl=ttl)
+    metadata_cache = VaultCache(
+        context, cbank, ckey, cache_backend=_get_cache_backend(config, opts), ttl=ttl
+    )
     return VaultKV(client, metadata_cache)
 
 
@@ -523,8 +525,16 @@ def _build_authd_client(opts, context, force_local=False):
     )
     # Tokens are cached in a distinct scope to enable cache per session
     session_cbank = _get_cache_bank(opts, force_local=force_local, session=True)
+    cache_ttl = (
+        config["cache"]["secret"] if config["cache"]["secret"] != "ttl" else None
+    )
     token_cache = VaultAuthCache(
-        config, opts, context, session_cbank, "token", VaultToken
+        context,
+        session_cbank,
+        "token",
+        VaultToken,
+        cache_backend=_get_cache_backend(config, opts),
+        ttl=cache_ttl,
     )
 
     client = None
@@ -535,7 +545,12 @@ def _build_authd_client(opts, context, force_local=False):
         secret_id_cache = None
         if secret_id:
             secret_id_cache = VaultAuthCache(
-                config, opts, context, connection_cbank, "secret_id", VaultSecretId
+                context,
+                connection_cbank,
+                "secret_id",
+                VaultSecretId,
+                cache_backend=_get_cache_backend(config, opts),
+                ttl=cache_ttl,
             )
             secret_id = secret_id_cache.get()
             # Only fetch secret ID if there is no cached valid token
@@ -791,7 +806,6 @@ def _query_master(
         unwrap_expected_creation_path=None,
     ):
         if not result:
-            nonlocal func
             log.error(
                 "Failed to get Vault connection from master! No result returned - "
                 "does the peer runner publish configuration include `vault.%s`?",
@@ -826,7 +840,6 @@ def _query_master(
         if "server" in result:
             # Ensure locally overridden verify parameter does not
             # always invalidate cache.
-            nonlocal opts
             reported_server = parse_config(result["server"], validate=False, opts=opts)[
                 "server"
             ]
@@ -1531,8 +1544,9 @@ class AuthenticatedVaultClient(VaultClient):
         Renew a token.
 
         increment
-            The time the token should be requested to be renewed for, starting
-            from the current point in time. The server might not honor this increment.
+            Request the token to be valid for this amount of time from the current
+            point of time onwards. Can also be used to reduce the validity period.
+            The server might not honor this increment.
             Can be an integer (seconds) or a time string like ``1h``. Optional.
 
         token
@@ -1714,20 +1728,38 @@ class UseCountMixin:
         return self.num_uses == 0 or self.num_uses - (self.use_count + uses) >= 0
 
 
-class BaseLease:
-    def __init__(self, **kwargs):
-        # eat irrelevant kwargs
-        pass
-
-
-class VaultLease(DurationMixin, BaseLease):
+class DropInitKwargsMixin:
     """
-    Base class for Vault leases that expire with time.
+    Mixin that breaks the chain of passing unhandled kwargs up the MRO.
     """
 
-    def __init__(self, lease_id, accessor=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+
+
+class AccessorMixin:
+    """
+    Mixin that manages accessor information relevant for tokens/secret IDs
+    """
+
+    def __init__(self, accessor=None, wrapped_accessor=None, **kwargs):
+        self.accessor = accessor if wrapped_accessor is None else wrapped_accessor
+        self.wrapping_accessor = accessor if wrapped_accessor is not None else None
+        super().__init__(**kwargs)
+
+    def accessor_payload(self):
+        if self.accessor is not None:
+            return {"accessor": self.accessor}
+        raise VaultInvocationError("No accessor information available")
+
+
+class BaseLease(DurationMixin, DropInitKwargsMixin):
+    """
+    Base class for leases that expire with time.
+    """
+
+    def __init__(self, lease_id, **kwargs):
         self.id = self.lease_id = lease_id
-        self.accessor = accessor
         super().__init__(**kwargs)
 
     def __str__(self):
@@ -1744,6 +1776,16 @@ class VaultLease(DurationMixin, BaseLease):
         return data == self.__dict__
 
     def is_valid(self, valid_for=0):
+        """
+        Checks whether the lease is valid for an amount of time
+
+        valid_for
+            Check whether the token will still be valid in the future.
+            This can be an integer, which will be interpreted as seconds, or a
+            time string using the same format as Vault does:
+            Suffix ``s`` for seconds, ``m`` for minutes, ``h`` for hours, ``d`` for days.
+            Defaults to 0.
+        """
         return self.is_valid_for(valid_for)
 
     def with_renewed(self, **kwargs):
@@ -1763,7 +1805,18 @@ class VaultLease(DurationMixin, BaseLease):
         return self.__dict__
 
 
-class VaultToken(UseCountMixin, VaultLease):
+class VaultLease(BaseLease):
+    """
+    Data object representing a Vault lease.
+    """
+
+    def __init__(self, lease_id, data, **kwargs):
+        # save lease-associated data
+        self.data = data
+        super().__init__(lease_id, **kwargs)
+
+
+class VaultToken(UseCountMixin, AccessorMixin, BaseLease):
     """
     Data object representing an authentication token
     """
@@ -1820,7 +1873,7 @@ class VaultToken(UseCountMixin, VaultLease):
         }
 
 
-class VaultSecretId(UseCountMixin, VaultLease):
+class VaultSecretId(UseCountMixin, AccessorMixin, BaseLease):
     """
     Data object representing an AppRole secret ID.
     """
@@ -1870,7 +1923,7 @@ class VaultSecretId(UseCountMixin, VaultLease):
         }
 
 
-class VaultWrappedResponse(VaultLease):
+class VaultWrappedResponse(AccessorMixin, BaseLease):
     """
     Data object representing a wrapped response
     """
@@ -1902,77 +1955,283 @@ class VaultWrappedResponse(VaultLease):
         }
 
 
-class VaultCache:
+class CommonCache:
     """
-    Encapsulates session and other cache backends for a single domain
-    like secret path metadata.
+    Base class that unifies context and other cache backends.
     """
 
-    def __init__(self, config, opts, context, cbank, ckey, ttl=None, cache=None):
-        self.config = config
-        self.opts = opts
+    def __init__(self, context, cbank, cache_backend=None, ttl=None):
         self.context = context
         self.cbank = cbank
-        self.ckey = ckey
+        self.cache = cache_backend
         self.ttl = ttl
-        self.cache = cache if cache is not None else _get_cache_backend(config, opts)
 
-    def exists(self):
-        """
-        Check whether data for this domain exists
-        """
-        if self.cbank in self.context and self.ckey in self.context[self.cbank]:
+    def _ckey_exists(self, ckey, flush=True):
+        if self.cbank in self.context and ckey in self.context[self.cbank]:
             return True
         if self.cache is not None:
-            if not self.cache.contains(self.cbank, self.ckey):
+            if not self.cache.contains(self.cbank, ckey):
                 return False
             if self.ttl is not None:
-                updated = self.cache.updated(self.cbank, self.ckey)
+                updated = self.cache.updated(self.cbank, ckey)
                 if int(time.time()) - updated >= self.ttl:
-                    log.debug("Cached data outdated, flushing.")
-                    self.flush()
+                    if flush:
+                        log.debug(
+                            f"Cached data in {self.cbank}/{ckey} outdated, flushing."
+                        )
+                        self.flush()
                     return False
             return True
         return False
 
-    def get(self):
+    def _get_ckey(self, ckey, flush=True):
+        if not self.exists(flush=flush):
+            return None
+        if self.cbank in self.context and ckey in self.context[self.cbank]:
+            return self.context[self.cbank][ckey]
+        if self.cache is not None:
+            return (
+                self.cache.fetch(self.cbank, ckey) or None
+            )  # account for race conditions
+        raise RuntimeError("This code path should not have been hit.")
+
+    def _store_ckey(self, ckey, value):
+        if self.cache is not None:
+            self.cache.store(self.cbank, ckey, value)
+        if self.cbank not in self.context:
+            self.context[self.cbank] = {}
+        self.context[self.cbank][ckey] = value
+
+    def _flush(self, ckey=None):
+        if self.cache is not None:
+            self.cache.flush(self.cbank, ckey)
+        if self.cbank in self.context:
+            if ckey is None:
+                self.context.pop(self.cbank)
+            else:
+                self.context[self.cbank].pop(ckey, None)
+        # also remove sub-banks from context to mimic cache behavior
+        if ckey is None:
+            for bank in list(self.context):
+                if bank.startswith(self.cbank):
+                    self.context.pop(bank)
+
+
+class VaultCache(CommonCache):
+    """
+    Encapsulates session and other cache backends for a single domain
+    like secret path metadata. Uses a single cache key.
+    """
+
+    def __init__(self, context, cbank, ckey, cache_backend=None, ttl=None):
+        super().__init__(context, cbank, cache_backend=cache_backend, ttl=ttl)
+        self.ckey = ckey
+
+    def exists(self, flush=True):
+        """
+        Check whether data for this domain exists
+        """
+        return self._ckey_exists(self.ckey, flush=flush)
+
+    def get(self, flush=True):
         """
         Return the cached data for this domain or None
         """
-        if not self.exists():
-            return None
-        if self.cbank in self.context and self.ckey in self.context[self.cbank]:
-            return self.context[self.cbank][self.ckey]
-        if self.cache is not None:
-            return self.cache.fetch(self.cbank, self.ckey)
-        raise RuntimeError("This code path should not have been hit.")
+        return self._get_ckey(self.ckey, flush=flush)
 
     def flush(self, cbank=False):
         """
         Flush the cache for this domain
         """
-        if self.cache is not None:
-            self.cache.flush(self.cbank, self.ckey if not cbank else None)
-        if self.cbank in self.context:
-            if cbank:
-                self.context.pop(self.cbank)
-            else:
-                self.context[self.cbank].pop(self.ckey, None)
-        # also remove sub-banks from context to mimic cache behavior
-        if cbank:
-            for bank in list(self.context):
-                if bank.startswith(self.cbank):
-                    self.context.pop(bank)
+        return self._flush(self.ckey if not cbank else None)
 
     def store(self, value):
         """
         Store data for this domain
         """
-        if self.cache is not None:
-            self.cache.store(self.cbank, self.ckey, value)
-        if self.cbank not in self.context:
-            self.context[self.cbank] = {}
-        self.context[self.cbank][self.ckey] = value
+        return self._store_ckey(self.ckey, value)
+
+
+class VaultConfigCache(VaultCache):
+    def __init__(
+        self,
+        context,
+        cbank,
+        ckey,
+        opts,
+        cache_backend_factory=_get_cache_backend,
+        init_config=None,
+    ):  # pylint: disable=super-init-not-called
+        self.context = context
+        self.cbank = cbank
+        self.ckey = ckey
+        self.opts = opts
+        self.config = None
+        self.cache = None
+        self.ttl = None
+        self.cache_backend_factory = cache_backend_factory
+        if init_config is not None:
+            self._load(init_config)
+
+    def exists(self, flush=True):
+        """
+        Check if a configuration has been loaded and cached
+        """
+        if self.config is None:
+            return False
+        return super().exists(flush=flush)
+
+    def get(self, flush=True):
+        """
+        Return the current cached configuration
+        """
+        if self.config is None:
+            return None
+        return super().get(flush=flush)
+
+    def flush(self, cbank=True):
+        """
+        Flush all connection-scoped data
+        """
+        if self.config is None:
+            log.warning(
+                "Tried to flush uninitialized configuration cache. Skipping flush."
+            )
+            return
+        # flush the whole connection-scoped cache by default
+        super().flush(cbank=cbank)
+        self.config = None
+        self.cache = None
+        self.ttl = None
+
+    def _load(self, config):
+        if self.config is not None:
+            if (
+                self.config["cache"]["backend"] != "session"
+                and self.config["cache"]["backend"] != config["cache"]["backend"]
+            ):
+                self.flush()
+        self.config = config
+        self.cache = self.cache_backend_factory(self.config, self.opts)
+        self.ttl = self.config["cache"]["config"]
+
+    def store(self, value):
+        """
+        Reload cache configuration, then store the new Vault configuration
+        """
+        self._load(value)
+        super().store(value)
+
+
+class LeaseCacheMixin:
+    """
+    Mixin for auth and lease cache that checks validity
+    and acts with hydrated objects
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.lease_cls = kwargs.pop("lease_cls", VaultLease)
+        super().__init__(*args, **kwargs)
+
+    def _check_validity(self, lease_data, valid_for=0):
+        lease = self.lease_cls(**lease_data)
+        if lease.is_valid(valid_for):
+            log.debug("Using cached lease.")
+            return lease
+        return None
+
+
+class VaultLeaseCache(LeaseCacheMixin, CommonCache):
+    def get(self, ckey, valid_for=0, flush=True):
+        """
+        Returns valid cached lease data or None.
+        Flushes cache if invalid by default.
+        """
+        data = self._get_ckey(ckey, flush=flush)
+        if data is None:
+            return data
+        ret = self._check_validity(data, valid_for=valid_for)
+        if ret is None and flush:
+            log.debug("Cached lease not valid anymore. Flushing cache.")
+            self._flush(ckey)
+        return ret
+
+    def store(self, ckey, value):
+        """
+        Store lease in cache
+        """
+        try:
+            value = value.to_dict()
+        except AttributeError:
+            pass
+        return self._store_ckey(ckey, value)
+
+    def exists(self, ckey, flush=True):
+        """
+        Check whether data for this domain exists
+        """
+        return self._ckey_exists(ckey, flush=flush)
+
+    def flush(self, ckey=None):
+        """
+        Flush the cache for this domain
+        """
+        return self._flush(ckey)
+
+
+class VaultAuthCache(LeaseCacheMixin, CommonCache):
+    """
+    Implements authentication secret-specific caches. Checks whether
+    the cached secrets are still valid before returning.
+    """
+
+    def __init__(self, context, cbank, ckey, auth_cls, cache_backend=None, ttl=None):
+        super().__init__(
+            context, cbank, lease_cls=auth_cls, cache_backend=cache_backend, ttl=ttl
+        )
+        self.ckey = ckey
+
+    def exists(self, flush=True):
+        """
+        Check whether data for this domain exists
+        """
+        return self._ckey_exists(self.ckey, flush=flush)
+
+    def get(self, valid_for=0, flush=True):
+        """
+        Returns valid cached auth data or None.
+        Flushes cache if invalid by default.
+        """
+        data = self._get_ckey(self.ckey, flush=flush)
+        if data is None:
+            return data
+        ret = self._check_validity(data, valid_for=valid_for)
+        if ret is None and flush:
+            log.debug("Cached auth data not valid anymore. Flushing cache.")
+            self.flush()
+        return ret
+
+    def store(self, value):
+        """
+        Store lease in cache
+        """
+        try:
+            value = value.to_dict()
+        except AttributeError:
+            pass
+        return self._store_ckey(self.ckey, value)
+
+    def flush(self, cbank=None):
+        """
+        Flush the cached auth credentials. If this is a token cache,
+        flushing it will delete the whole session-scoped cache bank by default.
+        """
+        if cbank is None:
+            # flush the whole cbank (session-scope) if this is a token cache by default
+            ckey = None if self.lease_cls is VaultToken else self.ckey
+        else:
+            ckey = None if cbank else self.ckey
+        return self._flush(ckey)
 
 
 def _get_config_cache(opts, context, cbank, ckey):
@@ -1996,129 +2255,7 @@ def _get_config_cache(opts, context, cbank, ckey):
                 # expiration check is done inside the class
                 config = cache.fetch(cbank, ckey)
 
-    return VaultConfigCache(opts, context, cbank, ckey, init_config=config)
-
-
-class VaultConfigCache(VaultCache):
-    def __init__(
-        self, opts, context, cbank, ckey, init_config=None
-    ):  # pylint: disable=super-init-not-called
-        self.opts = opts
-        self.context = context
-        self.cbank = cbank
-        self.ckey = ckey
-        self.config = None
-        self.cache = None
-        self.ttl = None
-        if init_config is not None:
-            self._load(init_config)
-
-    def exists(self):
-        """
-        Check if a configuration has been loaded and cached
-        """
-        if self.config is None:
-            return False
-        return super().exists()
-
-    def get(self):
-        """
-        Return the current cached configuration
-        """
-        if self.config is None:
-            return None
-        return super().get()
-
-    def flush(self):  # pylint: disable=arguments-differ
-        """
-        Flush all connection-scoped data
-        """
-        if self.config is None:
-            log.warning(
-                "Tried to flush uninitialized configuration cache. Skipping flush."
-            )
-            return
-        # flush the whole connection-scoped cache
-        super().flush(cbank=True)
-        self.config = None
-        self.cache = None
-        self.ttl = None
-
-    def _load(self, config):
-        if self.config is not None:
-            if (
-                self.config["cache"]["backend"] != "session"
-                and self.config["cache"]["backend"] != config["cache"]["backend"]
-            ):
-                self.flush()
-        self.config = config
-        self.cache = _get_cache_backend(self.config, self.opts)
-        self.ttl = self.config["cache"]["config"]
-
-    def store(self, value):
-        """
-        Reload cache configuration, then store the new Vault configuration
-        """
-        self._load(value)
-        super().store(value)
-
-
-class VaultLeaseCache(VaultCache):
-    def __init__(
-        self, config, opts, context, cbank, ckey, lease_cls=VaultLease, ttl=None
-    ):
-        super().__init__(config, opts, context, cbank, ckey, ttl=ttl)
-        self.lease_cls = lease_cls
-
-    def get(self, valid_for=0, flush=True):  # pylint: disable=arguments-differ
-        """
-        Returns valid cached authentication data or None.
-        Flushes cache if invalid by default.
-        """
-        if not self.exists():
-            return None
-        data = super().get()
-        lease = self.lease_cls(**data)
-        if lease.is_valid(valid_for):
-            log.debug("Using cached lease.")
-            return lease
-        if flush:
-            log.debug("Cached lease not valid anymore. Flushing cache.")
-            self.flush()
-        return None
-
-    def store(self, value):
-        """
-        Store auth data
-        """
-        try:
-            value = value.to_dict()
-        except AttributeError:
-            pass
-        return super().store(value)
-
-
-class VaultAuthCache(VaultLeaseCache):
-    """
-    Implements authentication secret-specific caches. Checks whether
-    the cached secrets are still valid before returning.
-    """
-
-    def __init__(self, config, opts, context, cbank, ckey, auth_cls, ttl=None):
-        if ttl is None:
-            if config["cache"]["secret"] != "ttl":
-                ttl = config["cache"]["secret"]
-        super().__init__(
-            config, opts, context, cbank, ckey, lease_cls=auth_cls, ttl=ttl
-        )
-
-    def flush(self):  # pylint: disable=arguments-differ
-        """
-        Flush the cached auth credentials. If this is a token cache,
-        flushing it will delete the whole session-scoped cache bank.
-        """
-        # flush the whole cbank (session-scope) if this is a token cache
-        super().flush(cbank=self.lease_cls is VaultToken)
+    return VaultConfigCache(context, cbank, ckey, opts, init_config=config)
 
 
 class VaultTokenAuth:

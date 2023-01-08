@@ -1036,10 +1036,7 @@ class TestBuildAuthdClient:
     def cached(self, token_auth, secret_id_response, request):
         cached_what = request.param
 
-        def _cache(config, opts, context, cbank, ckey, *args):
-            nonlocal cached_what
-            nonlocal secret_id_response
-            nonlocal token_auth
+        def _cache(context, cbank, ckey, *args, **kwargs):
             token = Mock(spec=vault.VaultAuthCache)
             token.get.return_value = None
             approle = Mock(spec=vault.VaultAuthCache)
@@ -1074,8 +1071,8 @@ class TestBuildAuthdClient:
         if test_remote_config["auth"]["method"] == "approle":
             if (
                 not test_remote_config["auth"]["secret_id"]
-                or cached(None, None, None, None, "token").get()
-                or cached(None, None, None, None, "secret_id").get()
+                or cached(None, None, "token").get()
+                or cached(None, None, "secret_id").get()
             ):
                 # In case a secret_id is not necessary or only a cached token is available,
                 # make sure we do not request a new secret ID from the master
@@ -2645,6 +2642,7 @@ def test_vault_lease_creation_time_normalization(creation_time):
         "renewable": False,
         "lease_duration": 1337,
         "creation_time": creation_time,
+        "data": None,
     }
     res = vault.VaultLease(**data)
     assert res.creation_time == 1661188581
@@ -2669,6 +2667,7 @@ def test_vault_lease_is_valid_accounts_for_time(tock, duration, offset, expected
         "lease_duration": duration,
         "creation_time": 0,
         "expire_time": duration,
+        "data": None,
     }
     with patch("salt.utils.vault.time.time", return_value=tock):
         res = vault.VaultLease(**data)
@@ -3109,17 +3108,6 @@ def test_get_cache_bank(connection, salt_runtype, force_local, expected):
 
 
 class TestVaultCache:
-    @pytest.fixture(params=["session", "other"])
-    def config(self, request):
-        return {
-            "cache": {
-                "backend": request.param,
-                "config": 3600,
-                "kv_metadata": "connection",
-                "secret": "ttl",
-            }
-        }
-
     @pytest.fixture
     def cbank(self):
         return "vault/connection"
@@ -3168,76 +3156,96 @@ class TestVaultCache:
         cache_factory.return_value = cache
         return cache
 
+    @pytest.mark.parametrize("config", ["session", "other"])
     def test_get_uncached(self, config, uncached, cbank, ckey):
         """
         Ensure that unavailable cached data is reported as None.
         """
-        cache = vault.VaultCache(config, {}, {}, cbank, ckey)
+        cache = vault.VaultCache(
+            {}, cbank, ckey, cache_backend=uncached if config != "session" else None
+        )
         res = cache.get()
         assert res is None
-        if config["cache"]["backend"] != "session":
+        if config != "session":
             uncached.contains.assert_called_once_with(cbank, ckey)
 
-    def test_get_cached(self, config, context, cached, cbank, ckey, data):
+    def test_get_cached_from_context(self, context, cached, cbank, ckey, data):
         """
         Ensure that cached data in __context__ is respected, regardless
         of cache backend.
         """
-        cache = vault.VaultCache(config, {}, context, cbank, ckey)
+        cache = vault.VaultCache(context, cbank, ckey, cache_backend=cached)
         res = cache.get()
         assert res == data
+        cached.updated.assert_not_called()
         cached.fetch.assert_not_called()
 
-    def test_get_cached_not_outdated(self, config, cached, cbank, ckey, context, data):
+    def test_get_cached_not_outdated(self, cached, cbank, ckey, data):
         """
         Ensure that cached data that is still valid is returned.
         """
-        if config["cache"]["backend"] != "session":
-            context = {}
-        cache = vault.VaultCache(config, {}, context, cbank, ckey, ttl=3600)
+        cache = vault.VaultCache({}, cbank, ckey, cache_backend=cached, ttl=3600)
         res = cache.get()
         assert res == data
-        if config["cache"]["backend"] == "session":
-            cached.updated.assert_not_called()
-            cached.fetch.assert_not_called()
-        else:
-            cached.updated.assert_called_once_with(cbank, ckey)
-            cached.fetch.assert_called_once_with(cbank, ckey)
+        cached.updated.assert_called_once_with(cbank, ckey)
+        cached.fetch.assert_called_once_with(cbank, ckey)
 
-    def test_get_cached_outdated(self, config, cached_outdated, cbank, ckey):
+    def test_get_cached_outdated(self, cached_outdated, cbank, ckey):
         """
         Ensure that cached data that is not valid anymore is flushed
-        and None is returned.
+        and None is returned by default.
         """
-        cache = vault.VaultCache(config, {}, {}, cbank, ckey, ttl=1)
+        cache = vault.VaultCache({}, cbank, ckey, cache_backend=cached_outdated, ttl=1)
         res = cache.get()
         assert res is None
-        if config["cache"]["backend"] != "session":
-            cached_outdated.updated.assert_called_once_with(cbank, ckey)
-            cached_outdated.flush.assert_called_once_with(cbank, ckey)
+        cached_outdated.updated.assert_called_once_with(cbank, ckey)
+        cached_outdated.flush.assert_called_once_with(cbank, ckey)
         cached_outdated.fetch.assert_not_called()
 
+    @pytest.mark.parametrize("config", ["session", "other"])
     def test_flush(self, config, context, cached, cbank, ckey):
         """
         Ensure that flushing clears the context key only and, if
         a cache backend is in use, it is also cleared.
         """
-        cache = vault.VaultCache(config, {}, context, cbank, ckey)
+        cache = vault.VaultCache(
+            context, cbank, ckey, cache_backend=cached if config != "session" else None
+        )
         cache.flush()
         assert context == {cbank: {}}
-        if config["cache"]["backend"] != "session":
+        if config != "session":
             cached.flush.assert_called_once_with(cbank, ckey)
 
+    @pytest.mark.parametrize("config", ["session", "other"])
+    def test_flush_cbank(self, config, context, cached, cbank, ckey):
+        """
+        Ensure that flushing with cbank=True clears the context bank and, if
+        a cache backend is in use, it is also cleared.
+        """
+        cache = vault.VaultCache(
+            context, cbank, ckey, cache_backend=cached if config != "session" else None
+        )
+        cache.flush(cbank=True)
+        assert context == {}
+        if config != "session":
+            cached.flush.assert_called_once_with(cbank, None)
+
     @pytest.mark.parametrize("context", [{}, {"vault/connection": {}}])
+    @pytest.mark.parametrize("config", ["session", "other"])
     def test_store(self, config, context, uncached, cbank, ckey, data):
         """
         Ensure that storing data in cache always updates the context
         and, if a cache backend is in use, it is also stored there.
         """
-        cache = vault.VaultCache(config, {}, context, cbank, ckey)
+        cache = vault.VaultCache(
+            context,
+            cbank,
+            ckey,
+            cache_backend=uncached if config != "session" else None,
+        )
         cache.store(data)
         assert context == {cbank: {ckey: data}}
-        if config["cache"]["backend"] != "session":
+        if config != "session":
             uncached.store.assert_called_once_with(cbank, ckey, data)
 
 
@@ -3341,7 +3349,7 @@ class TestVaultConfigCache:
         previous was not session only, it should be flushed.
         """
         with patch("salt.utils.vault.VaultConfigCache.flush") as flush:
-            cache = vault.VaultConfigCache({}, {}, cbank, ckey, config)
+            cache = vault.VaultConfigCache({}, cbank, ckey, {}, init_config=config)
             assert cache.config == config
             if config is not None:
                 assert cache.ttl == config["cache"]["config"]
@@ -3361,7 +3369,7 @@ class TestVaultConfigCache:
         """
         Ensure exists always evaluates to false when uninitialized
         """
-        cache = vault.VaultConfigCache({}, context, cbank, ckey, config)
+        cache = vault.VaultConfigCache(context, cbank, ckey, {}, init_config=config)
         res = cache.exists()
         assert res is bool(config)
 
@@ -3372,7 +3380,7 @@ class TestVaultConfigCache:
         """
         if config is not None and config["cache"]["backend"] != "session":
             context = {}
-        cache = vault.VaultConfigCache({}, context, cbank, ckey, config)
+        cache = vault.VaultConfigCache(context, cbank, ckey, {}, init_config=config)
         res = cache.get()
         if config is not None:
             assert res == data
@@ -3395,7 +3403,7 @@ class TestVaultConfigCache:
         """
         if config is None:
             context_old = deepcopy(context)
-        cache = vault.VaultConfigCache({}, context, cbank, ckey, config)
+        cache = vault.VaultConfigCache(context, cbank, ckey, {}, init_config=config)
         cache.flush()
         if config is None:
             assert context == context_old
@@ -3425,77 +3433,80 @@ class TestVaultConfigCache:
 
 class TestVaultAuthCache:
     @pytest.fixture
-    def config(self):
-        return {
-            "cache": {
-                "backend": "session",
-                "config": 3600,
-                "secret": "ttl",
-            }
-        }
-
-    @pytest.fixture
     def uncached(self):
-        with patch("salt.utils.vault.VaultCache") as cache:
-            cache.exists.return_value = False
-            cache.get.return_value = None
-            yield cache
+        with patch(
+            "salt.utils.vault.CommonCache._ckey_exists",
+            return_value=False,
+            autospec=True,
+        ):
+            with patch(
+                "salt.utils.vault.CommonCache._get_ckey",
+                return_value=None,
+                autospec=True,
+            ) as get:
+                yield get
 
     @pytest.fixture
     def cached(self, token_auth):
-        with patch("salt.utils.vault.VaultCache.exists", return_value=True):
-            with patch("salt.utils.vault.VaultCache.get") as get:
-                get.return_value = token_auth["auth"]
+        with patch(
+            "salt.utils.vault.CommonCache._ckey_exists",
+            return_value=True,
+            autospec=True,
+        ):
+            with patch(
+                "salt.utils.vault.CommonCache._get_ckey",
+                return_value=token_auth["auth"],
+                autospec=True,
+            ) as get:
                 yield get
 
     @pytest.fixture
     def cached_invalid_flush(self, token_auth, cached):
-        with patch("salt.utils.vault.VaultCache.flush") as flush:
+        with patch("salt.utils.vault.CommonCache._flush", autospec=True) as flush:
             token_auth["auth"]["num_uses"] = 1
             token_auth["auth"]["use_count"] = 1
             cached.return_value = token_auth["auth"]
             yield flush
 
     @pytest.mark.usefixtures("uncached")
-    def test_get_uncached(self, config):
+    def test_get_uncached(self):
         """
         Ensure that unavailable cached data is reported as None.
         """
-        cache = vault.VaultAuthCache(config, {}, {}, None, None, vault.VaultToken)
+        cache = vault.VaultAuthCache({}, None, None, vault.VaultToken)
         res = cache.get()
         assert res is None
 
     @pytest.mark.usefixtures("cached")
-    def test_get_cached(self, config, token_auth):
+    def test_get_cached(self, token_auth):
         """
         Ensure that cached data that is still valid is returned.
         """
-        cache = vault.VaultAuthCache(config, {}, {}, None, None, vault.VaultToken)
-        with patch.object(cache, "exists", MagicMock(return_value=True)):
-            res = cache.get()
+        cache = vault.VaultAuthCache({}, None, None, vault.VaultToken)
+        res = cache.get()
         assert res is not None
         assert res == vault.VaultToken(**token_auth["auth"])
 
-    def test_get_cached_invalid(self, config, cached_invalid_flush):
+    def test_get_cached_invalid(self, cached_invalid_flush):
         """
         Ensure that cached data that is not valid anymore is flushed
         and None is returned.
         """
-        cache = vault.VaultAuthCache(config, {}, {}, None, None, vault.VaultToken)
+        cache = vault.VaultAuthCache({}, None, None, vault.VaultToken)
         res = cache.get()
         assert res is None
         cached_invalid_flush.assert_called_once()
 
-    def test_store(self, config, token_auth):
+    def test_store(self, token_auth):
         """
         Ensure that storing authentication data sends a dictionary
         representation to the store implementation of the parent class.
         """
         token = vault.VaultToken(**token_auth["auth"])
-        cache = vault.VaultAuthCache(config, {}, {}, None, None, vault.VaultToken)
-        with patch("salt.utils.vault.VaultCache.store") as store:
+        cache = vault.VaultAuthCache({}, "cbank", "ckey", vault.VaultToken)
+        with patch("salt.utils.vault.CommonCache._store_ckey") as store:
             cache.store(token)
-            store.assert_called_once_with(token.to_dict())
+            store.assert_called_once_with("ckey", token.to_dict())
 
 
 ############################################
