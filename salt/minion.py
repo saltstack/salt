@@ -3315,12 +3315,9 @@ class Syndic(Minion):
                 minion_privkey_path, salt.serializers.msgpack.serialize(load)
             )
             load["sig"] = sig
-
-        with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
-            ret = yield channel.send(
-                load, timeout=timeout, tries=self.opts["return_retry_tries"]
-            )
-            return ret
+        return self.req_channel.send(
+            load, timeout=timeout, tries=self.opts["return_retry_tries"]
+        )
 
     @salt.ext.tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
@@ -3331,12 +3328,10 @@ class Syndic(Minion):
                 minion_privkey_path, salt.serializers.msgpack.serialize(load)
             )
             load["sig"] = sig
-
-        with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
-            ret = yield channel.send(
-                load, timeout=timeout, tries=self.opts["return_retry_tries"]
-            )
-            raise salt.ext.tornado.gen.Return(ret)
+        ret = yield self.async_req_channel.send(
+            load, timeout=timeout, tries=self.opts["return_retry_tries"]
+        )
+        return ret
 
     def fire_master_syndic_start(self):
         # Send an event to the master that the minion is live
@@ -3367,6 +3362,8 @@ class Syndic(Minion):
 
         # add handler to subscriber
         self.pub_channel.on_recv(self._process_cmd_socket)
+        self.req_channel = salt.channel.client.ReqChannel.factory(self.opts)
+        self.async_req_channel = salt.channel.client.ReqChannel.factory(self.opts)
 
     def _process_cmd_socket(self, payload):
         if payload is not None and payload["enc"] == "aes":
