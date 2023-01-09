@@ -23,6 +23,10 @@ but will be built later on if the community is interested in this module:
 Installation Prerequisites
 --------------------------
 
+This module now prefers the `python_on_whales` library instead of the legacy
+docker library. Please pip install `python_on_whales` to your salt environment.
+This new library requires Docker compose v2 which is a part of docker v2
+
 This execution module requires at least version 1.4.0 of both docker-compose_ and
 Docker_. docker-compose can easily be installed using :py:func:`pip.install
 <salt.modules.pip.install>`:
