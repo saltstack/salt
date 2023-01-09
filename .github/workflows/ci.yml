@@ -544,12 +544,28 @@ jobs:
           path: exitstatus
           if-no-files-found: error
 
+
   build-salt-linux-packages:
     name: Build Salt RPM
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
     uses: ./.github/workflows/build-salt-linux-packages.yml
+
+  build-windows-pkgs:
+    name: Build Windows Packages
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/build-windows-packages.yml
+
+  build-macos-pkgs:
+    name: Build macOS Packages
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/build-macos-packages.yml
+
 
   windows-2016:
     name: Windows 2016
@@ -929,7 +945,8 @@ jobs:
       - pre-commit
       - docs
       - lint
-      - twine-check
+      - build-macos-pkgs
+      - build-windows-pkgs
       - almalinux-8
       - almalinux-9
       - amazonlinux-2
