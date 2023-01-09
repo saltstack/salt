@@ -2810,6 +2810,8 @@ class LeaseStore:
                 ret = self.renew(lease, increment=increment)
             except (VaultNotFoundError, VaultPermissionDeniedError):
                 ret = {}
+            # Do not overwrite data of renewed leases!
+            ret.pop("data", None)
             return lease.with_renewed(**ret)
 
         # Since we can renew leases, do not check for future validity in cache
