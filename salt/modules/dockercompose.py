@@ -966,7 +966,7 @@ def up(path, service_names=None):
     else:
         try:
             if HAS_PYTHON_ON_WHALES:
-                project.compose.up(services=service_names)
+                project.compose.up(services=service_names, detach=True)
             else:
                 result = _get_convergence_plans(project, service_names)
                 ret = project.up(service_names)
