@@ -75,31 +75,34 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
         ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
         ctx.exit(1)
 
-    ctx.info("Sanitizing paths and confirming no path traversal is being used...")
     sanitized_changed_files = {}
-    for key, data in changed_files_contents.items():
-        try:
-            loaded_data = json.loads(data)
-        except ValueError:
-            loaded_data = data
-        if key.endswith("_files"):
-            files = set()
-            for entry in list(loaded_data):
-                if not entry:
-                    loaded_data.remove(entry)
-                try:
-                    entry = REPO_ROOT.joinpath(entry).resolve().relative_to(REPO_ROOT)
-                except ValueError:
-                    ctx.error(
-                        f"While processing the changed files key {key!r}, the "
-                        f"path entry {entry!r} was checked and it's not relative "
-                        "to the repository root."
-                    )
-                    ctx.exit(1)
-                files.add(str(entry))
-            sanitized_changed_files[key] = sorted(files)
-            continue
-        sanitized_changed_files[key] = loaded_data
+    if event_name != "schedule":
+        ctx.info("Sanitizing paths and confirming no path traversal is being used...")
+        for key, data in changed_files_contents.items():
+            try:
+                loaded_data = json.loads(data)
+            except ValueError:
+                loaded_data = data
+            if key.endswith("_files"):
+                files = set()
+                for entry in list(loaded_data):
+                    if not entry:
+                        loaded_data.remove(entry)
+                    try:
+                        entry = (
+                            REPO_ROOT.joinpath(entry).resolve().relative_to(REPO_ROOT)
+                        )
+                    except ValueError:
+                        ctx.error(
+                            f"While processing the changed files key {key!r}, the "
+                            f"path entry {entry!r} was checked and it's not relative "
+                            "to the repository root."
+                        )
+                        ctx.exit(1)
+                    files.add(str(entry))
+                sanitized_changed_files[key] = sorted(files)
+                continue
+            sanitized_changed_files[key] = loaded_data
 
     ctx.info("Writing 'changed-files' to the github outputs file")
     with open(github_output, "a", encoding="utf-8") as wfh:
@@ -130,8 +133,8 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
             wfh.write(f"jobs={json.dumps(jobs)}\n")
         ctx.exit(0)
 
-    # This is a push event
-    ctx.info("Running from a push event")
+    # This is a push or a scheduled event
+    ctx.info(f"Running from a {event_name!r} event")
     if gh_event["repository"]["fork"] is True:
         # This is running on a forked repository, don't run tests
         ctx.info("The push event is on a forked repository")
@@ -142,7 +145,7 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
         ctx.exit(0)
 
     # Not running on a fork, run everything
-    ctx.info("The push event is from the main repository")
+    ctx.info(f"The {event_name!r} event is from the main repository")
     jobs["github-hosted-runners"] = jobs["self-hosted-runners"] = True
     ctx.info("Writing 'jobs' to the github outputs file")
     with open(github_output, "a", encoding="utf-8") as wfh:
