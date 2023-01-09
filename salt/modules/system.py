@@ -19,6 +19,7 @@ from datetime import datetime, timedelta, tzinfo
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.decorators import depends
 
@@ -582,8 +583,9 @@ def set_computer_desc(desc):
 
     hostname_cmd = salt.utils.path.which("hostnamectl")
     if hostname_cmd:
+        verb = "hostname" if salt.utils.systemd.version() >= 249 else "set-hostname"
         result = __salt__["cmd.retcode"](
-            [hostname_cmd, "set-hostname", "--pretty", desc], python_shell=False
+            [hostname_cmd, verb, "--pretty", desc], python_shell=False
         )
         return True if result == 0 else False
 
