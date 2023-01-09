@@ -568,7 +568,7 @@ def minion_conn_cachedir(vault_salt_call_cli):
 
 @pytest.fixture
 def missing_auth_cache(minion_conn_cachedir):
-    token_cachefile = minion_conn_cachedir / "session" / "token.p"
+    token_cachefile = minion_conn_cachedir / "session" / "__token.p"
     secret_id_cachefile = minion_conn_cachedir / "secret_id.p"
     for file in [secret_id_cachefile, token_cachefile]:
         if file.exists():
@@ -851,7 +851,7 @@ class TestAppRoleIssuance:
         ret = vault_salt_run_cli.run("cache.list", "vault/connection/session")
         assert ret.returncode == 0
         assert ret.data
-        assert "token" in ret.data
+        assert "__token" in ret.data
 
     @pytest.mark.usefixtures("approles_synced")
     def test_issue_param_overrides_work(
