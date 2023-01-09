@@ -16,8 +16,6 @@ GRACE_PERIOD = 6
 
 
 def test_ping_speed():
-    if not bundle.HAS_BUNDLE:
-        return
     with PlayGround() as play_ground:
         mn = play_ground["master"]
         start_time = time()
