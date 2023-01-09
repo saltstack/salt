@@ -287,6 +287,21 @@ def _get_kv(opts, context):
     return VaultKV(client, metadata_cache)
 
 
+def get_lease_store(opts, context):
+    """
+    Return an instance of LeaseStore, which can be used
+    to cache leases and handle operations like renewals and revocations.
+    """
+    client, config = get_authd_client(opts, context, get_config=True)
+    session_cbank = _get_cache_bank(opts, session=True)
+    lease_cache = VaultLeaseCache(
+        context,
+        session_cbank + "/leases",
+        cache_backend=_get_cache_backend(config, opts),
+    )
+    return LeaseStore(client, lease_cache)
+
+
 def clear_cache(opts, context, ckey=None, connection=True, session=False):
     """
     Clears connection cache.
@@ -324,19 +339,6 @@ def _get_cache_backend(config, opts):
     # this should usually resolve to localfs as well on minions,
     # but can be overridden by setting cache in the minion config
     return salt.cache.factory(opts)
-
-
-def get_lease_cache(opts, context, ckey):
-    """
-    Return an instance of VaultLeaseCache, which can be used
-    to handle caching-related functions of leases like
-    authentication credentials that are tied to the currently
-    active token.
-    """
-    connection_cbank = _get_cache_bank(opts)
-    config, _ = _get_connection_config(connection_cbank, opts, context)
-    session_cbank = _get_cache_bank(opts, session=True)
-    return VaultLeaseCache(config, opts, context, session_cbank, ckey)
 
 
 def expand_pattern_lists(pattern, **mappings):
@@ -1691,7 +1693,7 @@ class DurationMixin:
         """
         return self.renewable
 
-    def is_valid_for(self, valid_for=0):
+    def is_valid_for(self, valid_for=0, blur=0):
         """
         Checks whether the entity is valid
 
@@ -1701,10 +1703,17 @@ class DurationMixin:
             time string using the same format as Vault does:
             Suffix ``s`` for seconds, ``m`` for minutes, ``h`` for hours, ``d`` for days.
             Defaults to 0.
+
+        blur
+            Allow undercutting ``valid_for`` for this amount of seconds.
+            Defaults to 0.
         """
         if not self.duration:
             return True
-        return self.expire_time > time.time() + timestring_map(valid_for)
+        delta = self.expire_time - time.time() - timestring_map(valid_for)
+        if delta >= 0:
+            return True
+        return abs(delta) <= blur
 
 
 class UseCountMixin:
@@ -1777,19 +1786,6 @@ class BaseLease(DurationMixin, DropInitKwargsMixin):
             data = other
         return data == self.__dict__
 
-    def is_valid(self, valid_for=0):
-        """
-        Checks whether the lease is valid for an amount of time
-
-        valid_for
-            Check whether the token will still be valid in the future.
-            This can be an integer, which will be interpreted as seconds, or a
-            time string using the same format as Vault does:
-            Suffix ``s`` for seconds, ``m`` for minutes, ``h`` for hours, ``d`` for days.
-            Defaults to 0.
-        """
-        return self.is_valid_for(valid_for)
-
     def with_renewed(self, **kwargs):
         """
         Partially update the contained data after lease renewal
@@ -1817,6 +1813,23 @@ class VaultLease(BaseLease):
         self.data = data
         super().__init__(lease_id, **kwargs)
 
+    def is_valid(self, valid_for=0, blur=0):
+        """
+        Checks whether the lease is valid for an amount of time
+
+        valid_for
+            Check whether the token will still be valid in the future.
+            This can be an integer, which will be interpreted as seconds, or a
+            time string using the same format as Vault does:
+            Suffix ``s`` for seconds, ``m`` for minutes, ``h`` for hours, ``d`` for days.
+            Defaults to 0.
+
+        blur
+            Allow undercutting ``valid_for`` for this amount of seconds.
+            Defaults to 0.
+        """
+        return self.is_valid_for(valid_for, blur=blur)
+
 
 class VaultToken(UseCountMixin, AccessorMixin, BaseLease):
     """
@@ -1829,7 +1842,7 @@ class VaultToken(UseCountMixin, AccessorMixin, BaseLease):
             kwargs["lease_id"] = kwargs.pop("client_token")
         super().__init__(**kwargs)
 
-    def is_valid(self, valid_for=0, uses=1):  # pylint: disable=arguments-differ
+    def is_valid(self, valid_for=0, uses=1):
         """
         Checks whether the token is valid for an amount of time and number of uses
 
@@ -1987,7 +2000,7 @@ class CommonCache:
         return False
 
     def _get_ckey(self, ckey, flush=True):
-        if not self.exists(flush=flush):
+        if not self._ckey_exists(ckey, flush=flush):
             return None
         if self.cbank in self.context and ckey in self.context[self.cbank]:
             return self.context[self.cbank][ckey]
@@ -2017,6 +2030,14 @@ class CommonCache:
             for bank in list(self.context):
                 if bank.startswith(self.cbank):
                     self.context.pop(bank)
+
+    def _list(self):
+        ckeys = []
+        if self.cbank in self.context:
+            ckeys += list(self.context[self.cbank])
+        if self.cache is not None:
+            ckeys += self.cache.list(self.cbank)
+        return set(ckeys)
 
 
 class VaultCache(CommonCache):
@@ -2055,6 +2076,10 @@ class VaultCache(CommonCache):
 
 
 class VaultConfigCache(VaultCache):
+    """
+    Handles caching of received configuration
+    """
+
     def __init__(
         self,
         context,
@@ -2119,7 +2144,8 @@ class VaultConfigCache(VaultCache):
 
     def store(self, value):
         """
-        Reload cache configuration, then store the new Vault configuration
+        Reload cache configuration, then store the new Vault configuration,
+        overwriting the existing one.
         """
         self._load(value)
         super().store(value)
@@ -2144,6 +2170,11 @@ class LeaseCacheMixin:
 
 
 class VaultLeaseCache(LeaseCacheMixin, CommonCache):
+    """
+    Handles caching of Vault leases. Supports multiple cache keys.
+    Checks whether cached leases are still valid before returning.
+    """
+
     def get(self, ckey, valid_for=0, flush=True):
         """
         Returns valid cached lease data or None.
@@ -2160,7 +2191,7 @@ class VaultLeaseCache(LeaseCacheMixin, CommonCache):
 
     def store(self, ckey, value):
         """
-        Store lease in cache
+        Store a lease in cache
         """
         try:
             value = value.to_dict()
@@ -2170,15 +2201,22 @@ class VaultLeaseCache(LeaseCacheMixin, CommonCache):
 
     def exists(self, ckey, flush=True):
         """
-        Check whether data for this domain exists
+        Check whether a named lease exists in cache
         """
         return self._ckey_exists(ckey, flush=flush)
 
     def flush(self, ckey=None):
         """
-        Flush the cache for this domain
+        Flush the lease cache or a single lease from the lease cache
         """
         return self._flush(ckey)
+
+    def list(self):
+        """
+        List all cached leases. Does not filter invalid ones,
+        so fetching a reported one might still return None.
+        """
+        return self._list()
 
 
 class VaultAuthCache(LeaseCacheMixin, CommonCache):
@@ -2215,7 +2253,7 @@ class VaultAuthCache(LeaseCacheMixin, CommonCache):
 
     def store(self, value):
         """
-        Store lease in cache
+        Store an auth credential in cache. Will overwrite possibly existing one.
         """
         try:
             value = value.to_dict()
@@ -2696,6 +2734,165 @@ class VaultKV:
                     "Failed to get secret metadata %s: %s", type(err).__name__, err
                 )
         return ret
+
+
+class LeaseStore:
+    """
+    Caches leases and handles lease operations
+    """
+
+    def __init__(self, client, cache):
+        self.client = client
+        self.cache = cache
+
+    def get(
+        self,
+        ckey,
+        valid_for=0,
+        renew=True,
+        renew_increment=None,
+        renew_blur=2,
+        flush=True,
+    ):
+        """
+        Return cached lease or None.
+
+        ckey
+            Cache key the lease has been saved in.
+
+        valid_for
+            Ensure the returned lease is valid for at least this amount of time.
+            This can be an integer, which will be interpreted as seconds, or a
+            time string using the same format as Vault does:
+            Suffix ``s`` for seconds, ``m`` for minutes, ``h`` for hours, ``d`` for days.
+            Defaults to 0.
+
+            .. note::
+
+                This does not take into account token validity, which active leases
+                are bound to as well.
+
+        renew
+            If the lease is still valid, but not valid for ``valid_for``, attempt to
+            renew it. Defaults to true.
+
+        renew_increment
+            When renewing, request the lease to be valid for this amount of time from
+            the current point of time onwards.
+            If unset, will renew the lease by its default validity period and, if
+            the renewed lease does not pass ``valid_for``, will try to renew it
+            by ``valid_for``.
+
+        renew_blur
+            When checking validity after renewal, allow this amount of seconds in leeway
+            to account for latency. Especially important when renew_increment is unset
+            and the default validity period is less than ``valid_for``.
+            Defaults to 2.
+
+        flush
+            If the lease is invalid or not valid for ``valid_for`` and renewals
+            are disabled or impossible, flush the cache. Defaults to true.
+        """
+        if renew_increment is not None and timestring_map(valid_for) > timestring_map(
+            renew_increment
+        ):
+            raise VaultInvocationError(
+                "When renew_increment is set, it must be at least valid_for to make sense"
+            )
+
+        def check_flush():
+            if flush:
+                self.cache.flush(ckey)
+            return None
+
+        def renew_lease(increment):
+            try:
+                ret = self.renew(lease, increment=increment)
+            except (VaultNotFoundError, VaultPermissionDeniedError):
+                ret = {}
+            return lease.with_renewed(**ret)
+
+        # Since we can renew leases, do not check for future validity in cache
+        lease = self.cache.get(ckey, flush=flush)
+        if lease is None or lease.is_valid(valid_for):
+            return lease
+        if not renew:
+            return check_flush()
+        lease = renew_lease(renew_increment)
+        if not lease.is_valid(valid_for, blur=renew_blur):
+            if renew_increment is not None:
+                # valid_for cannot possibly be respected
+                return check_flush()
+            # Maybe valid_for is greater than the default validity period, so check if
+            # the lease can be renewed by valid_for
+            lease = renew_lease(valid_for)
+            if not lease.is_valid(valid_for, blur=renew_blur):
+                return check_flush()
+        # Ensure the new validity is cached
+        self.cache.store(ckey, lease)
+        return lease
+
+    def list(self):
+        """
+        List all cached leases.
+        """
+        return self.cache.list()
+
+    def lookup(self, lease):
+        """
+        Lookup lease meta information.
+
+        lease
+            A lease ID or VaultLease object to look up.
+        """
+        endpoint = "sys/leases/lookup"
+        payload = {"lease_id": str(lease)}
+        return self.client.post(endpoint, payload=payload)
+
+    def renew(self, lease, increment=None):
+        """
+        Renew a lease.
+
+        lease
+            A lease ID or VaultLease object to renew.
+
+        increment
+            Request the lease to be valid for this amount of time from the current
+            point of time onwards. Can also be used to reduce the validity period.
+            The server might not honor this increment.
+            Can be an integer (seconds) or a time string like ``1h``. Optional.
+        """
+        endpoint = "sys/leases/renew"
+        payload = {"lease_id": str(lease)}
+        if increment is not None:
+            payload["increment"] = int(timestring_map(increment))
+        return self.client.post(endpoint, payload=payload)
+
+    def revoke(self, lease, sync=False):
+        """
+        Revoke a lease.
+
+        lease
+            A lease ID or VaultLease object to revoke.
+
+        sync
+            Only return once the lease has been revoked. Defaults to false.
+        """
+        endpoint = "sys/leases/renew"
+        payload = {"lease_id": str(lease), "sync": sync}
+        return self.client.post(endpoint, payload)
+
+    def store(self, ckey, lease):
+        """
+        Cache a lease.
+
+        ckey
+            The cache key the lease should be saved in.
+
+        lease
+            A lease ID or VaultLease object to store.
+        """
+        return self.cache.store(ckey, lease)
 
 
 ####################################################################################

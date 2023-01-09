@@ -9,7 +9,7 @@ import requests
 
 import salt.exceptions
 import salt.utils.vault as vault
-from tests.support.mock import ANY, MagicMock, Mock, patch
+from tests.support.mock import ANY, MagicMock, Mock, call, patch
 
 
 @pytest.fixture
@@ -3785,6 +3785,188 @@ class TestKVV2:
         res = kvv2.list(self.path)
         kvv2.client.list.assert_called_once_with(self.paths["metadata"])
         assert res == ["foo"]
+
+
+############################################
+# LeaseStore tests
+############################################
+
+
+class TestLeaseStore:
+    @pytest.fixture(autouse=True, params=[0])
+    def time_stopped(self, request):
+        with patch(
+            "salt.utils.vault.time.time", autospec=True, return_value=request.param
+        ):
+            yield
+
+    @pytest.fixture
+    def lease(self):
+        return {
+            "id": "database/creds/testrole/abcd",
+            "lease_id": "database/creds/testrole/abcd",
+            "renewable": True,
+            "duration": 1337,
+            "creation_time": 0,
+            "expire_time": 1337,
+            "data": {
+                "username": "test",
+                "password": "test",
+            },
+        }
+
+    @pytest.fixture
+    def lease_renewed_response(self):
+        return {
+            "lease_id": "database/creds/testrole/abcd",
+            "renewable": True,
+            "lease_duration": 2000,
+        }
+
+    @pytest.fixture
+    def lease_renewed_extended_response(self):
+        return {
+            "lease_id": "database/creds/testrole/abcd",
+            "renewable": True,
+            "lease_duration": 3000,
+        }
+
+    @pytest.fixture
+    def store(self):
+        client = Mock(spec=vault.AuthenticatedVaultClient)
+        cache = Mock(spec=vault.VaultLeaseCache)
+        cache.exists.return_value = False
+        cache.get.return_value = None
+        return vault.LeaseStore(client, cache)
+
+    @pytest.fixture
+    def store_valid(self, store, lease, lease_renewed_response):
+        store.cache.exists.return_value = True
+        store.cache.get.return_value = vault.VaultLease(**lease)
+        store.client.post.return_value = lease_renewed_response
+        return store
+
+    def test_get_uncached_or_invalid(self, store):
+        """
+        Ensure uncached or invalid leases are reported as None.
+        """
+        ret = store.get("test")
+        assert ret is None
+        store.client.post.assert_not_called()
+        store.cache.flush.assert_not_called()
+        store.cache.store.assert_not_called()
+
+    def test_get_cached_valid(self, store_valid, lease):
+        """
+        Ensure valid leases are returned without extra behavior.
+        """
+        ret = store_valid.get("test")
+        assert ret == lease
+        store_valid.client.post.assert_not_called()
+        store_valid.cache.flush.assert_not_called()
+        store_valid.cache.store.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "valid_for", [2000, pytest.param(2002, id="2002_renewal_leeway")]
+    )
+    def test_get_valid_renew_default_period(self, store_valid, lease, valid_for):
+        """
+        Ensure renewals are attempted by default, cache is updated accordingly
+        and validity checks after renewal allow for a little leeway to account
+        for latency.
+        """
+        ret = store_valid.get("test", valid_for=valid_for)
+        lease["duration"] = lease["expire_time"] = 2000
+        assert ret == lease
+        store_valid.client.post.assert_called_once_with(
+            "sys/leases/renew", payload={"lease_id": lease["id"]}
+        )
+        store_valid.cache.flush.assert_not_called()
+        store_valid.cache.store.assert_called_once_with("test", ret)
+
+    def test_get_valid_renew_increment(self, store_valid, lease):
+        """
+        Ensure renew_increment is honored when renewing.
+        """
+        ret = store_valid.get("test", valid_for=1400, renew_increment=2000)
+        lease["duration"] = lease["expire_time"] = 2000
+        assert ret == lease
+        store_valid.client.post.assert_called_once_with(
+            "sys/leases/renew", payload={"lease_id": lease["id"], "increment": 2000}
+        )
+        store_valid.cache.flush.assert_not_called()
+        store_valid.cache.store.assert_called_once_with("test", ret)
+
+    def test_get_valid_renew_increment_insufficient(self, store_valid, lease):
+        """
+        Ensure that when renewal_increment is set, valid_for is respected and that
+        a second renewal using valid_for as increment is not attempted when the
+        Vault server does not allow renewals for at least valid_for.
+        """
+        ret = store_valid.get("test", valid_for=2100, renew_increment=3000)
+        assert ret is None
+        store_valid.client.post.assert_called_once_with(
+            "sys/leases/renew", payload={"lease_id": lease["id"], "increment": 3000}
+        )
+        store_valid.cache.flush.assert_called_once_with("test")
+        store_valid.cache.store.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "valid_for", [3000, pytest.param(3002, id="3002_renewal_leeway")]
+    )
+    def test_get_valid_renew_valid_for(
+        self,
+        store_valid,
+        lease,
+        valid_for,
+        lease_renewed_response,
+        lease_renewed_extended_response,
+    ):
+        """
+        Ensure that, if renew_increment was not set and the default period
+        does not yield valid_for, a second renewal is attempted by valid_for.
+        There should be some leeway by default to account for latency.
+        """
+        store_valid.client.post.side_effect = (
+            lease_renewed_response,
+            lease_renewed_extended_response,
+        )
+        ret = store_valid.get("test", valid_for=valid_for)
+        lease["duration"] = lease["expire_time"] = 3000
+        assert ret == lease
+        store_valid.client.post.assert_has_calls(
+            (
+                call("sys/leases/renew", payload={"lease_id": lease["id"]}),
+                call(
+                    "sys/leases/renew",
+                    payload={"lease_id": lease["id"], "increment": valid_for},
+                ),
+            )
+        )
+        store_valid.cache.flush.assert_not_called()
+        store_valid.cache.store.assert_called_once_with("test", ret)
+
+    def test_get_valid_not_renew(self, store_valid):
+        """
+        Currently valid leases should not be returned if they undercut
+        valid_for and cache should be flushed by default.
+        """
+        ret = store_valid.get("test", valid_for=2000, renew=False)
+        assert ret is None
+        store_valid.cache.flush.assert_called_once_with("test")
+        store_valid.client.post.assert_not_called()
+        store_valid.cache.store.assert_not_called()
+
+    def test_get_valid_not_flush(self, store_valid):
+        """
+        Currently valid leases should not be returned if they undercut
+        valid_for and cache should not be flushed if requested so.
+        """
+        ret = store_valid.get("test", valid_for=2000, flush=False, renew=False)
+        assert ret is None
+        store_valid.cache.flush.assert_not_called()
+        store_valid.client.post.assert_not_called()
+        store_valid.cache.store.assert_not_called()
 
 
 ############################################
