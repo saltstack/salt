@@ -1904,6 +1904,8 @@ class Login(LowDataAdapter):
 
             if token["eauth"] == "django" and "^model" in eauth:
                 perms = token["auth_list"]
+            elif token["eauth"] == "rest" and "auth_list" in token:
+                perms = token["auth_list"]
             else:
                 perms = salt.netapi.sum_permissions(token, eauth)
                 perms = salt.netapi.sorted_permissions(perms)

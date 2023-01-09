@@ -1,0 +1,1 @@
+Import StrictVersion and LooseVersion from setuptools.distutils.verison or setuptools._distutils.version, if first not available

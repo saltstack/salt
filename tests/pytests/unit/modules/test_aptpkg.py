@@ -781,13 +781,6 @@ def test_mod_repo_match():
                                 )
 
 
-@patch("salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")]))
-@patch("os.path.getsize", MagicMock(return_value=123456))
-@patch("os.path.getctime", MagicMock(return_value=1234567890.123456))
-@patch(
-    "fnmatch.filter",
-    MagicMock(return_value=["/var/cache/apt/archive/test_package.rpm"]),
-)
 def test_list_downloaded():
     """
     Test downloaded packages listing.
@@ -803,8 +796,14 @@ def test_list_downloaded():
             }
         }
     }
-
-    with patch.dict(
+    with patch(
+        "salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")])
+    ), patch("os.path.getsize", MagicMock(return_value=123456)), patch(
+        "os.path.getctime", MagicMock(return_value=1234567890.123456)
+    ), patch(
+        "fnmatch.filter",
+        MagicMock(return_value=["/var/cache/apt/archive/test_package.rpm"]),
+    ), patch.dict(
         aptpkg.__salt__,
         {
             "lowpkg.bin_pkg_info": MagicMock(
@@ -971,7 +970,7 @@ def test__expand_repo_def():
     # Valid source
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
-        os_name="debian", lsb_distrib_codename="stretch", repo=repo, file=source_file
+        os_name="debian", os_codename="stretch", repo=repo, file=source_file
     )
 
     assert isinstance(sanitized, dict)
@@ -984,7 +983,7 @@ def test__expand_repo_def():
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian",
-        lsb_distrib_codename="stretch",
+        os_codename="stretch",
         repo=repo,
         file=source_file,
         architectures="amd64",
@@ -1010,7 +1009,7 @@ def test__expand_repo_def_cdrom():
     # Valid source
     repo = "# deb cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ bullseye main\n"
     sanitized = aptpkg._expand_repo_def(
-        os_name="debian", lsb_distrib_codename="bullseye", repo=repo, file=source_file
+        os_name="debian", os_codename="bullseye", repo=repo, file=source_file
     )
 
     assert isinstance(sanitized, dict)
@@ -1023,7 +1022,7 @@ def test__expand_repo_def_cdrom():
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian",
-        lsb_distrib_codename="stretch",
+        os_codename="stretch",
         repo=repo,
         file=source_file,
         architectures="amd64",
@@ -1184,13 +1183,14 @@ def test_call_apt_default():
         )
 
 
-@patch("salt.utils.systemd.has_scope", MagicMock(return_value=True))
 def test_call_apt_in_scope():
     """
     Call apt within the scope.
     :return:
     """
-    with patch.dict(
+    with patch(
+        "salt.utils.systemd.has_scope", MagicMock(return_value=True)
+    ), patch.dict(
         aptpkg.__salt__,
         {"cmd.run_all": MagicMock(), "config.get": MagicMock(return_value=True)},
     ):
@@ -1292,7 +1292,6 @@ def test_services_need_restart_checkrestart_missing():
             aptpkg.services_need_restart()
 
 
-@patch("salt.utils.path.which_bin", Mock(return_value="/usr/sbin/checkrestart"))
 def test_services_need_restart():
     """
     Test that checkrestart output is parsed correctly
@@ -1304,8 +1303,9 @@ PACKAGES: 8
 SERVICE:rsyslog,385,/usr/sbin/rsyslogd
 SERVICE:cups-daemon,390,/usr/sbin/cupsd
     """
-
-    with patch.dict(aptpkg.__salt__, {"cmd.run_stdout": Mock(return_value=cr_output)}):
+    with patch(
+        "salt.utils.path.which_bin", Mock(return_value="/usr/sbin/checkrestart")
+    ), patch.dict(aptpkg.__salt__, {"cmd.run_stdout": Mock(return_value=cr_output)}):
         assert sorted(aptpkg.services_need_restart()) == [
             "cups-daemon",
             "rsyslog",

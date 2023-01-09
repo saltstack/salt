@@ -32,7 +32,7 @@ def test_file_absent_should_use_force_mode_for_file_remove(fake_remove, mock_mod
 
 
 # TODO: This file.matches test should be a functional test instead. For now this is probably good enough -W. Werner, 2020-09-15
-def test_file_tidied_should_use_force_mode_for_file_remove(fake_remove):
+def test_file_tidied_for_file_remove(fake_remove):
     patch_is_dir = patch("os.path.isdir", autospec=True, return_value=True)
     patch_os_walk = patch(
         "os.walk",
@@ -42,15 +42,14 @@ def test_file_tidied_should_use_force_mode_for_file_remove(fake_remove):
     patch_stat = patch("os.stat", autospec=True)
     with patch_os_walk, patch_is_dir, patch_stat as fake_stat:
         fake_stat.return_value.st_atime = 1600356711.1166897
+        fake_stat.return_value.st_mode = 33188
         fake_stat.return_value.st_size = 9001  # It's over 9000!
 
         file.tidied("/some/directory/tree")
 
     call_root_file1 = "some root{}file1".format(os.sep)
     call_root_file2 = "some root{}file2".format(os.sep)
-    fake_remove.assert_has_calls(
-        [call(call_root_file1, force=True), call(call_root_file2, force=True)]
-    )
+    fake_remove.assert_has_calls([call(call_root_file1), call(call_root_file2)])
 
 
 # TODO: This file.copy test should be a functional test instead. For now this is probably good enough -W. Werner, 2020-09-15

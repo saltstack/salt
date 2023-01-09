@@ -12,9 +12,9 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Setup Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: '3.8'
 
@@ -24,10 +24,12 @@ jobs:
       run: |
         pip install --upgrade pip setuptools wheel
         pip install twine>=3.4.1
+        # pip install build     # add build when implement pyproject.toml
 
     - name: Create Source Tarball
       run: |
         python3 setup.py sdist
+        # TBD python3 -m build --sdist  # replace with build when implement pyproject.toml
 
     - name: Twine check
       run: |

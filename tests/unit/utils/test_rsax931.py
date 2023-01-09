@@ -10,6 +10,8 @@ import os
 import platform
 import sys
 
+import pytest
+
 import salt.utils.platform
 
 # salt libs
@@ -22,7 +24,7 @@ from salt.utils.rsax931 import (
 from tests.support.mock import patch
 
 # salt testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class RSAX931Test(TestCase):
@@ -121,7 +123,7 @@ class RSAX931Test(TestCase):
         msg = verifier.verify(RSAX931Test.hello_world_sig)
         self.assertEqual(RSAX931Test.hello_world, msg)
 
-    @skipIf(not salt.utils.platform.is_windows(), "Host OS is not Windows.")
+    @pytest.mark.skip_unless_on_windows
     def test_find_libcrypto_win32(self):
         """
         Test _find_libcrypto on Windows hosts.
@@ -129,10 +131,7 @@ class RSAX931Test(TestCase):
         lib_path = _find_libcrypto()
         self.assertEqual(lib_path, "libeay32")
 
-    @skipIf(
-        not getattr(sys, "frozen", False) and not salt.utils.platform.is_smartos(),
-        "Host OS is not SmartOS.",
-    )
+    @pytest.mark.skip_unless_on_smartos
     def test_find_libcrypto_smartos(self):
         """
         Test _find_libcrypto on a SmartOS host.
@@ -144,7 +143,7 @@ class RSAX931Test(TestCase):
             )
         )
 
-    @skipIf(not salt.utils.platform.is_sunos(), "Host OS is not Solaris-like.")
+    @pytest.mark.skip_unless_on_sunos
     def test_find_libcrypto_sunos(self):
         """
         Test _find_libcrypto on a Solaris-like host.
@@ -157,7 +156,7 @@ class RSAX931Test(TestCase):
                 break
         self.assertTrue(passed)
 
-    @skipIf(not salt.utils.platform.is_aix(), "Host OS is not IBM AIX.")
+    @pytest.mark.skip_unless_on_aix
     def test_find_libcrypto_aix(self):
         """
         Test _find_libcrypto on an IBM AIX host.

@@ -83,7 +83,7 @@ def test_exit_status_correct_usage(salt_master, proxy_minion_id, salt_cli):
     """
     factory = salt_master.salt_proxy_minion_daemon(
         proxy_minion_id,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         defaults={"transport": salt_master.config["transport"]},
     )
     factory.start()

@@ -33,7 +33,11 @@ def configure_loader_modules():
         "salt.runners.vault._get_token_create_url",
         MagicMock(return_value="http://fake_url"),
     )
-    with sig_valid_mock, token_url_mock:
+    cached_policies = patch(
+        "salt.runners.vault._get_policies_cached",
+        Mock(return_value=["saltstack/minion/test-minion", "saltstack/minions"]),
+    )
+    with sig_valid_mock, token_url_mock, cached_policies:
         yield {
             vault: {
                 "__opts__": {
@@ -109,7 +113,7 @@ def test_generate_token():
         assert "error" in result
         assert result["error"] == "no reason"
 
-    with patch("salt.runners.vault._get_policies", MagicMock(return_value=[])):
+    with patch("salt.runners.vault._get_policies_cached", MagicMock(return_value=[])):
         result = vault.generate_token("test-minion", "signature")
         assert isinstance(result, dict)
         assert "error" in result

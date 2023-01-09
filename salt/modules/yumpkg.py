@@ -50,7 +50,6 @@ try:
 except ImportError:
     HAS_YUM = False
 
-
 log = logging.getLogger(__name__)
 
 __HOLD_PATTERN = r"[\w+]+(?:[.-][^-]+)*"
@@ -527,7 +526,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     """
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", True))
-    if len(names) == 0:
+    if not names:
         return ""
 
     options = _get_options(**kwargs)
@@ -1415,7 +1414,7 @@ def install(
         If set to False it prevents package name normalization more strict way
         than ``normalize`` set to ``False`` does.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3006.0
 
     diff_attr:
         If a list of package attributes is specified, returned value will
@@ -1474,7 +1473,7 @@ def install(
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     diff_attr = kwargs.get("diff_attr")
@@ -2131,7 +2130,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     split_arch : True
         If set to False it prevents package name normalization by removing arch.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3006.0
 
 
     Returns a dict containing the changes.

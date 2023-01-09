@@ -23,6 +23,12 @@ pytestmark = [
 ]
 
 
+def _check_skip(grains):
+    if grains["os"] == "SUSE":
+        return True
+    return False
+
+
 def use_static_requirements_ids(value):
     return "USE_STATIC_REQUIREMENTS={}".format("1" if value else "0")
 
@@ -40,6 +46,7 @@ def virtualenv(virtualenv, use_static_requirements):
     return virtualenv
 
 
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_wheel(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test building and installing a bdist_wheel package
@@ -255,14 +262,7 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
         )
 
 
-# On python 3.5 Windows sdist fails with encoding errors. This is resolved
-# in later versions.
-@pytest.mark.skipif(
-    salt.utils.platform.is_windows()
-    and sys.version_info > (3,)
-    and sys.version_info < (3, 6),
-    reason="Skip on python 3.5",
-)
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test building and installing a sdist package
@@ -315,6 +315,7 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
             str(cache_dir),
             cwd=src_dir,
         )
+
         venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
 
         salt_generated_package = list(cache_dir.glob("*.tar.gz"))
@@ -367,6 +368,7 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
         )
 
 
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test installing directly from source

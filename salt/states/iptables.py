@@ -245,6 +245,8 @@ Example rules for IPSec policy:
     output of iptables-save. This may have unintended consequences on legacy
     releases of ``iptables``.
 """
+import copy
+
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 
@@ -432,6 +434,8 @@ def append(name, table="filter", family="ipv4", **kwargs):
         ret["comment"] = "\n".join(comments)
         return ret
 
+    if "__agg__" in kwargs:
+        del kwargs["__agg__"]
     for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in kwargs:
             del kwargs[ignore]
@@ -892,7 +896,7 @@ def mod_aggregate(low, chunks, running):
                 continue
 
             if chunk not in rules:
-                rules.append(chunk)
+                rules.append(copy.deepcopy(chunk))
                 chunk["__agg__"] = True
 
     if rules:

@@ -12,6 +12,7 @@ import glob
 import os
 import platform
 import sys
+import warnings
 from ctypes.util import find_library
 from datetime import datetime
 
@@ -425,7 +426,6 @@ class DownloadWindowsDlls(Command):
             for fname in (
                 "openssl/1.1.1k/ssleay32.dll",
                 "openssl/1.1.1k/libeay32.dll",
-                "libsodium/1.0.18/libsodium.dll",
             ):
                 # See if the library is already on the system
                 if find_library(fname):
@@ -820,8 +820,6 @@ class SaltDistribution(distutils.dist.Distribution):
         * salt-call
         * salt-cp
         * salt-minion
-        * salt-syndic
-        * spm
 
     When packaged for salt-ssh, the following scripts should be installed:
         * salt-call
@@ -833,6 +831,9 @@ class SaltDistribution(distutils.dist.Distribution):
         package:
             * salt-cloud
             * salt-run
+
+    To build all binaries on Windows set the SALT_BUILD_ALL_BINS environment
+    variable to `1`
 
     Under *nix, all scripts should be installed
     """
@@ -942,17 +943,17 @@ class SaltDistribution(distutils.dist.Distribution):
         with open(SALT_LONG_DESCRIPTION_FILE, encoding="utf-8") as f:
             self.long_description = f.read()
         self.long_description_content_type = "text/x-rst"
-        self.python_requires = ">=3.5"
+        self.python_requires = ">=3.6"
         self.classifiers = [
             "Programming Language :: Python",
             "Programming Language :: Cython",
             "Programming Language :: Python :: 3",
             "Programming Language :: Python :: 3 :: Only",
-            "Programming Language :: Python :: 3.5",
             "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
             "Development Status :: 5 - Production/Stable",
             "Environment :: Console",
             "Intended Audience :: Developers",
@@ -1058,26 +1059,22 @@ class SaltDistribution(distutils.dist.Distribution):
     def _property_data_files(self):
         # Data files common to all scenarios
         data_files = [
-            ("share/man/man1", ["doc/man/salt-call.1", "doc/man/salt-run.1"]),
+            ("share/man/man1", ["doc/man/salt-call.1"]),
             ("share/man/man7", ["doc/man/salt.7"]),
         ]
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             data_files[0][1].append("doc/man/salt-ssh.1")
-            if IS_WINDOWS_PLATFORM:
+            if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
                 return data_files
             data_files[0][1].append("doc/man/salt-cloud.1")
 
             return data_files
 
-        if IS_WINDOWS_PLATFORM:
+        if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
             data_files[0][1].extend(
                 [
-                    "doc/man/salt-api.1",
                     "doc/man/salt-cp.1",
-                    "doc/man/salt-key.1",
                     "doc/man/salt-minion.1",
-                    "doc/man/salt-syndic.1",
-                    "doc/man/spm.1",
                 ]
             )
             return data_files
@@ -1092,6 +1089,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 "doc/man/salt-master.1",
                 "doc/man/salt-minion.1",
                 "doc/man/salt-proxy.1",
+                "doc/man/salt-run.1",
                 "doc/man/spm.1",
                 "doc/man/salt.1",
                 "doc/man/salt-ssh.1",
@@ -1143,23 +1141,19 @@ class SaltDistribution(distutils.dist.Distribution):
     @property
     def _property_scripts(self):
         # Scripts common to all scenarios
-        scripts = ["scripts/salt-call", "scripts/salt-run"]
+        scripts = ["scripts/salt-call"]
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             scripts.append("scripts/salt-ssh")
-            if IS_WINDOWS_PLATFORM:
+            if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
                 return scripts
             scripts.extend(["scripts/salt-cloud", "scripts/spm"])
             return scripts
 
-        if IS_WINDOWS_PLATFORM:
+        if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
             scripts.extend(
                 [
-                    "scripts/salt-api",
                     "scripts/salt-cp",
-                    "scripts/salt-key",
                     "scripts/salt-minion",
-                    "scripts/salt-syndic",
-                    "scripts/spm",
                 ]
             )
             return scripts
@@ -1175,6 +1169,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 "scripts/salt-master",
                 "scripts/salt-minion",
                 "scripts/salt-proxy",
+                "scripts/salt-run",
                 "scripts/salt-ssh",
                 "scripts/salt-syndic",
                 "scripts/spm",
@@ -1192,25 +1187,21 @@ class SaltDistribution(distutils.dist.Distribution):
         # console scripts common to all scenarios
         scripts = [
             "salt-call = salt.scripts:salt_call",
-            "salt-run = salt.scripts:salt_run",
         ]
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             scripts.append("salt-ssh = salt.scripts:salt_ssh")
-            if IS_WINDOWS_PLATFORM:
+            if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
                 return {"console_scripts": scripts}
             scripts.append("salt-cloud = salt.scripts:salt_cloud")
             entrypoints["console_scripts"] = scripts
             return entrypoints
 
-        if IS_WINDOWS_PLATFORM:
+        if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
             scripts.extend(
                 [
-                    "salt-api = salt.scripts:salt_api",
                     "salt-cp = salt.scripts:salt_cp",
-                    "salt-key = salt.scripts:salt_key",
                     "salt-minion = salt.scripts:salt_minion",
-                    "salt-syndic = salt.scripts:salt_syndic",
-                    "spm = salt.scripts:salt_spm",
+                    "salt-pip = salt.scripts:salt_pip",
                 ]
             )
             entrypoints["console_scripts"] = scripts
@@ -1226,9 +1217,12 @@ class SaltDistribution(distutils.dist.Distribution):
                 "salt-key = salt.scripts:salt_key",
                 "salt-master = salt.scripts:salt_master",
                 "salt-minion = salt.scripts:salt_minion",
+                "salt-run = salt.scripts:salt_run",
                 "salt-ssh = salt.scripts:salt_ssh",
                 "salt-syndic = salt.scripts:salt_syndic",
                 "spm = salt.scripts:salt_spm",
+                "salt-proxy = salt.scripts:salt_proxy",
+                "salt-pip = salt.scripts:salt_pip",
             ]
         )
         entrypoints["console_scripts"] = scripts
@@ -1377,4 +1371,7 @@ class SaltDistribution(distutils.dist.Distribution):
 
 
 if __name__ == "__main__":
+    warnings.warn(
+        "Warning: distutils is deprecated and shall be removed in Python 3.12, advise migrate to using setuptools"
+    )
     setup(distclass=SaltDistribution)
