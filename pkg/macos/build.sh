@@ -103,7 +103,7 @@
 # Variables
 #-------------------------------------------------------------------------------
 SRC_DIR=$(git rev-parse --show-toplevel)
-SCRIPT_DIR="$SRC_DIR/pkg/osx"
+SCRIPT_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
 CPU_ARCH=$(uname -m)
 
 #-------------------------------------------------------------------------------

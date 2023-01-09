@@ -59,9 +59,8 @@ VERSION=${VERSION#"v"}
 
 CPU_ARCH="$(uname -m)"
 SRC_DIR="$(git rev-parse --show-toplevel)"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
 BUILD_DIR="$SCRIPT_DIR/build"
-PKG_RESOURCES=$SRC_DIR/pkg/osx
 CMD_OUTPUT=$(mktemp -t cmd.log)
 
 #-------------------------------------------------------------------------------
@@ -152,14 +151,14 @@ printf -- "-%.0s" {1..80}; printf "\n"
 if [[ ! -e "$SRC_DIR/.git" ]] && [[ ! -e "$SRC_DIR/scripts/salt" ]]; then
     echo "This directory doesn't appear to be a git repository."
     echo "The macOS build process needs some files from a Git checkout of Salt."
-    echo "Run this script from the 'pkg/osx' directory of the Git checkout."
+    echo "Run this script from the 'pkg/macos' directory of the Git checkout."
     exit 1
 fi
 
 #-------------------------------------------------------------------------------
 # Add Title, Description, Version and CPU Arch to distribution.xml
 #-------------------------------------------------------------------------------
-DIST="$PKG_RESOURCES/distribution.xml"
+DIST="$SCRIPT_DIR/distribution.xml"
 if [ -f "$DIST" ]; then
     _msg "Removing existing distribution.xml"
     rm -f "$DIST"
@@ -171,7 +170,7 @@ if [ -f "$DIST" ]; then
 fi
 
 _msg "Creating distribution.xml"
-cp "$PKG_RESOURCES/distribution.xml.dist" "$DIST"
+cp "$SCRIPT_DIR/distribution.xml.dist" "$DIST"
 if [ -f "$DIST" ]; then
     _success
 else
