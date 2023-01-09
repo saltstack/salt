@@ -1,0 +1,52 @@
+---
+name: Build MacOS Packages
+
+on:
+  - workflow_call
+
+jobs:
+
+  build-pkgs:
+    name: Build
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+    runs-on:
+      - macos-12
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Get Salt Version
+        run: |
+          SALT_VERSION=$(python3 salt/version.py)
+          echo "SALT_VERSION=$SALT_VERSION" >> $GITHUB_ENV
+
+      - name: Build Package
+        run: |
+          sudo -E pkg/macos/build.sh ${{ env.SALT_VERSION }}
+
+      - name: Upload ${{ matrix.arch }} Package
+        uses: actions/upload-artifact@v3
+        with:
+          name: macOS ${{ matrix.arch }} Package
+          path: pkg/macos/build/*
+          if-no-files-found: error
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
