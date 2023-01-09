@@ -544,6 +544,13 @@ jobs:
           path: exitstatus
           if-no-files-found: error
 
+  build-salt-linux-packages:
+    name: Build Salt RPM
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/build-salt-linux-packages.yml
+
   windows-2016:
     name: Windows 2016
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
