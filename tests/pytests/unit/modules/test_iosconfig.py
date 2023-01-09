@@ -194,7 +194,7 @@ def test_merge_tree(running_config, merge_config):
 
 
 def test_merge_text(running_config, merge_config):
-    extected_merge_text = textwrap.dedent(
+    expected_merge_text = textwrap.dedent(
         """\
         interface GigabitEthernet1
          ip address dhcp
@@ -218,7 +218,7 @@ def test_merge_text(running_config, merge_config):
     merge_text = iosconfig.merge_text(
         initial_config=running_config, merge_config=merge_config
     )
-    assert merge_text == extected_merge_text
+    assert merge_text == expected_merge_text
 
 
 def test_merge_diff(running_config, merge_config):
