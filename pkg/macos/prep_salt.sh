@@ -24,10 +24,9 @@
 # Variables
 #-------------------------------------------------------------------------------
 SRC_DIR="$(git rev-parse --show-toplevel)"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
 BUILD_DIR="$SCRIPT_DIR/build"
 CONF_DIR="$BUILD_DIR/etc/salt"
-PKG_RESOURCES=$SRC_DIR/pkg/osx
 CMD_OUTPUT=$(mktemp -t cmd.log)
 
 #-------------------------------------------------------------------------------
@@ -117,7 +116,7 @@ printf -- "-%.0s" {1..80}; printf "\n"
 if [[ ! -e "$SRC_DIR/.git" ]] && [[ ! -e "$SRC_DIR/scripts/salt" ]]; then
     echo "This directory doesn't appear to be a git repository."
     echo "The macOS build process needs some files from a Git checkout of Salt."
-    echo "Run this script from the 'pkg/osx' directory of the Git checkout."
+    echo "Run this script from the 'pkg/macos' directory of the Git checkout."
     exit 1
 fi
 
@@ -127,7 +126,7 @@ fi
 SALT_DIR="$BUILD_DIR/opt/salt"
 if ! [ -f "$SALT_DIR/salt-config.sh" ]; then
     _msg "Staging Salt config script"
-    cp "$PKG_RESOURCES/scripts/salt-config.sh" "$SALT_DIR/"
+    cp "$SCRIPT_DIR/scripts/salt-config.sh" "$SALT_DIR/"
     if [ -f "$SALT_DIR/salt-config.sh" ]; then
         _success
     else
@@ -158,7 +157,7 @@ for i in "${ITEMS[@]}"; do
     FILE="$BUILD_DIR/Library/LaunchDaemons/com.saltstack.salt.$i.plist"
     if ! [ -f "$FILE" ]; then
         _msg "Copying $i service definition"
-        cp "$PKG_RESOURCES/scripts/com.saltstack.salt.$i.plist" "$FILE"
+        cp "$SCRIPT_DIR/scripts/com.saltstack.salt.$i.plist" "$FILE"
         if [ -f "$FILE" ]; then
             _success
         else
