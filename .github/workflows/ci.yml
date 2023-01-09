@@ -124,6 +124,7 @@ jobs:
           echo '${{ steps.process-changed-files.outputs.jobs }}' | jq -C '.'
 
       - name: Check Collected Changed Files
+        if: ${{ github.event_name != 'schedule' }}
         run:
           echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
 
