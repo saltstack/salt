@@ -7,8 +7,6 @@ import textwrap
 import pytest
 
 import salt.modules.iosconfig as iosconfig
-
-# Import Salt modules
 from salt.utils.odict import OrderedDict
 
 
@@ -78,7 +76,7 @@ def merge_config():
 
 @pytest.fixture
 def configure_loader_modules():
-    return {}
+    return {iosconfig: {}}
 
 
 def test_tree(running_config):
