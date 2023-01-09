@@ -125,6 +125,26 @@ if ( ! (Test-Path -Path $WEBCACHE_DIR) ) {
 }
 
 #-------------------------------------------------------------------------------
+# Ensure WIX environment variable is set, if not refresh and check again
+#-------------------------------------------------------------------------------
+# If wix is installed in the same session, the WIX environment variable won't be
+# defined. If it still fails, WIX may not be installed, or the WIX environment
+# variable may not be defined.
+if ( ! "$env:WIX" ) {
+    Write-Host "Updating environment variables (wix): " -NoNewline
+    foreach ($level in "Machine", "User") {
+        $vars = [Environment]::GetEnvironmentVariables($level).GetEnumerator()
+        $vars | ForEach-Object { $_ } | Set-Content -Path { "Env:$( $_.Name )" }
+    }
+    if ( "$env:WIX" ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+}
+
+#-------------------------------------------------------------------------------
 # Caching VC++ Runtimes
 #-------------------------------------------------------------------------------
 
