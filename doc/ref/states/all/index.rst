@@ -319,6 +319,7 @@ state modules
     user
     vagrant
     vault
+    vault_db
     vbox_guest
     victorops
     virt

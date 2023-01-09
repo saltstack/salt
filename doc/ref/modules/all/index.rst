@@ -493,6 +493,7 @@ execution modules
     vagrant
     varnish
     vault
+    vault_db
     vbox_guest
     vboxmanage
     vcenter

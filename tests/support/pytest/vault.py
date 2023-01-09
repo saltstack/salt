@@ -36,7 +36,7 @@ def _vault_cmd(cmd, textinput=None, raw=False):
         return ret
     if ret.returncode != 0:
         log.debug("Failed to run vault %s:\n%s", " ".join(cmd), ret)
-        raise RuntimeError()
+        raise RuntimeError(ret.stdout)
     return ret
 
 
@@ -224,12 +224,64 @@ def vault_delete_secret(path, metadata=False):
     return True
 
 
-def vault_list(path):
+def vault_delete(path):
     try:
-        ret = _vault_cmd(["list", "-format=json", path])
-    except RuntimeError:
-        pytest.fail(f"Failed to list path at `{path}`")
+        ret = _vault_cmd(["delete", "-format=json", path])
+    except RuntimeError as err:
+        pytest.fail(f"Failed to delete path at `{path}`: {err}")
+    try:
+        return json.loads(ret.stdout) or True
+    except json.decoder.JSONDecodeError:
+        return True
+
+
+def vault_list(path):
+    ret = _vault_cmd(["list", "-format=json", path], raw=True)
+    if ret.returncode != 0:
+        if ret.returncode == 2:
+            return []
+        log.debug("Failed to list secrets at `%s`:\n%s", path, ret)
+        pytest.fail(f"Failed to list secrets at `{path}`")
     return json.loads(ret.stdout)
+
+
+def vault_read(path):
+    try:
+        ret = _vault_cmd(["read", "-format=json", path])
+    except RuntimeError as err:
+        pytest.fail(f"Failed to read path at `{path}`: {err}")
+    return json.loads(ret.stdout)
+
+
+def vault_write(path, *args, **kwargs):
+    kwargs_ = [f"{k}={v}" for k, v in kwargs.items()]
+    cmd = (
+        ["write", "-format=json"]
+        + (["-f"] if not (args or kwargs) else [])
+        + [path]
+        + list(args)
+        + kwargs_
+    )
+    try:
+        ret = _vault_cmd(cmd)
+    except RuntimeError as err:
+        pytest.fail(f"Failed to write to path at `{path}`: {err}")
+    try:
+        return json.loads(ret.stdout) or True
+    except json.decoder.JSONDecodeError:
+        return True
+
+
+def vault_revoke(lease_id, prefix=False):
+    cmd = ["lease", "revoke"]
+    if prefix:
+        cmd += ["-prefix"]
+    cmd += [lease_id]
+    try:
+        _vault_cmd(cmd)
+    except RuntimeError as err:
+        pytest.fail(f"Failed to revoke lease `{lease_id}`: {err}")
+    return True
 
 
 @pytest.fixture(scope="module")
