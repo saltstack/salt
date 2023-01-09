@@ -1362,6 +1362,49 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertTrue(diff[pkg_name]["old"])
                     self.assertFalse(diff[pkg_name]["new"])
 
+    def test_remove_ptf(self):
+        """
+        Test ptf package removal
+        :return:
+        """
+
+        class ListPackages:
+            def __init__(self):
+                self._packages = ["ptf-1234", "ptf-1239"]
+                self._pkgs = {
+                    "ptf-1234": "1",
+                    "ptf-1239": "2",
+                    "ptf-1999": "2.obsolete",
+                }
+
+            def __call__(self, root=None, includes=None):
+                pkgs = self._pkgs.copy()
+                for target in self._packages:
+                    if self._pkgs.get(target):
+                        del self._pkgs[target]
+
+                return pkgs
+
+        parsed_targets = [{"ptf-1234": None, "ptf-1239": None}, None]
+        cmd_out = {"retcode": 0, "stdout": "", "stderr": ""}
+
+        # If config.get starts being used elsewhere, we'll need to write a
+        # side_effect function.
+        patches = {
+            "cmd.run_all": MagicMock(return_value=cmd_out),
+            "pkg_resource.parse_targets": MagicMock(return_value=parsed_targets),
+            "pkg_resource.stringify": MagicMock(),
+            "config.get": MagicMock(return_value=True),
+        }
+
+        with patch.dict(zypper.__salt__, patches):
+            with patch("salt.modules.zypperpkg.list_pkgs", ListPackages()):
+                diff = zypper.remove(name="ptf-1234,ptf-1239")
+                for pkg_name in ["ptf-1234", "ptf-1239"]:
+                    self.assertTrue(diff.get(pkg_name))
+                    self.assertTrue(diff[pkg_name]["old"])
+                    self.assertFalse(diff[pkg_name]["new"])
+
     def test_repo_value_info(self):
         """
         Tests if repo info is properly parsed.

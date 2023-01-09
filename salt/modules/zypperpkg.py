@@ -2133,6 +2133,75 @@ def purge(name=None, pkgs=None, root=None, **kwargs):  # pylint: disable=unused-
     return _uninstall(name=name, pkgs=pkgs, root=root)
 
 
+def removeptf(
+    name=None, pkgs=None, root=None, **kwargs
+):  # pylint: disable=unused-argument
+    """
+    .. versionadded:: 3006
+
+    Remove a PTF package and replace it with the latest available update version
+    This will call a ``zypper -n removeptf``
+
+    name
+        The name of the PTF package to be deleted.
+
+
+    Multiple Package Options:
+
+    pkgs
+        A list of PTF packages to delete. Must be passed as a python list. The
+        ``name`` parameter will be ignored if this option is passed.
+
+    root
+        Operate on a different root directory.
+
+
+    Returns a dict containing the changes.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.removeptf <package name>
+        salt '*' pkg.removeptf <package1>,<package2>,<package3>
+        salt '*' pkg.removeptf pkgs='["ptf-1", "ptf-2"]'
+    """
+    try:
+        pkg_params = __salt__["pkg_resource.parse_targets"](name, pkgs)[0]
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
+    includes = _find_types(pkg_params.keys())
+    old = list_pkgs(root=root, includes=includes)
+    targets = []
+    for target in pkg_params:
+        if target in old:
+            targets.append(target)
+    if not targets:
+        return {}
+
+    systemd_scope = _systemd_scope()
+
+    errors = []
+    while targets:
+        __zypper__(systemd_scope=systemd_scope, root=root).call(
+            "removeptf", *targets[:500]
+        )
+        targets = targets[500:]
+
+    _clean_cache()
+    new = list_pkgs(root=root, includes=includes)
+    ret = salt.utils.data.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            "Problem encountered removing ptf package(s)",
+            info={"errors": errors, "changes": ret},
+        )
+
+    return ret
+
+
 def list_holds(pattern=None, full=True, root=None, **kwargs):
     """
     .. versionadded:: 3005
