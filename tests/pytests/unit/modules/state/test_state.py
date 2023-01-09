@@ -1274,3 +1274,41 @@ def test_event():
                 if _expected in x.args[0]:
                     found = True
             assert found is True
+
+
+@pytest.mark.parametrize(
+    "max_queue,call_count,ret_value",
+    [(0, 2, True), (3, 2, True), (2, 0, False), (1, 0, False)],
+)
+def test__wait(max_queue, call_count, ret_value):
+    mock_jid = 8675309
+    mock_sleep = MagicMock()
+    mock_prior = MagicMock(
+        side_effect=[
+            ["one", "two"],
+            ["one"],
+            [],
+        ]
+    )
+    with patch("time.sleep", mock_sleep), patch(
+        "salt.modules.state._prior_running_states", mock_prior
+    ):
+        ret = state._wait(mock_jid, max_queue=max_queue)
+        assert mock_sleep.call_count == call_count
+        assert ret is ret_value
+
+
+@pytest.mark.parametrize(
+    "queue,wait_called,ret_value",
+    [(True, True, None), (False, False, True), (1, True, None)],
+)
+def test__check_queue(queue, wait_called, ret_value):
+    mock_wait = MagicMock()
+    with patch("salt.modules.state._wait", mock_wait), patch(
+        "salt.modules.state.running", MagicMock(return_value=True)
+    ), patch.dict(state.__context__, {"retcode": "banana"}):
+        ret = state._check_queue(queue, {})
+        assert mock_wait.called is wait_called
+        assert ret is ret_value
+        if ret_value is True:
+            assert state.__context__["retcode"] == 1

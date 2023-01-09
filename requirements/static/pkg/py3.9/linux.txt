@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements/static/pkg/py3.9/linux.txt requirements/base.txt requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-certifi==2022.5.18.1
+certifi==2022.12.7
     # via requests
 cffi==1.14.6
     # via cryptography

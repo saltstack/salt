@@ -697,7 +697,7 @@ def collection_create(
     authdb=None,
 ):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     Create a collection in the specified database.
 
@@ -752,7 +752,7 @@ def collection_drop(
     authdb=None,
 ):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     Drop a collection in the specified database.
 
@@ -806,7 +806,7 @@ def collections_list(
     authdb=None,
 ):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     List the collections available in the specified database.
 

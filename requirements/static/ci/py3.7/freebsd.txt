@@ -350,7 +350,7 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.24.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2022.12.7
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -440,7 +440,7 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.5
     # via gitpython
-gitpython==3.1.12
+gitpython==3.1.30 ; python_version >= "3.7"
     # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
@@ -650,7 +650,7 @@ oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
-packaging==19.2
+packaging==21.3
     # via pytest
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
@@ -704,7 +704,7 @@ pyopenssl==19.1.0
     # via
     #   -r requirements/static/pkg/freebsd.in
     #   etcd3-py
-pyparsing==2.4.5
+pyparsing==3.0.9
     # via
     #   junos-eznc
     #   packaging
@@ -723,7 +723,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories[docker]==1.0.0rc22 ; sys_platform != "win32" and python_version >= "3.7"
+pytest-salt-factories[docker]==1.0.0rc21 ; sys_platform != "win32"
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.6.0
     # via pytest-salt-factories
@@ -848,7 +848,6 @@ six==1.16.0
     #   more-itertools
     #   msrestazure
     #   ncclient
-    #   packaging
     #   paramiko
     #   pynacl
     #   pyopenssl
@@ -887,6 +886,7 @@ typing-extensions==3.10.0.0
     # via
     #   aiohttp
     #   async-timeout
+    #   gitpython
     #   importlib-metadata
     #   pytest-shell-utilities
     #   pytest-system-statistics

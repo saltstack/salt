@@ -13,9 +13,16 @@ pytestmark = [
 ]
 
 
+def _check_skip(grains):
+    if grains["os"] == "MacOS":
+        return True
+    return False
+
+
 @SKIP_INITIAL_PHOTONOS_FAILURES
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_issue_1959_virtualenv_runas(tmp_path_world_rw, state_tree, states):
     with pytest.helpers.create_account(create_group=True) as account:
 

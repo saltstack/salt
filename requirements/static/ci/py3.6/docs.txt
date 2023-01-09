@@ -361,7 +361,7 @@ cachetools==4.2.2
     #   python-telegram-bot
 cassandra-driver==3.25.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2022.12.7
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -438,10 +438,6 @@ genshi==0.7.5
     # via -r requirements/static/ci/common.in
 geomet==0.2.1.post1
     # via cassandra-driver
-gitdb==4.0.7
-    # via gitpython
-gitpython==3.1.18
-    # via -r requirements/static/ci/common.in
 google-auth==2.0.1
     # via kubernetes
 hglib==2.6.1
@@ -645,7 +641,7 @@ oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
-packaging==20.9
+packaging==21.3
     # via
     #   ansible-core
     #   sphinx
@@ -695,7 +691,7 @@ pyopenssl==19.1.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==2.4.7
+pyparsing==3.0.9
     # via
     #   junos-eznc
     #   packaging
@@ -824,8 +820,6 @@ slack-bolt==1.15.5
     # via -r requirements/static/ci/linux.in
 slack-sdk==3.19.5
     # via slack-bolt
-smmap==4.0.0
-    # via gitdb
 snowballstemmer==2.1.0
     # via sphinx
 sphinx==3.5.2
@@ -864,7 +858,6 @@ typing-extensions==3.10.0.0
     # via
     #   aiohttp
     #   async-timeout
-    #   gitpython
     #   importlib-metadata
     #   yarl
 tzlocal==3.0

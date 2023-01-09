@@ -1,0 +1,6 @@
+conf/master /etc/salt
+pkg/common/salt-master.service /lib/systemd/system
+pkg/common/fish-completions/salt-master.fish /usr/share/fish/vendor_completions.d
+pkg/common/fish-completions/salt-key.fish /usr/share/fish/vendor_completions.d
+pkg/common/fish-completions/salt.fish /usr/share/fish/vendor_completions.d
+pkg/common/fish-completions/salt-run.fish /usr/share/fish/vendor_completions.d

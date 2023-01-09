@@ -353,7 +353,7 @@ cachetools==4.2.2
     #   python-telegram-bot
 cassandra-driver==3.25.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2022.12.7
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -426,7 +426,7 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.7
     # via gitpython
-gitpython==3.1.18
+gitpython==3.1.30 ; python_version >= "3.7"
     # via -r requirements/static/ci/common.in
 google-auth==2.0.1
     # via kubernetes
@@ -618,7 +618,7 @@ oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
-packaging==21.0
+packaging==21.3
     # via ansible-core
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
@@ -673,7 +673,7 @@ pyopenssl==20.0.1
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==2.4.7
+pyparsing==3.0.9
     # via
     #   junos-eznc
     #   packaging
