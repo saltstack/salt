@@ -658,7 +658,7 @@ def stop(path, service_names=None):
                 project.compose.stop(services=service_names)
             else:
                 project.stop(service_names)
-            if debug:
+            if debug and not HAS_PYTHON_ON_WHALES:
                 for container in project.containers(stopped=True):
                     if (
                         service_names is None
@@ -704,7 +704,7 @@ def pause(path, service_names=None):
                 project.compose.pause(services=service_names)
             else:
                 project.pause(service_names)
-            if debug:
+            if debug and not HAS_PYTHON_ON_WHALES:
                 for container in project.containers():
                     if (
                         service_names is None
@@ -750,7 +750,7 @@ def unpause(path, service_names=None):
                 project.compose.unpause(services=service_names)
             else:
                 project.unpause(service_names)
-            if debug:
+            if debug and not HAS_PYTHON_ON_WHALES:
                 for container in project.containers():
                     if (
                         service_names is None
@@ -796,7 +796,7 @@ def start(path, service_names=None):
                 project.compose.start(services=service_names)
             else:
                 project.start(service_names)
-            if debug:
+            if debug and not HAS_PYTHON_ON_WHALES:
                 for container in project.containers():
                     if (
                         service_names is None
@@ -842,7 +842,7 @@ def kill(path, service_names=None):
                 project.compose.kill(services=service_names)
             else:
                 project.kill(service_names)
-            if debug:
+            if debug and not HAS_PYTHON_ON_WHALES:
                 for container in project.containers(stopped=True):
                     if (
                         service_names is None
@@ -875,13 +875,15 @@ def rm(path, service_names=None):
         salt myminion dockercompose.rm /path/where/docker-compose/stored
         salt myminion dockercompose.rm /path/where/docker-compose/stored '[janus]'
     """
-    # TODO: needs adjustment for python on whales
     project = __load_project(path)
     if isinstance(project, dict):
         return project
     else:
         try:
-            project.remove_stopped(service_names)
+            if HAS_PYTHON_ON_WHALES:
+                project.compose.rm(services=service_names)
+            else:
+                project.remove_stopped(service_names)
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -905,33 +907,37 @@ def ps(path):
 
     project = __load_project(path)
     result = {}
-    # TODO: needs adjustment for python on whales
+    # TODO: needs output adjustment for python on whales
     if isinstance(project, dict):
         return project
     else:
-        if USE_FILTERCLASS:
-            containers = sorted(
-                project.containers(None, stopped=True)
-                + project.containers(None, OneOffFilter.only),
-                key=attrgetter("name"),
-            )
+        if HAS_PYTHON_ON_WHALES:
+            containers = project.compose.ps()
+            result = containers
         else:
-            containers = sorted(
-                project.containers(None, stopped=True)
-                + project.containers(None, one_off=True),
-                key=attrgetter("name"),
-            )
-        for container in containers:
-            command = container.human_readable_command
-            if len(command) > 30:
-                command = "{} ...".format(command[:26])
-            result[container.name] = {
-                "id": container.id,
-                "name": container.name,
-                "command": command,
-                "state": container.human_readable_state,
-                "ports": container.human_readable_ports,
-            }
+            if USE_FILTERCLASS:
+                containers = sorted(
+                    project.containers(None, stopped=True)
+                    + project.containers(None, OneOffFilter.only),
+                    key=attrgetter("name"),
+                )
+            else:
+                containers = sorted(
+                    project.containers(None, stopped=True)
+                    + project.containers(None, one_off=True),
+                    key=attrgetter("name"),
+                )
+            for container in containers:
+                command = container.human_readable_command
+                if len(command) > 30:
+                    command = "{} ...".format(command[:26])
+                result[container.name] = {
+                    "id": container.id,
+                    "name": container.name,
+                    "command": command,
+                    "state": container.human_readable_state,
+                    "ports": container.human_readable_ports,
+                }
     return __standardize_result(True, "Listing docker-compose containers", result, None)
 
 
@@ -965,7 +971,7 @@ def up(path, service_names=None):
             else:
                 result = _get_convergence_plans(project, service_names)
                 ret = project.up(service_names)
-            if debug:
+            if debug and not HAS_PYTHON_ON_WHALES:
                 for container in ret:
                     if (
                         service_names is None
