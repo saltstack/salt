@@ -2902,16 +2902,24 @@ def _uninstall(
         name, version, pkgs, normalize, ignore_epoch=ignore_epoch, **kwargs
     )
     if isinstance(targets, dict) and "result" in targets:
-        return targets
+        if action == "purge":
+            # found nothing, reset state return obj to empty list and check for removed to be purged
+            targets = []
+        else:
+            return targets
     elif not isinstance(targets, list):
-        return {
-            "name": name,
-            "changes": {},
-            "result": False,
-            "comment": "An error was encountered while checking targets: {}".format(
-                targets
-            ),
-        }
+        if action == "purge":
+            # found nothing, reset state return obj to empty list and check for removed to be purged
+            targets = []
+        else:
+            return {
+                "name": name,
+                "changes": {},
+                "result": False,
+                "comment": "An error was encountered while checking targets: {}".format(
+                    targets
+                ),
+            }
     if action == "purge":
         old_removed = __salt__["pkg.list_pkgs"](
             versions_as_list=True, removed=True, **kwargs
