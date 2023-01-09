@@ -12,10 +12,11 @@ jobs:
         arch:
           - x86_64
           - aarch64
-    runs-on:
-      - self-hosted
-      - linux
-      - ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+
+    container:
+      image: centos/python-38-centos7:latest
+
     steps:
       - uses: actions/checkout@v3
 
