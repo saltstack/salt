@@ -25,6 +25,10 @@ def default_config():
             "token": "test-token",
             "role_id": "test-role-id",
             "secret_id": None,
+            "token_lifecycle": {
+                "minimum_ttl": 10,
+                "renew_increment": None,
+            },
         },
         "cache": {
             "backend": "session",
@@ -538,6 +542,10 @@ def test_get_config_token(
     expected = {
         "auth": {
             "method": "token",
+            "token_lifecycle": {
+                "minimum_ttl": 10,
+                "renew_increment": None,
+            },
         },
         "cache": config("cache"),
         "server": config("server"),
@@ -609,6 +617,10 @@ def test_get_config_approle(
             "approle_name": "test-minion",
             "method": "approle",
             "secret_id": config("issue:approle:params:bind_secret_id"),
+            "token_lifecycle": {
+                "minimum_ttl": 10,
+                "renew_increment": None,
+            },
         },
         "cache": config("cache"),
         "server": config("server"),

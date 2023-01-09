@@ -276,6 +276,7 @@ def get_config(minion_id, signature, impersonated_by_master=False, issue_params=
         minion_config = {
             "auth": {
                 "method": _config("issue:type"),
+                "token_lifecycle": _config("auth:token_lifecycle"),
             },
             "cache": _config("cache"),
             "server": _config("server"),
