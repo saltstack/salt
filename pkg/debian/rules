@@ -20,7 +20,8 @@ override_dh_auto_build:
 	build/venv/bin/relenv fetch
 	build/venv/bin/relenv toolchain fetch
 	build/venv/bin/relenv create build/salt
-	RELENV_PIP_DIR=yes build/salt/bin/pip3 install /salt
+	RELENV_PIP_DIR=yes build/salt/bin/pip3 install .
+	for path in $$(find build/salt \( -type d -name '__pycache__' -o -type f -name '*.pyc' -o -type f -name '*.pyo' \)); do rm -rf $$path; done
 
 # dh_auto_install tries to invoke distutils causing failures.
 override_dh_auto_install:
