@@ -112,12 +112,14 @@ publisher_acl:
   bob:
     - '*1':
       - test.*
+      - file.touch
 
 external_auth:
   pam:
     bob:
       - '*1':
         - test.*
+        - file.touch
 
 nodegroups:
   second_string: "minion_*2"
@@ -139,12 +141,14 @@ publisher_acl:
   bob:
     - '*1':
       - test.*
+      - file.touch
 
 external_auth:
   pam:
     bob:
       - '*1':
         - test.*
+        - file.touch
         """
         )
 
@@ -491,6 +495,23 @@ def eauth_blocked_minions(request):
     yield request.param
 
 
+@pytest.fixture
+def docker_minions(
+    docker_minion,
+    docker_minion_a1,
+    docker_minion_a2,
+    docker_minion_b1,
+    docker_minion_b2,
+):
+    yield [
+        docker_minion,
+        docker_minion_a1,
+        docker_minion_a2,
+        docker_minion_b1,
+        docker_minion_b2,
+    ]
+
+
 @pytest.fixture(
     params=[
         "test.arg good_argument",
@@ -678,14 +699,15 @@ def test_eauth_user_should_be_able_to_target_valid_minions_with_valid_command(
 
 
 def test_eauth_user_should_not_be_able_to_target_invalid_minions(
-    eauth_blocked_minions, docker_master
+    eauth_blocked_minions, docker_master, docker_minions
 ):
     res = docker_master.run(
-        f"salt -a pam --username bob --password '' {eauth_blocked_minions} test.arg hello -t 20 --out=json",
+        f"salt -a pam --username bob --password '' {eauth_blocked_minions} file.touch /tmp/fun.txt -t 20 --out=json",
     )
-    results = json_output_to_dict(res.stdout)
-    assert "Authorization error occurred" in res.stdout
-    assert sorted(results) == []
+    assert "Authorization error occurred." == res.data or res.data is None
+    for minion in docker_minions:
+        res = minion.run("ls /tmp/fun.txt")
+        assert "ls: /tmp/fun.txt: No such file or directory" == res.stderr.strip()
 
 
 @pytest.mark.skip(reason="Not sure about blocklist")
