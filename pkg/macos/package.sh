@@ -44,25 +44,17 @@
 #         export DEV_INSTALL_CERT="Developer ID Installer: Salt Stack, Inc. (AB123ABCD1)"
 #
 ################################################################################
+
 #-------------------------------------------------------------------------------
 # Variables
 #-------------------------------------------------------------------------------
-# Get/Set Version
-if [ "$1" == "" ]; then
-    VERSION=$(git describe)
-else
-    VERSION=$1
-fi
-
-# Strip the v from the beginning
-VERSION=${VERSION#"v"}
 
 CPU_ARCH="$(uname -m)"
 SRC_DIR="$(git rev-parse --show-toplevel)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST_XML="$SCRIPT_DIR/distribution.xml"
 BUILD_DIR="$SCRIPT_DIR/build"
-CMD_OUTPUT=$(mktemp -t cmd.log)
+CMD_OUTPUT=$(mktemp -t cmd_log.XXX)
 
 #-------------------------------------------------------------------------------
 # Functions
@@ -118,6 +110,10 @@ while true; do
         -h | --help )
             _usage
             exit 0
+            ;;
+        -n | --nightly )
+            NIGHTLY=1
+            shift
             ;;
         -*)
             echo "Invalid Option: $1"
@@ -242,21 +238,36 @@ fi
 
 
 _msg "Building the product package (signed)"
-FILE="salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
-if productbuild --resources="$SCRIPT_DIR/pkg-resources" \
-                --distribution="$DIST_XML" \
-                --package-path="$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg" \
-                --version="$VERSION" \
-                --sign "$DEV_INSTALL_CERT" \
-                --timestamp \
-                "$FILE" > "$CMD_OUTPUT" 2>&1; then
-    _success
+if [ -z ${NIGHTLY} ]; then
+    # This is not a nightly build, so we want to sign it
+    FILE="salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
+    if productbuild --resources="$SCRIPT_DIR/pkg-resources" \
+                    --distribution="$DIST_XML" \
+                    --package-path="$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg" \
+                    --version="$VERSION" \
+                    --sign "$DEV_INSTALL_CERT" \
+                    --timestamp \
+                    "$FILE" > "$CMD_OUTPUT" 2>&1; then
+        _success
+    else
+        _failure
+    fi
 else
-    _failure
+    # This is a nightly build, so we don't sign it
+    FILE="salt-$VERSION-py3-$CPU_ARCH-unsigned.pkg"
+    if productbuild --resources="$SCRIPT_DIR/pkg-resources" \
+                    --distribution="$DIST_XML" \
+                    --package-path="$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg" \
+                    --version="$VERSION" \
+                    "$FILE" > "$CMD_OUTPUT" 2>&1; then
+        _success
+    else
+        _failure
+    fi
 fi
 
 #-------------------------------------------------------------------------------
-# Script Start
+# Script Completed
 #-------------------------------------------------------------------------------
 printf -- "-%.0s" {1..80}; printf "\n"
 echo "Building Salt Package Completed"
