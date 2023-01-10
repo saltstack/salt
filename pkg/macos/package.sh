@@ -71,6 +71,7 @@ _usage() {
      echo ""
      echo "  -h, --help      this message"
      echo "  -v, --version   version of Salt display in the package"
+     echo "  -n, --nightly   don't sign the package"
      echo ""
      echo "  To build the Salt package:"
      echo "      example: $0 3006.1-1"
@@ -115,17 +116,28 @@ while true; do
             NIGHTLY=1
             shift
             ;;
-        -*)
+        -v | --version )
+            shift
+            VERSION="$1"
+            shift
+            ;;
+        -* )
             echo "Invalid Option: $1"
             echo ""
             _usage
             exit 1
             ;;
         * )
+            VERSION="$1"
             shift
             ;;
     esac
 done
+
+if [ -z "$VERSION" ]; then
+    VERSION=$(git describe)
+fi
+VERSION=${VERSION#"v"}
 
 #-------------------------------------------------------------------------------
 # Delete temporary files on exit
