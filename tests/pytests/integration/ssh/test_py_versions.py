@@ -4,6 +4,7 @@ Integration tests for salt-ssh py_versions
 import logging
 import shutil
 import subprocess
+import time
 
 import pytest
 from saltfactories.utils import random_string
@@ -120,13 +121,24 @@ def salt_ssh_roster_file(ssh_port, ssh_keys, salt_master):
 def salt_ssh_cli(salt_master, salt_ssh_roster_file, ssh_keys, ssh_docker_container):
     assert salt_master.is_running()
     assert ssh_docker_container.is_running()
-    return salt_master.salt_ssh_cli(
+    ret = salt_master.salt_ssh_cli(
         timeout=180,
         roster_file=salt_ssh_roster_file,
         target_host="localhost",
         client_key=str(ssh_keys.priv_path),
         base_script_args=["--ignore-host-keys"],
     )
+    # Ensure the container is up and communicating
+    # This reduces flakyness
+    start = time.time() + 15
+    while time.time() < start:
+        verify = ret.run("test.ping", minion_tgt="pyvertest")
+        if verify.returncode == 0:
+            break
+        time.sleep(2)
+    else:
+        pytest.fail("Could not establish connection with container")
+    return ret
 
 
 @pytest.mark.slow_test
