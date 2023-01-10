@@ -221,7 +221,7 @@ if ( $CICD ) {
     $KeywordArguments["CICD"] = $true
 }
 
-powershell -file "$SCRIPT_DIR\nsis\build_pkg.ps1" @KeywordArguments
+& "$SCRIPT_DIR\nsis\build_pkg.ps1" @KeywordArguments
 
 if ( ! $? ) {
     Write-Host "Failed to build NSIS package"
@@ -232,7 +232,7 @@ if ( ! $? ) {
 # Build MSI Package
 #-------------------------------------------------------------------------------
 
-powershell -file "$SCRIPT_DIR\msi\build_pkg.ps1" @KeywordArguments
+& "$SCRIPT_DIR\msi\build_pkg.ps1" @KeywordArguments
 
 if ( ! $? ) {
     Write-Host "Failed to build NSIS package"
