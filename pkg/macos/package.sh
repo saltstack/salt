@@ -237,8 +237,8 @@ else
 fi
 
 
-_msg "Building the product package (signed)"
 if [ -z ${NIGHTLY} ]; then
+    _msg "Building the product package (signed)"
     # This is not a nightly build, so we want to sign it
     FILE="salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
     if productbuild --resources="$SCRIPT_DIR/pkg-resources" \
@@ -253,6 +253,7 @@ if [ -z ${NIGHTLY} ]; then
         _failure
     fi
 else
+    _msg "Building the product package (unsigned)"
     # This is a nightly build, so we don't sign it
     FILE="salt-$VERSION-py3-$CPU_ARCH-unsigned.pkg"
     if productbuild --resources="$SCRIPT_DIR/pkg-resources" \
