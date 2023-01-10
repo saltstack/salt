@@ -44,7 +44,7 @@
 #-------------------------------------------------------------------------------
 # Variables
 #-------------------------------------------------------------------------------
-SCRIPT_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="$SCRIPT_DIR/build"
 CMD_OUTPUT=$(mktemp -t cmd.log)
 
