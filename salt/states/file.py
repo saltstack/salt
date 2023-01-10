@@ -2904,6 +2904,7 @@ def managed(
         also reported during the state run. This behavior is useful for bringing
         existing application deployments under Salt configuration management
         without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
 
         .. versionadded:: 3007.0
 
@@ -2915,6 +2916,7 @@ def managed(
         also reported during the state run. This behavior is useful for bringing
         existing application deployments under Salt configuration management
         without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
 
         .. versionadded:: 3007.0
     """
