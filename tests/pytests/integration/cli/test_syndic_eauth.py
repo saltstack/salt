@@ -9,15 +9,6 @@ import pytest
 docker = pytest.importorskip("docker")
 
 
-@pytest.fixture(scope="module")
-def purge_docker():
-    subprocess.run(
-        "docker stop $(docker ps -aq); docker rm $(docker ps -aq); docker network prune",
-        shell=True,
-        check=False,
-    )
-
-
 def json_output_to_dict(output):
     """
     Convert ``salt ... --out=json`` Syndic return to a dictionary. Since the
@@ -82,7 +73,7 @@ def source_path():
 
 
 @pytest.fixture(scope="module")
-def config(purge_docker, source_path):
+def config(source_path):
     # 3.10>= will allow the below line
     # with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp_path:
     with tempfile.TemporaryDirectory() as tmp_path:
