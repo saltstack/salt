@@ -66,12 +66,7 @@ param(
     [Alias("b")]
     # Build python from source instead of fetching a tarball
     # Requires VC Build Tools
-    [Switch] $Build,
-
-    [Parameter(Mandatory=$false)]
-    [Alias("c")]
-    # Don't pretify the output of the Write-Result
-    [Switch] $CICD
+    [Switch] $Build
 
 )
 
@@ -122,11 +117,7 @@ Write-Host $("v" * 80)
 # Install NSIS
 #-------------------------------------------------------------------------------
 
-$KeywordArguments = @{}
-if ( $CICD ) {
-    $KeywordArguments["CICD"] = $true
-}
-& "$SCRIPT_DIR\install_nsis.ps1" @KeywordArguments
+& "$SCRIPT_DIR\install_nsis.ps1"
 if ( ! $? ) {
     Write-Host "Failed to install NSIS"
     exit 1
@@ -136,11 +127,7 @@ if ( ! $? ) {
 # Install WIX
 #-------------------------------------------------------------------------------
 
-$KeywordArguments = @{}
-if ( $CICD ) {
-    $KeywordArguments["CICD"] = $true
-}
-& "$SCRIPT_DIR\install_wix.ps1" @KeywordArguments
+& "$SCRIPT_DIR\install_wix.ps1"
 if ( ! $? ) {
     Write-Host "Failed to install WIX"
     exit 1
@@ -150,11 +137,7 @@ if ( ! $? ) {
 # Install Visual Studio Build Tools
 #-------------------------------------------------------------------------------
 
-$KeywordArguments = @{}
-if ( $CICD ) {
-    $KeywordArguments["CICD"] = $true
-}
-& "$SCRIPT_DIR\install_vs_buildtools.ps1" @KeywordArguments
+& "$SCRIPT_DIR\install_vs_buildtools.ps1"
 if ( ! $? ) {
     Write-Host "Failed to install Visual Studio Build Tools"
     exit 1
@@ -171,9 +154,6 @@ $KeywordArguments = @{
 if ( $Build ) {
     $KeywordArguments["Build"] = $true
 }
-if ( $CICD ) {
-    $KeywordArguments["CICD"] = $true
-}
 & "$SCRIPT_DIR\build_python.ps1" @KeywordArguments
 if ( ! $? ) {
     Write-Host "Failed to build Python"
@@ -184,11 +164,7 @@ if ( ! $? ) {
 # Install Salt
 #-------------------------------------------------------------------------------
 
-$KeywordArguments = @{}
-if ( $CICD ) {
-    $KeywordArguments["CICD"] = $true
-}
-& "$SCRIPT_DIR\install_salt.ps1" @KeywordArguments
+& "$SCRIPT_DIR\install_salt.ps1"
 if ( ! $? ) {
     Write-Host "Failed to install Salt"
     exit 1
@@ -198,11 +174,7 @@ if ( ! $? ) {
 # Prep Salt for Packaging
 #-------------------------------------------------------------------------------
 
-$KeywordArguments = @{}
-if ( $CICD ) {
-    $KeywordArguments["CICD"] = $true
-}
-& "$SCRIPT_DIR\prep_salt.ps1" @KeywordArguments
+& "$SCRIPT_DIR\prep_salt.ps1"
 if ( ! $? ) {
     Write-Host "Failed to Prepare Salt for packaging"
     exit 1
@@ -216,10 +188,6 @@ $KeywordArguments = @{}
 if ( ! [String]::IsNullOrEmpty($Version) ) {
     $KeywordArguments.Add("Version", $Version)
 }
-if ( $CICD ) {
-    $KeywordArguments["CICD"] = $true
-}
-
 powershell -file "$SCRIPT_DIR\nsis\build_pkg.ps1" @KeywordArguments
 
 if ( ! $? ) {
