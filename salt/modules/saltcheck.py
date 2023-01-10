@@ -317,6 +317,14 @@ from salt.utils.decorators import memoize
 from salt.utils.json import dumps, loads
 from salt.utils.odict import OrderedDict
 
+try:
+    from junit_xml import TestCase, TestSuite
+
+    HAS_JUNIT = True
+except (ImportError, ModuleNotFoundError):
+    HAS_JUNIT = False
+
+
 log = logging.getLogger(__name__)
 
 try:
@@ -346,7 +354,9 @@ def run_test(**kwargs):
 
     :param keyword arg test:
 
+
     CLI Example:
+
 
     .. code-block:: bash
 
@@ -372,7 +382,9 @@ def state_apply(state_name, **kwargs):
 
     Reference the :py:func:`state.apply <salt.modules.state.apply>` module documentation for arguments and usage options
 
+
     CLI Example:
+
 
     .. code-block:: bash
 
@@ -399,7 +411,9 @@ def report_highstate_tests(saltenv=None):
     Report on tests for states assigned to the minion through highstate.
     Quits with the exit code for the number of missing tests.
 
+
     CLI Example:
+
 
     .. code-block:: bash
 
@@ -433,7 +447,9 @@ def report_highstate_tests(saltenv=None):
     }
 
 
-def run_state_tests(state, saltenv=None, check_all=False, only_fails=False):
+def run_state_tests(
+    state, saltenv=None, check_all=False, only_fails=False, junit=False
+):
     """
     Execute tests for a salt state and return results
     Nested states will also be tested
@@ -442,8 +458,11 @@ def run_state_tests(state, saltenv=None, check_all=False, only_fails=False):
     :param str saltenv: optional saltenv. Defaults to base
     :param bool check_all: boolean to run all tests in state/saltcheck-tests directory
     :param bool only_fails: boolean to only print failure results
+    :param bool junit: boolean to print results in junit format
+
 
     CLI Example:
+
 
     .. code-block:: bash
 
@@ -473,7 +492,6 @@ def run_state_tests(state, saltenv=None, check_all=False, only_fails=False):
         stl.add_test_files_for_sls(state_name, check_all)
         stl.load_test_suite()
         results_dict = OrderedDict()
-
         # Check for situations to disable parallization
         if parallel:
             if type(num_proc) == float:
@@ -517,7 +535,11 @@ def run_state_tests(state, saltenv=None, check_all=False, only_fails=False):
         # If passed a duplicate state, don't overwrite with empty res
         if not results.get(state_name):
             results[state_name] = results_dict
-    return _generate_out_list(results, only_fails=only_fails)
+
+        if junit and HAS_JUNIT:
+            return _generate_junit_out_list(results)
+        else:
+            return _generate_out_list(results, only_fails=False)
 
 
 def parallel_scheck(data):
@@ -534,14 +556,17 @@ run_state_tests_ssh = salt.utils.functools.alias_function(
 )
 
 
-def run_highstate_tests(saltenv=None, only_fails=False):
+def run_highstate_tests(saltenv=None, only_fails=False, junit=False):
     """
     Execute all tests for states assigned to the minion through highstate and return results
 
     :param str saltenv: optional saltenv. Defaults to base
     :param bool only_fails: boolean to only print failure results
+    :param bool junit: boolean to print results in junit format
+
 
     CLI Example:
+
 
     .. code-block:: bash
 
@@ -556,7 +581,9 @@ def run_highstate_tests(saltenv=None, only_fails=False):
     sls_list = _get_top_states(saltenv)
     all_states = ",".join(sls_list)
 
-    return run_state_tests(all_states, saltenv=saltenv, only_fails=only_fails)
+    return run_state_tests(
+        all_states, saltenv=saltenv, only_fails=only_fails, junit=junit
+    )
 
 
 def _eval_failure_only_print(state_name, results, only_fails):
@@ -616,6 +643,35 @@ def _generate_out_list(results, only_fails=False):
     # Use-cases for exist code handling of missing or skipped?
     __context__["retcode"] = 1 if failed else 0
     return out_list
+
+
+def _generate_junit_out_list(results):
+    """
+    generates test results output list in JUnit format
+    """
+    total_time = 0.0
+    test_cases = []
+    failed = 0
+    for state in results:
+        if not results[state]:
+            test_cases.append(TestCase("missing_test", "", "", "Test(s) Missing"))
+        else:
+            for name, val in results[state].items():
+                time = float(val["duration"])
+                status = val["status"]
+                test_cases.append(TestCase(name, "", round(time, 4)))
+                if status.startswith("Fail"):
+                    failed = 1
+                    test_cases[len(test_cases) - 1].add_failure_info(status)
+                if status.startswith("Skip"):
+                    test_cases[len(test_cases) - 1].add_skipped_info(status)
+                total_time = total_time + float(val["duration"])
+
+    test_suite = TestSuite("test_results", test_cases)
+    # Set exist code to 1 if failed tests
+    # Use-cases for exist code handling of missing or skipped?
+    __context__["retcode"] = failed
+    return TestSuite.to_xml_string([test_suite])
 
 
 def _render_file(file_path):
