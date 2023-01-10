@@ -28,13 +28,16 @@ jobs:
 
       - name: Build Package
         run: |
-          pkg/macos/build.sh ${{ env.SALT_VERSION }}
+          pkg/macos/build_python.sh
+          pkg/macos/install_salt.sh
+          pkg/macos/prep_salt.sh
+          pkg/macos/package.sh ${{ env.SALT_VERSION }} -n
 
       - name: Upload ${{ matrix.arch }} Package
         uses: actions/upload-artifact@v3
         with:
           name: macOS ${{ matrix.arch }} Package
-          path: pkg/macos/build/*
+          path: pkg/macos/*.unsigned.pkg
           if-no-files-found: error
 
       - name: Set Exit Status
