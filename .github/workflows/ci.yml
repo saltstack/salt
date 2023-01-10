@@ -545,14 +545,14 @@ jobs:
           if-no-files-found: error
 
 
-  build-rpm-packages:
+  build-rpm-pkgs:
     name: Build RPM Packages
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
     uses: ./.github/workflows/build-rpm-packages.yml
 
-  build-deb-packages:
+  build-deb-pkgs:
     name: Build DEB Packages
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
