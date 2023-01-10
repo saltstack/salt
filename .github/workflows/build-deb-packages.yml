@@ -1,0 +1,56 @@
+name: Build Salt Packages
+
+on:
+  - workflow_call
+
+jobs:
+  rpm:
+    name: Build Deb
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+
+    container:
+      image: debian:10
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          path: build-deb-pkg
+
+      - name: Download System Dependencies
+        run: |
+          apt update
+          apt install -y python3 python3-virtualenv build-essential devscripts debhelper bash-completion
+
+      - name: Build Deb
+        env:
+          USE_STATIC_REQUIREMENTS: "1"
+        run: |
+          cd build-deb-pkg
+          ln -sf pkg/debian/ .
+          debuild -uc -us
+
+      - name: Upload DEBs
+        uses: actions/upload-artifact@v3
+        with:
+          name: salt-${{ matrix.arch }}-debs
+          path: ${{ github.workspace }}/*.deb
+          retention-days: 7
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
