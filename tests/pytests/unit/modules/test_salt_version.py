@@ -15,7 +15,9 @@ def test_mocked_objects():
     salt.version.SaltStackVersion.LNAMES dict using upper-case indexes
     """
     assert isinstance(salt.version.SaltStackVersion.LNAMES, dict)
-    sv = salt.version.SaltStackVersion(*salt.version.__version_info__)
+    sv = salt.version.SaltStackVersion(  # pylint: disable=no-value-for-parameter
+        *salt.version.__version_info__
+    )
     for k, v in salt.version.SaltStackVersion.LNAMES.items():
         assert k == k.lower()
         assert isinstance(v, tuple)

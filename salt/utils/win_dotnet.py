@@ -6,7 +6,7 @@ Dot NET functions
 
 import salt.utils.platform
 import salt.utils.win_reg as win_reg
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 __virtualname__ = "dotnet"
 
@@ -147,6 +147,6 @@ def version_at_least(version):
         the passed version, otherwise ``False``
     """
     for dotnet_version in versions_list():
-        if LooseVersion(dotnet_version) >= LooseVersion(str(version)):
+        if Version(dotnet_version) >= Version(str(version)):
             return True
     return False

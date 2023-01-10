@@ -41,9 +41,10 @@ $SCRIPT_DIR     = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").Direct
 $BUILD_DIR      = "$SCRIPT_DIR\buildenv"
 $PREREQ_DIR     = "$SCRIPT_DIR\prereqs"
 $SCRIPTS_DIR    = "$BUILD_DIR\Scripts"
-$PYTHON_BIN     = "$SCRIPTS_DIR\python.exe"
-$BUILD_SALT_DIR = "$BUILD_DIR\Lib\site-packages\salt"
 $BUILD_CONF_DIR = "$BUILD_DIR\configs"
+$SITE_PKGS_DIR  = "$BUILD_DIR\Lib\site-packages"
+$BUILD_SALT_DIR = "$SITE_PKGS_DIR\salt"
+$PYTHON_BIN     = "$SCRIPTS_DIR\python.exe"
 $PY_VERSION     = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
 $PY_VERSION     = "$($PY_VERSION.Major).$($PY_VERSION.Minor)"
 $ARCH           = $(. $PYTHON_BIN -c "import platform; print(platform.architecture()[0])")
@@ -180,6 +181,53 @@ $binaries | ForEach-Object {
     }
 }
 Write-Result "Success" -ForegroundColor Green
+
+#-------------------------------------------------------------------------------
+# Remove pywin32 components not needed by Salt
+#-------------------------------------------------------------------------------
+
+$directories = "adodbapi",
+               "isapi",
+               "pythonwin",
+               "win32\demos"
+$directories | ForEach-Object {
+    if ( Test-Path -Path "$SITE_PKGS_DIR\$_" ) {
+        Write-Host "Removing $_ directory: " -NoNewline
+        Remove-Item -Path "$SITE_PKGS_DIR\$_" -Recurse | Out-Null
+        if ( ! (Test-Path -Path "$SITE_PKGS_DIR\$_") ) {
+            Write-Result "Success" -ForegroundColor Green
+        } else {
+            Write-Result "Failed" -ForegroundColor Red
+            exit 1
+        }
+    }
+}
+
+#-------------------------------------------------------------------------------
+# Remove pywin32 components not needed by Salt
+#-------------------------------------------------------------------------------
+
+$directories = "cheroot\test",
+               "cherrypy\test",
+               "gitdb\test",
+               "psutil\tests",
+               "smmap\test",
+               "tempora\tests",
+               "win32\test",
+               "win32com\test",
+               "zmq\tests"
+$directories | ForEach-Object {
+    if ( Test-Path -Path "$SITE_PKGS_DIR\$_" ) {
+        Write-Host "Removing $_ directory: " -NoNewline
+        Remove-Item -Path "$SITE_PKGS_DIR\$_" -Recurse | Out-Null
+        if ( ! (Test-Path -Path "$SITE_PKGS_DIR\$_") ) {
+            Write-Result "Success" -ForegroundColor Green
+        } else {
+            Write-Result "Failed" -ForegroundColor Red
+            exit 1
+        }
+    }
+}
 
 #-------------------------------------------------------------------------------
 # Remove Non-Windows Execution Modules

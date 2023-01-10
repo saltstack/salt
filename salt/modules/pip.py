@@ -154,10 +154,8 @@ def _get_pip_bin(bin_env):
     Locate the pip binary, either from `bin_env` as a virtualenv, as the
     executable itself, or from searching conventional filesystem locations
     """
-    bundled = _check_bundled()
-
     if not bin_env:
-        if bundled:
+        if _check_bundled():
             logger.debug("pip: Using pip from bundled app")
             return [os.path.normpath(sys.executable), "pip"]
         else:
