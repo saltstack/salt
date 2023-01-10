@@ -545,12 +545,12 @@ jobs:
           if-no-files-found: error
 
 
-  build-salt-linux-packages:
-    name: Build Salt RPM
+  build-linux-packages:
+    name: Build Linux Packages
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-    uses: ./.github/workflows/build-salt-linux-packages.yml
+    uses: ./.github/workflows/build-linux-packages.yml
 
   build-windows-pkgs:
     name: Build Windows Packages
