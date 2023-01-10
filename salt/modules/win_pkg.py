@@ -65,7 +65,7 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltRenderError,
 )
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -2356,7 +2356,7 @@ def _reverse_cmp_pkg_versions(pkg1, pkg2):
     """
     Compare software package versions
     """
-    return 1 if LooseVersion(pkg1) > LooseVersion(pkg2) else -1
+    return 1 if Version(pkg1) > Version(pkg2) else -1
 
 
 def _get_latest_pkg_version(pkginfo):

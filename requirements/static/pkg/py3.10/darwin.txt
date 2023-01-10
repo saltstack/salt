@@ -26,7 +26,7 @@ distro==1.5.0
     # via -r requirements/base.txt
 gitdb==4.0.5
     # via gitpython
-gitpython==3.1.12
+gitpython==3.1.30 ; python_version >= "3.7"
     # via -r requirements/darwin.txt
 idna==2.8
     # via
@@ -51,6 +51,8 @@ jmespath==1.0.1
     # via -r requirements/base.txt
 linode-python==1.1.1
     # via -r requirements/darwin.txt
+looseversion==1.0.2
+    # via -r requirements/base.txt
 mako==1.2.2
     # via -r requirements/darwin.txt
 markupsafe==2.0.1
@@ -65,6 +67,8 @@ more-itertools==8.2.0
     #   jaraco.classes
     #   jaraco.functools
 msgpack==1.0.2
+    # via -r requirements/base.txt
+packaging==22.0
     # via -r requirements/base.txt
 portend==2.6
     # via cherrypy

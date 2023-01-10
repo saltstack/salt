@@ -542,6 +542,7 @@ execution modules
     winrepo
     wordpress
     x509
+    x509_v2
     xapi_virt
     xbpspkg
     xfs

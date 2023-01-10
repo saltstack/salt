@@ -26,10 +26,20 @@ $ProgressPreference = "SilentlyContinue"
 $ErrorActionPreference = "Stop"
 
 #-------------------------------------------------------------------------------
-# Variables
+# Script Variables
 #-------------------------------------------------------------------------------
+
 $SCRIPT_DIR   = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
 $RELENV_DIR   = "${env:LOCALAPPDATA}\relenv"
+
+#-------------------------------------------------------------------------------
+# Script Functions
+#-------------------------------------------------------------------------------
+
+function Write-Result($result, $ForegroundColor="Green") {
+    $position = 80 - $result.Length - [System.Console]::CursorLeft
+    Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+}
 
 #-------------------------------------------------------------------------------
 # Start the Script
@@ -54,10 +64,10 @@ if ( Test-Path -Path "$SCRIPT_DIR\venv" ) {
     Write-Host "Removing venv directory: " -NoNewline
     Remove-Item -Path "$SCRIPT_DIR\venv" -Recurse -Force
     if ( Test-Path -Path "$SCRIPT_DIR\venv" ) {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     } else {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     }
 }
 
@@ -68,10 +78,10 @@ if ( Test-Path -Path "$SCRIPT_DIR\build" ) {
     Write-Host "Removing build directory: " -NoNewline
     Remove-Item -Path "$SCRIPT_DIR\build" -Recurse -Force
     if ( Test-Path -Path "$SCRIPT_DIR\build" ) {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     } else {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     }
 }
 
@@ -82,10 +92,10 @@ if ( Test-Path -Path "$SCRIPT_DIR\buildenv" ) {
     Write-Host "Removing buildenv directory: " -NoNewline
     Remove-Item -Path "$SCRIPT_DIR\buildenv" -Recurse -Force
     if ( Test-Path -Path "$SCRIPT_DIR\buildenv" ) {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     } else {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     }
 }
 
@@ -96,10 +106,10 @@ if ( Test-Path -Path "$SCRIPT_DIR\prereqs" ) {
     Write-Host "Removing prereqs directory: " -NoNewline
     Remove-Item -Path "$SCRIPT_DIR\prereqs" -Recurse -Force
     if ( Test-Path -Path "$SCRIPT_DIR\prereqs" ) {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     } else {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     }
 }
 
@@ -110,10 +120,10 @@ if ( Test-Path -Path "$RELENV_DIR" ) {
     Write-Host "Removing relenv directory: " -NoNewline
     Remove-Item -Path "$RELENV_DIR" -Recurse -Force
     if ( Test-Path -Path "$RELENV_DIR" ) {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     } else {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     }
 }
 
