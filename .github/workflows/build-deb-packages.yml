@@ -8,7 +8,8 @@ jobs:
     name: Build Deb
     runs-on:
       - self-hosted
-      - ${{ matrix.arch == 'aarch64' && 'linux-arm' || 'linux' }}
+      - linux
+      - ${{ matrix.arch }}
     strategy:
       fail-fast: false
       matrix:
