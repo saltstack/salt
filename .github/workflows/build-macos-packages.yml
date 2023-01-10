@@ -37,7 +37,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: macOS ${{ matrix.arch }} Package
-          path: pkg/macos/*.unsigned.pkg
+          path: pkg/macos/*unsigned.pkg
           if-no-files-found: error
 
       - name: Set Exit Status
