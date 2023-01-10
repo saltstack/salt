@@ -622,13 +622,13 @@ jobs:
           if-no-files-found: error
 
 
-  build-rpm-packages:
+  build-rpm-pkgs:
     name: Build RPM Packages
     needs:
       - prepare-ci
     uses: ./.github/workflows/build-rpm-packages.yml
 
-  build-deb-packages:
+  build-deb-pkgs:
     name: Build DEB Packages
     needs:
       - prepare-ci
