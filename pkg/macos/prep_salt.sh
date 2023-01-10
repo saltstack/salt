@@ -24,15 +24,10 @@
 # Variables
 #-------------------------------------------------------------------------------
 SRC_DIR="$(git rev-parse --show-toplevel)"
-echo "$SRC_DIR"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-echo "$SCRIPT_DIR"
 BUILD_DIR="$SCRIPT_DIR/build"
-echo "$BUILD_DIR"
 CONF_DIR="$BUILD_DIR/etc/salt"
-echo "$CONF_DIR"
 CMD_OUTPUT=$(mktemp -t cmd.log)
-echo "$CMD_OUTPUT"
 
 #-------------------------------------------------------------------------------
 # Functions
