@@ -6,12 +6,15 @@ on:
 jobs:
   rpm:
     name: Build Deb
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - ${{ matrix.arch == 'aarch64' && 'linux-arm' || 'linux' }}
     strategy:
       fail-fast: false
       matrix:
         arch:
           - x86_64
+          - aarch64
 
     container:
       image: debian:10
