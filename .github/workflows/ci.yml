@@ -545,12 +545,12 @@ jobs:
           if-no-files-found: error
 
 
-  build-linux-packages:
-    name: Build Linux Packages
+  build-rpm-packages:
+    name: Build RPM Packages
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-    uses: ./.github/workflows/build-linux-packages.yml
+    uses: ./.github/workflows/build-rpm-packages.yml
 
   build-windows-pkgs:
     name: Build Windows Packages
@@ -947,6 +947,7 @@ jobs:
       - lint
       - build-macos-pkgs
       - build-windows-pkgs
+      - build-rpm-pkgs
       - almalinux-8
       - almalinux-9
       - amazonlinux-2
