@@ -21,7 +21,8 @@ env:
   COLUMNS: 160
 
 permissions:
-  contents: read
+  contents: read  # for dorny/paths-filter to fetch a list of changed files
+  pull-requests: read  # for dorny/paths-filter to read pull requests
 
 concurrency:
   # Concurrency is defined in a way that concurrent builds against branches do
@@ -35,9 +36,6 @@ jobs:
   prepare-ci:
     name: Prepare CI
     runs-on: ubuntu-latest
-    permissions:
-      contents: read  # for dorny/paths-filter to fetch a list of changed files
-      pull-requests: read  # for dorny/paths-filter to read pull requests
     outputs:
       jobs: ${{ steps.process-changed-files.outputs.jobs }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
@@ -199,20 +197,6 @@ jobs:
       - prepare-ci
     with:
       changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
-
-  pr-checks:
-    name: PR Checks
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] && github.event_name == 'pull_request' }}
-    permissions:
-      contents: read
-      pull-requests: write
-    uses: ./.github/workflows/pr-checks-action.yml
-    needs:
-      - prepare-ci
-    with:
-      changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
-    secrets:
-      github-token: ${{ secrets.GITHUB_TOKEN }}
 
   windows-2016:
     name: Windows 2016
@@ -479,7 +463,6 @@ jobs:
       - docs
       - lint
       - twine-check
-      - pr-checks
       - almalinux-8
       - almalinux-9
       - amazonlinux-2
