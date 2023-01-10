@@ -103,7 +103,7 @@
 # Variables
 #-------------------------------------------------------------------------------
 SRC_DIR=$(git rev-parse --show-toplevel)
-SCRIPT_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CPU_ARCH=$(uname -m)
 
 #-------------------------------------------------------------------------------
