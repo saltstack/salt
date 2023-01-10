@@ -12,7 +12,6 @@ jobs:
       matrix:
         arch:
           - x86_64
-          - aarch64
 
     container:
       image: centos:7
@@ -35,7 +34,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: salt-${{ matrix.arch }}-rpms
-          path: /root/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
+          path: ~/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
           retention-days: 7
 
       - name: Set Exit Status
