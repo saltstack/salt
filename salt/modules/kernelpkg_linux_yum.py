@@ -5,37 +5,27 @@ Manage Linux kernel packages on YUM-based systems
 import functools
 import logging
 
-try:
-    import salt.modules.yumpkg
-    import salt.utils.data
-    import salt.utils.functools
-    import salt.utils.systemd
-    from salt.exceptions import CommandExecutionError
-    from salt.utils.versions import LooseVersion as _LooseVersion
-
-    __IMPORT_ERROR = None
-except ImportError as exc:
-    __IMPORT_ERROR = exc.__str__()
+import salt.modules.yumpkg
+import salt.utils.data
+import salt.utils.functools
+import salt.utils.systemd
+from salt.exceptions import CommandExecutionError
+from salt.utils.versions import LooseVersion
 
 log = logging.getLogger(__name__)
 
 __virtualname__ = "kernelpkg"
 
-if __IMPORT_ERROR is None:
-    # Import functions from yumpkg
-    # pylint: disable=invalid-name, protected-access
-    _yum = salt.utils.functools.namespaced_function(salt.modules.yumpkg._yum, globals())
-    # pylint: enable=invalid-name, protected-access
+# Import functions from yumpkg
+# pylint: disable=invalid-name, protected-access
+_yum = salt.utils.functools.namespaced_function(salt.modules.yumpkg._yum, globals())
+# pylint: enable=invalid-name, protected-access
 
 
 def __virtual__():
     """
     Load this module on RedHat-based systems only
     """
-
-    if __IMPORT_ERROR:
-        return False, __IMPORT_ERROR
-
     if __grains__.get("os_family", "") == "RedHat":
         return __virtualname__
     elif __grains__.get("os", "").lower() in (
@@ -133,7 +123,7 @@ def needs_reboot():
 
         salt '*' kernelpkg.needs_reboot
     """
-    return _LooseVersion(active()) < _LooseVersion(latest_installed())
+    return LooseVersion(active()) < LooseVersion(latest_installed())
 
 
 def upgrade(reboot=False, at_time=None):
@@ -190,7 +180,7 @@ def upgrade_available():
 
         salt '*' kernelpkg.upgrade_available
     """
-    return _LooseVersion(latest_available()) > _LooseVersion(latest_installed())
+    return LooseVersion(latest_available()) > LooseVersion(latest_installed())
 
 
 def remove(release):
@@ -291,8 +281,8 @@ def _cmp_version(item1, item2):
     """
     Compare function for package version sorting
     """
-    vers1 = _LooseVersion(item1)
-    vers2 = _LooseVersion(item2)
+    vers1 = LooseVersion(item1)
+    vers2 = LooseVersion(item2)
 
     if vers1 < vers2:
         return -1

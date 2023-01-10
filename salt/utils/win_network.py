@@ -23,14 +23,14 @@ depending on the version of Windows this is run on. Once support for Windows
 import platform
 
 from salt._compat import ipaddress
-from salt.utils.versions import StrictVersion
+from salt.utils.versions import Version
 
 IS_WINDOWS = platform.system() == "Windows"
 
 __virtualname__ = "win_network"
 
 if IS_WINDOWS:
-    USE_WMI = StrictVersion(platform.version()) < StrictVersion("6.2")
+    USE_WMI = Version(platform.version()) < Version("6.2")
     if USE_WMI:
         import wmi
 
