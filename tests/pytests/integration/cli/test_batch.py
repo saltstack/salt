@@ -179,7 +179,19 @@ def test_batch_retcode(salt_cli, salt_minion, salt_sub_minion, run_timeout):
     )
 
     assert cmd.returncode == 23
-    assert not cmd.stderr
+    # TODO: Certain platforms will have a warning related to jinja. But
+    # that's an issue with dependency versions that may be due to the versions
+    # installed on the test images. When those issues are sorted, this can
+    # simply `not cmd.stderr`.
+    assert (
+        not cmd.stderr
+        or cmd.stderr.endswith(
+            "jinja.py:736: DeprecationWarning: 'contextfunction' is renamed to 'pass_context', the old name will be removed in Jinja 3.1.\n  @contextfunction\n"
+        )
+        or cmd.stderr.endswith(
+            "process.py:54: DeprecationWarning: PY_SSIZE_T_CLEAN will be required for '#' formats\n  current = setproctitle.getproctitle()\n"
+        )
+    )
     assert "true" in cmd.stdout
 
 
@@ -198,7 +210,19 @@ def test_multiple_modules_in_batch(salt_cli, salt_minion, salt_sub_minion, run_t
     )
 
     assert cmd.returncode == 23
-    assert not cmd.stderr
+    # TODO: Certain platforms will have a warning related to setproctitle. But
+    # that's an issue with dependency versions that may be due to the versions
+    # installed on the test images. When those issues are sorted, this can
+    # simply `not cmd.stderr`.
+    assert (
+        not cmd.stderr
+        or cmd.stderr.endswith(
+            "process.py:54: DeprecationWarning: PY_SSIZE_T_CLEAN will be required for '#' formats\n  current = setproctitle.getproctitle()\n"
+        )
+        or cmd.stderr.endswith(
+            "jinja.py:736: DeprecationWarning: 'contextfunction' is renamed to 'pass_context', the old name will be removed in Jinja 3.1.\n  @contextfunction\n"
+        )
+    )
 
 
 def test_batch_module_stopping_failed_respond(
