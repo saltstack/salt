@@ -50,7 +50,9 @@ BuildRequires: python3
 BuildRequires: python3-pip
 BuildRequires: openssl
 BuildRequires: git
+%if %{rhel} >= 9
 BuildRequires: libxcrypt-compat
+%endif
 
 %description
 Salt is a distributed remote execution system used to execute commands and
