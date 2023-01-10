@@ -43,7 +43,7 @@ PY_VERSIONS=(
 )
 
 # Locations
-SCRIPT_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SYS_PY_BIN="$(which python3)"
 BUILD_DIR="$SCRIPT_DIR/build"
 BLD_PY_BIN="$BUILD_DIR/opt/salt/bin/python3"

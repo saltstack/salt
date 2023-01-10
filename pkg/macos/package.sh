@@ -59,7 +59,7 @@ VERSION=${VERSION#"v"}
 
 CPU_ARCH="$(uname -m)"
 SRC_DIR="$(git rev-parse --show-toplevel)"
-SCRIPT_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="$SCRIPT_DIR/build"
 CMD_OUTPUT=$(mktemp -t cmd.log)
 
