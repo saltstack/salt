@@ -28,7 +28,7 @@ jobs:
 
       - name: Build Package
         run: |
-          sudo -E pkg/macos/build.sh ${{ env.SALT_VERSION }}
+          pkg/macos/build.sh ${{ env.SALT_VERSION }}
 
       - name: Upload ${{ matrix.arch }} Package
         uses: actions/upload-artifact@v3
