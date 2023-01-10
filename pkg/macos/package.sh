@@ -236,7 +236,7 @@ fi
 
 _msg "Building the source package"
 # Build the src package
-FILE="salt-src-$VERSION-py3-$CPU_ARCH.pkg"
+FILE="$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg"
 if pkgbuild --root="$BUILD_DIR" \
             --scripts="$SCRIPT_DIR/pkg-scripts" \
             --identifier=com.saltstack.salt \
@@ -252,7 +252,7 @@ fi
 if [ -z ${NIGHTLY} ]; then
     _msg "Building the product package (signed)"
     # This is not a nightly build, so we want to sign it
-    FILE="salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
+    FILE="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
     if productbuild --resources="$SCRIPT_DIR/pkg-resources" \
                     --distribution="$DIST_XML" \
                     --package-path="$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg" \
@@ -267,7 +267,7 @@ if [ -z ${NIGHTLY} ]; then
 else
     _msg "Building the product package (unsigned)"
     # This is a nightly build, so we don't sign it
-    FILE="salt-$VERSION-py3-$CPU_ARCH-unsigned.pkg"
+    FILE="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH-unsigned.pkg"
     if productbuild --resources="$SCRIPT_DIR/pkg-resources" \
                     --distribution="$DIST_XML" \
                     --package-path="$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg" \
