@@ -11,12 +11,6 @@ needed to build Python from source.
 install_vc_buildtools.ps1
 
 #>
-param(
-    [Parameter(Mandatory=$false)]
-    [Alias("c")]
-    # Don't pretify the output of the Write-Result
-    [Switch] $CICD
-)
 
 #-------------------------------------------------------------------------------
 # Script Preferences
@@ -31,12 +25,8 @@ $ErrorActionPreference = "Stop"
 #-------------------------------------------------------------------------------
 
 function Write-Result($result, $ForegroundColor="Green") {
-    if ( $CICD ) {
-        Write-Host $result -ForegroundColor $ForegroundColor
-    } else {
-        $position = 80 - $result.Length - [System.Console]::CursorLeft
-        Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
-    }
+    $position = 80 - $result.Length - [System.Console]::CursorLeft
+    Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
 }
 
 #-------------------------------------------------------------------------------

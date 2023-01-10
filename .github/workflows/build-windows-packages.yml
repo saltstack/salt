@@ -31,7 +31,7 @@ jobs:
       - name: Build Package
         shell: powershell
         run: |
-          & pkg/windows/build.cmd -Architecture ${{ matrix.arch }} -Version $env:SALT_VERSION -CICD
+          & pkg/windows/build.cmd -Architecture ${{ matrix.arch }} -Version $env:SALT_VERSION
 
       - name: Upload ${{ matrix.arch }} NSIS Package
         uses: actions/upload-artifact@v3
