@@ -60,6 +60,7 @@ VERSION=${VERSION#"v"}
 CPU_ARCH="$(uname -m)"
 SRC_DIR="$(git rev-parse --show-toplevel)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DIST_XML="$SCRIPT_DIR/distribution.xml"
 BUILD_DIR="$SCRIPT_DIR/build"
 CMD_OUTPUT=$(mktemp -t cmd.log)
 
@@ -158,11 +159,10 @@ fi
 #-------------------------------------------------------------------------------
 # Add Title, Description, Version and CPU Arch to distribution.xml
 #-------------------------------------------------------------------------------
-DIST="$SCRIPT_DIR/distribution.xml"
-if [ -f "$DIST" ]; then
+if [ -f "$DIST_XML" ]; then
     _msg "Removing existing distribution.xml"
-    rm -f "$DIST"
-    if ! [ -f "$DIST" ]; then
+    rm -f "$DIST_XML"
+    if ! [ -f "$DIST_XML" ]; then
         _success
     else
         _failure
@@ -170,11 +170,11 @@ if [ -f "$DIST" ]; then
 fi
 
 _msg "Creating distribution.xml"
-cp "$SCRIPT_DIR/distribution.xml.dist" "$DIST"
-if [ -f "$DIST" ]; then
+cp "$SCRIPT_DIR/distribution.xml.dist" "$DIST_XML"
+if [ -f "$DIST_XML" ]; then
     _success
 else
-    CMD_OUTPUT="Failed to copy: $DIST"
+    CMD_OUTPUT="Failed to copy: $DIST_XML"
     _failure
 fi
 
@@ -182,8 +182,8 @@ fi
 # be able to check it
 _msg "Setting package version"
 SED_STR="s/@VERSION@/$VERSION/g"
-sed -i "" "$SED_STR" "$DIST"
-if grep -q "$VERSION" "$DIST"; then
+sed -i "" "$SED_STR" "$DIST_XML"
+if grep -q "$VERSION" "$DIST_XML"; then
     _success
 else
     CMD_OUTPUT="Failed to set: $VERSION"
@@ -193,8 +193,8 @@ fi
 _msg "Setting package title"
 TITLE="Salt $VERSION (Python 3)"
 SED_STR="s/@TITLE@/$TITLE/g"
-sed -i "" "$SED_STR" "$DIST"
-if grep -q "$TITLE" "$DIST"; then
+sed -i "" "$SED_STR" "$DIST_XML"
+if grep -q "$TITLE" "$DIST_XML"; then
     _success
 else
     CMD_OUTPUT="Failed to set: $TITLE"
@@ -204,8 +204,8 @@ fi
 _msg "Setting package description"
 DESC="Salt $VERSION with Python 3"
 SED_STR="s/@DESC@/$DESC/g"
-sed -i "" "$SED_STR" "$DIST"
-if grep -q "$DESC" "$DIST"; then
+sed -i "" "$SED_STR" "$DIST_XML"
+if grep -q "$DESC" "$DIST_XML"; then
     _success
 else
     CMD_OUTPUT="Failed to set: $DESC"
@@ -214,8 +214,8 @@ fi
 
 _msg "Setting package architecture"
 SED_STR="s/@CPU_ARCH@/$CPU_ARCH/g"
-sed -i "" "$SED_STR" "$DIST"
-if grep -q "$CPU_ARCH" "$DIST"; then
+sed -i "" "$SED_STR" "$DIST_XML"
+if grep -q "$CPU_ARCH" "$DIST_XML"; then
     _success
 else
     CMD_OUTPUT="Failed to set: $CPU_ARCH"
@@ -230,7 +230,7 @@ _msg "Building the source package"
 # Build the src package
 FILE="salt-src-$VERSION-py3-$CPU_ARCH.pkg"
 if pkgbuild --root="$BUILD_DIR" \
-            --scripts=pkg-scripts \
+            --scripts="$SCRIPT_DIR/pkg-scripts" \
             --identifier=com.saltstack.salt \
             --version="$VERSION" \
             --ownership=recommended \
@@ -243,9 +243,9 @@ fi
 
 _msg "Building the product package (signed)"
 FILE="salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
-if productbuild --resources=pkg-resources \
-                --distribution=distribution.xml  \
-                --package-path="salt-src-$VERSION-py3-$CPU_ARCH.pkg" \
+if productbuild --resources="$SCRIPT_DIR/pkg-resources" \
+                --distribution="$DIST_XML" \
+                --package-path="$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg" \
                 --version="$VERSION" \
                 --sign "$DEV_INSTALL_CERT" \
                 --timestamp \
