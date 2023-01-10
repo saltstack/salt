@@ -209,7 +209,11 @@ printf "v%.0s" {1..80}; printf "\n"
 #-------------------------------------------------------------------------------
 # Build and Sign Package
 #-------------------------------------------------------------------------------
-"$SCRIPT_DIR/package.sh" "$VERSION"
+if [ "$(id -un)" != "root" ]; then
+    sudo "$SCRIPT_DIR/package.sh" "$VERSION"
+else
+    "$SCRIPT_DIR/package.sh" "$VERSION"
+fi
 
 #-------------------------------------------------------------------------------
 # Notarize Package
