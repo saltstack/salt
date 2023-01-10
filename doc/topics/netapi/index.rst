@@ -55,6 +55,5 @@ the :command:`salt` command.
 
 .. toctree::
 
-    ../tutorials/http
     writing
 
