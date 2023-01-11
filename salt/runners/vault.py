@@ -617,6 +617,9 @@ def sync_approles(minions=None, up=False, down=False):
 
     for minion in set(minions) & set(list_approles()):
         _manage_approle(minion, issue_params=None)
+        # Running multiple pillar renders in a loop would otherwise
+        # falsely report a cyclic dependency (same loader context?)
+        __opts__.pop("_vault_runner_is_compiling_pillar_templates", None)
     return True
 
 
@@ -686,6 +689,9 @@ def sync_entities(minions=None, up=False, down=False):
 
     for minion in set(minions) & set(list_approles()):
         _manage_entity(minion)
+        # Running multiple pillar renders in a loop would otherwise
+        # falsely report a cyclic dependency (same loader context?)
+        __opts__.pop("_vault_runner_is_compiling_pillar_templates", None)
         entity = _lookup_entity_by_alias(minion)
         if not entity or entity["name"] != f"salt_minion_{minion}":
             log.info(
