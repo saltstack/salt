@@ -1265,7 +1265,7 @@ class TestFetchSecretId:
             else:
                 assert res == vault.VaultSecretId(
                     secret_id=secret_id,
-                    secret_id_ttl=test_remote_config["cache"]["config"],
+                    secret_id_ttl=0,
                     secret_id_num_uses=0,
                 )
             uncached.get.assert_not_called()

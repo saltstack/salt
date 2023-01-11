@@ -177,7 +177,6 @@ This enables you to write templated ACL policies like:
         capabilities = ["read"]
     }
 
-
 All possible master configuration options with defaults:
 
 .. code-block:: yaml
@@ -377,7 +376,15 @@ config
     .. versionadded:: 3007.0
 
     The time in seconds to cache queried configuration from the master.
-    Defaults to ``3600`` (one hour).
+    Defaults to ``3600`` (one hour). Set this to ``null`` to disable
+    cache expiration. Changed ``server`` configuration on the master will
+    still be recognized, but changes in ``auth`` and ``cache`` will need
+    a manual cache clearance using ``vault.clear_token_cache``.
+
+    .. note::
+
+        Expiring the configuration will also clear cached authentication
+        credentials and leases.
 
 kv_metadata
     .. versionadded:: 3007.0

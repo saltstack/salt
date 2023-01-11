@@ -626,7 +626,7 @@ def _get_connection_config(cbank, opts, context, force_local=False):
     except VaultConfigExpired as err:
         # Make sure to still work with old peer_run configuration
         if "Peer runner return was empty" not in err.message:
-            raise err
+            raise
         log.warning(
             "Got empty response to Vault config request. Falling back to vault.generate_token. "
             "Please update your master peer_run configuration."
@@ -706,7 +706,7 @@ def _fetch_secret_id(config, opts, secret_id_cache, force_local=False):
             # assume locally configured secret_ids do not expire
             return LocalVaultSecretId(
                 secret_id=config["auth"]["secret_id"],
-                secret_id_ttl=config["cache"]["config"],
+                secret_id_ttl=0,
                 secret_id_num_uses=0,
             )
         # When secret_id is falsey, the approle does not require secret IDs,
@@ -1902,7 +1902,7 @@ class VaultSecretId(UseCountMixin, AccessorMixin, BaseLease):
             kwargs["accessor"] = kwargs.pop("secret_id_accessor", None)
         super().__init__(**kwargs)
 
-    def is_valid(self, valid_for=0, uses=1):  # pylint: disable=arguments-differ
+    def is_valid(self, valid_for=0, uses=1):
         """
         Checks whether the secret ID is valid for an amount of time and number of uses
 
@@ -2446,6 +2446,12 @@ class LocalVaultSecretId(VaultSecretId):
     """
     Represents a secret ID from local configuration and should not be cached.
     """
+
+    def is_valid(self, valid_for=0, uses=1):
+        """
+        Local secret IDs are always assumed to be valid until proven otherwise
+        """
+        return True
 
 
 class VaultAppRole:
