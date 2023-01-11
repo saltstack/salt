@@ -160,7 +160,7 @@ def xccdf_eval(xccdffile, ovalfiles=None, **kwargs):
         (stdoutdata, error) = proc.communicate()
         success = _OSCAP_EXIT_CODES_MAP.get(proc.returncode, False)
         if proc.returncode < 0:
-            error += "\nKilled by signal {}\n".format(proc.returncode).encode('ascii')
+            error += "\nKilled by signal {}\n".format(proc.returncode).encode("ascii")
         returncode = proc.returncode
         if success:
             __salt__["cp.push_dir"](tempdir)
@@ -215,7 +215,7 @@ def xccdf(params):
         (stdoutdata, error) = proc.communicate()
         success = _OSCAP_EXIT_CODES_MAP.get(proc.returncode, False)
         if proc.returncode < 0:
-            error += "\nKilled by signal {}\n".format(proc.returncode).encode('ascii')
+            error += "\nKilled by signal {}\n".format(proc.returncode).encode("ascii")
         returncode = proc.returncode
         if success:
             __salt__["cp.push_dir"](tempdir)
