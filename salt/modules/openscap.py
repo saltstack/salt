@@ -58,7 +58,20 @@ _OSCAP_EXIT_CODES_MAP = {
 }
 
 
-def xccdf_eval(xccdffile, ovalfiles=None, **kwargs):
+def xccdf_eval(
+    xccdffile,
+    ovalfiles=None,
+    profile=None,
+    rule=None,
+    oval_results=None,
+    results=None,
+    report=None,
+    fetch_remote_resources=None,
+    tailoring_file=None,
+    tailoring_id=None,
+    remediate=None,
+    **kwargs
+):
     """
     Run ``oscap xccdf eval`` commands on minions.
 
@@ -119,29 +132,29 @@ def xccdf_eval(xccdffile, ovalfiles=None, **kwargs):
         ovalfiles = []
 
     cmd_opts = ["oscap", "xccdf", "eval"]
-    if kwargs.get("oval_results"):
+    if oval_results:
         cmd_opts.append("--oval-results")
-    if "results" in kwargs:
+    if results:
         cmd_opts.append("--results")
-        cmd_opts.append(kwargs["results"])
-    if "report" in kwargs:
+        cmd_opts.append(results)
+    if report:
         cmd_opts.append("--report")
-        cmd_opts.append(kwargs["report"])
-    if "profile" in kwargs:
+        cmd_opts.append(report)
+    if profile:
         cmd_opts.append("--profile")
-        cmd_opts.append(kwargs["profile"])
-    if "rule" in kwargs:
+        cmd_opts.append(profile)
+    if rule:
         cmd_opts.append("--rule")
-        cmd_opts.append(kwargs["rule"])
-    if "tailoring_file" in kwargs:
+        cmd_opts.append(rule)
+    if tailoring_file:
         cmd_opts.append("--tailoring-file")
-        cmd_opts.append(kwargs["tailoring_file"])
-    if "tailoring_id" in kwargs:
+        cmd_opts.append(tailoring_file)
+    if tailoring_id:
         cmd_opts.append("--tailoring-id")
-        cmd_opts.append(kwargs["tailoring_id"])
-    if kwargs.get("fetch_remote_resources"):
+        cmd_opts.append(tailoring_id)
+    if fetch_remote_resources:
         cmd_opts.append("--fetch-remote-resources")
-    if kwargs.get("remediate"):
+    if remediate:
         cmd_opts.append("--remediate")
     cmd_opts.append(xccdffile)
     cmd_opts.extend(ovalfiles)
