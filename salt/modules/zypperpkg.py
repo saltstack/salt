@@ -1412,12 +1412,12 @@ def refresh_db(force=None, root=None, **kwargs):
         If set to True, automatically trust and import public GPG key for
         the repository.
 
-        .. versionadded:: 3005
+        .. versionadded:: 3007
 
     repos
         Refresh just the specified repos
 
-        .. versionadded:: 3005
+        .. versionadded:: 3007
 
     root
         operate on a different root directory.
