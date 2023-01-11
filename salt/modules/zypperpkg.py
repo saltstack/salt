@@ -1968,17 +1968,21 @@ def _uninstall(name=None, pkgs=None, root=None):
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
+    ptfpackages = _find_ptf_packages(pkg_params.keys(), root=root)
     includes = _find_types(pkg_params.keys())
     old = list_pkgs(root=root, includes=includes)
     targets = []
     for target in pkg_params:
+        if target in ptfpackages:
+            # ptfpackages needs special handling
+            continue
         # Check if package version set to be removed is actually installed:
         # old[target] contains a comma-separated list of installed versions
         if target in old and pkg_params[target] in old[target].split(","):
             targets.append(target + "-" + pkg_params[target])
         elif target in old and not pkg_params[target]:
             targets.append(target)
-    if not targets:
+    if not targets and not ptfpackages:
         return {}
 
     systemd_scope = _systemd_scope()
@@ -1989,6 +1993,13 @@ def _uninstall(name=None, pkgs=None, root=None):
             "remove", *targets[:500]
         )
         targets = targets[500:]
+
+    # handle ptf packages
+    while ptfpackages:
+        __zypper__(systemd_scope=systemd_scope, root=root).call(
+            "removeptf", "--allow-downgrade", *ptfpackages[:500]
+        )
+        ptfpackages = ptfpackages[500:]
 
     _clean_cache()
     new = list_pkgs(root=root, includes=includes)
@@ -2075,6 +2086,10 @@ def remove(
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
+
+    .. versionadded:: 3007
+
+    Can now remove also PTF packages which require a different handling in the backend.
     """
     return _uninstall(name=name, pkgs=pkgs, root=root)
 
@@ -2538,6 +2553,26 @@ def _get_visible_patterns(root=None):
             "summary": element.getAttribute("summary"),
         }
     return patterns
+
+
+def _find_ptf_packages(pkgs, root=None):
+    """
+    Find ptf packages in "pkgs" and return them as list
+    """
+    ptfs = []
+    cmd = ["rpm"]
+    if root:
+        cmd.extend(["--root", root])
+    cmd.extend(["-q", "--qf", "%{NAME}: [%{PROVIDES} ]\n"])
+    cmd.extend(pkgs)
+    output = __salt__["cmd.run"](cmd)
+    for line in output.splitlines():
+        if not line.strip():
+            continue
+        pkg, provides = line.split(":", 1)
+        if "ptf()" in provides:
+            ptfs.append(pkg)
+    return ptfs
 
 
 def _get_installed_patterns(root=None):
