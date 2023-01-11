@@ -511,6 +511,8 @@ def pytest_runtest_setup(item):
         log.critical("DOCKER is DOWN!!!!!!!")
         print("DOCKER is DOWN!!!!!!!")
         exit(-1)
+    log.critical("DOCKER is UP!!!!!!!")
+    print("DOCKER is UP!!!!!!!")
     integration_utils_tests_path = str(TESTS_DIR / "integration" / "utils")
     if (
         str(item.fspath).startswith(integration_utils_tests_path)
