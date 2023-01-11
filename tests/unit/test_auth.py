@@ -301,6 +301,7 @@ class MasterACLTestCase(ModuleCase):
             # Did we fire it?
             self.assertNotEqual(self.fire_event_mock.call_args[0][0]["fun"], "sys.doc")
 
+    @pytest.mark.skip_on_windows(reason="PAM eauth not available on Windows")
     def test_master_publish_some_minions(self):
         """
         Tests to ensure we can only target minions for which we
