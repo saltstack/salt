@@ -10,6 +10,8 @@ import shutil
 import tempfile
 from subprocess import PIPE, Popen
 
+import salt.utils.versions
+
 ArgumentParser = object
 
 try:
@@ -185,6 +187,10 @@ def xccdf(params):
 
         salt '*'  openscap.xccdf "eval --profile Default /usr/share/openscap/scap-yast2sec-xccdf.xml"
     """
+    salt.utils.versions.warn_until(
+        3009,
+        "The 'xccdf' function has been deprecated, please use 'xccdf_eval' instead",
+    )
     params = shlex.split(params)
     policy = params[-1]
 
