@@ -138,9 +138,9 @@ jobs:
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session}} >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session}} >> "$GITHUB_ENV"
           else
-            echo NOX_SESSION=${{ inputs.nox-session}}-tcp >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session}}-tcp >> "$GITHUB_ENV"
           fi
 
       - name: Install Dependencies
@@ -215,7 +215,6 @@ jobs:
           tar xvf ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz
 
       - name: Install System Dependencies
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           brew install tree
 
@@ -241,9 +240,9 @@ jobs:
       - name: Define Nox Session
         run: |
           if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session}} >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session}} >> "$GITHUB_ENV"
           else
-            echo NOX_SESSION=${{ inputs.nox-session}}-tcp >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session}}-tcp >> "$GITHUB_ENV"
           fi
 
       - name: Download testrun-changed-files.txt
@@ -310,16 +309,16 @@ jobs:
 
       - name: Fix file ownership
         run: |
-          sudo chown -R $(id -un) .
+          sudo chown -R "$(id -un)" .
 
       - name: Combine Coverage Reports
-        if: always() && contains(fromJSON('["canceled", "skipped"]'), steps.run-tests.outcome) == false
+        if: always()
         run: |
           nox -e combine-coverage
 
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
-        if: always() && contains(fromJSON('["canceled", "skipped"]'), steps.run-tests.outcome) == false
+        if: always()
         run: |
           tree -a artifacts
           mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
@@ -394,9 +393,9 @@ jobs:
       - name: Define Nox Session
         run: |
           if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session}} >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session}} >> "$GITHUB_ENV"
           else
-            echo NOX_SESSION=${{ inputs.nox-session}}-tcp >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session}}-tcp >> "$GITHUB_ENV"
           fi
 
       - name: Download Test Run Artifacts

@@ -195,7 +195,7 @@ jobs:
         if: always()
         run: |
           mkdir exitstatus
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-prepare-ci
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-prepare-ci
 
       - name: Upload Exit Status
         if: always()
