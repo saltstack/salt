@@ -15,6 +15,7 @@ from unittest import TestCase  # pylint: disable=blacklisted-module
 
 import _pytest.logging
 import _pytest.skipping
+import docker
 import psutil
 import pytest
 
@@ -503,6 +504,13 @@ def pytest_runtest_setup(item):
     """
     Fixtures injection based on markers or test skips based on CLI arguments
     """
+    try:
+        docker_api = docker.from_env()
+        docker_api.containers.list()
+    except docker.errors.DockerException:
+        log.critical("DOCKER is DOWN!!!!!!!")
+        print("DOCKER is DOWN!!!!!!!")
+        exit(-1)
     integration_utils_tests_path = str(TESTS_DIR / "integration" / "utils")
     if (
         str(item.fspath).startswith(integration_utils_tests_path)
