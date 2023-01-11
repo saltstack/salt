@@ -108,7 +108,7 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit,
 )
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 try:
     # pylint: disable=no-name-in-module
@@ -174,7 +174,7 @@ def version_compatible(version):
     """
     Checks profitbricks version
     """
-    return LooseVersion(profitbricks.API_VERSION) >= LooseVersion(version)
+    return Version(profitbricks.API_VERSION) >= Version(version)
 
 
 def get_dependencies():

@@ -23,14 +23,14 @@ depending on the version of Windows this is run on. Once support for Windows
 import platform
 
 from salt._compat import ipaddress
-from salt.utils.versions import StrictVersion
+from salt.utils.versions import Version
 
 IS_WINDOWS = platform.system() == "Windows"
 
 __virtualname__ = "win_network"
 
 if IS_WINDOWS:
-    USE_WMI = StrictVersion(platform.version()) < StrictVersion("6.2")
+    USE_WMI = Version(platform.version()) < Version("6.2")
     if USE_WMI:
         import wmi
 
@@ -39,6 +39,8 @@ if IS_WINDOWS:
         import clr
         from System.Net import NetworkInformation
 
+# TODO: Should we deprecate support for pythonnet 2.5.2, these enumerations can
+# TODO: be deleted
 enum_adapter_types = {
     1: "Unknown",
     6: "Ethernet",
@@ -107,18 +109,29 @@ def __virtual__():
 def _get_base_properties(i_face):
     raw_mac = i_face.GetPhysicalAddress().ToString()
     try:
-        i_face_type = enum_adapter_types[i_face.NetworkInterfaceType]
-    except KeyError:
-        i_face_type = i_face.Description
-    return {
+        # pythonnet 3.0.1
+        i_face_type = i_face.NetworkInterfaceType.ToString()
+    except AttributeError:
+        # pythonnet 2.5.2
+        try:
+            i_face_type = enum_adapter_types[i_face.NetworkInterfaceType]
+        except KeyError:
+            i_face_type = i_face.Description
+    ret = {
         "alias": i_face.Name,
         "description": i_face.Description,
         "id": i_face.Id,
         "receive_only": i_face.IsReceiveOnly,
         "type": i_face_type,
-        "status": enum_operational_status[i_face.OperationalStatus],
         "physical_address": ":".join(raw_mac[i : i + 2] for i in range(0, 12, 2)),
     }
+    try:
+        # pythonnet 3.0.1
+        ret["status"] = i_face.OperationalStatus.ToString()
+    except AttributeError:
+        # pythonnet 2.5.2
+        ret["status"] = enum_operational_status[i_face.OperationalStatus]
+    return ret
 
 
 def _get_ip_base_properties(i_face):
@@ -136,7 +149,17 @@ def _get_ip_unicast_info(i_face):
     if ip_properties.UnicastAddresses.Count > 0:
         names = {af_inet: "ip_addresses", af_inet6: "ipv6_addresses"}
         for addrs in ip_properties.UnicastAddresses:
-            if addrs.Address.AddressFamily == af_inet:
+            try:
+                # pythonnet 3.0.1
+                if addrs.Address.AddressFamily.ToString() == "InterNetwork":
+                    family = 2
+                else:
+                    family = 23
+            except AttributeError:
+                # pythonnet 2.5.2
+                family = addrs.Address.AddressFamily
+
+            if family == af_inet:
                 ip = addrs.Address.ToString()
                 mask = addrs.IPv4Mask.ToString()
                 net = ipaddress.IPv4Network(ip + "/" + mask, False)
@@ -155,14 +178,28 @@ def _get_ip_unicast_info(i_face):
                     # for feature parity with Linux
                     "interface_index": int(addrs.Address.ScopeId),
                 }
-            ip_info.update(
-                {
-                    "prefix_length": addrs.PrefixLength,
-                    "prefix_origin": enum_prefix_suffix[addrs.PrefixOrigin],
-                    "suffix_origin": enum_prefix_suffix[addrs.SuffixOrigin],
-                }
-            )
-            int_dict.setdefault(names[addrs.Address.AddressFamily], []).append(ip_info)
+            ip_info.update({"prefix_length": addrs.PrefixLength})
+            try:
+                # pythonnet 3.0.1
+                ip_info.update(
+                    {"prefix_origin": addrs.PrefixOrigin.ToString()},
+                )
+            except AttributeError:
+                # pythonnet 2.5.2
+                ip_info.update(
+                    {"prefix_origin": enum_prefix_suffix[addrs.PrefixOrigin]},
+                )
+            try:
+                # pythonnet 3.0.1
+                ip_info.update(
+                    {"suffix_origin": addrs.SuffixOrigin.ToString()},
+                )
+            except AttributeError:
+                # pythonnet 2.5.2
+                ip_info.update(
+                    {"suffix_origin": enum_prefix_suffix[addrs.SuffixOrigin]},
+                )
+            int_dict.setdefault(names[family], []).append(ip_info)
     return int_dict
 
 
@@ -172,7 +209,16 @@ def _get_ip_gateway_info(i_face):
     if ip_properties.GatewayAddresses.Count > 0:
         names = {af_inet: "ip_gateways", af_inet6: "ipv6_gateways"}
         for addrs in ip_properties.GatewayAddresses:
-            int_dict.setdefault(names[addrs.Address.AddressFamily], []).append(
+            try:
+                # pythonnet 3.0.1
+                if addrs.Address.AddressFamily.ToString() == "InterNetwork":
+                    family = 2
+                else:
+                    family = 23
+            except AttributeError:
+                # pythonnet 2.5.2
+                family = addrs.Address.AddressFamily
+            int_dict.setdefault(names[family], []).append(
                 addrs.Address.ToString().split("%")[0]
             )
     return int_dict
@@ -184,7 +230,16 @@ def _get_ip_dns_info(i_face):
     if ip_properties.DnsAddresses.Count > 0:
         names = {af_inet: "ip_dns", af_inet6: "ipv6_dns"}
         for addrs in ip_properties.DnsAddresses:
-            int_dict.setdefault(names[addrs.AddressFamily], []).append(
+            try:
+                # pythonnet 3.0.1
+                if addrs.AddressFamily.ToString() == "InterNetwork":
+                    family = 2
+                else:
+                    family = 23
+            except AttributeError:
+                # pythonnet 2.5.2
+                family = addrs.AddressFamily
+            int_dict.setdefault(names[family], []).append(
                 addrs.ToString().split("%")[0]
             )
     return int_dict
@@ -196,7 +251,16 @@ def _get_ip_multicast_info(i_face):
     if ip_properties.MulticastAddresses.Count > 0:
         names = {af_inet: "ip_multicast", af_inet6: "ipv6_multicast"}
         for addrs in ip_properties.MulticastAddresses:
-            int_dict.setdefault(names[addrs.Address.AddressFamily], []).append(
+            try:
+                # pythonnet 3.0.1
+                if addrs.Address.AddressFamily.ToString() == "InterNetwork":
+                    family = 2
+                else:
+                    family = 23
+            except AttributeError:
+                # pythonnet 2.5.2
+                family = addrs.Address.AddressFamily
+            int_dict.setdefault(names[family], []).append(
                 addrs.Address.ToString().split("%")[0]
             )
     return int_dict
@@ -208,9 +272,16 @@ def _get_ip_anycast_info(i_face):
     if ip_properties.AnycastAddresses.Count > 0:
         names = {af_inet: "ip_anycast", af_inet6: "ipv6_anycast"}
         for addrs in ip_properties.AnycastAddresses:
-            int_dict.setdefault(names[addrs.Address.AddressFamily], []).append(
-                addrs.Address.ToString()
-            )
+            try:
+                # pythonnet 3.0.1
+                if addrs.Address.AddressFamily.ToString() == "InterNetwork":
+                    family = 2
+                else:
+                    family = 23
+            except AttributeError:
+                # pythonnet 2.5.2
+                family = addrs.Address.AddressFamily
+            int_dict.setdefault(names[family], []).append(addrs.Address.ToString())
     return int_dict
 
 

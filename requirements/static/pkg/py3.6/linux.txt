@@ -45,7 +45,7 @@ jinja2==3.0.3
     # via -r requirements/base.txt
 jmespath==0.10.0
     # via -r requirements/base.txt
-looseversion==1.0.2
+looseversion==1.0.3
     # via -r requirements/base.txt
 markupsafe==2.0.1
     # via
@@ -71,10 +71,8 @@ pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pyopenssl==19.1.0
     # via -r requirements/static/pkg/linux.in
-pyparsing==3.0.9
-    # via
-    #   -r requirements/base.txt
-    #   packaging
+pyparsing==3.0.6
+    # via packaging
 python-dateutil==2.8.1
     # via -r requirements/static/pkg/linux.in
 python-gnupg==0.4.8

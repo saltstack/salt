@@ -446,10 +446,6 @@ genshi==0.7.5
     # via -r requirements/static/ci/common.in
 geomet==0.1.2
     # via cassandra-driver
-gitdb==4.0.5
-    # via gitpython
-gitpython==3.1.12
-    # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
 hglib==2.6.1
@@ -521,7 +517,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
-looseversion==1.0.2
+looseversion==1.0.3
     # via -r requirements/base.txt
 lxml==4.9.1
     # via
@@ -713,9 +709,8 @@ pyopenssl==19.1.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==3.0.9
+pyparsing==3.0.6
     # via
-    #   -r requirements/base.txt
     #   junos-eznc
     #   packaging
 pyrsistent==0.17.3
@@ -886,8 +881,6 @@ slack-bolt==1.15.5
     # via -r requirements/static/ci/linux.in
 slack-sdk==3.19.5
     # via slack-bolt
-smmap==3.0.4
-    # via gitdb
 sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7

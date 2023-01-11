@@ -438,7 +438,7 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.5
     # via gitpython
-gitpython==3.1.12
+gitpython==3.1.30 ; python_version >= "3.7"
     # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
@@ -498,6 +498,8 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
+looseversion==1.0.2
+    # via -r requirements/base.txt
 lxml==4.9.1
     # via
     #   junos-eznc
@@ -641,7 +643,9 @@ oauthlib==3.2.1
 oscrypto==1.2.0
     # via certvalidator
 packaging==21.3
-    # via pytest
+    # via
+    #   -r requirements/base.txt
+    #   pytest
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in

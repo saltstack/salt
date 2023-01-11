@@ -3,7 +3,7 @@ import logging
 import os
 
 import salt.auth
-from salt.utils.versions import StrictVersion as _StrictVersion
+from salt.utils.versions import Version
 
 __virtualname__ = os.path.abspath(__file__).rsplit(os.sep)[-2] or "rest_tornado"
 
@@ -15,7 +15,7 @@ has_tornado = False
 try:
     import salt.ext.tornado
 
-    if _StrictVersion(salt.ext.tornado.version) >= _StrictVersion(min_tornado_version):
+    if Version(salt.ext.tornado.version) >= Version(min_tornado_version):
         has_tornado = True
     else:
         log.error("rest_tornado requires at least tornado %s", min_tornado_version)

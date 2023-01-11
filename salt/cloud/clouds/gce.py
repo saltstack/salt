@@ -60,7 +60,7 @@ import salt.utils.msgpack
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import SaltCloudSystemExit
 from salt.utils.functools import namespaced_function
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 # pylint: disable=import-error
 LIBCLOUD_IMPORT_ERROR = None
@@ -107,7 +107,7 @@ def __virtual__():
     if not HAS_LIBCLOUD:
         return False, "apache-libcloud is not installed"
 
-    if _LooseVersion(libcloud.__version__) < _LooseVersion("2.5.0"):
+    if Version(libcloud.__version__) < Version("2.5.0"):
         return False, "The salt-cloud GCE driver requires apache-libcloud>=2.5.0"
 
     if get_configured_provider() is False:

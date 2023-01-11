@@ -17,7 +17,9 @@ import zipfile
 
 import distro
 import jinja2
+import looseversion
 import msgpack
+import packaging
 import yaml
 
 import salt
@@ -279,6 +281,8 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
         "ssl_match_hostname",
         "markupsafe",
         "backports_abc",
+        "looseversion",
+        "packaging",
     ]
     if ext_py_ver and tuple(ext_py_ver) >= (3, 0):
         mods.append("distro")
@@ -426,6 +430,8 @@ def get_tops(extra_mods="", so_mods=""):
         ssl_match_hostname,
         markupsafe,
         backports_abc,
+        looseversion,
+        packaging,
     ]
     modules = find_site_modules("contextvars")
     if modules:

@@ -79,23 +79,22 @@ $ErrorActionPreference = "Stop"
 #-------------------------------------------------------------------------------
 $SCRIPT_DIR     = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
 $PROJECT_DIR    = $(git rev-parse --show-toplevel)
-$SALT_SRC_DIR   = "$( (Get-Item $PROJECT_DIR).Parent.FullName )\salt"
 
 #-------------------------------------------------------------------------------
 # Verify Salt and Version
 #-------------------------------------------------------------------------------
 
 if ( [String]::IsNullOrEmpty($Version) ) {
-    if ( ! (Test-Path -Path $SALT_SRC_DIR) ) {
-        Write-Host "Missing Salt Source Directory: $SALT_SRC_DIR"
+    if ( ! (Test-Path -Path $PROJECT_DIR) ) {
+        Write-Host "Missing Salt Source Directory: $PROJECT_DIR"
         exit 1
     }
-    Push-Location $SALT_SRC_DIR
+    Push-Location $PROJECT_DIR
     $Version = $( git describe )
     $Version = $Version.Trim("v")
     Pop-Location
     if ( [String]::IsNullOrEmpty($Version) ) {
-        Write-Host "Failed to get version from $SALT_SRC_DIR"
+        Write-Host "Failed to get version from $PROJECT_DIR"
         exit 1
     }
 }
@@ -114,6 +113,7 @@ Write-Host $("v" * 80)
 #-------------------------------------------------------------------------------
 # Install NSIS
 #-------------------------------------------------------------------------------
+
 & "$SCRIPT_DIR\install_nsis.ps1"
 if ( ! $? ) {
     Write-Host "Failed to install NSIS"
@@ -121,8 +121,19 @@ if ( ! $? ) {
 }
 
 #-------------------------------------------------------------------------------
+# Install WIX
+#-------------------------------------------------------------------------------
+
+& "$SCRIPT_DIR\install_wix.ps1"
+if ( ! $? ) {
+    Write-Host "Failed to install WIX"
+    exit 1
+}
+
+#-------------------------------------------------------------------------------
 # Install Visual Studio Build Tools
 #-------------------------------------------------------------------------------
+
 & "$SCRIPT_DIR\install_vs_buildtools.ps1"
 if ( ! $? ) {
     Write-Host "Failed to install Visual Studio Build Tools"
@@ -132,6 +143,7 @@ if ( ! $? ) {
 #-------------------------------------------------------------------------------
 # Build Python
 #-------------------------------------------------------------------------------
+
 $KeywordArguments = @{
     Version = $PythonVersion
     Architecture = $Architecture
@@ -148,6 +160,7 @@ if ( ! $? ) {
 #-------------------------------------------------------------------------------
 # Install Salt
 #-------------------------------------------------------------------------------
+
 & "$SCRIPT_DIR\install_salt.ps1"
 if ( ! $? ) {
     Write-Host "Failed to install Salt"
@@ -157,6 +170,7 @@ if ( ! $? ) {
 #-------------------------------------------------------------------------------
 # Prep Salt for Packaging
 #-------------------------------------------------------------------------------
+
 & "$SCRIPT_DIR\prep_salt.ps1"
 if ( ! $? ) {
     Write-Host "Failed to Prepare Salt for packaging"
@@ -164,19 +178,35 @@ if ( ! $? ) {
 }
 
 #-------------------------------------------------------------------------------
-# Build Package
+# Build NSIS Package
 #-------------------------------------------------------------------------------
+
 $KeywordArguments = @{}
 if ( ! [String]::IsNullOrEmpty($Version) ) {
     $KeywordArguments.Add("Version", $Version)
 }
 
-powershell -file "$SCRIPT_DIR\build_pkg.ps1" @KeywordArguments
+powershell -file "$SCRIPT_DIR\nsis\build_pkg.ps1" @KeywordArguments
 
 if ( ! $? ) {
-    Write-Host "Failed to build package"
+    Write-Host "Failed to build NSIS package"
     exit 1
 }
+
+#-------------------------------------------------------------------------------
+# Build MSI Package
+#-------------------------------------------------------------------------------
+
+powershell -file "$SCRIPT_DIR\msi\build_pkg.ps1" @KeywordArguments
+
+if ( ! $? ) {
+    Write-Host "Failed to build NSIS package"
+    exit 1
+}
+
+#-------------------------------------------------------------------------------
+# Script Complete
+#-------------------------------------------------------------------------------
 
 Write-Host $("^" * 80)
 Write-Host "Build Salt $Architecture Completed" -ForegroundColor Cyan
