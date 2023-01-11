@@ -706,8 +706,9 @@ def test_eauth_user_should_not_be_able_to_target_invalid_minions(
     )
     assert "Authorization error occurred." == res.data or res.data is None
     for minion in docker_minions:
-        res = minion.run("ls /tmp/fun.txt")
-        assert "ls: /tmp/fun.txt: No such file or directory" == res.stderr.strip()
+        res = minion.run("test -f /tmp/fun.txt")
+        file_exists = res.returncode == 0
+        assert not file_exists
 
 
 @pytest.mark.skip(reason="Not sure about blocklist")
