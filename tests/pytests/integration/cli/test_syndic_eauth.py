@@ -2,7 +2,6 @@ import json
 import pathlib
 import tempfile
 import time
-import subprocess
 
 import pytest
 
