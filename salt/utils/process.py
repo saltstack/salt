@@ -1090,7 +1090,8 @@ class SignalHandlingProcess(Process):
                     self.pid,
                     os.getpid(),
                 )
-        sys.exit(salt.defaults.exitcodes.EX_OK)
+        # It's OK to call os._exit instead of sys.exit on forked processed
+        os._exit(salt.defaults.exitcodes.EX_OK)
 
     def start(self):
         with default_signals(signal.SIGINT, signal.SIGTERM):

@@ -26,7 +26,7 @@ import salt.utils.stringutils
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 try:
     import salt.utils.win_network
@@ -1096,7 +1096,7 @@ def netbsd_interfaces():
     address)
     """
     # NetBSD versions prior to 8.0 can still use linux_interfaces()
-    if LooseVersion(os.uname()[2]) < LooseVersion("8.0"):
+    if Version(os.uname()[2]) < Version("8.0"):
         return linux_interfaces()
 
     ifconfig_path = salt.utils.path.which("ifconfig")
