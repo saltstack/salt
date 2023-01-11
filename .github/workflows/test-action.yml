@@ -127,9 +127,9 @@ jobs:
       - name: Define Nox Session
         run: |
           if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session }} >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session }} >> "$GITHUB_ENV"
           else
-            echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> "$GITHUB_ENV"
           fi
 
       - name: Start VM
@@ -238,9 +238,9 @@ jobs:
       - name: Define Nox Session
         run: |
           if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session }} >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session }} >> "$GITHUB_ENV"
           else
-            echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> "$GITHUB_ENV"
           fi
 
       - name: Download testrun-changed-files.txt
@@ -300,13 +300,13 @@ jobs:
             ${{ matrix.tests-chunk }} -- --run-slow
 
       - name: Combine Coverage Reports
-        if: always() && steps.spin-up-vm.outcome == 'success' && contains(fromJSON('["canceled", "skipped"]'), steps.run-tests.outcome) == false
+        if: always() && steps.spin-up-vm.outcome == 'success'
         run: |
           tools --timestamps vm combine-coverage ${{ inputs.distro-slug }}
 
       - name: Download Test Run Artifacts
         id: download-artifacts-from-vm
-        if: always() && steps.spin-up-vm.outcome == 'success' && contains(fromJSON('["canceled", "skipped"]'), steps.run-tests.outcome) == false
+        if: always() && steps.spin-up-vm.outcome == 'success'
         run: |
           tools --timestamps vm download-artifacts ${{ inputs.distro-slug }}
           tree -a artifacts
@@ -398,9 +398,9 @@ jobs:
       - name: Define Nox Session
         run: |
           if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session }} >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session }} >> "$GITHUB_ENV"
           else
-            echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> "$GITHUB_ENV"
           fi
 
       - name: Download Test Run Artifacts
