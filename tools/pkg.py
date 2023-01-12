@@ -78,4 +78,11 @@ def set_salt_version(ctx: Context, salt_version: str, overwrite: bool = False):
         with open(gh_env_file, "w", encoding="utf-8") as wfh:
             wfh.write(f"{variable_text}\n")
 
+    gh_output_file = os.environ.get("GITHUB_OUTPUT", None)
+    if gh_output_file is not None:
+        variable_text = f"salt-version={salt_version}"
+        ctx.info(f"Writing '{variable_text}' to '$GITHUB_OUTPUT' file:", gh_output_file)
+        with open(gh_output_file, "w", encoding="utf-8") as wfh:
+            wfh.write(f"{variable_text}\n")
+
     ctx.exit(0)
