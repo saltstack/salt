@@ -2,7 +2,12 @@
 name: Build MacOS Packages
 
 on:
-  - workflow_call
+  workflow_call:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to building packages.
 
 jobs:
 
@@ -21,17 +26,21 @@ jobs:
         with:
           python-version: 3.9
 
-      - name: Get Salt Version
-        run: |
-          SALT_VERSION=$(python3 salt/version.py)
-          echo "SALT_VERSION=$SALT_VERSION" >> $GITHUB_ENV
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
 
       - name: Build Package
         run: |
           pkg/macos/build_python.sh
           pkg/macos/install_salt.sh
           pkg/macos/prep_salt.sh
-          pkg/macos/package.sh -n ${{ env.SALT_VERSION }}
+          pkg/macos/package.sh -n ${{ inputs.salt-version }}
 
       - name: Upload ${{ matrix.arch }} Package
         uses: actions/upload-artifact@v3
