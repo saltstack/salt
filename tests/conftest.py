@@ -181,6 +181,12 @@ def pytest_addoption(parser):
         default=False,
         help="Run slow tests.",
     )
+    test_selection_group.addoption(
+        "--package-tests",
+        action="store_true",
+        default=False,
+        help="Run packages related tests tests.",
+    )
 
     output_options_group = parser.getgroup("Output Options")
     output_options_group.addoption(
@@ -533,6 +539,11 @@ def pytest_runtest_setup(item):
     ):
         item._skipped_by_mark = True
         pytest.skip(PRE_PYTEST_SKIP_REASON)
+
+    package_tests_enabled = item.config.getoption("--package-tests")
+    package_tests_path = str(TESTS_DIR / "pytests" / "packaging")
+    if str(item.fspath).startswith(package_tests_path) and not package_tests_enabled:
+        raise pytest.skip.Exception("Package tests disabled.", _use_item_location=True)
 
     if item.get_closest_marker("slow_test"):
         if item.config.getoption("--run-slow") is False:
