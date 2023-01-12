@@ -1,0 +1,21 @@
+---
+name: setup-salt-version
+description: Setup Salt Version
+inputs:
+  salt-version:
+    type: string
+    default: ""
+    description: >
+      The Salt version to set prior to running tests or building packages.
+      If not set, it is discover at run time, like, for example, capturing
+      the output of running `python3 salt/version.py`
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Setup Salt Version
+      shell: bash
+      run: |
+        tools pkg set-salt-version ${{ inputs.salt-version }}
