@@ -1,10 +1,15 @@
 name: Build Salt Packages
 
 on:
-  - workflow_call
+  workflow_call:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to building packages.
 
 jobs:
-  rpm:
+  build:
     name: Build RPM
     runs-on:
       - self-hosted
@@ -32,6 +37,8 @@ jobs:
         env:
           USE_STATIC_REQUIREMENTS: "1"
         run: |
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
+          sed -i 's/^Version: \(.*\)$/Version: ${{ inputs.salt-version }}/g' pkg/rpm/salt.spec
           rpmbuild -bb --define="_salt_src $(pwd)" $(pwd)/pkg/rpm/salt.spec
 
       - name: Upload RPMs
