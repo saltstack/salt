@@ -15,6 +15,11 @@ install_salt.ps1
 #>
 param(
     [Parameter(Mandatory=$false)]
+    [Alias("b")]
+    # Don't pretify the output of the Write-Result
+    [String] $BuildDir,
+
+    [Parameter(Mandatory=$false)]
     [Alias("c")]
     # Don't pretify the output of the Write-Result
     [Switch] $CICD
@@ -47,7 +52,11 @@ function Write-Result($result, $ForegroundColor="Green") {
 
 # Python Variables
 $SCRIPT_DIR    = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
-$BUILD_DIR     = "$SCRIPT_DIR\buildenv"
+if ( $BuildDir ) {
+    $BUILD_DIR = $BuildDir
+} else {
+    $BUILD_DIR = "$SCRIPT_DIR\buildenv"
+}
 $SITE_PKGS_DIR = "$BUILD_DIR\Lib\site-packages"
 $SCRIPTS_DIR   = "$BUILD_DIR\Scripts"
 $PYTHON_BIN    = "$SCRIPTS_DIR\python.exe"

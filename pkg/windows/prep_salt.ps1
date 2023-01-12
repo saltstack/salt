@@ -16,6 +16,11 @@ prep_salt.ps1
 #>
 param(
     [Parameter(Mandatory=$false)]
+    [Alias("b")]
+    # Don't pretify the output of the Write-Result
+    [String] $BuildDir,
+
+    [Parameter(Mandatory=$false)]
     [Alias("c")]
     # Don't pretify the output of the Write-Result
     [Switch] $CICD
@@ -48,7 +53,11 @@ function Write-Result($result, $ForegroundColor="Green") {
 
 $PROJECT_DIR    = $(git rev-parse --show-toplevel)
 $SCRIPT_DIR     = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
-$BUILD_DIR      = "$SCRIPT_DIR\buildenv"
+if ( $BuildDir ) {
+    $BUILD_DIR = $BuildDir
+} else {
+    $BUILD_DIR = "$SCRIPT_DIR\buildenv"
+}
 $PREREQ_DIR     = "$SCRIPT_DIR\prereqs"
 $SCRIPTS_DIR    = "$BUILD_DIR\Scripts"
 $BUILD_CONF_DIR = "$BUILD_DIR\configs"
@@ -138,7 +147,7 @@ if ( Test-Path -Path "$BUILD_CONF_DIR\minion" ) {
     exit 1
 }
 
-Write-Host "Copying SSM to Bin: " -NoNewline
+Write-Host "Copying SSM to Root: " -NoNewline
 Invoke-WebRequest -Uri "$SALT_DEP_URL/ssm-2.24-103-gdee49fc.exe" -OutFile "$BUILD_DIR\ssm.exe"
 if ( Test-Path -Path "$BUILD_DIR\ssm.exe" ) {
     Write-Result "Success" -ForegroundColor Green
