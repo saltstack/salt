@@ -186,7 +186,8 @@ def docker_master(salt_factories, syndic_network, config, source_path):
         "master",
         image_name="saltstack/salt:3005",
         container_run_kwargs={
-            "entrypoint": "salt-master -ldebug",
+            # "entrypoint": "salt-master -ldebug",
+            "entrypoint": "python -m http.server",
             "network": syndic_network,
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
@@ -216,7 +217,8 @@ def docker_minion(salt_factories, syndic_network, config, source_path):
         "minion",
         image_name="saltstack/salt:3005",
         container_run_kwargs={
-            "entrypoint": "salt-minion",
+            # "entrypoint": "salt-minion",
+            "entrypoint": "python -m http.server",
             "network": syndic_network,
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
@@ -242,7 +244,8 @@ def docker_syndic_a(salt_factories, config, syndic_network, source_path):
         "syndic_a",
         image_name="saltstack/salt:3005",
         container_run_kwargs={
-            "entrypoint": "salt-master -ldebug",
+            # "entrypoint": "salt-master -ldebug",
+            "entrypoint": "python -m http.server",
             "network": syndic_network,
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
@@ -268,7 +271,8 @@ def docker_syndic_b(salt_factories, config, syndic_network, source_path):
         "syndic_b",
         image_name="saltstack/salt:3005",
         container_run_kwargs={
-            "entrypoint": "salt-master -ldebug",
+            # "entrypoint": "salt-master -ldebug",
+            "entrypoint": "python -m http.server",
             "network": syndic_network,
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
@@ -295,7 +299,8 @@ def docker_minion_a1(salt_factories, config, syndic_network, source_path):
         image_name="saltstack/salt:3005",
         container_run_kwargs={
             "network": syndic_network,
-            "entrypoint": "salt-minion -ldebug",
+            # "entrypoint": "salt-minion -ldebug",
+            "entrypoint": "python -m http.server",
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
                 source_path: {
@@ -321,7 +326,8 @@ def docker_minion_a2(salt_factories, config, syndic_network, source_path):
         image_name="saltstack/salt:3005",
         container_run_kwargs={
             "network": syndic_network,
-            "entrypoint": "salt-minion",
+            # "entrypoint": "salt-minion",
+            "entrypoint": "python -m http.server",
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
                 source_path: {
@@ -347,7 +353,8 @@ def docker_minion_b1(salt_factories, config, syndic_network, source_path):
         image_name="saltstack/salt:3005",
         container_run_kwargs={
             "network": syndic_network,
-            "entrypoint": "salt-minion",
+            # "entrypoint": "salt-minion",
+            "entrypoint": "python -m http.server",
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
                 source_path: {
@@ -373,7 +380,8 @@ def docker_minion_b2(salt_factories, config, syndic_network, source_path):
         image_name="saltstack/salt:3005",
         container_run_kwargs={
             "network": syndic_network,
-            "entrypoint": "salt-minion",
+            # "entrypoint": "salt-minion",
+            "entrypoint": "python -m http.server",
             "volumes": {
                 config_dir: {"bind": "/etc/salt", "mode": "z"},
                 source_path: {
@@ -403,6 +411,29 @@ def all_the_docker(
     docker_minion_b2,
 ):
     try:
+        for s in (
+            docker_master,
+            docker_syndic_a,
+            docker_syndic_b,
+            docker_minion_a1,
+            docker_minion_a2,
+            docker_minion_b1,
+            docker_minion_b2,
+            docker_minion,
+        ):
+            s.run("python3 -m pip install looseversion packaging")
+        # WORKAROUND
+        for s in (docker_master, docker_syndic_a, docker_syndic_b):
+            s.run("salt-master -d -ldebug")
+        for s in (
+            docker_minion_a1,
+            docker_minion_a2,
+            docker_minion_b1,
+            docker_minion_b2,
+            docker_minion,
+        ):
+            s.run("salt-minion -d")
+        # END WORKAROUND
         for s in (docker_syndic_a, docker_syndic_b):
             s.run("salt-syndic -d")
         failure_time = time.time() + 20
@@ -702,11 +733,11 @@ def test_eauth_user_should_not_be_able_to_target_invalid_minions(
     eauth_blocked_minions, docker_master, docker_minions
 ):
     res = docker_master.run(
-        f"salt -a pam --username bob --password '' {eauth_blocked_minions} file.touch /tmp/fun.txt -t 20 --out=json",
+        f"salt -a pam --username bob --password '' {eauth_blocked_minions} file.touch /tmp/bad_bad_file.txt -t 20 --out=json",
     )
     assert "Authorization error occurred." == res.data or res.data is None
     for minion in docker_minions:
-        res = minion.run("test -f /tmp/fun.txt")
+        res = minion.run("test -f /tmp/bad_bad_file.txt")
         file_exists = res.returncode == 0
         assert not file_exists
 
