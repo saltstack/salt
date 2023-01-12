@@ -8,6 +8,13 @@ on:
     - cron: '0 */8 * * *'  # Run every 8 hours
   workflow_dispatch:
     inputs:
+      salt-version:
+        type: string
+        default: ""
+        description: >
+          The Salt version to set prior to running tests or building packages.
+          If not set, it is discover at run time, like, for example, capturing
+          the output of running `python3 salt/version.py`
       testrun-type:
         description: Type of test run
         required: true
@@ -94,14 +101,6 @@ jobs:
                 - *salt_added_modified
                 - *tests_added_modified
 
-      - name: Write Changed Files To A Local File
-        run:
-          echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
-
-      - name: Check Local Changed Files Contents
-        run:
-          cat changed-files.json
-
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
@@ -109,6 +108,19 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup Salt Version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+
+      - name: Write Changed Files To A Local File
+        run:
+          echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
+
+      - name: Check Local Changed Files Contents
+        run:
+          cat changed-files.json
 
       - name: Process Changed Files
         id: process-changed-files
