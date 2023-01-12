@@ -9,6 +9,10 @@ inputs:
       The Salt version to set prior to running tests or building packages.
       If not set, it is discover at run time, like, for example, capturing
       the output of running `python3 salt/version.py`
+outputs:
+  salt-version:
+    value: ${{ steps.setup-salt-version.outputs.salt-version }}
+    description: The Salt version written to `salt/_version.txt`
 
 runs:
   using: composite
@@ -16,6 +20,7 @@ runs:
   steps:
 
     - name: Setup Salt Version
+      id: setup-salt-version
       shell: bash
       run: |
         tools pkg set-salt-version ${{ inputs.salt-version }}
