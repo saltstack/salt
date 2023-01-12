@@ -1,6 +1,6 @@
 ---
-name: build-linux-onedir
-description: Build Linux Onedir Package
+name: build-onedir-pkg
+description: Build Onedir Package
 inputs:
   platform:
     required: true
@@ -29,6 +29,7 @@ runs:
         key: ${{ env.CACHE_SEED }}|relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt') }}
 
     - name: Install Salt Into Onedir
+      if: "${{ inputs.platform }}" != "windows"
       env:
         PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         PIP_EXTRA_INDEX_URL: https://pypi.org/simple
@@ -36,26 +37,63 @@ runs:
         RELENV_PIP_DIR: "1"
       shell: bash
       run: |
-        if [ "${{ inputs.platform }}" != "windows" ]; then
-          artifacts/${{ inputs.package-name }}/bin/python3 -m pip install .
-        else
-          artifacts/${{ inputs.package-name }}/Scripts/python -m pip install .
+        artifacts/${{ inputs.package-name }}/bin/python3 -m pip install .
+        if [ "${{ inputs.platform }}" == "darwin" ]; then
+          pkg/macos/prep_salt.sh --build-dir artifacts/${{ inputs.package-name }}
+          rm -rf artifacts/${{ inputs.package-name }}/opt
+          rm -rf artifacts/${{ inputs.package-name }}/etc
+          rm -rf artifacts/${{ inputs.package-name }}/Library
         fi
+
+    - name: Install Salt Into Onedir (Windows)
+      if: "${{ inputs.platform }}" == "windows"
+      env:
+        PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+        PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+        USE_STATIC_REQUIREMENTS: "1"
+      shell: powershell
+      run: |
+        # install salt
+        pkg\windows\install_salt.cmd -BuildDir "artifacts\${{ inputs.package-name }}" -CICD
+        # prep salt
+        pkg\windows\prep_salt.cmd -BuildDir "artifacts\${{ inputs.package-name }}" -CICD
+        # Remove package specific items
+        Remove-Item -Path artifacts\${{ inputs.package-name }}\configs -Recurse
 
     - name: Cleanup Salt Onedir Directory
       shell: bash
       run: |
         tools pkg pre-archive-cleanup artifacts/${{ inputs.package-name }}
 
-    - name: Create Tarball
+    - name: Create Archive
+      if: "${{ inputs.platform }}" != "windows"
       shell: bash
       run: |
         cd artifacts/
         tar -cJf ${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz  ${{ inputs.package-name }}
 
+    - name: Create Archive (Windows)
+      if: "${{ inputs.platform }}" == "windows"
+      env:
+        ProgressPreference: "SilentlyContinue"
+        ErrorActionPreference: "Stop"
+      shell: powershell
+      run: |
+        cd artifacts
+        Compress-Archive -LiteralPath ${{ inputs.package-name }}" -DestinationPath ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip
+
     - name: Upload Onedir Tarball as an Artifact
+      if: "${{ inputs.platform }}" != "windows"
       uses: actions/upload-artifact@v3
       with:
         name: ${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
         path: artifacts/${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+        retention-days: 7
+
+    - name: Upload Onedir Zipfile as an Artifact
+      if: "${{ inputs.platform }}" == "windows"
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip
+        path: artifacts/${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip
         retention-days: 7

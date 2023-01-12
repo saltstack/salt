@@ -1,6 +1,6 @@
 ---
-name: build-linux-onedir
-description: Build Linux Onedir Package
+name: build-onedir-deps
+description: Build Onedir Dependencies
 inputs:
   platform:
     required: true

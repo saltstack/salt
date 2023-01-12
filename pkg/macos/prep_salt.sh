@@ -20,18 +20,11 @@
 #         ./prep_salt.sh
 #
 ################################################################################
-#-------------------------------------------------------------------------------
-# Variables
-#-------------------------------------------------------------------------------
-SRC_DIR="$(git rev-parse --show-toplevel)"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BUILD_DIR="$SCRIPT_DIR/build"
-CONF_DIR="$BUILD_DIR/etc/salt"
-CMD_OUTPUT=$(mktemp -t cmd.log)
 
 #-------------------------------------------------------------------------------
-# Functions
+# Script Functions
 #-------------------------------------------------------------------------------
+
 # _usage
 #
 #   Prints out help text
@@ -42,7 +35,8 @@ _usage() {
      echo "usage: ${0}"
      echo "             [-h|--help]"
      echo ""
-     echo "  -h, --help      this message"
+     echo "  -h, --help       this message"
+     echo "  -b, --build-dir  the location of the build directory"
      echo ""
      echo "  To build the Salt package:"
      echo "      example: $0"
@@ -83,7 +77,12 @@ while true; do
             _usage
             exit 0
             ;;
-        -*)
+        -b | --build-dir )
+            shift
+            BUILD_DIR="$*"
+            shift
+            ;;
+        -* )
             echo "Invalid Option: $1"
             echo ""
             _usage
@@ -94,6 +93,17 @@ while true; do
             ;;
     esac
 done
+
+#-------------------------------------------------------------------------------
+# Script Variables
+#-------------------------------------------------------------------------------
+SRC_DIR="$(git rev-parse --show-toplevel)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -z "$BUILD_DIR" ]; then
+    BUILD_DIR="$SCRIPT_DIR/build"
+fi
+CONF_DIR="$BUILD_DIR/etc/salt"
+CMD_OUTPUT=$(mktemp -t cmd.log)
 
 #-------------------------------------------------------------------------------
 # Delete temporary files on exit
