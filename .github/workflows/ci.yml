@@ -47,6 +47,7 @@ jobs:
       jobs: ${{ steps.process-changed-files.outputs.jobs }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
       testrun: ${{ steps.define-testrun.outputs.testrun }}
+      salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
     steps:
       - uses: actions/checkout@v3
       - name: Get Changed Files
@@ -110,6 +111,7 @@ jobs:
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Setup Salt Version
+        id: setup-salt-version
         uses: ./.github/actions/setup-salt-version
         with:
           salt-version: "${{ inputs.salt-version }}"
