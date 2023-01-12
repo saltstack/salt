@@ -1,6 +1,6 @@
 ---
 name: build-onedir-bare
-description: Build Bare Onedir Package
+description: Build OneDir Bare
 inputs:
   platform:
     required: true

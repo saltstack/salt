@@ -1,6 +1,6 @@
 ---
 name: build-linux-onedir
-description: Build Linux Onedir Package
+description: Build Onedir CI Package
 inputs:
   platform:
     required: true
