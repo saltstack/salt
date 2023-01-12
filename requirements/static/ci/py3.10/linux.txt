@@ -500,6 +500,8 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
+looseversion==1.0.2
+    # via -r requirements/base.txt
 lxml==4.9.1
     # via
     #   junos-eznc
@@ -631,6 +633,7 @@ oscrypto==1.2.0
     # via certvalidator
 packaging==21.3
     # via
+    #   -r requirements/base.txt
     #   ansible-core
     #   pytest
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"

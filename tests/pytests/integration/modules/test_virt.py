@@ -7,6 +7,7 @@ from xml.etree import ElementTree
 
 import pytest
 
+import salt.version
 from tests.support.virt import SaltVirtMinionContainerFactory
 
 docker = pytest.importorskip("docker")
@@ -17,6 +18,19 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("docker"),
 ]
+
+
+def _install_salt_dependencies(container):
+    dependencies = []
+    for package, version in salt.version.dependency_information():
+        if package not in ("packaging", "looseversion"):
+            # These are newer base dependencies which the container might not
+            # yet have
+            continue
+        dependencies.append(f"{package}=={version}")
+    if dependencies:
+        ret = container.run("python3", "-m", "pip", "install", *dependencies)
+        log.debug("Install missing dependecies ret: %s", ret)
 
 
 @pytest.fixture(scope="module")
@@ -58,6 +72,7 @@ def virt_minion_0(
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
     )
+    factory.before_start(_install_salt_dependencies, factory)
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
     )
@@ -94,6 +109,7 @@ def virt_minion_1(
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
     )
+    factory.before_start(_install_salt_dependencies, factory)
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
     )

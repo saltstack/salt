@@ -1,0 +1,1 @@
+Stop relying on `salt/_version.py` to write Salt's version. Instead use `salt/_version.txt` which only contains the version string.
