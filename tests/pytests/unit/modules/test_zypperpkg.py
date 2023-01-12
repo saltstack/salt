@@ -11,7 +11,7 @@ import pytest
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.zypperpkg as zypper
 from salt.exceptions import CommandExecutionError
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, call, patch
 
 
 @pytest.fixture
@@ -354,3 +354,93 @@ def test_dist_upgrade_failure():
 
             assert exc.exception.info["changes"] == {}
             assert exc.exception.info["result"]["stdout"] == zypper_output
+
+
+def test_remove_multiple_pkgs_with_ptf():
+    call_spy = MagicMock()
+    zypper_mock = MagicMock()
+    zypper_mock.stdout = ""
+    zypper_mock.stderr = ""
+    zypper_mock.exit_code = 0
+    zypper_mock.call = call_spy
+
+    rpm_output = textwrap.dedent(
+        """
+        vim: vi vim vim(x86-64) vim-base vim-enhanced vim-python vim_client
+        ptf-12345: ptf() ptf-12345
+        """
+    )
+    rpm_mock = MagicMock(side_effect=[rpm_output])
+
+    with patch(
+        "salt.modules.zypperpkg.__zypper__", MagicMock(return_value=zypper_mock)
+    ), patch.object(
+        zypper,
+        "list_pkgs",
+        MagicMock(side_effect=[{"vim": "0.18.0", "ptf-12345": "1"}, {}]),
+    ), patch.dict(
+        zypper.__salt__, {"cmd.run": rpm_mock}
+    ):
+        expected_calls = [
+            call(
+                "remove",
+                "vim",
+            ),
+            call(
+                "removeptf",
+                "--allow-downgrade",
+                "ptf-12345",
+            ),
+        ]
+
+        result = zypper.remove(name="vim,ptf-12345")
+        call_spy.assert_has_calls(expected_calls, any_order=False)
+        assert result["vim"]["new"] == "", result
+        assert result["vim"]["old"] == "0.18.0", result
+        assert result["ptf-12345"]["new"] == "", result
+        assert result["ptf-12345"]["old"] == "1", result
+
+
+def test_remove_ptf():
+    call_spy = MagicMock()
+    zypper_mock = MagicMock()
+    zypper_mock.stdout = ""
+    zypper_mock.stderr = ""
+    zypper_mock.exit_code = 0
+    zypper_mock.call = call_spy
+
+    rpm_mock = MagicMock(
+        side_effect=[
+            "vim: vi vim vim(x86-64) vim-base vim-enhanced vim-python vim_client",
+            "ptf-12345: ptf() ptf-12345",
+        ]
+    )
+
+    with patch(
+        "salt.modules.zypperpkg.__zypper__", MagicMock(return_value=zypper_mock)
+    ), patch.object(
+        zypper,
+        "list_pkgs",
+        MagicMock(side_effect=[{"vim": "0.18.0"}, {}, {"ptf-12345": "1"}, {}]),
+    ), patch.dict(
+        zypper.__salt__, {"cmd.run": rpm_mock}
+    ):
+        expected_call_vim = [
+            "remove",
+            "vim",
+        ]
+        expected_call_ptf = [
+            "removeptf",
+            "--allow-downgrade",
+            "ptf-12345",
+        ]
+
+        result = zypper.remove(name="vim")
+        call_spy.assert_called_with(*expected_call_vim)
+        assert result["vim"]["new"] == "", result
+        assert result["vim"]["old"] == "0.18.0", result
+
+        result = zypper.remove(name="ptf-12345")
+        call_spy.assert_called_with(*expected_call_ptf)
+        assert result["ptf-12345"]["new"] == "", result
+        assert result["ptf-12345"]["old"] == "1", result
