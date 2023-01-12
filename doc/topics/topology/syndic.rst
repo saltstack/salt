@@ -21,14 +21,6 @@ node and the local ``salt-master`` daemon.  This gives the Master node control
 over the Minion nodes attached to the ``salt-master`` daemon running on the
 Syndic node.
 
-.. warning::
-
-    Salt does not officially support Syndic and :ref:`external auth or
-    publisher_acl<acl-eauth>`. It's possible that it might work under certain
-    circumstances, but comprehensive support is lacking. See `issue #62618 on
-    GitHub <https://github.com/saltstack/salt/issues/62618>`_ for more
-    information. Currently Syndic is only expected to work when running Salt as
-    root, though work is scheduled to fix this in Salt 3006 (Sulfur).
 
 Configuring the Syndic
 ======================
@@ -70,6 +62,10 @@ the Syndic just as with a Minion.
 The :conf_master:`order_masters` option configures the Master node to send
 extra information with its publications that is needed by Syndic nodes
 connected directly to it.
+
+.. warning::
+   The syndic process must be run as the same user as the syndic master.
+
 
 .. note::
 
