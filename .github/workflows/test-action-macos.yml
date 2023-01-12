@@ -53,12 +53,8 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v3
 
-      - name: Install Python Tools Scripts
-        env:
-          PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-          PIP_EXTRA_INDEX_URL: https://pypi.org/simple
-        run: |
-          python3 -m pip install -r requirements/static/ci/py3.9/tools.txt
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Generate Test Matrix
         id: generate-matrix
