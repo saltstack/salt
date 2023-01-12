@@ -551,6 +551,8 @@ jobs:
     needs:
       - prepare-ci
     uses: ./.github/workflows/build-rpm-packages.yml
+    with:
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   build-deb-pkgs:
     name: Build DEB Packages
@@ -558,6 +560,8 @@ jobs:
     needs:
       - prepare-ci
     uses: ./.github/workflows/build-deb-packages.yml
+    with:
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   build-windows-pkgs:
     name: Build Windows Packages
@@ -565,6 +569,8 @@ jobs:
     needs:
       - prepare-ci
     uses: ./.github/workflows/build-windows-packages.yml
+    with:
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   build-macos-pkgs:
     name: Build macOS Packages
@@ -572,6 +578,8 @@ jobs:
     needs:
       - prepare-ci
     uses: ./.github/workflows/build-macos-packages.yml
+    with:
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
 
   windows-2016:
