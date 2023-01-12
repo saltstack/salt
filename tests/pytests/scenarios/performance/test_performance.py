@@ -328,7 +328,9 @@ def _wait_for_stdout(expected, func, *args, timeout=120, **kwargs):
             break
         time.sleep(1)
     else:
-        pytest.skip("Skipping test, one or more daemons failed to start")
+        pytest.skip(
+            f"Skipping test, one or more daemons failed to start: {expected} NOT FOUND IN {ret}"
+        )
 
 
 @pytest.mark.flaky(max_runs=4)
