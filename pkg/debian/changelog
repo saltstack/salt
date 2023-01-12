@@ -1,4 +1,4 @@
-salt (3006.0) stable; urgency=medium
+salt (SALT_RELEASE_VERSION) stable; urgency=medium
 
   * Build of Salt with Relenv
 

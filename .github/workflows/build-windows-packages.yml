@@ -2,7 +2,12 @@
 name: Build Windows Packages
 
 on:
-  - workflow_call
+  workflow_call:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to building packages.
 
 jobs:
 
@@ -22,16 +27,19 @@ jobs:
         with:
           python-version: 3.9
 
-      - name: Get Salt Version
-        shell: powershell
-        run: |
-          $env:SALT_VERSION=(py -3 salt/version.py)
-          Add-Content -Path $env:GITHUB_ENV -Value "SALT_VERSION=$env:SALT_VERSION"
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
 
       - name: Build Package
         shell: powershell
         run: |
-          & pkg/windows/build.cmd -Architecture ${{ matrix.arch }} -Version $env:SALT_VERSION -CICD
+          & pkg/windows/build.cmd -Architecture ${{ matrix.arch }} -Version ${{ inputs.salt-version }} -CICD
 
       - name: Upload ${{ matrix.arch }} NSIS Package
         uses: actions/upload-artifact@v3
