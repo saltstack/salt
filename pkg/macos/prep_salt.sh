@@ -134,6 +134,10 @@ fi
 # Copy salt-config from Salt Repo to /opt/salt
 #-------------------------------------------------------------------------------
 SALT_DIR="$BUILD_DIR/opt/salt"
+if ! [ -d "$SALT_DIR" ]; then
+    # We only need this for relenv builds
+    mkdir -p "$SALT_DIR"
+fi
 if ! [ -f "$SALT_DIR/salt-config.sh" ]; then
     _msg "Staging Salt config script"
     cp "$SCRIPT_DIR/scripts/salt-config.sh" "$SALT_DIR/"
