@@ -15,6 +15,10 @@ on:
         required: true
         type: string
         description: JSON string containing information about what and how to run the test suite
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to running tests.
 
 
 env:
@@ -162,6 +166,10 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
+
+      - name: Setup Salt Version
+        run: |
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3

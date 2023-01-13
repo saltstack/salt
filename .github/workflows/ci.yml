@@ -221,6 +221,7 @@ jobs:
       distro-slug: windows-2016
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   windows-2019:
     name: Windows 2019
@@ -232,6 +233,7 @@ jobs:
       distro-slug: windows-2019
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   windows-2022:
     name: Windows 2022
@@ -243,6 +245,7 @@ jobs:
       distro-slug: windows-2022
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   macos-12:
     name: MacOS 12
@@ -254,6 +257,7 @@ jobs:
       distro-slug: macos-12
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   almalinux-8:
     name: Alma Linux 8
@@ -265,6 +269,7 @@ jobs:
       distro-slug: almalinux-8
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   almalinux-9:
     name: Alma Linux 9
@@ -276,6 +281,7 @@ jobs:
       distro-slug: almalinux-9
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   amazonlinux-2:
     name: Amazon Linux 2
@@ -287,6 +293,7 @@ jobs:
       distro-slug: amazonlinux-2
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   archlinux-lts:
     name: Arch Linux LTS
@@ -298,6 +305,7 @@ jobs:
       distro-slug: archlinux-lts
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   centos-7:
     name: CentOS 7
@@ -309,6 +317,7 @@ jobs:
       distro-slug: centos-7
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   centosstream-8:
     name: CentOS Stream 8
@@ -320,6 +329,7 @@ jobs:
       distro-slug: centosstream-8
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   centosstream-9:
     name: CentOS Stream 9
@@ -331,6 +341,7 @@ jobs:
       distro-slug: centosstream-9
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   debian-10:
     name: Debian 10
@@ -342,6 +353,7 @@ jobs:
       distro-slug: debian-10
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   debian-11:
     name: Debian 11
@@ -353,6 +365,7 @@ jobs:
       distro-slug: debian-11
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   debian-11-arm64:
     name: Debian 11 ARM64
@@ -364,6 +377,7 @@ jobs:
       distro-slug: debian-11-arm64
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   fedora-36:
     name: Fedora 36
@@ -375,6 +389,7 @@ jobs:
       distro-slug: fedora-36
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   opensuse-15:
     name: Opensuse 15
@@ -386,6 +401,7 @@ jobs:
       distro-slug: opensuse-15
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   photon-3:
     name: Photon OS 3
@@ -397,6 +413,7 @@ jobs:
       distro-slug: photonos-3
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   photon-4:
     name: Photon OS 4
@@ -408,6 +425,7 @@ jobs:
       distro-slug: photonos-4
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   ubuntu-1804:
     name: Ubuntu 18.04
@@ -419,6 +437,7 @@ jobs:
       distro-slug: ubuntu-18.04
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   ubuntu-2004:
     name: Ubuntu 20.04
@@ -430,6 +449,7 @@ jobs:
       distro-slug: ubuntu-20.04
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64
@@ -441,6 +461,7 @@ jobs:
       distro-slug: ubuntu-20.04-arm64
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   ubuntu-2204:
     name: Ubuntu 22.04
@@ -452,6 +473,7 @@ jobs:
       distro-slug: ubuntu-22.04
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64
@@ -463,6 +485,7 @@ jobs:
       distro-slug: ubuntu-22.04-arm64
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
 
   set-pipeline-exit-status:
