@@ -42,6 +42,11 @@ runs:
           artifacts/${{ inputs.package-name }}/Scripts/python -m pip install .
         fi
 
+    - name: Cleanup Salt Onedir Directory
+      shell: bash
+      run: |
+        tools pkg pre-archive-cleanup artifacts/${{ inputs.package-name }}
+
     - name: Create Tarball
       shell: bash
       run: |
