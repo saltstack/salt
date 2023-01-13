@@ -58,7 +58,7 @@ runs:
         # prep salt
         pkg\windows\prep_salt.cmd -BuildDir ".\artifacts\${{ inputs.package-name }}" -CICD
         # Remove package specific items
-        Remove-Item -Path .\artifacts\${{ inputs.package-name }}\configs -Recurse
+        Remove-Item -Path .\artifacts\${{ inputs.package-name }}\configs -Recurse -Force
 
     - name: Cleanup Salt Onedir Directory
       shell: bash
