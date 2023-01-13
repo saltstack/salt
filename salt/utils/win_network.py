@@ -23,7 +23,6 @@ depending on the version of Windows this is run on. Once support for Windows
 import platform
 
 import salt.utils.win_reg
-
 from salt._compat import ipaddress
 
 IS_WINDOWS = platform.system() == "Windows"
@@ -38,7 +37,7 @@ if IS_WINDOWS:
     net_release = salt.utils.win_reg.read_value(
         hive="HKLM",
         key=r"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full",
-        vname="Release"
+        vname="Release",
     )
     # If the registry key is not found, or the value is less than 461808, we
     # need to use WMI
@@ -50,6 +49,7 @@ if IS_WINDOWS:
         # This is supported by all versions of Windows, but the database we're
         # using hasn't really been optimized, so it is much slower
         import wmi
+
         import salt.utils.winapi
     else:
         # This uses .NET to get network settings and is faster than WMI
