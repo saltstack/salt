@@ -19,7 +19,11 @@ on:
         required: false
         type: string
         description: The python version to run tests with
-        default: 3.9
+        default: "3.9"
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to running tests.
 
 
 env:
@@ -155,6 +159,10 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
+
+      - name: Setup Salt Version
+        run: |
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: Install System Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
