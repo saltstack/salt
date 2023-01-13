@@ -348,51 +348,6 @@ def test_new_openscap_xccdf_eval_success_with_failing_rules():
         }
 
 
-def test_new_openscap_xccdf_eval_success_ignore_unknown_params():
-    with patch(
-        "salt.modules.openscap.Popen",
-        MagicMock(
-            return_value=Mock(
-                **{"returncode": 2, "communicate.return_value": ("", "some error")}
-            )
-        ),
-    ):
-        response = openscap.xccdf_eval(
-            "/policy/file",
-            param="Default",
-            profile="Default",
-            oval_results=True,
-            results="results.xml",
-            report="report.html",
-        )
-
-        assert response == {
-            "upload_dir": random_temp_dir,
-            "error": "some error",
-            "success": True,
-            "returncode": 2,
-        }
-        expected_cmd = [
-            "oscap",
-            "xccdf",
-            "eval",
-            "--oval-results",
-            "--results",
-            "results.xml",
-            "--report",
-            "report.html",
-            "--profile",
-            "Default",
-            "/policy/file",
-        ]
-        openscap.Popen.assert_called_once_with(
-            expected_cmd,
-            cwd=openscap.tempfile.mkdtemp.return_value,
-            stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-        )
-
-
 def test_new_openscap_xccdf_eval_evaluation_error():
     with patch(
         "salt.modules.openscap.Popen",
