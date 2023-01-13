@@ -29,7 +29,7 @@ runs:
         key: ${{ env.CACHE_SEED }}|relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles('.relenv/**/*.xz', 'requirements/static/pkg/*/*.txt') }}
 
     - name: Install Salt Into Onedir
-      if: !contains(inputs.platform, "windows")
+      if: contains(inputs.platform, "windows") != true
       env:
         PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         PIP_EXTRA_INDEX_URL: https://pypi.org/simple
@@ -61,7 +61,7 @@ runs:
         Remove-Item -Path .\artifacts\${{ inputs.package-name }}\configs -Recurse
 
     - name: Create Archive
-      if: !contains(inputs.platform, "windows")
+      if: contains(inputs.platform, "windows") != true
       shell: bash
       run: |
         cd artifacts/
@@ -78,7 +78,7 @@ runs:
         Compress-Archive -LiteralPath ${{ inputs.package-name }}" -DestinationPath ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip
 
     - name: Upload Onedir Tarball as an Artifact
-      if: !contains(inputs.platform, "windows")
+      if: contains(inputs.platform, "windows") != true
       uses: actions/upload-artifact@v3
       with:
         name: ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz
