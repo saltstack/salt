@@ -70,7 +70,6 @@ def xccdf_eval(
     tailoring_file=None,
     tailoring_id=None,
     remediate=None,
-    **kwargs
 ):
     """
     Run ``oscap xccdf eval`` commands on minions.
