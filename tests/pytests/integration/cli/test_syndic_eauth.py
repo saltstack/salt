@@ -106,6 +106,7 @@ def config(source_path):
         master_config_path = master_dir / "master"
         master_config_path.write_text(
             """
+auth.pam.python: /usr/local/bin/python3
 order_masters: True
 
 publisher_acl:
@@ -136,6 +137,7 @@ nodegroups:
         syndic_a_master_config_path = syndic_a_dir / "master"
         syndic_a_master_config_path.write_text(
             """
+auth.pam.python: /usr/local/bin/python3
 syndic_master: master
 publisher_acl:
   bob:
