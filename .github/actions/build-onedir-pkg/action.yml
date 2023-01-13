@@ -80,7 +80,7 @@ runs:
       shell: powershell
       run: |
         cd artifacts
-        Compress-Archive -LiteralPath ${{ inputs.package-name }}" -DestinationPath ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip
+        Compress-Archive -LiteralPath "${{ inputs.package-name }}" -DestinationPath "${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip"
 
     - name: Upload Onedir Tarball as an Artifact
       if: ${{ inputs.platform != 'windows' }}
