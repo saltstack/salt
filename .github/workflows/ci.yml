@@ -207,7 +207,7 @@ jobs:
 
 
   build-bare-linux:
-    name: Build Bare Onedir Linux
+    name: Build Onedir Bare Linux
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
@@ -249,7 +249,7 @@ jobs:
           if-no-files-found: error
 
   build-deps-linux:
-    name: Build Salt Onedir Dependencies Linux
+    name: Build Onedir Salt Deps Linux
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
@@ -292,7 +292,7 @@ jobs:
           if-no-files-found: error
 
   build-salt-linux:
-    name: Build Salt Onedir Linux
+    name: Build Onedir Salt Archive Linux
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
@@ -345,7 +345,7 @@ jobs:
           if-no-files-found: error
 
   build-bare-windows:
-    name: Build Bare Onedir Windows
+    name: Build Onedir Bare Windows
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     needs:
       - prepare-ci
@@ -387,7 +387,7 @@ jobs:
           if-no-files-found: error
 
   build-deps-windows:
-    name: Build Salt Dependencies Onedir Windows
+    name: Build Onedir Salt Deps Windows
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     needs:
       - prepare-ci
@@ -430,7 +430,7 @@ jobs:
           if-no-files-found: error
 
   build-salt-windows:
-    name: Build Salt Onedir Windows
+    name: Build Onedir Salt Archive Windows
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     needs:
       - prepare-ci
@@ -484,7 +484,7 @@ jobs:
           if-no-files-found: error
 
   build-bare-macos:
-    name: Build Bare Onedir macOS
+    name: Build Onedir Bare macOS
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     needs:
       - prepare-ci
@@ -526,7 +526,7 @@ jobs:
           if-no-files-found: error
 
   build-deps-macos:
-    name: Build Salt Dependencies Onedir macOS
+    name: Build Onedir Salt Deps macOS
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     needs:
       - prepare-ci
@@ -569,7 +569,7 @@ jobs:
           if-no-files-found: error
 
   build-salt-macos:
-    name: Build Salt Onedir macOS
+    name: Build Onedir Salt Archive macOS
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     needs:
       - prepare-ci
@@ -703,7 +703,7 @@ jobs:
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   macos-12:
-    name: MacOS 12
+    name: macOS 12
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     needs:
       - prepare-ci
