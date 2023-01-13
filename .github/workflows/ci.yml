@@ -634,6 +634,7 @@ jobs:
       platform: windows
       arch: amd64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   windows-2019:
     name: Windows 2019
@@ -648,6 +649,7 @@ jobs:
       platform: windows
       arch: amd64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   windows-2022:
     name: Windows 2022
@@ -662,6 +664,7 @@ jobs:
       platform: windows
       arch: amd64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   macos-12:
     name: MacOS 12
@@ -676,6 +679,7 @@ jobs:
       platform: darwin
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   almalinux-8:
     name: Alma Linux 8
@@ -690,6 +694,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   almalinux-9:
     name: Alma Linux 9
@@ -704,6 +709,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   amazonlinux-2:
     name: Amazon Linux 2
@@ -718,6 +724,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   archlinux-lts:
     name: Arch Linux LTS
@@ -732,6 +739,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   centos-7:
     name: CentOS 7
@@ -746,6 +754,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   centosstream-8:
     name: CentOS Stream 8
@@ -760,6 +769,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   centosstream-9:
     name: CentOS Stream 9
@@ -774,6 +784,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   debian-10:
     name: Debian 10
@@ -788,6 +799,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   debian-11:
     name: Debian 11
@@ -802,6 +814,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   debian-11-arm64:
     name: Debian 11 Arm64
@@ -816,6 +829,7 @@ jobs:
       platform: linux
       arch: aarch64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   fedora-36:
     name: Fedora 36
@@ -830,6 +844,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   opensuse-15:
     name: Opensuse 15
@@ -844,6 +859,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   photon-3:
     name: Photon OS 3
@@ -858,6 +874,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   photon-4:
     name: Photon OS 4
@@ -872,6 +889,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   ubuntu-1804:
     name: Ubuntu 18.04
@@ -886,6 +904,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   ubuntu-2004:
     name: Ubuntu 20.04
@@ -900,6 +919,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64
@@ -914,6 +934,7 @@ jobs:
       platform: linux
       arch: aarch64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   ubuntu-2204:
     name: Ubuntu 22.04
@@ -928,6 +949,7 @@ jobs:
       platform: linux
       arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64
@@ -942,6 +964,7 @@ jobs:
       platform: linux
       arch: aarch64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks

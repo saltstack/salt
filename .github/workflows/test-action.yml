@@ -23,6 +23,10 @@ on:
         required: true
         type: string
         description: The platform arch being tested
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to running tests.
       package-name:
         required: false
         type: string
@@ -188,6 +192,10 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
+
+      - name: Setup Salt Version
+        run: |
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
