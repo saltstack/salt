@@ -280,7 +280,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         session.error("Could not find a linux requirements file for {}".format(pydir))
 
 
-def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
+def _upgrade_pip_setuptools_and_wheel(session, upgrade=True, onedir=False):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
@@ -296,14 +296,19 @@ def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
     ]
     if upgrade:
         install_command.append("-U")
-    install_command.extend(
-        [
+    if onedir:
+        requirements = [
             "pip>=22.3.1,<23.0",
             # https://github.com/pypa/setuptools/commit/137ab9d684075f772c322f455b0dd1f992ddcd8f
             "setuptools>=65.6.3,<66",
             "wheel",
         ]
-    )
+    else:
+        requirements = [
+            "pip>=20.2.4,<21.2",
+            "setuptools!=50.*,!=51.*,!=52.*,<59",
+        ]
+    install_command.extend(requirements)
     session_run_always(session, *install_command, silent=PIP_INSTALL_SILENT)
     return True
 
@@ -318,7 +323,7 @@ def _install_requirements(
     if onedir and IS_LINUX:
         session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
 
-    if not _upgrade_pip_setuptools_and_wheel(session):
+    if not _upgrade_pip_setuptools_and_wheel(session, onedir=onedir):
         return False
 
     # Install requirements
