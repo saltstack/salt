@@ -29,7 +29,7 @@ runs:
         key: ${{ env.CACHE_SEED }}|relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles('.relenv/**/*.xz', 'requirements/static/pkg/*/*.txt') }}
 
     - name: Install Salt Into Onedir
-      if: contains(inputs.platform, "windows") != true
+      if: ${{ inputs.platform != 'windows' }}
       env:
         PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         PIP_EXTRA_INDEX_URL: https://pypi.org/simple
@@ -46,7 +46,7 @@ runs:
         fi
 
     - name: Install Salt Into Onedir (Windows)
-      if: contains(inputs.platform, "windows")
+      if: ${{ inputs.platform == 'windows' }}
       env:
         PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         PIP_EXTRA_INDEX_URL: https://pypi.org/simple
@@ -61,14 +61,14 @@ runs:
         Remove-Item -Path .\artifacts\${{ inputs.package-name }}\configs -Recurse
 
     - name: Create Archive
-      if: contains(inputs.platform, "windows") != true
+      if: ${{ inputs.platform != 'windows' }}
       shell: bash
       run: |
         cd artifacts/
         tar -cJf ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz  ${{ inputs.package-name }}
 
     - name: Create Archive (Windows)
-      if: contains(inputs.platform, "windows")
+      if: ${{ inputs.platform == 'windows' }}
       env:
         ProgressPreference: "SilentlyContinue"
         ErrorActionPreference: "Stop"
@@ -78,7 +78,7 @@ runs:
         Compress-Archive -LiteralPath ${{ inputs.package-name }}" -DestinationPath ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip
 
     - name: Upload Onedir Tarball as an Artifact
-      if: contains(inputs.platform, "windows") != true
+      if: ${{ inputs.platform != 'windows' }}
       uses: actions/upload-artifact@v3
       with:
         name: ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz
@@ -86,7 +86,7 @@ runs:
         retention-days: 7
 
     - name: Upload Onedir Zipfile as an Artifact
-      if: contains(inputs.platform, "windows")
+      if: ${{ inputs.platform == 'windows' }}
       uses: actions/upload-artifact@v3
       with:
         name: ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip
