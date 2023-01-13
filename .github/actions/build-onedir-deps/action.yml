@@ -47,3 +47,8 @@ runs:
         else
           artifacts/${{ inputs.package-name }}/Scripts/python -m pip install -r requirements/static/pkg/py3.10/${{ inputs.platform }}.txt
         fi
+
+    - name: Cleanup Salt Onedir Directory
+      shell: bash
+      run: |
+        tools pkg pre-archive-cleanup artifacts/${{ inputs.package-name }}

@@ -46,3 +46,9 @@ runs:
           artifacts/${{ inputs.package-name }}/Scripts/python -m pip install -U "pip>=22.3.1,<23.0"
           artifacts/${{ inputs.package-name }}/Scripts/python -m pip install -U "setuptools>=65.6.3,<66"
         fi
+
+    - name: Cleanup Onedir Directory
+      shell: bash
+      if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
+      run: |
+        tools pkg pre-archive-cleanup artifacts/${{ inputs.package-name }}

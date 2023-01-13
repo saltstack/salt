@@ -26,7 +26,7 @@ on:
 
 env:
   COLUMNS: 160
-  CACHE_SEED: SEED-1  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-2  # Bump the number to invalidate all caches
 
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
@@ -306,6 +306,10 @@ jobs:
         with:
           platform: linux
           arch: ${{ matrix.arch }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
       - name: Install Salt Packaging Dependencies into Relenv Onedir
         uses: ./.github/actions/build-onedir-deps
         with:
@@ -401,6 +405,10 @@ jobs:
         with:
           platform: windows
           arch: ${{ matrix.arch }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
       - name: Setup Bare Relenv Onedir
         uses: ./.github/actions/build-onedir-bare
         with:
@@ -435,15 +443,21 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+
       - name: Setup Relenv
         uses: ./.github/actions/setup-relenv
         with:
           platform: windows
           arch: ${{ matrix.arch }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
       - name: Install Salt Packaging Dependencies into Relenv Onedir
         uses: ./.github/actions/build-onedir-deps
         with:
@@ -531,15 +545,21 @@ jobs:
     runs-on: macos-12
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
       - name: Setup Relenv
         uses: ./.github/actions/setup-relenv
         with:
           platform: darwin
           arch: ${{ matrix.arch }}
+
       - name: Setup Bare Relenv Onedir
         uses: ./.github/actions/build-onedir-bare
         with:
@@ -574,15 +594,21 @@ jobs:
     runs-on: macos-12
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+
       - name: Setup Relenv
         uses: ./.github/actions/setup-relenv
         with:
           platform: darwin
           arch: ${{ matrix.arch }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
       - name: Install Salt Packaging Dependencies into Relenv Onedir
         uses: ./.github/actions/build-onedir-deps
         with:
