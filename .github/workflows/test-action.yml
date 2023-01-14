@@ -278,6 +278,7 @@ jobs:
 #        with:
 #          check_name: Test Results(${{ inputs.distro-slug }} ${{ matrix.tests-chunk }})
 #          report_paths: 'artifacts/xml-unittests-output/*.xml'
+#          annotate_only: true
 
       - name: Report Salt Code Coverage(${{ matrix.tests-chunk }})
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
@@ -385,6 +386,7 @@ jobs:
         with:
           check_name: Overall Test Results(${{ inputs.distro-slug }})
           report_paths: 'artifacts/xml-unittests-output/*.xml'
+          annotate_only: true
 
       - name: Set Exit Status
         if: always()
