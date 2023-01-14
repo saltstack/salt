@@ -242,54 +242,11 @@ jobs:
     with:
       changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
 
-  build-bare-linux:
-    name: Build Bare Onedir Linux
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
-    needs:
-      - prepare-ci
-    strategy:
-      fail-fast: false
-      matrix:
-        arch:
-          - x86_64
-          - aarch64
-    runs-on:
-      - self-hosted
-      - linux
-      - ${{ matrix.arch }}
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Relenv
-        uses: ./.github/actions/setup-relenv
-        with:
-          platform: linux
-          arch: ${{ matrix.arch }}
-      - name: Setup Bare Relenv Onedir
-        uses: ./.github/actions/build-onedir-bare
-        with:
-          platform: linux
-          arch: ${{ matrix.arch }}
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
-
   build-deps-linux:
     name: Build Salt Onedir Dependencies Linux
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-bare-linux
     strategy:
       fail-fast: false
       matrix:
@@ -384,58 +341,11 @@ jobs:
           path: exitstatus
           if-no-files-found: error
 
-  build-bare-windows:
-    name: Build Bare Onedir Windows
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
-    needs:
-      - prepare-ci
-    strategy:
-      fail-fast: false
-      matrix:
-        arch:
-          - amd64
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-      - name: Setup Relenv
-        uses: ./.github/actions/setup-relenv
-        with:
-          platform: windows
-          arch: ${{ matrix.arch }}
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Setup Bare Relenv Onedir
-        uses: ./.github/actions/build-onedir-bare
-        with:
-          platform: windows
-          arch: ${{ matrix.arch }}
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-windows-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
-
   build-deps-windows:
     name: Build Salt Dependencies Onedir Windows
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-bare-windows
     strategy:
       fail-fast: false
       matrix:
@@ -533,60 +443,11 @@ jobs:
           path: exitstatus
           if-no-files-found: error
 
-  build-bare-macos:
-    name: Build Bare Onedir macOS
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
-    needs:
-      - prepare-ci
-    strategy:
-      fail-fast: false
-      matrix:
-        arch:
-          - x86_64
-    runs-on: macos-12
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Setup Relenv
-        uses: ./.github/actions/setup-relenv
-        with:
-          platform: darwin
-          arch: ${{ matrix.arch }}
-
-      - name: Setup Bare Relenv Onedir
-        uses: ./.github/actions/build-onedir-bare
-        with:
-          platform: darwin
-          arch: ${{ matrix.arch }}
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-macos-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
-
   build-deps-macos:
     name: Build Salt Dependencies Onedir macOS
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-bare-macos
     strategy:
       fail-fast: false
       matrix:
