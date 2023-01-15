@@ -24,14 +24,12 @@ runs:
     - name: Set environment variables
       shell: bash
       run: |
-        python3 -c "import os; os.makedirs('.relenv', exist_ok=True)"
-        echo RELENV_DATA="$(pwd)/.relenv" >> $GITHUB_ENV
         echo RELENV_VERSION="$(python3 -m pip show relenv | grep Version | cut -d ' ' -f2)" >> $GITHUB_ENV
 
     - name: Cache Relenv Data Directory
       uses: actions/cache@v3
       with:
-        path: ${{ env.RELENV_DATA }}
+        path: ${{ github.workspace }}/.relenv
         key: ${{ env.CACHE_SEED }}|relenv|${{ env.RELENV_VERSION }}|${{ inputs.platform }}|${{ inputs.arch }}
 
     - name: Fetch Toolchain
