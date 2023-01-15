@@ -1232,7 +1232,7 @@ def compress_dependencies(session):
 
 
 @nox.session(
-    python="3",
+    python=str(ONEDIR_PYTHON_PATH),
     name="pre-archive-cleanup",
 )
 @nox.parametrize("pkg", [False, True])
