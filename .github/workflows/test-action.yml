@@ -123,6 +123,11 @@ jobs:
         run: |
           tools --timestamps vm install-dependencies --nox-session=${{ env.NOX_SESSION }} ${{ inputs.distro-slug }}
 
+      - name: Cleanup .nox Directory
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm pre-archive-cleanup ${{ inputs.distro-slug }}
+
       - name: Compress .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |

@@ -129,6 +129,11 @@ jobs:
           export PKG_CONFIG_PATH="/usr/local/opt/openssl@3/lib/pkgconfig"
           nox --install-only -e ${{ env.NOX_SESSION }}
 
+      - name: Cleanup .nox Directory
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          nox -e pre-archive-cleanup
+
       - name: Compress .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
