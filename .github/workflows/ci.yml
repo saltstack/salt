@@ -49,6 +49,7 @@ jobs:
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
       testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
+      cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -162,6 +163,11 @@ jobs:
           name: testrun-changed-files.txt
           path: testrun-changed-files.txt
 
+      - name: Set Cache Seed Output
+        id: set-cache-seed
+        run: |
+          echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
+
       - name: Set Exit Status
         if: always()
         run: |
@@ -223,6 +229,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   windows-2019:
     name: Windows 2019
@@ -235,6 +242,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   windows-2022:
     name: Windows 2022
@@ -247,6 +255,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   macos-12:
     name: MacOS 12
@@ -259,6 +268,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   almalinux-8:
     name: Alma Linux 8
@@ -271,6 +281,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   almalinux-9:
     name: Alma Linux 9
@@ -283,6 +294,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   amazonlinux-2:
     name: Amazon Linux 2
@@ -295,6 +307,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   archlinux-lts:
     name: Arch Linux LTS
@@ -307,6 +320,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   centos-7:
     name: CentOS 7
@@ -319,6 +333,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   centosstream-8:
     name: CentOS Stream 8
@@ -331,6 +346,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   centosstream-9:
     name: CentOS Stream 9
@@ -343,6 +359,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   debian-10:
     name: Debian 10
@@ -355,6 +372,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   debian-11:
     name: Debian 11
@@ -367,6 +385,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   debian-11-arm64:
     name: Debian 11 ARM64
@@ -379,6 +398,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   fedora-36:
     name: Fedora 36
@@ -391,6 +411,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   opensuse-15:
     name: Opensuse 15
@@ -403,6 +424,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   photon-3:
     name: Photon OS 3
@@ -415,6 +437,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   photon-4:
     name: Photon OS 4
@@ -427,6 +450,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   ubuntu-1804:
     name: Ubuntu 18.04
@@ -439,6 +463,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   ubuntu-2004:
     name: Ubuntu 20.04
@@ -451,6 +476,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64
@@ -463,6 +489,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   ubuntu-2204:
     name: Ubuntu 22.04
@@ -475,6 +502,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64
@@ -487,6 +515,7 @@ jobs:
       nox-session: ci-test
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
 
   set-pipeline-exit-status:
