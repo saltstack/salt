@@ -51,11 +51,11 @@ runs:
       shell: bash
       run: |
         cd artifacts/
-        tar -cJf ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz  ${{ inputs.package-name }}
+        tar -cJf ${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz  ${{ inputs.package-name }}
 
     - name: Upload Onedir Tarball as an Artifact
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz
-        path: artifacts/${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz
+        name: ${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+        path: artifacts/${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
         retention-days: 7
