@@ -1148,7 +1148,17 @@ class VM:
         source = f"{self.name}:{remote_path}/"
         destination = "artifacts/"
         description = f"Downloading {source} ..."
-        self.rsync(source, destination, description)
+        self.rsync(
+            source,
+            destination,
+            description,
+            [
+                "--exclude",
+                f"{remote_path}/artifacts/salt",
+                "--exclude",
+                f"{remote_path}/artifacts/salt-*.*",
+            ],
+        )
 
     def rsync(self, source, destination, description, rsync_flags: list[str] = None):
         """
