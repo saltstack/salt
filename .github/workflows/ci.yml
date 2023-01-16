@@ -631,7 +631,7 @@ jobs:
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   macos-12:
-    name: MacOS 12
+    name: macOS 12
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     needs:
       - prepare-ci

@@ -1,5 +1,5 @@
 ---
-name: Build MacOS Packages
+name: Build macOS Packages
 
 on:
   workflow_call:
