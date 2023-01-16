@@ -679,8 +679,7 @@ def test_pkg_016_conditionally_ignore_epoch(PKG_EPOCH_TARGETS, latest_version, s
     assert ret.result is True
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_photonos(),
+@pytest.mark.skip_on_photonos(
     reason="package hold/unhold unsupported on Photon OS",
 )
 @pytest.mark.requires_salt_modules(
@@ -994,3 +993,41 @@ def test_pkg_cap_006_uptodate(PKG_CAP_TARGETS, modules, states):
     finally:
         ret = states.pkg.removed(name=realpkg)
         assert ret.result is True
+
+
+@pytest.mark.requires_salt_modules(
+    "pkg.version", "pkg.latest_version", "pkg.remove", "pkg.purge", "pkg.list_pkgs"
+)
+@pytest.mark.requires_salt_states("pkg.installed", "pkg.removed", "pkg.purged")
+def test_pkg_purged_with_removed_pkg(grains, PKG_TARGETS, states, modules):
+    """
+    This is a destructive test as it installs and then removes a package, then purges a removed package
+    """
+    if grains["os_family"] != "Debian":
+        pytest.skip("Only runs on Debian.")
+
+    target = PKG_TARGETS[0]
+
+    ret = states.pkg.installed(
+        name=target,
+        version="<9999999",
+        refresh=False,
+    )
+    assert ret.result is True
+
+    # The version that was installed should be the latest available
+    version = modules.pkg.version(target)
+    assert version
+
+    # Clean up
+    ret = states.pkg.removed(name=target)
+    assert ret.result is True
+
+    ret = states.pkg.purged(name=target)
+    assert ret.result is True
+    assert ret.name == target
+    assert ret.comment == "All targeted packages were purged."
+    assert ret.changes == {
+        "installed": {},
+        "removed": {target: {"new": "", "old": version}},
+    }

@@ -438,7 +438,7 @@ def ifelse(
     merge_lists=False,
 ):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     Evaluate each pair of arguments up to the last one as a (matcher, value)
     tuple, returning ``value`` if matched.  If none match, returns the last

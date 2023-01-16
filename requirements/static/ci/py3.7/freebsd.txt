@@ -350,7 +350,7 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.24.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2022.12.7
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -440,7 +440,7 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.5
     # via gitpython
-gitpython==3.1.12
+gitpython==3.1.30 ; python_version >= "3.7"
     # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
@@ -508,6 +508,8 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
+looseversion==1.0.2
+    # via -r requirements/base.txt
 lxml==4.9.1
     # via
     #   junos-eznc
@@ -650,8 +652,10 @@ oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
-packaging==19.2
-    # via pytest
+packaging==21.3
+    # via
+    #   -r requirements/base.txt
+    #   pytest
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
@@ -690,8 +694,6 @@ pycparser==2.17
     # via cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pycurl==7.43.0.6 ; python_version <= "3.9"
-    # via -r requirements/static/ci/common.in
 pyeapi==0.8.3
     # via napalm
 pygit2==1.8.0 ; python_version >= "3.7"
@@ -706,7 +708,7 @@ pyopenssl==19.1.0
     # via
     #   -r requirements/static/pkg/freebsd.in
     #   etcd3-py
-pyparsing==2.4.5
+pyparsing==3.0.9
     # via
     #   junos-eznc
     #   packaging
@@ -850,7 +852,6 @@ six==1.16.0
     #   more-itertools
     #   msrestazure
     #   ncclient
-    #   packaging
     #   paramiko
     #   pynacl
     #   pyopenssl
@@ -889,6 +890,7 @@ typing-extensions==3.10.0.0
     # via
     #   aiohttp
     #   async-timeout
+    #   gitpython
     #   importlib-metadata
     #   pytest-shell-utilities
     #   pytest-system-statistics

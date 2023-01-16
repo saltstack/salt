@@ -4,7 +4,7 @@ import shutil
 import pytest
 
 from salt.exceptions import CommandExecutionError
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -78,8 +78,7 @@ def npm_version(shell, install_npm):
     return ret.stdout.strip()
 
 
-@pytest.mark.skipif(
-    True,
+@pytest.mark.skip(
     reason="This test tries to install from a git repo using ssh, at least now. Skipping.",
 )
 @pytest.mark.skip_if_not_root
@@ -117,7 +116,7 @@ def test_npm_cache_clean(npm, npm_version):
     """
     Basic test to determine if NPM successfully cleans its cached packages.
     """
-    if LooseVersion(npm_version) >= LooseVersion(MAX_NPM_VERSION):
+    if Version(npm_version) >= Version(MAX_NPM_VERSION):
         pytest.skip("Skip with npm >= 5.0.0 until #41770 is fixed")
     ret = npm.cache_cleaned(name="unused", force=True)
     assert ret.result is True

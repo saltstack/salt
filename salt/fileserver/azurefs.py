@@ -58,12 +58,12 @@ import salt.utils.hashutils
 import salt.utils.json
 import salt.utils.path
 import salt.utils.stringutils
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 try:
     import azure.storage
 
-    if LooseVersion(azure.storage.__version__) < LooseVersion("0.20.0"):
+    if Version(azure.storage.__version__) < Version("0.20.0"):
         raise ImportError("azure.storage.__version__ must be >= 0.20.0")
     HAS_AZURE = True
 except (ImportError, AttributeError):

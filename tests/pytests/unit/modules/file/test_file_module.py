@@ -100,9 +100,7 @@ def test_check_file_meta_binary_contents():
     )
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_windows(), reason="lsattr is not available on Windows"
-)
+@pytest.mark.skip_on_windows(reason="lsattr is not available on Windows")
 def test_check_file_meta_no_lsattr():
     """
     Ensure that we skip attribute comparison if lsattr(1) is not found
@@ -134,8 +132,9 @@ def test_check_file_meta_no_lsattr():
     assert result
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_windows() or salt.utils.platform.is_aix(),
+@pytest.mark.skip_on_platforms(
+    windows=True,
+    aix=True,
     reason="lsattr is not available on Windows and AIX",
 )
 def test_cmp_attrs_extents_flag():
@@ -175,9 +174,7 @@ def test_cmp_attrs_extents_flag():
         assert changes.removed is None
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_windows(), reason="SED is not available on Windows"
-)
+@pytest.mark.skip_on_windows(reason="SED is not available on Windows")
 def test_sed_limit_escaped(sed_content, subdir):
     with salt.utils.files.fopen(str(subdir / "tfile"), "w+") as tfile:
         tfile.write(sed_content)

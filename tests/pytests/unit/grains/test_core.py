@@ -1145,6 +1145,41 @@ def test_endeavouros_os_grains():
     _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
+@pytest.mark.skip_unless_on_linux
+def test_Parrot_OS_grains():
+    """
+    Test if OS grains are parsed correctly in Parrot OS
+    """
+    # /etc/os-release data taken from ParrotOS 5.1
+    _os_release_data = {
+        "PRETTY_NAME": "Parrot OS 5.1 (Electro Ara)",
+        "NAME": "Parrot OS",
+        "VERSION_ID": "5.1",
+        "VERSION": "5.1 (Electro Ara)",
+        "VERSION_CODENAME": "ara",
+        "ID": "parrot",
+        "ID_LIKE": "debian",
+        "HOME_URL": "https://www.parrotsec.org/",
+        "SUPPORT_URL": "https://community.parrotsec.org/",
+        "BUG_REPORT_URL": "https://community.parrotsec.org/",
+    }
+    _os_release_map = {
+        "_linux_distribution": ("Parrot", "5.1", "Electro Ara"),
+    }
+
+    expectation = {
+        "os": "Parrot OS",
+        "os_family": "Debian",
+        "oscodename": "ara",
+        "osfullname": "Parrot OS",
+        "osrelease": "5.1",
+        "osrelease_info": (5, 1),
+        "osmajorrelease": 5,
+        "osfinger": "Parrot OS-5",
+    }
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+
+
 def test_unicode_error():
     raise_unicode_mock = MagicMock(name="raise_unicode_error", side_effect=UnicodeError)
     with patch("salt.grains.core.hostname"), patch(
@@ -2951,6 +2986,7 @@ def test__hw_data_linux_empty():
             "biosreleasedate": "",
             "biosversion": "",
             "biosvendor": "",
+            "boardname": "",
             "manufacturer": "",
             "productname": "",
             "serialnumber": "",

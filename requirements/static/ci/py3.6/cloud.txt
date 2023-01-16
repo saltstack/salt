@@ -354,7 +354,7 @@ cachetools==4.2.2
     # via google-auth
 cassandra-driver==3.25.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2022.12.7
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -434,10 +434,6 @@ genshi==0.7.5
     # via -r requirements/static/ci/common.in
 geomet==0.2.1.post1
     # via cassandra-driver
-gitdb==4.0.7
-    # via gitpython
-gitpython==3.1.18
-    # via -r requirements/static/ci/common.in
 google-auth==2.1.0
     # via kubernetes
 idna-ssl==1.1.0
@@ -506,6 +502,8 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
+looseversion==1.0.3
+    # via -r requirements/base.txt
 lxml==4.9.1
     # via
     #   junos-eznc
@@ -644,8 +642,10 @@ oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
-packaging==21.0
-    # via pytest
+packaging==21.3
+    # via
+    #   -r requirements/base.txt
+    #   pytest
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
@@ -681,8 +681,6 @@ pycparser==2.19
     # via cffi
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
-pycurl==7.44.1 ; python_version <= "3.9"
-    # via -r requirements/static/ci/common.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
 pyjwt==2.4.0
@@ -693,7 +691,7 @@ pyopenssl==20.0.1
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==2.4.7
+pyparsing==3.0.6
     # via
     #   junos-eznc
     #   packaging
@@ -854,8 +852,6 @@ six==1.16.0
     #   websocket-client
 smbprotocol==0.1.1
     # via pypsexec
-smmap==4.0.0
-    # via gitdb
 sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
@@ -876,7 +872,6 @@ typing-extensions==3.10.0.0
     # via
     #   aiohttp
     #   async-timeout
-    #   gitpython
     #   immutables
     #   importlib-metadata
     #   pytest-shell-utilities

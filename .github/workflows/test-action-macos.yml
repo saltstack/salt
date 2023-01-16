@@ -1,0 +1,409 @@
+name: Test Artifact
+
+on:
+  workflow_call:
+    inputs:
+      distro-slug:
+        required: true
+        type: string
+        description: The OS slug to run tests against
+      nox-session:
+        required: true
+        type: string
+        description: The nox session to run
+      testrun:
+        required: true
+        type: string
+        description: JSON string containing information about what and how to run the test suite
+      python-version:
+        required: false
+        type: string
+        description: The python version to run tests with
+        default: 3.9
+
+
+env:
+  NOX_VERSION: "2022.8.7"
+  COLUMNS: 160
+  PIP_INDEX_URL: "https://pypi-proxy.saltstack.net/root/local/+simple/"
+  PIP_EXTRA_INDEX_URL: "https://pypi.org/simple"
+
+jobs:
+
+  generate-matrix:
+    name: Generate Test Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
+      transport-matrix-include: ${{ steps.generate-transport-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Install Python Tools Scripts
+        env:
+          PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+          PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+        run: |
+          python3 -m pip install -r requirements/static/ci/py3.10/tools.txt
+
+      - name: Generate Test Matrix
+        id: generate-matrix
+        run: |
+          TEST_MATRIX=$(tools ci matrix ${{ inputs.distro-slug }})
+          echo "$TEST_MATRIX"
+          echo "matrix=$TEST_MATRIX" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Transport Matrix
+        id: generate-transport-matrix
+        run: |
+          TRANSPORT_MATRIX=$(tools ci transport-matrix ${{ inputs.distro-slug }})
+          echo "$TRANSPORT_MATRIX"
+          echo "matrix=$TRANSPORT_MATRIX" >> "$GITHUB_OUTPUT"
+
+  dependencies:
+    name: Setup Test Dependencies
+    runs-on: ${{ inputs.distro-slug }}
+    timeout-minutes: 90
+    needs:
+      - generate-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.generate-matrix.outputs.transport-matrix-include) }}
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Cache nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+        id: nox-dependencies-cache
+        uses: actions/cache@v3
+        with:
+          path: nox.${{ inputs.distro-slug }}.tar.*
+          key: testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+
+      # Skip jobs if nox.*.tar.* is already cached
+      - name: Set up Python ${{ inputs.python-version }}
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        uses: actions/setup-python@v4
+        with:
+          python-version: "${{ inputs.python-version }}"
+
+      - name: Install System Dependencies
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          brew install openssl@3
+
+      - name: Install Nox
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        env:
+          PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+          PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+        run: |
+          python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
+
+      - name: Define Nox Session
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          if [ "${{ matrix.transport }}" != "tcp" ]; then
+            echo NOX_SESSION=${{ inputs.nox-session}}-3 >> $GITHUB_ENV
+          else
+            echo NOX_SESSION=${{ inputs.nox-session}}-tcp-3 >> $GITHUB_ENV
+          fi
+
+      - name: Install Dependencies
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        env:
+          PRINT_TEST_SELECTION: "0"
+          PRINT_SYSTEM_INFO: "0"
+          PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+          PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+        run: |
+          export PYCURL_SSL_LIBRARY=openssl
+          export LDFLAGS="-L/usr/local/opt/openssl@3/lib"
+          export CPPFLAGS="-I/usr/local/opt/openssl@3/include"
+          export PKG_CONFIG_PATH="/usr/local/opt/openssl@3/lib/pkgconfig"
+          nox --install-only -e ${{ env.NOX_SESSION }}
+
+      - name: Compress .nox Directory
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          nox -e compress-dependencies -- ${{ inputs.distro-slug }}
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-deps
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  test:
+    name: Test
+    runs-on: ${{ inputs.distro-slug }}
+    timeout-minutes: 600  # 10 Hours
+    needs:
+      - generate-matrix
+      - dependencies
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include) }}
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Install System Dependencies
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          brew install tree
+
+      - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
+        uses: actions/cache@v3
+        with:
+          path: nox.${{ inputs.distro-slug }}.tar.*
+          key: testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: "${{ inputs.python-version }}"
+
+      - name: Install Nox
+        run: |
+          python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
+
+      - name: Decompress .nox Directory
+        run: |
+          nox -e decompress-dependencies -- ${{ inputs.distro-slug }}
+
+      - name: Define Nox Session
+        run: |
+          if [ "${{ matrix.transport }}" != "tcp" ]; then
+            echo NOX_SESSION=${{ inputs.nox-session}}-3 >> $GITHUB_ENV
+          else
+            echo NOX_SESSION=${{ inputs.nox-session}}-tcp-3 >> $GITHUB_ENV
+          fi
+
+      - name: Download testrun-changed-files.txt
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: testrun-changed-files.txt
+
+      - name: Show System Info & Test Plan
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "1"
+          PRINT_TEST_PLAN_ONLY: "1"
+          PRINT_SYSTEM_INFO: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- -k "mac or darwin"
+
+      - name: Run Slow/Changed Tests
+        id: run-slow-changed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --suppress-no-test-exit-code --run-slow --from-filenames=testrun-changed-files.txt
+
+      - name: Run Fast Tests
+        id: run-fast-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin"
+
+      - name: Run Full Tests
+        id: run-full-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            --run-slow -k "mac or darwin"
+
+      - name: Fix file ownership
+        run: |
+          sudo chown -R $(id -un) .
+
+      - name: Combine Coverage Reports
+        if: always() && contains(fromJSON('["canceled", "skipped"]'), steps.run-tests.outcome) == false
+        run: |
+          nox -e combine-coverage
+
+      - name: Prepare Test Run Artifacts
+        id: download-artifacts-from-vm
+        if: always() && contains(fromJSON('["canceled", "skipped"]'), steps.run-tests.outcome) == false
+        run: |
+          tree -a artifacts
+          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
+          echo "COVERAGE_FILE=artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}" >> GITHUB_ENV
+
+      - name: Upload Test Run Artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: testrun-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
+          path: artifacts
+
+#      - name: Publish Test Report
+#        uses: mikepenz/action-junit-report@v3
+#        if: always() && steps.download-artifacts-from-vm.outcome == 'success'
+#        with:
+#          check_name: Test Results(${{ inputs.distro-slug }} ${{ matrix.tests-chunk }})
+#          report_paths: 'artifacts/xml-unittests-output/*.xml'
+#          annotate_only: true
+
+      - name: Report Salt Code Coverage(${{ matrix.tests-chunk }})
+        if: always()
+        continue-on-error: true
+        run: |
+          nox --force-color -e report-coverage -- salt
+
+      - name: Report Tests Code Coverage(${{ matrix.tests-chunk }})
+        if: always()
+        continue-on-error: true
+        run: |
+          nox --force-color -e report-coverage -- tests
+
+      - name: Report Combined Code Coverage(${{ matrix.tests-chunk }})
+        continue-on-error: true
+        if: always()
+        run: |
+          nox --force-color -e report-coverage
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}-${{ matrix.tests-chunk }}-tests
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  report:
+    name: Reports for ${{ inputs.distro-slug }}(${{ matrix.transport }})
+    runs-on: ubuntu-latest
+    needs:
+      - test
+      - generate-matrix
+    if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include) }}
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Define Nox Session
+        run: |
+          if [ "${{ matrix.transport }}" != "tcp" ]; then
+            echo NOX_SESSION=${{ inputs.nox-session}}-3 >> $GITHUB_ENV
+          else
+            echo NOX_SESSION=${{ inputs.nox-session}}-tcp-3 >> $GITHUB_ENV
+          fi
+
+      - name: Download Test Run Artifacts
+        id: download-test-run-artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: testrun-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
+          path: artifacts
+
+      - name: Show Test Run Artifacts
+        if: always() && steps.download-test-run-artifacts.outcome == 'success'
+        run: |
+          tree -a artifacts
+
+      - name: Upload Code Coverage DB
+        if: always() && steps.download-test-run-artifacts.outcome == 'success'
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage
+          path: artifacts/coverage
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Nox
+        run: |
+          python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
+
+      - name: Report Salt Code Coverage
+        continue-on-error: true
+        run: |
+          nox --force-color -e report-coverage -- salt
+
+      - name: Report Tests Code Coverage
+        continue-on-error: true
+        run: |
+          nox --force-color -e report-coverage -- tests
+
+      - name: Report Combined Code Coverage
+        continue-on-error: true
+        run: |
+          nox --force-color -e report-coverage
+
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v3
+        # always run even if the previous steps fails
+        if: always() && github.event_name == 'push' && steps.download-test-run-artifacts.outcome == 'success'
+        with:
+          check_name: Overall Test Results(${{ inputs.distro-slug }})
+          report_paths: 'artifacts/xml-unittests-output/*.xml'
+          annotate_only: true
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}-report
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error

@@ -20,12 +20,9 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
 from tests.support.helpers import patched_environ
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
-@skipIf(
-    salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
-)
+@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
 @pytest.mark.windows_whitelisted
 class PipModuleTest(ModuleCase):
     def setUp(self):
@@ -590,16 +587,21 @@ class PipModuleTest(ModuleCase):
                 " Dictionary: {}".format(exc, pprint.pformat(ret))
             )
 
-    @skipIf(not os.path.isfile("pip3"), "test where pip3 is installed")
-    @skipIf(
-        salt.utils.platform.is_windows(), "test specific for linux usage of /bin/python"
+    @pytest.mark.skipif(
+        shutil.which("/bin/pip3") is None, reason="Could not find /bin/pip3"
+    )
+    @pytest.mark.skip_on_windows(reason="test specific for linux usage of /bin/python")
+    @pytest.mark.skip_initial_gh_actions_failure(
+        reason="This was skipped on older golden images and is failing on newer."
     )
     def test_system_pip3(self):
+
         self.run_function(
             "pip.install", pkgs=["lazyimport==0.0.1"], bin_env="/bin/pip3"
         )
-        ret1 = self.run_function("cmd.run", "/bin/pip3 freeze | grep lazyimport")
+        ret1 = self.run_function("cmd.run_all", ["/bin/pip3 freeze | grep lazyimport"])
+        assert "lazyimport==0.0.1" in ret1["stdout"]
+
         self.run_function("pip.uninstall", pkgs=["lazyimport"], bin_env="/bin/pip3")
-        ret2 = self.run_function("cmd.run", "/bin/pip3 freeze | grep lazyimport")
-        assert "lazyimport==0.0.1" in ret1
-        assert ret2 == ""
+        ret2 = self.run_function("cmd.run_all", ["/bin/pip3 freeze | grep lazyimport"])
+        assert ret2["stdout"] == ""

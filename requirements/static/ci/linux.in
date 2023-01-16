@@ -14,3 +14,4 @@ mercurial
 hglib
 redis-py-cluster
 python-consul
+slack_bolt

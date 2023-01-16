@@ -33,7 +33,7 @@ import salt.utils.yaml
 from salt.exceptions import TemplateError
 from salt.utils.decorators.jinja import jinja_filter, jinja_global, jinja_test
 from salt.utils.odict import OrderedDict
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 try:
     from markupsafe import Markup
@@ -46,7 +46,7 @@ log = logging.getLogger(__name__)
 __all__ = ["SaltCacheLoader", "SerializerExtension"]
 
 GLOBAL_UUID = uuid.UUID("91633EBF-1C86-5E33-935A-28061F4B480E")
-JINJA_VERSION = LooseVersion(jinja2.__version__)
+JINJA_VERSION = Version(jinja2.__version__)
 
 
 class SaltCacheLoader(BaseLoader):
