@@ -370,14 +370,17 @@ def install_dependencies(ctx: Context, name: str, nox_session: str = "ci-test-3"
             "help": "The VM Name",
             "metavar": "VM_NAME",
         },
+        "pkg": {
+            "help": "Perform extended, pre-packaging cleanup routines",
+        },
     },
 )
-def pre_archive_cleanup(ctx: Context, name: str):
+def pre_archive_cleanup(ctx: Context, name: str, pkg: bool = False):
     """
     Pre `.nox` directory compress cleanup.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    returncode = vm.run_nox("pre-archive-cleanup")
+    returncode = vm.run_nox(f"pre-archive-cleanup(pkg={pkg})")
     ctx.exit(returncode)
 
 
