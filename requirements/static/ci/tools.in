@@ -1,3 +1,4 @@
 python-tools-scripts >= 0.9.3
 attrs
 boto3
+pyyaml

@@ -132,7 +132,7 @@ jobs:
       - name: Cleanup .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          nox -e pre-archive-cleanup
+          nox -e "pre-archive-cleanup(pkg=False)"
 
       - name: Compress .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
