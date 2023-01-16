@@ -321,7 +321,7 @@ try:
     from junit_xml import TestCase, TestSuite
 
     HAS_JUNIT = True
-except (ImportError, ModuleNotFoundError):
+except ImportError:
     HAS_JUNIT = False
 
 
@@ -354,9 +354,7 @@ def run_test(**kwargs):
 
     :param keyword arg test:
 
-
     CLI Example:
-
 
     .. code-block:: bash
 
@@ -382,9 +380,7 @@ def state_apply(state_name, **kwargs):
 
     Reference the :py:func:`state.apply <salt.modules.state.apply>` module documentation for arguments and usage options
 
-
     CLI Example:
-
 
     .. code-block:: bash
 
@@ -411,9 +407,7 @@ def report_highstate_tests(saltenv=None):
     Report on tests for states assigned to the minion through highstate.
     Quits with the exit code for the number of missing tests.
 
-
     CLI Example:
-
 
     .. code-block:: bash
 
@@ -460,9 +454,7 @@ def run_state_tests(
     :param bool only_fails: boolean to only print failure results
     :param bool junit: boolean to print results in junit format
 
-
     CLI Example:
-
 
     .. code-block:: bash
 
@@ -564,9 +556,7 @@ def run_highstate_tests(saltenv=None, only_fails=False, junit=False):
     :param bool only_fails: boolean to only print failure results
     :param bool junit: boolean to print results in junit format
 
-
     CLI Example:
-
 
     .. code-block:: bash
 
