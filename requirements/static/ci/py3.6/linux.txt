@@ -440,7 +440,7 @@ frozenlist==1.2.0
     # via
     #   aiohttp
     #   aiosignal
-future==0.17.1
+future==0.18.3
     # via textfsm
 genshi==0.7.5
     # via -r requirements/static/ci/common.in
