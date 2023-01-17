@@ -43,12 +43,12 @@ def pytest_addoption(parser):
     register argparse-style options and ini-style config values.
     """
     test_selection_group = parser.getgroup("Tests Runtime Selection")
-    #    test_selection_group.addoption(
-    #        "--system-service",
-    #        default=False,
-    #        action="store_true",
-    #        help="Run the daemons as system services",
-    #    )
+    test_selection_group.addoption(
+        "--system-service",
+        default=False,
+        action="store_true",
+        help="Run the daemons as system services",
+    )
     test_selection_group.addoption(
         "--upgrade",
         default=False,
