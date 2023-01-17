@@ -1,0 +1,124 @@
+---
+name: Build Salt Onedir
+
+on:
+  - workflow_call
+
+jobs:
+
+  linux:
+    name: Linux
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+          - aarch64
+    runs-on:
+      - self-hosted
+      - linux
+      - ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: linux
+          arch: ${{ matrix.arch }}
+      - name: Install Salt into Relenv Onedir
+        uses: ./.github/actions/build-onedir-pkg
+        with:
+          platform: linux
+          arch: ${{ matrix.arch }}
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  windows:
+    name: Windows
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - amd64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup Relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: windows
+          arch: ${{ matrix.arch }}
+      - name: Install Salt into Relenv Onedir
+        uses: ./.github/actions/build-onedir-pkg
+        with:
+          platform: windows
+          arch: ${{ matrix.arch }}
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-windows-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  macos:
+    name: macOS
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+    runs-on: macos-12
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup Relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: darwin
+          arch: ${{ matrix.arch }}
+      - name: Install Salt into Relenv Onedir
+        uses: ./.github/actions/build-onedir-pkg
+        with:
+          platform: darwin
+          arch: ${{ matrix.arch }}
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-macos-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
