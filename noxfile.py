@@ -329,6 +329,9 @@ def _install_requirements(
     if not _upgrade_pip_setuptools_and_wheel(session, onedir=onedir):
         return False
 
+    if onedir and not IS_WINDOWS and not IS_DARWIN and not IS_FREEBSD:
+        session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
+
     # Install requirements
     requirements_file = _get_pip_requirements_file(
         session, transport, requirements_type=requirements_type
