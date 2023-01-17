@@ -13,12 +13,12 @@ from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
-def _VERSION():
+def _version():
     return "3.6.0alpha0"
 
 
 @pytest.fixture
-def _MODULES():
+def _modules():
     return (
         "syslogformat,json-plugin,basicfuncs,afstomp,afsocket,cryptofuncs,"
         "afmongodb,dbparser,system-source,affile,pseudofile,afamqp,"
@@ -27,7 +27,7 @@ def _MODULES():
 
 
 @pytest.fixture
-def VERSION_OUTPUT(_VERSION, _MODULES):
+def version_output(_version, _modules):
     return """syslog-ng {0}
 Installer-Version: {0}
 Revision:
@@ -41,12 +41,12 @@ Enable-IPv6: on
 Enable-Spoof-Source: off
 Enable-TCP-Wrapper: off
 Enable-Linux-Caps: off""".format(
-        _VERSION, _MODULES
+        _version, _modules
     )
 
 
 @pytest.fixture
-def STATS_OUTPUT():
+def stats_output():
     return """SourceName;SourceId;SourceInstance;State;Type;Number
 center;;received;a;processed;0
 destination;#anon-destination0;;a;processed;0
@@ -81,14 +81,13 @@ def configure_loader_modules():
 def test_statement_without_options():
     s = syslog_ng.Statement("source", "s_local", options=[])
     b = s.build()
-    assert (
+    assert b == (
         dedent(
             """\
         source s_local {
         };
         """
         )
-        == b
     )
 
 
@@ -97,7 +96,7 @@ def test_non_empty_statement():
     o2 = syslog_ng.Option("tcp")
     s = syslog_ng.Statement("source", "s_local", options=[o1, o2])
     b = s.build()
-    assert (
+    assert b == (
         dedent(
             """\
         source s_local {
@@ -108,7 +107,6 @@ def test_non_empty_statement():
         };
         """
         )
-        == b
     )
 
 
@@ -123,7 +121,7 @@ def test_option_with_parameters():
     o1.add_parameter(p2)
     o1.add_parameter(p3)
     b = o1.build()
-    assert (
+    assert b == (
         dedent(
             """\
         file(
@@ -134,7 +132,6 @@ def test_option_with_parameters():
         );
         """
         )
-        == b
     )
 
 
@@ -151,7 +148,7 @@ def test_parameter_with_values():
     p.add_value(v2)
 
     b = p.build()
-    assert (
+    assert b == (
         dedent(
             """\
         tls(
@@ -161,7 +158,6 @@ def test_parameter_with_values():
             )
         )"""
         )
-        == b
     )
 
 
@@ -176,7 +172,7 @@ def test_value_with_arguments():
     t.add_argument(a2)
 
     b = t.build()
-    assert (
+    assert b == (
         dedent(
             """\
         key_file(
@@ -184,7 +180,6 @@ def test_value_with_arguments():
             "/opt/syslog-ng/etc/syslog-ng/key.d/syslog-ng.key"
         )"""
         )
-        == b
     )
 
 
@@ -219,7 +214,7 @@ def test_end_to_end_statement_generation():
 
     s.add_child(o)
     b = s.build()
-    assert (
+    assert b == (
         dedent(
             """\
         source s_tls {
@@ -245,14 +240,13 @@ def test_end_to_end_statement_generation():
         };
         """
         )
-        == b
     )
 
 
 @pytest.mark.skip_on_windows(reason="Module not available on Windows")
-def test_version(_VERSION, VERSION_OUTPUT, orig_env, bin_dir, mocked_env):
-    cmd_ret = {"retcode": 0, "stdout": VERSION_OUTPUT}
-    expected_output = {"retcode": 0, "stdout": _VERSION}
+def test_version(_version, version_output, orig_env, bin_dir, mocked_env):
+    cmd_ret = {"retcode": 0, "stdout": version_output}
+    expected_output = {"retcode": 0, "stdout": _version}
     cmd_args = ["syslog-ng", "-V"]
 
     cmd_mock = MagicMock(return_value=cmd_ret)
@@ -273,8 +267,8 @@ def test_version(_VERSION, VERSION_OUTPUT, orig_env, bin_dir, mocked_env):
 
 
 @pytest.mark.skip_on_windows(reason="Module not available on Windows")
-def test_stats(STATS_OUTPUT, orig_env, bin_dir, mocked_env):
-    cmd_ret = {"retcode": 0, "stdout": STATS_OUTPUT}
+def test_stats(stats_output, orig_env, bin_dir, mocked_env):
+    cmd_ret = {"retcode": 0, "stdout": stats_output}
     cmd_args = ["syslog-ng-ctl", "stats"]
 
     cmd_mock = MagicMock(return_value=cmd_ret)
@@ -295,9 +289,9 @@ def test_stats(STATS_OUTPUT, orig_env, bin_dir, mocked_env):
 
 
 @pytest.mark.skip_on_windows(reason="Module not available on Windows")
-def test_modules(_MODULES, VERSION_OUTPUT, orig_env, bin_dir, mocked_env):
-    cmd_ret = {"retcode": 0, "stdout": VERSION_OUTPUT}
-    expected_output = {"retcode": 0, "stdout": _MODULES}
+def test_modules(_modules, version_output, orig_env, bin_dir, mocked_env):
+    cmd_ret = {"retcode": 0, "stdout": version_output}
+    expected_output = {"retcode": 0, "stdout": _modules}
     cmd_args = ["syslog-ng", "-V"]
 
     cmd_mock = MagicMock(return_value=cmd_ret)
