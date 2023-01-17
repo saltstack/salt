@@ -12,7 +12,6 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 try:
     import M2Crypto  # pylint: disable=W0611
@@ -25,8 +24,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.usefixtures("salt_sub_minion")
-@skipIf(not HAS_M2CRYPTO, "Skip when no M2Crypto found")
-@pytest.mark.slow_test
+@pytest.mark.skipif(not HAS_M2CRYPTO, reason="Skip when no M2Crypto found")
 class x509Test(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def setUpClass(cls):
@@ -584,7 +582,6 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
     ):
         """
         Test using the deprecated managed_private_key arg in certificate_managed does not throw an error.
-
         TODO: Remove this test in Aluminium when the arg is removed.
         """
         self.run_state("x509.private_key_managed", name=keyfile, bits=4096)
@@ -739,12 +736,10 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         {%- set ca_crt_path = '"""
             + crtfile
             + """' %}
-
         certificate.authority::private-key:
           x509.private_key_managed:
             - name: {{ ca_key_path }}
             - backup: True
-
         certificate.authority::certificate:
           x509.certificate_managed:
             - name: {{ ca_crt_path }}
