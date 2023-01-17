@@ -26,24 +26,17 @@ runs:
       uses: actions/cache@v3
       with:
         path: artifacts/${{ inputs.package-name }}
-        key: relenv|${{ env.RELENV_VERSION }}|bare|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles('.relenv/**/*.xz') }}
+        key: ${{ env.CACHE_SEED }}|relenv|${{ env.RELENV_VERSION }}|bare|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles('.relenv/**/*.xz') }}
 
     - name: Cache Deps Onedir Package Directory
       id: onedir-pkg-cache
       uses: actions/cache@v3
       with:
         path: artifacts/${{ inputs.package-name }}
-        key: relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles('.relenv/**/*.xz', 'requirements/static/pkg/*/*.txt') }}
-
-    - name: Cache Pip Wheels
-      uses: actions/cache@v3
-      with:
-        path: .pip-download-cache
-        key: pip-download-cache|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles('.relenv/**/*.xz', 'requirements/static/pkg/*/*.txt') }}
+        key: ${{ env.CACHE_SEED }}|relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles('.relenv/**/*.xz', 'requirements/static/pkg/*/*.txt') }}
 
     - name: Install Salt Onedir Package Dependencies
       env:
-        PIP_DOWNLOAD_CACHE: .pip-download-cache
         PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         PIP_EXTRA_INDEX_URL: https://pypi.org/simple
       shell: bash
