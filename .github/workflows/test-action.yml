@@ -23,6 +23,19 @@ on:
         required: true
         type: string
         description: Seed used to invalidate caches
+      platform:
+        required: true
+        type: string
+        description: The platform being tested
+      arch:
+        required: true
+        type: string
+        description: The platform arch being tested
+      package-name:
+        required: false
+        type: string
+        description: The onedir package name to use
+        default: salt
 
 
 env:
@@ -87,6 +100,21 @@ jobs:
           path: nox.${{ inputs.distro-slug }}.tar.*
           key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
+      - name: Download Onedir Tarball as an Artifact
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz
+          path: artifacts/
+
+      - name: Decompress Onedir Tarball
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+          cd artifacts
+          tar xvf ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz
+
       # Skip jobs if nox.*.tar.* is already cached
       - name: PyPi Proxy
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -99,9 +127,9 @@ jobs:
       - name: Define Nox Session
         run: |
           if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session}}-3 >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session }} >> $GITHUB_ENV
           else
-            echo NOX_SESSION=${{ inputs.nox-session}}-tcp-3 >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> $GITHUB_ENV
           fi
 
       - name: Start VM
@@ -147,7 +175,7 @@ jobs:
       - name: Set Exit Status
         if: always()
         run: |
-          mkdir exitstatus
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
           echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-deps
 
       - name: Upload Exit Status
@@ -181,6 +209,19 @@ jobs:
         run: |
           echo "${{ inputs.salt-version }}" > salt/_version.txt
 
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz
+          path: artifacts/
+
+      - name: Decompress Onedir Tarball
+        shell: bash
+        run: |
+          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+          cd artifacts
+          tar xvf ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz
+
       - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3
         with:
@@ -197,9 +238,9 @@ jobs:
       - name: Define Nox Session
         run: |
           if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session}}-3 >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session }} >> $GITHUB_ENV
           else
-            echo NOX_SESSION=${{ inputs.nox-session}}-tcp-3 >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> $GITHUB_ENV
           fi
 
       - name: Download testrun-changed-files.txt
@@ -321,7 +362,7 @@ jobs:
       - name: Set Exit Status
         if: always()
         run: |
-          mkdir exitstatus
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
           echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}-${{ matrix.tests-chunk }}-tests
 
       - name: Upload Exit Status
@@ -354,9 +395,9 @@ jobs:
       - name: Define Nox Session
         run: |
           if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session}}-3 >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session }} >> $GITHUB_ENV
           else
-            echo NOX_SESSION=${{ inputs.nox-session}}-tcp-3 >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> $GITHUB_ENV
           fi
 
       - name: Download Test Run Artifacts
@@ -378,10 +419,10 @@ jobs:
           name: code-coverage
           path: artifacts/coverage
 
-      - name: Set up Python 3.10
+      - name: Set up Python 3.9
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "3.9"
 
       - name: Install Nox
         run: |
@@ -414,7 +455,7 @@ jobs:
       - name: Set Exit Status
         if: always()
         run: |
-          mkdir exitstatus
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
           echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}-report
 
       - name: Upload Exit Status
