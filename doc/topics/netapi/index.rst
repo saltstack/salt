@@ -50,8 +50,8 @@ the :command:`salt` command.
 
 
 .. autoclass:: salt.netapi.NetapiClient
-    :members: local, local_async, local_subset, ssh, runner, runner_async,
-        wheel, wheel_async
+    :members: run, local, local_async, local_subset, local_batch, ssh, runner,
+        runner_async, wheel, wheel_async
 
 .. toctree::
 
