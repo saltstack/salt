@@ -38,6 +38,7 @@ jobs:
     runs-on:
       - self-hosted
       - linux
+      - x86_64
     outputs:
       matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
       transport-matrix-include: ${{ steps.generate-transport-matrix.outputs.matrix }}
@@ -336,6 +337,7 @@ jobs:
     runs-on:
       - self-hosted
       - linux
+      - x86_64
     if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     needs:
       - test
