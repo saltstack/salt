@@ -1,0 +1,46 @@
+---
+name: setup-relenv
+description: Setup Relenv
+inputs:
+  platform:
+    required: true
+    type: string
+    description: The platform to build
+  arch:
+    required: true
+    type: string
+    description: The platform arch to build
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Install Relenv
+      shell: bash
+      run: |
+        python3 -m pip install relenv
+
+    - name: Set environment variables
+      shell: bash
+      run: |
+        python3 -c "import os; os.makedirs('.relenv', exist_ok=True)"
+        echo RELENV_DATA="$(pwd)/.relenv" >> $GITHUB_ENV
+        echo RELENV_VERSION="$(python3 -m pip show relenv | grep Version | cut -d ' ' -f2)" >> $GITHUB_ENV
+
+    - name: Cache Relenv Data Directory
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.RELENV_DATA }}
+        key: relenv|${{ env.RELENV_VERSION }}|${{ inputs.platform }}|${{ inputs.arch }} }}
+
+    - name: Fetch Toolchain
+      if: ${{ inputs.platform == 'linux' }}
+      shell: bash
+      run: |
+        python3 -m relenv toolchain fetch --arch=${{ inputs.arch }}
+
+    - name: Fetch Native Python Build
+      shell: bash
+      run: |
+        python3 -m relenv fetch --arch=${{ inputs.arch }}

@@ -1,0 +1,75 @@
+---
+name: build-linux-onedir
+description: Build Linux Onedir Package
+inputs:
+  platform:
+    required: true
+    type: string
+    description: The platform to build
+  arch:
+    required: true
+    type: string
+    description: The platform arch to build
+  package-name:
+    required: false
+    type: string
+    description: The onedir package name to create
+    default: salt
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Download Cached Bare Onedir Package Directory
+      id: onedir-bare-cache
+      uses: actions/cache@v3
+      with:
+        path: artifacts/${{ inputs.package-name }}
+        key: relenv|${{ env.RELENV_VERSION }}|bare|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles('.relenv/**/*.xz') }}
+
+    - name: Cache Pip Wheels
+      uses: actions/cache@v3
+      with:
+        path: .pip-download-cache
+        key: pip-download-cache|${{ env.RELENV_VERSION }}|salt|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles('.relenv/**/*.xz', 'requirements/static/pkg/*/*.txt') }}
+
+    - name: Install Salt Onedir Package Dependencies
+      env:
+        PIP_DOWNLOAD_CACHE: .pip-download-cache
+        PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+        PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+      shell: bash
+      run: |
+        python3 -c "import os; os.makedirs('.downloaded-dependencies', exist_ok=True)"
+        if [ "${{ inputs.platform }}" != "windows" ]; then
+          artifacts/${{ inputs.package-name }}/bin/python3 -m pip install -r requirements/static/pkg/py3.10/${{ inputs.platform }}.txt
+        else
+          artifacts/${{ inputs.package-name }}/Scripts/python -m pip install -r requirements/static/pkg/py3.10/${{ inputs.platform }}.txt
+        fi
+
+    - name: Install Salt Into Onedir
+      env:
+        PIP_DOWNLOAD_CACHE: .pip-download-cache
+        PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+        PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+      shell: bash
+      run: |
+        if [ "${{ inputs.platform }}" != "windows" ]; then
+          artifacts/${{ inputs.package-name }}/bin/python3 -m pip install .
+        else
+          artifacts/${{ inputs.package-name }}/Scripts/python -m pip install .
+        fi
+
+    - name: Create Tarball
+      shell: bash
+      run: |
+        cd artifacts/
+        tar -cJf ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz  ${{ inputs.package-name }}
+
+    - name: Upload Onedir Tarball as an Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz
+        path: artifacts/${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.tar.xz
+        retention-days: 7

@@ -241,15 +241,273 @@ jobs:
     with:
       changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
 
+  build-bare-linux:
+    name: Build Bare Onedir Linux
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+          - aarch64
+    runs-on:
+      - self-hosted
+      - linux
+      - ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: linux
+          arch: ${{ matrix.arch }}
+      - name: Setup Bare Relenv Onedir
+        uses: ./.github/actions/build-onedir-bare
+        with:
+          platform: linux
+          arch: ${{ matrix.arch }}
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  build-salt-linux:
+    name: Build Salt Onedir Linux
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-bare-linux
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+          - aarch64
+    runs-on:
+      - self-hosted
+      - linux
+      - ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: linux
+          arch: ${{ matrix.arch }}
+      - name: Install Salt into Relenv Onedir
+        uses: ./.github/actions/build-onedir-pkg
+        with:
+          platform: linux
+          arch: ${{ matrix.arch }}
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  build-bare-windows:
+    name: Build Bare Onedir Windows
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - amd64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup Relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: windows
+          arch: ${{ matrix.arch }}
+      - name: Setup Bare Relenv Onedir
+        uses: ./.github/actions/build-onedir-bare
+        with:
+          platform: windows
+          arch: ${{ matrix.arch }}
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-windows-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  build-salt-windows:
+    name: Build Salt Onedir Windows
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-bare-windows
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - amd64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup Relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: windows
+          arch: ${{ matrix.arch }}
+      - name: Install Salt into Relenv Onedir
+        uses: ./.github/actions/build-onedir-pkg
+        with:
+          platform: windows
+          arch: ${{ matrix.arch }}
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-windows-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  build-bare-macos:
+    name: Build Bare Onedir macOS
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+    runs-on: macos-12
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup Relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: darwin
+          arch: ${{ matrix.arch }}
+      - name: Setup Bare Relenv Onedir
+        uses: ./.github/actions/build-onedir-bare
+        with:
+          platform: darwin
+          arch: ${{ matrix.arch }}
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-macos-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  build-salt-macos:
+    name: Build Salt Onedir macOS
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-bare-macos
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+    runs-on: macos-12
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup Relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: darwin
+          arch: ${{ matrix.arch }}
+      - name: Install Salt into Relenv Onedir
+        uses: ./.github/actions/build-onedir-pkg
+        with:
+          platform: darwin
+          arch: ${{ matrix.arch }}
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-macos-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
   windows-2016:
     name: Windows 2016
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-windows
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2016
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -259,10 +517,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-windows
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2019
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -272,10 +533,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-windows
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2022
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -285,10 +549,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-macos
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-12
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: darwin
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -298,10 +565,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: almalinux-8
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -311,10 +581,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: almalinux-9
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -324,10 +597,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: amazonlinux-2
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -337,10 +613,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: archlinux-lts
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -350,10 +629,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centos-7
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -363,10 +645,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centosstream-8
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -376,10 +661,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centosstream-9
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -389,10 +677,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-10
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -402,23 +693,29 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-11
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
 
   debian-11-arm64:
-    name: Debian 11 ARM64
+    name: Debian 11 Arm64
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-11-arm64
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -428,10 +725,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: fedora-36
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -441,10 +741,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: opensuse-15
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -454,10 +757,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: photonos-3
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -467,10 +773,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: photonos-4
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -480,10 +789,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-18.04
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -493,10 +805,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-20.04
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -506,10 +821,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-20.04-arm64
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -519,10 +837,13 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-22.04
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
@@ -532,14 +853,16 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-linux
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-22.04-arm64
-      nox-session: ci-test
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
       testrun: ${{ needs.prepare-ci.outputs.testrun }}
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
-
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
