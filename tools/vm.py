@@ -45,7 +45,10 @@ except ImportError:
 
 
 if TYPE_CHECKING:
+    # pylint: disable=no-name-in-module
     from boto3.resources.factory.ec2 import Instance
+
+    # pylint: enable=no-name-in-module
 
 log = logging.getLogger(__name__)
 
@@ -891,7 +894,7 @@ class VM:
                             description=f"SSH connection to {host} available!",
                             completed=ssh_connection_timeout,
                         )
-                        return True
+                        break
                     proc.wait(timeout=3)
                     stderr = proc.stderr.read().strip()
                     if stderr:
@@ -921,6 +924,7 @@ class VM:
                 if last_error:
                     error += f". {last_error}"
                 return error
+            return True
 
     def destroy(self):
         try:
@@ -1206,7 +1210,7 @@ class VM:
         pseudo_terminal: bool = False,
         env: list[str] = None,
         log_command_level: int = logging.INFO,
-        ssh_options: list[str] | None = None,
+        ssh_options: list[str] | None = None,  # pylint: disable=bad-whitespace
     ) -> list[str]:
         ssh = shutil.which("ssh")
         if TYPE_CHECKING:
