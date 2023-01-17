@@ -2,18 +2,21 @@
 common:
   dir_patterns: &common_dir_patterns
     - "**/__pycache__"
-    # - "**/tests"
-    - "**/site-packages/cheroot/test"
-    - "**/site-packages/cherrypy/test"
-    - "**/site-packages/gitdb/test"
-    - "**/site-packages/psutil/tests"
-    - "**/site-packages/smmap/test"
-    - "**/site-packages/zmq/tests"
+    - "**/site-packages/test"
+    - "**/site-packages/tests"
+    - "**/site-packages/*/test"
+    - "**/site-packages/*/tests"
+    - "**/site-packages/ansible_collections/*/*/test"
+    - "**/site-packages/ansible_collections/*/*/tests"
     # Bundled Tornado Test Suite
     - "**/salt/ext/tornado/test"
   file_patterns: &common_file_patterns
     - "*.pyc"
     - "*.pyo"
+    - "**/test/test_*.py*"
+    - "**/test/**/test_*.py*"
+    - "**/tests/test_*.py*"
+    - "**/tests/**/test_*.py*"
 
 ci:
   darwin:
