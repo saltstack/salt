@@ -2,12 +2,12 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-
 import logging
 
-from salt.utils.versions import LooseVersion
+import pytest
+
+from salt.utils.versions import Version
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest
-from tests.support.unit import skipIf
 
 try:
     import azure  # pylint: disable=unused-import
@@ -31,18 +31,20 @@ def __has_required_azure():
     """
     if HAS_AZURE:
         if hasattr(azure, "__version__"):
-            version = LooseVersion(azure.__version__)
+            version = Version(azure.__version__)
         else:
-            version = LooseVersion(azure.common.__version__)
-        if LooseVersion(REQUIRED_AZURE) <= version:
+            version = Version(azure.common.__version__)
+        if Version(REQUIRED_AZURE) <= version:
             return True
     return False
 
 
-@skipIf(not HAS_AZURE, "These tests require the Azure Python SDK to be installed.")
-@skipIf(
+@pytest.mark.skipif(
+    not HAS_AZURE, reason="These tests require the Azure Python SDK to be installed."
+)
+@pytest.mark.skipif(
     not __has_required_azure(),
-    "The Azure Python SDK must be >= {}.".format(REQUIRED_AZURE),
+    reason="The Azure Python SDK must be >= {}.".format(REQUIRED_AZURE),
 )
 class AzureTest(CloudTest):
     """

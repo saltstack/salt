@@ -3,7 +3,8 @@ import os.path
 import sys
 from collections import namedtuple
 
-import pkg_resources  # pylint: disable=W8410
+
+import pkg_resources
 import pytest
 
 import salt.config

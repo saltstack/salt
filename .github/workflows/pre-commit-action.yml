@@ -1,0 +1,73 @@
+name: Pre-Commit
+
+on:
+  workflow_call:
+    inputs:
+      changed-files:
+        required: true
+        type: string
+        description: JSON string containing information about changed files
+
+jobs:
+  Pre-Commit:
+    name: Run Pre-Commit Against Salt
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: python:3.8.6-slim-buster
+
+    steps:
+
+      - name: Install System Deps
+        run: |
+          echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+          apt-get update
+          apt-get install -y enchant git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
+          apt-get install -y git/buster-backports
+
+      - uses: actions/checkout@v3
+
+      - name: Install Pre-Commit
+        env:
+          PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+        run: |
+          python -m pip install --upgrade pip
+          pip install pre-commit
+          pre-commit install --install-hooks
+
+      - name: Check ALL Files On Branch
+        if: github.event_name != 'pull_request'
+        env:
+          SKIP: lint-salt,lint-tests,remove-import-headers,rstcheck
+        run: |
+          pre-commit run --show-diff-on-failure --color=always --all-files
+
+      - name: Check Changed Files On PR
+        if: github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['repo']
+        env:
+          SKIP: lint-salt,lint-tests
+          GH_ACTIONS_ANNOTATE: "1"
+        run: |
+          pre-commit run --show-diff-on-failure --color=always --files ${{ join(fromJSON(inputs.changed-files)['repo_files'], ' ') }}
+
+      - name: Check Docs On Deleted Files
+        if: fromJSON(inputs.changed-files)['deleted']
+        env:
+          PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+        run: |
+          pre-commit run --show-diff-on-failure --color=always check-docs --files ${{ join(fromJSON(inputs.changed-files)['deleted_files'], ' ') }}
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-pre-commit
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error

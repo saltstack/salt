@@ -339,14 +339,16 @@ backports.ssl-match-hostname==3.7.0.1 ; python_version < "3.7"
 backports.zoneinfo==0.2.1
     # via tzlocal
 bcrypt==3.2.0
-    # via paramiko
-boto3==1.18.27 ; python_version >= "3.6"
+    # via
+    #   paramiko
+    #   passlib
+boto3==1.21.46 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
     #   moto
 boto==2.49.0
     # via -r requirements/static/ci/common.in
-botocore==1.21.27
+botocore==1.24.46
     # via
     #   boto3
     #   moto
@@ -357,7 +359,7 @@ cachetools==4.2.2
     #   python-telegram-bot
 cassandra-driver==3.25.0
     # via -r requirements/static/ci/common.in
-certifi==2022.5.18.1
+certifi==2022.12.7
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
@@ -426,16 +428,12 @@ frozenlist==1.2.0
     # via
     #   aiohttp
     #   aiosignal
-future==0.18.2
+future==0.18.3
     # via textfsm
 genshi==0.7.5
     # via -r requirements/static/ci/common.in
 geomet==0.2.1.post1
     # via cassandra-driver
-gitdb==4.0.7
-    # via gitpython
-gitpython==3.1.18
-    # via -r requirements/static/ci/common.in
 google-auth==2.0.1
     # via kubernetes
 hglib==2.6.1
@@ -468,7 +466,7 @@ ipaddress==1.0.23
     # via kubernetes
 isodate==0.6.0
     # via msrest
-isort==4.3.17
+isort==4.3.21
     # via pylint
 jaraco.classes==3.2.1
     # via jaraco.collections
@@ -509,6 +507,8 @@ lazy-object-proxy==1.4.3
     # via astroid
 libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
+looseversion==1.0.3
+    # via -r requirements/base.txt
 lxml==4.9.1
     # via
     #   junos-eznc
@@ -643,15 +643,17 @@ oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
-packaging==21.0
-    # via ansible-core
+packaging==21.3
+    # via
+    #   -r requirements/base.txt
+    #   ansible-core
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
     #   junos-eznc
     #   ncclient
     #   scp
-passlib==1.7.4 ; sys_platform != "win32"
+passlib[bcrypt]==1.7.4
     # via -r requirements/static/ci/common.in
 pathspec==0.9.0
     # via yamllint
@@ -673,8 +675,6 @@ pycparser==2.20
     # via cffi
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
-pycurl==7.44.1 ; python_version <= "3.9"
-    # via -r requirements/static/ci/common.in
 pygit2==1.0.3 ; python_version <= "3.8"
     # via -r requirements/static/ci/linux.in
 pyiface==0.0.11
@@ -697,7 +697,7 @@ pyopenssl==20.0.1
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==2.4.7
+pyparsing==3.0.6
     # via
     #   junos-eznc
     #   packaging
@@ -822,8 +822,10 @@ six==1.16.0
     #   vcert
     #   virtualenv
     #   websocket-client
-smmap==4.0.0
-    # via gitdb
+slack-bolt==1.15.5
+    # via -r requirements/static/ci/linux.in
+slack-sdk==3.19.5
+    # via slack-bolt
 sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
@@ -850,7 +852,6 @@ typing-extensions==3.10.0.0
     # via
     #   aiohttp
     #   async-timeout
-    #   gitpython
     #   immutables
     #   importlib-metadata
     #   yarl

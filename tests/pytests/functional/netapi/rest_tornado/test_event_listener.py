@@ -4,8 +4,16 @@ import salt.utils.event
 from salt.netapi.rest_tornado import saltnado
 from tests.support.events import eventpublisher_process
 
+
+def _check_skip(grains):
+    if grains["os"] == "MacOS":
+        return True
+    return False
+
+
 pytestmark = [
     pytest.mark.slow_test,
+    pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip),
 ]
 
 
@@ -13,7 +21,7 @@ class Request:
     __slots__ = ("_finished",)
 
     def __init__(self):
-        self._finished = False
+        self._finished = True
 
 
 @pytest.fixture

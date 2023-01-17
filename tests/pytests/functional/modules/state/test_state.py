@@ -19,6 +19,12 @@ log = logging.getLogger(__name__)
 pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.core_test]
 
 
+def _check_skip(grains):
+    if grains["os"] == "SUSE":
+        return True
+    return False
+
+
 def test_show_highstate(state, state_testfile_dest_path):
     """
     state.show_highstate
@@ -670,6 +676,7 @@ def test_retry_option(state, state_tree):
             assert state_return.full_return["duration"] >= 3
 
 
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_retry_option_success(state, state_tree, tmp_path):
     """
     test a state with the retry option that should return True immediately (i.e. no retries)

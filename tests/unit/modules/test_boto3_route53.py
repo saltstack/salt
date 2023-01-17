@@ -8,7 +8,7 @@ import pytest
 
 import salt.loader
 import salt.modules.boto3_route53 as boto3_route53
-from salt.utils.versions import Version  # pylint: disable=E0611
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase

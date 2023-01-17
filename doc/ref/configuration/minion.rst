@@ -2274,6 +2274,31 @@ aggregate just those types.
     state_aggregate:
       - pkg
 
+.. conf_minion:: state_queue
+
+``state_queue``
+---------------
+
+Default: ``False``
+
+Instead of failing immediately when another state run is in progress, a value
+of ``True`` will queue the new state run to begin running once the other has
+finished. This option starts a new thread for each queued state run, so use
+this option sparingly.
+
+.. code-block:: yaml
+
+    state_queue: True
+
+Additionally, it can be set to an integer representing the maximum queue size
+which can be attained before the state runs will fail to be queued. This can
+prevent runaway conditions where new threads are started until system
+performance is hampered.
+
+.. code-block:: yaml
+
+    state_queue: 2
+
 .. conf_minion:: state_verbose
 
 ``state_verbose``
@@ -2471,6 +2496,21 @@ default configuration set up at install time.
 .. code-block:: yaml
 
     snapper_states_config: root
+
+``global_state_conditions``
+---------------------------
+
+Default: ``None``
+
+If set, this parameter expects a dictionary of state module names as keys and a
+list of conditions which must be satisfied in order to run any functions in that
+state module.
+
+.. code-block:: yaml
+
+    global_state_conditions:
+      "*": ["G@global_noop:false"]
+      service: ["not G@virtual_subtype:chroot"]
 
 File Directory Settings
 =======================

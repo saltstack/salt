@@ -29,9 +29,8 @@ MOCK_SHELL_FILE = "# List of acceptable shells\n\n/bin/bash\n"
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    return {cmdmod: {"__opts__": opts}}
+def configure_loader_modules(minion_opts):
+    return {cmdmod: {"__opts__": minion_opts}}
 
 
 @pytest.fixture(scope="module")

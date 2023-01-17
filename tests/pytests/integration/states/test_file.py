@@ -13,7 +13,7 @@ from pytestshellutils.utils import ports
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-from salt.utils.versions import Version  # pylint: disable=E0611
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 

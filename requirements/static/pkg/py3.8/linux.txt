@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements/static/pkg/py3.8/linux.txt requirements/base.txt requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-certifi==2022.5.18.1
+certifi==2022.12.7
     # via requests
 cffi==1.14.6
     # via cryptography
@@ -41,6 +41,8 @@ jinja2==3.1.0
     # via -r requirements/base.txt
 jmespath==1.0.1
     # via -r requirements/base.txt
+looseversion==1.0.2
+    # via -r requirements/base.txt
 markupsafe==2.0.1
     # via
     #   -r requirements/base.txt
@@ -52,6 +54,8 @@ more-itertools==5.0.0
     #   jaraco.classes
     #   jaraco.functools
 msgpack==1.0.2
+    # via -r requirements/base.txt
+packaging==22.0
     # via -r requirements/base.txt
 portend==2.4
     # via cherrypy

@@ -65,7 +65,7 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltRenderError,
 )
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -1768,6 +1768,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
         # Install the software
         # Check Use Scheduler Option
+        log.debug("PKG : cmd: %s /s /c %s", cmd_shell, arguments)
+        log.debug("PKG : pwd: %s", cache_path)
         if pkginfo[version_num].get("use_scheduler", False):
             # Create Scheduled Task
             __salt__["task.create_task"](
@@ -1834,6 +1836,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 python_shell=False,
                 redirect_stderr=True,
             )
+            log.debug("PKG : retcode: %s", result["retcode"])
             if not result["retcode"]:
                 ret[pkg_name] = {"install status": "success"}
                 changed.append(pkg_name)
@@ -2353,7 +2356,7 @@ def _reverse_cmp_pkg_versions(pkg1, pkg2):
     """
     Compare software package versions
     """
-    return 1 if LooseVersion(pkg1) > LooseVersion(pkg2) else -1
+    return 1 if Version(pkg1) > Version(pkg2) else -1
 
 
 def _get_latest_pkg_version(pkginfo):

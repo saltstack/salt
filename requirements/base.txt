@@ -5,5 +5,8 @@ PyYAML
 MarkupSafe
 requests>=1.0.0
 distro>=1.0.1
-contextvars
 psutil>=5.0.0
+packaging>=21.3
+looseversion
+# We need contextvars for salt-ssh
+contextvars

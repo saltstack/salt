@@ -16,7 +16,6 @@ import types
 import warnings
 from contextlib import contextmanager
 
-import _pytest._version
 import attr
 import pytest
 from saltfactories.utils import random_string
@@ -27,9 +26,6 @@ import salt.utils.pycrypto
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
-
-PYTEST_GE_7 = getattr(_pytest._version, "version_tuple", (-1, -1)) >= (7, 0)
-
 
 log = logging.getLogger(__name__)
 
@@ -253,7 +249,7 @@ class TestAccount:
     hashed_password = attr.ib(repr=False)
     create_group = attr.ib(repr=False, default=False)
     group_name = attr.ib()
-    _group = attr.ib(init=False, repr=False)
+    _group = attr.ib(init=True, repr=False)
     _delete_account = attr.ib(init=False, repr=False, default=False)
 
     @sminion.default
@@ -298,6 +294,10 @@ class TestAccount:
                 "account. There's no group attribute in this account instance."
             )
         return self._group
+
+    @group.setter
+    def _set_group(self, value):
+        self._group = value
 
     def __enter__(self):
         if not self.sminion.functions.user.info(self.username):
@@ -381,6 +381,7 @@ def create_account(
     hashed_password=attr.NOTHING,
     group_name=attr.NOTHING,
     create_group=False,
+    group=attr.NOTHING,
     sminion=attr.NOTHING,
 ):
     with TestAccount(
@@ -390,6 +391,7 @@ def create_account(
         hashed_password=hashed_password,
         group_name=group_name,
         create_group=create_group,
+        group=group,
     ) as account:
         yield account
 
@@ -694,10 +696,6 @@ class EntropyGenerator:
         if self.current_entropy >= self.minimum_entropy:
             return
 
-        exc_kwargs = {}
-        if PYTEST_GE_7:
-            exc_kwargs["_use_item_location"] = True
-
         rngd = shutil.which("rngd")
         openssl = shutil.which("openssl")
         timeout = time.time() + max_time
@@ -712,7 +710,7 @@ class EntropyGenerator:
                         )
                     )
                     if self.skip:
-                        raise pytest.skip.Exception(message, **exc_kwargs)
+                        raise pytest.skip.Exception(message, _use_item_location=True)
                     raise pytest.fail(message)
                 subprocess.run([rngd, "-r", "/dev/urandom"], shell=False, check=True)
                 self.current_entropy = int(kernel_entropy_file.read_text().strip())
@@ -730,7 +728,7 @@ class EntropyGenerator:
                         )
                     )
                     if self.skip:
-                        raise pytest.skip.Exception(message, **exc_kwargs)
+                        raise pytest.skip.Exception(message, _use_item_location=True)
                     raise pytest.fail(message)
 
                 target_file = tempfile.NamedTemporaryFile(
@@ -762,7 +760,7 @@ class EntropyGenerator:
                 )
             )
             if self.skip:
-                raise pytest.skip.Exception(message, **exc_kwargs)
+                raise pytest.skip.Exception(message, _use_item_location=True)
             raise pytest.fail(message)
 
     def __enter__(self):
@@ -771,6 +769,23 @@ class EntropyGenerator:
 
     def __exit__(self, *_):
         pass
+
+
+@pytest.helpers.register
+@contextmanager
+def change_cwd(path):
+    """
+    Context manager helper to change CWD for a with code block and restore
+    it at the end
+    """
+    old_cwd = os.getcwd()
+    try:
+        os.chdir(path)
+        # Do stuff
+        yield
+    finally:
+        # Restore Old CWD
+        os.chdir(old_cwd)
 
 
 # Only allow star importing the functions defined in this module

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<installer-gui-script minSpecVersion="2">
+    <title>@TITLE@</title>
+    <organization>com.saltstack.salt</organization>
+    <!-- Define minimum system requirements -->
+    <volume-check>
+        <allowed-os-versions>
+            <os-version min="10.9" />
+        </allowed-os-versions>
+    </volume-check>
+    <options rootVolumeOnly="true"
+             hostArchitectures="@CPU_ARCH@" />
+    <domains enable_localSystem="true" />
+    <!-- Define background image -->
+    <background file="logo.png"
+                mime-type="image/png"
+                scaling="proportional"
+                alignment="bottomleft" />
+    <background-darkAqua file="logo.png"
+                         mime-type="image/png"
+                         scaling="proportional"
+                         alignment="bottomleft" />
+    <!-- Define documents displayed at various steps -->
+    <welcome file="welcome.rtf"
+             mime-type="text/rtf" />
+    <license file="license.rtf"
+             mime-type="text/rtf" />
+    <conclusion file="conclusion.rtf"
+                mime-type="text/rtf" />
+    <!-- List all component packages -->
+    <pkg-ref id="com.saltstack.salt"
+             version="@VERSION@"
+             auth="root">salt-src-@VERSION@-py3-@CPU_ARCH@.pkg</pkg-ref>
+    <!-- List them again here. They can now be organized
+         as a hierarchy if you want. -->
+    <choices-outline>
+        <line choice="com.saltstack.salt" />
+    </choices-outline>
+    <!-- Define each choice above -->
+    <choice id="com.saltstack.salt"
+            visible="false"
+            title="@TITLE@"
+            description="@DESC@"
+            start_selected="true">
+        <pkg-ref id="com.saltstack.salt" />
+    </choice>
+</installer-gui-script>

@@ -1,0 +1,513 @@
+name: CI
+
+on:
+  push: {}
+  pull_request: {}
+  schedule:
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
+    - cron: '0 */8 * * *'  # Run every 8 hours
+  workflow_dispatch:
+    inputs:
+      testrun-type:
+        description: Type of test run
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - changed
+
+env:
+  COLUMNS: 160
+
+permissions:
+  contents: read  # for dorny/paths-filter to fetch a list of changed files
+  pull-requests: read  # for dorny/paths-filter to read pull requests
+
+concurrency:
+  # Concurrency is defined in a way that concurrent builds against branches do
+  # not cancel previous builds.
+  # However, for every new build against the same pull request source branch,
+  # all older builds against that same branch get canceled.
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  prepare-ci:
+    name: Prepare CI
+    runs-on: ubuntu-latest
+    outputs:
+      jobs: ${{ steps.process-changed-files.outputs.jobs }}
+      changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
+      testrun: ${{ steps.define-testrun.outputs.testrun }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get Changed Files
+        id: changed-files
+        uses: dorny/paths-filter@v2
+        with:
+          token: ${{ github.token }}
+          list-files: json
+          filters: |
+            repo:
+              - added|modified:
+                - '**'
+            doc-requirements:
+              - added|modified: &doc_requirements
+                - requirements/static/ci/py3.*/docs.txt
+            lint-requirements:
+              - added|modified: &lint_requirements
+                - requirements/static/ci/py3.*/lint.txt
+            test_requirements:
+              - added|modified: &test_requirements
+                - requirements/static/ci/py3.*/darwin.txt
+                - requirements/static/ci/py3.*/linux.txt
+                - requirements/static/ci/py3.*/freebsd.txt
+                - requirements/static/ci/py3.*/windows.txt
+                - requirements/static/ci/py3.*/darwin-crypto.txt
+                - requirements/static/ci/py3.*/linux-crypto.txt
+                - requirements/static/ci/py3.*/freebsd-crypto.txt
+                - requirements/static/ci/py3.*/windows-crypto.txt
+            deleted:
+              - deleted:
+                - '**'
+            docs:
+              - added|modified:
+                - doc/**
+                - *doc_requirements
+            salt:
+              - added|modified: &salt_added_modified
+                - setup.py
+                - noxfile.py
+                - salt/**/*.py
+                - tasks/**/*.py
+                - tools/**/*.py
+            tests:
+              - added|modified: &tests_added_modified
+                - tests/**/*.py
+            lint:
+              - added|modified:
+                - .pylintrc
+                - *lint_requirements
+            testrun:
+              - added|modified:
+                - *salt_added_modified
+                - *tests_added_modified
+
+      - name: Write Changed Files To A Local File
+        run:
+          echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
+
+      - name: Check Local Changed Files Contents
+        run:
+          cat changed-files.json
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Python Tools Scripts
+        env:
+          PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+          PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+        run: |
+          python3 -m pip install -r requirements/static/ci/py3.10/tools.txt
+
+      - name: Process Changed Files
+        id: process-changed-files
+        run:
+          tools ci process-changed-files ${{ github.event_name }} changed-files.json
+
+      - name: Check Collected Jobs
+        run:
+          echo '${{ steps.process-changed-files.outputs.jobs }}' | jq -C '.'
+
+      - name: Check Collected Changed Files
+        if: ${{ github.event_name != 'schedule' }}
+        run:
+          echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
+
+      - name: Define Testrun
+        id: define-testrun
+        run:
+          tools ci define-testrun ${{ github.event_name }} changed-files.json
+
+      - name: Check Defined Test Run
+        run:
+          echo '${{ steps.define-testrun.outputs.testrun }}' | jq -C '.'
+
+      - name: Check Contents of generated testrun-changed-files.txt
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
+        run:
+          cat testrun-changed-files.txt || true
+
+      - name: Upload testrun-changed-files.txt
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: testrun-changed-files.txt
+          path: testrun-changed-files.txt
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-prepare-ci
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  pre-commit:
+    name: Pre-Commit
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
+    uses: ./.github/workflows/pre-commit-action.yml
+    needs:
+      - prepare-ci
+    with:
+      changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
+
+  docs:
+    name: Build Docs
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
+    uses: ./.github/workflows/docs-action.yml
+    needs:
+      - prepare-ci
+    with:
+      changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
+
+  lint:
+    name: Lint
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
+    uses: ./.github/workflows/lint-action.yml
+    needs:
+      - prepare-ci
+    with:
+      changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
+
+  twine-check:
+    name: Twine Check
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
+    uses: ./.github/workflows/twine-check-action.yml
+    needs:
+      - prepare-ci
+    with:
+      changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
+
+  windows-2016:
+    name: Windows 2016
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: windows-2016
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  windows-2019:
+    name: Windows 2019
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: windows-2019
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  windows-2022:
+    name: Windows 2022
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: windows-2022
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  macos-12:
+    name: MacOS 12
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action-macos.yml
+    with:
+      distro-slug: macos-12
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  almalinux-8:
+    name: Alma Linux 8
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: almalinux-8
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  almalinux-9:
+    name: Alma Linux 9
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: almalinux-9
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  amazonlinux-2:
+    name: Amazon Linux 2
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: amazonlinux-2
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  archlinux-lts:
+    name: Arch Linux LTS
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: archlinux-lts
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  centos-7:
+    name: CentOS 7
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: centos-7
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  centosstream-8:
+    name: CentOS Stream 8
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: centosstream-8
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  centosstream-9:
+    name: CentOS Stream 9
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: centosstream-9
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  debian-10:
+    name: Debian 10
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-10
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  debian-11:
+    name: Debian 11
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-11
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  debian-11-arm64:
+    name: Debian 11 ARM64
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-11-arm64
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  fedora-36:
+    name: Fedora 36
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: fedora-36
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  opensuse-15:
+    name: Opensuse 15
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: opensuse-15
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  photon-3:
+    name: Photon OS 3
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: photonos-3
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  photon-4:
+    name: Photon OS 4
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: photonos-4
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  ubuntu-1804:
+    name: Ubuntu 18.04
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-18.04
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  ubuntu-2004:
+    name: Ubuntu 20.04
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-20.04
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  ubuntu-2004-arm64:
+    name: Ubuntu 20.04 Arm64
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-20.04-arm64
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  ubuntu-2204:
+    name: Ubuntu 22.04
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-22.04
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+  ubuntu-2204-arm64:
+    name: Ubuntu 22.04 Arm64
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-22.04-arm64
+      nox-session: ci-test
+      testrun: ${{ needs.prepare-ci.outputs.testrun }}
+
+
+  set-pipeline-exit-status:
+    # This step is just so we can make github require this step, to pass checks
+    # on a pull request instead of requiring all
+    name: Set the ${{ github.workflow }} Pipeline Exit Status
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - pre-commit
+      - docs
+      - lint
+      - twine-check
+      - almalinux-8
+      - almalinux-9
+      - amazonlinux-2
+      - archlinux-lts
+      - centos-7
+      - centosstream-8
+      - centosstream-9
+      - debian-10
+      - debian-11
+      - debian-11-arm64
+      - fedora-36
+      - opensuse-15
+      - photon-3
+      - photon-4
+      - ubuntu-1804
+      - ubuntu-2004
+      - ubuntu-2004-arm64
+      - ubuntu-2204
+      - ubuntu-2204-arm64
+      - windows-2016
+      - windows-2019
+      - windows-2022
+      - macos-12
+    steps:
+    - name: Download Exit Status Files
+      if: always()
+      uses: actions/download-artifact@v3
+      with:
+        name: exitstatus
+        path: exitstatus
+
+    - name: Delete Exit Status Artifacts
+      if: always()
+      uses: geekyeggo/delete-artifact@v2
+      with:
+        name: exitstatus
+        failOnError: false
+
+    - name: Set Pipeline Exit Status
+      run: |
+        tree exitstatus
+        grep -RE 'failure|cancelled' exitstatus/ && exit 1 || exit 0
+
+    - name: Done
+      if: always()
+      run:
+        echo "All worflows finished"

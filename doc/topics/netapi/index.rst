@@ -37,12 +37,23 @@ values that are mapped to function arguments. This allows calling functions
 simply by creating a data structure. (And this is exactly how much of Salt's
 own internals work!)
 
+The :conf_master:`netapi_enable_clients` list in the master config sets which
+clients are available. It is recommended to only enable the clients required
+to complete the tasks needed to reduce the amount of Salt functionality exposed
+via the netapi. Enabling the local clients will provide the same functionality as 
+the :command:`salt` command.
+
+.. admonition:: :conf_master:`netapi_enable_clients`
+
+    Prior to Salt's 3006.0 release all clients were enabled and it was not possible
+    to disable clients individually.
+
+
 .. autoclass:: salt.netapi.NetapiClient
     :members: local, local_async, local_subset, ssh, runner, runner_async,
         wheel, wheel_async
 
 .. toctree::
 
-    ../tutorials/http
     writing
 

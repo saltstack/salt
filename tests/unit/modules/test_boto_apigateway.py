@@ -3,13 +3,15 @@ import logging
 import random
 import string
 
+import pytest
+
 import salt.loader
 import salt.loader.context
 import salt.modules.boto_apigateway as boto_apigateway
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=import-error,no-name-in-module
 try:
@@ -136,7 +138,7 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
+    elif Version(boto3.__version__) < Version(required_boto3_version):
         return False
     else:
         return True
@@ -148,7 +150,7 @@ def _has_required_botocore():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(botocore.__version__) < LooseVersion(required_botocore_version):
+    elif Version(botocore.__version__) < Version(required_botocore_version):
         return False
     else:
         return True
@@ -207,17 +209,16 @@ class BotoApiGatewayTestCaseMixin:
         return False
 
 
-# @skipIf(True, 'Skip these tests while investigating failures')
-@skipIf(HAS_BOTO is False, "The boto3 module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto3 module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto3 module must be greater than or equal to version {}".format(
+    reason="The boto3 module must be greater than or equal to version {}".format(
         required_boto3_version
     ),
 )
-@skipIf(
+@pytest.mark.skipif(
     _has_required_botocore() is False,
-    "The botocore module must be greater than or equal to version {}".format(
+    reason="The botocore module must be greater than or equal to version {}".format(
         required_botocore_version
     ),
 )

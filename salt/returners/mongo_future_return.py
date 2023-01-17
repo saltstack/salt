@@ -96,12 +96,12 @@ import logging
 
 import salt.returners
 import salt.utils.jid
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 try:
     import pymongo
 
-    PYMONGO_VERSION = _LooseVersion(pymongo.version)
+    PYMONGO_VERSION = Version(pymongo.version)
     HAS_PYMONGO = True
 except ImportError:
     HAS_PYMONGO = False
@@ -167,7 +167,7 @@ def _get_conn(ret):
     # at some point we should remove support for
     # pymongo versions < 2.3 until then there are
     # a bunch of these sections that need to be supported
-    if uri and PYMONGO_VERSION > _LooseVersion("2.3"):
+    if uri and PYMONGO_VERSION > Version("2.3"):
         if uri and host:
             raise salt.exceptions.SaltConfigurationError(
                 "Mongo returner expects either uri or host configuration. Both were"
@@ -177,21 +177,19 @@ def _get_conn(ret):
         conn = pymongo.MongoClient(uri)
         mdb = conn.get_database()
     else:
-        if PYMONGO_VERSION > _LooseVersion("2.3"):
-            conn = pymongo.MongoClient(host, port)
+        if PYMONGO_VERSION > Version("2.3"):
+            conn = pymongo.MongoClient(host, port, username=user, password=password)
         else:
             if uri:
                 raise salt.exceptions.SaltConfigurationError(
                     "pymongo <= 2.3 does not support uri format"
                 )
-            conn = pymongo.Connection(host, port)
+            conn = pymongo.Connection(host, port, username=user, password=password)
 
         mdb = conn[db_]
-        if user and password:
-            mdb.authenticate(user, password)
 
     if indexes:
-        if PYMONGO_VERSION > _LooseVersion("2.3"):
+        if PYMONGO_VERSION > Version("2.3"):
             mdb.saltReturns.create_index("minion")
             mdb.saltReturns.create_index("jid")
             mdb.jobs.create_index("jid")
@@ -238,7 +236,7 @@ def returner(ret):
     #
     # again we run into the issue with deprecated code from previous versions
 
-    if PYMONGO_VERSION > _LooseVersion("2.3"):
+    if PYMONGO_VERSION > Version("2.3"):
         # using .copy() to ensure that the original data is not changed, raising issue with pymongo team
         mdb.saltReturns.insert_one(sdata.copy())
     else:
@@ -293,7 +291,7 @@ def save_load(jid, load, minions=None):
     conn, mdb = _get_conn(ret=None)
     to_save = _safe_copy(load)
 
-    if PYMONGO_VERSION > _LooseVersion("2.3"):
+    if PYMONGO_VERSION > Version("2.3"):
         # using .copy() to ensure original data for load is unchanged
         mdb.jobs.insert_one(to_save)
     else:
@@ -386,7 +384,7 @@ def event_return(events):
     if isinstance(events, dict):
         log.debug(events)
 
-        if PYMONGO_VERSION > _LooseVersion("2.3"):
+        if PYMONGO_VERSION > Version("2.3"):
             mdb.events.insert_one(events.copy())
         else:
             mdb.events.insert(events.copy())

@@ -1,0 +1,118 @@
+#!/bin/bash
+###############################################################################
+#
+# Title: Pre Install Script for Salt Installation
+# Authors: Shane Lee
+# Date: December 2015
+#
+# Description: This script stops the salt minion service before attempting to
+#              install Salt on macOS. It also removes the /opt/salt
+#              directory, symlink to salt-config, and salt from paths.d.
+#
+# Requirements:
+#    - None
+#
+# Usage:
+#     This script is run as a part of the macOS Salt Installation
+#
+###############################################################################
+
+#-------------------------------------------------------------------------------
+# Define Variables
+#-------------------------------------------------------------------------------
+# Path Variables
+INSTALL_DIR="/opt/salt"
+BIN_DIR="$INSTALL_DIR/bin"
+TEMP_DIR="/tmp"
+SBIN_DIR="/usr/local/sbin"
+
+#-------------------------------------------------------------------------------
+# Define Functions
+#-------------------------------------------------------------------------------
+log () {
+    if [ -f "$TEMP_DIR/preinstall.txt" ]; then
+        echo "$1" >> "$TEMP_DIR/preinstall.txt"
+    else
+        echo "$1" > "$TEMP_DIR/preinstall.txt"
+    fi
+}
+
+quit_on_error() {
+    # Launchctl returns error code 36 when bootout is in progress, so just return
+    test "$1" == 36 && return;
+    log "$(basename "$0") caught error: $1 on line : $2 command was: $3"
+    exit 1
+}
+trap 'quit_on_error $? $LINENO $BASH_COMMAND' ERR
+
+#-------------------------------------------------------------------------------
+# Start Script
+#-------------------------------------------------------------------------------
+log "Preinstall started on: $(date '+%Y/%m/%d %H:%M:%S')"
+
+#-------------------------------------------------------------------------------
+# Stop the service
+#-------------------------------------------------------------------------------
+log "Service: Configuring..."
+
+while /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; do
+    log "Service: Stopping minion..."
+    launchctl disable system/com.saltstack.salt.minion
+    launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
+    sleep 1
+    log "Service: Stopped Successfully"
+done
+while /bin/launchctl list "com.saltstack.salt.master" &> /dev/null; do
+    log "Service: Stopping master..."
+    launchctl disable system/com.saltstack.salt.master
+    launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.master.plist
+    sleep 1
+    log "Service: Stopped Successfully"
+done
+while /bin/launchctl list "com.saltstack.salt.syndic" &> /dev/null; do
+    log "Service: Stopping syndic..."
+    launchctl disable system/com.saltstack.salt.syndic
+    launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.syndic.plist
+    sleep 1
+    log "Service: Stopped Successfully"
+done
+while /bin/launchctl list "com.saltstack.salt.api" &> /dev/null; do
+    log "Service: Stopping api..."
+    launchctl disable system/com.saltstack.salt.api
+    launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.api.plist
+    sleep 1
+    log "Service: Stopped Successfully"
+done
+
+log "Service: Configured Successfully"
+
+#-------------------------------------------------------------------------------
+# Remove the Symlink to salt-config.sh
+#-------------------------------------------------------------------------------
+if [ -L "$SBIN_DIR/salt-config" ]; then
+    log "Cleanup: Removing Symlink $BIN_DIR/salt-config"
+    rm "$SBIN_DIR/salt-config"
+    log "Cleanup: Removed Successfully"
+fi
+
+#-------------------------------------------------------------------------------
+# Remove the $INSTALL_DIR directory
+#-------------------------------------------------------------------------------
+if [ -d "$INSTALL_DIR" ]; then
+    log "Cleanup: Removing $INSTALL_DIR"
+    rm -rf "$INSTALL_DIR"
+    log "Cleanup: Removed Successfully"
+fi
+
+#-------------------------------------------------------------------------------
+# Remove the salt from the paths.d
+#-------------------------------------------------------------------------------
+if [ -f "/etc/paths.d/salt" ]; then
+    log "Path: Removing salt from the path..."
+    rm "/etc/paths.d/salt"
+    log "Path: Removed Successfully"
+fi
+
+log "Preinstall Completed Successfully on: $(date '+%Y/%m/%d %H:%M:%S')"
+
+exit 0
