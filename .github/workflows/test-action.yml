@@ -27,7 +27,9 @@ jobs:
 
   generate-matrix:
     name: Generate Test Matrix
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - linux
     outputs:
       matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
       transport-matrix-include: ${{ steps.generate-transport-matrix.outputs.matrix }}
@@ -314,7 +316,9 @@ jobs:
 
   report:
     name: Reports for ${{ inputs.distro-slug }}(${{ matrix.transport }})
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - linux
     if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     needs:
       - test
