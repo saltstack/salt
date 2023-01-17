@@ -3,16 +3,13 @@
 """
 
 
-import os
-import tempfile
-
 import pytest
 
 from salt.modules import xml
 
 
 @pytest.fixture
-def XML_STRING():
+def xml_string():
     return """
     <root xmlns:foo="http://www.foo.org/" xmlns:bar="http://www.bar.org">
         <actors>
@@ -34,65 +31,47 @@ def configure_loader_modules():
     return {xml: {}}
 
 
-def test_get_value(XML_STRING):
+def test_get_value(xml_string, tmp_path):
     """
     Verify xml.get_value
     """
-    with tempfile.NamedTemporaryFile("w+", delete=False) as xml_file:
-        xml_file.write(XML_STRING)
-        xml_file.flush()
-
-    xml_result = xml.get_value(xml_file.name, ".//actor[@id='2']")
+    xml_file = tmp_path / "test_xml.xml"
+    xml_file.write_text(xml_string)
+    xml_result = xml.get_value(str(xml_file), ".//actor[@id='2']")
     assert xml_result == "Liam Neeson"
 
-    os.remove(xml_file.name)
 
-
-def test_set_value(XML_STRING):
+def test_set_value(xml_string, tmp_path):
     """
     Verify xml.set_value
     """
-    with tempfile.NamedTemporaryFile("w+", delete=False) as xml_file:
-        xml_file.write(XML_STRING)
-        xml_file.flush()
-
-    xml_result = xml.set_value(xml_file.name, ".//actor[@id='2']", "Patrick Stewart")
+    xml_file = tmp_path / "test_xml.xml"
+    xml_file.write_text(xml_string)
+    xml_result = xml.set_value(str(xml_file), ".//actor[@id='2']", "Patrick Stewart")
     assert xml_result is True
-
-    xml_result = xml.get_value(xml_file.name, ".//actor[@id='2']")
+    xml_result = xml.get_value(str(xml_file), ".//actor[@id='2']")
     assert xml_result == "Patrick Stewart"
 
-    os.remove(xml_file.name)
 
-
-def test_get_attribute(XML_STRING):
+def test_get_attribute(xml_string, tmp_path):
     """
     Verify xml.get_attribute
     """
-    with tempfile.NamedTemporaryFile("w+", delete=False) as xml_file:
-        xml_file.write(XML_STRING)
-        xml_file.flush()
-
-    xml_result = xml.get_attribute(xml_file.name, ".//actor[@id='3']")
+    xml_file = tmp_path / "test_xml.xml"
+    xml_file.write_text(xml_string)
+    xml_result = xml.get_attribute(str(xml_file), ".//actor[@id='3']")
     assert xml_result == {"id": "3"}
 
-    os.remove(xml_file.name)
 
-
-def test_set_attribute(XML_STRING):
+def test_set_attribute(xml_string, tmp_path):
     """
     Verify xml.set_value
     """
-    with tempfile.NamedTemporaryFile("w+", delete=False) as xml_file:
-        xml_file.write(XML_STRING)
-        xml_file.flush()
-
+    xml_file = tmp_path / "test_xml.xml"
+    xml_file.write_text(xml_string)
     xml_result = xml.set_attribute(
-        xml_file.name, ".//actor[@id='3']", "edited", "uh-huh"
+        str(xml_file), ".//actor[@id='3']", "edited", "uh-huh"
     )
     assert xml_result is True
-
-    xml_result = xml.get_attribute(xml_file.name, ".//actor[@id='3']")
+    xml_result = xml.get_attribute(str(xml_file), ".//actor[@id='3']")
     assert xml_result == {"edited": "uh-huh", "id": "3"}
-
-    os.remove(xml_file.name)
