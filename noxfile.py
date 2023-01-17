@@ -1760,3 +1760,25 @@ def build(session):
         ]
         session.run("sha256sum", *packages, external=True)
     session.run("python", "-m", "twine", "check", "dist/*")
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="test-pkgs")
+@nox.parametrize("coverage", [False, True])
+def test_pkgs(session, coverage):
+    """
+    pytest pkg tests session
+    """
+    pydir = _get_pydir(session)
+    # Install requirements
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "pkgtests.txt"
+        )
+
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    cmd_args = [
+        "pkg/tests/",
+    ] + session.posargs
+    _pytest(session, coverage, cmd_args)
