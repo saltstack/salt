@@ -235,12 +235,6 @@ def pytest_addoption(parser):
         default=False,
         help="Run proxy tests (DEPRECATED)",
     )
-    test_selection_group.addoption(
-        "--run-slow",
-        action="store_true",
-        default=False,
-        help="Run slow tests.",
-    )
 
     output_options_group = parser.getgroup("Output Options")
     output_options_group.addoption(
@@ -563,7 +557,7 @@ def pytest_markeval_namespace(config):
 
     This is useful when the condition for a marker requires objects that are expensive or impossible to obtain during
     collection time, which is required by normal boolean conditions.
-    
+
     :param config: The pytest config object.
     :returns: A dictionary of additional globals to add.
     """
