@@ -1,0 +1,36 @@
+---
+name: build-onedir-bare
+description: Build Bare Onedir Package
+inputs:
+  platform:
+    required: true
+    type: string
+    description: The platform to build
+  arch:
+    required: true
+    type: string
+    description: The platform arch to build
+  package-name:
+    required: false
+    type: string
+    description: The onedir package name to create
+    default: salt
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Cache Bare Onedir Package Directory
+      id: onedir-pkg-cache
+      uses: actions/cache@v3
+      with:
+        path: artifacts/${{ inputs.package-name }}
+        key: relenv|${{ env.RELENV_VERSION }}|bare|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles('.relenv/**/*.xz') }}
+
+    - name: Create Onedir Directory
+      shell: bash
+      if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
+      run: |
+        python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+        python3 -m relenv create --arch=${{ inputs.arch }} artifacts/${{ inputs.package-name }}
