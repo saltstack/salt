@@ -12,7 +12,7 @@ jobs:
   Salt:
     name: Build Salt Documentation
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || fromJSON(inputs.changed-files)['docs'] || fromJSON(inputs.changed-files)['salt'] }}
+    if: ${{ github.event_name == 'push' || github.event_name == 'schedule' || fromJSON(inputs.changed-files)['docs'] || fromJSON(inputs.changed-files)['salt'] }}
 
     container:
       image: python:3.8-slim-buster
