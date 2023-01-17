@@ -26,17 +26,10 @@ runs:
       uses: actions/cache@v3
       with:
         path: artifacts/${{ inputs.package-name }}
-        key: relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles('.relenv/**/*.xz', 'requirements/static/pkg/*/*.txt') }}
-
-    - name: Cache Pip Wheels
-      uses: actions/cache@v3
-      with:
-        path: .pip-download-cache
-        key: pip-download-cache|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles('.relenv/**/*.xz', 'requirements/static/pkg/*/*.txt') }}
+        key: ${{ env.CACHE_SEED }}|relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles('.relenv/**/*.xz', 'requirements/static/pkg/*/*.txt') }}
 
     - name: Install Salt Into Onedir
       env:
-        PIP_DOWNLOAD_CACHE: .pip-download-cache
         PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         PIP_EXTRA_INDEX_URL: https://pypi.org/simple
         USE_STATIC_REQUIREMENTS: "1"
