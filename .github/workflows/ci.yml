@@ -70,6 +70,12 @@ jobs:
             lint-requirements:
               - added|modified: &lint_requirements
                 - requirements/static/ci/py3.*/lint.txt
+            pkg_requirements:
+              - added|modified: &pkg_requirements
+                - requirements/static/pkg/py3.*/darwin.txt
+                - requirements/static/pkg/py3.*/linux.txt
+                - requirements/static/pkg/py3.*/freebsd.txt
+                - requirements/static/pkg/py3.*/windows.txt
             test_requirements:
               - added|modified: &test_requirements
                 - requirements/static/ci/py3.*/darwin.txt
@@ -101,6 +107,9 @@ jobs:
               - added|modified:
                 - .pylintrc
                 - *lint_requirements
+            golden_images:
+              - added|modified:
+                - cicd/golden-images.json
             testrun:
               - added|modified:
                 - *salt_added_modified

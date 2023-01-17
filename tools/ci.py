@@ -230,10 +230,20 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
     # Based on which files changed, or other things like PR comments we can
     # decide what to run, or even if the full test run should be running on the
     # pull request, etc...
-    changed_requirements_files = json.loads(
+    changed_pkg_requirements_files = json.loads(
+        changed_files_contents["pkg_requirements_files"]
+    )
+    changed_test_requirements_files = json.loads(
         changed_files_contents["test_requirements_files"]
     )
-    if changed_requirements_files:
+    if changed_files_contents["golden_images"] == "true":
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                "Full test run chosen because there was a change made "
+                "to `cicd/golden-images.json`.\n"
+            )
+        testrun = {"type": "full"}
+    elif changed_pkg_requirements_files or changed_test_requirements_files:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(
                 "Full test run chosen because there was a change made "
@@ -242,7 +252,9 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             wfh.write(
                 "<details>\n<summary>Changed Requirements Files (click me)</summary>\n<pre>\n"
             )
-            for path in sorted(changed_requirements_files):
+            for path in sorted(
+                changed_pkg_requirements_files + changed_test_requirements_files
+            ):
                 wfh.write(f"{path}\n")
             wfh.write("</pre>\n</details>\n")
         testrun = {"type": "full"}
@@ -254,7 +266,6 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         }
         ctx.info(f"Writing {testrun_changed_files_path.name} ...")
         selected_changed_files = []
-        step_summary_written = False
         for fpath in json.loads(changed_files_contents["testrun_files"]):
             if fpath.startswith(("tools/", "tasks/")):
                 continue
@@ -265,21 +276,21 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
                 testrun["type"] = "full"
                 with open(github_step_summary, "a", encoding="utf-8") as wfh:
                     wfh.write(
-                        "Full test run chosen because there was a change to 'tests/conftest.py'.\n"
+                        f"Full test run chosen because there was a change to `{fpath}`.\n"
                     )
-                    step_summary_written = True
             selected_changed_files.append(fpath)
         testrun_changed_files_path.write_text("\n".join(sorted(selected_changed_files)))
-        if step_summary_written is False:
+        if testrun["type"] == "changed":
             with open(github_step_summary, "a", encoding="utf-8") as wfh:
                 wfh.write("Partial test run chosen.\n")
+        if selected_changed_files:
+            with open(github_step_summary, "a", encoding="utf-8") as wfh:
                 wfh.write(
                     "<details>\n<summary>Selected Changed Files (click me)</summary>\n<pre>\n"
                 )
                 for path in sorted(selected_changed_files):
                     wfh.write(f"{path}\n")
                 wfh.write("</pre>\n</details>\n")
-                step_summary_written = True
 
     with open(github_step_summary, "a", encoding="utf-8") as wfh:
         wfh.write("<details>\n<summary>All Changed Files (click me)</summary>\n<pre>\n")
