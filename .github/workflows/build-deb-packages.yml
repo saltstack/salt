@@ -17,6 +17,7 @@ jobs:
       - ${{ matrix.arch }}
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         arch:
           - x86_64
@@ -30,20 +31,27 @@ jobs:
         with:
           path: build-deb-pkg
 
+      - name: Download Onedir Tarball as an Artifact
+        if: inputs.platform != 'windows' && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-linux-${{ matrix.arch }}.tar.xz
+          path: build-deb-pkg/artifacts/
+
       - name: Download System Dependencies
         run: |
           apt update
-          apt install -y python3 python3-virtualenv build-essential devscripts debhelper bash-completion
+          apt install -y python3 python3-venv build-essential devscripts debhelper bash-completion
 
       - name: Build Deb
         env:
-          USE_STATIC_REQUIREMENTS: "1"
+          SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/build-deb-pkg/artifacts/salt-linux-${{ matrix.arch }}.tar.xz"
         run: |
           cd build-deb-pkg
           echo "${{ inputs.salt-version }}" > salt/_version.txt
           ln -sf pkg/debian/ .
           sed -i 's/SALT_RELEASE_VERSION/${{ inputs.salt-version }}/g' debian/changelog
-          debuild -uc -us
+          debuild -e SALT_ONEDIR_ARCHIVE -uc -us
 
       - name: Upload DEBs
         uses: actions/upload-artifact@v3
