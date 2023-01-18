@@ -3,10 +3,13 @@ def test_help(install_salt):
     Test --help works for all salt cmds
     """
     for cmd in install_salt.binary_paths.values():
-        if "salt-cloud" in cmd:
+        # TODO: add back salt-cloud and salt-ssh when its fixed
+        cmd = [str(x) for x in cmd]
+        if any(x in ["salt-cloud", "salt-ssh"] for x in cmd):
             assert True
-        elif "salt-ssh" in cmd:
-            assert True
+        elif "python" in cmd[0]:
+            ret = install_salt.proc.run(*cmd, "--version")
+            assert "Python" in ret.stdout
         else:
             ret = install_salt.proc.run(*cmd, "--help")
             assert "Usage" in ret.stdout
