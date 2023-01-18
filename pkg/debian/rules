@@ -13,34 +13,31 @@ override_dh_auto_clean:
 	rm -rf debian/salt-syndic
 	rm -rf debian/salt-ssh
 
+ifeq ("${SALT_ONEDIR_ARCHIVE}", "")
 override_dh_auto_build:
-	mkdir build
-	test -n "${ONEDIR_DEPS_ARCHIVE}" \
-		&& cd build \
-		&& tar xf ${ONEDIR_DEPS_ARCHIVE} \
-		&& cd .. \
-		|| true
-	test -z "${ONEDIR_DEPS_ARCHIVE}" \
-		&& python3 -m venv --clear --copies build/venv \
-		&& build/venv/bin/python3 -m pip install relenv \
-		&& build/venv/bin/relenv fetch \
-		&& build/venv/bin/relenv toolchain fetch \
-		&& build/venv/bin/relenv create build/salt \
-		&& build/salt/bin/python3 -m pip install "pip>=22.3.1,<23.0" "setuptools>=65.6.3,<66" "wheel" \
-		&& export PY=$$(build/salt/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()') \
-		&& build/salt/bin/python3 -m pip install -r requirements/static/pkg/py$${PY}/linux.txt \
-		|| true
-
-	export USE_STATIC_REQUIREMENTS=1
-	export RELENV_PIP_DIR=1
-	test -n "${SALT_SRC_TARBALL}" \
-		&& build/salt/bin/python3 -m pip install --no-warn-script-location "${SALT_SRC_TARBALL}" \
-		|| build/salt/bin/python3 -m pip install --no-warn-script-location .
-
-	build/salt/bin/python3 -m venv --clear --copies build/tools
-	export PY=$$(build/tools/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()') \
-		&& build/tools/bin/python3 -m pip install -r requirements/static/ci/py$${PY}/tools.txt
-	build/tools/bin/tools pkg pre-archive-cleanup --pkg build/salt
+	mkdir -p build/onedir
+	python3 -m venv --clear --copies build/onedir/venv
+	build/onedir/venv/bin/python3 -m pip install relenv
+	build/onedir/venv/bin/relenv fetch
+	build/onedir/venv/bin/relenv toolchain fetch
+	build/onedir/venv/bin/relenv create build/onedir/salt
+	build/onedir/salt/bin/python3 -m pip install "pip>=22.3.1,<23.0" "setuptools>=65.6.3,<66" "wheel"
+	export PY=$$(build/onedir/salt/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()') \
+		&& build/onedir/salt/bin/python3 -m pip install -r requirements/static/pkg/py$${PY}/linux.txt
+	export USE_STATIC_REQUIREMENTS=1 \
+		&& export RELENV_PIP_DIR=1 \
+		&& build/onedir/salt/bin/python3 -m pip install --no-warn-script-location .
+	build/onedir/salt/bin/python3 -m venv --clear --copies build/onedir/tools
+	export PY=$$(build/onedir/tools/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()') \
+		&& build/onedir/tools/bin/python3 -m pip install -r requirements/static/ci/py$${PY}/tools.txt
+	build/onedir/tools/bin/tools pkg pre-archive-cleanup --pkg build/onedir/salt
+else
+override_dh_auto_build:
+	# The relenv onedir is being provided, all setup up until Salt is installed
+	# is expected to be done
+	mkdir -p build/onedir
+	cd build/onedir; tar xvf ${SALT_ONEDIR_ARCHIVE}
+endif
 
 # dh_auto_install tries to invoke distutils causing failures.
 override_dh_auto_install:
@@ -48,5 +45,5 @@ override_dh_auto_install:
 
 override_dh_install:
 	mkdir -p debian/salt-common/usr/opt/saltstack
-	cp -R build/salt debian/salt-common/usr/opt/saltstack/
+	cp -R build/onedir/salt debian/salt-common/usr/opt/saltstack/
 	dh_install

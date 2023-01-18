@@ -17,6 +17,7 @@ jobs:
       - ${{ matrix.arch }}
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         arch:
           - x86_64
@@ -28,14 +29,21 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Download Onedir Tarball as an Artifact
+        if: inputs.platform != 'windows' && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-linux-${{ matrix.arch }}.tar.xz
+          path: artifacts/
+
       - name: Download System Dependencies
         run: |
           yum -y update
-          yum -y install python3 python3-pip openssl git rpmdevtools rpmlint systemd-units
+          yum -y install python3 python3-pip openssl git rpmdevtools rpmlint systemd-units libxcrypt-compat
 
       - name: Build RPM
         env:
-          USE_STATIC_REQUIREMENTS: "1"
+          SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/artifacts/salt-linux-${{ matrix.arch }}.tar.xz"
         run: |
           echo "${{ inputs.salt-version }}" > salt/_version.txt
           sed -i 's/^Version: \(.*\)$/Version: ${{ inputs.salt-version }}/g' pkg/rpm/salt.spec
