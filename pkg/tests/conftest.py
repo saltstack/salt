@@ -248,6 +248,7 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         "file_roots": state_tree.as_dict(),
         "pillar_roots": pillar_tree.as_dict(),
         "rest_cherrypy": {"port": 8000, "disable_ssl": True},
+        "netapi_enable_clients": ["local"],
         "external_auth": {"auto": {"saltdev": [".*"]}},
     }
     if (platform.is_windows() or platform.is_darwin()) and install_salt.singlebin:
