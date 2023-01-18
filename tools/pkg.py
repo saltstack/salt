@@ -133,18 +133,19 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
     else:
         patterns = patterns["linux"]
 
+    def unnest_lists(patterns):
+        if isinstance(patterns, list):
+            for pattern in patterns:
+                yield from unnest_lists(pattern)
+        else:
+            yield patterns
+
     dir_patterns = set()
-    for pattern in patterns["dir_patterns"]:
-        if isinstance(pattern, list):
-            dir_patterns.update(set(pattern))
-            continue
+    for pattern in unnest_lists(patterns["dir_patterns"]):
         dir_patterns.add(pattern)
 
     file_patterns = set()
-    for pattern in patterns["file_patterns"]:
-        if isinstance(pattern, list):
-            file_patterns.update(set(pattern))
-            continue
+    for pattern in unnest_lists(patterns["file_patterns"]):
         file_patterns.add(pattern)
 
     for root, dirs, files in os.walk(cleanup_path, topdown=True, followlinks=False):
