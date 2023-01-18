@@ -33,10 +33,6 @@ def test_salt_master_as_daemon(salt_master_factory):
                 (
                     all(
                         text in salt_master_factory.impl._terminal_result.stderr
-                        for text in ("PY_SSIZE_T_CLEAN", "salt/utils/process.py:54")
-                    ),
-                    all(
-                        text in salt_master_factory.impl._terminal_result.stderr
                         for text in (
                             "salt/utils/jinja.py:736",
                             "contextfunction",
@@ -89,10 +85,6 @@ def test_salt_minion_as_daemon(salt_minion_factory):
             # assertion that `stderr == ""` should be left.
             if not any(
                 (
-                    all(
-                        text in salt_minion_factory.impl._terminal_result.stderr
-                        for text in ("PY_SSIZE_T_CLEAN", "salt/utils/process.py:54")
-                    ),
                     all(
                         text in salt_minion_factory.impl._terminal_result.stderr
                         for text in (
