@@ -129,25 +129,42 @@ unset CXXFLAGS
 unset CFLAGS
 unset LDFLAGS
 rm -rf $RPM_BUILD_DIR
-mkdir -p $RPM_BUILD_DIR/opt/saltstack
-mkdir -p $RPM_BUILD_DIR/usr/bin
+mkdir -p $RPM_BUILD_DIR/build
 cd $RPM_BUILD_DIR
-python3 -m pip install relenv
-relenv fetch
-relenv toolchain fetch
-relenv create $RPM_BUILD_DIR/opt/saltstack/salt
-env RELENV_PIP_DIR=yes $RPM_BUILD_DIR/opt/saltstack/salt/bin/pip3 install --no-cache -v %{_salt_src}
-# jmsepath doesn't use pip scripts
-rm $RPM_BUILD_DIR/opt/saltstack/salt/jp.py
+
+test -n "${ONEDIR_DEPS_ARCHIVE}" \
+	&& cd build \
+	&& tar xf ${ONEDIR_DEPS_ARCHIVE} \
+	&& cd .. \
+	|| true
+test -z "${ONEDIR_DEPS_ARCHIVE}" \
+	&& python3 -m venv --clear --copies build/venv \
+	&& build/venv/bin/python3 -m pip install relenv \
+	&& build/venv/bin/relenv fetch \
+	&& build/venv/bin/relenv toolchain fetch \
+	&& build/venv/bin/relenv create build/salt \
+	&& build/salt/bin/python3 -m pip install "pip>=22.3.1,<23.0" "setuptools>=65.6.3,<66" "wheel" \
+	&& export PY=$(build/salt/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()') \
+	&& build/salt/bin/python3 -m pip install -r %{_salt_src}/requirements/static/pkg/py${PY}/linux.txt \
+	|| true
+
+export USE_STATIC_REQUIREMENTS=1
+export RELENV_PIP_DIR=1
+test -n "${SALT_SRC_TARBALL}" \
+	&& build/salt/bin/python3 -m pip install --no-warn-script-location "${SALT_SRC_TARBALL}" \
+	|| build/salt/bin/python3 -m pip install --no-warn-script-location %{_salt_src}
+
+build/salt/bin/python3 -m venv --clear --copies build/tools
+export PY=$(build/tools/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()') \
+	&& build/tools/bin/python3 -m pip install -r %{_salt_src}/requirements/static/ci/py${PY}/tools.txt
+cd %{_salt_src}
+$RPM_BUILD_DIR/build/tools/bin/tools pkg pre-archive-cleanup --pkg $RPM_BUILD_DIR/build/salt
 
 
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/opt/saltstack
-cp -R $RPM_BUILD_DIR/* %{buildroot}/
-mkdir -p %{buildroot}/opt/saltstack/salt
-# pip installs directory
-mkdir -p %{buildroot}/opt/saltstack/salt/pypath/
+cp -R $RPM_BUILD_DIR/build/salt %{buildroot}/opt/saltstack/
 
 # Add some directories
 install -d -m 0755 %{buildroot}%{_var}/log/salt
