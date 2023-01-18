@@ -22,6 +22,32 @@ ci = command_group(name="ci", help="CI Related Commands", description=__doc__)
 
 
 @ci.command(
+    name="print-gh-event",
+)
+def print_gh_event(ctx: Context):
+    """
+    Pretty print the GH Actions event.
+    """
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is None:
+        ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event_path is not None
+
+    try:
+        gh_event = json.loads(open(gh_event_path).read())
+    except Exception as exc:
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
+        ctx.exit(1)
+
+    ctx.info("GH Event Payload:")
+    ctx.print(gh_event, soft_wrap=True)
+    ctx.exit(0)
+
+
+@ci.command(
     name="process-changed-files",
     arguments={
         "event_name": {
@@ -36,6 +62,67 @@ ci = command_group(name="ci", help="CI Related Commands", description=__doc__)
     },
 )
 def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.Path):
+    """
+    Process changed files to avoid path traversal.
+    """
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    if not changed_files.exists():
+        ctx.error(f"The '{changed_files}' file does not exist.")
+        ctx.exit(1)
+    try:
+        changed_files_contents = json.loads(changed_files.read_text())
+    except Exception as exc:
+        ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
+        ctx.exit(1)
+
+    sanitized_changed_files = {}
+    ctx.info("Sanitizing paths and confirming no path traversal is being used...")
+    for key, data in changed_files_contents.items():
+        try:
+            loaded_data = json.loads(data)
+        except ValueError:
+            loaded_data = data
+        if key.endswith("_files"):
+            files = set()
+            for entry in list(loaded_data):
+                if not entry:
+                    loaded_data.remove(entry)
+                try:
+                    entry = REPO_ROOT.joinpath(entry).resolve().relative_to(REPO_ROOT)
+                except ValueError:
+                    ctx.error(
+                        f"While processing the changed files key {key!r}, the "
+                        f"path entry {entry!r} was checked and it's not relative "
+                        "to the repository root."
+                    )
+                    ctx.exit(1)
+                files.add(str(entry))
+            sanitized_changed_files[key] = sorted(files)
+            continue
+        sanitized_changed_files[key] = loaded_data
+
+    ctx.info("Writing 'changed-files' to the github outputs file")
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"changed-files={json.dumps(sanitized_changed_files)}\n")
+    ctx.exit(0)
+
+
+@ci.command(
+    name="define-jobs",
+    arguments={
+        "event_name": {
+            "help": "The name of the GitHub event being processed.",
+        },
+    },
+)
+def define_jobs(ctx: Context, event_name: str):
     """
     Set GH Actions outputs for what should build or not.
     """
@@ -65,48 +152,6 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
     ctx.print(gh_event, soft_wrap=True)
     # Let's it print until the end
     time.sleep(1)
-
-    if not changed_files.exists():
-        ctx.error(f"The '{changed_files}' file does not exist.")
-        ctx.exit(1)
-    try:
-        changed_files_contents = json.loads(changed_files.read_text())
-    except Exception as exc:
-        ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
-        ctx.exit(1)
-
-    sanitized_changed_files = {}
-    if event_name != "schedule":
-        ctx.info("Sanitizing paths and confirming no path traversal is being used...")
-        for key, data in changed_files_contents.items():
-            try:
-                loaded_data = json.loads(data)
-            except ValueError:
-                loaded_data = data
-            if key.endswith("_files"):
-                files = set()
-                for entry in list(loaded_data):
-                    if not entry:
-                        loaded_data.remove(entry)
-                    try:
-                        entry = (
-                            REPO_ROOT.joinpath(entry).resolve().relative_to(REPO_ROOT)
-                        )
-                    except ValueError:
-                        ctx.error(
-                            f"While processing the changed files key {key!r}, the "
-                            f"path entry {entry!r} was checked and it's not relative "
-                            "to the repository root."
-                        )
-                        ctx.exit(1)
-                    files.add(str(entry))
-                sanitized_changed_files[key] = sorted(files)
-                continue
-            sanitized_changed_files[key] = loaded_data
-
-    ctx.info("Writing 'changed-files' to the github outputs file")
-    with open(github_output, "a", encoding="utf-8") as wfh:
-        wfh.write(f"changed-files={json.dumps(sanitized_changed_files)}\n")
 
     ctx.info("Selecting which type of jobs(self hosted runners or not) to run")
     jobs = {"github-hosted-runners": False, "self-hosted-runners": False}
@@ -171,14 +216,6 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
     """
     Set GH Actions outputs for what and how Salt should be tested.
     """
-    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
-    if gh_event_path is None:
-        ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
-        ctx.exit(1)
-
-    if TYPE_CHECKING:
-        assert gh_event_path is not None
-
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output is None:
         ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
@@ -187,17 +224,6 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
     if TYPE_CHECKING:
         assert github_output is not None
 
-    try:
-        gh_event = json.loads(open(gh_event_path).read())
-    except Exception as exc:
-        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
-        ctx.exit(1)
-
-    ctx.info("GH Event Payload:")
-    ctx.print(gh_event, soft_wrap=True)
-    # Let it print until the end
-    time.sleep(1)
-
     github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if github_step_summary is None:
         ctx.warn("The 'GITHUB_STEP_SUMMARY' variable is not set.")
@@ -205,15 +231,6 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
 
     if TYPE_CHECKING:
         assert github_step_summary is not None
-
-    if not changed_files.exists():
-        ctx.error(f"The '{changed_files}' file does not exist.")
-        ctx.exit(1)
-    try:
-        changed_files_contents = json.loads(changed_files.read_text())
-    except Exception as exc:
-        ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
-        ctx.exit(1)
 
     if event_name in ("push", "schedule"):
         # In this case, a full test run is in order
@@ -225,6 +242,19 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(f"Full test run chosen due to event type of {event_name!r}.\n")
         return
+
+    if not changed_files.exists():
+        ctx.error(f"The '{changed_files}' file does not exist.")
+        ctx.error(
+            "FYI, the command 'tools process-changed-files <changed-files-path>' "
+            "needs to run prior to this one."
+        )
+        ctx.exit(1)
+    try:
+        changed_files_contents = json.loads(changed_files.read_text())
+    except Exception as exc:
+        ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
+        ctx.exit(1)
 
     # So, it's a pull request...
     # Based on which files changed, or other things like PR comments we can
