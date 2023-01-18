@@ -75,6 +75,7 @@ class SaltPkgInstall:
     pkg_mngr: str = attr.ib(init=False)
     rm_pkg: str = attr.ib(init=False)
     salt_pkgs: List[str] = attr.ib(init=False)
+    install_dir: pathlib.Path = attr.ib(init=False)
     binary_paths: List[pathlib.Path] = attr.ib(init=False)
 
     @proc.default
@@ -125,6 +126,19 @@ class SaltPkgInstall:
             salt_pkgs.append("salt-common")
         return salt_pkgs
 
+    @install_dir.default
+    def _default_install_dir(self):
+        if platform.is_windows():
+            install_dir = pathlib.Path(
+                os.getenv("ProgramFiles"), "Salt Project", "Salt"
+            ).resolve()
+        elif platform.is_darwin():
+            # TODO: Add mac install dir path
+            install_dir = ""
+        else:
+            install_dir = pathlib.Path("/opt", "saltstack", "salt")
+        return install_dir
+
     def __attrs_post_init__(self):
         file_ext_re = r"tar\.gz"
         if platform.is_darwin():
@@ -164,10 +178,7 @@ class SaltPkgInstall:
                     elif file_ext == "exe":
                         self.onedir = True
                         self.installer_pkg = True
-                        install_dir = pathlib.Path(
-                            os.getenv("ProgramFiles"), "Salt Project", "Salt"
-                        ).resolve()
-                        self.bin_dir = install_dir / "bin"
+                        self.bin_dir = self.install_dir / "bin"
                         self.run_root = self.bin_dir / "salt.exe"
                         self.ssm_bin = self.bin_dir / "ssm.exe"
                     else:
@@ -227,6 +238,7 @@ class SaltPkgInstall:
                 "syndic": ["salt-syndic"],
                 "spm": ["spm"],
                 "pip": ["salt-pip"],
+                "python": [self.install_dir / "bin" / "python3"],
             }
         else:
             self.binary_paths = {
@@ -499,10 +511,7 @@ class SaltPkgInstall:
 
             self.onedir = True
             self.installer_pkg = True
-            install_dir = pathlib.Path(
-                os.getenv("ProgramFiles"), "Salt Project", "Salt"
-            ).resolve()
-            self.bin_dir = install_dir / "bin"
+            self.bin_dir = self.install_dir / "bin"
             self.run_root = self.bin_dir / "salt.exe"
             self.ssm_bin = self.bin_dir / "ssm.exe"
 
