@@ -310,6 +310,9 @@ rm -rf %{buildroot}
 ln -s -f /opt/saltstack/salt/spm %{_bindir}/spm
 ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
 
+%post cloud
+ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
+
 %post master
 %systemd_post salt-master.service
 ln -s -f /opt/saltstack/salt/salt %{_bindir}/salt
@@ -345,6 +348,9 @@ if [ $1 -lt 2 ]; then
     /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/run/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/run/.libcrypto.so.1.1.hmac || :
   fi
 fi
+
+%post ssh
+ln -s -f /opt/saltstack/salt/salt-ssh %{_bindir}/salt-ssh
 
 %post api
 %systemd_post salt-api.service
