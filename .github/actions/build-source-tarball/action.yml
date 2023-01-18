@@ -1,0 +1,31 @@
+---
+name: build-source-tarball
+description: Build Source Tarball
+inputs:
+  nox-version:
+    required: false
+    type: string
+    description: The version of Nox to install
+    default: "2022.8.7"
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Install Nox
+      shell: bash
+      run: |
+        nox --version || python3 -m pip install nox==${{ inputs.nox-version }}
+
+    - name: Create Source Tarball
+      shell: bash
+      run: |
+        nox -e build
+
+    - name: Upload Source Tarball as an Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: salt-${{ env.SALT_VERSION }}.tar.gz
+        path: dist/salt-*.tar.gz
+        retention-days: 7

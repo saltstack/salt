@@ -233,14 +233,45 @@ jobs:
     with:
       changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
 
-  twine-check:
-    name: Twine Check
+  build-source-tarball:
+    name: Build Source Tarball
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
-    uses: ./.github/workflows/twine-check-action.yml
     needs:
       - prepare-ci
-    with:
-      changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+
+      - name: Build Source Tarball
+        uses: ./.github/actions/build-source-tarball
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-source-tarball
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
 
   build-deps-linux:
     name: Build Onedir Salt Linux Dependencies
@@ -294,6 +325,7 @@ jobs:
     needs:
       - prepare-ci
       - build-deps-linux
+      - build-source-tarball
     strategy:
       fail-fast: false
       matrix:
@@ -395,6 +427,7 @@ jobs:
     needs:
       - prepare-ci
       - build-deps-windows
+      - build-source-tarball
     strategy:
       fail-fast: false
       matrix:
@@ -497,6 +530,7 @@ jobs:
     needs:
       - prepare-ci
       - build-deps-macos
+      - build-source-tarball
     strategy:
       fail-fast: false
       matrix:
@@ -570,6 +604,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-windows
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
@@ -579,6 +614,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
+      - build-salt-macos
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
