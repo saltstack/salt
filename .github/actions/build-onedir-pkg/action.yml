@@ -28,6 +28,11 @@ runs:
         path: artifacts/${{ inputs.package-name }}
         key: ${{ env.CACHE_SEED }}|relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt') }}
 
+    - name: Create Source Tarball
+      shell: bash
+      run: |
+        nox -e build
+
     - name: Install Salt Into Onedir
       if: ${{ inputs.platform != 'windows' }}
       env:
@@ -37,7 +42,7 @@ runs:
         RELENV_PIP_DIR: "1"
       shell: bash
       run: |
-        artifacts/${{ inputs.package-name }}/bin/python3 -m pip install .
+        artifacts/${{ inputs.package-name }}/bin/python3 -m pip install dist/salt-${{ env.SALT_VERSION }}.tar.gz
         if [ ${{ inputs.platform }} == "darwin" ]; then
           pkg/macos/prep_salt.sh --build-dir ./artifacts/${{ inputs.package-name }}
           rm -rf ./artifacts/${{ inputs.package-name }}/opt
@@ -81,6 +86,13 @@ runs:
       run: |
         cd artifacts
         Compress-Archive -LiteralPath "${{ inputs.package-name }}" -DestinationPath "${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip"
+
+    - name: Upload Source Tarball as an Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: salt-${{ env.SALT_VERSION }}.tar.gz
+        path: dist/salt-*.tar.gz
+        retention-days: 7
 
     - name: Upload Onedir Tarball as an Artifact
       if: ${{ inputs.platform != 'windows' }}
