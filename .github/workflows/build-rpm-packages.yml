@@ -46,6 +46,7 @@ jobs:
         run: |
           echo "${{ inputs.salt-version }}" > salt/_version.txt
           sed -i 's/^Version: \(.*\)$/Version: ${{ inputs.salt-version }}/g' pkg/rpm/salt.spec
+          export SALT_ONEDIR_ARCHIVE=artifacts/salt-linux-${{ matrix.arch }}.tar.xz
           rpmbuild -bb --define="_salt_src $(pwd)" $(pwd)/pkg/rpm/salt.spec
 
       - name: Upload RPMs
