@@ -463,7 +463,7 @@ jaraco.functools==2.0
     #   tempora
 jaraco.text==3.5.1
     # via jaraco.collections
-jinja2==3.1.0
+jinja2==3.1.2
     # via
     #   -r requirements/base.txt
     #   junos-eznc
@@ -790,7 +790,7 @@ scp==0.13.2
     # via junos-eznc
 semantic-version==2.9.0
     # via etcd3-py
-setproctitle==1.3.2 ; python_version >= "3.10"
+setproctitle==1.3.2
     # via -r requirements/darwin.txt
 six==1.16.0
     # via

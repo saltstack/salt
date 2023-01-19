@@ -1299,7 +1299,7 @@ repos:
       - id: nox
         alias: lint-salt
         name: Lint Salt
-        files: ^((setup|noxfile)|(salt|tasks)/.*)\.py$
+        files: ^((setup|noxfile)|(salt|tasks|tools)/.*)\.py$
         exclude: >
             (?x)^(
                 templates/.*|
