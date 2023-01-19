@@ -1778,7 +1778,5 @@ def test_pkgs(session, coverage):
         install_command = ["--progress-bar=off", "-r", requirements_file]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
-    cmd_args = [
-        "pkg/tests/",
-    ] + session.posargs
+    cmd_args = ["pkg/tests/"] + session.posargs
     _pytest(session, coverage, cmd_args)
