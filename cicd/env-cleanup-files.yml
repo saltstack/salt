@@ -2,6 +2,10 @@
 common:
   dir_patterns: &common_dir_patterns
     - "**/__pycache__"
+    - "**/lib/python3.*/test"
+    - "**/lib/python3.*/idlelib"
+    - "**/lib/python3.*/tkinter"
+    - "**/lib/python3.*/turtledemo"
     - "**/site-packages/test"
     - "**/site-packages/tests"
     - "**/site-packages/*/test"
