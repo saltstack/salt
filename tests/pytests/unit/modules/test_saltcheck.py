@@ -38,5 +38,5 @@ def test__generate_junit_out_list():
         + """\t</testsuite>\n</testsuites>\n"""
     )
     ret = saltcheck._generate_junit_out_list(results)
-    diff = main.diff_texts(ret, expected)
+    diff = xmldiff.main.diff_texts(ret, expected)
     assert diff == []
