@@ -60,7 +60,7 @@ def test_key_exists_non_existing():
     """
     Tests the key_exists function using a non existing registry key
     """
-    assert not (win_reg.key_exists(hive="HKLM", key="SOFTWARE\\FakeKey"))
+    assert not win_reg.key_exists(hive="HKLM", key="SOFTWARE\\FakeKey")
 
 
 def test_key_exists_invalid_hive():
