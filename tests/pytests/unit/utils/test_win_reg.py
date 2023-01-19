@@ -112,6 +112,7 @@ def test_value_exists_non_existing():
         vname="NonExistingValueName",
     )
 
+
 def test_value_exists_invalid_hive():
     """
     Tests the value_exists function using an invalid hive
@@ -303,6 +304,7 @@ def test_list_values_unknown_key_error():
             key="SOFTWARE\\Microsoft",
         )
 
+
 def test_read_value_existing():
     """
     Test the read_value function using a well known registry value
@@ -341,11 +343,14 @@ def test_read_value_non_existing():
         "hive": "HKLM",
         "key": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
     }
-    assert win_reg.read_value(
+    assert (
+        win_reg.read_value(
             hive="HKLM",
             key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
             vname="fake_name",
-        ) == expected
+        )
+        == expected
+    )
 
 
 def test_read_value_non_existing_key(fake_key):
@@ -360,9 +365,7 @@ def test_read_value_non_existing_key(fake_key):
         "hive": "HKLM",
         "key": fake_key,
     }
-    assert win_reg.read_value(
-        hive="HKLM", key=fake_key, vname="fake_name"
-    ) == expected
+    assert win_reg.read_value(hive="HKLM", key=fake_key, vname="fake_name") == expected
 
 
 def test_read_value_access_denied(fake_key):
@@ -381,9 +384,9 @@ def test_read_value_access_denied(fake_key):
         side_effect=win32api.error(5, "RegOpenKeyEx", "Access is denied")
     )
     with patch("salt.utils.win_reg.win32api.RegOpenKeyEx", mock_error):
-        assert win_reg.read_value(
-            hive="HKLM", key=fake_key, vname="fake_name"
-        ) == expected
+        assert (
+            win_reg.read_value(hive="HKLM", key=fake_key, vname="fake_name") == expected
+        )
 
 
 def test_read_value_invalid_hive():
@@ -454,11 +457,14 @@ def test_read_value_multi_sz_empty_list(fake_key):
             "vname": "empty_list",
             "vtype": "REG_MULTI_SZ",
         }
-        assert win_reg.read_value(
-            hive="HKLM",
-            key=fake_key,
-            vname="empty_list",
-        ) == expected
+        assert (
+            win_reg.read_value(
+                hive="HKLM",
+                key=fake_key,
+                vname="empty_list",
+            )
+            == expected
+        )
     finally:
         win_reg.delete_key_recursive(hive="HKLM", key=fake_key)
 
@@ -480,9 +486,9 @@ def test_set_value(fake_key):
             "vname": "fake_name",
             "vtype": "REG_SZ",
         }
-        assert win_reg.read_value(
-            hive="HKLM", key=fake_key, vname="fake_name"
-        ) == expected
+        assert (
+            win_reg.read_value(hive="HKLM", key=fake_key, vname="fake_name") == expected
+        )
     finally:
         win_reg.delete_key_recursive(hive="HKLM", key=fake_key)
 
@@ -527,11 +533,14 @@ def test_set_value_unicode_key(fake_key, unicode_key):
             "vname": "fake_name",
             "vtype": "REG_SZ",
         }
-        assert win_reg.read_value(
-            hive="HKLM",
-            key="\\".join([fake_key, unicode_key]),
-            vname="fake_name",
-        ) == expected
+        assert (
+            win_reg.read_value(
+                hive="HKLM",
+                key="\\".join([fake_key, unicode_key]),
+                vname="fake_name",
+            )
+            == expected
+        )
     finally:
         win_reg.delete_key_recursive(hive="HKLM", key=fake_key)
 
@@ -553,9 +562,10 @@ def test_set_value_unicode_value(fake_key, unicode_value):
             "vname": "fake_unicode",
             "vtype": "REG_SZ",
         }
-        assert win_reg.read_value(
-            hive="HKLM", key=fake_key, vname="fake_unicode"
-        ) == expected
+        assert (
+            win_reg.read_value(hive="HKLM", key=fake_key, vname="fake_unicode")
+            == expected
+        )
     finally:
         win_reg.delete_key_recursive(hive="HKLM", key=fake_key)
 
@@ -581,9 +591,10 @@ def test_set_value_reg_dword(fake_key):
             "vname": "dword_value",
             "vtype": "REG_DWORD",
         }
-        assert win_reg.read_value(
-            hive="HKLM", key=fake_key, vname="dword_value"
-        ) == expected
+        assert (
+            win_reg.read_value(hive="HKLM", key=fake_key, vname="dword_value")
+            == expected
+        )
     finally:
         win_reg.delete_key_recursive(hive="HKLM", key=fake_key)
 
@@ -609,9 +620,10 @@ def test_set_value_reg_qword(fake_key):
             "vname": "qword_value",
             "vtype": "REG_QWORD",
         }
-        assert win_reg.read_value(
-            hive="HKLM", key=fake_key, vname="qword_value"
-        ) == expected
+        assert (
+            win_reg.read_value(hive="HKLM", key=fake_key, vname="qword_value")
+            == expected
+        )
     finally:
         win_reg.delete_key_recursive(hive="HKLM", key=fake_key)
 
@@ -802,9 +814,9 @@ def test_delete_value_non_existing(fake_key):
         side_effect=win32api.error(2, "RegOpenKeyEx", "Unknown error")
     )
     with patch("salt.utils.win_reg.win32api.RegOpenKeyEx", mock_error):
-        assert win_reg.delete_value(
-            hive="HKLM", key=fake_key, vname="fake_name"
-        ) is None
+        assert (
+            win_reg.delete_value(hive="HKLM", key=fake_key, vname="fake_name") is None
+        )
 
 
 def test_delete_value_invalid_hive(fake_key):
@@ -1002,9 +1014,12 @@ def test_delete_key_recursive_unicode(fake_key, unicode_key):
             "Deleted": ["\\".join(["HKLM", fake_key, unicode_key])],
             "Failed": [],
         }
-        assert win_reg.delete_key_recursive(
-            hive="HKLM", key="\\".join([fake_key, unicode_key])
-        ) == expected
+        assert (
+            win_reg.delete_key_recursive(
+                hive="HKLM", key="\\".join([fake_key, unicode_key])
+            )
+            == expected
+        )
     finally:
         win_reg.delete_key_recursive(hive="HKLM", key=fake_key)
 
