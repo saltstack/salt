@@ -92,7 +92,7 @@ def __virtual__():
     only load this module if m2crypto is available
     """
     # salt.features appears to not be setup when invoked via peer publishing
-    if __opts__.get("features").get("x509_v2"):
+    if __opts__.get("features", {}).get("x509_v2"):
         return (False, "Superseded, using x509_v2")
     if HAS_M2:
         salt.utils.versions.warn_until(

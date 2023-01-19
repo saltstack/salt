@@ -1,0 +1,17 @@
+---
+name: setup-python-tools-scripts
+description: Setup 'python-tools-scripts'
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Install 'python-tools-scripts'
+      shell: bash
+      env:
+        PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+        PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+      run: |
+        PY_VERSION=$(python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info))")
+        python3 -m pip install -r requirements/static/ci/py${PY_VERSION}/tools.txt

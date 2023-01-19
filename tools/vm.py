@@ -45,7 +45,10 @@ except ImportError:
 
 
 if TYPE_CHECKING:
+    # pylint: disable=no-name-in-module
     from boto3.resources.factory.ec2 import Instance
+
+    # pylint: enable=no-name-in-module
 
 log = logging.getLogger(__name__)
 
@@ -269,11 +272,12 @@ def test(
     if "photonos" in name:
         skip_known_failures = os.environ.get("SKIP_INITIAL_PHOTONOS_FAILURES", "1")
         env["SKIP_INITIAL_PHOTONOS_FAILURES"] = skip_known_failures
-    vm.run_nox(
+    returncode = vm.run_nox(
         nox_session=nox_session,
         session_args=nox_session_args,
         env=env,
     )
+    ctx.exit(returncode)
 
 
 @vm.command(
@@ -329,11 +333,12 @@ def testplan(
     if "photonos" in name:
         skip_known_failures = os.environ.get("SKIP_INITIAL_PHOTONOS_FAILURES", "1")
         env["SKIP_INITIAL_PHOTONOS_FAILURES"] = skip_known_failures
-    vm.run_nox(
+    returncode = vm.run_nox(
         nox_session=nox_session,
         session_args=nox_session_args,
         env=env,
     )
+    ctx.exit(returncode)
 
 
 @vm.command(
@@ -357,7 +362,29 @@ def install_dependencies(ctx: Context, name: str, nox_session: str = "ci-test-3"
     Install test dependencies on VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    vm.install_dependencies(nox_session)
+    returncode = vm.install_dependencies(nox_session)
+    ctx.exit(returncode)
+
+
+@vm.command(
+    name="pre-archive-cleanup",
+    arguments={
+        "name": {
+            "help": "The VM Name",
+            "metavar": "VM_NAME",
+        },
+        "pkg": {
+            "help": "Perform extended, pre-packaging cleanup routines",
+        },
+    },
+)
+def pre_archive_cleanup(ctx: Context, name: str, pkg: bool = False):
+    """
+    Pre `.nox` directory compress cleanup.
+    """
+    vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
+    returncode = vm.run_nox(f"pre-archive-cleanup(pkg={pkg})")
+    ctx.exit(returncode)
 
 
 @vm.command(
@@ -374,7 +401,8 @@ def compress_dependencies(ctx: Context, name: str):
     Compress the .nox/ directory in the VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    vm.compress_dependencies()
+    returncode = vm.compress_dependencies()
+    ctx.exit(returncode)
 
 
 @vm.command(
@@ -391,7 +419,8 @@ def decompress_dependencies(ctx: Context, name: str):
     Decompress a dependencies archive into the .nox/ directory in the VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    vm.decompress_dependencies()
+    returncode = vm.decompress_dependencies()
+    ctx.exit(returncode)
 
 
 @vm.command(
@@ -425,7 +454,8 @@ def combine_coverage(ctx: Context, name: str):
     Combine the several code coverage files into a single one in the VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    vm.combine_coverage()
+    returncode = vm.combine_coverage()
+    ctx.exit(returncode)
 
 
 @vm.command(
@@ -864,7 +894,7 @@ class VM:
                             description=f"SSH connection to {host} available!",
                             completed=ssh_connection_timeout,
                         )
-                        return True
+                        break
                     proc.wait(timeout=3)
                     stderr = proc.stderr.read().strip()
                     if stderr:
@@ -894,6 +924,7 @@ class VM:
                 if last_error:
                     error += f". {last_error}"
                 return error
+            return True
 
     def destroy(self):
         try:
@@ -1037,7 +1068,7 @@ class VM:
             "-f",
             f"{self.upload_path.joinpath('noxfile.py').as_posix()}",
             "-e",
-            nox_session,
+            f"'{nox_session}'",
         ]
         if nox_args:
             cmd += nox_args
@@ -1062,25 +1093,25 @@ class VM:
             capture=False,
             pseudo_terminal=True,
         )
-        self.ctx.exit(ret.returncode)
+        return ret.returncode
 
     def combine_coverage(self):
         """
         Combine the code coverage databases
         """
-        self.run_nox("combine-coverage", session_args=[self.name])
+        return self.run_nox("combine-coverage", session_args=[self.name])
 
     def compress_dependencies(self):
         """
         Compress .nox/ into nox.<vm-name>.tar.* in the VM
         """
-        self.run_nox("compress-dependencies", session_args=[self.name])
+        return self.run_nox("compress-dependencies", session_args=[self.name])
 
     def decompress_dependencies(self):
         """
         Decompress nox.<vm-name>.tar.* if it exists in the VM
         """
-        self.run_nox("decompress-dependencies", session_args=[self.name])
+        return self.run_nox("decompress-dependencies", session_args=[self.name])
 
     def download_dependencies(self):
         """
@@ -1179,7 +1210,7 @@ class VM:
         pseudo_terminal: bool = False,
         env: list[str] = None,
         log_command_level: int = logging.INFO,
-        ssh_options: list[str] | None = None,
+        ssh_options: list[str] | None = None,  # pylint: disable=bad-whitespace
     ) -> list[str]:
         ssh = shutil.which("ssh")
         if TYPE_CHECKING:

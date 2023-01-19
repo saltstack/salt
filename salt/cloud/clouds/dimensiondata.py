@@ -34,7 +34,7 @@ from salt.exceptions import (
     SaltCloudSystemExit,
 )
 from salt.utils.functools import namespaced_function
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 # Import libcloud
 try:
@@ -51,7 +51,7 @@ try:
     # this work-around. This work-around can be removed when the required
     # minimum version of libcloud is 2.0.0 (See PR #40837 - which is
     # implemented in Salt 2018.3.0).
-    if _LooseVersion(libcloud.__version__) < _LooseVersion("1.4.0"):
+    if Version(libcloud.__version__) < Version("1.4.0"):
         # See https://github.com/saltstack/salt/issues/32743
         import libcloud.security
 

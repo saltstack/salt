@@ -16,7 +16,7 @@ import pytest
 
 import salt.utils.files
 import salt.utils.path
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 from tests.support.case import ModuleCase
 from tests.support.helpers import TstSuiteLoggingHandler, with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -36,7 +36,7 @@ def __check_git_version(caller, min_version, skip_msg):
             if not salt.utils.path.which("git"):
                 self.skipTest("git is not installed")
             git_version = self.run_function("git.version")
-            if _LooseVersion(git_version) < _LooseVersion(min_version):
+            if Version(git_version) < Version(min_version):
                 self.skipTest(skip_msg.format(min_version, git_version))
             if actual_setup is not None:
                 actual_setup(self, *args, **kwargs)
@@ -49,7 +49,7 @@ def __check_git_version(caller, min_version, skip_msg):
         if not salt.utils.path.which("git"):
             self.skipTest("git is not installed")
         git_version = self.run_function("git.version")
-        if _LooseVersion(git_version) < _LooseVersion(min_version):
+        if Version(git_version) < Version(min_version):
             self.skipTest(skip_msg.format(min_version, git_version))
         return caller(self, *args, **kwargs)
 
