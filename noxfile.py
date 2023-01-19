@@ -1633,7 +1633,7 @@ def changelog(session, draft, force):
         install_command = ["--progress-bar=off", "-r", requirements_file]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
-    town_cmd = ["towncrier", "--version={}".format(session.posargs[0])]
+    town_cmd = ["towncrier", "build", "--version={}".format(session.posargs[0])]
     if draft:
         town_cmd.append("--draft")
     if force:

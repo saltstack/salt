@@ -1,1 +1,4 @@
-towncrier
+towncrier==21.9.0; python_version <= '3.6'
+towncrier==22.12.0; python_version > '3.6'
+looseversion
+packaging
