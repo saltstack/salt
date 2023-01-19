@@ -32,7 +32,6 @@ jobs:
           path: build-deb-pkg
 
       - name: Download Onedir Tarball as an Artifact
-        if: inputs.platform != 'windows' && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: actions/download-artifact@v3
         with:
           name: salt-linux-${{ matrix.arch }}.tar.xz
