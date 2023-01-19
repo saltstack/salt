@@ -8,9 +8,9 @@ attrs==22.1.0
     # via
     #   -r requirements/static/ci/tools.in
     #   python-tools-scripts
-boto3==1.24.80
+boto3==1.21.46
     # via -r requirements/static/ci/tools.in
-botocore==1.27.80
+botocore==1.24.46
     # via
     #   boto3
     #   s3transfer
@@ -26,9 +26,11 @@ python-dateutil==2.8.2
     # via botocore
 python-tools-scripts==0.9.3
     # via -r requirements/static/ci/tools.in
+pyyaml==6.0
+    # via -r requirements/static/ci/tools.in
 rich==12.5.1
     # via python-tools-scripts
-s3transfer==0.6.0
+s3transfer==0.5.2
     # via boto3
 six==1.16.0
     # via python-dateutil
