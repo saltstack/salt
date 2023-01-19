@@ -47,7 +47,6 @@ jobs:
           SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/build-deb-pkg/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
         run: |
           cd build-deb-pkg
-          export SALT_ONEDIR_ARCHIVE=artifacts/salt-linux-${{ matrix.arch }}.tar.xz
           echo "${{ inputs.salt-version }}" > salt/_version.txt
           ln -sf pkg/debian/ .
           sed -i 's/SALT_RELEASE_VERSION/${{ inputs.salt-version }}/g' debian/changelog
