@@ -5,6 +5,7 @@ from tests.support.mock import MagicMock
 
 xmldiff = pytest.importorskip("xmldiff")
 
+
 @pytest.fixture()
 def configure_loader_modules():
     return {saltcheck: {"__salt__": {"state.show_top": MagicMock()}}}
