@@ -3,11 +3,7 @@ import pytest
 import salt.modules.saltcheck as saltcheck
 from tests.support.mock import MagicMock
 
-try:
-    from xmldiff import main
-except ImportError:
-    raise ImportError
-
+xmldiff = pytest.importorskip("xmldiff")
 
 @pytest.fixture()
 def configure_loader_modules():
