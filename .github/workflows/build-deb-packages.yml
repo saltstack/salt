@@ -24,7 +24,7 @@ jobs:
           - aarch64
 
     container:
-      image: debian:10
+      image: ghcr.io/saltstack/salt-ci-containers/debian:11
 
     steps:
       - uses: actions/checkout@v3
