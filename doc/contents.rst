@@ -27,6 +27,7 @@ Salt Table of Contents
     topics/proxyminion/index
     topics/network_automation/index
     topics/virt/index
+    topics/packaging/index
     ref/cli/index
     ref/pillar/index
     ref/tops/index
