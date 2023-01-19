@@ -289,6 +289,7 @@ jobs:
       - prepare-ci
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         arch:
           - x86_64
@@ -337,6 +338,7 @@ jobs:
       - build-source-tarball
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         arch:
           - x86_64
@@ -389,6 +391,7 @@ jobs:
       - prepare-ci
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         arch:
           - x86
@@ -440,6 +443,7 @@ jobs:
       - build-source-tarball
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         arch:
           - x86
@@ -494,6 +498,7 @@ jobs:
       - prepare-ci
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         arch:
           - x86_64
@@ -544,6 +549,7 @@ jobs:
       - build-source-tarball
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         arch:
           - x86_64
