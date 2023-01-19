@@ -35,10 +35,19 @@ jobs:
         with:
           salt-version: "${{ inputs.salt-version }}"
 
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-darwin-${{ matrix.arch }}.tar.xz
+
+      - name: Decompress Onedir Tarball
+        run: |
+          mkdir -p pkg/macos/build/opt
+          cd pkg/macos/build/opt
+          tar xf ${{github.workspace}}/salt-darwin-${{ matrix.arch }}.tar.xz
+
       - name: Build Package
         run: |
-          pkg/macos/build_python.sh
-          pkg/macos/install_salt.sh
           pkg/macos/prep_salt.sh
           pkg/macos/package.sh -n ${{ inputs.salt-version }}
 
