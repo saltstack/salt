@@ -1,6 +1,7 @@
 import logging
 
 import tools.ci
+import tools.pkg
 import tools.vm
 
 for name in ("boto3", "botocore", "urllib3"):

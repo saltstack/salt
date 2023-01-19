@@ -1166,7 +1166,119 @@ def compress_dependencies(session):
         )
         nox_dependencies_tarball_path.unlink()
 
-    session_run_always(session, "tar", "-caf", nox_dependencies_tarball, ".nox")
+    session_run_always(
+        session,
+        "tar",
+        "-caf",
+        nox_dependencies_tarball,
+        "--exclude=.nox/pre-archive-cleanup",
+        ".nox",
+    )
+
+
+@nox.session(
+    python="3",
+    name="pre-archive-cleanup",
+)
+@nox.parametrize("pkg", [False, True])
+def pre_archive_cleanup(session, pkg):
+    """
+    Call `tools pkg pre-archive-cleanup <path>`
+    """
+    if session.posargs:
+        session.error("No additional arguments can be passed to 'pre-archive-cleanup'")
+    version_info = _get_session_python_version_info(session)
+    if version_info >= (3, 9):
+        if _upgrade_pip_setuptools_and_wheel(session):
+            requirements_file = os.path.join(
+                "requirements", "static", "ci", _get_pydir(session), "tools.txt"
+            )
+            install_command = ["--progress-bar=off", "-r", requirements_file]
+            session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+        cmdline = [
+            "tools",
+            "pkg",
+            "pre-archive-cleanup",
+        ]
+        if pkg:
+            cmdline.append("--pkg")
+        cmdline.append(".nox")
+        session_run_always(session, *cmdline)
+        return
+
+    # On windows, we still run Py3.9
+    # Let's do the cleanup here, for now.
+    # This is a copy of the pre_archive_cleanup function in tools/pkg.py
+
+    import fnmatch
+    import shutil
+
+    try:
+        import yaml
+    except ImportError:
+        session.error("Please install 'pyyaml'.")
+        return
+
+    with open(str(REPO_ROOT / "cicd" / "env-cleanup-files.yml")) as rfh:
+        patterns = yaml.safe_load(rfh.read())
+
+    if pkg:
+        patterns = patterns["pkg"]
+    else:
+        patterns = patterns["ci"]
+
+    if IS_WINDOWS:
+        patterns = patterns["windows"]
+    elif IS_DARWIN:
+        patterns = patterns["darwin"]
+    else:
+        patterns = patterns["linux"]
+
+    dir_patterns = set()
+    for pattern in patterns["dir_patterns"]:
+        if isinstance(pattern, list):
+            dir_patterns.update(set(pattern))
+            continue
+        dir_patterns.add(pattern)
+
+    file_patterns = set()
+    for pattern in patterns["file_patterns"]:
+        if isinstance(pattern, list):
+            file_patterns.update(set(pattern))
+            continue
+        file_patterns.add(pattern)
+
+    for root, dirs, files in os.walk(
+        str(REPO_ROOT / ".nox"), topdown=True, followlinks=False
+    ):
+        for dirname in dirs:
+            path = pathlib.Path(root, dirname).resolve()
+            if not path.exists():
+                continue
+            match_path = path.as_posix()
+            for pattern in dir_patterns:
+                if fnmatch.fnmatch(str(match_path), pattern):
+                    session.log(
+                        f"Deleting directory: {match_path}; Matching pattern: {pattern!r}"
+                    )
+                    shutil.rmtree(str(path))
+                    break
+        for filename in files:
+            path = pathlib.Path(root, filename).resolve()
+            if not path.exists():
+                continue
+            match_path = path.as_posix()
+            for pattern in file_patterns:
+                if fnmatch.fnmatch(str(match_path), pattern):
+                    session.log(
+                        f"Deleting file: {match_path}; Matching pattern: {pattern!r}"
+                    )
+                    try:
+                        os.remove(str(path))
+                    except FileNotFoundError:
+                        pass
+                    break
 
 
 @nox.session(python="3", name="combine-coverage")

@@ -15,11 +15,19 @@ on:
         required: true
         type: string
         description: JSON string containing information about what and how to run the test suite
+      cache-seed:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
       python-version:
         required: false
         type: string
         description: The python version to run tests with
-        default: 3.9
+        default: "3.9"
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to running tests.
 
 
 env:
@@ -40,12 +48,8 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v3
 
-      - name: Install Python Tools Scripts
-        env:
-          PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-          PIP_EXTRA_INDEX_URL: https://pypi.org/simple
-        run: |
-          python3 -m pip install -r requirements/static/ci/py3.10/tools.txt
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Generate Test Matrix
         id: generate-matrix
@@ -80,7 +84,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+          key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
 
       # Skip jobs if nox.*.tar.* is already cached
       - name: Set up Python ${{ inputs.python-version }}
@@ -125,6 +129,11 @@ jobs:
           export PKG_CONFIG_PATH="/usr/local/opt/openssl@3/lib/pkgconfig"
           nox --install-only -e ${{ env.NOX_SESSION }}
 
+      - name: Cleanup .nox Directory
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          nox -e "pre-archive-cleanup(pkg=False)"
+
       - name: Compress .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
@@ -160,6 +169,10 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v3
 
+      - name: Setup Salt Version
+        run: |
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
+
       - name: Install System Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
@@ -169,7 +182,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+          key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
 
       - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v4
@@ -284,6 +297,7 @@ jobs:
 #        with:
 #          check_name: Test Results(${{ inputs.distro-slug }} ${{ matrix.tests-chunk }})
 #          report_paths: 'artifacts/xml-unittests-output/*.xml'
+#          annotate_only: true
 
       - name: Report Salt Code Coverage(${{ matrix.tests-chunk }})
         if: always()
@@ -391,6 +405,7 @@ jobs:
         with:
           check_name: Overall Test Results(${{ inputs.distro-slug }})
           report_paths: 'artifacts/xml-unittests-output/*.xml'
+          annotate_only: true
 
       - name: Set Exit Status
         if: always()

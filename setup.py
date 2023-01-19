@@ -233,6 +233,11 @@ class WriteSaltVersion(Command):
                 salt_version = SaltStackVersion.parse(
                     self.distribution.with_salt_version
                 )
+            if os.path.exists(self.distribution.salt_version_hardcoded_path):
+                log.warn(
+                    "The 'salt/_version.txt' file already exists. Not overwriting it."
+                )
+                return
 
             with open(
                 self.distribution.salt_version_hardcoded_path, "w", encoding="utf-8"
