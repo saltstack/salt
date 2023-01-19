@@ -1,3 +1,5 @@
+import pathlib
+import subprocess
 import sys
 
 import pytest
@@ -21,9 +23,18 @@ def test_salt_versions_report_master(install_salt):
     )
     ret.stdout.matcher.fnmatch_lines(["*Salt Version:*"])
     if sys.platform == "win32":
-        ret.stdout.matcher.fnmatch_lines(["*Python: 3.8.16*"])
+        python_executable = pathlib.Path(
+            r"C:\Program Files\Salt Project\Salt\Scripts\python.exe"
+        )
     else:
-        ret.stdout.matcher.fnmatch_lines(["*Python: 3.9.16*"])
+        python_executable = pathlib.Path("/opt/saltstack/salt/bin/python3")
+    py_version = subprocess.run(
+        [str(python_executable), "--version"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    ).stdout
+    py_version = py_version.decode().strip().replace(" ", ": ")
+    ret.stdout.matcher.fnmatch_lines([f"*{py_version}*"])
 
 
 def test_salt_versions_report_minion(salt_cli, salt_minion):
