@@ -24,7 +24,7 @@ jobs:
           - aarch64
 
     container:
-      image: centos:7
+      image: ghcr.io/saltstack/salt-ci-containers/centos:stream9
 
     steps:
       - uses: actions/checkout@v3
