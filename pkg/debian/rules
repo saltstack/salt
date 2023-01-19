@@ -44,6 +44,6 @@ override_dh_auto_install:
 
 
 override_dh_install:
-	mkdir -p debian/salt-common/usr/opt/saltstack
-	cp -R build/onedir/salt debian/salt-common/usr/opt/saltstack/
+	mkdir -p debian/salt-common/opt/saltstack
+	cp -R build/onedir/salt debian/salt-common/opt/saltstack/
 	dh_install
