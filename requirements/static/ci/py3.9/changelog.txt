@@ -22,7 +22,7 @@ packaging==23.0
     # via -r requirements/static/ci/changelog.in
 tomli==2.0.1
     # via towncrier
-towncrier==22.12.0 ; python_version > "3.6"
+towncrier==22.12.0
     # via -r requirements/static/ci/changelog.in
 
 # The following packages are considered to be unsafe in a requirements file:
