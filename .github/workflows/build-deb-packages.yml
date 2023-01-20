@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    name: Build Deb
+    name: DEB
     runs-on:
       - self-hosted
       - linux

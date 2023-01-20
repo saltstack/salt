@@ -12,7 +12,7 @@ on:
 jobs:
 
   build-pkgs:
-    name: Build
+    name: Windows
     strategy:
       fail-fast: false
       max-parallel: 2
