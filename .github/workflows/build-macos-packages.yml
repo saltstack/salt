@@ -51,8 +51,9 @@ jobs:
 
       - name: Build Package
         run: |
-          pkg/macos/prep_salt.sh
-          pkg/macos/package.sh -n ${{ inputs.salt-version }}
+          cd pkg/macos
+          ./prep_salt.sh
+          sudo ./package.sh -n ${{ inputs.salt-version }}
 
       - name: Upload ${{ matrix.arch }} Package
         uses: actions/upload-artifact@v3
