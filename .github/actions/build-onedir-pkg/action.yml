@@ -88,12 +88,17 @@ runs:
         cd artifacts
         Compress-Archive -LiteralPath "${{ inputs.package-name }}" -DestinationPath "${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip"
 
+    - name: Create Hash Files
+      shell: bash
+      run: |
+        tools pkg generate-hashes artifacts/${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.*
+
     - name: Upload Onedir Tarball as an Artifact
       if: ${{ inputs.platform != 'windows' }}
       uses: actions/upload-artifact@v3
       with:
         name: ${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
-        path: artifacts/${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+        path: artifacts/${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz*
         retention-days: 7
 
     - name: Upload Onedir Zipfile as an Artifact
@@ -101,5 +106,5 @@ runs:
       uses: actions/upload-artifact@v3
       with:
         name: ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip
-        path: artifacts/${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip
+        path: artifacts/${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip*
         retention-days: 7

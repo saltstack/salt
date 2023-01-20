@@ -23,9 +23,14 @@ runs:
       run: |
         nox -e build
 
+    - name: Create Hash Files
+      shell: bash
+      run: |
+        tools pkg generate-hashes dist/salt-${{ env.SALT_VERSION }}.tar.gz
+
     - name: Upload Source Tarball as an Artifact
       uses: actions/upload-artifact@v3
       with:
         name: salt-${{ env.SALT_VERSION }}.tar.gz
-        path: dist/salt-*.tar.gz
+        path: dist/salt-*.tar.gz*
         retention-days: 7
