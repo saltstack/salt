@@ -32,7 +32,7 @@ jobs:
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-linux-${{ matrix.arch }}.tar.xz
+          name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: artifacts/
 
       - name: Download System Dependencies
@@ -42,7 +42,7 @@ jobs:
 
       - name: Build RPM
         env:
-          SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/artifacts/salt-${{ inputs.salt-version }}-linux-${{ matrix.arch }}.tar.xz"
+          SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
         run: |
           echo "${{ inputs.salt-version }}" > salt/_version.txt
           sed -i 's/^Version: \(.*\)$/Version: ${{ inputs.salt-version }}/g' pkg/rpm/salt.spec
