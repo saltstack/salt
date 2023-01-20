@@ -48,6 +48,7 @@ ci:
       - *common_file_patterns
       # Help files
       - "**/*.chm"
+      - "**/Scripts/wmitest*"
       # Non Windows execution modules
       - "**/site-packages/salt/modules/aacme.py*"
       - "**/site-packages/salt/modules/aix.py*"

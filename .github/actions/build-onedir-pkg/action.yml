@@ -62,7 +62,7 @@ runs:
         # install salt
         pkg\windows\install_salt.cmd -BuildDir ".\artifacts\${{ inputs.package-name }}" -CICD
         # prep salt
-        pkg\windows\prep_salt.cmd -BuildDir ".\artifacts\${{ inputs.package-name }}" -CICD
+        pkg\windows\prep_salt.cmd -BuildDir ".\artifacts\${{ inputs.package-name }}" -CICD -NoPythonExeCleanup
         # Remove package specific items
         Remove-Item -Path .\artifacts\${{ inputs.package-name }}\configs -Recurse -Force
 
@@ -72,29 +72,24 @@ runs:
         tools pkg pre-archive-cleanup artifacts/${{ inputs.package-name }}
 
     - name: Create Archive
-      if: ${{ inputs.platform != 'windows' }}
       shell: bash
       run: |
         cd artifacts/
         tar -cJf ${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz  ${{ inputs.package-name }}
 
-    - name: Create Archive (Windows)
+    - name: Create Archive (Zipfile)
       if: ${{ inputs.platform == 'windows' }}
-      env:
-        ProgressPreference: "SilentlyContinue"
-        ErrorActionPreference: "Stop"
       shell: powershell
       run: |
         cd artifacts
-        Compress-Archive -LiteralPath "${{ inputs.package-name }}" -DestinationPath "${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip"
+        py -3 -m zipfile -c "${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.zip" ${{ inputs.package-name }}
 
     - name: Create Hash Files
       shell: bash
       run: |
-        tools pkg generate-hashes artifacts/${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.*
+        tools pkg generate-hashes artifacts/${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.*
 
     - name: Upload Onedir Tarball as an Artifact
-      if: ${{ inputs.platform != 'windows' }}
       uses: actions/upload-artifact@v3
       with:
         name: ${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
@@ -105,6 +100,6 @@ runs:
       if: ${{ inputs.platform == 'windows' }}
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip
-        path: artifacts/${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip*
+        name: ${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.zip
+        path: artifacts/${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.zip*
         retention-days: 7

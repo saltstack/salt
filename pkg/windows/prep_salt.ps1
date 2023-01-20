@@ -23,7 +23,8 @@ param(
     [Parameter(Mandatory=$false)]
     [Alias("c")]
     # Don't pretify the output of the Write-Result
-    [Switch] $CICD
+    [Switch] $CICD,
+    [Switch] $NoPythonExeCleanup
 )
 
 #-------------------------------------------------------------------------------
@@ -181,25 +182,27 @@ if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
 # Remove binaries not needed by Salt
 #-------------------------------------------------------------------------------
 
-$binaries = @(
-    "py.exe",
-    "pyw.exe",
-    "pythonw.exe",
-    "venvlauncher.exe",
-    "venvwlauncher.exe"
-)
-Write-Host "Removing Python binaries: " -NoNewline
-$binaries | ForEach-Object {
-    if ( Test-Path -Path "$SCRIPTS_DIR\$_" ) {
-        # Use .net, the powershell function is asynchronous
-        [System.IO.File]::Delete("$SCRIPTS_DIR\$_")
+if ( $NoPythonExeCleanup -eq $false ) {
+    $binaries = @(
+        "py.exe",
+        "pyw.exe",
+        "pythonw.exe",
+        "venvlauncher.exe",
+        "venvwlauncher.exe"
+    )
+    Write-Host "Removing Python binaries: " -NoNewline
+    $binaries | ForEach-Object {
         if ( Test-Path -Path "$SCRIPTS_DIR\$_" ) {
-            Write-Result "Failed" -ForegroundColor Red
-            exit 1
+            # Use .net, the powershell function is asynchronous
+            [System.IO.File]::Delete("$SCRIPTS_DIR\$_")
+            if ( Test-Path -Path "$SCRIPTS_DIR\$_" ) {
+                Write-Result "Failed" -ForegroundColor Red
+                exit 1
+            }
         }
     }
+    Write-Result "Success" -ForegroundColor Green
 }
-Write-Result "Success" -ForegroundColor Green
 
 #-------------------------------------------------------------------------------
 # Remove pywin32 components not needed by Salt

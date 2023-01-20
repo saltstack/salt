@@ -26,7 +26,7 @@ on:
 
 env:
   COLUMNS: 160
-  CACHE_SEED: SEED-2  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-3  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
 
 permissions:
@@ -391,6 +391,7 @@ jobs:
       fail-fast: false
       matrix:
         arch:
+          - x86
           - amd64
     runs-on: windows-latest
     steps:
@@ -441,6 +442,7 @@ jobs:
       fail-fast: false
       matrix:
         arch:
+          - x86
           - amd64
     runs-on: windows-latest
     steps:
