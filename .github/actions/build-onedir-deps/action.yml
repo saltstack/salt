@@ -15,6 +15,10 @@ inputs:
     type: string
     description: The onedir package name to create
     default: salt
+  cache-seed:
+    required: true
+    type: string
+    description: Seed used to invalidate caches
 
 runs:
   using: composite
@@ -26,7 +30,7 @@ runs:
       uses: actions/cache@v3
       with:
         path: artifacts/${{ inputs.package-name }}
-        key: ${{ env.CACHE_SEED }}|relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt') }}
+        key: ${{ inputs.cache-seed }}|relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt') }}
 
     - name: Create Onedir Directory
       shell: bash

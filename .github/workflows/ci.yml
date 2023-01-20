@@ -273,327 +273,38 @@ jobs:
           path: exitstatus
           if-no-files-found: error
 
-  build-deps-linux:
-    name: Build Onedir Salt Linux Dependencies
+  build-deps-onedir:
+    name: Build Dependencies Onedir
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        arch:
-          - x86_64
-          - aarch64
-    runs-on:
-      - self-hosted
-      - linux
-      - ${{ matrix.arch }}
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Relenv
-        uses: ./.github/actions/setup-relenv
-        with:
-          platform: linux
-          arch: ${{ matrix.arch }}
+    uses: ./.github/workflows/build-deps-onedir.yml
+    with:
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      self-hosted-runners: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+      github-hosted-runners: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
 
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
 
-      - name: Install Salt Packaging Dependencies into Relenv Onedir
-        uses: ./.github/actions/build-onedir-deps
-        with:
-          platform: linux
-          arch: ${{ matrix.arch }}
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
-
-  build-salt-linux:
-    name: Build Onedir Salt Linux
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+  build-salt-onedir:
+    name: Build Salt Onedir
     needs:
       - prepare-ci
-      - build-deps-linux
+      - build-deps-onedir
       - build-source-tarball
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        arch:
-          - x86_64
-          - aarch64
-    runs-on:
-      - self-hosted
-      - linux
-      - ${{ matrix.arch }}
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Setup Salt Version
-        id: setup-salt-version
-        uses: ./.github/actions/setup-salt-version
-        with:
-          salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-
-      - name: Setup Relenv
-        uses: ./.github/actions/setup-relenv
-        with:
-          platform: linux
-          arch: ${{ matrix.arch }}
-      - name: Install Salt into Relenv Onedir
-        uses: ./.github/actions/build-onedir-pkg
-        with:
-          platform: linux
-          arch: ${{ matrix.arch }}
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
-
-  build-deps-windows:
-    name: Build Onedir Salt Windows Dependencies
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
-    needs:
-      - prepare-ci
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        arch:
-          - x86
-          - amd64
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Setup Relenv
-        uses: ./.github/actions/setup-relenv
-        with:
-          platform: windows
-          arch: ${{ matrix.arch }}
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Install Salt Packaging Dependencies into Relenv Onedir
-        uses: ./.github/actions/build-onedir-deps
-        with:
-          platform: windows
-          arch: ${{ matrix.arch }}
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-windows-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
-
-  build-salt-windows:
-    name: Build Onedir Salt Windows
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
-    needs:
-      - prepare-ci
-      - build-deps-windows
-      - build-source-tarball
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        arch:
-          - x86
-          - amd64
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Setup Relenv
-        uses: ./.github/actions/setup-relenv
-        with:
-          platform: windows
-          arch: ${{ matrix.arch }}
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Setup Salt Version
-        id: setup-salt-version
-        uses: ./.github/actions/setup-salt-version
-        with:
-          salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-
-      - name: Install Salt into Relenv Onedir
-        uses: ./.github/actions/build-onedir-pkg
-        with:
-          platform: windows
-          arch: ${{ matrix.arch }}
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-windows-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
-
-  build-deps-macos:
-    name: Build Onedir Salt macOS Dependencies
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
-    needs:
-      - prepare-ci
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        arch:
-          - x86_64
-    runs-on: macos-12
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Setup Relenv
-        uses: ./.github/actions/setup-relenv
-        with:
-          platform: darwin
-          arch: ${{ matrix.arch }}
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Install Salt Packaging Dependencies into Relenv Onedir
-        uses: ./.github/actions/build-onedir-deps
-        with:
-          platform: darwin
-          arch: ${{ matrix.arch }}
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-macos-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
-
-  build-salt-macos:
-    name: Build Onedir Salt macOS
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
-    needs:
-      - prepare-ci
-      - build-deps-macos
-      - build-source-tarball
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        arch:
-          - x86_64
-    runs-on: macos-12
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-      - name: Setup Relenv
-        uses: ./.github/actions/setup-relenv
-        with:
-          platform: darwin
-          arch: ${{ matrix.arch }}
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Setup Salt Version
-        id: setup-salt-version
-        uses: ./.github/actions/setup-salt-version
-        with:
-          salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-
-      - name: Install Salt into Relenv Onedir
-        uses: ./.github/actions/build-onedir-pkg
-        with:
-          platform: darwin
-          arch: ${{ matrix.arch }}
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-macos-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
+    uses: ./.github/workflows/build-salt-onedir.yml
+    with:
+      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      self-hosted-runners: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+      github-hosted-runners: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
 
 
   build-pkgs:
     name: Build Salt Packages
     needs:
       - prepare-ci
-      - build-salt-linux
-      - build-salt-windows
-      - build-salt-macos
+      - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
     with:
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
@@ -606,7 +317,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-windows
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2016
@@ -622,7 +333,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-windows
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2019
@@ -638,7 +349,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-windows
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2022
@@ -654,7 +365,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-macos
+      - build-salt-onedir
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-12
@@ -670,7 +381,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: almalinux-8
@@ -686,7 +397,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: almalinux-9
@@ -702,7 +413,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: amazonlinux-2
@@ -718,7 +429,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: archlinux-lts
@@ -734,7 +445,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centos-7
@@ -750,7 +461,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centosstream-8
@@ -766,7 +477,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centosstream-9
@@ -782,7 +493,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-10
@@ -798,7 +509,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-11
@@ -814,7 +525,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-11-arm64
@@ -830,7 +541,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: fedora-36
@@ -846,7 +557,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: opensuse-15
@@ -862,7 +573,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: photonos-3
@@ -878,7 +589,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: photonos-4
@@ -894,7 +605,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-18.04
@@ -910,7 +621,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-20.04
@@ -926,7 +637,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-20.04-arm64
@@ -942,7 +653,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-22.04
@@ -958,7 +669,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-linux
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-22.04-arm64
@@ -979,6 +690,8 @@ jobs:
       - pre-commit
       - docs
       - lint
+      - build-deps-onedir
+      - build-salt-onedir
       - build-pkgs
       - almalinux-8
       - almalinux-9

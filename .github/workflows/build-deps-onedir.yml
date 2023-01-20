@@ -1,15 +1,31 @@
----
-name: Build Bare Onedir
+name: Build Salt Packages
 
 on:
-  - workflow_call
+  workflow_call:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to building packages.
+      github-hosted-runners:
+        type: boolean
+        required: true
+      self-hosted-runners:
+        type: boolean
+        required: true
+      cache-seed:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
 
 jobs:
 
-  linux:
+  build-deps-linux:
     name: Linux
+    if: ${{ inputs.self-hosted-runners }}
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         arch:
           - x86_64
@@ -25,11 +41,17 @@ jobs:
         with:
           platform: linux
           arch: ${{ matrix.arch }}
-      - name: Setup Bare Relenv Onedir
-        uses: ./.github/actions/build-onedir-bare
+          cache-seed: ${{ inputs.cache-seed }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Install Salt Packaging Dependencies into Relenv Onedir
+        uses: ./.github/actions/build-onedir-deps
         with:
           platform: linux
           arch: ${{ matrix.arch }}
+          cache-seed: ${{ inputs.cache-seed }}
 
       - name: Set Exit Status
         if: always()
@@ -45,30 +67,41 @@ jobs:
           path: exitstatus
           if-no-files-found: error
 
-  windows:
+  build-deps-windows:
     name: Windows
+    if: ${{ inputs.github-hosted-runners }}
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         arch:
+          - x86
           - amd64
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+
       - name: Setup Relenv
         uses: ./.github/actions/setup-relenv
         with:
           platform: windows
           arch: ${{ matrix.arch }}
-      - name: Setup Bare Relenv Onedir
-        uses: ./.github/actions/build-onedir-bare
+          cache-seed: ${{ inputs.cache-seed }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Install Salt Packaging Dependencies into Relenv Onedir
+        uses: ./.github/actions/build-onedir-deps
         with:
           platform: windows
           arch: ${{ matrix.arch }}
+          cache-seed: ${{ inputs.cache-seed }}
 
       - name: Set Exit Status
         if: always()
@@ -84,30 +117,40 @@ jobs:
           path: exitstatus
           if-no-files-found: error
 
-  macos:
+  build-deps-macos:
     name: macOS
+    if: ${{ inputs.github-hosted-runners }}
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         arch:
           - x86_64
     runs-on: macos-12
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+
       - name: Setup Relenv
         uses: ./.github/actions/setup-relenv
         with:
           platform: darwin
           arch: ${{ matrix.arch }}
-      - name: Setup Bare Relenv Onedir
-        uses: ./.github/actions/build-onedir-bare
+          cache-seed: ${{ inputs.cache-seed }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Install Salt Packaging Dependencies into Relenv Onedir
+        uses: ./.github/actions/build-onedir-deps
         with:
           platform: darwin
           arch: ${{ matrix.arch }}
+          cache-seed: ${{ inputs.cache-seed }}
 
       - name: Set Exit Status
         if: always()
