@@ -8,16 +8,10 @@ import textwrap
 import pytest
 
 import salt.modules.xfs as xfs
-import salt.utils.platform
 
 pytestmark = [
-    pytest.mark.skipif(
-        salt.utils.platform.is_windows(), reason="xfs not available on windows"
-    ),
-    pytest.mark.skipif(
-        salt.utils.platform.is_darwin(),
-        reason="xfs not available on darwin.",
-    ),
+    pytest.mark.skip_on_windows(reason="xfs not available on windows"),
+    pytest.mark.skip_on_darwin(reason="xfs not available on darwin."),
 ]
 
 
