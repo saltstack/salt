@@ -148,13 +148,8 @@ def test_read_secret_with_default(path):
 
 
 def test_read_secret_no_default(path):
-    try:
+    with pytest.raises(CommandExecutionError):
         vault.read_secret(path)
-    except CommandExecutionError:
-        # This is expected
-        pass
-    else:
-        raise Exception("Should have raised a CommandExecutionError")
 
 
 def test_list_secrets_with_default(path):
@@ -162,10 +157,5 @@ def test_list_secrets_with_default(path):
 
 
 def test_list_secrets_no_default(path):
-    try:
+    with pytest.raises(CommandExecutionError):
         vault.list_secrets(path)
-    except CommandExecutionError:
-        # This is expected
-        pass
-    else:
-        raise Exception("Should have raised a CommandExecutionError")
