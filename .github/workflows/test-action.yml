@@ -104,14 +104,14 @@ jobs:
         if: inputs.platform != 'windows' && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
           path: artifacts/
 
       - name: Download Onedir Zipfile as an Artifact
         if: inputs.platform == 'windows' && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ inputs.platform }}-${{ inputs.arch }}.zip
           path: artifacts/
 
       - name: Decompress Onedir Tarball
@@ -120,15 +120,14 @@ jobs:
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
 
       - name: Decompress Onedir Zipfile
         if: inputs.platform == 'windows' && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
-          cd artifacts
-          unzip ${{ inputs.package-name }}-${{ inputs.arch }}-${{ inputs.platform }}.zip
+          py -3 -m zipfile -e artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ inputs.platform }}-${{ inputs.arch }}.zip artifacts/
 
       # Skip jobs if nox.*.tar.* is already cached
       - name: PyPi Proxy
@@ -227,7 +226,7 @@ jobs:
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
           path: artifacts/
 
       - name: Decompress Onedir Tarball
@@ -235,7 +234,7 @@ jobs:
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
 
       - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3
