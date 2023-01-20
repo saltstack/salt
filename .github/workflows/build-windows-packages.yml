@@ -40,11 +40,11 @@ jobs:
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-windows-${{ matrix.arch }}.zip
+          name: salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip
 
       - name: Decompress Onedir Zipfile
         run: |
-          py -3 -m zipfile -e salt-${{ inputs.salt-version }}-windows-${{ matrix.arch }}.zip pkg/windows/
+          py -3 -m zipfile -e salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip pkg/windows/
           mv pkg/windows/salt pkg/windows/buildenv
 
       - name: Build Package

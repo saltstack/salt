@@ -38,13 +38,13 @@ jobs:
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-darwin-${{ matrix.arch }}.tar.xz
+          name: salt-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch }}.tar.xz
 
       - name: Decompress Onedir Tarball
         run: |
           mkdir -p artifacts
           cd artifacts
-          tar xvf ${{ github.workspace }}/salt-${{ inputs.salt-version }}-darwin-${{ matrix.arch }}.tar.xz
+          tar xvf ${{ github.workspace }}/salt-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch }}.tar.xz
           cd ${{ github.workspace }}
           mkdir -p pkg/macos/build/opt
           cp -Rp artifacts/salt pkg/macos/build/opt/

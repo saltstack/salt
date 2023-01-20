@@ -100,45 +100,33 @@ jobs:
           path: nox.${{ inputs.distro-slug }}.tar.*
           key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
+      # Skip jobs if nox.*.tar.* is already cached
       - name: Download Onedir Tarball as an Artifact
-        if: inputs.platform != 'windows' && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
-          path: artifacts/
-
-      - name: Download Onedir Zipfile as an Artifact
-        if: inputs.platform == 'windows' && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ inputs.platform }}-${{ inputs.arch }}.zip
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
           path: artifacts/
 
       - name: Decompress Onedir Tarball
-        if: inputs.platform != 'windows' && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
 
-      - name: Decompress Onedir Zipfile
-        if: inputs.platform == 'windows' && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        shell: bash
-        run: |
-          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
-          py -3 -m zipfile -e artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ inputs.platform }}-${{ inputs.arch }}.zip artifacts/
-
-      # Skip jobs if nox.*.tar.* is already cached
       - name: PyPi Proxy
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
 
       - name: Setup Python Tools Scripts
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Define Nox Session
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           if [ "${{ matrix.transport }}" != "tcp" ]; then
             echo NOX_SESSION=${{ inputs.nox-session }} >> "$GITHUB_ENV"
@@ -153,6 +141,7 @@ jobs:
           tools --timestamps vm create --retries=2 ${{ inputs.distro-slug }}
 
       - name: List Free Space
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
 
@@ -226,7 +215,7 @@ jobs:
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
           path: artifacts/
 
       - name: Decompress Onedir Tarball
@@ -234,7 +223,7 @@ jobs:
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
 
       - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3
