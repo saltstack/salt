@@ -3,8 +3,6 @@
 """
 
 
-import os
-
 import pytest
 
 import salt.exceptions
@@ -14,17 +12,12 @@ from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
-def temp_database_file():
-    return "/tmp/salt-tests-tmpdir/test_vagrant.sqlite"
-
-
-@pytest.fixture
-def local_opts(temp_database_file):
+def local_opts(tmp_path):
     return {
         "extension_modules": "",
         "vagrant_sdb_data": {
             "driver": "sqlite3",
-            "database": temp_database_file,
+            "database": str(tmp_path / "test_vagrant.sqlite"),
             "table": "sdb",
             "create_table": True,
         },
@@ -33,10 +26,7 @@ def local_opts(temp_database_file):
 
 @pytest.fixture
 def configure_loader_modules(local_opts):
-    vagrant_globals = {
-        "__opts__": local_opts,
-    }
-    return {vagrant: vagrant_globals}
+    return {vagrant: {"__opts__": local_opts}}
 
 
 def test_vagrant_get_vm_info_not_found():
@@ -46,10 +36,8 @@ def test_vagrant_get_vm_info_not_found():
             vagrant.get_vm_info("thisNameDoesNotExist")
 
 
-def test_vagrant_init_positional(local_opts):
-    path_nowhere = os.path.join(os.sep, "tmp", "nowhere")
-    if salt.utils.platform.is_windows():
-        path_nowhere = "c:{}".format(path_nowhere)
+def test_vagrant_init_positional(local_opts, tmp_path):
+    path_nowhere = str(tmp_path / "tmp" / "nowhere")
     mock_sdb = MagicMock(return_value=None)
     with patch.dict(vagrant.__utils__, {"sdb.sdb_set": mock_sdb}):
         resp = vagrant.init(
@@ -138,10 +126,8 @@ def test_vagrant_get_ssh_config_fails():
                 vagrant.get_ssh_config("test3")  # has not been started
 
 
-def test_vagrant_destroy(local_opts):
-    path_mydir = os.path.join(os.sep, "my", "dir")
-    if salt.utils.platform.is_windows():
-        path_mydir = "c:{}".format(path_mydir)
+def test_vagrant_destroy(local_opts, tmp_path):
+    path_mydir = str(tmp_path / "my" / "dir")
     mock_cmd = MagicMock(return_value={"retcode": 0})
     with patch.dict(vagrant.__salt__, {"cmd.run_all": mock_cmd}):
         mock_sdb = MagicMock(return_value=None)
