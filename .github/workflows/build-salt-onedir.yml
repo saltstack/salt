@@ -1,0 +1,183 @@
+name: Build Salt Packages
+
+on:
+  workflow_call:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to building packages.
+      github-hosted-runners:
+        type: boolean
+        required: true
+      self-hosted-runners:
+        type: boolean
+        required: true
+      cache-seed:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
+
+jobs:
+
+  build-salt-linux:
+    name: Linux
+    if: ${{ inputs.self-hosted-runners }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        arch:
+          - x86_64
+          - aarch64
+    runs-on:
+      - self-hosted
+      - linux
+      - ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+
+      - name: Setup Relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: linux
+          arch: ${{ matrix.arch }}
+          cache-seed: ${{ inputs.cache-seed }}
+
+      - name: Install Salt into Relenv Onedir
+        uses: ./.github/actions/build-onedir-salt
+        with:
+          platform: linux
+          arch: ${{ matrix.arch }}
+          cache-seed: ${{ inputs.cache-seed }}
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  build-salt-windows:
+    name: Windows
+    if: ${{ inputs.github-hosted-runners }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        arch:
+          - x86
+          - amd64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Setup Relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: windows
+          arch: ${{ matrix.arch }}
+          cache-seed: ${{ inputs.cache-seed }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+
+      - name: Install Salt into Relenv Onedir
+        uses: ./.github/actions/build-onedir-salt
+        with:
+          platform: windows
+          arch: ${{ matrix.arch }}
+          cache-seed: ${{ inputs.cache-seed }}
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-windows-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  build-salt-macos:
+    name: macOS
+    if: ${{ inputs.github-hosted-runners }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        arch:
+          - x86_64
+    runs-on: macos-12
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Setup Relenv
+        uses: ./.github/actions/setup-relenv
+        with:
+          platform: darwin
+          arch: ${{ matrix.arch }}
+          cache-seed: ${{ inputs.cache-seed }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+
+      - name: Install Salt into Relenv Onedir
+        uses: ./.github/actions/build-onedir-salt
+        with:
+          platform: darwin
+          arch: ${{ matrix.arch }}
+          cache-seed: ${{ inputs.cache-seed }}
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-macos-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
