@@ -23,7 +23,10 @@ param(
     [Parameter(Mandatory=$false)]
     [Alias("c")]
     # Don't pretify the output of the Write-Result
-    [Switch] $CICD
+    [Switch] $CICD,
+
+    [Parameter(Mandatory=$false)]
+    [Switch] $PKG
 )
 
 #-------------------------------------------------------------------------------
@@ -137,23 +140,27 @@ if ( Test-Path -Path $PREREQ_DIR ) {
 # Staging the Build Environment
 #-------------------------------------------------------------------------------
 
-Write-Host "Copying config files from Salt: " -NoNewline
-New-Item -Path $BUILD_CONF_DIR -ItemType Directory | Out-Null
-Copy-Item -Path "$PROJECT_DIR\conf\minion" -Destination "$BUILD_CONF_DIR"
-if ( Test-Path -Path "$BUILD_CONF_DIR\minion" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
+if ( $PKG ) {
+    Write-Host "Copying config files from Salt: " -NoNewline
+    New-Item -Path $BUILD_CONF_DIR -ItemType Directory | Out-Null
+    Copy-Item -Path "$PROJECT_DIR\conf\minion" -Destination "$BUILD_CONF_DIR"
+    if ( Test-Path -Path "$BUILD_CONF_DIR\minion" ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
 }
 
-Write-Host "Copying SSM to Root: " -NoNewline
-Invoke-WebRequest -Uri "$SALT_DEP_URL/ssm-2.24-103-gdee49fc.exe" -OutFile "$BUILD_DIR\ssm.exe"
-if ( Test-Path -Path "$BUILD_DIR\ssm.exe" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
+if ( $PKG ) {
+    Write-Host "Copying SSM to Root: " -NoNewline
+    Invoke-WebRequest -Uri "$SALT_DEP_URL/ssm-2.24-103-gdee49fc.exe" -OutFile "$BUILD_DIR\ssm.exe"
+    if ( Test-Path -Path "$BUILD_DIR\ssm.exe" ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
 }
 
 New-Item -Path $PREREQ_DIR -ItemType Directory | Out-Null
@@ -181,25 +188,27 @@ if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
 # Remove binaries not needed by Salt
 #-------------------------------------------------------------------------------
 
-$binaries = @(
-    "py.exe",
-    "pyw.exe",
-    "pythonw.exe",
-    "venvlauncher.exe",
-    "venvwlauncher.exe"
-)
-Write-Host "Removing Python binaries: " -NoNewline
-$binaries | ForEach-Object {
-    if ( Test-Path -Path "$SCRIPTS_DIR\$_" ) {
-        # Use .net, the powershell function is asynchronous
-        [System.IO.File]::Delete("$SCRIPTS_DIR\$_")
+if ( $PKG ) {
+    $binaries = @(
+        "py.exe",
+        "pyw.exe",
+        "pythonw.exe",
+        "venvlauncher.exe",
+        "venvwlauncher.exe"
+    )
+    Write-Host "Removing Python binaries: " -NoNewline
+    $binaries | ForEach-Object {
         if ( Test-Path -Path "$SCRIPTS_DIR\$_" ) {
-            Write-Result "Failed" -ForegroundColor Red
-            exit 1
+            # Use .net, the powershell function is asynchronous
+            [System.IO.File]::Delete("$SCRIPTS_DIR\$_")
+            if ( Test-Path -Path "$SCRIPTS_DIR\$_" ) {
+                Write-Result "Failed" -ForegroundColor Red
+                exit 1
+            }
         }
     }
+    Write-Result "Success" -ForegroundColor Green
 }
-Write-Result "Success" -ForegroundColor Green
 
 #-------------------------------------------------------------------------------
 # Remove pywin32 components not needed by Salt
