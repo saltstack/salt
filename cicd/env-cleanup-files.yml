@@ -48,6 +48,7 @@ ci:
       - *common_file_patterns
       # Help files
       - "**/*.chm"
+      - "**/Scripts/wmitest*"
       # Non Windows execution modules
       - "**/site-packages/salt/modules/aacme.py*"
       - "**/site-packages/salt/modules/aix.py*"
@@ -252,6 +253,7 @@ pkg:
     dir_patterns:
       - *ci_windows_dir_patterns
       - "**/salt/share"
+      - "**/site-packages/pywin32_system32"
     file_patterns:
       - *ci_windows_file_patterns
       - "**/Scripts/py.exe"

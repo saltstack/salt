@@ -41,7 +41,7 @@ param(
     [String] $Version = "3.8.16",
 
     [Parameter(Mandatory=$false)]
-    [ValidateSet("x64", "x86")]
+    [ValidateSet("x64", "x86", "amd64")]
     [Alias("a")]
     # The System Architecture to build. "x86" will build a 32-bit installer.
     # "x64" will build a 64-bit installer. Default is: x64
@@ -67,6 +67,10 @@ param(
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
 $ProgressPreference = "SilentlyContinue"
 $ErrorActionPreference = "Stop"
+
+if ( $Architecture -eq "amd64" ) {
+  $Architecture = "x64"
+}
 
 #-------------------------------------------------------------------------------
 # Script Functions

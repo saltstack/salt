@@ -15,10 +15,11 @@ jobs:
     name: Build
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         arch:
           - x86
-          - x64
+          - amd64
     runs-on:
       - windows-latest
     steps:
@@ -36,10 +37,20 @@ jobs:
         with:
           salt-version: "${{ inputs.salt-version }}"
 
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-windows-${{ matrix.arch }}.zip
+
+      - name: Decompress Onedir Zipfile
+        run: |
+          py -3 -m zipfile -e salt-windows-${{ matrix.arch }}.zip pkg/windows/
+          mv pkg/windows/salt pkg/windows/buildenv
+
       - name: Build Package
         shell: powershell
         run: |
-          & pkg/windows/build.cmd -Architecture ${{ matrix.arch }} -Version ${{ inputs.salt-version }} -CICD
+          & pkg/windows/build.cmd -Architecture ${{ matrix.arch }} -Version ${{ inputs.salt-version }} -CICD -SkipInstall
 
       - name: Upload ${{ matrix.arch }} NSIS Package
         uses: actions/upload-artifact@v3
