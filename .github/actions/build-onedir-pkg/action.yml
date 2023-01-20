@@ -72,31 +72,31 @@ runs:
       shell: bash
       run: |
         cd artifacts/
-        tar -cJf ${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz  ${{ inputs.package-name }}
+        tar -cJf ${{ inputs.package-name }}-${{ env.SALT_VERSION }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz  ${{ inputs.package-name }}
 
     - name: Create Archive (Zipfile)
       if: ${{ inputs.platform == 'windows' }}
       shell: powershell
       run: |
         cd artifacts
-        py -3 -m zipfile -c "${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.zip" ${{ inputs.package-name }}
+        py -3 -m zipfile -c "${{ inputs.package-name }}-${{ env.SALT_VERSION }}-${{ inputs.platform }}-${{ inputs.arch }}.zip" ${{ inputs.package-name }}
 
     - name: Create Hash Files
       shell: bash
       run: |
-        tools pkg generate-hashes artifacts/${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.*
+        tools pkg generate-hashes artifacts/${{ inputs.package-name }}-${{ env.SALT_VERSION }}-${{ inputs.platform }}-${{ inputs.arch }}.*
 
     - name: Upload Onedir Tarball as an Artifact
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
-        path: artifacts/${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz*
+        name: ${{ inputs.package-name }}-${{ env.SALT_VERSION }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+        path: artifacts/${{ inputs.package-name }}-${{ env.SALT_VERSION }}-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz*
         retention-days: 7
 
     - name: Upload Onedir Zipfile as an Artifact
       if: ${{ inputs.platform == 'windows' }}
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.zip
-        path: artifacts/${{ inputs.package-name }}-${{ inputs.platform }}-${{ inputs.arch }}.zip*
+        name: ${{ inputs.package-name }}-${{ env.SALT_VERSION }}-${{ inputs.platform }}-${{ inputs.arch }}.zip
+        path: artifacts/${{ inputs.package-name }}-${{ env.SALT_VERSION }}-${{ inputs.platform }}-${{ inputs.arch }}.zip*
         retention-days: 7
