@@ -73,11 +73,11 @@ def test_checks_exists():
 
 def test_checks_create(request_mock):
     pytest.raises(CommandExecutionError, uptime.create, "http://example.org")
-    assert 4321 == uptime.create("http://example.com")
-    assert ("http://localhost:5000/api/checks",) == request_mock.args
+    assert uptime.create("http://example.com") == 4321
+    assert request_mock.args == ("http://localhost:5000/api/checks",)
 
 
 def test_checks_delete(request_mock):
     pytest.raises(CommandExecutionError, uptime.delete, "http://example.com")
     assert uptime.delete("http://example.org") is True
-    assert ("http://localhost:5000/api/checks/1234",) == request_mock.args
+    assert request_mock.args == ("http://localhost:5000/api/checks/1234",)
