@@ -12,7 +12,7 @@ on:
 jobs:
 
   build-pkgs:
-    name: Build
+    name: macOS
     strategy:
       fail-fast: false
       matrix:

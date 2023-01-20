@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    name: Build RPM
+    name: RPM
     runs-on:
       - self-hosted
       - linux
