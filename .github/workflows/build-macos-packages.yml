@@ -30,6 +30,7 @@ jobs:
         run: |
           pkg/macos/build_python.sh
           pkg/macos/install_salt.sh
+          pkg/macos/sign_binaries.sh
           pkg/macos/prep_salt.sh
           pkg/macos/package.sh ${{ env.SALT_VERSION }} -n
 
