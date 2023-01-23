@@ -155,7 +155,7 @@ def test_install_editable_without_egg_fails():
 
 def test_install_multiple_editable():
     editables = [
-        "git+https://github.com/jek/blinker.git#egg=Blinker",
+        "git+https://github.com/saltstack/istr.git@v1.0.1#egg=iStr",
         "git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting",
     ]
 
@@ -191,7 +191,7 @@ def test_install_multiple_editable():
 def test_install_multiple_pkgs_and_editables():
     pkgs = ["pep8", "salt"]
     editables = [
-        "git+https://github.com/jek/blinker.git#egg=Blinker",
+        "git+https://github.com/saltstack/istr.git@v1.0.1#egg=iStr",
         "git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting",
     ]
 
