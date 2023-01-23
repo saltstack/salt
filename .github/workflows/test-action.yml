@@ -192,7 +192,7 @@ jobs:
       - self-hosted
       - linux
       - bastion
-    timeout-minutes: 240  # 4 Hours - More than this and something is wrong
+    timeout-minutes: 300  # 5 Hours - More than this and something is wrong
     needs:
       - dependencies
       - generate-matrix
@@ -270,7 +270,7 @@ jobs:
 
       - name: Show System Info & Test Plan
         run: |
-          tools --timestamps --no-output-timeout-secs=18000 vm testplan --skip-requirements-install \
+          tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }}
 
@@ -278,7 +278,7 @@ jobs:
         id: run-slow-changed-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
-          tools --timestamps --no-output-timeout-secs=18000 vm test --skip-requirements-install \
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --run-slow --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
@@ -287,7 +287,7 @@ jobs:
         id: run-fast-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
-          tools --timestamps --no-output-timeout-secs=18000 vm test --skip-requirements-install \
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }}
 
@@ -295,7 +295,7 @@ jobs:
         id: run-full-tests
         if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
-          tools --timestamps --no-output-timeout-secs=18000 vm test --skip-requirements-install \
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --run-slow
 
