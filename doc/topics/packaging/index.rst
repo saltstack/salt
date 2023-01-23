@@ -4,7 +4,7 @@
 Onedir Packaging
 ================
 
-Relenv onedir packagig
+Relenv onedir packaging
 ======================
 
 Starting in 3006, only onedir packaging will be available. The 3006 onedir packages
