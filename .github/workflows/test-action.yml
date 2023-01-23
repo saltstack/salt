@@ -309,6 +309,9 @@ jobs:
         if: always() && steps.spin-up-vm.outcome == 'success'
         run: |
           tools --timestamps vm download-artifacts ${{ inputs.distro-slug }}
+          # Delete the salt onedir, we won't need it anymore and it will prevent
+          # from it showing in the tree command below
+          rm -rf artifacts/salt*
           tree -a artifacts
           mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
           echo "COVERAGE_FILE=artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}" >> GITHUB_ENV
