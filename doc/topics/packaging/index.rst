@@ -5,7 +5,7 @@ Onedir Packaging
 ================
 
 Relenv onedir packaging
-======================
+=======================
 
 Starting in 3006, only onedir packaging will be available. The 3006 onedir packages
 are built with the `relenv <https://github.com/saltstack/relative-environment-for-python>`_ tool.
