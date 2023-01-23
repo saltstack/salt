@@ -175,7 +175,9 @@ def xccdf_eval(
             error += "\nKilled by signal {}\n".format(proc.returncode).encode("ascii")
         returncode = proc.returncode
         if success:
-            __salt__["cp.push_dir"](tempdir)
+            if not __salt__["cp.push_dir"](tempdir):
+                success = False
+                error = "There was an error uploading openscap results files to salt master. Please check logs."
             upload_dir = tempdir
         shutil.rmtree(tempdir, ignore_errors=True)
 
@@ -230,7 +232,9 @@ def xccdf(params):
             error += "\nKilled by signal {}\n".format(proc.returncode).encode("ascii")
         returncode = proc.returncode
         if success:
-            __salt__["cp.push_dir"](tempdir)
+            if not __salt__["cp.push_dir"](tempdir):
+                success = False
+                error = "There was an error uploading openscap results files to salt master. Please check logs."
             shutil.rmtree(tempdir, ignore_errors=True)
             upload_dir = tempdir
 
