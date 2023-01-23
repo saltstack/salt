@@ -17,6 +17,8 @@ import sys
 import tarfile
 import tempfile
 
+import nox.command
+
 # fmt: off
 if __name__ == "__main__":
     sys.stderr.write(
@@ -1776,4 +1778,37 @@ def test_pkgs(session, coverage):
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = ["pkg/tests/"] + session.posargs
+    _pytest(session, coverage, cmd_args)
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="test-upgrade-pkgs")
+@nox.parametrize("coverage", [False, True])
+@nox.parametrize("classic", [False, True])
+def test_upgrade_pkgs(session, coverage, classic):
+    """
+    pytest pkg upgrade tests session
+    """
+    pydir = _get_pydir(session)
+    # Install requirements
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "pkgtests.txt"
+        )
+
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    cmd_args = [
+        "pkg/tests/upgrade/test_salt_upgrade.py::test_salt_upgrade",
+        "--upgrade",
+        "--no-uninstall",
+    ] + session.posargs
+    if classic:
+        cmd_args = cmd_args + ["--classic"]
+    try:
+        _pytest(session, coverage, cmd_args)
+    except nox.command.CommandFailed:
+        sys.exit(0)
+
+    cmd_args = ["pkg/tests/", "--no-install"] + session.posargs
     _pytest(session, coverage, cmd_args)

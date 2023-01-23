@@ -67,6 +67,12 @@ def pytest_addoption(parser):
         action="store_true",
         help="Do not uninstall salt packages after test run is complete",
     )
+    test_selection_group.addoption(
+        "--classic",
+        default=False,
+        action="store_true",
+        help="Test an upgrade from the classic packages.",
+    )
 
 
 @pytest.fixture(scope="session")
