@@ -1045,9 +1045,9 @@ def _pytest(session, coverage, cmd_args, env=None):
 def _ci_test(session, transport, onedir=False):
     # Install requirements
     _install_requirements(session, transport, onedir=onedir)
-    env = {
-        "ONEDIR_TESTRUN": "1",
-    }
+    env = {}
+    if onedir:
+        env["ONEDIR_TESTRUN"] = "1"
     chunks = {
         "unit": [
             "tests/unit",
