@@ -31,7 +31,7 @@ Available interfaces:
 
 * local - run execution modules on minions
 * local_subset - run execution modules on a subset of minions
-* runnner - run runner modules on master
+* runner - run runner modules on master
 * ssh - run salt-ssh commands
 * wheel - run wheel modules
 
