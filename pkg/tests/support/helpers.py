@@ -77,6 +77,7 @@ class SaltPkgInstall:
     salt_pkgs: List[str] = attr.ib(init=False)
     install_dir: pathlib.Path = attr.ib(init=False)
     binary_paths: List[pathlib.Path] = attr.ib(init=False)
+    classic: bool = attr.ib(default=False)
 
     @proc.default
     def _default_proc(self):
@@ -430,21 +431,25 @@ class SaltPkgInstall:
             os_name = os_name.split()[0].lower()
         if os_name == "centos" or os_name == "fedora":
             os_name = "redhat"
-        # TODO: When tiamat is considered production we need to update these
-        # TODO: paths to the tiamat paths instead of the old package paths.
         if os_name.lower() in ["redhat", "centos", "amazon", "fedora"]:
             for fp in pathlib.Path("/etc", "yum.repos.d").glob("epel*"):
                 fp.unlink()
+            gpg_key = "SALTSTACK-GPG-KEY.pub"
+            if version == "9":
+                gpg_key = "SALTSTACK-GPG-KEY2.pub"
+            root_url = "salt/py3/"
+            if self.classic:
+                root_url = "py3/"
             ret = self.proc.run(
                 "rpm",
                 "--import",
-                f"https://repo.saltproject.io/salt/py3/{os_name}/{version}/x86_64/{major_ver}/SALTSTACK-GPG-KEY.pub",
+                f"https://repo.saltproject.io/{root_url}{os_name}/{version}/x86_64/{major_ver}/{gpg_key}",
             )
             self._check_retcode(ret)
             ret = self.proc.run(
                 "curl",
                 "-fsSL",
-                f"https://repo.saltproject.io/salt/py3/{os_name}/{version}/x86_64/{major_ver}.repo",
+                f"https://repo.saltproject.io/{root_url}{os_name}/{version}/x86_64/{major_ver}.repo",
                 "-o",
                 f"/etc/yum.repos.d/salt-{os_name}.repo",
             )
