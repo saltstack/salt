@@ -244,6 +244,7 @@ def test(
     rerun_failures: bool = False,
     skip_requirements_install: bool = False,
     print_tests_selection: bool = False,
+    print_system_info: bool = False,
     skip_code_coverage: bool = False,
 ):
     """
@@ -265,6 +266,10 @@ def test(
         env["SKIP_CODE_COVERAGE"] = "1"
     else:
         env["SKIP_CODE_COVERAGE"] = "0"
+    if print_system_info:
+        env["PRINT_SYSTEM_INFO"] = "1"
+    else:
+        env["PRINT_SYSTEM_INFO"] = "0"
     if (
         skip_requirements_install
         or os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
