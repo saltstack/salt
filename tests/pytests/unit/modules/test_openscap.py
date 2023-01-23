@@ -5,48 +5,26 @@ import pytest
 import salt.modules.openscap as openscap
 from tests.support.mock import MagicMock, Mock, patch
 
-random_temp_dir = "/tmp/unique-name"
 policy_file = "/usr/share/openscap/policy-file-xccdf.xml"
 
 
-class OpenscapTestMock:
-    def __init__(self):
-        import salt.modules.openscap
-
-        salt.modules.openscap.__salt__ = MagicMock()
-        self.patchers = [
-            patch("salt.modules.openscap.__salt__", MagicMock()),
-            patch("salt.modules.openscap.shutil.rmtree", Mock()),
-            patch(
-                "salt.modules.openscap.tempfile.mkdtemp",
-                Mock(return_value=random_temp_dir),
-            ),
-            patch("salt.modules.openscap.os.path.exists", Mock(return_value=True)),
-        ]
-        for patcher in self.patchers:
-            self.apply_patch(patcher)
-
-    def apply_patch(self, patcher):
-        patcher.start()
-
-    def close(self):
-        for patcher in self.patchers:
-            patcher.stop()
+@pytest.fixture
+def random_temp_dir(tmp_path):
+    tmp_dir = tmp_path / "unique"
+    tmp_dir.mkdir()
+    return str(tmp_dir)
 
 
 @pytest.fixture
-def openscap_mocks():
-    mocks = OpenscapTestMock()
-    yield mocks
-    mocks.close()
+def configure_loader_modules(random_temp_dir):
+    with patch("salt.modules.openscap.shutil.rmtree", Mock()), patch(
+        "salt.modules.openscap.tempfile.mkdtemp",
+        Mock(return_value=random_temp_dir),
+    ), patch("salt.modules.openscap.os.path.exists", Mock(return_value=True)):
+        yield {openscap: {"__salt__": {"cp.push_dir": MagicMock()}}}
 
 
-@pytest.fixture
-def configure_loader_modules(openscap_mocks):
-    return {openscap: {"__salt__": {"cp.push_dir": MagicMock()}}}
-
-
-def test_openscap_xccdf_eval_success():
+def test_openscap_xccdf_eval_success(random_temp_dir):
     with patch(
         "salt.modules.openscap.Popen",
         MagicMock(
@@ -85,7 +63,7 @@ def test_openscap_xccdf_eval_success():
         }
 
 
-def test_openscap_xccdf_eval_success_with_failing_rules():
+def test_openscap_xccdf_eval_success_with_failing_rules(random_temp_dir):
     with patch(
         "salt.modules.openscap.Popen",
         MagicMock(
@@ -137,7 +115,7 @@ def test_openscap_xccdf_eval_fail_no_profile():
     }
 
 
-def test_openscap_xccdf_eval_success_ignore_unknown_params():
+def test_openscap_xccdf_eval_success_ignore_unknown_params(random_temp_dir):
     with patch(
         "salt.modules.openscap.Popen",
         MagicMock(
@@ -208,7 +186,7 @@ def test_openscap_xccdf_eval_fail_not_implemented_action():
     }
 
 
-def test_new_openscap_xccdf_eval_success():
+def test_new_openscap_xccdf_eval_success(random_temp_dir):
     with patch(
         "salt.modules.openscap.Popen",
         MagicMock(
@@ -253,7 +231,7 @@ def test_new_openscap_xccdf_eval_success():
         }
 
 
-def test_new_openscap_xccdf_eval_success_with_extra_ovalfiles():
+def test_new_openscap_xccdf_eval_success_with_extra_ovalfiles(random_temp_dir):
     with patch(
         "salt.modules.openscap.Popen",
         MagicMock(
@@ -301,7 +279,7 @@ def test_new_openscap_xccdf_eval_success_with_extra_ovalfiles():
         }
 
 
-def test_new_openscap_xccdf_eval_success_with_failing_rules():
+def test_new_openscap_xccdf_eval_success_with_failing_rules(random_temp_dir):
     with patch(
         "salt.modules.openscap.Popen",
         MagicMock(
