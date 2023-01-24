@@ -47,12 +47,16 @@ jobs:
           echo "${{ inputs.salt-version }}" > salt/_version.txt
           sed -i 's/^Version: \(.*\)$/Version: ${{ inputs.salt-version }}/g' pkg/rpm/salt.spec
           rpmbuild -bb --define="_salt_src $(pwd)" $(pwd)/pkg/rpm/salt.spec
+      
+      - name: Compress RPMs
+        run: |
+          tar czvf salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpms.tar.gz ~/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
 
-      - name: Upload RPMs
+      - name: Upload RPMs Archive
         uses: actions/upload-artifact@v3
         with:
-          name: salt-${{ matrix.arch }}-rpms
-          path: ~/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpms.tar.gz
+          path: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpms.tar.gz
           retention-days: 7
 
       - name: Set Exit Status
