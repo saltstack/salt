@@ -28,6 +28,7 @@ def changelog(version):
     proc = subprocess.run(
         ["towncrier", "build", "--draft", f"--version={version}"],
         stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         check=True,
     )
     return proc.stdout.decode()
@@ -111,20 +112,13 @@ def version():
             "default": None,
         },
         "draft": {
-            "help": ("Do not make any changes, instead output what would be changed."),
-            "type": "bool",
-            "default": False,
+            "help": "Do not make any changes, instead output what would be changed.",
         },
     },
 )
-def update_rpm(ctx: Context, salt_version: str, draft: bool):
+def update_rpm(ctx: Context, salt_version: str, draft: bool = False):
     if salt_version is None:
         salt_version = version()
-    proc = subprocess.run(
-        ["towncrier", "build", "--draft", f"--version={salt_version}"],
-        stdout=subprocess.PIPE,
-        check=True,
-    )
     changes = pkg_changelog(salt_version)
     proc = subprocess.run(
         ["sed", f"s/Version: .*/Version: {salt_version}/g", "pkg/rpm/salt.spec"],
@@ -167,13 +161,11 @@ def update_rpm(ctx: Context, salt_version: str, draft: bool):
             "default": None,
         },
         "draft": {
-            "help": ("Do not make any changes, instead output what would be changed."),
-            "type": "bool",
-            "default": False,
+            "help": "Do not make any changes, instead output what would be changed.",
         },
     },
 )
-def update_deb(ctx: Context, salt_version: str, draft: bool):
+def update_deb(ctx: Context, salt_version: str, draft: bool = False):
     if salt_version is None:
         salt_version = version()
     changes = pkg_changelog(salt_version)
@@ -212,13 +204,11 @@ def update_deb(ctx: Context, salt_version: str, draft: bool):
             "default": None,
         },
         "draft": {
-            "help": ("Do not make any changes, instead output what would be changed."),
-            "type": "bool",
-            "default": False,
+            "help": "Do not make any changes, instead output what would be changed.",
         },
     },
 )
-def update_release_notes(ctx: Context, salt_version: str, draft: bool):
+def update_release_notes(ctx: Context, salt_version: str, draft: bool = False):
     if salt_version is None:
         salt_version = version()
     if "+" in salt_version:
@@ -259,16 +249,11 @@ def update_release_notes(ctx: Context, salt_version: str, draft: bool):
             "default": None,
         },
         "draft": {
-            "help": (
-                "The draft option determines if we should remove the fragment "
-                "files from the changelog directory"
-            ),
-            "type": "bool",
-            "default": True,
+            "help": "Do not make any changes, instead output what would be changed.",
         },
     },
 )
-def generate_changelog_md(ctx: Context, salt_version: str, draft: bool):
+def generate_changelog_md(ctx: Context, salt_version: str, draft: bool = False):
     if salt_version is None:
         salt_version = version()
     cmd = ["towncrier", "build", "--version={version}"]
