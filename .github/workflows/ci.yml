@@ -419,6 +419,23 @@ jobs:
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
 
+
+  centos-7-pkg-tests:
+    name: CentOS 7 Package Tests
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: centos-7
+      nox-session: test-pkgs
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      package-type: rpm
+
+
   windows-2016:
     name: Windows 2016
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
