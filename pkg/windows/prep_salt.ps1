@@ -26,6 +26,7 @@ param(
     [Switch] $CICD,
 
     [Parameter(Mandatory=$false)]
+    # When true, additional routines are done to prepare for packaging.
     [Switch] $PKG
 )
 
