@@ -249,7 +249,7 @@ def test_list_values_existing():
     assert "ProgramFilesDir" in keys
 
 
-def test_list_values_non_existing():
+def test_list_values_non_existing(fake_key):
     """
     Test the list_values function using a non existing registry key
     """
@@ -727,7 +727,7 @@ def test_delete_value_unicode_vname(unicode_key, fake_key):
 
 
 @pytest.mark.destructive_test
-def test_delete_value_unicode_key(fake_key):
+def test_delete_value_unicode_key(unicode_key, fake_key):
     """
     Test the delete_value function on a unicode key
     """
