@@ -1,2 +1,2 @@
-sphinx>=3.5.1
+sphinx>=4.1.2
 jinja2<3.1
