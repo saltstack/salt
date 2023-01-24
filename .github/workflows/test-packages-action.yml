@@ -176,7 +176,7 @@ jobs:
       - name: Download Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-${{ inputs.arch }}-rpms
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpms.tar.gz
           path: pkg/artifacts/
 
       # - name: Decompress Packages Archive
