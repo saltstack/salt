@@ -1278,7 +1278,7 @@ def pre_archive_cleanup(session, pkg):
         session.error("Please install 'pyyaml'.")
         return
 
-    with open(str(REPO_ROOT / "cicd" / "env-cleanup-files.yml")) as rfh:
+    with open(str(REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml")) as rfh:
         patterns = yaml.safe_load(rfh.read())
 
     if pkg:

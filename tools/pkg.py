@@ -120,7 +120,7 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
 
     When running on Windows and macOS, some additional cleanup is also done.
     """
-    with open(str(REPO_ROOT / "cicd" / "env-cleanup-files.yml")) as rfh:
+    with open(str(REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml")) as rfh:
         patterns = yaml.safe_load(rfh.read())
 
     if pkg:
