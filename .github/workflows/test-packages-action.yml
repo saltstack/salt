@@ -257,7 +257,7 @@ jobs:
       - name: Run Package Tests
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} -- --run-slow
+            --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }}
         # tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
         #   --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
         #   ${{ matrix.tests-chunk }} -- --run-slow
