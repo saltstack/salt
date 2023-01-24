@@ -45,6 +45,7 @@ jobs:
       - name: Pip Install Tools Requirements
         run: |
           pip3 install -r $(pwd)/requirements/static/ci/py3.10/tools.txt
+          pip3 install -r $(pwd)/requirements/static/ci/py3.10/changelog.txt
 
       - name: Build Deb
         env:
