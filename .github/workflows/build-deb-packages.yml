@@ -42,14 +42,18 @@ jobs:
           apt update
           apt install -y python3 python3-venv build-essential devscripts debhelper bash-completion
 
+      - name: Pip Install Tools Requirements
+        run: |
+          pip3 install -r $(pwd)/requirements/static/ci/py3.10/tools.txt
+
       - name: Build Deb
         env:
           SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/build-deb-pkg/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
         run: |
           cd build-deb-pkg
           echo "${{ inputs.salt-version }}" > salt/_version.txt
+          tools changelog update-deb
           ln -sf pkg/debian/ .
-          sed -i 's/SALT_RELEASE_VERSION/${{ inputs.salt-version }}/g' debian/changelog
           debuild -e SALT_ONEDIR_ARCHIVE -uc -us
 
       - name: Upload DEBs

@@ -40,12 +40,16 @@ jobs:
           yum -y update
           yum -y install python3 python3-pip openssl git rpmdevtools rpmlint systemd-units libxcrypt-compat
 
+      - name: Pip Install Tools Requirements
+        run: |
+          pip3 install -r $(pwd)/requirements/static/ci/py3.10/tools.txt
+
       - name: Build RPM
         env:
           SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
         run: |
           echo "${{ inputs.salt-version }}" > salt/_version.txt
-          sed -i 's/^Version: \(.*\)$/Version: ${{ inputs.salt-version }}/g' pkg/rpm/salt.spec
+          tools changlog update-rpm
           rpmbuild -bb --define="_salt_src $(pwd)" $(pwd)/pkg/rpm/salt.spec
 
       - name: Upload RPMs
