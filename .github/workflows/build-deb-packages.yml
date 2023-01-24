@@ -40,7 +40,7 @@ jobs:
       - name: Download System Dependencies
         run: |
           apt update
-          apt install -y python3 python3-venv build-essential devscripts debhelper bash-completion
+          apt install -y python3 python3-venv python3-pip build-essential devscripts debhelper bash-completion
 
       - name: Pip Install Tools Requirements
         run: |
