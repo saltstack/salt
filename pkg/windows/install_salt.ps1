@@ -29,9 +29,11 @@ param(
     [Switch] $SkipInstall,
 
     [Parameter(Mandatory=$false)]
+    # Path to a Salt source tarball which be used to install Salt.
     [String] $SourceTarball,
 
     [Parameter(Mandatory=$false)]
+    # When true, additional routines are done to prepare for packaging.
     [Switch] $PKG
 )
 
