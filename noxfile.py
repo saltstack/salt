@@ -69,14 +69,18 @@ if COVERAGE_FILE is None:
 IS_DARWIN = sys.platform.lower().startswith("darwin")
 IS_WINDOWS = sys.platform.lower().startswith("win")
 IS_FREEBSD = sys.platform.lower().startswith("freebsd")
+IS_LINUX = sys.platform.lower().startswith("linux")
+ONEDIR_ARTIFACT_PATH = ARTIFACTS_DIR / "salt"
+if IS_WINDOWS:
+    ONEDIR_PYTHON_PATH = ONEDIR_ARTIFACT_PATH / "Scripts" / "python.exe"
+else:
+    ONEDIR_PYTHON_PATH = ONEDIR_ARTIFACT_PATH / "bin" / "python3"
 # Python versions to run against
 _PYTHON_VERSIONS = ("3", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10")
 
 # Nox options
 #  Reuse existing virtualenvs
 nox.options.reuse_existing_virtualenvs = True
-#  Don't fail on missing interpreters
-nox.options.error_on_missing_interpreters = False
 
 # Change current directory to REPO_ROOT
 os.chdir(str(REPO_ROOT))
@@ -117,8 +121,11 @@ def session_run_always(session, *command, **kwargs):
             session._runner.global_config.install_only = old_install_only_value
 
 
-def find_session_runner(session, name, python_version, **kwargs):
-    name += "-{}".format(python_version)
+def find_session_runner(session, name, python_version, onedir=False, **kwargs):
+    if onedir:
+        name += "-onedir-{}".format(ONEDIR_PYTHON_PATH)
+    else:
+        name += "-{}".format(python_version)
     for s, _ in session._runner.manifest.list_all_sessions():
         if name not in s.signatures:
             continue
@@ -273,7 +280,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         session.error("Could not find a linux requirements file for {}".format(pydir))
 
 
-def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
+def _upgrade_pip_setuptools_and_wheel(session, upgrade=True, onedir=False):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
@@ -289,21 +296,34 @@ def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
     ]
     if upgrade:
         install_command.append("-U")
-    install_command.extend(
-        [
-            "pip>=20.2.4,<21.2",
-            "setuptools!=50.*,!=51.*,!=52.*,<59",
+    if onedir:
+        requirements = [
+            "pip>=22.3.1,<23.0",
+            # https://github.com/pypa/setuptools/commit/137ab9d684075f772c322f455b0dd1f992ddcd8f
+            "setuptools>=65.6.3,<66",
             "wheel",
         ]
-    )
+    else:
+        requirements = [
+            "pip>=20.2.4,<21.2",
+            "setuptools!=50.*,!=51.*,!=52.*,<59",
+        ]
+    install_command.extend(requirements)
     session_run_always(session, *install_command, silent=PIP_INSTALL_SILENT)
     return True
 
 
 def _install_requirements(
-    session, transport, *extra_requirements, requirements_type="ci"
+    session,
+    transport,
+    *extra_requirements,
+    requirements_type="ci",
+    onedir=False,
 ):
-    if not _upgrade_pip_setuptools_and_wheel(session):
+    if onedir and IS_LINUX:
+        session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
+
+    if not _upgrade_pip_setuptools_and_wheel(session, onedir=onedir):
         return False
 
     # Install requirements
@@ -1022,9 +1042,12 @@ def _pytest(session, coverage, cmd_args, env=None):
         session.run("python", "-m", "pytest", *args, env=env)
 
 
-def _ci_test(session, transport):
+def _ci_test(session, transport, onedir=False):
     # Install requirements
-    _install_requirements(session, transport)
+    _install_requirements(session, transport, onedir=onedir)
+    env = {
+        "ONEDIR_TESTRUN": "1",
+    }
     chunks = {
         "unit": [
             "tests/unit",
@@ -1086,7 +1109,7 @@ def _ci_test(session, transport):
             ]
             + chunk_cmd
         )
-        _pytest(session, track_code_coverage, pytest_args)
+        _pytest(session, track_code_coverage, pytest_args, env=env)
     except CommandFailed:
         if rerun_failures is False:
             raise
@@ -1106,7 +1129,7 @@ def _ci_test(session, transport):
             ]
             + chunk_cmd
         )
-        _pytest(session, track_code_coverage, pytest_args)
+        _pytest(session, track_code_coverage, pytest_args, env=env)
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="ci-test")
@@ -1117,6 +1140,38 @@ def ci_test(session):
 @nox.session(python=_PYTHON_VERSIONS, name="ci-test-tcp")
 def ci_test_tcp(session):
     _ci_test(session, "tcp")
+
+
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="ci-test-onedir",
+    venv_params=["--system-site-packages"],
+)
+def ci_test_onedir(session):
+    if not ONEDIR_ARTIFACT_PATH.exists():
+        session.error(
+            "The salt onedir artifact, expected to be in '{}', was not found".format(
+                ONEDIR_ARTIFACT_PATH.relative_to(REPO_ROOT)
+            )
+        )
+
+    _ci_test(session, "zeromq", onedir=True)
+
+
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="ci-test-onedir-tcp",
+    venv_params=["--system-site-packages"],
+)
+def ci_test_onedir_tcp(session):
+    if not ONEDIR_ARTIFACT_PATH.exists():
+        session.error(
+            "The salt onedir artifact, expected to be in '{}', was not found".format(
+                ONEDIR_ARTIFACT_PATH.relative_to(REPO_ROOT)
+            )
+        )
+
+    _ci_test(session, "tcp", onedir=True)
 
 
 @nox.session(python="3", name="report-coverage")
@@ -1177,7 +1232,7 @@ def compress_dependencies(session):
 
 
 @nox.session(
-    python="3",
+    python=str(ONEDIR_PYTHON_PATH),
     name="pre-archive-cleanup",
 )
 @nox.parametrize("pkg", [False, True])
@@ -1578,7 +1633,7 @@ def changelog(session, draft, force):
         install_command = ["--progress-bar=off", "-r", requirements_file]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
-    town_cmd = ["towncrier", "--version={}".format(session.posargs[0])]
+    town_cmd = ["towncrier", "build", "--version={}".format(session.posargs[0])]
     if draft:
         town_cmd.append("--draft")
     if force:
