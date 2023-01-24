@@ -141,6 +141,11 @@ cd $RPM_BUILD_DIR
   build/salt/bin/python3 -m pip install "pip>=22.3.1,<23.0" "setuptools>=65.6.3,<66" "wheel"
   export PY=$(build/salt/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
   build/salt/bin/python3 -m pip install -r %{_salt_src}/requirements/static/pkg/py${PY}/linux.txt
+
+  # Fix any hardcoded paths to the relenv python binary on any of the scripts installed in
+  # the <onedir>/bin directory
+  find build/salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$(dirname $(readlink -f $0))/python3" "$0" "$@":g' {} \;
+
   export USE_STATIC_REQUIREMENTS=1
   export RELENV_PIP_DIR=1
   build/salt/bin/python3 -m pip install --no-warn-script-location %{_salt_src}
@@ -154,7 +159,11 @@ cd $RPM_BUILD_DIR
   # is expected to be done
   cd build
   tar xf ${SALT_ONEDIR_ARCHIVE}
-  cd ..
+
+  # Fix any hardcoded paths to the relenv python binary on any of the scripts installed in the <onedir>/bin directory
+  find salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$$(dirname $$(readlink -f $$0))/python3" "$$0" "$$@":g' {} \;
+
+  cd $RPM_BUILD_DIR
 %endif
 
 
