@@ -50,7 +50,7 @@ jobs:
           SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
         run: |
           echo "${{ inputs.salt-version }}" > salt/_version.txt
-          tools changlog update-rpm
+          tools changelog update-rpm
           rpmbuild -bb --define="_salt_src $(pwd)" $(pwd)/pkg/rpm/salt.spec
 
       - name: Upload RPMs
