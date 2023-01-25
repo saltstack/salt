@@ -3,7 +3,7 @@ import pytest
 import salt.modules.saltcheck as saltcheck
 from tests.support.mock import MagicMock
 
-xmldiff = pytest.importorskip("xmldiff")
+xmldiff = pytest.importorskip("xmldiff.main")
 
 
 @pytest.fixture()
@@ -39,5 +39,5 @@ def test__generate_junit_out_list():
         + """\t</testsuite>\n</testsuites>\n"""
     )
     ret = saltcheck._generate_junit_out_list(results)
-    diff = xmldiff.main.diff_texts(ret, expected)
+    diff = xmldiff.diff_texts(ret, expected)
     assert diff == []
