@@ -5,17 +5,16 @@ These commands are used to build Salt packages.
 from __future__ import annotations
 
 import fnmatch
+import gzip
 import hashlib
 import json
 import logging
-import gzip
 import os
 import pathlib
-import tempfile
-import tarfile
 import shutil
-import subprocess
 import sys
+import tarfile
+import tempfile
 
 import yaml
 from ptscripts import Context, command_group
@@ -317,5 +316,5 @@ def source_tarball(ctx: Context):
             str(pkg.relative_to(REPO_ROOT))
             for pkg in REPO_ROOT.joinpath("dist").iterdir()
         ]
-        ctx.run("sha256sum", *packages) #, external=True)
+        ctx.run("sha256sum", *packages)
     ctx.run("python3", "-m", "twine", "check", "dist/*", check=True)

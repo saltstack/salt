@@ -31,6 +31,21 @@ jobs:
         with:
           path: build-deb-pkg
 
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
+          path: build-deb-pkg/artifacts/
+
+      - name: Download System Dependencies
+        run: |
+          apt update
+          apt install -y python3 python3-venv python3-pip build-essential devscripts debhelper bash-completion git
+
+      - name: List CWD
+        run: |
+          ls -la $(cwd)
+
       - name: Download Release Changes
         uses: actions/download-artifact@v2
         with:
@@ -42,16 +57,6 @@ jobs:
           git apply salt-${{ inputs.salt-version }}.diff
           rm salt-${{ inputs.salt-version }}.diff
 
-      - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
-          path: build-deb-pkg/artifacts/
-
-      - name: Download System Dependencies
-        run: |
-          apt update
-          apt install -y python3 python3-venv python3-pip build-essential devscripts debhelper bash-completion
 
       - name: Build Deb
         env:
