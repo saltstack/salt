@@ -48,11 +48,14 @@ jobs:
           sed -i 's/^Version: \(.*\)$/Version: ${{ inputs.salt-version }}/g' pkg/rpm/salt.spec
           rpmbuild -bb --define="_salt_src $(pwd)" $(pwd)/pkg/rpm/salt.spec
       
-      - name: Compress RPMs
-        run: |
-          tar czvf salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpms.tar.gz ~/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
+      - name: Upload RPMs
+        uses: actions/upload-artifact@v3
+        with:
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm-packages
+          path: ~/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
+          retention-days: 7
 
-      - name: Upload RPMs Archive
+      - name: Upload RPMs
         uses: actions/upload-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpms.tar.gz
