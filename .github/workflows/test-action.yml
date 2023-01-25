@@ -289,13 +289,13 @@ jobs:
             ${{ matrix.tests-chunk }} -- --run-slow
 
       - name: Combine Coverage Reports
-        if: always() && steps.spin-up-vm.outcome == 'success'
+        if: always() && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
         run: |
           tools --timestamps vm combine-coverage ${{ inputs.distro-slug }}
 
       - name: Download Test Run Artifacts
         id: download-artifacts-from-vm
-        if: always() && steps.spin-up-vm.outcome == 'success'
+        if: always() && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
         run: |
           tools --timestamps vm download-artifacts ${{ inputs.distro-slug }}
           # Delete the salt onedir, we won't need it anymore and it will prevent
@@ -311,7 +311,7 @@ jobs:
           tools --timestamps vm destroy ${{ inputs.distro-slug }} || true
 
       - name: Upload Test Run Artifacts
-        if: always() && steps.download-artifacts-from-vm.outcome == 'success'
+        if: always() && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         uses: actions/upload-artifact@v3
         with:
           name: testrun-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
@@ -329,7 +329,7 @@ jobs:
 #          annotate_only: true
 
       - name: Install Nox
-        if: always() && steps.download-artifacts-from-vm.outcome == 'success'
+        if: always() && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         env:
           PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
           PIP_EXTRA_INDEX_URL: https://pypi.org/simple
@@ -337,19 +337,19 @@ jobs:
           python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
 
       - name: Report Salt Code Coverage(${{ matrix.tests-chunk }})
-        if: always() && steps.download-artifacts-from-vm.outcome == 'success'
+        if: always() && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         continue-on-error: true
         run: |
           nox --force-color -e report-coverage -- salt
 
       - name: Report Tests Code Coverage(${{ matrix.tests-chunk }})
-        if: always() && steps.download-artifacts-from-vm.outcome == 'success'
+        if: always() && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         continue-on-error: true
         run: |
           nox --force-color -e report-coverage -- tests
 
       - name: Report Combined Code Coverage(${{ matrix.tests-chunk }})
-        if: always() && steps.download-artifacts-from-vm.outcome == 'success'
+        if: always() && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         continue-on-error: true
         run: |
           nox --force-color -e report-coverage
