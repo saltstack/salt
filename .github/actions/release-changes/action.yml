@@ -16,7 +16,7 @@ runs:
     - name: Set salt version
       shell: bash
       run: |
-          echo "${{ inputs.salt-version }}" > salt/_version.txt
+          echo '${{ env.SALT_VERSION }}' > salt/_version.txt
 
     - name: Update Debian changelog
       shell: bash
