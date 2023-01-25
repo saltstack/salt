@@ -28,14 +28,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-        with:
-          path: build-deb-pkg
 
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
-          path: build-deb-pkg/artifacts/
+          path: artifacts/
 
       - name: Download System Dependencies
         run: |
@@ -57,12 +55,10 @@ jobs:
           git apply salt-${{ inputs.salt-version }}.diff
           rm salt-${{ inputs.salt-version }}.diff
 
-
       - name: Build Deb
         env:
-          SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/build-deb-pkg/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
+          SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
         run: |
-          cd build-deb-pkg
           echo "${{ inputs.salt-version }}" > salt/_version.txt
           ln -sf pkg/debian/ .
           debuild -e SALT_ONEDIR_ARCHIVE -uc -us
