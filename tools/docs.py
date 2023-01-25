@@ -28,8 +28,12 @@ doc = command_group(name="docs", help="Manpages tools", description=__doc__)
     name="man",
 )
 def man(ctx: Context):
-    ctx.run("make", "clean", cwd="doc/", check=True)
-    ctx.run("make", "man", "SHPINXOPTS=-W", cwd="doc/", check=True)
+    #XXX tools update
+    #ctx.run("make", "clean", cwd="doc/", check=True)
+    #ctx.run("make", "man", "SHPINXOPTS=-W", cwd="doc/", check=True)
+    os.chdir("doc/")
+    ctx.run("make", "clean", check=True)
+    ctx.run("make", "man", "SHPINXOPTS=-W", check=True)
     for root, dirs, files in os.walk("doc/_build/man"):
         for file in files:
             shutil.copy(os.path.join(root, file), os.path.join("doc/man", file))
