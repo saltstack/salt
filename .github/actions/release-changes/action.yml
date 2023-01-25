@@ -13,6 +13,11 @@ runs:
         pip3 install -r $(pwd)/requirements/static/ci/py3.10/tools.txt
         pip3 install -r $(pwd)/requirements/static/ci/py3.10/changelog.txt
 
+    - name: Set salt version
+      shell: bash
+      run: |
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
+
     - name: Update Debian changelog
       shell: bash
       run: |
