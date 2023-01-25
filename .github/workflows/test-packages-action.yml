@@ -169,24 +169,19 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v3
 
-      # - name: Setup Salt Version
-      #   run: |
-      #     echo "${{ inputs.salt-version }}" > salt/_version.txt
-
       - name: Download Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-${{ inputs.arch }}-rpms.tar.gz
+          name: salt-${{ inputs.salt-version }}-${{ inputs.arch }}-rpm-packages
           path: pkg/artifacts/
 
-      - name: Decompress Packages Archive
-        shell: bash
+      - name: List package artifacts
         run: |
-          python3 -c "import os; os.makedirs('pkg/artifacts', exist_ok=True)"
           cd pkg/artifacts
           tree .
-          tar xzvf salt-${{ inputs.salt-version }}-${{ inputs.arch }}-rpms.tar.gz
+          mv salt-${{ inputs.salt-version }}-${{ inputs.arch }}-rpm-packages/* .
           tree .
+          rm -rf salt-${{ inputs.salt-version }}-${{ inputs.arch }}-rpm-packages
 
       # - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
       #   uses: actions/cache@v3
@@ -240,23 +235,6 @@ jobs:
       #       --nox-session=${{ env.NOX_SESSION }} ${{ inputs.distro-slug }} \
       #       ${{ matrix.tests-chunk }}
 
-      # - name: Run Slow/Changed Tests
-      #   id: run-slow-changed-tests
-      #   if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
-      #   run: |
-      #     tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-      #       --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-      #       ${{ matrix.tests-chunk }} -- --run-slow --suppress-no-test-exit-code \
-      #       --from-filenames=testrun-changed-files.txt
-
-      # - name: Run Fast Tests
-      #   id: run-fast-tests
-      #   if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
-      #   run: |
-      #     tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-      #       --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-      #       ${{ matrix.tests-chunk }}
-
       - name: Run Package Tests
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test \
@@ -296,32 +274,6 @@ jobs:
       #       artifacts
       #       !artifacts/salt/*
       #       !artifacts/salt-*.tar.*
-
-      # - name: Install Nox
-      #   if: always() && steps.download-artifacts-from-vm.outcome == 'success'
-      #   env:
-      #     PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-      #     PIP_EXTRA_INDEX_URL: https://pypi.org/simple
-      #   run: |
-      #     python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
-
-      # - name: Report Salt Code Coverage(${{ matrix.tests-chunk }})
-      #   if: always() && steps.download-artifacts-from-vm.outcome == 'success'
-      #   continue-on-error: true
-      #   run: |
-      #     nox --force-color -e report-coverage -- salt
-
-      # - name: Report Tests Code Coverage(${{ matrix.tests-chunk }})
-      #   if: always() && steps.download-artifacts-from-vm.outcome == 'success'
-      #   continue-on-error: true
-      #   run: |
-      #     nox --force-color -e report-coverage -- tests
-
-      # - name: Report Combined Code Coverage(${{ matrix.tests-chunk }})
-      #   if: always() && steps.download-artifacts-from-vm.outcome == 'success'
-      #   continue-on-error: true
-      #   run: |
-      #     nox --force-color -e report-coverage
 
       # - name: Set Exit Status
       #   if: always()
