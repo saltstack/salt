@@ -179,11 +179,14 @@ jobs:
           name: salt-${{ inputs.salt-version }}-${{ inputs.arch }}-rpms.tar.gz
           path: pkg/artifacts/
 
-      # - name: Decompress Packages Archive
-      #   shell: bash
-      #   run: |
-      #     python3 -c "import os; os.makedirs('pkg/artifacts', exist_ok=True)"
-      #     cd pkg/artifacts
+      - name: Decompress Packages Archive
+        shell: bash
+        run: |
+          python3 -c "import os; os.makedirs('pkg/artifacts', exist_ok=True)"
+          cd pkg/artifacts
+          tree .
+          tar xzvf salt-${{ inputs.salt-version }}-${{ inputs.arch }}-rpms.tar.gz
+          tree .
 
       # - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
       #   uses: actions/cache@v3
