@@ -17,6 +17,12 @@ except ImportError:
 # fmt: off
 
 
+pytestmark = [
+    pytest.mark.skip_on_windows(reason="Do not run these tests on Windows"),
+    pytest.mark.skip_on_darwin(reason="Do not run these tests on Mac"),
+]
+
+
 @pytest.fixture
 def test_interfaces():
     return [
@@ -843,7 +849,6 @@ def test_interfaces():
 # fmt: on
 
 
-@pytest.mark.skip_on_windows(reason="Do not run these tests on Windows")
 @pytest.fixture
 def configure_loader_modules():
     return {debian_ip: {}}
