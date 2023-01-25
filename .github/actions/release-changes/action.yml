@@ -12,6 +12,7 @@ runs:
       run: |
         pip3 install -r $(pwd)/requirements/static/ci/py3.10/tools.txt
         pip3 install -r $(pwd)/requirements/static/ci/py3.10/changelog.txt
+        pip3 install -r $(pwd)/requirements/static/ci/py3.10/docs.txt
 
     - name: Set salt version
       shell: bash
@@ -43,6 +44,11 @@ runs:
         tools changelog update-release-notes
 
     - name: Update CHANGELOG.md
+      shell: bash
+      run: |
+        tools docs man
+
+    - name: Create release changes diff
       shell: bash
       run: |
         git diff --no-color > salt-${{ env.SALT_VERSION }}.diff

@@ -29,6 +29,18 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Download Release Changes
+        uses: actions/download-artifact@v2
+        with:
+          name: salt-${{ inputs.salt-version }}.diff
+
+      - name: Apply release changes
+        shell: bash
+        run: |
+          git apply salt-${{ inputs.salte-version }}.diff
+          rm salt-${{ inputs.salte-version }}.diff
+
+
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
