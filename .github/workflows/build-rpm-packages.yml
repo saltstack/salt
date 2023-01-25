@@ -34,12 +34,12 @@ jobs:
         with:
           name: salt-${{ inputs.salt-version }}.diff
 
-      - name: Apply release changes
-        shell: bash
-        run: |
-          git apply salt-${{ inputs.salte-version }}.diff
-          rm salt-${{ inputs.salte-version }}.diff
 
+
+      - name: Download System Dependencies
+        run: |
+          yum -y update
+          yum -y install python3 python3-pip openssl git rpmdevtools rpmlint systemd-units libxcrypt-compat git
 
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
@@ -47,10 +47,11 @@ jobs:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: artifacts/
 
-      - name: Download System Dependencies
+      - name: Apply release changes
+        shell: bash
         run: |
-          yum -y update
-          yum -y install python3 python3-pip openssl git rpmdevtools rpmlint systemd-units libxcrypt-compat
+          git apply salt-${{ inputs.salte-version }}.diff
+          rm salt-${{ inputs.salte-version }}.diff
 
       - name: Build RPM
         env:

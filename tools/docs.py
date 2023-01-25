@@ -4,17 +4,11 @@ These commands are used to generate Salt's manpages.
 # pylint: disable=resource-leakage,broad-except
 from __future__ import annotations
 
-import datetime
-import fnmatch
 import logging
 import os
 import pathlib
 import shutil
-import subprocess
-import sys
-import textwrap
 
-import yaml
 from ptscripts import Context, command_group
 
 log = logging.getLogger(__name__)
@@ -23,6 +17,7 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # Define the command group
 doc = command_group(name="docs", help="Manpages tools", description=__doc__)
+
 
 @doc.command(
     name="man",
@@ -54,7 +49,7 @@ def epub(ctx: Context):
 @doc.command(
     name="pdf",
 )
-def html(ctx: Context):
+def pdf(ctx: Context):
     if not shutil.which("inkscape"):
         ctx.warn("No inkscape binary found")
         ctx.exit(1)
