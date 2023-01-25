@@ -57,6 +57,7 @@ jobs:
         with:
           name: Windows ${{ matrix.arch }} NSIS Package
           path: pkg/windows/build/Salt-*.exe
+          retention-days: 7
           if-no-files-found: error
 
       - name: Upload ${{ matrix.arch }} MSI Package
@@ -64,6 +65,7 @@ jobs:
         with:
           name: Windows ${{ matrix.arch }} MSI Package
           path: pkg/windows/build/Salt-*.msi
+          retention-days: 7
           if-no-files-found: error
 
       - name: Set Exit Status

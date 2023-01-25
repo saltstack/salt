@@ -60,6 +60,7 @@ jobs:
         with:
           name: macOS ${{ matrix.arch }} Package
           path: pkg/macos/*unsigned.pkg
+          retention-days: 7
           if-no-files-found: error
 
       - name: Set Exit Status

@@ -34,3 +34,4 @@ runs:
         name: salt-${{ env.SALT_VERSION }}.tar.gz
         path: dist/salt-*.tar.gz*
         retention-days: 7
+        if-no-files-found: error
