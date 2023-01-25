@@ -211,7 +211,7 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
                         if size == 0:
                             break  # EOF
                         digest.update(view[:size])
-            digest_file_path = fpath.parent / f"{fpath.name}.{hash_name}"
+            digest_file_path = fpath.parent / f"{fpath.name}.{hash_name.upper()}"
             hexdigest = digest.hexdigest()
             ctx.info(f"   * Writing {digest_file_path} ...")
             digest_file_path.write_text(digest.hexdigest())
