@@ -418,6 +418,26 @@ class SaltPkgInstall:
             self._install_compressed(upgrade=upgrade)
         else:
             self._install_pkgs(upgrade=upgrade)
+            if self.distro_id in ("ubuntu", "debian"):
+                self.stop_services()
+
+    def stop_services(self):
+        """
+        Debian distros automatically start the services
+        We want to ensure our tests start with the config
+        settings we have set. This will also verify the expected
+        services are up and running.
+        """
+        for service in ["salt-syndic", "salt-master", "salt-minion"]:
+            check_run = self.proc.run("systemctl", "status", service)
+            if check_run.returncode != 0:
+                # The system was not started automatically and we
+                # are expecting it to be on install
+                log.debug("The service %s was not started on install.", service)
+                return False
+            stop_service = self.proc.run("systemctl", "stop", service)
+            self._check_retcode(stop_service)
+        return True
 
     def install_previous(self):
         """
