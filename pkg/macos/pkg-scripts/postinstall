@@ -77,7 +77,7 @@ fi
 # This is a special tool to make it easier for the user to get started setting
 # up salt
 log "Symlink: Creating symlink for salt-config..."
-ln -sf "$INSTALL_DIR/salt-config" "$SBIN_DIR/salt-config"
+ln -sf "$INSTALL_DIR/salt-config.sh" "$SBIN_DIR/salt-config"
 if [ -f "$SBIN_DIR/salt-config" ]; then
     log "Symlink: Created Successfully"
 else
