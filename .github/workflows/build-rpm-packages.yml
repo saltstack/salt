@@ -68,7 +68,7 @@ jobs:
           echo "${{ inputs.salt-version }}" > salt/_version.txt
           rpmbuild -bb --define="_salt_src $(pwd)" "$(pwd)/pkg/rpm/salt.spec"
 
-      - name: Upload RPMs Archive
+      - name: Upload RPMs
         uses: actions/upload-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm-pkgs
