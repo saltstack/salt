@@ -990,6 +990,8 @@ class VM:
             "artifacts/",
             "--include",
             "artifacts/salt",
+            "--include",
+            "pkg/artifacts/*",
             # But we also want to exclude all other entries under artifacts/
             "--exclude",
             "artifacts/*",
