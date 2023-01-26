@@ -55,14 +55,14 @@ jobs:
       - name: Upload ${{ matrix.arch }} NSIS Package
         uses: actions/upload-artifact@v3
         with:
-          name: Windows ${{ matrix.arch }} NSIS Package
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS
           path: pkg/windows/build/Salt-*.exe
           if-no-files-found: error
 
       - name: Upload ${{ matrix.arch }} MSI Package
         uses: actions/upload-artifact@v3
         with:
-          name: Windows ${{ matrix.arch }} MSI Package
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-MSI
           path: pkg/windows/build/Salt-*.msi
           if-no-files-found: error
 
