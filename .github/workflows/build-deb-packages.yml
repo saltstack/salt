@@ -48,7 +48,7 @@ jobs:
           ls -la $(cwd)
 
       - name: Download Release Changes
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}.diff
           path: pkgs/checkout/

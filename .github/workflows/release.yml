@@ -174,13 +174,13 @@ jobs:
 
     - name: Download salt-man-pages
       if: github.event.inputs.manPages == 'true'
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: salt-man-pages
         path: doc/man/
 
     - name: Download salt changelog
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: salt-changelog
 
