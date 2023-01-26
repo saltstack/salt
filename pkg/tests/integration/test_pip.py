@@ -11,7 +11,10 @@ from pytestskipmarkers.utils import platform
 def pypath():
     if platform.is_windows():
         return pathlib.Path(os.getenv("LocalAppData"), "salt", "bin")
-    return pathlib.Path(f"{os.sep}opt", "saltstack", "salt", "bin")
+    elif platform.is_darwin():
+        return pathlib.Path(f"{os.sep}opt", "salt", "bin")
+    else:
+        return pathlib.Path(f"{os.sep}opt", "saltstack", "salt", "bin")
 
 
 @pytest.fixture(autouse=True)
