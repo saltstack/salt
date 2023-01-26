@@ -28,12 +28,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          path:
+            pkgs/checkout/
 
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
-          path: artifacts/
+          path: pkgs/checkout/artifacts/
 
       - name: Download System Dependencies
         run: |
@@ -48,25 +51,32 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: salt-${{ inputs.salt-version }}.diff
+          path: pkgs/checkout/
 
       - name: Apply release changes
         shell: bash
         run: |
+          cd pkgs/checkout/
           git apply salt-${{ inputs.salt-version }}.diff
           rm salt-${{ inputs.salt-version }}.diff
 
       - name: Build Deb
         env:
-          SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
+          SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/pkgs/checkout/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
         run: |
+          cd pkgs/checkout/
           echo "${{ inputs.salt-version }}" > salt/_version.txt
           ln -sf pkg/debian/ .
           debuild -e SALT_ONEDIR_ARCHIVE -uc -us
+
+      - name: Cleanup
+        run: |
+          rm -rf pkgs/checkout/
 
       - name: Upload DEBs
         uses: actions/upload-artifact@v3
         with:
           name: salt-${{ matrix.arch }}-debs
-          path: ../*.deb
+          path: ${{ github.workspace }}/pkgs/*
           retention-days: 7
           if-no-files-found: error
