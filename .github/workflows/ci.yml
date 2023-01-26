@@ -435,6 +435,35 @@ jobs:
       pkg-type: rpm
 
 
+  centosstream-8-pkg-tests:
+    name: CentOS 8 Stream Package Tests
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: centosstream-8
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      pkg-type: rpm
+
+  centosstream-9-pkg-tests:
+    name: CentOS 9 Stream Package Tests
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: centosstream-9
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      pkg-type: rpm
+
+
   windows-2016:
     name: Windows 2016
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
