@@ -419,6 +419,22 @@ jobs:
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
 
+# <-------------------------------- PACKAGE TESTS -------------------------------->
+# TODO: Extract these out later
+
+  amazonlinux-2-pkg-tests:
+    name: Amazon Linux 2 Package Tests
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-salt-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: amazonlinux-2
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      pkg-type: rpm
 
   centos-7-pkg-tests:
     name: CentOS 7 Package Tests
@@ -463,20 +479,120 @@ jobs:
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       pkg-type: rpm
 
-
-  fedora-36-pkg-tests:
-    name: Fedora 36 Package Tests
+  debian-10-pkg-tests:
+    name: Debian 10 Package Tests
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-onedir
+      - build-salt-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
-      distro-slug: fedora-36
+      distro-slug: debian-10
       platform: linux
       arch: x86_64
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      pkg-type: rpm
+      pkg-type: deb
+
+  debian-11-pkg-tests:
+    name: Debian 11 Package Tests
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-salt-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: debian-11
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      pkg-type: deb
+
+  debian-11-arm64-pkg-tests:
+    name: Debian 11 Arm64 Package Tests
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-salt-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: debian-11-arm64
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      pkg-type: deb
+
+
+  ubuntu-1804-pkg-tests:
+    name: Ubuntu 18.04 Package Tests
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-salt-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: ubuntu-18.04
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      pkg-type: deb
+
+  ubuntu-2004-pkg-tests:
+    name: Ubuntu 20.04 Package Tests
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-salt-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: ubuntu-20.04
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      pkg-type: deb
+
+  ubuntu-2004-arm64-pkg-tests:
+    name: Ubuntu 20.04 Arm64 Package Tests
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-salt-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: ubuntu-20.04-arm64
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      pkg-type: deb
+
+  ubuntu-2204-pkg-tests:
+    name: Ubuntu 22.04 Package Tests
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-salt-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: ubuntu-22.04
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      pkg-type: deb
+
+  ubuntu-2204-arm64-pkg-tests:
+    name: Ubuntu 22.04 Arm64 Package Tests
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-salt-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: ubuntu-22.04-arm64
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      pkg-type: deb
+
+# <-------------------------------- PACKAGE TESTS -------------------------------->
 
   windows-2016:
     name: Windows 2016
