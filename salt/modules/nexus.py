@@ -93,8 +93,12 @@ def get_latest_snapshot(
 
     headers = {}
     if username and password:
+        data_string = "{0}:{1}".format(
+            username.replace("\n", ""), password.replace("\n", "")
+        )
+        data_bytes = data_string.encode("utf-8")
         headers["Authorization"] = "Basic {}".format(
-            base64.encodestring("{}:{}".format(username, password)).replace("\n", "")
+            base64.b64encode(data_bytes).decode("utf-8")
         )
     artifact_metadata = _get_artifact_metadata(
         nexus_url=nexus_url,
@@ -174,8 +178,12 @@ def get_snapshot(
     )
     headers = {}
     if username and password:
+        data_string = "{0}:{1}".format(
+            username.replace("\n", ""), password.replace("\n", "")
+        )
+        data_bytes = data_string.encode("utf-8")
         headers["Authorization"] = "Basic {}".format(
-            base64.encodestring("{}:{}".format(username, password)).replace("\n", "")
+            base64.b64encode(data_bytes).decode("utf-8")
         )
     snapshot_url, file_name = _get_snapshot_url(
         nexus_url=nexus_url,
@@ -240,8 +248,12 @@ def get_snapshot_version_string(
     )
     headers = {}
     if username and password:
+        data_string = "{0}:{1}".format(
+            username.replace("\n", ""), password.replace("\n", "")
+        )
+        data_bytes = data_string.encode("utf-8")
         headers["Authorization"] = "Basic {}".format(
-            base64.encodestring("{}:{}".format(username, password)).replace("\n", "")
+            base64.b64encode(data_bytes).decode("utf-8")
         )
     return _get_snapshot_url(
         nexus_url=nexus_url,
@@ -305,8 +317,12 @@ def get_latest_release(
     )
     headers = {}
     if username and password:
+        data_string = "{0}:{1}".format(
+            username.replace("\n", ""), password.replace("\n", "")
+        )
+        data_bytes = data_string.encode("utf-8")
         headers["Authorization"] = "Basic {}".format(
-            base64.encodestring("{}:{}".format(username, password)).replace("\n", "")
+            base64.b64encode(data_bytes).decode("utf-8")
         )
     artifact_metadata = _get_artifact_metadata(
         nexus_url=nexus_url,
@@ -378,8 +394,12 @@ def get_release(
     )
     headers = {}
     if username and password:
+        data_string = "{0}:{1}".format(
+            username.replace("\n", ""), password.replace("\n", "")
+        )
+        data_bytes = data_string.encode("utf-8")
         headers["Authorization"] = "Basic {}".format(
-            base64.encodestring("{}:{}".format(username, password)).replace("\n", "")
+            base64.b64encode(data_bytes).decode("utf-8")
         )
     release_url, file_name = _get_release_url(
         repository, group_id, artifact_id, packaging, version, nexus_url, classifier
