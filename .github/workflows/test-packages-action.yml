@@ -173,8 +173,9 @@ jobs:
           name: salt-${{ inputs.salt-version }}-${{ inputs.arch }}-${{ inputs.pkg-type }}-packages
           path: pkg/artifacts/
 
-      - name: List package artifacts
+      - name: List Packages
         run: |
+          yum install rpmdevtools -y
           tree pkg/artifacts
 
       # - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
