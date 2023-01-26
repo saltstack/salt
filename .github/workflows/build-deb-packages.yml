@@ -55,7 +55,7 @@ jobs:
       - name: Upload DEBs
         uses: actions/upload-artifact@v3
         with:
-          name: salt-${{ matrix.arch }}-debs
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb-packages
           path: ${{ github.workspace }}/*.deb
           retention-days: 7
 
