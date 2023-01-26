@@ -29,7 +29,7 @@ def version():
     _version = ""
     for artifact in ARTIFACTS_DIR.glob("**/*.*"):
         _version = re.search(
-            r"([0-9].*)(\-[0-9].fc|\-[0-9].el|\+ds|\-[0-9].am|(\-[0-9]-[a-z]*-[a-z]*[0-9_]*.|\-[0-9]*.*)(tar.gz|zip|exe|pkg|rpm))",
+            r"([0-9].*)(\-[0-9].fc|\-[0-9].el|\+ds|\_all|\_any|\_amd64|\_arm64|\-[0-9].am|(\-[0-9]-[a-z]*-[a-z]*[0-9_]*.|\-[0-9]*.*)(tar.gz|tar.xz|zip|exe|pkg|rpm|deb))",
             artifact.name,
         )
         if _version:
@@ -37,8 +37,8 @@ def version():
                 _version.groups()[0]
                 .replace("_", "-")
                 .replace("~", "")
-                .replace("-py3-x86-64", "")
             )
+            _version = _version.split("-")[0]
             break
     return _version
 
