@@ -26,6 +26,8 @@ def test_salt_versions_report_master(install_salt):
         python_executable = pathlib.Path(
             r"C:\Program Files\Salt Project\Salt\Scripts\python.exe"
         )
+    elif sys.platform == "darwin":
+        python_executable = pathlib.Path("/opt/salt/bin/python3")
     else:
         python_executable = pathlib.Path("/opt/saltstack/salt/bin/python3")
     py_version = subprocess.run(
@@ -70,7 +72,7 @@ def test_compare_versions(version, binary, install_salt):
     "symlink",
     [
         # We can't create a salt symlink because there is a salt directory
-        # "salt",
+        "salt",
         "salt-api",
         "salt-call",
         "salt-cloud",
@@ -80,7 +82,7 @@ def test_compare_versions(version, binary, install_salt):
         "salt-minion",
         "salt-proxy",
         "salt-run",
-        "salt-spm",
+        "spm",
         "salt-ssh",
         "salt-syndic",
     ],
@@ -94,7 +96,7 @@ def test_symlinks_created(version, symlink, install_salt):
             "This test is for the installer package only (pkg). It does not "
             "apply to the tarball"
         )
-    ret = install_salt.proc.run(install_salt.bin_dir / symlink, "--version")
+    ret = install_salt.proc.run(pathlib.Path("/usr/local/sbin") / symlink, "--version")
     ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
 
 
