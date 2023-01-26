@@ -1,0 +1,2 @@
+Update nexus module to handle python3 encoding
+With python 3 username and password in the header needs to be converted from string to bytes to b64 encoded bytes.
