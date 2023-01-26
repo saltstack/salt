@@ -45,6 +45,7 @@ class SaltVirtMinionContainerFactory(SaltMinion):
                 "NO_START_MINION": "1",
                 "HOST_UUID": self.host_uuid,
                 "PYTHONDONTWRITEBYTECODE": "1",
+                "PYTHONPATH": str(CODE_DIR),
             }
         )
         super().__attrs_post_init__()
