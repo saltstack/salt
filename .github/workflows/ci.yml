@@ -592,6 +592,20 @@ jobs:
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       pkg-type: deb
 
+  macos-12:
+    name: macOS 12 Package Tests
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action-macos.yml
+    with:
+      distro-slug: macos-12
+      platform: darwin
+      arch: x86_64
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      pkg-type: macos
+
 # <-------------------------------- PACKAGE TESTS -------------------------------->
 
   windows-2016:
