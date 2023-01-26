@@ -18,6 +18,17 @@ runs:
       run: |
         nox --version || python3 -m pip install nox==${{ inputs.nox-version }}
 
+    - name: Download Release Changes
+      uses: actions/download-artifact@v2
+      with:
+        name: salt-${{ env.SALT_VERSION }}.diff
+
+    - name: Apply release changes
+      shell: bash
+      run: |
+        git apply salt-${{ env.SALT_VERSION }}.diff
+        rm salt-${{ env.SALT_VERSION }}.diff
+
     - name: Create Source Tarball
       shell: bash
       run: |
