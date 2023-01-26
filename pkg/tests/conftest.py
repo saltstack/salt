@@ -33,7 +33,12 @@ def version():
             artifact.name,
         )
         if _version:
-            _version = _version.groups()[0].replace("_", "-").replace("~", "")
+            _version = (
+                _version.groups()[0]
+                .replace("_", "-")
+                .replace("~", "")
+                .replace("-py3-x86-64", "")
+            )
             break
     return _version
 
@@ -83,7 +88,11 @@ def salt_factories_root_dir(request, tmp_path_factory):
     if root_dir is not None:
         yield root_dir
     else:
-        root_dir = tmp_path_factory.mktemp("salt-tests")
+        if platform.is_darwin():
+            root_dir = pathlib.Path("/tmp/salt-tests-tmpdir")
+            root_dir.mkdir(mode=0o777, parents=True, exist_ok=True)
+        else:
+            root_dir = tmp_path_factory.mktemp("salt-tests")
         try:
             yield root_dir
         finally:
@@ -249,6 +258,8 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
             str(salt_factories.get_salt_log_handlers_path()),
         ],
     }
+    if platform.is_darwin():
+        config_defaults["enable_fqdns_grains"] = False
     config_overrides = {
         "timeout": 30,
         "file_roots": state_tree.as_dict(),
@@ -291,6 +302,8 @@ def salt_minion(salt_master, install_salt):
         "engines_dirs": salt_master.config["engines_dirs"].copy(),
         "log_handlers_dirs": salt_master.config["log_handlers_dirs"].copy(),
     }
+    if platform.is_darwin():
+        config_defaults["enable_fqdns_grains"] = False
     config_overrides = {
         "id": minion_id,
         "file_roots": salt_master.config["file_roots"].copy(),
