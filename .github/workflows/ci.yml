@@ -427,7 +427,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-pkgs
+      - build-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: amazonlinux-2
@@ -484,7 +484,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-pkgs
+      - build-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: debian-10
@@ -498,7 +498,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-pkgs
+      - build-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: debian-11
@@ -512,7 +512,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-pkgs
+      - build-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: debian-11-arm64
@@ -527,7 +527,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-pkgs
+      - build-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: ubuntu-18.04
@@ -541,7 +541,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-pkgs
+      - build-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: ubuntu-20.04
@@ -555,7 +555,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-pkgs
+      - build-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: ubuntu-20.04-arm64
@@ -569,7 +569,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-pkgs
+      - build-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: ubuntu-22.04
@@ -583,7 +583,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
     needs:
       - prepare-ci
-      - build-salt-pkgs
+      - build-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: ubuntu-22.04-arm64
