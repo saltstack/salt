@@ -223,7 +223,6 @@ jobs:
 
       - name: Run Package Tests
         run: |
-          tools --timestamps vm ssh --sudo ${{ inputs.distro-slug }} -- yum install rpmdevtools -y || true
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test \
             --nox-session=${{ matrix.nox-session }} --rerun-failures ${{ inputs.distro-slug }}
         # tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
