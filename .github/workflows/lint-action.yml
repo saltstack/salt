@@ -57,7 +57,7 @@ jobs:
       - name: Set Exit Status
         if: always()
         run: |
-          mkdir exitstatus
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
           echo "${{ job.status }}" > exitstatus/${{ github.job }}-lint-salt
 
       - name: Upload Exit Status
@@ -116,7 +116,7 @@ jobs:
       - name: Set Exit Status
         if: always()
         run: |
-          mkdir exitstatus
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
           echo "${{ job.status }}" > exitstatus/${{ github.job }}-lint-salt
 
       - name: Upload Exit Status

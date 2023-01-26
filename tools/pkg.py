@@ -5,6 +5,8 @@ These commands are used to build Salt packages.
 from __future__ import annotations
 
 import fnmatch
+import hashlib
+import json
 import logging
 import os
 import pathlib
@@ -118,7 +120,7 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
 
     When running on Windows and macOS, some additional cleanup is also done.
     """
-    with open(str(REPO_ROOT / "cicd" / "env-cleanup-files.yml")) as rfh:
+    with open(str(REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml")) as rfh:
         patterns = yaml.safe_load(rfh.read())
 
     if pkg:
@@ -133,18 +135,19 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
     else:
         patterns = patterns["linux"]
 
+    def unnest_lists(patterns):
+        if isinstance(patterns, list):
+            for pattern in patterns:
+                yield from unnest_lists(pattern)
+        else:
+            yield patterns
+
     dir_patterns = set()
-    for pattern in patterns["dir_patterns"]:
-        if isinstance(pattern, list):
-            dir_patterns.update(set(pattern))
-            continue
+    for pattern in unnest_lists(patterns["dir_patterns"]):
         dir_patterns.add(pattern)
 
     file_patterns = set()
-    for pattern in patterns["file_patterns"]:
-        if isinstance(pattern, list):
-            file_patterns.update(set(pattern))
-            continue
+    for pattern in unnest_lists(patterns["file_patterns"]):
         file_patterns.add(pattern)
 
     for root, dirs, files in os.walk(cleanup_path, topdown=True, followlinks=False):
@@ -175,3 +178,45 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
                     except FileNotFoundError:
                         pass
                     break
+
+
+@pkg.command(
+    name="generate-hashes",
+    arguments={
+        "files": {
+            "help": "The files to generate the hashes for.",
+            "nargs": "*",
+        },
+    },
+)
+def generate_hashes(ctx: Context, files: list[pathlib.Path]):
+    """
+    Generate "blake2b", "sha512" and "sha3_512" hashes for the passed files.
+    """
+    for fpath in files:
+        ctx.info(f"* Processing {fpath} ...")
+        hashes = {}
+        for hash_name in ("blake2b", "sha512", "sha3_512"):
+            ctx.info(f"   * Calculating {hash_name} ...")
+            with fpath.open("rb") as rfh:
+                try:
+                    digest = hashlib.file_digest(rfh, hash_name)  # type: ignore[attr-defined]
+                except AttributeError:
+                    # Python < 3.11
+                    buf = bytearray(2**18)  # Reusable buffer to reduce allocations.
+                    view = memoryview(buf)
+                    digest = getattr(hashlib, hash_name)()
+                    while True:
+                        size = rfh.readinto(buf)
+                        if size == 0:
+                            break  # EOF
+                        digest.update(view[:size])
+            digest_file_path = fpath.parent / f"{fpath.name}.{hash_name.upper()}"
+            hexdigest = digest.hexdigest()
+            ctx.info(f"   * Writing {digest_file_path} ...")
+            digest_file_path.write_text(digest.hexdigest())
+            hashes[hash_name] = hexdigest
+        hashes_json_path = fpath.parent / f"{fpath.name}.json"
+        ctx.info(f"   * Writing {hashes_json_path} ...")
+        hashes_json_path.write_text(json.dumps(hashes))
+    ctx.info("Done")

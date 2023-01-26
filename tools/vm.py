@@ -244,6 +244,7 @@ def test(
     rerun_failures: bool = False,
     skip_requirements_install: bool = False,
     print_tests_selection: bool = False,
+    print_system_info: bool = False,
     skip_code_coverage: bool = False,
 ):
     """
@@ -252,6 +253,7 @@ def test(
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
     env = {
         "PRINT_TEST_PLAN_ONLY": "0",
+        "SKIP_INITIAL_ONEDIR_FAILURES": "1",
         "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
     }
     if rerun_failures:
@@ -264,6 +266,10 @@ def test(
         env["SKIP_CODE_COVERAGE"] = "1"
     else:
         env["SKIP_CODE_COVERAGE"] = "0"
+    if print_system_info:
+        env["PRINT_SYSTEM_INFO"] = "1"
+    else:
+        env["PRINT_SYSTEM_INFO"] = "0"
     if (
         skip_requirements_install
         or os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
@@ -976,11 +982,17 @@ class VM:
             "--exclude",
             ".pytest_cache/",
             "--exclude",
-            "artifacts/",
-            "--exclude",
             f"{STATE_DIR.relative_to(REPO_ROOT)}{os.path.sep}",
             "--exclude",
             "*.py~",
+            # We need to include artifacts/ to be able to include artifacts/salt
+            "--include",
+            "artifacts/",
+            "--include",
+            "artifacts/salt",
+            # But we also want to exclude all other entries under artifacts/
+            "--exclude",
+            "artifacts/*",
         ]
         if self.is_windows:
             # Symlinks aren't handled properly on windows, just replace the
@@ -1141,7 +1153,17 @@ class VM:
         source = f"{self.name}:{remote_path}/"
         destination = "artifacts/"
         description = f"Downloading {source} ..."
-        self.rsync(source, destination, description)
+        self.rsync(
+            source,
+            destination,
+            description,
+            [
+                "--exclude",
+                f"{remote_path}/artifacts/salt",
+                "--exclude",
+                f"{remote_path}/artifacts/salt-*.*",
+            ],
+        )
 
     def rsync(self, source, destination, description, rsync_flags: list[str] = None):
         """

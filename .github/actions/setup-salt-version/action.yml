@@ -2,6 +2,9 @@
 name: setup-salt-version
 description: Setup Salt Version
 inputs:
+  cwd:
+    type: string
+    default: ""
   salt-version:
     type: string
     default: ""
@@ -23,4 +26,7 @@ runs:
       id: setup-salt-version
       shell: bash
       run: |
+        if [ "${{ inputs.cwd }}" != "" ]; then
+          cd "${{ inputs.cwd }}"
+        fi
         tools pkg set-salt-version ${{ inputs.salt-version }}

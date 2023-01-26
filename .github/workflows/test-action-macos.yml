@@ -15,10 +15,6 @@ on:
         required: true
         type: string
         description: JSON string containing information about what and how to run the test suite
-      cache-seed:
-        required: true
-        type: string
-        description: Seed used to invalidate caches
       python-version:
         required: false
         type: string
@@ -28,6 +24,23 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to running tests.
+      cache-seed:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
+      platform:
+        required: true
+        type: string
+        description: The platform being tested
+      arch:
+        required: true
+        type: string
+        description: The platform arch being tested
+      package-name:
+        required: false
+        type: string
+        description: The onedir package name to use
+        default: salt
 
 
 env:
@@ -86,6 +99,21 @@ jobs:
           path: nox.${{ inputs.distro-slug }}.tar.*
           key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
 
+      - name: Download Onedir Tarball as an Artifact
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          path: artifacts/
+
+      - name: Decompress Onedir Tarball
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+          cd artifacts
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+
       # Skip jobs if nox.*.tar.* is already cached
       - name: Set up Python ${{ inputs.python-version }}
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -110,9 +138,9 @@ jobs:
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session}}-3 >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session}} >> "$GITHUB_ENV"
           else
-            echo NOX_SESSION=${{ inputs.nox-session}}-tcp-3 >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session}}-tcp >> "$GITHUB_ENV"
           fi
 
       - name: Install Dependencies
@@ -142,7 +170,7 @@ jobs:
       - name: Set Exit Status
         if: always()
         run: |
-          mkdir exitstatus
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
           echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-deps
 
       - name: Upload Exit Status
@@ -156,7 +184,7 @@ jobs:
   test:
     name: Test
     runs-on: ${{ inputs.distro-slug }}
-    timeout-minutes: 600  # 10 Hours
+    timeout-minutes: 360  # 6 Hours
     needs:
       - generate-matrix
       - dependencies
@@ -173,8 +201,20 @@ jobs:
         run: |
           echo "${{ inputs.salt-version }}" > salt/_version.txt
 
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          path: artifacts/
+
+      - name: Decompress Onedir Tarball
+        shell: bash
+        run: |
+          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+          cd artifacts
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+
       - name: Install System Dependencies
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           brew install tree
 
@@ -200,9 +240,9 @@ jobs:
       - name: Define Nox Session
         run: |
           if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session}}-3 >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session}} >> "$GITHUB_ENV"
           else
-            echo NOX_SESSION=${{ inputs.nox-session}}-tcp-3 >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session}}-tcp >> "$GITHUB_ENV"
           fi
 
       - name: Download testrun-changed-files.txt
@@ -269,17 +309,20 @@ jobs:
 
       - name: Fix file ownership
         run: |
-          sudo chown -R $(id -un) .
+          sudo chown -R "$(id -un)" .
 
       - name: Combine Coverage Reports
-        if: always() && contains(fromJSON('["canceled", "skipped"]'), steps.run-tests.outcome) == false
+        if: always()
         run: |
           nox -e combine-coverage
 
       - name: Prepare Test Run Artifacts
         id: download-artifacts-from-vm
-        if: always() && contains(fromJSON('["canceled", "skipped"]'), steps.run-tests.outcome) == false
+        if: always()
         run: |
+          # Delete the salt onedir, we won't need it anymore and it will prevent
+          # from it showing in the tree command below
+          rm -rf artifacts/salt*
           tree -a artifacts
           mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
           echo "COVERAGE_FILE=artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}" >> GITHUB_ENV
@@ -289,7 +332,10 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: testrun-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
-          path: artifacts
+          path: |
+            artifacts
+            !artifacts/salt/*
+            !artifacts/salt-*.tar.*
 
 #      - name: Publish Test Report
 #        uses: mikepenz/action-junit-report@v3
@@ -320,7 +366,7 @@ jobs:
       - name: Set Exit Status
         if: always()
         run: |
-          mkdir exitstatus
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
           echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}-${{ matrix.tests-chunk }}-tests
 
       - name: Upload Exit Status
@@ -350,9 +396,9 @@ jobs:
       - name: Define Nox Session
         run: |
           if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session}}-3 >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session}} >> "$GITHUB_ENV"
           else
-            echo NOX_SESSION=${{ inputs.nox-session}}-tcp-3 >> $GITHUB_ENV
+            echo NOX_SESSION=${{ inputs.nox-session}}-tcp >> "$GITHUB_ENV"
           fi
 
       - name: Download Test Run Artifacts
@@ -374,10 +420,10 @@ jobs:
           name: code-coverage
           path: artifacts/coverage
 
-      - name: Set up Python 3.10
+      - name: Set up Python 3.9
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "3.9"
 
       - name: Install Nox
         run: |
@@ -410,7 +456,7 @@ jobs:
       - name: Set Exit Status
         if: always()
         run: |
-          mkdir exitstatus
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
           echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}-report
 
       - name: Upload Exit Status
