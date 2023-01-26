@@ -26,7 +26,7 @@ runs:
         nox --version || python3 -m pip install nox==${{ inputs.nox-version }}
 
     - name: Download Release Changes
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: salt-${{ env.SALT_VERSION }}.diff
 
