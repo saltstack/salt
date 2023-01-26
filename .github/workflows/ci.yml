@@ -592,7 +592,7 @@ jobs:
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
       pkg-type: deb
 
-  macos-12:
+  macos-12-pkg-tests:
     name: macOS 12 Package Tests
     if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
     needs:
