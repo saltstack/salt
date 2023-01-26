@@ -20,6 +20,12 @@ inputs:
     type: string
     description: Seed used to invalidate caches
 
+
+env:
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+
+
 runs:
   using: composite
 
@@ -52,9 +58,6 @@ runs:
         fi
 
     - name: Install Salt Onedir Package Dependencies
-      env:
-        PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-        PIP_EXTRA_INDEX_URL: https://pypi.org/simple
       shell: bash
       run: |
         if [ "${{ inputs.platform }}" != "windows" ]; then
