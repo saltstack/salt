@@ -1762,8 +1762,7 @@ def build(session):
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="test-pkgs")
-@nox.parametrize("coverage", [False, True])
-def test_pkgs(session, coverage):
+def test_pkgs(session):
     """
     pytest pkg tests session
     """
@@ -1778,13 +1777,12 @@ def test_pkgs(session, coverage):
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = ["pkg/tests/"] + session.posargs
-    _pytest(session, coverage, cmd_args)
+    _pytest(session, False, cmd_args)
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="test-upgrade-pkgs")
-@nox.parametrize("coverage", [False, True])
 @nox.parametrize("classic", [False, True])
-def test_upgrade_pkgs(session, coverage, classic):
+def test_upgrade_pkgs(session, classic):
     """
     pytest pkg upgrade tests session
     """
@@ -1806,9 +1804,9 @@ def test_upgrade_pkgs(session, coverage, classic):
     if classic:
         cmd_args = cmd_args + ["--classic"]
     try:
-        _pytest(session, coverage, cmd_args)
+        _pytest(session, False, cmd_args)
     except nox.command.CommandFailed:
         sys.exit(0)
 
     cmd_args = ["pkg/tests/", "--no-install"] + session.posargs
-    _pytest(session, coverage, cmd_args)
+    _pytest(session, False, cmd_args)
