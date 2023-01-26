@@ -1,6 +1,11 @@
 ---
 name: release-changes
 description: Create release changes diff
+inputs:
+  salt-version:
+    type: string
+    required: true
+    description: The Salt version to set prior to creating the release changes
 
 runs:
   using: composite
@@ -17,7 +22,7 @@ runs:
     - name: Set salt version
       shell: bash
       run: |
-          echo '${{ env.SALT_VERSION }}' > salt/_version.txt
+          echo '${{ inputs.salt-version }}' > salt/_version.txt
 
     - name: Update Debian changelog
       shell: bash
@@ -51,11 +56,12 @@ runs:
     - name: Create release changes diff
       shell: bash
       run: |
-        git diff --no-color > salt-${{ env.SALT_VERSION }}.diff
+        git diff --no-color > salt-${{ inputs.salt-version }}.diff
 
     - name: Upload Source Tarball as an Artifact
       uses: actions/upload-artifact@v3
       with:
-        name: salt-${{ env.SALT_VERSION }}.diff
-        path: salt-${{ env.SALT_VERSION }}.diff
+        name: salt-${{ inputs.salt-version }}.diff
+        path: salt-${{ inputs.salt-version }}.diff
         retention-days: 7
+        if-no-files-found: error

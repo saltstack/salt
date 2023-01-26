@@ -220,7 +220,7 @@ jobs:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
 
   release-changes:
-    name: Create release diff
+    name: Create Release Diff
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['github-hosted-runners'] }}
     needs:
       - prepare-workflow
@@ -244,6 +244,8 @@ jobs:
 
       - name: Generate Changes Diff
         uses: ./.github/actions/release-changes
+        with:
+          salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
   build-source-tarball:
     name: Build Source Tarball
