@@ -7,10 +7,6 @@ on:
         required: true
         type: string
         description: The OS slug to run tests against
-      nox-session:
-        required: true
-        type: string
-        description: The nox session to run
       platform:
         required: true
         type: string
@@ -19,7 +15,7 @@ on:
         required: true
         type: string
         description: The platform arch being tested
-      package-type:
+      pkg-type:
         required: true
         type: string
         description: The platform arch being tested
@@ -162,8 +158,10 @@ jobs:
     #   - generate-matrix
     strategy:
       fail-fast: false
-      # matrix:
-      #   include: ${{ fromJSON(needs.generate-matrix.outputs.matrix-include) }}
+      matrix:
+        nox-session:
+          - test-pkgs
+          - test-upgrade-pkgs
 
     steps:
       - name: Checkout Source Code
@@ -172,16 +170,12 @@ jobs:
       - name: Download Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-${{ inputs.arch }}-rpm-packages
+          name: salt-${{ inputs.salt-version }}-${{ inputs.arch }}-${{ inputs.pkg-type }}-packages
           path: pkg/artifacts/
 
       - name: List package artifacts
         run: |
-          cd pkg/artifacts
-          tree .
-          mv salt-${{ inputs.salt-version }}-${{ inputs.arch }}-rpm-packages/* .
-          tree .
-          rm -rf salt-${{ inputs.salt-version }}-${{ inputs.arch }}-rpm-packages
+          tree pkg/artifacts
 
       # - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
       #   uses: actions/cache@v3
@@ -195,14 +189,6 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
-
-      # - name: Define Nox Session
-      #   run: |
-      #     if [ "${{ matrix.transport }}" != "tcp" ]; then
-      #       echo NOX_SESSION=${{ inputs.nox-session }} >> "$GITHUB_ENV"
-      #     else
-      #       echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> "$GITHUB_ENV"
-      #     fi
 
       # - name: Download testrun-changed-files.txt
       #   if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
@@ -238,7 +224,7 @@ jobs:
       - name: Run Package Tests
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test \
-            --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }}
+            --nox-session=${{ matrix.nox-session }} --rerun-failures ${{ inputs.distro-slug }}
         # tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
         #   --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
         #   ${{ matrix.tests-chunk }} -- --run-slow

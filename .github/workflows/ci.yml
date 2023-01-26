@@ -429,7 +429,6 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: centos-7
-      nox-session: test-pkgs
       platform: linux
       arch: x86_64
       salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
