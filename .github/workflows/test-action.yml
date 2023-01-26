@@ -175,20 +175,6 @@ jobs:
         run: |
           tools --timestamps vm destroy ${{ inputs.distro-slug }}
 
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-deps
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
-
   test:
     name: Test
     runs-on:
@@ -368,20 +354,6 @@ jobs:
         run: |
           nox --force-color -e report-coverage
 
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}-${{ matrix.tests-chunk }}-tests
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
-
   report:
     name: Reports for ${{ inputs.distro-slug }}(${{ matrix.transport }})
     runs-on:
@@ -460,17 +432,3 @@ jobs:
           check_name: Overall Test Results(${{ inputs.distro-slug }})
           report_paths: 'artifacts/xml-unittests-output/*.xml'
           annotate_only: true
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}-report
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
