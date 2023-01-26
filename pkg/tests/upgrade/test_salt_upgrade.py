@@ -28,6 +28,10 @@ def test_salt_upgrade(salt_call_cli, salt_minion, install_salt):
     assert ret.returncode == 0
     assert ret.data
 
+    # install dep following upgrade
+    install = salt_call_cli.run("--local", "pip.install", dep)
+    assert install.returncode == 0
+
     # test pip install after an upgrade
     use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
     assert "Authentication information could" in use_lib.stderr
