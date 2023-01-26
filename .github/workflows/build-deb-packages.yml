@@ -67,6 +67,6 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: salt-${{ matrix.arch }}-debs
-          path: ${{ github.workspace }}/*.deb
-          if-no-files-found: error
+          path: ../*.deb
           retention-days: 7
+          if-no-files-found: error
