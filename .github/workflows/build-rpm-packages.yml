@@ -8,6 +8,9 @@ on:
         required: true
         description: The Salt version to set prior to building packages.
 
+env:
+  COLUMNS: 160
+
 jobs:
   build:
     name: RPM

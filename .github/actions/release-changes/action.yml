@@ -7,6 +7,9 @@ inputs:
     required: true
     description: The Salt version to set prior to creating the release changes
 
+env:
+  COLUMNS: 160
+
 runs:
   using: composite
 
