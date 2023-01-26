@@ -78,7 +78,7 @@ jobs:
       - name: Upload DEBs
         uses: actions/upload-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb-pkgs
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb
           path: ${{ github.workspace }}/pkgs/*
           retention-days: 7
           if-no-files-found: error
