@@ -55,20 +55,6 @@ jobs:
           path: doc/_build/html
           if-no-files-found: error
 
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-docs-html
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
-
   Manpages:
     name: Build Salt man Pages
     runs-on: ubuntu-latest
@@ -115,18 +101,4 @@ jobs:
         with:
           name: salt-man-pages
           path: doc/_build/man
-          if-no-files-found: error
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-docs-man
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
           if-no-files-found: error

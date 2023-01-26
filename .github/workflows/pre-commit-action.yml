@@ -57,17 +57,3 @@ jobs:
           PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         run: |
           pre-commit run --show-diff-on-failure --color=always check-docs --files ${{ join(fromJSON(inputs.changed-files)['deleted_files'], ' ') }}
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-pre-commit
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
