@@ -160,8 +160,8 @@ jobs:
       fail-fast: false
       matrix:
         nox-session:
-          - test-pkgs
-          - test-upgrade-pkgs
+          - test-pkgs-3
+          - test-upgrade-pkgs-3
 
     steps:
       - name: Checkout Source Code
