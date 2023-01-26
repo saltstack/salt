@@ -464,6 +464,20 @@ jobs:
       pkg-type: rpm
 
 
+  fedora-36-pkg-tests:
+    name: Fedora 36 Package Tests
+    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-ci
+      - build-salt-onedir
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: fedora-36
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
+      pkg-type: rpm
+
   windows-2016:
     name: Windows 2016
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
