@@ -18,6 +18,7 @@ import _pytest.skipping
 import psutil
 import pytest
 
+import salt
 import salt._logging
 import salt._logging.mixins
 import salt.config
@@ -47,7 +48,8 @@ os.chdir(str(CODE_DIR))
 # Make sure the current directory is the first item in sys.path
 if str(CODE_DIR) in sys.path:
     sys.path.remove(str(CODE_DIR))
-sys.path.insert(0, str(CODE_DIR))
+if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
+    sys.path.insert(0, str(CODE_DIR))
 
 os.environ["REPO_ROOT_DIR"] = str(CODE_DIR)
 
@@ -222,6 +224,19 @@ def pytest_configure(config):
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     """
+    # try:
+    #     assert config._onedir_check_complete
+    #     return
+    # except AttributeError:
+    #     if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+    #         if pathlib.Path(salt.__file__).parent == CODE_DIR / "salt":
+    #             raise pytest.UsageError(
+    #                 "Apparently running the test suite against the onedir build "
+    #                 "of salt, however, the imported salt package is pointing to "
+    #                 "the respository checkout instead of the onedir package."
+    #             )
+    #     config._onedir_check_complete = True
+
     for dirname in CODE_DIR.iterdir():
         if not dirname.is_dir():
             continue
@@ -273,6 +288,14 @@ def pytest_configure(config):
         "markers",
         "skip_initial_gh_actions_failure(skip=<boolean or callable, reason=None): Skip known test failures "
         "under the new GH Actions setup if the environment variable SKIP_INITIAL_GH_ACTIONS_FAILURES "
+        "is equal to '1' and the 'skip' keyword argument is either `True` or it's a callable that "
+        "when called returns `True`. If `skip` is a callable, it should accept a single argument "
+        "'grains', which is the grains dictionary.",
+    )
+    config.addinivalue_line(
+        "markers",
+        "skip_initial_onedir_failure(skip=<boolean or callable, reason=None): Skip known test failures "
+        "under the new onedir builds if the environment variable SKIP_INITIAL_ONEDIR_FAILURES "
         "is equal to '1' and the 'skip' keyword argument is either `True` or it's a callable that "
         "when called returns `True`. If `skip` is a callable, it should accept a single argument "
         "'grains', which is the grains dictionary.",
@@ -611,6 +634,43 @@ def pytest_runtest_setup(item):
         if skip:
             raise pytest.skip.Exception(reason, _use_item_location=True)
 
+    skip_initial_onedir_failures_env_set = (
+        os.environ.get("SKIP_INITIAL_ONEDIR_FAILURES", "0") == "1"
+    )
+    skip_initial_onedir_failure_marker = item.get_closest_marker(
+        "skip_initial_onedir_failure"
+    )
+    if (
+        skip_initial_onedir_failure_marker is not None
+        and skip_initial_onedir_failures_env_set
+    ):
+        if skip_initial_onedir_failure_marker.args:
+            raise pytest.UsageError(
+                "'skip_initial_onedir_failure' marker does not accept any arguments "
+                "only keyword arguments."
+            )
+        kwargs = skip_initial_onedir_failure_marker.kwargs.copy()
+        skip = kwargs.pop("skip", True)
+        if skip and not callable(skip) and not isinstance(skip, bool):
+            raise pytest.UsageError(
+                "The 'skip' keyword argument to the 'skip_initial_onedir_failure' marker "
+                "requires a boolean or callable, not '{}'.".format(type(skip))
+            )
+        reason = kwargs.pop("reason", None)
+        if reason is None:
+            reason = "Test skipped because it's a know GH Actions initial failure that needs to be fixed"
+        if kwargs:
+            raise pytest.UsageError(
+                "'skip_initial_onedir_failure' marker does not accept any keyword arguments "
+                "except 'skip' and 'reason'."
+            )
+        if skip and callable(skip):
+            grains = _grains_for_marker()
+            skip = skip(grains)
+
+        if skip:
+            raise pytest.skip.Exception(reason, _use_item_location=True)
+
     requires_random_entropy_marker = item.get_closest_marker("requires_random_entropy")
     if requires_random_entropy_marker is not None:
         if requires_random_entropy_marker.args:
@@ -740,15 +800,22 @@ def salt_factories_config():
         start_timeout = 120
     else:
         start_timeout = 60
+
+    if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+        code_dir = None
+    else:
+        code_dir = str(CODE_DIR)
+
     kwargs = {
-        "code_dir": str(CODE_DIR),
+        "code_dir": code_dir,
         "start_timeout": start_timeout,
+        "inject_sitecustomize": MAYBE_RUN_COVERAGE,
     }
     if MAYBE_RUN_COVERAGE:
         kwargs["coverage_rc_path"] = str(COVERAGERC_FILE)
-    coverage_db_path = os.environ.get("COVERAGE_FILE")
-    if coverage_db_path:
-        kwargs["coverage_db_path"] = coverage_db_path
+    else:
+        kwargs["coverage_rc_path"] = None
+    kwargs["coverage_db_path"] = os.environ.get("COVERAGE_FILE")
     return kwargs
 
 
