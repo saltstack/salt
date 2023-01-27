@@ -80,7 +80,8 @@ class SaltPkgInstall:
     rm_pkg: str = attr.ib(init=False)
     salt_pkgs: List[str] = attr.ib(init=False)
     install_dir: pathlib.Path = attr.ib(init=False)
-    binary_paths: List[pathlib.Path] = attr.ib(init=False)
+    binary_paths: Dict[str, List[pathlib.Path]] = attr.ib(init=False)
+    # binary_paths: List[pathlib.Path] = attr.ib(init=False)
     classic: bool = attr.ib(default=False)
     prev_version: str = attr.ib()
     pkg_version: str = attr.ib(default="1")
@@ -221,7 +222,7 @@ class SaltPkgInstall:
             file_ext_re = "zip|exe"
         for f_path in ARTIFACTS_DIR.glob("**/*.*"):
             f_path = str(f_path)
-            if re.search(f"salt-(.*).({file_ext_re})$", f_path):
+            if re.search(f"salt-(.*).({file_ext_re})$", f_path, re.IGNORECASE):
                 # Compressed can be zip, tar.gz, exe, or pkg. All others are
                 # deb and rpm
                 self.compressed = True
@@ -252,9 +253,9 @@ class SaltPkgInstall:
                     elif file_ext == "exe":
                         self.onedir = True
                         self.installer_pkg = True
-                        self.bin_dir = self.install_dir / "bin"
-                        self.run_root = self.bin_dir / "salt.exe"
-                        self.ssm_bin = self.bin_dir / "ssm.exe"
+                        self.root = self.install_dir.parent
+                        self.bin_dir = self.install_dir
+                        self.ssm_bin = self.install_dir / "ssm.exe"
                     else:
                         log.error("Unexpected file extension: %s", file_ext)
                 else:
@@ -298,41 +299,17 @@ class SaltPkgInstall:
         if not self.pkgs:
             pytest.fail("Could not find Salt Artifacts")
 
+        python_bin = self.install_dir / "bin" / "python3"
+        if platform.is_windows():
+            python_bin = self.install_dir / "Scripts" / "python.exe"
         if not self.compressed:
-            self.binary_paths = {
-                "salt": ["salt"],
-                "api": ["salt-api"],
-                "call": ["salt-call"],
-                "cloud": ["salt-cloud"],
-                "cp": ["salt-cp"],
-                "key": ["salt-key"],
-                "master": ["salt-master"],
-                "minion": ["salt-minion"],
-                "proxy": ["salt-proxy"],
-                "run": ["salt-run"],
-                "ssh": ["salt-ssh"],
-                "syndic": ["salt-syndic"],
-                "spm": ["spm"],
-                "pip": ["salt-pip"],
-                "python": [self.install_dir / "bin" / "python3"],
-            }
-        else:
-            if self.run_root and os.path.exists(self.run_root):
+            if platform.is_windows():
                 self.binary_paths = {
-                    "salt": [str(self.run_root)],
-                    "api": [str(self.run_root), "api"],
-                    "call": [str(self.run_root), "call"],
-                    "cloud": [str(self.run_root), "cloud"],
-                    "cp": [str(self.run_root), "cp"],
-                    "key": [str(self.run_root), "key"],
-                    "master": [str(self.run_root), "master"],
-                    "minion": [str(self.run_root), "minion"],
-                    "proxy": [str(self.run_root), "proxy"],
-                    "run": [str(self.run_root), "run"],
-                    "ssh": [str(self.run_root), "ssh"],
-                    "syndic": [str(self.run_root), "syndic"],
-                    "spm": [str(self.run_root), "spm"],
-                    "pip": [str(self.run_root), "pip"],
+                    "call": ["salt-call"],
+                    "cp": ["salt-cp"],
+                    "minion": ["salt-minion"],
+                    "pip": ["salt-pip"],
+                    "python": [python_bin],
                 }
             else:
                 if os.path.exists(self.install_dir / "bin" / "salt"):
@@ -340,29 +317,84 @@ class SaltPkgInstall:
                 else:
                     install_dir = self.install_dir
                 self.binary_paths = {
-                    "salt": [install_dir / "salt"],
-                    "api": [install_dir / "salt-api"],
-                    "call": [install_dir / "salt-call"],
-                    "cloud": [install_dir / "salt-cloud"],
-                    "cp": [install_dir / "salt-cp"],
-                    "key": [install_dir / "salt-key"],
-                    "master": [install_dir / "salt-master"],
-                    "minion": [install_dir / "salt-minion"],
-                    "proxy": [install_dir / "salt-proxy"],
-                    "run": [install_dir / "salt-run"],
-                    "ssh": [install_dir / "salt-ssh"],
-                    "syndic": [install_dir / "salt-syndic"],
-                    "spm": [install_dir / "spm"],
-                    "pip": [install_dir / "salt-pip"],
-                    "python": [self.install_dir / "bin" / "python3"],
+                    "salt": ["salt"],
+                    "api": ["salt-api"],
+                    "call": ["salt-call"],
+                    "cloud": ["salt-cloud"],
+                    "cp": ["salt-cp"],
+                    "key": ["salt-key"],
+                    "master": ["salt-master"],
+                    "minion": ["salt-minion"],
+                    "proxy": ["salt-proxy"],
+                    "run": ["salt-run"],
+                    "ssh": ["salt-ssh"],
+                    "syndic": ["salt-syndic"],
+                    "spm": ["spm"],
+                    "pip": ["salt-pip"],
+                    "python": [python_bin],
                 }
+        else:
+            if self.run_root and os.path.exists(self.run_root):
+                if platform.is_windows():
+                    self.binary_paths = {
+                        "call": [str(self.run_root), "call"],
+                        "cp": [str(self.run_root), "cp"],
+                        "minion": [str(self.run_root), "minion"],
+                        "pip": [str(self.run_root), "pip"],
+                        "python": [python_bin],
+                    }
+                else:
+                    self.binary_paths = {
+                        "salt": [str(self.run_root)],
+                        "api": [str(self.run_root), "api"],
+                        "call": [str(self.run_root), "call"],
+                        "cloud": [str(self.run_root), "cloud"],
+                        "cp": [str(self.run_root), "cp"],
+                        "key": [str(self.run_root), "key"],
+                        "master": [str(self.run_root), "master"],
+                        "minion": [str(self.run_root), "minion"],
+                        "proxy": [str(self.run_root), "proxy"],
+                        "run": [str(self.run_root), "run"],
+                        "ssh": [str(self.run_root), "ssh"],
+                        "syndic": [str(self.run_root), "syndic"],
+                        "spm": [str(self.run_root), "spm"],
+                        "pip": [str(self.run_root), "pip"],
+                        "python": [python_bin],
+                    }
+            else:
+                if platform.is_windows():
+                    self.binary_paths = {
+                        "call": [self.install_dir / "salt-call.exe"],
+                        "cp": [self.install_dir / "salt-cp.exe"],
+                        "minion": [self.install_dir / "salt-minion.exe"],
+                        "pip": [self.install_dir / "salt-pip.exe"],
+                        "python": [python_bin],
+                    }
+                else:
+                    self.binary_paths = {
+                        "salt": [self.install_dir / "salt"],
+                        "api": [self.install_dir / "salt-api"],
+                        "call": [self.install_dir / "salt-call"],
+                        "cloud": [self.install_dir / "salt-cloud"],
+                        "cp": [self.install_dir / "salt-cp"],
+                        "key": [self.install_dir / "salt-key"],
+                        "master": [self.install_dir / "salt-master"],
+                        "minion": [self.install_dir / "salt-minion"],
+                        "proxy": [self.install_dir / "salt-proxy"],
+                        "run": [self.install_dir / "salt-run"],
+                        "ssh": [self.install_dir / "salt-ssh"],
+                        "syndic": [self.install_dir / "salt-syndic"],
+                        "spm": [self.install_dir / "spm"],
+                        "pip": [self.install_dir / "salt-pip"],
+                        "python": [python_bin],
+                    }
 
     @staticmethod
     def salt_factories_root_dir(system_service: bool = False) -> pathlib.Path:
         if system_service is False:
             return None
         if platform.is_windows():
-            return pathlib.Path("C:/salt")
+            return pathlib.Path("C:/ProgramData/Salt Project/Salt")
         if platform.is_darwin():
             return pathlib.Path("/opt/salt")
         return pathlib.Path("/")
