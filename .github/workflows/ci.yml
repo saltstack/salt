@@ -606,6 +606,89 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: macos
 
+  windows-2016-nsis-pkg-tests:
+    name: Windows 2016 NSIS Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2016
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: NSIS
+
+  windows-2016-msi-pkg-tests:
+    name: Windows 2016 MSI Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2016
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: MSI
+
+  windows-2019-nsis-pkg-tests:
+    name: Windows 2019 NSIS Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2019
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: NSIS
+
+  windows-2019-msi-pkg-tests:
+    name: Windows 2019 MSI Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2019
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: MSI
+
+  windows-2022-nsis-pkg-tests:
+    name: Windows 2022 NSIS Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2022
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: NSIS
+
+  windows-2022-msi-pkg-tests:
+    name: Windows 2022 MSI Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2022
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: MSI
 # <-------------------------------- PACKAGE TESTS -------------------------------->
 
   windows-2016:
