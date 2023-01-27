@@ -219,7 +219,6 @@ jobs:
 
       - name: Run Package Tests
         env:
-          SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
           PRINT_TEST_PLAN_ONLY: "0"
           PRINT_SYSTEM_INFO: "0"
