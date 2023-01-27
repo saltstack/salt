@@ -1,37 +1,32 @@
+import os.path
 import pathlib
 import subprocess
-import sys
 
 import pytest
 from pytestskipmarkers.utils import platform
 
 
+@pytest.mark.skip_on_windows
 def test_salt_version(version, install_salt):
     """
-    Test version outputed from salt --version
+    Test version output from salt --version
     """
-    ret = install_salt.proc.run(*install_salt.binary_paths["salt"], "--version")
+    test_bin = os.path.join(*install_salt.binary_paths["salt"])
+    ret = install_salt.proc.run(test_bin, "--version")
     assert ret.stdout.strip() == f"salt {version}"
 
 
+@pytest.mark.skip_on_windows
 def test_salt_versions_report_master(install_salt):
     """
     Test running --versions-report on master
     """
-    ret = install_salt.proc.run(
-        *install_salt.binary_paths["master"], "--versions-report"
-    )
+    test_bin = os.path.join(*install_salt.binary_paths["master"])
+    python_bin = os.path.join(*install_salt.binary_paths["python"])
+    ret = install_salt.proc.run(test_bin, "--versions-report")
     ret.stdout.matcher.fnmatch_lines(["*Salt Version:*"])
-    if sys.platform == "win32":
-        python_executable = pathlib.Path(
-            r"C:\Program Files\Salt Project\Salt\Scripts\python.exe"
-        )
-    elif sys.platform == "darwin":
-        python_executable = pathlib.Path("/opt/salt/bin/python3")
-    else:
-        python_executable = pathlib.Path("/opt/saltstack/salt/bin/python3")
     py_version = subprocess.run(
-        [str(python_executable), "--version"],
+        [str(python_bin), "--version"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     ).stdout
@@ -56,15 +51,16 @@ def test_compare_versions(version, binary, install_salt):
     """
     if platform.is_windows() and install_salt.singlebin:
         pytest.skip(
-            "Already tested in `test_salt_version`. No need to repeat "
-            "for windows single binary installs."
+            "Already tested in `test_salt_version`. No need to repeat for "
+            "Windows single binary installs."
         )
-    if binary in ["master", "cloud", "syndic"]:
-        if sys.platform.startswith("win"):
-            pytest.skip(f"{binary} not installed on windows")
 
-    ret = install_salt.proc.run(*install_salt.binary_paths[binary], "--version")
-    ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
+    if binary in install_salt.binary_paths:
+        test_binary = os.path.join(*install_salt.binary_paths[binary])
+        ret = install_salt.proc.run(test_binary, "--version")
+        ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
+    else:
+        pytest.skip(f"Binary not available: {binary}")
 
 
 @pytest.mark.skip_unless_on_darwin()
@@ -100,13 +96,13 @@ def test_symlinks_created(version, symlink, install_salt):
     ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
 
 
+@pytest.mark.skip_on_windows()
 def test_compare_pkg_versions_redhat_rc(version, install_salt):
     """
-    Test compare pkg versions for redhat RC packages.
-    A tilde should be included in RC Packages and it
-    should test to be a lower version than a non RC package
-    of the same version. For example, v3004~rc1 should be
-    less than v3004.
+    Test compare pkg versions for redhat RC packages. A tilde should be included
+    in RC Packages and it should test to be a lower version than a non RC
+    package of the same version. For example, v3004~rc1 should be less than
+    v3004.
     """
     if install_salt.distro_id not in ("centos", "redhat", "amzn", "fedora"):
         pytest.skip("Only tests rpm packages")
