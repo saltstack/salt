@@ -1,3 +1,6 @@
+import os.path
+
+
 def test_help(install_salt):
     """
     Test --help works for all salt cmds
@@ -9,6 +12,7 @@ def test_help(install_salt):
             ret = install_salt.proc.run(*cmd, "--version")
             assert "Python" in ret.stdout
         else:
-            ret = install_salt.proc.run(*cmd, "--help")
+            test_bin = os.path.join(*cmd)
+            ret = install_salt.proc.run(test_bin, "--help")
             assert "Usage" in ret.stdout
             assert ret.returncode == 0
