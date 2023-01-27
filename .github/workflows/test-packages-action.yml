@@ -23,6 +23,11 @@ on:
         type: string
         required: true
         description: The Salt version of the packages to install and test
+      package-name:
+        required: false
+        type: string
+        description: The onedir package name to use
+        default: salt
 
 
 env:
@@ -30,121 +35,131 @@ env:
   COLUMNS: 160
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
 
 jobs:
 
-  # dependencies:
-  #   name: Setup Test Dependencies
-  #   needs:
-  #     - generate-matrix
-  #   runs-on:
-  #     - self-hosted
-  #     - linux
-  #     - bastion
-  #   timeout-minutes: 90
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       include: ${{ fromJSON(needs.generate-matrix.outputs.transport-matrix-include) }}
-  #   steps:
-  #     - name: Checkout Source Code
-  #       uses: actions/checkout@v3
+  generate-matrix:
+    name: Generate Package Test Matrix
+    runs-on:
+      - self-hosted
+      - linux
+      - x86_64
+    outputs:
+      pkg-matrix-include: ${{ steps.generate-pkg-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
 
-  #     - name: Cache nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
-  #       id: nox-dependencies-cache
-  #       uses: actions/cache@v3
-  #       with:
-  #         path: nox.${{ inputs.distro-slug }}.tar.*
-  #         key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
 
-  #     # Skip jobs if nox.*.tar.* is already cached
-  #     - name: Download Onedir Tarball as an Artifact
-  #       if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-  #       uses: actions/download-artifact@v3
-  #       with:
-  #         name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
-  #         path: artifacts/
+      - name: Generate Package Test Matrix
+        id: generate-pkg-matrix
+        run: |
+          PKG_MATRIX=$(tools ci pkg-matrix ${{ inputs.distro-slug }})
+          echo "$PKG_MATRIX"
+          echo "matrix=$PKG_MATRIX" >> "$GITHUB_OUTPUT"
 
-  #     - name: Decompress Onedir Tarball
-  #       if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-  #       shell: bash
-  #       run: |
-  #         python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
-  #         cd artifacts
-  #         tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+  dependencies:
+    name: Setup Test Dependencies
+    needs:
+      - generate-matrix
+    runs-on:
+      - self-hosted
+      - linux
+      - bastion
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.generate-matrix.outputs.pkg-matrix-include) }}
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
 
-  #     - name: PyPi Proxy
-  #       if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-  #       run: |
-  #         sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
+      - name: Cache nox.${{ inputs.distro-slug }}.tar.* for session ${{ matrix.nox-session }}
+        id: nox-dependencies-cache
+        uses: actions/cache@v3
+        with:
+          path: nox.${{ inputs.distro-slug }}.tar.*
+          key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ matrix.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
-  #     - name: Setup Python Tools Scripts
-  #       if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-  #       uses: ./.github/actions/setup-python-tools-scripts
+      # Skip jobs if nox.*.tar.* is already cached
+      - name: Download Onedir Tarball as an Artifact
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          path: artifacts/
 
-  #     - name: Define Nox Session
-  #       if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-  #       run: |
-  #         if [ "${{ matrix.transport }}" != "tcp" ]; then
-  #           echo NOX_SESSION=${{ inputs.nox-session }} >> "$GITHUB_ENV"
-  #         else
-  #           echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> "$GITHUB_ENV"
-  #         fi
+      - name: Decompress Onedir Tarball
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+          cd artifacts
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
 
-  #     - name: Start VM
-  #       if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-  #       id: spin-up-vm
-  #       run: |
-  #         tools --timestamps vm create --retries=2 ${{ inputs.distro-slug }}
+      - name: Setup Python Tools Scripts
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        uses: ./.github/actions/setup-python-tools-scripts
 
-  #     - name: List Free Space
-  #       if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-  #       run: |
-  #         tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
+      - name: Start VM
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        id: spin-up-vm
+        run: |
+          tools --timestamps vm create --retries=2 ${{ inputs.distro-slug }}
 
-  #     - name: Upload Checkout To VM
-  #       if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-  #       run: |
-  #         tools --timestamps vm rsync ${{ inputs.distro-slug }}
+      - name: List Free Space
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
 
-  #     - name: Install Dependencies
-  #       if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-  #       run: |
-  #         tools --timestamps vm install-dependencies --nox-session=${{ env.NOX_SESSION }} ${{ inputs.distro-slug }}
+      - name: Upload Checkout To VM
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm rsync ${{ inputs.distro-slug }}
 
-  #     - name: Cleanup .nox Directory
-  #       if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-  #       run: |
-  #         tools --timestamps vm pre-archive-cleanup ${{ inputs.distro-slug }}
+      - name: Install Dependencies
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm install-dependencies --nox-session=${{ matrix.nox-session }} ${{ inputs.distro-slug }}
 
-  #     - name: Compress .nox Directory
-  #       if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-  #       run: |
-  #         tools --timestamps vm compress-dependencies ${{ inputs.distro-slug }}
+      - name: Cleanup .nox Directory
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm pre-archive-cleanup ${{ inputs.distro-slug }}
 
-  #     - name: Download Compressed .nox Directory
-  #       if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-  #       run: |
-  #         tools --timestamps vm download-dependencies ${{ inputs.distro-slug }}
+      - name: Compress .nox Directory
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm compress-dependencies ${{ inputs.distro-slug }}
 
-  #     - name: Destroy VM
-  #       if: always() && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-  #       run: |
-  #         tools --timestamps vm destroy ${{ inputs.distro-slug }}
+      - name: Download Compressed .nox Directory
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm download-dependencies ${{ inputs.distro-slug }}
 
-  #     - name: Set Exit Status
-  #       if: always()
-  #       run: |
-  #         python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-  #         echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-deps
+      - name: Destroy VM
+        if: always() && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm destroy ${{ inputs.distro-slug }}
 
-  #     - name: Upload Exit Status
-  #       if: always()
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: exitstatus
-  #         path: exitstatus
-  #         if-no-files-found: error
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-${{ matrix.nox-session }}-deps
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
 
   test:
     name: Test
@@ -153,15 +168,12 @@ jobs:
       - linux
       - bastion
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
-    # needs:
-    #   - dependencies
-    #   - generate-matrix
+    needs:
+      - dependencies
     strategy:
       fail-fast: false
       matrix:
-        nox-session:
-          - test-pkgs-3
-          - test-upgrade-pkgs-3
+        include: ${{ fromJSON(needs.generate-matrix.outputs.pkg-matrix-include) }}
 
     steps:
       - name: Checkout Source Code
@@ -170,36 +182,24 @@ jobs:
       - name: Download Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-${{ inputs.arch }}-${{ inputs.pkg-type }}
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ inputs.arch }}-${{ inputs.pkg-type }}
           path: pkg/artifacts/
 
       - name: List Packages
         run: |
           tree pkg/artifacts
 
-      # - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: nox.${{ inputs.distro-slug }}.tar.*
-      #     key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
-
-      - name: PyPi Proxy
-        run: |
-          sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
+      - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ matrix.nox-session }}
+        uses: actions/cache@v3
+        with:
+          path: nox.${{ inputs.distro-slug }}.tar.*
+          key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ matrix.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
-      # - name: Download testrun-changed-files.txt
-      #   if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
-      #   uses: actions/download-artifact@v3
-      #   with:
-      #     name: testrun-changed-files.txt
-
       - name: Start VM
         id: spin-up-vm
-        env:
-          TESTS_CHUNK: ${{ matrix.tests-chunk }}
         run: |
           tools --timestamps vm create --retries=2 ${{ inputs.distro-slug }}
 
@@ -211,61 +211,58 @@ jobs:
         run: |
           tools --timestamps vm rsync ${{ inputs.distro-slug }}
 
-      # - name: Decompress .nox Directory
-      #   run: |
-      #     tools --timestamps vm decompress-dependencies ${{ inputs.distro-slug }}
+      - name: Decompress .nox Directory
+        run: |
+          tools --timestamps vm decompress-dependencies ${{ inputs.distro-slug }}
 
-      # - name: Show System Info & Test Plan
-      #   run: |
-      #     tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
-      #       --nox-session=${{ env.NOX_SESSION }} ${{ inputs.distro-slug }} \
-      #       ${{ matrix.tests-chunk }}
+      - name: Show System Info & Test Plan
+        run: |
+          tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
+            --nox-session=${{ matrix.nox-session }} ${{ inputs.distro-slug }}
 
       - name: Run Package Tests
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test \
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install\
             --nox-session=${{ matrix.nox-session }} --rerun-failures ${{ inputs.distro-slug }}
 
-      # - name: Download Test Run Artifacts
-      #   id: download-artifacts-from-vm
-      #   if: always() && steps.spin-up-vm.outcome == 'success'
-      #   run: |
-      #     tools --timestamps vm download-artifacts ${{ inputs.distro-slug }}
-      #     # Delete the salt onedir, we won't need it anymore and it will prevent
-      #     # from it showing in the tree command below
-      #     rm -rf artifacts/salt*
-      #     tree -a artifacts
-      #     mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
-      #     echo "COVERAGE_FILE=artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}" >> GITHUB_ENV
+      - name: Download Test Run Artifacts
+        id: download-artifacts-from-vm
+        if: always() && steps.spin-up-vm.outcome == 'success'
+        run: |
+          tools --timestamps vm download-artifacts ${{ inputs.distro-slug }}
+          # Delete the salt onedir, we won't need it anymore and it will prevent
+          # from it showing in the tree command below
+          rm -rf artifacts/salt*
+          tree -a artifacts
 
       - name: Destroy VM
         if: always()
         run: |
           tools --timestamps vm destroy ${{ inputs.distro-slug }} || true
 
-      # - name: Upload Test Run Artifacts
-      #   if: always() && steps.download-artifacts-from-vm.outcome == 'success'
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: testrun-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
-      #     path: |
-      #       artifacts
-      #       !artifacts/salt/*
-      #       !artifacts/salt-*.tar.*
+      - name: Upload Test Run Artifacts
+        if: always() && steps.download-artifacts-from-vm.outcome == 'success'
+        uses: actions/upload-artifact@v3
+        with:
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.nox-session }}
+          path: |
+            artifacts
+            !artifacts/salt/*
+            !artifacts/salt-*.tar.*
 
-      # - name: Set Exit Status
-      #   if: always()
-      #   run: |
-      #     python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-      #     echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}-${{ matrix.tests-chunk }}-tests
+      - name: Set Exit Status
+        if: always()
+        run: |
+          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-${{ matrix.nox-session }}-tests
 
-      # - name: Upload Exit Status
-      #   if: always()
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: exitstatus
-      #     path: exitstatus
-      #     if-no-files-found: error
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
 
   # report:
   #   name: Reports for ${{ inputs.distro-slug }}(${{ matrix.transport }})
