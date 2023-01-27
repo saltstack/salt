@@ -189,6 +189,9 @@ jobs:
           python-version: "${{ inputs.python-version }}"
 
       - name: Install Nox
+        env:
+          PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+          PIP_EXTRA_INDEX_URL: https://pypi.org/simple
         run: |
           python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
 
@@ -197,10 +200,6 @@ jobs:
       #   with:
       #     path: nox.${{ inputs.distro-slug }}.tar.*
       #     key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
-
-      - name: PyPi Proxy
-        run: |
-          sed -i '7s;^;--index-url=https://pypi-proxy.saltstack.net/root/local/+simple/ --extra-index-url=https://pypi.org/simple\n;' requirements/static/ci/*/*.txt
 
       # - name: Download testrun-changed-files.txt
       #   if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
@@ -227,6 +226,8 @@ jobs:
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+          PIP_EXTRA_INDEX_URL: https://pypi.org/simple
         run: |
           sudo -E nox -e ${{ matrix.nox-session }}
 
