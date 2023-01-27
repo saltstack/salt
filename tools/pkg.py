@@ -284,6 +284,11 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
 
 @pkg.command(
     name="source-tarball",
+    venv_config={
+        "requirements_files": [
+            REPO_ROOT / "requirements" / "build.txt",
+        ]
+    },
 )
 def source_tarball(ctx: Context):
     shutil.rmtree("dist/", ignore_errors=True)
@@ -295,7 +300,12 @@ def source_tarball(ctx: Context):
         "HEAD",
         capture=True,
     ).stdout.strip()
-    env = {**os.environ, **{"SOURCE_DATE_EPOCH": str(timestamp)}}
+    env = {
+        **os.environ,
+        **{
+            "SOURCE_DATE_EPOCH": str(timestamp),
+        },
+    }
     ctx.run(
         "python3",
         "-m",
@@ -308,7 +318,7 @@ def source_tarball(ctx: Context):
     # Recreate sdist to be reproducible
     recompress = Recompress(timestamp)
     for targz in REPO_ROOT.joinpath("dist").glob("*.tar.gz"):
-        ctx.info("Re-compressing %s...", targz.relative_to(REPO_ROOT))
+        ctx.info(f"Re-compressing {targz.relative_to(REPO_ROOT)} ...")
         recompress.recompress(targz)
     sha256sum = shutil.which("sha256sum")
     if sha256sum:

@@ -1,4 +1,4 @@
-python-tools-scripts >= 0.9.7
+python-tools-scripts >= 0.10.1
 attrs
 boto3
 pyyaml

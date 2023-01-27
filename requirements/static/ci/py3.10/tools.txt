@@ -24,7 +24,7 @@ pygments==2.13.0
     # via rich
 python-dateutil==2.8.2
     # via botocore
-python-tools-scripts==0.9.7
+python-tools-scripts==0.10.1
     # via -r requirements/static/ci/tools.in
 pyyaml==6.0
     # via -r requirements/static/ci/tools.in
@@ -34,5 +34,7 @@ s3transfer==0.5.2
     # via boto3
 six==1.16.0
     # via python-dateutil
+typing-extensions==4.4.0
+    # via python-tools-scripts
 urllib3==1.26.12
     # via botocore
