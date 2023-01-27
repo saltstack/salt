@@ -622,3 +622,26 @@ def rerun_workflow(ctx: Context):
     else:
         ctx.info("Restarted workflow successfully")
     ctx.exit(0)
+
+
+@ci.command(
+    name="pkg-matrix",
+    arguments={
+        "distro_slug": {
+            "help": "The distribution slug to generate the matrix for",
+        },
+    },
+)
+def pkg_matrix(ctx: Context, distro_slug: str):
+    """
+    Generate the test matrix.
+    """
+    _matrix = []
+    for sess in (
+        "test-pkgs-3",
+        "test-upgrade-pkgs-3(classic=False)",
+        "test-upgrade-pkgs-3(classic=False)",
+    ):
+        _matrix.append({"nox-session": sess})
+    print(json.dumps(_matrix))
+    ctx.exit(0)
