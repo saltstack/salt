@@ -3,6 +3,11 @@ default_language_version:
 
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.6.23
+    hooks:
+      - id: actionlint
+
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
     rev: "4.6"
     hooks:

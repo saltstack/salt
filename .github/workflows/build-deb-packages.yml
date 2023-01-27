@@ -43,10 +43,6 @@ jobs:
           apt update
           apt install -y python3 python3-venv python3-pip build-essential devscripts debhelper bash-completion git
 
-      - name: List CWD
-        run: |
-          ls -la $(cwd)
-
       - name: Download Release Changes
         uses: actions/download-artifact@v3
         with:
