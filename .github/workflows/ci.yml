@@ -273,6 +273,8 @@ jobs:
 
       - name: Build Source Tarball
         uses: ./.github/actions/build-source-tarball
+        with:
+          salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
   build-deps-onedir:
     name: Build Dependencies Onedir
