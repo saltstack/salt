@@ -29,6 +29,8 @@ def test_salt_upgrade(salt_call_cli, salt_minion, install_salt):
     assert ret.data
 
     # install dep following upgrade
+    # TODO: Remove this once we figure out how to
+    # preserve things installed via PIP between upgrades.
     install = salt_call_cli.run("--local", "pip.install", dep)
     assert install.returncode == 0
 
