@@ -27,7 +27,7 @@ jobs:
           - aarch64
 
     container:
-      image: centos:7
+      image: ghcr.io/saltstack/salt-ci-containers/packaging:centos-7
 
     steps:
       - uses: actions/checkout@v3
@@ -36,8 +36,6 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}.diff
-
-
 
       - name: Download System Dependencies
         run: |
