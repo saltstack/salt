@@ -20,6 +20,13 @@ inputs:
     type: string
     description: Seed used to invalidate caches
 
+
+env:
+  COLUMNS: 160
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+
+
 runs:
   using: composite
 
@@ -40,8 +47,6 @@ runs:
     - name: Install Salt Into Onedir
       if: ${{ inputs.platform != 'windows' }}
       env:
-        PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-        PIP_EXTRA_INDEX_URL: https://pypi.org/simple
         USE_STATIC_REQUIREMENTS: "1"
         RELENV_PIP_DIR: "1"
       shell: bash
@@ -57,8 +62,6 @@ runs:
     - name: Install Salt Into Onedir (Windows)
       if: ${{ inputs.platform == 'windows' }}
       env:
-        PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-        PIP_EXTRA_INDEX_URL: https://pypi.org/simple
         USE_STATIC_REQUIREMENTS: "1"
       shell: powershell
       run: |

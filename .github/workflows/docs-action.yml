@@ -8,6 +8,12 @@ on:
         type: string
         description: JSON string containing information about changed files
 
+
+env:
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+
+
 jobs:
   Salt:
     name: Build Salt Documentation
@@ -30,15 +36,11 @@ jobs:
           fetch-depth: 0
 
       - name: Install Nox
-        env:
-          PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         run: |
           python -m pip install --upgrade pip
           pip install nox
 
       - name: Install Python Requirements
-        env:
-          PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         run:
           nox --install-only --forcecolor -e 'docs-html(compress=False, clean=True)'
 
@@ -75,16 +77,12 @@ jobs:
 
       - name: Install Nox
         if: ${{ github.event_name == 'push' || fromJSON(inputs.changed-files)['docs'] }}
-        env:
-          PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         run: |
           python -m pip install --upgrade pip
           pip install nox
 
       - name: Install Python Requirements
         if: github.event_name == 'push' || fromJSON(inputs.changed-files)['docs']
-        env:
-          PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         run:
           nox --install-only --forcecolor -e 'docs-man(compress=False, update=False, clean=True)'
 

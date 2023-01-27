@@ -128,9 +128,6 @@ jobs:
 
       - name: Install Nox
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        env:
-          PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-          PIP_EXTRA_INDEX_URL: https://pypi.org/simple
         run: |
           python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
 
@@ -148,8 +145,6 @@ jobs:
         env:
           PRINT_TEST_SELECTION: "0"
           PRINT_SYSTEM_INFO: "0"
-          PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-          PIP_EXTRA_INDEX_URL: https://pypi.org/simple
         run: |
           export PYCURL_SSL_LIBRARY=openssl
           export LDFLAGS="-L/usr/local/opt/openssl@3/lib"

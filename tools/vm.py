@@ -1088,8 +1088,9 @@ class VM:
             cmd += ["--"] + session_args
         if env is None:
             env = {}
-        if "CI" in os.environ:
-            env["CI"] = os.environ["CI"]
+        for key in ("CI", "PIP_INDEX_URL", "PIP_EXTRA_INDEX_URL"):
+            if key in os.environ:
+                env[key] = os.environ[key]
         env["PYTHONUTF8"] = "1"
         env["OUTPUT_COLUMNS"] = str(self.ctx.console.width)
         env["GITHUB_ACTIONS_PIPELINE"] = "1"
