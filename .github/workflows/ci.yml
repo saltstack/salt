@@ -219,40 +219,22 @@ jobs:
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
 
-  release-changes:
+  prepare-release:
     name: Create Release Diff
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['github-hosted-runners'] }}
     needs:
       - prepare-workflow
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Setup Salt Version
-        id: setup-salt-version
-        uses: ./.github/actions/setup-salt-version
-        with:
-          salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-
-      - name: Generate Changes Diff
-        uses: ./.github/actions/release-changes
-        with:
-          salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+    uses: ./.github/workflows/prepare-release.yml
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
   build-source-tarball:
     name: Build Source Tarball
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['github-hosted-runners'] }}
     needs:
       - prepare-workflow
-      - release-changes
+      - prepare-release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
