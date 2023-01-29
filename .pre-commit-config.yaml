@@ -1082,7 +1082,7 @@ repos:
         args: [--silent, -E, fix_asserts, -E, fix_docstrings]
 
   - repo: https://github.com/timothycrosley/isort
-    rev: 5.10.1
+    rev: 5.12.0
     hooks:
       - id: isort
         additional_dependencies: ['toml']
