@@ -1,3 +1,10 @@
+import pytest
+
+pytestmark = [
+    pytest.mark.skip_on_windows,
+]
+
+
 def test_salt_api(api_request):
     """
     Test running a command against the salt api

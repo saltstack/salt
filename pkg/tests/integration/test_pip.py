@@ -9,7 +9,7 @@ from pytestskipmarkers.utils import platform
 @pytest.fixture
 def pypath():
     if platform.is_windows():
-        return pathlib.Path(os.getenv("LocalAppData"), "salt", "bin")
+        return pathlib.Path(os.getenv("ProgramFiles"), "Salt Project", "Salt")
     elif platform.is_darwin():
         return pathlib.Path(f"{os.sep}opt", "salt", "bin")
     else:
@@ -31,24 +31,24 @@ def wipe_pydeps(pypath, install_salt):
             )
 
 
-def test_pip_install(salt_call_cli):
+def test_pip_install(install_salt):
     """
-    Test pip.install and ensure
-    module can use installed library
+    Test pip.install and ensure module can use installed library
     """
     dep = "PyGithub"
     repo = "https://github.com/saltstack/salt.git"
 
     try:
-        install = salt_call_cli.run("--local", "pip.install", dep)
+        test_bin = os.path.join(*install_salt.binary_paths["call"])
+        install = install_salt.proc.run(test_bin, "--local", "pip.install", dep)
         assert install.returncode == 0
 
-        use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
+        use_lib = install_salt.proc.run(test_bin, "--local", "github.get_repo_info", repo)
         assert "Authentication information could" in use_lib.stderr
     finally:
-        ret = salt_call_cli.run("--local", "pip.uninstall", dep)
+        ret = install_salt.proc.run(test_bin, "--local", "pip.uninstall", dep)
         assert ret.returncode == 0
-        use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
+        use_lib = install_salt.proc.run(test_bin, "--local", "github.get_repo_info", repo)
         assert "The github execution module cannot be loaded" in use_lib.stderr
 
 
