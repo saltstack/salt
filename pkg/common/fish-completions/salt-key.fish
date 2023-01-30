@@ -25,7 +25,7 @@ complete -c salt-key         -f -s p -l print                -d "Print the speci
 complete -c salt-key         -r      -l priv                 -d "The private-key file to create a signature with"
 complete -c salt-key         -r      -l pub                  -d "The public-key file to create a signature for"
 complete -c salt-key         -f -s R -l reject-all           -d "Reject all pending keys"
-complete -c salt-key         -f -s r -l reject               -d "Reject the specified public key (use --include-all to match accepted keys in addition to pending keys).  Globs are supported."
+complete -c salt-key         -f -s r -l reject               -d "-r REJECT, --reject=REJECT Reject the specified public key (use --include-all to match accepted keys in addition to pending keys). Globs are supported.It may cause dramatic performance salt-msater degradation. See [performance guide](https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing) for details"
 complete -c salt-key         -r      -l signature-path       -d "The path where the signature file should be written"
 
 # minions
