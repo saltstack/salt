@@ -244,6 +244,7 @@ def test(
     rerun_failures: bool = False,
     skip_requirements_install: bool = False,
     print_tests_selection: bool = False,
+    print_system_info: bool = False,
     skip_code_coverage: bool = False,
 ):
     """
@@ -265,6 +266,10 @@ def test(
         env["SKIP_CODE_COVERAGE"] = "1"
     else:
         env["SKIP_CODE_COVERAGE"] = "0"
+    if print_system_info:
+        env["PRINT_SYSTEM_INFO"] = "1"
+    else:
+        env["PRINT_SYSTEM_INFO"] = "0"
     if (
         skip_requirements_install
         or os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
@@ -1083,8 +1088,9 @@ class VM:
             cmd += ["--"] + session_args
         if env is None:
             env = {}
-        if "CI" in os.environ:
-            env["CI"] = os.environ["CI"]
+        for key in ("CI", "PIP_INDEX_URL", "PIP_EXTRA_INDEX_URL"):
+            if key in os.environ:
+                env[key] = os.environ[key]
         env["PYTHONUTF8"] = "1"
         env["OUTPUT_COLUMNS"] = str(self.ctx.console.width)
         env["GITHUB_ACTIONS_PIPELINE"] = "1"

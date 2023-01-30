@@ -10,6 +10,16 @@ inputs:
     required: true
     type: string
     description: The platform arch to build
+  cache-seed:
+    required: true
+    type: string
+    description: Seed used to invalidate caches
+
+
+env:
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+
 
 runs:
   using: composite
@@ -30,7 +40,7 @@ runs:
       uses: actions/cache@v3
       with:
         path: ${{ github.workspace }}/.relenv
-        key: ${{ env.CACHE_SEED }}|relenv|${{ env.RELENV_VERSION }}|${{ inputs.platform }}|${{ inputs.arch }}
+        key: ${{ inputs.cache-seed }}|relenv|${{ env.RELENV_VERSION }}|${{ inputs.platform }}|${{ inputs.arch }}
 
     - name: Fetch Toolchain
       if: ${{ inputs.platform == 'linux' }}

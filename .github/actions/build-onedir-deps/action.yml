@@ -1,6 +1,6 @@
 ---
-name: build-linux-onedir
-description: Build Linux Onedir Package
+name: build-onedir-deps
+description: Build Onedir Dependencies
 inputs:
   platform:
     required: true
@@ -15,6 +15,17 @@ inputs:
     type: string
     description: The onedir package name to create
     default: salt
+  cache-seed:
+    required: true
+    type: string
+    description: Seed used to invalidate caches
+
+
+env:
+  COLUMNS: 160
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+
 
 runs:
   using: composite
@@ -26,7 +37,7 @@ runs:
       uses: actions/cache@v3
       with:
         path: artifacts/${{ inputs.package-name }}
-        key: ${{ env.CACHE_SEED }}|relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt') }}
+        key: ${{ inputs.cache-seed }}|relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt') }}
 
     - name: Create Onedir Directory
       shell: bash
@@ -48,9 +59,6 @@ runs:
         fi
 
     - name: Install Salt Onedir Package Dependencies
-      env:
-        PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-        PIP_EXTRA_INDEX_URL: https://pypi.org/simple
       shell: bash
       run: |
         if [ "${{ inputs.platform }}" != "windows" ]; then

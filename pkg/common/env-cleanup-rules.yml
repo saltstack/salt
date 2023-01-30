@@ -2,6 +2,10 @@
 common:
   dir_patterns: &common_dir_patterns
     - "**/__pycache__"
+    - "**/lib/python3.*/test"
+    - "**/lib/python3.*/idlelib"
+    - "**/lib/python3.*/tkinter"
+    - "**/lib/python3.*/turtledemo"
     - "**/site-packages/test"
     - "**/site-packages/tests"
     - "**/site-packages/*/test"
@@ -44,6 +48,7 @@ ci:
       - *common_file_patterns
       # Help files
       - "**/*.chm"
+      - "**/Scripts/wmitest*"
       # Non Windows execution modules
       - "**/site-packages/salt/modules/aacme.py*"
       - "**/site-packages/salt/modules/aix.py*"
@@ -248,11 +253,11 @@ pkg:
     dir_patterns:
       - *ci_windows_dir_patterns
       - "**/salt/share"
+      - "**/site-packages/pywin32_system32"
     file_patterns:
       - *ci_windows_file_patterns
       - "**/Scripts/py.exe"
       - "**/Scripts/pyw.exe"
-      - "**/Scripts/pythonw.exe"
       - "**/Scripts/venvlauncher.exe"
       - "**/Scripts/venvwlauncher.exe"
       - "**/Scripts/wheel*"
