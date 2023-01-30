@@ -344,13 +344,13 @@ bcrypt==3.2.0
     # via
     #   paramiko
     #   passlib
-boto3==1.18.27 ; python_version >= "3.6"
+boto3==1.21.46 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
     #   moto
 boto==2.49.0
     # via -r requirements/static/ci/common.in
-botocore==1.21.27
+botocore==1.24.46
     # via
     #   boto3
     #   moto
@@ -432,7 +432,7 @@ frozenlist==1.2.0
     # via
     #   aiohttp
     #   aiosignal
-future==0.18.2
+future==0.18.3
     # via textfsm
 genshi==0.7.5
     # via -r requirements/static/ci/common.in
@@ -788,7 +788,7 @@ scp==0.13.6
     # via junos-eznc
 semantic-version==2.9.0
     # via etcd3-py
-setproctitle==1.1.10 ; python_version < "3.10"
+setproctitle==1.2.3
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via
@@ -825,7 +825,7 @@ slack-sdk==3.19.5
     # via slack-bolt
 snowballstemmer==2.1.0
     # via sphinx
-sphinx==3.5.2
+sphinx==3.5.2 ; python_version < "3.10"
     # via -r requirements/static/ci/docs.in
 sphinxcontrib-applehelp==1.0.2
     # via sphinx

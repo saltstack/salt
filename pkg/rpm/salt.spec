@@ -28,7 +28,6 @@ URL:     https://saltproject.io/
 
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildArch: x86_64
 
 %ifarch %{ix86} x86_64
 Requires: dmidecode
@@ -50,7 +49,9 @@ BuildRequires: python3
 BuildRequires: python3-pip
 BuildRequires: openssl
 BuildRequires: git
+%if %{rhel} >= 9
 BuildRequires: libxcrypt-compat
+%endif
 
 %description
 Salt is a distributed remote execution system used to execute commands and
@@ -128,25 +129,48 @@ unset CXXFLAGS
 unset CFLAGS
 unset LDFLAGS
 rm -rf $RPM_BUILD_DIR
-mkdir -p $RPM_BUILD_DIR/opt/saltstack
-mkdir -p $RPM_BUILD_DIR/usr/bin
+mkdir -p $RPM_BUILD_DIR/build
 cd $RPM_BUILD_DIR
-python3 -m pip install relenv
-relenv fetch
-relenv toolchain fetch
-relenv create $RPM_BUILD_DIR/opt/saltstack/salt
-env RELENV_PIP_DIR=yes $RPM_BUILD_DIR/opt/saltstack/salt/bin/pip3 install --no-cache -v %{_salt_src}
-# jmsepath doesn't use pip scripts
-rm $RPM_BUILD_DIR/opt/saltstack/salt/jp.py
+
+%if "%{getenv:SALT_ONEDIR_ARCHIVE}" == ""
+  python3 -m venv --clear --copies build/venv
+  build/venv/bin/python3 -m pip install relenv
+  build/venv/bin/relenv fetch
+  build/venv/bin/relenv toolchain fetch
+  build/venv/bin/relenv create build/salt
+  build/salt/bin/python3 -m pip install "pip>=22.3.1,<23.0" "setuptools>=65.6.3,<66" "wheel"
+  export PY=$(build/salt/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
+  build/salt/bin/python3 -m pip install -r %{_salt_src}/requirements/static/pkg/py${PY}/linux.txt
+
+  # Fix any hardcoded paths to the relenv python binary on any of the scripts installed in
+  # the <onedir>/bin directory
+  find build/salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$(dirname $(readlink -f $0))/python3" "$0" "$@":g' {} \;
+
+  export USE_STATIC_REQUIREMENTS=1
+  export RELENV_PIP_DIR=1
+  build/salt/bin/python3 -m pip install --no-warn-script-location %{_salt_src}
+
+  build/salt/bin/python3 -m venv --clear --copies build/tools
+  build/tools/bin/python3 -m pip install -r %{_salt_src}/requirements/static/ci/py${PY}/tools.txt
+  cd %{_salt_src}
+  $RPM_BUILD_DIR/build/tools/bin/tools pkg pre-archive-cleanup --pkg $RPM_BUILD_DIR/build/salt
+%else
+  # The relenv onedir is being provided, all setup up until Salt is installed
+  # is expected to be done
+  cd build
+  tar xf ${SALT_ONEDIR_ARCHIVE}
+
+  # Fix any hardcoded paths to the relenv python binary on any of the scripts installed in the <onedir>/bin directory
+  find salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$$(dirname $$(readlink -f $$0))/python3" "$$0" "$$@":g' {} \;
+
+  cd $RPM_BUILD_DIR
+%endif
 
 
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/opt/saltstack
-cp -R $RPM_BUILD_DIR/* %{buildroot}/
-mkdir -p %{buildroot}/opt/saltstack/salt
-# pip installs directory
-mkdir -p %{buildroot}/opt/saltstack/salt/pypath/
+cp -R $RPM_BUILD_DIR/build/salt %{buildroot}/opt/saltstack/
 
 # Add some directories
 install -d -m 0755 %{buildroot}%{_var}/log/salt
@@ -164,6 +188,21 @@ install -d -m 0700 %{buildroot}%{_sysconfdir}/salt/cloud.profiles.d
 install -d -m 0700 %{buildroot}%{_sysconfdir}/salt/cloud.providers.d
 install -d -m 0755 %{buildroot}%{_sysconfdir}/salt/proxy.d
 install -d -m 0755 %{buildroot}%{_bindir}
+
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt %{buildroot}%{_bindir}/salt
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-call %{buildroot}%{_bindir}/salt-call
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-master %{buildroot}%{_bindir}/salt-master
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-minion %{buildroot}%{_bindir}/salt-minion
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-api %{buildroot}%{_bindir}/salt-api
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-cp %{buildroot}%{_bindir}/salt-cp
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-key %{buildroot}%{_bindir}/salt-key
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-run %{buildroot}%{_bindir}/salt-run
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-cloud %{buildroot}%{_bindir}/salt-cloud
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-ssh %{buildroot}%{_bindir}/salt-ssh
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-syndic %{buildroot}%{_bindir}/salt-syndic
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-proxy %{buildroot}%{_bindir}/salt-proxy
+install -m 0755 %{buildroot}/opt/saltstack/salt/spm %{buildroot}%{_bindir}/spm
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-pip %{buildroot}%{_bindir}/salt-pip
 
 # Add the config files
 install -p -m 0640 %{_salt_src}/conf/minion %{buildroot}%{_sysconfdir}/salt/minion
@@ -225,6 +264,8 @@ rm -rf %{buildroot}
 %dir %{_var}/cache/salt
 %dir %{_var}/log/salt
 %doc %{_mandir}/man1/spm.1*
+%{_bindir}/spm
+%{_bindir}/salt-pip
 /opt/saltstack/salt
 %dir %{_sysconfdir}/salt
 %dir %{_sysconfdir}/salt/pki
@@ -240,6 +281,11 @@ rm -rf %{buildroot}
 %doc %{_mandir}/man1/salt-key.1*
 %doc %{_mandir}/man1/salt-master.1*
 %doc %{_mandir}/man1/salt-run.1*
+%{_bindir}/salt
+%{_bindir}/salt-cp
+%{_bindir}/salt-key
+%{_bindir}/salt-master
+%{_bindir}/salt-run
 %{_unitdir}/salt-master.service
 %config(noreplace) %{_sysconfdir}/salt/master
 %dir %{_sysconfdir}/salt/master.d
@@ -250,6 +296,9 @@ rm -rf %{buildroot}
 %doc %{_mandir}/man1/salt-call.1*
 %doc %{_mandir}/man1/salt-minion.1*
 %doc %{_mandir}/man1/salt-proxy.1*
+%{_bindir}/salt-minion
+%{_bindir}/salt-call
+%{_bindir}/salt-proxy
 %{_unitdir}/salt-minion.service
 %{_unitdir}/salt-proxy@.service
 %config(noreplace) %{_sysconfdir}/salt/minion
@@ -259,15 +308,18 @@ rm -rf %{buildroot}
 
 %files syndic
 %doc %{_mandir}/man1/salt-syndic.1*
+%{_bindir}/salt-syndic
 %{_unitdir}/salt-syndic.service
 
 %files api
 %defattr(-,root,root)
 %doc %{_mandir}/man1/salt-api.1*
+%{_bindir}/salt-api
 %{_unitdir}/salt-api.service
 
 %files cloud
 %doc %{_mandir}/man1/salt-cloud.1*
+%{_bindir}/salt-cloud
 %{_sysconfdir}/salt/cloud.conf.d
 %{_sysconfdir}/salt/cloud.deploy.d
 %{_sysconfdir}/salt/cloud.maps.d
@@ -277,6 +329,7 @@ rm -rf %{buildroot}
 
 %files ssh
 %doc %{_mandir}/man1/salt-ssh.1*
+%{_bindir}/salt-ssh
 %config(noreplace) %{_sysconfdir}/salt/roster
 
 
@@ -294,6 +347,9 @@ rm -rf %{buildroot}
 %post
 ln -s -f /opt/saltstack/salt/spm %{_bindir}/spm
 ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
+
+%post cloud
+ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
 
 %post master
 %systemd_post salt-master.service
@@ -330,6 +386,9 @@ if [ $1 -lt 2 ]; then
     /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/run/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/run/.libcrypto.so.1.1.hmac || :
   fi
 fi
+
+%post ssh
+ln -s -f /opt/saltstack/salt/salt-ssh %{_bindir}/salt-ssh
 
 %post api
 %systemd_post salt-api.service
