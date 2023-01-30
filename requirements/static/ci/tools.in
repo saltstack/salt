@@ -2,3 +2,4 @@ python-tools-scripts >= 0.10.1
 attrs
 boto3
 pyyaml
+jinja2

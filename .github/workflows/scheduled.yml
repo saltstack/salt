@@ -1,10 +1,12 @@
 # Do not edit these workflows directly as the changes made will be overwritten.
-# Instead, edit the template '.github/workflows/templates/ci.yml.j2'
+# Instead, edit the template '.github/workflows/templates/scheduled.yml.j2'
 ---
-name: CI
+name: Scheduled
+
 on:
-  push: {}
-  pull_request: {}
+  schedule:
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
+    - cron: '0 */8 * * *'  # Run every 8 hours
 
 env:
   COLUMNS: 160
@@ -16,12 +18,8 @@ permissions:
   pull-requests: read  # for dorny/paths-filter to read pull requests
 
 concurrency:
-  # Concurrency is defined in a way that concurrent builds against branches do
-  # not cancel previous builds.
-  # However, for every new build against the same pull request source branch,
-  # all older builds against that same branch get canceled.
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   prepare-workflow:

@@ -1,0 +1,229 @@
+# Do not edit these workflows directly as the changes made will be overwritten.
+# Instead, edit the template '<{ template }>'
+---
+name: <{ workflow_name }>
+
+<%- block on %>
+
+on:
+  push: {}
+  pull_request: {}
+
+<%- endblock on %>
+
+<%- block env %>
+
+env:
+  COLUMNS: 160
+  CACHE_SEED: SEED-4  # Bump the number to invalidate all caches
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
+
+<%- endblock env %>
+
+<%- block permissions %>
+
+permissions:
+  contents: read  # for dorny/paths-filter to fetch a list of changed files
+  pull-requests: read  # for dorny/paths-filter to read pull requests
+
+<%- endblock permissions %>
+
+<%- block concurrency %>
+
+concurrency:
+  # Concurrency is defined in a way that concurrent builds against branches do
+  # not cancel previous builds.
+  # However, for every new build against the same pull request source branch,
+  # all older builds against that same branch get canceled.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+<%- endblock concurrency %>
+
+<%- block jobs %>
+
+jobs:
+
+  <%- block prepare_workflow_job %>
+  <%- do conclusion_needs.append('prepare-workflow') %>
+  prepare-workflow:
+    name: Prepare Workflow Run
+    runs-on: ubuntu-latest
+    outputs:
+      jobs: ${{ steps.define-jobs.outputs.jobs }}
+      changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
+      testrun: ${{ steps.define-testrun.outputs.testrun }}
+      salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
+      cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full clone to also get the tags to get the right salt version
+
+      - name: Get Changed Files
+        if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}
+        id: changed-files
+        uses: dorny/paths-filter@v2
+        with:
+          token: ${{ github.token }}
+          list-files: json
+          filters: |
+            repo:
+              - added|modified:
+                - '**'
+            doc-requirements:
+              - added|modified: &doc_requirements
+                - requirements/static/ci/py3.*/docs.txt
+            lint-requirements:
+              - added|modified: &lint_requirements
+                - requirements/static/ci/py3.*/lint.txt
+            pkg_requirements:
+              - added|modified: &pkg_requirements
+                - requirements/static/pkg/py3.*/darwin.txt
+                - requirements/static/pkg/py3.*/linux.txt
+                - requirements/static/pkg/py3.*/freebsd.txt
+                - requirements/static/pkg/py3.*/windows.txt
+            test_requirements:
+              - added|modified: &test_requirements
+                - requirements/static/ci/py3.*/darwin.txt
+                - requirements/static/ci/py3.*/linux.txt
+                - requirements/static/ci/py3.*/freebsd.txt
+                - requirements/static/ci/py3.*/windows.txt
+                - requirements/static/ci/py3.*/darwin-crypto.txt
+                - requirements/static/ci/py3.*/linux-crypto.txt
+                - requirements/static/ci/py3.*/freebsd-crypto.txt
+                - requirements/static/ci/py3.*/windows-crypto.txt
+            deleted:
+              - deleted:
+                - '**'
+            docs:
+              - added|modified:
+                - doc/**
+                - *doc_requirements
+            salt:
+              - added|modified: &salt_added_modified
+                - setup.py
+                - noxfile.py
+                - salt/**/*.py
+                - tasks/**/*.py
+                - tools/**/*.py
+            tests:
+              - added|modified: &tests_added_modified
+                - tests/**/*.py
+            lint:
+              - added|modified:
+                - .pylintrc
+                - *lint_requirements
+            golden_images:
+              - added|modified:
+                - cicd/golden-images.json
+            testrun:
+              - added|modified:
+                - *salt_added_modified
+                - *tests_added_modified
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Pretty Print The GH Actions Event
+        run:
+          tools ci print-gh-event
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: ""
+
+      - name: Write Changed Files To A Local File
+        if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}
+        run:
+          echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
+
+      - name: Check Local Changed Files Contents
+        if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}
+        run:
+          cat changed-files.json
+
+      - name: Process Changed Files
+        if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}
+        id: process-changed-files
+        run:
+          tools ci process-changed-files ${{ github.event_name }} changed-files.json
+
+      - name: Check Collected Changed Files
+        if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}
+        run:
+          echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
+
+      - name: Define Jobs To Run
+        id: define-jobs
+        run:
+          tools ci define-jobs ${{ github.event_name }}
+
+      - name: Check Collected Jobs
+        run:
+          echo '${{ steps.define-jobs.outputs.jobs }}' | jq -C '.'
+
+      - name: Define Testrun
+        id: define-testrun
+        run:
+          tools ci define-testrun ${{ github.event_name }} changed-files.json
+
+      - name: Check Defined Test Run
+        run:
+          echo '${{ steps.define-testrun.outputs.testrun }}' | jq -C '.'
+
+      - name: Check Contents of generated testrun-changed-files.txt
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
+        run:
+          cat testrun-changed-files.txt || true
+
+      - name: Upload testrun-changed-files.txt
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: testrun-changed-files.txt
+          path: testrun-changed-files.txt
+
+      - name: Set Cache Seed Output
+        id: set-cache-seed
+        run: |
+          echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
+  <%- endblock prepare_workflow_job %>
+
+<%- endblock jobs %>
+
+  set-pipeline-exit-status:
+    # This step is just so we can make github require this step, to pass checks
+    # on a pull request instead of requiring all
+    name: Set the ${{ github.workflow }} Pipeline Exit Status
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      <%- for need in conclusion_needs %>
+      - <{ need }>
+      <%- endfor %>
+    steps:
+      - name: Get workflow information
+        id: get-workflow-info
+        uses: technote-space/workflow-conclusion-action@v3
+
+      - name: Set Pipeline Exit Status
+        shell: bash
+        run: |
+          if [ "${{ steps.get-workflow-info.outputs.conclusion }}" != "success" ]; then
+            exit 1
+          else
+            exit 0
+          fi
+
+      - name: Done
+        if: always()
+        run:
+          echo "All worflows finished"
