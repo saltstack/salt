@@ -801,7 +801,7 @@ def salt_factories_config():
     else:
         start_timeout = 60
 
-    if "ONEDIR_TESTRUN" in os.environ:
+    if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
         code_dir = None
     else:
         code_dir = str(CODE_DIR)
