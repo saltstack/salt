@@ -37,7 +37,7 @@ runs:
       uses: actions/cache@v3
       with:
         path: artifacts/${{ inputs.package-name }}
-        key: ${{ inputs.cache-seed }}|relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt') }}
+        key: ${{ inputs.cache-seed }}|relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt', '.github/actions/build-onedir-deps/action.yml') }}
 
     - name: Create Onedir Directory
       shell: bash
@@ -62,7 +62,7 @@ runs:
       shell: bash
       run: |
         if [ "${{ inputs.platform }}" != "windows" ]; then
-          artifacts/${{ inputs.package-name }}/bin/python3 -m pip install -r requirements/static/pkg/py3.10/${{ inputs.platform }}.txt
+          artifacts/${{ inputs.package-name }}/bin/python3 -m pip install -r requirements/static/pkg/py3.10/${{ inputs.platform }}.txt --no-binary=':all:'
         else
           artifacts/${{ inputs.package-name }}/Scripts/python -m pip install -r requirements/static/pkg/py3.10/${{ inputs.platform }}.txt
         fi
