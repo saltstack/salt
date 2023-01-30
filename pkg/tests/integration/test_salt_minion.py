@@ -1,3 +1,10 @@
+import pytest
+
+pytestmark = [
+    pytest.mark.skip_on_windows,
+]
+
+
 def test_salt_minion_ping(salt_cli, salt_minion):
     """
     Test running a command against a targeted minion

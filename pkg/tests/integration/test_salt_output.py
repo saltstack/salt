@@ -1,5 +1,9 @@
 import pytest
 
+pytestmark = [
+    pytest.mark.skip_on_windows,
+]
+
 
 @pytest.mark.parametrize("output_fmt", ["yaml", "json"])
 def test_salt_output(salt_cli, salt_minion, output_fmt):

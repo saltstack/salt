@@ -1,22 +1,24 @@
+import os
 import sys
 
 import pytest
 
-pytestmark = [
-    pytest.mark.skip_unless_on_linux,
-]
-
 
 @pytest.fixture(scope="module")
-def grains(salt_call_cli):
-    ret = salt_call_cli.run("--local", "grains.items")
-    assert ret.data, ret
+def grains(install_salt):
+    test_bin = os.path.join(*install_salt.binary_paths["call"])
+    ret = install_salt.proc.run(test_bin, "--local", "grains.items")
+    assert ret.returncode == 0
+    assert "saltversioninfo" in ret.stdout
     return ret.data
 
 
 @pytest.fixture(scope="module")
-def pkgname(grains):
+def pkg_name(install_salt, grains):
     if sys.platform.startswith("win"):
+        test_bin = os.path.join(*install_salt.binary_paths["call"])
+        install_salt.proc.run(test_bin, "--local", "winrepo.update_git_repos")
+        install_salt.proc.run(test_bin, "--local", "pkg.refresh_db")
         return "putty"
     elif grains["os_family"] == "RedHat":
         if grains["os"] == "VMware Photon OS":
@@ -27,6 +29,7 @@ def pkgname(grains):
     return "figlet"
 
 
-def test_pkg_install(salt_call_cli, pkgname):
-    ret = salt_call_cli.run("--local", "state.single", "pkg.installed", pkgname)
+def test_pkg_install(install_salt, pkg_name):
+    test_bin = os.path.join(*install_salt.binary_paths["call"])
+    ret = install_salt.proc.run(test_bin, "--local", "state.single", "pkg.installed", pkg_name)
     assert ret.returncode == 0

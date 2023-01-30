@@ -1,5 +1,11 @@
 from sys import platform
 
+import pytest
+
+pytestmark = [
+    pytest.mark.skip_on_windows,
+]
+
 
 def test_salt_cmd_run(salt_cli, salt_minion):
     """
