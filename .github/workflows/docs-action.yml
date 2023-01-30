@@ -8,6 +8,12 @@ on:
         type: string
         description: JSON string containing information about changed files
 
+
+env:
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+
+
 jobs:
   Salt:
     name: Build Salt Documentation
@@ -30,15 +36,11 @@ jobs:
           fetch-depth: 0
 
       - name: Install Nox
-        env:
-          PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         run: |
           python -m pip install --upgrade pip
           pip install nox
 
       - name: Install Python Requirements
-        env:
-          PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         run:
           nox --install-only --forcecolor -e 'docs-html(compress=False, clean=True)'
 
@@ -53,20 +55,6 @@ jobs:
         with:
           name: salt-html-docs
           path: doc/_build/html
-          if-no-files-found: error
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-docs-html
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
           if-no-files-found: error
 
   Manpages:
@@ -89,16 +77,12 @@ jobs:
 
       - name: Install Nox
         if: ${{ github.event_name == 'push' || fromJSON(inputs.changed-files)['docs'] }}
-        env:
-          PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         run: |
           python -m pip install --upgrade pip
           pip install nox
 
       - name: Install Python Requirements
         if: github.event_name == 'push' || fromJSON(inputs.changed-files)['docs']
-        env:
-          PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         run:
           nox --install-only --forcecolor -e 'docs-man(compress=False, update=False, clean=True)'
 
@@ -115,18 +99,4 @@ jobs:
         with:
           name: salt-man-pages
           path: doc/_build/man
-          if-no-files-found: error
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-docs-man
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
           if-no-files-found: error

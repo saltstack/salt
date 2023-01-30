@@ -20,6 +20,13 @@ inputs:
     type: string
     description: Seed used to invalidate caches
 
+
+env:
+  COLUMNS: 160
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+
+
 runs:
   using: composite
 
@@ -40,8 +47,6 @@ runs:
     - name: Install Salt Into Onedir
       if: ${{ inputs.platform != 'windows' }}
       env:
-        PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-        PIP_EXTRA_INDEX_URL: https://pypi.org/simple
         USE_STATIC_REQUIREMENTS: "1"
         RELENV_PIP_DIR: "1"
       shell: bash
@@ -57,8 +62,6 @@ runs:
     - name: Install Salt Into Onedir (Windows)
       if: ${{ inputs.platform == 'windows' }}
       env:
-        PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-        PIP_EXTRA_INDEX_URL: https://pypi.org/simple
         USE_STATIC_REQUIREMENTS: "1"
       shell: powershell
       run: |
@@ -96,6 +99,7 @@ runs:
         name: ${{ inputs.package-name }}-${{ env.SALT_VERSION }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
         path: artifacts/${{ inputs.package-name }}-${{ env.SALT_VERSION }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz*
         retention-days: 7
+        if-no-files-found: error
 
     - name: Upload Onedir Zipfile as an Artifact
       if: ${{ inputs.platform == 'windows' }}
@@ -104,3 +108,4 @@ runs:
         name: ${{ inputs.package-name }}-${{ env.SALT_VERSION }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.zip
         path: artifacts/${{ inputs.package-name }}-${{ env.SALT_VERSION }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.zip*
         retention-days: 7
+        if-no-files-found: error

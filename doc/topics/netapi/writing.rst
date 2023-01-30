@@ -1,3 +1,5 @@
+.. _netapi-writing:
+
 ======================
 Writing netapi modules
 ======================
