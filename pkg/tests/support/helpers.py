@@ -14,6 +14,7 @@ from zipfile import ZipFile
 
 import attr
 import distro
+import packaging
 import psutil
 import pytest
 import requests
@@ -78,6 +79,11 @@ class SaltPkgInstall:
     install_dir: pathlib.Path = attr.ib(init=False)
     binary_paths: List[pathlib.Path] = attr.ib(init=False)
     classic: bool = attr.ib(default=False)
+    prev_version: str = attr.ib()
+    pkg_version: str = attr.ib(default="1")
+    repo_data: str = attr.ib(init=False)
+    major: str = attr.ib(init=False)
+    minor: str = attr.ib(init=False)
 
     @proc.default
     def _default_proc(self):
@@ -140,7 +146,59 @@ class SaltPkgInstall:
             install_dir = pathlib.Path("/opt", "saltstack", "salt")
         return install_dir
 
+    @repo_data.default
+    def _default_repo_data(self):
+        """
+        Query to see the published Salt artifacts
+        from repo.json
+        """
+        url = "https://repo.saltproject.io/salt/onedir/repo.json"
+        ret = requests.get(url)
+        data = ret.json()
+        return data
+
+    def relenv(self, version):
+        """
+        Detects if we are using relenv
+        onedir build
+        """
+        relenv = False
+        if packaging.version.parse(version) >= packaging.version.parse("3006.0"):
+            relenv = True
+        return relenv
+
+    def get_version(self):
+        """
+        Return the version information
+        needed to install a previous version
+        of Salt.
+        """
+        prev_version = self.prev_version
+        pkg_version = None
+        if not prev_version:
+            # We did not pass in a version, lets detect the latest
+            # version information of a Salt artifact.
+            latest = list(self.repo_data["latest"].keys())[0]
+            version = self.repo_data["latest"][latest]["version"]
+            if "-" in version:
+                prev_version, pkg_version = version.split("-")
+            else:
+                prev_version, pkg_version = version, None
+        else:
+            # We passed in a version, but lets check if the pkg_version
+            # is defined. Relenv pkgs do not define a pkg build number
+            if "-" not in prev_version and not self.relenv(version=prev_version):
+                pkg_numbers = [x for x in self.repo_data.keys() if prev_version in x]
+                pkg_version = 1
+                for number in pkg_numbers:
+                    number = int(number.split("-")[1])
+                    if number > pkg_version:
+                        pkg_version = number
+        major, minor = prev_version.split(".")
+        return major, minor, prev_version, pkg_version
+
     def __attrs_post_init__(self):
+        self.major, self.minor, self.prev_version, self.pkg_version = self.get_version()
         file_ext_re = r"tar\.gz"
         if platform.is_darwin():
             file_ext_re = r"tar\.gz|pkg"
@@ -465,9 +523,9 @@ class SaltPkgInstall:
         upgrade tests.
         """
         if platform.is_darwin():
-            major_ver = "3005-1"
+            major_ver = f"{self.major}-{self.pkg_version}"
         else:
-            major_ver = "3005"
+            major_ver = self.major
         min_ver = f"{major_ver}"
         os_name, version, code_name = distro.linux_distribution()
         if os_name:
