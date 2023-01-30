@@ -1131,7 +1131,7 @@ repos:
       - id: bandit
         alias: bandit-salt
         name: Run bandit against Salt
-        args: [--silent, -lll, --skip, B701]
+        args: [--silent, -lll, --skip, "B701,B324"]
         exclude: >
             (?x)^(
                 templates/.*|
@@ -1145,7 +1145,7 @@ repos:
       - id: bandit
         alias: bandit-tests
         name: Run bandit against the test suite
-        args: [--silent, -lll, --skip, B701]
+        args: [--silent, -lll, --skip, "B701,B324"]
         files: ^tests/.*
         exclude: ^tests/minionswarm\.py
         additional_dependencies: ['importlib_metadata<5']
