@@ -33,11 +33,7 @@ def version():
             artifact.name,
         )
         if _version:
-            _version = (
-                _version.groups()[0]
-                .replace("_", "-")
-                .replace("~", "")
-            )
+            _version = _version.groups()[0].replace("_", "-").replace("~", "")
             _version = _version.split("-")[0]
             break
     return _version
@@ -78,6 +74,11 @@ def pytest_addoption(parser):
         action="store_true",
         help="Test an upgrade from the classic packages.",
     )
+    test_selection_group.addoption(
+        "--prev-version",
+        action="store",
+        help="Test an upgrade from the version specified.",
+    )
 
 
 @pytest.fixture(scope="session")
@@ -116,6 +117,8 @@ def install_salt(request, salt_factories_root_dir):
         upgrade=request.config.getoption("--upgrade"),
         no_uninstall=request.config.getoption("--no-uninstall"),
         no_install=request.config.getoption("--no-install"),
+        classic=request.config.getoption("--classic"),
+        prev_version=request.config.getoption("--prev-version"),
     ) as fixture:
         yield fixture
 
