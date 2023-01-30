@@ -1,0 +1,82 @@
+name: Build Salt Packages
+
+on:
+  workflow_call:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to building packages.
+
+jobs:
+  build:
+    name: DEB
+    runs-on:
+      - self-hosted
+      - linux
+      - ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        arch:
+          - x86_64
+          - aarch64
+
+    container:
+      image: ghcr.io/saltstack/salt-ci-containers/debian:11
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          path:
+            pkgs/checkout/
+
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
+          path: pkgs/checkout/artifacts/
+
+      - name: Download System Dependencies
+        run: |
+          apt update
+          apt install -y python3 python3-venv python3-pip build-essential devscripts debhelper bash-completion git
+
+      - name: List CWD
+        run: |
+          ls -la $(cwd)
+
+      - name: Download Release Changes
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ inputs.salt-version }}.diff
+          path: pkgs/checkout/
+
+      - name: Apply release changes
+        shell: bash
+        run: |
+          cd pkgs/checkout/
+          git apply salt-${{ inputs.salt-version }}.diff
+          rm salt-${{ inputs.salt-version }}.diff
+
+      - name: Build Deb
+        env:
+          SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/pkgs/checkout/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
+        run: |
+          cd pkgs/checkout/
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
+          ln -sf pkg/debian/ .
+          debuild -e SALT_ONEDIR_ARCHIVE -uc -us
+
+      - name: Cleanup
+        run: |
+          rm -rf pkgs/checkout/
+
+      - name: Upload DEBs
+        uses: actions/upload-artifact@v3
+        with:
+          name: salt-${{ matrix.arch }}-debs
+          path: ${{ github.workspace }}/pkgs/*
+          retention-days: 7
+          if-no-files-found: error

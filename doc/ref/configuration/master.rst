@@ -2134,6 +2134,11 @@ worker_threads value.
 Worker threads should not be put below 3 when using the peer system, but can
 drop down to 1 worker otherwise.
 
+Standards for busy environments:
+
+* Use one worker thread per 200 minions.
+* The value of worker_threads should not exceed 1½ times the available CPU cores.
+
 .. note::
     When the master daemon starts, it is expected behaviour to see
     multiple salt-master processes, even if 'worker_threads' is set to '1'. At
