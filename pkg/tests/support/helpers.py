@@ -474,15 +474,16 @@ class SaltPkgInstall:
             os_name = os_name.split()[0].lower()
         if os_name == "centos" or os_name == "fedora":
             os_name = "redhat"
+        root_url = "salt/py3/"
+        if self.classic:
+            root_url = "py3/"
+
         if os_name.lower() in ["redhat", "centos", "amazon", "fedora"]:
             for fp in pathlib.Path("/etc", "yum.repos.d").glob("epel*"):
                 fp.unlink()
             gpg_key = "SALTSTACK-GPG-KEY.pub"
             if version == "9":
                 gpg_key = "SALTSTACK-GPG-KEY2.pub"
-            root_url = "salt/py3/"
-            if self.classic:
-                root_url = "py3/"
             ret = self.proc.run(
                 "rpm",
                 "--import",
@@ -517,7 +518,7 @@ class SaltPkgInstall:
                 "-fsSL",
                 "-o",
                 "/usr/share/keyrings/salt-archive-keyring.gpg",
-                f"https://repo.saltproject.io/salt/py3/{os_name}/{version}/amd64/{major_ver}/salt-archive-keyring.gpg",
+                f"https://repo.saltproject.io/{root_url}{os_name}/{version}/amd64/{major_ver}/salt-archive-keyring.gpg",
             )
             self._check_retcode(ret)
             with open(
@@ -525,7 +526,7 @@ class SaltPkgInstall:
             ) as fp:
                 fp.write(
                     "deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg arch=amd64] "
-                    f"https://repo.saltproject.io/salt/py3/{os_name}/{version}/amd64/{major_ver} {code_name} main"
+                    f"https://repo.saltproject.io/{root_url}{os_name}/{version}/amd64/{major_ver} {code_name} main"
                 )
             ret = self.proc.run(self.pkg_mngr, "update")
             self._check_retcode(ret)
@@ -542,6 +543,10 @@ class SaltPkgInstall:
             win_pkg_url = (
                 f"https://repo.saltproject.io/salt/py3/windows/{major_ver}/{win_pkg}"
             )
+
+            if self.classic:
+                win_pkg = f"Salt-Minion-{min_ver}-1-Py3-AMD64-Setup.exe"
+                win_pkg_url = f"https://repo.saltproject.io/windows/{win_pkg}"
             pkg_path = pathlib.Path(r"C:\TEMP", win_pkg)
             pkg_path.parent.mkdir(exist_ok=True)
             ret = requests.get(win_pkg_url)
@@ -568,6 +573,9 @@ class SaltPkgInstall:
             mac_pkg_url = (
                 f"https://repo.saltproject.io/salt/py3/macos/{major_ver}/{mac_pkg}"
             )
+            if self.classic:
+                mac_pkg = f"salt-{min_ver}-1-py3-x86_64.pkg"
+                mac_pkg_url = f"https://repo.saltproject.io/osx/{mac_pkg}"
             mac_pkg_path = f"/tmp/{mac_pkg}"
             ret = self.proc.run(
                 "curl",
