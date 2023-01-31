@@ -1,4 +1,4 @@
-name: Build DEB Apt Repository
+name: Build RPM Repository
 
 on:
   workflow_call:
@@ -22,7 +22,7 @@ env:
 
 jobs:
   build-repo:
-    name: DEB
+    name: RPM
     environment: ${{ inputs.environment }}
     runs-on:
       - self-hosted
@@ -33,42 +33,22 @@ jobs:
       max-parallel: 2
       matrix:
         include:
-          - distro: debian
-            version: "10"
+          - distro: amazon
+            version: "2"
             arch: x86_64
             key-id: 0E08A149DE57BFBE
-          - distro: debian
-            version: "10"
-            arch: aarch64
-            key-id: 0E08A149DE57BFBE
-          - distro: debian
-            version: "11"
+          - distro: redhat
+            version: "7"
             arch: x86_64
             key-id: 0E08A149DE57BFBE
-          - distro: debian
-            version: "11"
-            arch: aarch64
-            key-id: 0E08A149DE57BFBE
-          - distro: ubuntu
-            version: "18.04"
+          - distro: redhat
+            version: "8"
             arch: x86_64
             key-id: 0E08A149DE57BFBE
-          - distro: ubuntu
-            version: "20.04"
+          - distro: redhat
+            version: "9"
             arch: x86_64
-            key-id: 0E08A149DE57BFBE
-          - distro: ubuntu
-            version: "20.04"
-            arch: aarch64
-            key-id: 0E08A149DE57BFBE
-          - distro: ubuntu
-            version: "22.04"
-            arch: x86_64
-            key-id: 0E08A149DE57BFBE
-          - distro: ubuntu
-            version: "22.04"
-            arch: aarch64
-            key-id: 0E08A149DE57BFBE
+            key-id: 37A710479D30D7B6
 
     steps:
       - uses: actions/checkout@v3
@@ -76,15 +56,15 @@ jobs:
       - name: Download System Dependencies
         run: |
           sudo apt update
-          sudo apt install -y devscripts apt-utils
+          sudo apt install -y rpm
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
-      - name: Download DEB Packages
+      - name: Download RPM Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb-pkgs
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm-pkgs
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG
@@ -98,8 +78,8 @@ jobs:
           pinentry-mode loopback
           EOF
 
-
       - name: Get Secrets
+        if: ${{ matrix.key-id == '0E08A149DE57BFBE' }}
         env:
           SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
         run: |
@@ -115,24 +95,54 @@ jobs:
           rm "$SECRETS_KEY_FILE"
           echo "passphrase-file ${GNUPGHOME}/passphrase" >> "${GNUPGHOME}/gpg.conf"
 
-      - name: Create Repository Path
-        run: |
-          mkdir -p artifacts/pkgs/repo
-
-      - name: Download `salt-archive-keyring.gpg`
+      - name: Get Secrets
+        if: ${{ matrix.key-id == '37A710479D30D7B6' }}
         env:
           SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
         run: |
           SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
           echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
-          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/salt-archive-keyring-gpg-file \
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256 \
+            --query SecretString --output text | jq .default_key -r \
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -d - \
+            | gpg --import -
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256 \
+            --query SecretString --output text| jq .default_passphrase -r \
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o "${GNUPGHOME}/passphrase" -d -
+          rm "$SECRETS_KEY_FILE"
+          echo "passphrase-file ${GNUPGHOME}/passphrase" >> "${GNUPGHOME}/gpg.conf"
+
+      - name: Create Repository Path
+        run: |
+          mkdir -p artifacts/pkgs/repo
+
+      - name: Download `salt-archive-keyring.gpg`
+        if: ${{ matrix.key-id == '0E08A149DE57BFBE' }}
+        env:
+          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+        run: |
+          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
+          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/saltstack-gpg-key-file \
             --query SecretString --output text| jq .base64 -r | base64 -d \
-            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o ~/salt-archive-keyring.gpg -d -
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o ~/SALTSTACK-GPG-KEY.pub -d -
+          rm "${SECRETS_KEY_FILE}"
+
+      - name: Download `salt-archive-keyring.gpg`
+        if: ${{ matrix.key-id == '37A710479D30D7B6' }}
+        env:
+          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+        run: |
+          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
+          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/saltstack-gpg-key2-file \
+            --query SecretString --output text| jq .base64 -r | base64 -d \
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o ~/SALTSTACK-GPG-KEY2.pub -d -
           rm "${SECRETS_KEY_FILE}"
 
       - name: Create Repository
         run: |
-          tools pkg-repo deb --key-id=${{ matrix.key-id }} --distro-arch=${{ matrix.arch }} \
+          tools pkg-repo rpm --key-id=${{ matrix.key-id }} --distro-arch=${{ matrix.arch }} \
             ${{ inputs.dev-build && '--dev-build' }} --salt-version=${{ inputs.salt-version }} \
             --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo

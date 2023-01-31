@@ -30,12 +30,12 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}-${{ inputs.environment }}-repo
-          path: repo/py3/
+          path: repo/
 
       - name: Show Repository
         run: |
-          tree -a repo/py3/
+          tree -a repo/
 
       - name: Upload Repository Contents(${{ inputs.environment }})
         run: |
-          aws s3 cp --acl bucket-owner-full-control --recursive repo/py3/ s3://salt-project-prod-salt-artifacts-${{ inputs.environment }}
+          aws s3 cp --acl bucket-owner-full-control --recursive repo/ s3://salt-project-prod-salt-artifacts-${{ inputs.environment }}
