@@ -169,6 +169,7 @@ jobs:
       - bastion
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     needs:
+      - generate-matrix
       - dependencies
     strategy:
       fail-fast: false
