@@ -639,8 +639,8 @@ def pkg_matrix(ctx: Context, distro_slug: str):
     _matrix = []
     for sess in (
         "test-pkgs-3",
-        "test-upgrade-pkgs-3(classic=False)",
-        "test-upgrade-pkgs-3(classic=False)",
+        "'test-upgrade-pkgs-3(classic=False)'",
+        "'test-upgrade-pkgs-3(classic=True)'",
     ):
         _matrix.append({"nox-session": sess})
     print(json.dumps(_matrix))
