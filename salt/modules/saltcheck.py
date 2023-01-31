@@ -531,7 +531,7 @@ def run_state_tests(
         if junit and HAS_JUNIT:
             return _generate_junit_out_list(results)
         else:
-            return _generate_out_list(results, only_fails=False)
+            return _generate_out_list(results, only_fails=only_fails)
 
 
 def parallel_scheck(data):
