@@ -1,1 +1,1 @@
-usr/opt/saltstack/salt/salt-ssh /usr/bin/salt-ssh
+opt/saltstack/salt/salt-ssh /usr/bin/salt-ssh

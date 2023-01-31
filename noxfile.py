@@ -7,11 +7,14 @@ Nox configuration script
 # pylint: disable=resource-leakage,3rd-party-module-not-gated
 
 import datetime
+import gzip
 import json
 import os
 import pathlib
+import shutil
 import sqlite3
 import sys
+import tarfile
 import tempfile
 
 # fmt: off
@@ -1045,9 +1048,9 @@ def _pytest(session, coverage, cmd_args, env=None):
 def _ci_test(session, transport, onedir=False):
     # Install requirements
     _install_requirements(session, transport, onedir=onedir)
-    env = {
-        "ONEDIR_TESTRUN": "1",
-    }
+    env = {}
+    if onedir:
+        env["ONEDIR_TESTRUN"] = "1"
     chunks = {
         "unit": [
             "tests/unit",
@@ -1275,7 +1278,7 @@ def pre_archive_cleanup(session, pkg):
         session.error("Please install 'pyyaml'.")
         return
 
-    with open(str(REPO_ROOT / "cicd" / "env-cleanup-files.yml")) as rfh:
+    with open(str(REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml")) as rfh:
         patterns = yaml.safe_load(rfh.read())
 
     if pkg:
@@ -1640,3 +1643,115 @@ def changelog(session, draft, force):
         # Do not ask, just remove news fragments
         town_cmd.append("--yes")
     session.run(*town_cmd)
+
+
+class Recompress:
+    """
+    Helper class to re-compress a ``.tag.gz`` file to make it reproducible.
+    """
+
+    def __init__(self, mtime):
+        self.mtime = int(mtime)
+
+    def tar_reset(self, tarinfo):
+        """
+        Reset user, group, mtime, and mode to create reproducible tar.
+        """
+        tarinfo.uid = tarinfo.gid = 0
+        tarinfo.uname = tarinfo.gname = "root"
+        tarinfo.mtime = self.mtime
+        if tarinfo.type == tarfile.DIRTYPE:
+            tarinfo.mode = 0o755
+        else:
+            tarinfo.mode = 0o644
+        if tarinfo.pax_headers:
+            raise ValueError(tarinfo.name, tarinfo.pax_headers)
+        return tarinfo
+
+    def recompress(self, targz):
+        """
+        Re-compress the passed path.
+        """
+        tempd = pathlib.Path(tempfile.mkdtemp()).resolve()
+        d_src = tempd.joinpath("src")
+        d_src.mkdir()
+        d_tar = tempd.joinpath(targz.stem)
+        d_targz = tempd.joinpath(targz.name)
+        with tarfile.open(d_tar, "w|") as wfile:
+            with tarfile.open(targz, "r:gz") as rfile:
+                rfile.extractall(d_src)
+                extracted_dir = next(pathlib.Path(d_src).iterdir())
+                for name in sorted(extracted_dir.rglob("*")):
+                    wfile.add(
+                        str(name),
+                        filter=self.tar_reset,
+                        recursive=False,
+                        arcname=str(name.relative_to(d_src)),
+                    )
+
+        with open(d_tar, "rb") as rfh:
+            with gzip.GzipFile(
+                fileobj=open(d_targz, "wb"), mode="wb", filename="", mtime=self.mtime
+            ) as gz:  # pylint: disable=invalid-name
+                while True:
+                    chunk = rfh.read(1024)
+                    if not chunk:
+                        break
+                    gz.write(chunk)
+        targz.unlink()
+        shutil.move(str(d_targz), str(targz))
+
+
+@nox.session(python="3")
+def build(session):
+    """
+    Build source and binary distributions based off the current commit author date UNIX timestamp.
+
+    The reason being, reproducible packages.
+
+    .. code-block: shell
+
+        git show -s --format=%at HEAD
+    """
+    shutil.rmtree("dist/", ignore_errors=True)
+    if SKIP_REQUIREMENTS_INSTALL is False:
+        session.install(
+            "--progress-bar=off",
+            "-r",
+            "requirements/build.txt",
+            silent=PIP_INSTALL_SILENT,
+        )
+
+    timestamp = session.run(
+        "git",
+        "show",
+        "-s",
+        "--format=%at",
+        "HEAD",
+        silent=True,
+        log=False,
+        stderr=None,
+    ).strip()
+    env = {"SOURCE_DATE_EPOCH": str(timestamp)}
+    session.run(
+        "python",
+        "-m",
+        "build",
+        "--sdist",
+        str(REPO_ROOT),
+        env=env,
+    )
+    # Recreate sdist to be reproducible
+    recompress = Recompress(timestamp)
+    for targz in REPO_ROOT.joinpath("dist").glob("*.tar.gz"):
+        session.log("Re-compressing %s...", targz.relative_to(REPO_ROOT))
+        recompress.recompress(targz)
+
+    sha256sum = shutil.which("sha256sum")
+    if sha256sum:
+        packages = [
+            str(pkg.relative_to(REPO_ROOT))
+            for pkg in REPO_ROOT.joinpath("dist").iterdir()
+        ]
+        session.run("sha256sum", *packages, external=True)
+    session.run("python", "-m", "twine", "check", "dist/*")

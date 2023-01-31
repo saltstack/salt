@@ -1,6 +1,8 @@
 import logging
 
+import tools.changelog
 import tools.ci
+import tools.docs
 import tools.pkg
 import tools.vm
 
