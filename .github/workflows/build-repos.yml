@@ -45,3 +45,14 @@ jobs:
       rc-build: ${{ inputs.rc-build }}
     secrets:
       SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+
+  build-windows:
+    name: Build Windows Repositories
+    uses: ./.github/workflows/build-windows-repo.yml
+    with:
+      environment: ${{ inputs.environment }}
+      salt-version: "${{ inputs.salt-version }}"
+      nightly-build: ${{ inputs.nightly-build }}
+      rc-build: ${{ inputs.rc-build }}
+    secrets:
+      SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
