@@ -171,7 +171,7 @@ def debian(
     }}
     """
     ctx.info("Creating repository directory structure ...")
-    create_repo_path = repo_path / distro / distro_version / distro_arch
+    create_repo_path = repo_path / "py3" / distro / distro_version / distro_arch
     if dev_build is False:
         create_repo_path = create_repo_path / "minor" / salt_version
     create_repo_path.mkdir(exist_ok=True, parents=True)
@@ -263,6 +263,176 @@ def debian(
 
     ctx.info(f"Running '{' '.join(cmdline)}' ...")
     ctx.run(*cmdline, cwd=create_repo_path)
+    if dev_build is False:
+        ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
+        major_version = packaging.version.parse(salt_version).major
+        major_link = create_repo_path.parent.parent / str(major_version)
+        major_link.symlink_to(f"minor/{salt_version}")
+        latest_link = create_repo_path.parent.parent / "latest"
+        latest_link.symlink_to(f"minor/{salt_version}")
+
+    ctx.info("Done")
+
+
+@pkg.command(
+    name="rpm",
+    arguments={
+        "salt_version": {
+            "help": (
+                "The salt version for which to build the repository configuration files. "
+                "If not passed, it will be discovered by running 'python3 salt/version.py'."
+            ),
+            "required": True,
+        },
+        "distro": {
+            "help": "The debian based distribution to build the repository for",
+            "choices": ("amazon", "redhat"),
+            "required": True,
+        },
+        "distro_version": {
+            "help": "The distro version.",
+            "required": True,
+        },
+        "distro_arch": {
+            "help": "The distribution architecture",
+            "choices": ("x86_64", "aarch64", "arm64"),
+        },
+        "repo_path": {
+            "help": "Path where the repository shall be created.",
+            "required": True,
+        },
+        "key_id": {
+            "help": "The GnuPG key ID used to sign.",
+            "required": True,
+        },
+        "incoming": {
+            "help": (
+                "The path to the directory containing the files that should added to "
+                "the repository."
+            ),
+            "required": True,
+        },
+        "dev_build": {
+            "help": "Developement repository target",
+        },
+    },
+)
+def rpm(
+    ctx: Context,
+    salt_version: str = None,
+    distro: str = None,
+    distro_version: str = None,
+    incoming: pathlib.Path = None,
+    repo_path: pathlib.Path = None,
+    key_id: str = None,
+    distro_arch: str = "amd64",
+    dev_build: bool = False,
+):
+    """
+    Create the redhat repository.
+    """
+    if TYPE_CHECKING:
+        assert salt_version is not None
+        assert distro is not None
+        assert distro_version is not None
+        assert incoming is not None
+        assert repo_path is not None
+        assert key_id is not None
+    distro_info = {
+        "amazon": {
+            "2": {
+                "arm_support": True,
+            },
+        },
+        "redhat": {
+            "7": {
+                "arm_support": True,
+            },
+            "8": {
+                "arm_support": True,
+            },
+            "9": {
+                "arm_support": True,
+            },
+        },
+    }
+    uid = ctx.run("id", "-u", capture=True).stdout.strip().decode()
+    gid = ctx.run("id", "-g", capture=True).stdout.strip().decode()
+    display_name = f"{distro.capitalize()} {distro_version}"
+    if distro_version not in distro_info[distro]:
+        ctx.error(f"Support for {display_name} is missing.")
+        ctx.exit(1)
+
+    if distro_arch == "aarch64":
+        ctx.info(f"The {distro_arch} arch is an alias for 'arm64'. Adjusting.")
+        distro_arch = "arm64"
+
+    distro_details = distro_info[distro][distro_version]
+    if distro_arch == "arm64" and not distro_details["arm_support"]:
+        ctx.error(f"There's no arm64 support for {display_name}.")
+        ctx.exit(1)
+
+    ctx.info("Distribution Details:")
+    ctx.info(distro_details)
+
+    if key_id == "0E08A149DE57BFBE":
+        saltstack_gpg_key_file = (
+            pathlib.Path("~/SALTSTACK-GPG-KEY.pub").expanduser().resolve()
+        )
+    else:
+        saltstack_gpg_key_file = (
+            pathlib.Path("~/SALTSTACK-GPG-KEY2.pub").expanduser().resolve()
+        )
+    if not saltstack_gpg_key_file.exists():
+        ctx.error(f"The file '{saltstack_gpg_key_file}' does not exist.")
+        ctx.exit(1)
+
+    ctx.info("Creating repository directory structure ...")
+    create_repo_path = repo_path / "py3" / distro / distro_version / distro_arch
+    if dev_build is False:
+        create_repo_path = create_repo_path / "minor" / salt_version
+    create_repo_path.joinpath("SRPMS").mkdir(exist_ok=True, parents=True)
+
+    ctx.info(f"Copying {saltstack_gpg_key_file} to {create_repo_path} ...")
+    shutil.copyfile(
+        saltstack_gpg_key_file,
+        create_repo_path / saltstack_gpg_key_file.name,
+    )
+
+    for fpath in incoming.iterdir():
+        if ".src" in fpath.suffixes:
+            dpath = create_repo_path / "SRPMS" / fpath.name
+        else:
+            dpath = create_repo_path / fpath.name
+        ctx.info(f"Copying {fpath} to {dpath} ...")
+        shutil.copyfile(fpath, dpath)
+        if fpath.suffix == ".rpm":
+            ctx.info(f"Running 'rpmsign' on {dpath} ...")
+            ctx.run("rpmsign", "--key-id", key_id, "--addsign", str(dpath))
+
+    createrepo = shutil.which("createrepo")
+    if createrepo is None:
+        container = "ghcr.io/saltstack/salt-ci-containers/packaging:centosstream-9"
+        ctx.info(f"Using docker container '{container}' to call 'createrepo'...")
+        uid = ctx.run("id", "-u", capture=True).stdout.strip().decode()
+        gid = ctx.run("id", "-g", capture=True).stdout.strip().decode()
+        ctx.run(
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{create_repo_path.resolve()}:/code",
+            "-u",
+            f"{uid}:{gid}",
+            "-w",
+            "/code",
+            container,
+            "createrepo",
+            ".",
+        )
+    else:
+        ctx.run("createrepo", ".", cwd=create_repo_path)
+
     if dev_build is False:
         ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
         major_version = packaging.version.parse(salt_version).major
