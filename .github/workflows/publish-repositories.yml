@@ -1,0 +1,41 @@
+name: Deploy Nightly
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        description: On which GitHub Environment Context To Run
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version
+
+env:
+  COLUMNS: 160
+
+jobs:
+
+  publish-repositories:
+    name: Publish Reporitories
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-${{ inputs.environment }}
+    environment: ${{ inputs.environment }}
+
+    steps:
+
+      - name: Download Repository Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ inputs.salt-version }}-${{ inputs.environment }}-repo
+          path: repo/py3/
+
+      - name: Show Repository
+        run: |
+          tree -a repo/py3/
+
+      - name: Upload Repository Contents(${{ inputs.environment }})
+        run: |
+          aws s3 cp --acl bucket-owner-full-control --recursive repo/py3/ s3://salt-project-prod-salt-artifacts-${{ inputs.environment }}

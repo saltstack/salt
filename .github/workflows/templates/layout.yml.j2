@@ -206,7 +206,10 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     needs:
-      <%- for need in conclusion_needs %>
+      <%- for need in conclusion_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+      <%- for need in test_salt_needs.iter(consume=False) %>
       - <{ need }>
       <%- endfor %>
     steps:
