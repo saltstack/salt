@@ -271,13 +271,13 @@ def _prep_powershell_cmd(shell, cmd, stack, encoded_cmd):
     # The last item in the list [-1] is the current method.
     # The third item[2] in each tuple is the name of that method.
     if stack[-2][2] == "script":
-        cmd = '{} -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command {}'.format(
-            shell, cmd
+        cmd = (
+            "{} -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command {}".format(
+                shell, cmd
+            )
         )
     elif encoded_cmd:
-        cmd = '{} -NonInteractive -NoProfile -EncodedCommand {}'.format(
-            shell, cmd
-        )
+        cmd = "{} -NonInteractive -NoProfile -EncodedCommand {}".format(shell, cmd)
     else:
         cmd = '{} -NonInteractive -NoProfile -Command "{}"'.format(shell, cmd)
 
