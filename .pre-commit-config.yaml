@@ -19,6 +19,7 @@ repos:
           - boto3==1.21.46
           - pyyaml==6.0
           - jinja2==3.1.2
+          - packaging==23.0
       - id: tools
         alias: actionlint
         name: Lint GitHub Actions Workflows
@@ -32,6 +33,7 @@ repos:
           - boto3==1.21.46
           - pyyaml==6.0
           - jinja2==3.1.2
+          - packaging==23.0
 
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
     rev: "4.6"
