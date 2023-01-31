@@ -7,6 +7,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import shutil
+from typing import TYPE_CHECKING, cast
 
 from jinja2 import Environment, FileSystemLoader
 from ptscripts import Context, command_group
@@ -23,10 +24,22 @@ cgroup = command_group(
 )
 
 
-class NoDuplicatesList(list):
+class NeedsTracker:
+    def __init__(self):
+        self._needs = []
+
     def append(self, need):
-        if need not in self:
-            super().append(need)
+        if need not in self._needs:
+            self._needs.append(need)
+
+    def iter(self, consume=False):
+        if consume is False:
+            for need in self._needs:
+                yield need
+            return
+        while self._needs:
+            need = self._needs.pop(0)
+            yield need
 
 
 @cgroup.command(
@@ -39,6 +52,9 @@ def generate_workflows(ctx: Context):
     workflows = {
         "CI": {
             "template": "ci.yml",
+        },
+        "Nightly": {
+            "template": "nightly.yml",
         },
         "Scheduled": {
             "template": "scheduled.yml",
@@ -55,7 +71,10 @@ def generate_workflows(ctx: Context):
         loader=FileSystemLoader(str(TEMPLATES)),
     )
     for workflow_name, details in workflows.items():
-        template = details["template"]
+        if TYPE_CHECKING:
+            assert isinstance(details, dict)
+        template: str = cast(str, details["template"])
+        includes: dict[str, bool] = cast(dict, details.get("includes") or {})
         workflow_path = WORKFLOWS / template
         template_path = TEMPLATES / f"{template}.j2"
         ctx.info(
@@ -65,7 +84,9 @@ def generate_workflows(ctx: Context):
         context = {
             "template": template_path.relative_to(REPO_ROOT),
             "workflow_name": workflow_name,
-            "conclusion_needs": NoDuplicatesList(),
+            "includes": includes,
+            "conclusion_needs": NeedsTracker(),
+            "test_salt_needs": NeedsTracker(),
         }
         loaded_template = env.get_template(f"{template}.j2")
         rendered_template = loaded_template.render(**context)

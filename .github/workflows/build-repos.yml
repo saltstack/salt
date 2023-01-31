@@ -1,0 +1,32 @@
+name: Build Salt Packages
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        description: On which GitHub Environment Context To Run
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to building packages.
+      dev-build:
+        type: boolean
+        default: false
+    secrets:
+      SECRETS_KEY:
+        required: true
+
+env:
+  COLUMNS: 160
+
+jobs:
+  build:
+    name: Build DEB Repositories
+    uses: ./.github/workflows/build-deb-repo.yml
+    with:
+      environment: ${{ inputs.environment }}
+      salt-version: "${{ inputs.salt-version }}"
+      dev-build: ${{ inputs.dev-build }}
+    secrets:
+      SECRETS_KEY: ${{ secrets.SECRETS_KEY }}

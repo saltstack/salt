@@ -9,6 +9,8 @@ on:
 <%- block jobs %>
   <{- super() }>
 
+  <%- if includes.get('pre-commit', True) %>
+
   pre-commit:
     <%- do conclusion_needs.append('pre-commit') %>
     name: Pre-Commit
@@ -18,6 +20,11 @@ on:
       - prepare-workflow
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+
+  <%- endif %>
+
+
+  <%- if includes.get('docs', True) %>
 
   docs:
     <%- do conclusion_needs.append('docs') %>
@@ -29,6 +36,11 @@ on:
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
 
+  <%- endif %>
+
+
+  <%- if includes.get('lint', True) %>
+
   lint:
     <%- do conclusion_needs.append('lint') %>
     name: Lint
@@ -39,6 +51,11 @@ on:
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
 
+  <%- endif %>
+
+
+  <%- if includes.get('prepare-release', True) %>
+
   prepare-release:
     name: Prepare Release
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['github-hosted-runners'] }}
@@ -48,6 +65,11 @@ on:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+  <%- endif %>
+
+
+  <%- if includes.get('build-source-tarball', True) %>
 
   build-source-tarball:
     name: Build Source Tarball
@@ -78,6 +100,11 @@ on:
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
+  <%- endif %>
+
+
+  <%- if includes.get('build-deps-onedir', True) %>
+
   build-deps-onedir:
     <%- do conclusion_needs.append('build-deps-onedir') %>
     name: Build Dependencies Onedir
@@ -91,6 +118,10 @@ on:
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['github-hosted-runners'] }}
 
+  <%- endif %>
+
+
+  <%- if includes.get('build-salt-onedir', True) %>
 
   build-salt-onedir:
     <%- do conclusion_needs.append('build-salt-onedir') %>
@@ -106,6 +137,10 @@ on:
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['github-hosted-runners'] }}
 
+  <%- endif %>
+
+
+  <%- if includes.get('build-pkgs', True) %>
 
   build-pkgs:
     <%- do conclusion_needs.append('build-pkgs') %>
@@ -119,8 +154,13 @@ on:
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['github-hosted-runners'] }}
 
+  <%- endif %>
+
+
+  <%- if includes.get('salt-tests', True) %>
+
   windows-2016:
-    <%- do conclusion_needs.append('windows-2016') %>
+    <%- do test_salt_needs.append('windows-2016') %>
     name: Windows 2016
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -137,7 +177,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2019:
-    <%- do conclusion_needs.append('windows-2019') %>
+    <%- do test_salt_needs.append('windows-2019') %>
     name: Windows 2019
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -154,7 +194,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2022:
-    <%- do conclusion_needs.append('windows-2022') %>
+    <%- do test_salt_needs.append('windows-2022') %>
     name: Windows 2022
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -171,7 +211,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   macos-12:
-    <%- do conclusion_needs.append('macos-12') %>
+    <%- do test_salt_needs.append('macos-12') %>
     name: macOS 12
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['github-hosted-runners'] }}
     needs:
@@ -188,7 +228,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   almalinux-8:
-    <%- do conclusion_needs.append('almalinux-8') %>
+    <%- do test_salt_needs.append('almalinux-8') %>
     name: Alma Linux 8
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -205,7 +245,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   almalinux-9:
-    <%- do conclusion_needs.append('almalinux-9') %>
+    <%- do test_salt_needs.append('almalinux-9') %>
     name: Alma Linux 9
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -222,7 +262,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   amazonlinux-2:
-    <%- do conclusion_needs.append('amazonlinux-2') %>
+    <%- do test_salt_needs.append('amazonlinux-2') %>
     name: Amazon Linux 2
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -239,7 +279,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   archlinux-lts:
-    <%- do conclusion_needs.append('archlinux-lts') %>
+    <%- do test_salt_needs.append('archlinux-lts') %>
     name: Arch Linux LTS
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -256,7 +296,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   centos-7:
-    <%- do conclusion_needs.append('centos-7') %>
+    <%- do test_salt_needs.append('centos-7') %>
     name: CentOS 7
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -273,7 +313,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   centosstream-8:
-    <%- do conclusion_needs.append('centosstream-8') %>
+    <%- do test_salt_needs.append('centosstream-8') %>
     name: CentOS Stream 8
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -290,7 +330,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   centosstream-9:
-    <%- do conclusion_needs.append('centosstream-9') %>
+    <%- do test_salt_needs.append('centosstream-9') %>
     name: CentOS Stream 9
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -307,7 +347,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   debian-10:
-    <%- do conclusion_needs.append('debian-10') %>
+    <%- do test_salt_needs.append('debian-10') %>
     name: Debian 10
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -324,7 +364,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   debian-11:
-    <%- do conclusion_needs.append('debian-11') %>
+    <%- do test_salt_needs.append('debian-11') %>
     name: Debian 11
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -341,7 +381,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   debian-11-arm64:
-    <%- do conclusion_needs.append('debian-11-arm64') %>
+    <%- do test_salt_needs.append('debian-11-arm64') %>
     name: Debian 11 Arm64
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -358,7 +398,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   fedora-36:
-    <%- do conclusion_needs.append('fedora-36') %>
+    <%- do test_salt_needs.append('fedora-36') %>
     name: Fedora 36
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -375,7 +415,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   opensuse-15:
-    <%- do conclusion_needs.append('opensuse-15') %>
+    <%- do test_salt_needs.append('opensuse-15') %>
     name: Opensuse 15
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -392,7 +432,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   photonos-3:
-    <%- do conclusion_needs.append('photonos-3') %>
+    <%- do test_salt_needs.append('photonos-3') %>
     name: Photon OS 3
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -409,7 +449,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   photonos-4:
-    <%- do conclusion_needs.append('photonos-4') %>
+    <%- do test_salt_needs.append('photonos-4') %>
     name: Photon OS 4
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -426,7 +466,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-1804:
-    <%- do conclusion_needs.append('ubuntu-1804') %>
+    <%- do test_salt_needs.append('ubuntu-1804') %>
     name: Ubuntu 18.04
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -443,7 +483,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2004:
-    <%- do conclusion_needs.append('ubuntu-2004') %>
+    <%- do test_salt_needs.append('ubuntu-2004') %>
     name: Ubuntu 20.04
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -460,7 +500,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2004-arm64:
-    <%- do conclusion_needs.append('ubuntu-2004-arm64') %>
+    <%- do test_salt_needs.append('ubuntu-2004-arm64') %>
     name: Ubuntu 20.04 Arm64
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -477,7 +517,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2204:
-    <%- do conclusion_needs.append('ubuntu-2204') %>
+    <%- do test_salt_needs.append('ubuntu-2204') %>
     name: Ubuntu 22.04
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -494,7 +534,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2204-arm64:
-    <%- do conclusion_needs.append('ubuntu-2204-arm64') %>
+    <%- do test_salt_needs.append('ubuntu-2204-arm64') %>
     name: Ubuntu 22.04 Arm64
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
     needs:
@@ -509,4 +549,7 @@ on:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  <%- endif %>
+
 <%- endblock jobs %>

@@ -1,0 +1,56 @@
+<%- extends 'ci.yml.j2' %>
+
+<%- block on %>
+
+on:
+  push: {}
+  schedule:
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
+    - cron: '0 3 * * *'  # Every day at 3AM
+
+<%- endblock on %>
+
+<%- block concurrency %>
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: false
+
+<%- endblock concurrency %>
+
+<%- block jobs %>
+  <{- super() }>
+
+  build-repositories:
+    <%- do conclusion_needs.append('build-repositories') %>
+    name: Build Repositories
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/build-repos.yml
+    with:
+      environment: nightly
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      dev-build: true
+    secrets:
+      SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+
+  publish-repositories:
+    <%- do conclusion_needs.append('publish-repositories') %>
+    name: Publish Repositories
+    needs:
+      - prepare-workflow
+      - build-repositories
+      <%- for need in test_salt_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+    uses: ./.github/workflows/publish-repositories.yml
+    with:
+      environment: nightly
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+    secrets: inherit
+<%- endblock jobs %>
+
+<%- block pipeline_exit_status %>
+<{ super() }>
+<%- endblock pipeline_exit_status %>

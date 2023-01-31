@@ -1,12 +1,13 @@
 # Do not edit these workflows directly as the changes made will be overwritten.
-# Instead, edit the template '.github/workflows/templates/scheduled.yml.j2'
+# Instead, edit the template '.github/workflows/templates/nightly.yml.j2'
 ---
-name: Scheduled
+name: Nightly
 
 on:
+  push: {}
   schedule:
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
-    - cron: '0 */8 * * *'  # Run every 8 hours
+    - cron: '0 3 * * *'  # Every day at 3AM
 
 env:
   COLUMNS: 160
@@ -642,20 +643,24 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
-  set-pipeline-exit-status:
-    # This step is just so we can make github require this step, to pass checks
-    # on a pull request instead of requiring all
-    name: Set the ${{ github.workflow }} Pipeline Exit Status
-    if: always()
-    runs-on: ubuntu-latest
+  build-repositories:
+    name: Build Repositories
     needs:
       - prepare-workflow
-      - pre-commit
-      - docs
-      - lint
-      - build-deps-onedir
-      - build-salt-onedir
       - build-pkgs
+    uses: ./.github/workflows/build-repos.yml
+    with:
+      environment: nightly
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      dev-build: true
+    secrets:
+      SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+
+  publish-repositories:
+    name: Publish Repositories
+    needs:
+      - prepare-workflow
+      - build-repositories
       - windows-2016
       - windows-2019
       - windows-2022
@@ -679,6 +684,28 @@ jobs:
       - ubuntu-2004-arm64
       - ubuntu-2204
       - ubuntu-2204-arm64
+    uses: ./.github/workflows/publish-repositories.yml
+    with:
+      environment: nightly
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+    secrets: inherit
+
+  set-pipeline-exit-status:
+    # This step is just so we can make github require this step, to pass checks
+    # on a pull request instead of requiring all
+    name: Set the ${{ github.workflow }} Pipeline Exit Status
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      - prepare-workflow
+      - pre-commit
+      - docs
+      - lint
+      - build-deps-onedir
+      - build-salt-onedir
+      - build-pkgs
+      - build-repositories
+      - publish-repositories
     steps:
       - name: Get workflow information
         id: get-workflow-info
