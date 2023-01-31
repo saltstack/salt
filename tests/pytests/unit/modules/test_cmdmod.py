@@ -312,6 +312,16 @@ def test_powershell_empty():
         ret = cmdmod.powershell("Set-ExecutionPolicy RemoteSigned")
         assert ret == {}
 
+@pytest.mark.skip_unless_on_windows
+def test_powershell_empty():
+    """
+    Tests cmd.powershell when the output is an empty string
+    """
+    mock_run = {"pid": 1234, "retcode": 0, "stderr": "", "stdout": ""}
+    with patch("salt.modules.cmdmod._run", return_value=mock_run):
+        ret = cmdmod.powershell("Set-ExecutionPolicy RemoteSigned")
+        assert ret == {}
+
 
 def test_is_valid_shell_windows():
     """
@@ -1056,3 +1066,49 @@ def test_runas_env_sudo_group(bundled):
                                             popen_mock.call_args_list[0][0][0]
                                             == exp_ret
                                         )
+
+def test_prep_powershell_cmd():
+    """
+    Tests _prep_powershell_cmd returns correct cmd
+    """
+    stack = [['', '', ''], ['', '', ''], ['', '', '']]
+    ret = cmdmod._prep_powershell_cmd(shell="powershell",
+                                      cmd="$PSVersionTable",
+                                      stack=stack,
+                                      encoded_cmd=False) 
+    assert ret == 'powershell -NonInteractive -NoProfile -Command "$PSVersionTable"'
+
+    ret = cmdmod._prep_powershell_cmd(shell="powershell",
+                                      cmd="$PSVersionTable",
+                                      stack=stack,
+                                      encoded_cmd=True) 
+    assert ret == 'powershell -NonInteractive -NoProfile -EncodedCommand $PSVersionTable'
+
+    stack = [['', '', ''], ['', '', 'script'], ['', '', '']]
+    ret = cmdmod._prep_powershell_cmd(shell="powershell",
+                                      cmd="$PSVersionTable",
+                                      stack=stack,
+                                      encoded_cmd=False) 
+    assert ret == 'powershell -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command $PSVersionTable'
+
+    with patch("salt.utils.platform.is_windows", MagicMock(return_value=True)):
+        stack = [['', '', ''], ['', '', ''], ['', '', '']]
+
+        ret = cmdmod._prep_powershell_cmd(shell="powershell",
+                                          cmd="$PSVersionTable",
+                                          stack=stack,
+                                          encoded_cmd=False) 
+        assert ret == '"powershell" -NonInteractive -NoProfile -Command "$PSVersionTable"'
+
+        ret = cmdmod._prep_powershell_cmd(shell="powershell",
+                                          cmd="$PSVersionTable",
+                                          stack=stack,
+                                          encoded_cmd=True) 
+        assert ret == '"powershell" -NonInteractive -NoProfile -EncodedCommand $PSVersionTable'
+
+        stack = [['', '', ''], ['', '', 'script'], ['', '', '']]
+        ret = cmdmod._prep_powershell_cmd(shell="powershell",
+                                          cmd="$PSVersionTable",
+                                          stack=stack,
+                                          encoded_cmd=False) 
+        assert ret == '"powershell" -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command $PSVersionTable'
