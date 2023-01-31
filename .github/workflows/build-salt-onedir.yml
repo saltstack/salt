@@ -60,19 +60,6 @@ jobs:
           arch: ${{ matrix.arch }}
           cache-seed: ${{ inputs.cache-seed }}
 
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
 
   build-salt-windows:
     name: Windows
@@ -115,19 +102,6 @@ jobs:
           arch: ${{ matrix.arch }}
           cache-seed: ${{ inputs.cache-seed }}
 
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-windows-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
 
   build-salt-macos:
     name: macOS
@@ -167,17 +141,3 @@ jobs:
           platform: darwin
           arch: ${{ matrix.arch }}
           cache-seed: ${{ inputs.cache-seed }}
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-macos-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error

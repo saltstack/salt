@@ -5,6 +5,7 @@ These commands are used to build Salt packages.
 from __future__ import annotations
 
 import fnmatch
+import gzip
 import hashlib
 import json
 import logging
@@ -12,6 +13,8 @@ import os
 import pathlib
 import shutil
 import sys
+import tarfile
+import tempfile
 
 import yaml
 from ptscripts import Context, command_group
@@ -22,6 +25,63 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # Define the command group
 pkg = command_group(name="pkg", help="Packaging Related Commands", description=__doc__)
+
+
+class Recompress:
+    """
+    Helper class to re-compress a ``.tag.gz`` file to make it reproducible.
+    """
+
+    def __init__(self, mtime):
+        self.mtime = int(mtime)
+
+    def tar_reset(self, tarinfo):
+        """
+        Reset user, group, mtime, and mode to create reproducible tar.
+        """
+        tarinfo.uid = tarinfo.gid = 0
+        tarinfo.uname = tarinfo.gname = "root"
+        tarinfo.mtime = self.mtime
+        if tarinfo.type == tarfile.DIRTYPE:
+            tarinfo.mode = 0o755
+        else:
+            tarinfo.mode = 0o644
+        if tarinfo.pax_headers:
+            raise ValueError(tarinfo.name, tarinfo.pax_headers)
+        return tarinfo
+
+    def recompress(self, targz):
+        """
+        Re-compress the passed path.
+        """
+        tempd = pathlib.Path(tempfile.mkdtemp()).resolve()
+        d_src = tempd.joinpath("src")
+        d_src.mkdir()
+        d_tar = tempd.joinpath(targz.stem)
+        d_targz = tempd.joinpath(targz.name)
+        with tarfile.open(d_tar, "w|") as wfile:
+            with tarfile.open(targz, "r:gz") as rfile:
+                rfile.extractall(d_src)
+                extracted_dir = next(pathlib.Path(d_src).iterdir())
+                for name in sorted(extracted_dir.rglob("*")):
+                    wfile.add(
+                        str(name),
+                        filter=self.tar_reset,
+                        recursive=False,
+                        arcname=str(name.relative_to(d_src)),
+                    )
+
+        with open(d_tar, "rb") as rfh:
+            with gzip.GzipFile(
+                fileobj=open(d_targz, "wb"), mode="wb", filename="", mtime=self.mtime
+            ) as gz:  # pylint: disable=invalid-name
+                while True:
+                    chunk = rfh.read(1024)
+                    if not chunk:
+                        break
+                    gz.write(chunk)
+        targz.unlink()
+        shutil.move(str(d_targz), str(targz))
 
 
 @pkg.command(
@@ -211,7 +271,7 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
                         if size == 0:
                             break  # EOF
                         digest.update(view[:size])
-            digest_file_path = fpath.parent / f"{fpath.name}.{hash_name}"
+            digest_file_path = fpath.parent / f"{fpath.name}.{hash_name.upper()}"
             hexdigest = digest.hexdigest()
             ctx.info(f"   * Writing {digest_file_path} ...")
             digest_file_path.write_text(digest.hexdigest())
@@ -220,3 +280,51 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
         ctx.info(f"   * Writing {hashes_json_path} ...")
         hashes_json_path.write_text(json.dumps(hashes))
     ctx.info("Done")
+
+
+@pkg.command(
+    name="source-tarball",
+    venv_config={
+        "requirements_files": [
+            REPO_ROOT / "requirements" / "build.txt",
+        ]
+    },
+)
+def source_tarball(ctx: Context):
+    shutil.rmtree("dist/", ignore_errors=True)
+    timestamp = ctx.run(
+        "git",
+        "show",
+        "-s",
+        "--format=%at",
+        "HEAD",
+        capture=True,
+    ).stdout.strip()
+    env = {
+        **os.environ,
+        **{
+            "SOURCE_DATE_EPOCH": str(timestamp),
+        },
+    }
+    ctx.run(
+        "python3",
+        "-m",
+        "build",
+        "--sdist",
+        str(REPO_ROOT),
+        env=env,
+        check=True,
+    )
+    # Recreate sdist to be reproducible
+    recompress = Recompress(timestamp)
+    for targz in REPO_ROOT.joinpath("dist").glob("*.tar.gz"):
+        ctx.info(f"Re-compressing {targz.relative_to(REPO_ROOT)} ...")
+        recompress.recompress(targz)
+    sha256sum = shutil.which("sha256sum")
+    if sha256sum:
+        packages = [
+            str(pkg.relative_to(REPO_ROOT))
+            for pkg in REPO_ROOT.joinpath("dist").iterdir()
+        ]
+        ctx.run("sha256sum", *packages)
+    ctx.run("python3", "-m", "twine", "check", "dist/*", check=True)

@@ -8,6 +8,9 @@ on:
         required: true
         description: The Salt version to set prior to building packages.
 
+env:
+  COLUMNS: 160
+
 jobs:
   build:
     name: RPM
@@ -29,24 +32,36 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Download Release Changes
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ inputs.salt-version }}.diff
+
+
+
+      - name: Download System Dependencies
+        run: |
+          yum -y update
+          yum -y install python3 python3-pip openssl git rpmdevtools rpmlint systemd-units libxcrypt-compat git
+
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: artifacts/
 
-      - name: Download System Dependencies
+      - name: Apply release changes
+        shell: bash
         run: |
-          yum -y update
-          yum -y install python3 python3-pip openssl git rpmdevtools rpmlint systemd-units libxcrypt-compat
+          git apply salt-${{ inputs.salt-version }}.diff
+          rm salt-${{ inputs.salt-version }}.diff
 
       - name: Build RPM
         env:
           SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
         run: |
           echo "${{ inputs.salt-version }}" > salt/_version.txt
-          sed -i 's/^Version: \(.*\)$/Version: ${{ inputs.salt-version }}/g' pkg/rpm/salt.spec
-          rpmbuild -bb --define="_salt_src $(pwd)" $(pwd)/pkg/rpm/salt.spec
+          rpmbuild -bb --define="_salt_src $(pwd)" "$(pwd)/pkg/rpm/salt.spec"
 
       - name: Upload RPMs
         uses: actions/upload-artifact@v3
@@ -54,17 +69,4 @@ jobs:
           name: salt-${{ matrix.arch }}-rpms
           path: ~/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
           retention-days: 7
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
           if-no-files-found: error

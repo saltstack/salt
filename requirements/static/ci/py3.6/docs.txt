@@ -825,7 +825,7 @@ slack-sdk==3.19.5
     # via slack-bolt
 snowballstemmer==2.1.0
     # via sphinx
-sphinx==3.5.2
+sphinx==3.5.2 ; python_version < "3.10"
     # via -r requirements/static/ci/docs.in
 sphinxcontrib-applehelp==1.0.2
     # via sphinx

@@ -57,6 +57,7 @@ jobs:
         with:
           name: Windows ${{ matrix.arch }} NSIS Package
           path: pkg/windows/build/Salt-*.exe
+          retention-days: 7
           if-no-files-found: error
 
       - name: Upload ${{ matrix.arch }} MSI Package
@@ -64,18 +65,5 @@ jobs:
         with:
           name: Windows ${{ matrix.arch }} MSI Package
           path: pkg/windows/build/Salt-*.msi
-          if-no-files-found: error
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          py -3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
+          retention-days: 7
           if-no-files-found: error

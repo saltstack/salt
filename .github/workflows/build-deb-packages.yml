@@ -29,46 +29,50 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          path: build-deb-pkg
+          path:
+            pkgs/checkout/
 
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
-          path: build-deb-pkg/artifacts/
+          path: pkgs/checkout/artifacts/
 
       - name: Download System Dependencies
         run: |
           apt update
-          apt install -y python3 python3-venv build-essential devscripts debhelper bash-completion
+          apt install -y python3 python3-venv python3-pip build-essential devscripts debhelper bash-completion git
+
+      - name: Download Release Changes
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ inputs.salt-version }}.diff
+          path: pkgs/checkout/
+
+      - name: Apply release changes
+        shell: bash
+        run: |
+          cd pkgs/checkout/
+          git apply salt-${{ inputs.salt-version }}.diff
+          rm salt-${{ inputs.salt-version }}.diff
 
       - name: Build Deb
         env:
-          SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/build-deb-pkg/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
+          SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/pkgs/checkout/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
         run: |
-          cd build-deb-pkg
+          cd pkgs/checkout/
           echo "${{ inputs.salt-version }}" > salt/_version.txt
           ln -sf pkg/debian/ .
-          sed -i 's/SALT_RELEASE_VERSION/${{ inputs.salt-version }}/g' debian/changelog
           debuild -e SALT_ONEDIR_ARCHIVE -uc -us
+
+      - name: Cleanup
+        run: |
+          rm -rf pkgs/checkout/
 
       - name: Upload DEBs
         uses: actions/upload-artifact@v3
         with:
           name: salt-${{ matrix.arch }}-debs
-          path: ${{ github.workspace }}/*.deb
+          path: ${{ github.workspace }}/pkgs/*
           retention-days: 7
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
           if-no-files-found: error

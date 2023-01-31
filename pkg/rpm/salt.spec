@@ -189,6 +189,21 @@ install -d -m 0700 %{buildroot}%{_sysconfdir}/salt/cloud.providers.d
 install -d -m 0755 %{buildroot}%{_sysconfdir}/salt/proxy.d
 install -d -m 0755 %{buildroot}%{_bindir}
 
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt %{buildroot}%{_bindir}/salt
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-call %{buildroot}%{_bindir}/salt-call
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-master %{buildroot}%{_bindir}/salt-master
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-minion %{buildroot}%{_bindir}/salt-minion
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-api %{buildroot}%{_bindir}/salt-api
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-cp %{buildroot}%{_bindir}/salt-cp
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-key %{buildroot}%{_bindir}/salt-key
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-run %{buildroot}%{_bindir}/salt-run
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-cloud %{buildroot}%{_bindir}/salt-cloud
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-ssh %{buildroot}%{_bindir}/salt-ssh
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-syndic %{buildroot}%{_bindir}/salt-syndic
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-proxy %{buildroot}%{_bindir}/salt-proxy
+install -m 0755 %{buildroot}/opt/saltstack/salt/spm %{buildroot}%{_bindir}/spm
+install -m 0755 %{buildroot}/opt/saltstack/salt/salt-pip %{buildroot}%{_bindir}/salt-pip
+
 # Add the config files
 install -p -m 0640 %{_salt_src}/conf/minion %{buildroot}%{_sysconfdir}/salt/minion
 install -p -m 0640 %{_salt_src}/conf/master %{buildroot}%{_sysconfdir}/salt/master
@@ -249,6 +264,8 @@ rm -rf %{buildroot}
 %dir %{_var}/cache/salt
 %dir %{_var}/log/salt
 %doc %{_mandir}/man1/spm.1*
+%{_bindir}/spm
+%{_bindir}/salt-pip
 /opt/saltstack/salt
 %dir %{_sysconfdir}/salt
 %dir %{_sysconfdir}/salt/pki
@@ -264,6 +281,11 @@ rm -rf %{buildroot}
 %doc %{_mandir}/man1/salt-key.1*
 %doc %{_mandir}/man1/salt-master.1*
 %doc %{_mandir}/man1/salt-run.1*
+%{_bindir}/salt
+%{_bindir}/salt-cp
+%{_bindir}/salt-key
+%{_bindir}/salt-master
+%{_bindir}/salt-run
 %{_unitdir}/salt-master.service
 %config(noreplace) %{_sysconfdir}/salt/master
 %dir %{_sysconfdir}/salt/master.d
@@ -274,6 +296,9 @@ rm -rf %{buildroot}
 %doc %{_mandir}/man1/salt-call.1*
 %doc %{_mandir}/man1/salt-minion.1*
 %doc %{_mandir}/man1/salt-proxy.1*
+%{_bindir}/salt-minion
+%{_bindir}/salt-call
+%{_bindir}/salt-proxy
 %{_unitdir}/salt-minion.service
 %{_unitdir}/salt-proxy@.service
 %config(noreplace) %{_sysconfdir}/salt/minion
@@ -283,15 +308,18 @@ rm -rf %{buildroot}
 
 %files syndic
 %doc %{_mandir}/man1/salt-syndic.1*
+%{_bindir}/salt-syndic
 %{_unitdir}/salt-syndic.service
 
 %files api
 %defattr(-,root,root)
 %doc %{_mandir}/man1/salt-api.1*
+%{_bindir}/salt-api
 %{_unitdir}/salt-api.service
 
 %files cloud
 %doc %{_mandir}/man1/salt-cloud.1*
+%{_bindir}/salt-cloud
 %{_sysconfdir}/salt/cloud.conf.d
 %{_sysconfdir}/salt/cloud.deploy.d
 %{_sysconfdir}/salt/cloud.maps.d
@@ -301,6 +329,7 @@ rm -rf %{buildroot}
 
 %files ssh
 %doc %{_mandir}/man1/salt-ssh.1*
+%{_bindir}/salt-ssh
 %config(noreplace) %{_sysconfdir}/salt/roster
 
 
