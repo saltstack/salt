@@ -90,8 +90,10 @@ Job events
 
 .. salt:event:: salt/job/<JID>/prog/<MID>/<RUN NUM>
 
-    Fired each time a each function in a state run completes execution.
-    
+    Fired each time a each function in a state run completes execution. Can
+    also be fired on individual state if the :ref:`fire_event <requisites-fire-event>`
+    option is set on that state.
+
     Can be enabled for all state runs in the Salt master config with the
     :conf_master:`state_events` option. To enable for an individual state
     run, pass ``state_events=True`` to the :py:mod:`state <salt.modules.state>`
