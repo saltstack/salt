@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import pathlib
+import shutil
 
 from jinja2 import Environment, FileSystemLoader
 from ptscripts import Context, command_group
@@ -69,3 +70,36 @@ def generate_workflows(ctx: Context):
         loaded_template = env.get_template(f"{template}.j2")
         rendered_template = loaded_template.render(**context)
         workflow_path.write_text(rendered_template.rstrip() + "\n")
+
+
+@cgroup.command(
+    name="actionlint",
+    arguments={
+        "files": {
+            "help": "Files to run actionlint against",
+            "nargs": "*",
+        },
+        "no_color": {
+            "help": "Disable colors in output",
+        },
+    },
+)
+def actionlint(ctx: Context, files: list[str], no_color: bool = False):
+    """
+    Run `actionlint`
+    """
+    actionlint = shutil.which("actionlint")
+    if not actionlint:
+        ctx.warn("Could not find the 'actionlint' binary")
+        ctx.exit(0)
+    cmdline = [actionlint]
+    if no_color is False:
+        cmdline.append("-color")
+    shellcheck = shutil.which("shellcheck")
+    if shellcheck:
+        cmdline.append(f"-shellcheck={shellcheck}")
+    pyflakes = shutil.which("pyflakes")
+    if pyflakes:
+        cmdline.append(f"-pyflakes={pyflakes}")
+    ret = ctx.run(*cmdline, *files, check=False)
+    ctx.exit(ret.returncode)
