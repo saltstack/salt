@@ -52,18 +52,12 @@ jobs:
         run: |
           & pkg/windows/build.cmd -Architecture ${{ matrix.arch }} -Version ${{ inputs.salt-version }} -CICD -SkipInstall
 
-      - name: Upload ${{ matrix.arch }} NSIS Package
+      - name: Upload ${{ matrix.arch }} Packages
         uses: actions/upload-artifact@v3
         with:
-          name: Windows ${{ matrix.arch }} NSIS Package
-          path: pkg/windows/build/Salt-*.exe
-          retention-days: 7
-          if-no-files-found: error
-
-      - name: Upload ${{ matrix.arch }} MSI Package
-        uses: actions/upload-artifact@v3
-        with:
-          name: Windows ${{ matrix.arch }} MSI Package
-          path: pkg/windows/build/Salt-*.msi
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-windows-pkgs
+          path: |
+            pkg/windows/build/Salt-*.exe
+            pkg/windows/build/Salt-*.msi
           retention-days: 7
           if-no-files-found: error
