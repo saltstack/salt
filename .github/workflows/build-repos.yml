@@ -56,3 +56,14 @@ jobs:
       rc-build: ${{ inputs.rc-build }}
     secrets:
       SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+
+  build-macos:
+    name: Build macOS Repositories
+    uses: ./.github/workflows/build-macos-repo.yml
+    with:
+      environment: ${{ inputs.environment }}
+      salt-version: "${{ inputs.salt-version }}"
+      nightly-build: ${{ inputs.nightly-build }}
+      rc-build: ${{ inputs.rc-build }}
+    secrets:
+      SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
