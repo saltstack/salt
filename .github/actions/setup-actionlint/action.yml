@@ -1,0 +1,29 @@
+---
+name: setup-actionlint
+description: Setup actionlint
+inputs:
+  version:
+    description: The version of actionlint
+    default: v1.6.23
+
+runs:
+  using: composite
+  steps:
+
+    - name: Cache actionlint Binary
+      uses: actions/cache@v3
+      with:
+        path: /usr/local/bin/actionlint
+        key: ${{ runner.os }}-${{ runner.arch }}-actionlint-${{ inputs.version }}
+
+    - name: Setup actionlint
+      shell: bash
+      run: |
+        if ! command -v actionlint; then
+          bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/${{ inputs.version }}/scripts/download-actionlint.bash)
+          mv ./actionlint /usr/local/bin/actionlint
+        fi
+    - name: Show actionlint Version
+      shell: bash
+      run: |
+        actionlint --version
