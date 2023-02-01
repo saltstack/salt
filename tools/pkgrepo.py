@@ -8,6 +8,7 @@ import logging
 import pathlib
 import shutil
 import textwrap
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import packaging.version
@@ -180,6 +181,8 @@ def debian(
     create_repo_path = create_repo_path / "py3" / distro / distro_version / distro_arch
     if nightly_build is False:
         create_repo_path = create_repo_path / "minor" / salt_version
+    else:
+        create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
     create_repo_path.mkdir(exist_ok=True, parents=True)
     ftp_archive_config_file = create_repo_path / "apt-ftparchive.conf"
     ctx.info(f"Writing {ftp_archive_config_file} ...")
@@ -276,6 +279,10 @@ def debian(
         major_link.symlink_to(f"minor/{salt_version}")
         latest_link = create_repo_path.parent.parent / "latest"
         latest_link.symlink_to(f"minor/{salt_version}")
+    else:
+        ctx.info("Creating 'latest' symlink ...")
+        latest_link = create_repo_path.parent / "latest"
+        latest_link.symlink_to(create_repo_path.name)
 
     ctx.info("Done")
 
@@ -379,6 +386,8 @@ def rpm(
     create_repo_path = create_repo_path / "py3" / distro / distro_version / distro_arch
     if nightly_build is False:
         create_repo_path = create_repo_path / "minor" / salt_version
+    else:
+        create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
     create_repo_path.joinpath("SRPMS").mkdir(exist_ok=True, parents=True)
 
     ctx.info(f"Copying {saltstack_gpg_key_file} to {create_repo_path} ...")
@@ -428,5 +437,9 @@ def rpm(
         major_link.symlink_to(f"minor/{salt_version}")
         latest_link = create_repo_path.parent.parent / "latest"
         latest_link.symlink_to(f"minor/{salt_version}")
+    else:
+        ctx.info("Creating 'latest' symlink ...")
+        latest_link = create_repo_path.parent / "latest"
+        latest_link.symlink_to(create_repo_path.name)
 
     ctx.info("Done")
