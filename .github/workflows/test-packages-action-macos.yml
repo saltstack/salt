@@ -23,6 +23,10 @@ on:
         type: string
         required: true
         description: The Salt version of the packages to install and test
+      cache-seed:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
       python-version:
         required: false
         type: string
