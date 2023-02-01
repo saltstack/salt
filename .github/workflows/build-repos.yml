@@ -67,3 +67,14 @@ jobs:
       rc-build: ${{ inputs.rc-build }}
     secrets:
       SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+
+  build-onedir:
+    name: Build Onedir Repositories
+    uses: ./.github/workflows/build-onedir-repo.yml
+    with:
+      environment: ${{ inputs.environment }}
+      salt-version: "${{ inputs.salt-version }}"
+      nightly-build: ${{ inputs.nightly-build }}
+      rc-build: ${{ inputs.rc-build }}
+    secrets:
+      SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
