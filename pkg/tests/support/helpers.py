@@ -82,7 +82,6 @@ class SaltPkgInstall:
     salt_pkgs: List[str] = attr.ib(init=False)
     install_dir: pathlib.Path = attr.ib(init=False)
     binary_paths: Dict[str, List[pathlib.Path]] = attr.ib(init=False)
-    # binary_paths: List[pathlib.Path] = attr.ib(init=False)
     classic: bool = attr.ib(default=False)
     prev_version: str = attr.ib()
     pkg_version: str = attr.ib(default="1")
@@ -169,7 +168,6 @@ class SaltPkgInstall:
         Query to see the published Salt artifacts
         from repo.json
         """
-        return {"latest": {"windows": {"version": "3003.1"}, "linux": {"version": "3003.1"}}}
         url = "https://repo.saltproject.io/salt/onedir/repo.json"
         ret = requests.get(url)
         data = ret.json()
@@ -397,7 +395,6 @@ class SaltPkgInstall:
             return None
         if platform.is_windows():
             return pathlib.Path("C:/salt")
-            # return pathlib.Path("C:/ProgramData/Salt Project/Salt")
         if platform.is_darwin():
             return pathlib.Path("/opt/salt")
         return pathlib.Path("/")
