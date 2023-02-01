@@ -1,6 +1,12 @@
 import logging
 
+import pytest
+
 from saltfactories.utils.functional import MultiStateResult
+
+pytestmark = [
+    pytest.mark.skip_on_windows,
+]
 
 log = logging.getLogger(__name__)
 

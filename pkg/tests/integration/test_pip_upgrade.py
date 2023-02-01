@@ -5,6 +5,10 @@ import pytest
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.skip_on_windows,
+]
+
 
 def test_pip_install(install_salt, salt_call_cli):
     """
