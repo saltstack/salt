@@ -7,7 +7,10 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages.
-      dev-build:
+      nightly-build:
+        type: boolean
+        default: false
+      rc-build:
         type: boolean
         default: false
       environment:
@@ -143,8 +146,9 @@ jobs:
       - name: Create Repository
         run: |
           tools pkg-repo rpm --key-id=${{ matrix.key-id }} --distro-arch=${{ matrix.arch }} \
-            ${{ inputs.dev-build && '--dev-build' }} --salt-version=${{ inputs.salt-version }} \
-            --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
+            ${{ inputs.nightly-build && '--nightly-build' || ''  }} --salt-version=${{ inputs.salt-version }} \
+            ${{ inputs.rc-build && '--rc-build' || ''  }} --distro=${{ matrix.distro }} \
+            --distro-version=${{ matrix.version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
       - name: Upload Repository As An Artifact
