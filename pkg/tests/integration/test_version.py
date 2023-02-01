@@ -34,6 +34,7 @@ def test_salt_versions_report_master(install_salt):
     ret.stdout.matcher.fnmatch_lines([f"*{py_version}*"])
 
 
+@pytest.mark.skip_on_windows
 def test_salt_versions_report_minion(salt_cli, salt_minion):
     """
     Test running test.versions_report on minion
