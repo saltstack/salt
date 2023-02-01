@@ -282,7 +282,7 @@ If ( Test-Path -Path "$BLD_PY_BIN" ) {
 $ssllibs = "libeay32.dll",
            "ssleay32.dll"
 $ssllibs | ForEach-Object {
-    $url = "$SALT_DEP_URL/openssl/1.1.1k/$_"
+    $url = "$SALT_DEP_URL/openssl/1.1.1s/$_"
     $file = "$SCRIPTS_DIR\$_"
     Write-Host "Retrieving $_`: " -NoNewline
     Invoke-WebRequest -Uri "$url" -OutFile "$file" | Out-Null
