@@ -313,7 +313,7 @@ jobs:
         if: always()
         run: |
           python3 -c "import os; os.makedirs('exitstatus', exist_ok=True)"
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}-report
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-${{ matrix.nox-session }}-report
 
       - name: Upload Exit Status
         if: always()
