@@ -402,6 +402,7 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   centos-7-pkg-tests:
     name: CentOS 7 Package Tests
@@ -416,6 +417,7 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
 
   centosstream-8-pkg-tests:
@@ -431,6 +433,7 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   centosstream-9-pkg-tests:
     name: CentOS 9 Stream Package Tests
@@ -445,6 +448,7 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   debian-10-pkg-tests:
     name: Debian 10 Package Tests
@@ -459,6 +463,7 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   debian-11-pkg-tests:
     name: Debian 11 Package Tests
@@ -473,6 +478,7 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   debian-11-arm64-pkg-tests:
     name: Debian 11 Arm64 Package Tests
@@ -487,6 +493,7 @@ jobs:
       arch: aarch64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
 
   ubuntu-1804-pkg-tests:
@@ -502,6 +509,7 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2004-pkg-tests:
     name: Ubuntu 20.04 Package Tests
@@ -516,6 +524,7 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2004-arm64-pkg-tests:
     name: Ubuntu 20.04 Arm64 Package Tests
@@ -530,6 +539,7 @@ jobs:
       arch: aarch64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2204-pkg-tests:
     name: Ubuntu 22.04 Package Tests
@@ -544,6 +554,7 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2204-arm64-pkg-tests:
     name: Ubuntu 22.04 Arm64 Package Tests
@@ -558,6 +569,7 @@ jobs:
       arch: aarch64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   macos-12-pkg-tests:
     name: macOS 12 Package Tests
@@ -572,6 +584,7 @@ jobs:
       arch: x86_64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: macos
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2016-nsis-pkg-tests:
     name: Windows 2016 NSIS Package Tests
@@ -586,6 +599,7 @@ jobs:
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: NSIS
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2016-msi-pkg-tests:
     name: Windows 2016 MSI Package Tests
@@ -600,6 +614,7 @@ jobs:
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: MSI
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2019-nsis-pkg-tests:
     name: Windows 2019 NSIS Package Tests
@@ -614,6 +629,7 @@ jobs:
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: NSIS
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2019-msi-pkg-tests:
     name: Windows 2019 MSI Package Tests
@@ -628,6 +644,7 @@ jobs:
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: MSI
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2022-nsis-pkg-tests:
     name: Windows 2022 NSIS Package Tests
@@ -642,6 +659,7 @@ jobs:
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: NSIS
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2022-msi-pkg-tests:
     name: Windows 2022 MSI Package Tests
@@ -656,6 +674,7 @@ jobs:
       arch: amd64
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: MSI
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 # <-------------------------------- PACKAGE TESTS -------------------------------->
 
   windows-2016:
