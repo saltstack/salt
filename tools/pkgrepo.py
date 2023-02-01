@@ -339,25 +339,9 @@ def rpm(
         assert repo_path is not None
         assert key_id is not None
     distro_info = {
-        "amazon": {
-            "2": {
-                "arm_support": True,
-            },
-        },
-        "redhat": {
-            "7": {
-                "arm_support": True,
-            },
-            "8": {
-                "arm_support": True,
-            },
-            "9": {
-                "arm_support": True,
-            },
-        },
+        "amazon": ["2"],
+        "redhat": ["7", "8", "9"],
     }
-    uid = ctx.run("id", "-u", capture=True).stdout.strip().decode()
-    gid = ctx.run("id", "-g", capture=True).stdout.strip().decode()
     display_name = f"{distro.capitalize()} {distro_version}"
     if distro_version not in distro_info[distro]:
         ctx.error(f"Support for {display_name} is missing.")
@@ -366,14 +350,6 @@ def rpm(
     if distro_arch == "aarch64":
         ctx.info(f"The {distro_arch} arch is an alias for 'arm64'. Adjusting.")
         distro_arch = "arm64"
-
-    distro_details = distro_info[distro][distro_version]
-    if distro_arch == "arm64" and not distro_details["arm_support"]:
-        ctx.error(f"There's no arm64 support for {display_name}.")
-        ctx.exit(1)
-
-    ctx.info("Distribution Details:")
-    ctx.info(distro_details)
 
     if key_id == "0E08A149DE57BFBE":
         saltstack_gpg_key_file = (
