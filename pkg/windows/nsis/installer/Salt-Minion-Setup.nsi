@@ -46,6 +46,13 @@ ${StrStrAdv}
     !define PYTHON_ARCHITECTURE "x64"
 !endif
 
+# Get Estimated Size from CLI argument /DEstimatedSize
+!ifdef PythonArchitecture
+    !define ESTIMATED_SIZE "${EstimatedSize}"
+!else
+    # Default
+    !define ESTIMATED_SIZE 0
+!endif
 
 # x64 and AMD64 are AMD64, all others are x86
 !if "${PYTHON_ARCHITECTURE}" == "x64"
@@ -933,8 +940,12 @@ Section -Post
     WriteRegStr HKLM "SYSTEM\CurrentControlSet\services\salt-minion" \
         "DependOnService" "nsi"
 
-    # Set the estimated size
-    ${GetSize} "$INSTDIR" "/S=OK" $0 $1 $2
+    # If ESTIMATED_SIZE is not set, calculated it
+    ${If} ${ESTIMATED_SIZE} == 0
+        ${GetSize} "$INSTDIR" "/S=OK" $0 $1 $2
+    ${Else}
+        StrCpy $0 ${ESTIMATED_SIZE}
+    ${Endif}
     IntFmt $0 "0x%08X" $0
     WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
         "EstimatedSize" "$0"

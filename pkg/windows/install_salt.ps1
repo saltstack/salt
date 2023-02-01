@@ -235,7 +235,6 @@ if ( ! $SkipInstall ) {
   } else {
       $InstallPath = "."
   }
-  $InstallPath
   try {
       $env:RELENV_PIP_DIR = "yes"
       Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
