@@ -5,7 +5,7 @@ import shutil
 
 import pytest
 from pytestskipmarkers.utils import platform
-from saltfactories.utils import random_string
+from saltfactories.utils import random_string, cli_scripts
 from saltfactories.utils.tempfiles import SaltPillarTree, SaltStateTree
 
 from tests.support.helpers import (
@@ -14,6 +14,7 @@ from tests.support.helpers import (
     TESTS_DIR,
     ApiRequest,
     SaltMaster,
+    SaltMasterWindows,
     SaltPkgInstall,
     TestUser,
 )
@@ -281,12 +282,17 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         # On windows, using single binary, it has to decompress it and run the command. Too slow.
         # So, just in this scenario, use open mode
         config_overrides["open_mode"] = True
+    if platform.is_windows():
+        factory_class = SaltMasterWindows
+    else:
+        factory_class = SaltMaster
     factory = salt_factories.salt_master_daemon(
         random_string("master-"),
         defaults=config_defaults,
         overrides=config_overrides,
-        factory_class=SaltMaster,
+        factory_class=factory_class,
         salt_pkg_install=install_salt,
+        python_executable=install_salt.bin_dir / "Scripts" / "python.exe",
     )
     factory.after_terminate(pytest.helpers.remove_stale_master_key, factory)
     with factory.started(start_timeout=start_timeout):
