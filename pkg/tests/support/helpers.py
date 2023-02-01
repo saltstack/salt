@@ -273,7 +273,9 @@ class SaltPkgInstall:
                     else:
                         log.error("Unexpected file extension: %s", file_ext)
 
-            if re.search(r"salt(.*)(x86_64|all|amd64|aarch64)\.(rpm|deb)$", f_path):
+            if re.search(
+                r"salt(.*)(x86_64|all|amd64|aarch64|arm64)\.(rpm|deb)$", f_path
+            ):
                 self.installer_pkg = True
                 self.pkgs.append(f_path)
 
