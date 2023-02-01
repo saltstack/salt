@@ -46,6 +46,17 @@ runs:
         python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
         python3 -m relenv create --arch=${{ inputs.arch }} artifacts/${{ inputs.package-name }}
 
+    - name: Get Onedir Python Version
+      shell: bash
+      if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
+      run: |
+        if [ "${{ inputs.platform }}" != "windows" ]; then
+          PY_VERSION=$(artifacts/${{ inputs.package-name }}/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info))")
+        else
+          PY_VERSION=$(artifacts/${{ inputs.package-name }}/Scripts/python -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info))")
+        fi
+        echo "PY_VERSION=$PY_VERSION" >> "$GITHUB_ENV"
+
     - name: Upgrade Setuptools & Pip
       shell: bash
       if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
@@ -62,9 +73,9 @@ runs:
       shell: bash
       run: |
         if [ "${{ inputs.platform }}" != "windows" ]; then
-          artifacts/${{ inputs.package-name }}/bin/python3 -m pip install -r requirements/static/pkg/py3.10/${{ inputs.platform }}.txt --no-binary=':all:'
+          artifacts/${{ inputs.package-name }}/bin/python3 -m pip install -r requirements/static/pkg/py${PY_VERSION}/${{ inputs.platform }}.txt --no-binary=':all:'
         else
-          artifacts/${{ inputs.package-name }}/Scripts/python -m pip install -r requirements/static/pkg/py3.10/${{ inputs.platform }}.txt
+          artifacts/${{ inputs.package-name }}/Scripts/python -m pip install -r requirements/static/pkg/py${PY_VERSION}/${{ inputs.platform }}.txt
         fi
 
     - name: Cleanup Salt Onedir Directory
