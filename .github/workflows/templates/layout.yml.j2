@@ -1,5 +1,6 @@
 # Do not edit these workflows directly as the changes made will be overwritten.
 # Instead, edit the template '<{ template }>'
+<%- set prepare_workflow_salt_version_input = prepare_workflow_salt_version_input|default("") %>
 ---
 name: <{ workflow_name }>
 
@@ -138,7 +139,7 @@ jobs:
         id: setup-salt-version
         uses: ./.github/actions/setup-salt-version
         with:
-          salt-version: ""
+          salt-version: "<{ prepare_workflow_salt_version_input }>"
 
       - name: Write Changed Files To A Local File
         if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}

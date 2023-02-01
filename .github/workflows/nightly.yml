@@ -653,6 +653,7 @@ jobs:
       environment: nightly
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       nightly-build: true
+      rc-build: ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') }}
     secrets:
       SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
 
