@@ -93,30 +93,25 @@ def debian(
                 "label": "deb10ary",
                 "codename": "buster",
                 "suitename": "oldstable",
-                "arm_support": False,
             },
             "11": {
                 "label": "deb11ary",
                 "codename": "bullseye",
                 "suitename": "stable",
-                "arm_support": True,
             },
         },
         "ubuntu": {
             "18.04": {
                 "label": "salt_ubuntu1804",
                 "codename": "bionic",
-                "arm_support": False,
             },
             "20.04": {
                 "label": "salt_ubuntu2004",
                 "codename": "focal",
-                "arm_support": True,
             },
             "22.04": {
                 "label": "salt_ubuntu2204",
                 "codename": "jammy",
-                "arm_support": True,
             },
         },
     }
@@ -134,9 +129,6 @@ def debian(
         distro_arch = "arm64"
 
     distro_details = distro_info[distro][distro_version]
-    if distro_arch == "arm64" and not distro_details["arm_support"]:
-        ctx.error(f"There's no arm64 support for {display_name}.")
-        ctx.exit(1)
 
     ctx.info("Distribution Details:")
     ctx.info(distro_details)
