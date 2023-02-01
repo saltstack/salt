@@ -31,7 +31,7 @@ concurrency:
     with:
       environment: nightly
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      dev-build: true
+      nightly-build: true
     secrets:
       SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
 

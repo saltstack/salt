@@ -46,9 +46,6 @@ pkg = command_group(
             "help": "The distribution architecture",
             "choices": ("x86_64", "amd64", "aarch64", "arm64"),
         },
-        "dev_build": {
-            "help": "Developement repository target",
-        },
         "repo_path": {
             "help": "Path where the repository shall be created.",
             "required": True,
@@ -64,6 +61,12 @@ pkg = command_group(
             ),
             "required": True,
         },
+        "nightly_build": {
+            "help": "Developement repository target",
+        },
+        "rc_build": {
+            "help": "Release Candidate repository target",
+        },
     },
 )
 def debian(
@@ -75,7 +78,8 @@ def debian(
     repo_path: pathlib.Path = None,
     key_id: str = None,
     distro_arch: str = "amd64",
-    dev_build: bool = False,
+    nightly_build: bool = False,
+    rc_build: bool = False,
 ):
     """
     Create the debian repository.
@@ -152,7 +156,7 @@ def debian(
         ftp_archive_config_suite = (
             f"""\n    APT::FTPArchive::Release::Suite "{suitename}";\n"""
         )
-    archive_description = f"SaltProject {display_name} Python 3{'' if dev_build else ' development'} Salt package repo"
+    archive_description = f"SaltProject {display_name} Python 3{'' if nightly_build else ' development'} Salt package repo"
     ftp_archive_config = f"""\
     APT::FTPArchive::Release::Origin "SaltProject";
     APT::FTPArchive::Release::Label "{label}";{ftp_archive_config_suite}
@@ -171,8 +175,10 @@ def debian(
     }}
     """
     ctx.info("Creating repository directory structure ...")
-    create_repo_path = repo_path / "py3" / distro / distro_version / distro_arch
-    if dev_build is False:
+    if nightly_build or rc_build:
+        create_repo_path = repo_path / "salt"
+    create_repo_path = create_repo_path / "py3" / distro / distro_version / distro_arch
+    if nightly_build is False:
         create_repo_path = create_repo_path / "minor" / salt_version
     create_repo_path.mkdir(exist_ok=True, parents=True)
     ftp_archive_config_file = create_repo_path / "apt-ftparchive.conf"
@@ -263,7 +269,7 @@ def debian(
 
     ctx.info(f"Running '{' '.join(cmdline)}' ...")
     ctx.run(*cmdline, cwd=create_repo_path)
-    if dev_build is False:
+    if nightly_build is False:
         ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
         major_version = packaging.version.parse(salt_version).major
         major_link = create_repo_path.parent.parent / str(major_version)
@@ -312,8 +318,11 @@ def debian(
             ),
             "required": True,
         },
-        "dev_build": {
+        "nightly_build": {
             "help": "Developement repository target",
+        },
+        "rc_build": {
+            "help": "Release Candidate repository target",
         },
     },
 )
@@ -326,7 +335,8 @@ def rpm(
     repo_path: pathlib.Path = None,
     key_id: str = None,
     distro_arch: str = "amd64",
-    dev_build: bool = False,
+    nightly_build: bool = False,
+    rc_build: bool = False,
 ):
     """
     Create the redhat repository.
@@ -364,8 +374,10 @@ def rpm(
         ctx.exit(1)
 
     ctx.info("Creating repository directory structure ...")
-    create_repo_path = repo_path / "py3" / distro / distro_version / distro_arch
-    if dev_build is False:
+    if nightly_build or rc_build:
+        create_repo_path = repo_path / "salt"
+    create_repo_path = create_repo_path / "py3" / distro / distro_version / distro_arch
+    if nightly_build is False:
         create_repo_path = create_repo_path / "minor" / salt_version
     create_repo_path.joinpath("SRPMS").mkdir(exist_ok=True, parents=True)
 
@@ -409,7 +421,7 @@ def rpm(
     else:
         ctx.run("createrepo", ".", cwd=create_repo_path)
 
-    if dev_build is False:
+    if nightly_build is False:
         ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
         major_version = packaging.version.parse(salt_version).major
         major_link = create_repo_path.parent.parent / str(major_version)

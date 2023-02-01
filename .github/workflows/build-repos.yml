@@ -10,7 +10,10 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages.
-      dev-build:
+      nightly-build:
+        type: boolean
+        default: false
+      rc-build:
         type: boolean
         default: false
     secrets:
@@ -27,7 +30,8 @@ jobs:
     with:
       environment: ${{ inputs.environment }}
       salt-version: "${{ inputs.salt-version }}"
-      dev-build: ${{ inputs.dev-build }}
+      nightly-build: ${{ inputs.nightly-build }}
+      rc-build: ${{ inputs.rc-build }}
     secrets:
       SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
 
@@ -37,6 +41,7 @@ jobs:
     with:
       environment: ${{ inputs.environment }}
       salt-version: "${{ inputs.salt-version }}"
-      dev-build: ${{ inputs.dev-build }}
+      nightly-build: ${{ inputs.nightly-build }}
+      rc-build: ${{ inputs.rc-build }}
     secrets:
       SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
