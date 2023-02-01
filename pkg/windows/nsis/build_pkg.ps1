@@ -119,6 +119,15 @@ if ( Test-Path -Path "$NSIS_BIN" ) {
     exit 1
 }
 
+Write-Host "Getting Estimated Installation Size: " -NoNewLine
+$estimated_size = [math]::Round(((Get-ChildItem "$BUILDENV_DIR" -Recurse -Force | Measure-Object -Sum Length).Sum / 1kb))
+if ( $estimated_size -gt 0 ) {
+    Write-Result "Success" -ForegroundColor Green
+} else {
+    Write-Result "Failed" -ForegroundColor Red
+    exit 1
+}
+
 #-------------------------------------------------------------------------------
 # Build the Installer
 #-------------------------------------------------------------------------------
@@ -128,6 +137,7 @@ $installer_name = "Salt-Minion-$Version-Py$($PY_VERSION.Split(".")[0])-$ARCH-Set
 Start-Process -FilePath $NSIS_BIN `
               -ArgumentList "/DSaltVersion=$Version", `
                             "/DPythonArchitecture=$ARCH", `
+                            "/DEstimatedSize=$estimated_size", `
                             "$INSTALLER_DIR\Salt-Minion-Setup.nsi" `
               -Wait -WindowStyle Hidden
 if ( Test-Path -Path "$INSTALLER_DIR\$installer_name" ) {
