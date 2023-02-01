@@ -38,6 +38,10 @@ jobs:
             arch: x86_64
             key-id: 0E08A149DE57BFBE
           - distro: debian
+            version: "10"
+            arch: aarch64
+            key-id: 0E08A149DE57BFBE
+          - distro: debian
             version: "11"
             arch: x86_64
             key-id: 0E08A149DE57BFBE
