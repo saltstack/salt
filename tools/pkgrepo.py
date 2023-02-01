@@ -430,16 +430,67 @@ def rpm(
     else:
         ctx.run("createrepo", ".", cwd=create_repo_path)
 
-    if nightly_build is False:
+    def _create_repo_file(create_repo_path, url_suffix):
+        ctx.info(f"Creating '{repo_file_path.relative_to(repo_path)}' file ...")
+        if nightly_build:
+            base_url = "salt-dev/py3/"
+            repo_file_contents = "[salt-nightly-repo]"
+        elif rc_build:
+            base_url = "salt_rc/py3/"
+            repo_file_contents = "[salt-rc-repo]"
+        else:
+            base_url = "py3/"
+            repo_file_contents = "[salt-repo]"
+        base_url += f"{distro}/{url_suffix}"
+        if distro_version == "9":
+            gpg_key = f"{base_url}/SALTSTACK-GPG-KEY2.pub"
+        else:
+            gpg_key = f"{base_url}/SALTSTACK-GPG-KEY.pub"
+        if distro == "amazon":
+            distro_name = "Amazon Linux"
+        else:
+            distro_name = "RHEL/CentOS"
+
+        if int(distro_version) < 8:
+            failovermethod = "\n        failovermethod=priority\n"
+        else:
+            failovermethod = ""
+
+        repo_file_contents += f"""
+        name=Salt repo for {distro_name} {distro_version} PY3
+        baseurl=https://repo.saltproject.io/{base_url}
+        skip_if_unavailable=True{failovermethod}
+        priority=10
+        enabled=1
+        enabled_metadata=1
+        gpgcheck=1
+        gpgkey={gpg_key}
+        """
+
+    if nightly_build:
+        repo_file_path = create_repo_path.parent / "nightly.repo"
+    elif rc_build:
+        repo_file_path = create_repo_path.parent / "rc.repo"
+    else:
+        repo_file_path = create_repo_path.parent / f"{create_repo_path.name}.repo"
+
+    _create_repo_file(repo_file_path, salt_version)
+
+    if nightly_build is False and rc_build is False:
         ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
         major_version = packaging.version.parse(salt_version).major
         major_link = create_repo_path.parent.parent / str(major_version)
         major_link.symlink_to(f"minor/{salt_version}")
         latest_link = create_repo_path.parent.parent / "latest"
         latest_link.symlink_to(f"minor/{salt_version}")
+        for name in (major_version, "latest"):
+            repo_file_path = create_repo_path.parent.parent / f"{name}.repo"
+            _create_repo_file(repo_file_path, name)
     else:
-        ctx.info("Creating 'latest' symlink ...")
+        ctx.info("Creating 'latest' symlink and 'latest.repo' file ...")
         latest_link = create_repo_path.parent / "latest"
         latest_link.symlink_to(create_repo_path.name)
+        repo_file_path = create_repo_path.parent.parent / "latest.repo"
+        _create_repo_file(repo_file_path, "latest")
 
     ctx.info("Done")
