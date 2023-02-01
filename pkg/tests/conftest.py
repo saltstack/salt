@@ -284,6 +284,11 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         config_overrides["open_mode"] = True
     if platform.is_windows():
         factory_class = SaltMasterWindows
+        salt_factories.system_install = False
+        scripts_dir = salt_factories.root_dir / "Scripts"
+        scripts_dir.mkdir(exist_ok=True)
+        salt_factories.scripts_dir = scripts_dir
+        config_overrides["open_mode"] = True
     else:
         factory_class = SaltMaster
     factory = salt_factories.salt_master_daemon(
@@ -294,6 +299,8 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         salt_pkg_install=install_salt,
         python_executable=install_salt.bin_dir / "Scripts" / "python.exe",
     )
+    if platform.is_windows():
+        salt_factories.system_install = True
     factory.after_terminate(pytest.helpers.remove_stale_master_key, factory)
     with factory.started(start_timeout=start_timeout):
         yield factory
