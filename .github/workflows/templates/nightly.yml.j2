@@ -1,3 +1,4 @@
+<%- set gh_environment = gh_environment|default("nightly") %>
 <%- extends 'ci.yml.j2' %>
 
 <%- block on %>
@@ -29,9 +30,14 @@ concurrency:
       - build-pkgs
     uses: ./.github/workflows/build-repos.yml
     with:
-      environment: nightly
+      environment: <{ gh_environment }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      <%- if gh_environment == "nightly" %>
       nightly-build: true
+      <%- else %>
+      nightly-build: false
+      <%- endif %>
+      rc-build: ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') }}
     secrets:
       SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
 
@@ -46,7 +52,7 @@ concurrency:
       <%- endfor %>
     uses: ./.github/workflows/publish-repositories.yml
     with:
-      environment: nightly
+      environment: <{ gh_environment }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
     secrets: inherit
 <%- endblock jobs %>
