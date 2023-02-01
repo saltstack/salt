@@ -169,6 +169,7 @@ class SaltPkgInstall:
         Query to see the published Salt artifacts
         from repo.json
         """
+        return {"latest": {"windows": {"version": "3003.1"}, "linux": {"version": "3003.1"}}}
         url = "https://repo.saltproject.io/salt/onedir/repo.json"
         ret = requests.get(url)
         data = ret.json()
@@ -1298,33 +1299,6 @@ class DaemonPkgMixin(PkgMixin):
 
 
 @attr.s(kw_only=True)
-class SaltMasterWindows(DaemonPkgMixin, master.SaltMaster):
-    """
-    Subclassed just to tweak the binary paths if needed and factory classes.
-    """
-    def __attrs_post_init__(self):
-        self.script_name = cli_scripts.generate_script(
-            bin_dir=self.salt_pkg_install.bin_dir,
-            script_name="salt-master",
-            code_dir=self.factories_manager.code_dir.parent
-        )
-        master.SaltMaster.__attrs_post_init__(self)
-        DaemonPkgMixin.__attrs_post_init__(self)
-        self.system_install = False
-        self.system_service = False
-
-    def _get_impl_class(self):
-        return DaemonImpl
-
-    def cmdline(self, *args, **kwargs):
-        cmdline_ = super().cmdline(*args, **kwargs)
-        if self.python_executable:
-            if cmdline_[0] != self.python_executable:
-                cmdline_.insert(0, self.python_executable)
-        return cmdline_
-
-
-@attr.s(kw_only=True)
 class SaltMaster(DaemonPkgMixin, master.SaltMaster):
     """
     Subclassed just to tweak the binary paths if needed and factory classes.
@@ -1378,6 +1352,30 @@ class SaltMaster(DaemonPkgMixin, master.SaltMaster):
             salt_pkg_install=self.salt_pkg_install,
             **factory_class_kwargs,
         )
+
+
+@attr.s(kw_only=True)
+class SaltMasterWindows(SaltMaster):
+    """
+    Subclassed just to tweak the binary paths if needed and factory classes.
+    """
+    def __attrs_post_init__(self):
+        super().__attrs_post_init__()
+        self.script_name = cli_scripts.generate_script(
+            bin_dir=self.factories_manager.scripts_dir,
+            script_name="salt-master",
+            code_dir=self.factories_manager.code_dir.parent
+        )
+
+    def _get_impl_class(self):
+        return DaemonImpl
+
+    def cmdline(self, *args, **kwargs):
+        cmdline_ = super().cmdline(*args, **kwargs)
+        if self.python_executable:
+            if cmdline_[0] != self.python_executable:
+                cmdline_.insert(0, self.python_executable)
+        return cmdline_
 
 
 @attr.s(kw_only=True, slots=True)
