@@ -59,6 +59,7 @@ jobs:
           platform: linux
           arch: ${{ matrix.arch }}
           cache-seed: ${{ inputs.cache-seed }}
+          salt-version: "${{ inputs.salt-version }}"
 
 
   build-salt-windows:
@@ -101,6 +102,7 @@ jobs:
           platform: windows
           arch: ${{ matrix.arch }}
           cache-seed: ${{ inputs.cache-seed }}
+          salt-version: "${{ inputs.salt-version }}"
 
 
   build-salt-macos:
@@ -141,3 +143,4 @@ jobs:
           platform: darwin
           arch: ${{ matrix.arch }}
           cache-seed: ${{ inputs.cache-seed }}
+          salt-version: "${{ inputs.salt-version }}"
