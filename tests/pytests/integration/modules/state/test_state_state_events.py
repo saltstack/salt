@@ -11,9 +11,6 @@ import pytest
 log = logging.getLogger(__name__)
 
 
-EVENT_TAG = "salt/job/*/prog/{}/0"
-
-
 @pytest.fixture(scope="module")
 def configure_state_tree(salt_master, salt_minion):
     top_file = """
@@ -36,12 +33,21 @@ def configure_state_tree(salt_master, salt_minion):
         yield
 
 
+@pytest.fixture(scope="module")
+def state_event_tag():
+    """
+    State event tag to match
+    """
+    return "salt/job/*/prog/{}/0"
+
+
 def test_highstate_state_events(
     event_listener,
     salt_master,
     salt_minion,
     salt_call_cli,
     configure_state_tree,
+    state_event_tag,
 ):
     """
     Test state.highstate with state_events=True
@@ -52,7 +58,7 @@ def test_highstate_state_events(
     assert ret.returncode == 0
     assert ret.data
 
-    event_pattern = (salt_master.id, EVENT_TAG.format(salt_minion.id))
+    event_pattern = (salt_master.id, state_event_tag.format(salt_minion.id))
     matched_events = event_listener.wait_for_events(
         [event_pattern], after_time=start_time, timeout=30
     )
@@ -65,6 +71,7 @@ def test_sls_state_events(
     salt_minion,
     salt_call_cli,
     configure_state_tree,
+    state_event_tag,
 ):
     """
     Test state.sls with state_events=True
@@ -75,7 +82,7 @@ def test_sls_state_events(
     assert ret.returncode == 0
     assert ret.data
 
-    event_pattern = (salt_master.id, EVENT_TAG.format(salt_minion.id))
+    event_pattern = (salt_master.id, state_event_tag.format(salt_minion.id))
     matched_events = event_listener.wait_for_events(
         [event_pattern], after_time=start_time, timeout=30
     )
@@ -88,6 +95,7 @@ def test_sls_id_state_events(
     salt_minion,
     salt_call_cli,
     configure_state_tree,
+    state_event_tag,
 ):
     """
     Test state.sls_id with state_events=True
@@ -100,7 +108,7 @@ def test_sls_id_state_events(
     assert ret.returncode == 0
     assert ret.data
 
-    event_pattern = (salt_master.id, EVENT_TAG.format(salt_minion.id))
+    event_pattern = (salt_master.id, state_event_tag.format(salt_minion.id))
     matched_events = event_listener.wait_for_events(
         [event_pattern], after_time=start_time, timeout=30
     )
