@@ -310,7 +310,7 @@ def update_deb(ctx: Context, salt_version: str, draft: bool = False):
         wfp.write(f"salt ({salt_version}) stable; urgency=medium\n\n")
         wfp.write(formated)
         wfp.write(
-            f"\n -- Salt Project Packaging <saltproject-packaging@vmware.com> {date}\n\n"
+            f"\n -- Salt Project Packaging <saltproject-packaging@vmware.com>  {date}\n\n"
         )
         with open("pkg/debian/changelog") as rfp:
             wfp.write(rfp.read())
