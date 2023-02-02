@@ -1,7 +1,6 @@
 import logging
 
 import pytest
-
 from saltfactories.utils.functional import MultiStateResult
 
 pytestmark = [

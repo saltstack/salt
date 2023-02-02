@@ -31,5 +31,7 @@ def pkg_name(install_salt, grains):
 
 def test_pkg_install(install_salt, pkg_name):
     test_bin = os.path.join(*install_salt.binary_paths["call"])
-    ret = install_salt.proc.run(test_bin, "--local", "state.single", "pkg.installed", pkg_name)
+    ret = install_salt.proc.run(
+        test_bin, "--local", "state.single", "pkg.installed", pkg_name
+    )
     assert ret.returncode == 0

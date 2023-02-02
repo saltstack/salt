@@ -5,7 +5,7 @@ import shutil
 
 import pytest
 from pytestskipmarkers.utils import platform
-from saltfactories.utils import random_string, cli_scripts
+from saltfactories.utils import cli_scripts, random_string
 from saltfactories.utils.tempfiles import SaltPillarTree, SaltStateTree
 
 from tests.support.helpers import (
