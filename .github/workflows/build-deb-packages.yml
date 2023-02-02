@@ -1,4 +1,5 @@
-name: Build Salt Packages
+---
+name: Build Debian Packages
 
 on:
   workflow_call:

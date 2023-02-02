@@ -1,4 +1,5 @@
-name: Build Salt Packages
+---
+name: Build Salt Onedir
 
 on:
   workflow_call:

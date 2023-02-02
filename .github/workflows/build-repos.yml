@@ -1,4 +1,5 @@
-name: Build Salt Packages
+---
+name: Build Repositories
 
 on:
   workflow_call:

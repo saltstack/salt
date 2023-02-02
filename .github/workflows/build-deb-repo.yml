@@ -1,3 +1,4 @@
+---
 name: Build DEB Apt Repository
 
 on:
