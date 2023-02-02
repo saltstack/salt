@@ -1806,4 +1806,7 @@ def test_upgrade_pkgs(session, classic):
     try:
         _pytest(session, False, cmd_args)
     except nox.command.CommandFailed:
-        sys.exit(0)
+        sys.exit(1)
+
+    cmd_args = ["pkg/tests/"] + session.posargs
+    _pytest(session, False, cmd_args)
