@@ -1,3 +1,4 @@
+---
 name: New Issues Triage Assignment
 concurrency: 1
 on:

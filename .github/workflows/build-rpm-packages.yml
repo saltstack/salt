@@ -1,4 +1,5 @@
-name: Build Salt Packages
+---
+name: Build RPM Packages
 
 on:
   workflow_call:

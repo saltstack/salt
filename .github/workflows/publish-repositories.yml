@@ -1,4 +1,5 @@
-name: Deploy Nightly
+---
+name: Publish Repositories
 
 on:
   workflow_call:
@@ -17,7 +18,7 @@ env:
 jobs:
 
   publish-repositories:
-    name: Publish Reporitories
+    name: Publish Repositories
     runs-on:
       - self-hosted
       - linux

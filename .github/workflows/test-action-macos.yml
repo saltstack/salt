@@ -1,4 +1,5 @@
-name: Test Artifact
+---
+name: Test Artifact(macOS)
 
 on:
   workflow_call:
