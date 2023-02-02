@@ -6,6 +6,7 @@ pytestmark = [
     pytest.mark.skip_on_windows(reason="Linux test only"),
 ]
 
+
 def test_system_config(salt_cli, salt_minion):
     """
     Test system config
