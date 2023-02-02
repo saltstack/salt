@@ -43,12 +43,16 @@ def test_pip_install(install_salt):
         install = install_salt.proc.run(test_bin, "--local", "pip.install", dep)
         assert install.returncode == 0
 
-        use_lib = install_salt.proc.run(test_bin, "--local", "github.get_repo_info", repo)
+        use_lib = install_salt.proc.run(
+            test_bin, "--local", "github.get_repo_info", repo
+        )
         assert "Authentication information could" in use_lib.stderr
     finally:
         ret = install_salt.proc.run(test_bin, "--local", "pip.uninstall", dep)
         assert ret.returncode == 0
-        use_lib = install_salt.proc.run(test_bin, "--local", "github.get_repo_info", repo)
+        use_lib = install_salt.proc.run(
+            test_bin, "--local", "github.get_repo_info", repo
+        )
         assert "The github execution module cannot be loaded" in use_lib.stderr
 
 
