@@ -115,16 +115,16 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
 
 
 @ci.command(
-    name="define-jobs",
+    name="runner-types",
     arguments={
         "event_name": {
             "help": "The name of the GitHub event being processed.",
         },
     },
 )
-def define_jobs(ctx: Context, event_name: str):
+def runner_types(ctx: Context, event_name: str):
     """
-    Set GH Actions outputs for what should build or not.
+    Set GH Actions 'runners' output to know what can run where.
     """
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is None:
@@ -153,8 +153,8 @@ def define_jobs(ctx: Context, event_name: str):
     # Let's it print until the end
     time.sleep(1)
 
-    ctx.info("Selecting which type of jobs(self hosted runners or not) to run")
-    jobs = {"github-hosted-runners": False, "self-hosted-runners": False}
+    ctx.info("Selecting which type of runners(self hosted runners or not) to run")
+    runners = {"github-hosted": False, "self-hosted": False}
     if event_name == "pull_request":
         ctx.info("Running from a pull request event")
         pr_event_data = gh_event["pull_request"]
@@ -165,17 +165,17 @@ def define_jobs(ctx: Context, event_name: str):
             # If this is a pull request coming from the same repository, don't run anything
             ctx.info("Pull request is coming from the same repository.")
             ctx.info("Not running any jobs since they will run against the branch")
-            ctx.info("Writing 'jobs' to the github outputs file")
+            ctx.info("Writing 'runners' to the github outputs file")
             with open(github_output, "a", encoding="utf-8") as wfh:
-                wfh.write(f"jobs={json.dumps(jobs)}\n")
+                wfh.write(f"runners={json.dumps(runners)}\n")
             ctx.exit(0)
 
         # This is a PR from a forked repository
         ctx.info("Pull request is not comming from the same repository")
-        jobs["github-hosted-runners"] = jobs["self-hosted-runners"] = True
-        ctx.info("Writing 'jobs' to the github outputs file")
+        runners["github-hosted"] = runners["self-hosted"] = True
+        ctx.info("Writing 'runners' to the github outputs file")
         with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"jobs={json.dumps(jobs)}\n")
+            wfh.write(f"runners={json.dumps(runners)}\n")
         ctx.exit(0)
 
     # This is a push or a scheduled event
@@ -183,18 +183,18 @@ def define_jobs(ctx: Context, event_name: str):
     if gh_event["repository"]["fork"] is True:
         # This is running on a forked repository, don't run tests
         ctx.info("The push event is on a forked repository")
-        jobs["github-hosted-runners"] = True
-        ctx.info("Writing 'jobs' to the github outputs file")
+        runners["github-hosted"] = True
+        ctx.info("Writing 'runners' to the github outputs file")
         with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"jobs={json.dumps(jobs)}\n")
+            wfh.write(f"runners={json.dumps(runners)}\n")
         ctx.exit(0)
 
     # Not running on a fork, run everything
     ctx.info(f"The {event_name!r} event is from the main repository")
-    jobs["github-hosted-runners"] = jobs["self-hosted-runners"] = True
-    ctx.info("Writing 'jobs' to the github outputs file")
+    runners["github-hosted"] = runners["self-hosted"] = True
+    ctx.info("Writing 'runners' to the github outputs file")
     with open(github_output, "a", encoding="utf-8") as wfh:
-        wfh.write(f"jobs={json.dumps(jobs)}")
+        wfh.write(f"runners={json.dumps(runners)}")
     ctx.exit(0)
 
 
