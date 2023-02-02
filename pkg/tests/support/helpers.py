@@ -301,9 +301,7 @@ class SaltPkgInstall:
                 "python": [self.install_dir / "bin" / "python3"],
             }
         else:
-            if self.salt_pkg_install.run_root and os.path.exists(
-                self.salt_pkg_install.run_root
-            ):
+            if self.run_root and os.path.exists(self.run_root):
                 self.binary_paths = {
                     "salt": [str(self.run_root)],
                     "api": [str(self.run_root), "api"],
