@@ -204,12 +204,80 @@ jobs:
   prepare-release:
     name: Prepare Release
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['prepare-release'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    runs-on: ubuntu-latest
     needs:
       - prepare-workflow
-    uses: ./.github/workflows/prepare-release.yml
-    with:
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        id: setup-python
+        with:
+          python-version: "3.10"
+
+      - name: Cache Python Tools Virtualenvs
+        id: nox-dependencies-cache
+        uses: actions/cache@v3
+        with:
+          path: .tools-venvs/
+          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.setup-python.outputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+      - name: Update Debian changelog
+        shell: bash
+        run: |
+          tools changelog update-deb --draft
+          tools changelog update-deb
+
+      - name: Update RPM changelog
+        shell: bash
+        run: |
+          tools changelog update-rpm --draft
+          tools changelog update-rpm
+
+      - name: Update Release Notes
+        shell: bash
+        run: |
+          tools changelog update-release-notes --draft
+          tools changelog update-release-notes
+
+      - name: Generate MAN Pages
+        shell: bash
+        run: |
+          tools docs man
+
+      - name: Update Changelog
+        shell: bash
+        run: |
+          tools changelog update-changelog-md --draft
+          tools changelog update-changelog-md
+
+      - name: Show Changes Diff
+        shell: bash
+        run: |
+          git diff --color
+
+      - name: Create release changes diff
+        shell: bash
+        run: |
+          git diff --no-color > salt-${{ needs.prepare-workflow.outputs.salt-version }}.diff
+
+      - name: Upload Source Tarball as an Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.diff
+          path: salt-${{ needs.prepare-workflow.outputs.salt-version }}.diff
+          retention-days: 7
+          if-no-files-found: error
 
   docs:
     name: Build Docs
