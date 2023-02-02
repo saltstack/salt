@@ -1361,7 +1361,7 @@ class SaltMasterWindows(SaltMaster):
         self.script_name = cli_scripts.generate_script(
             bin_dir=self.factories_manager.scripts_dir,
             script_name="salt-master",
-            code_dir=self.factories_manager.code_dir.parent
+            code_dir=self.factories_manager.code_dir.parent,
         )
 
     def _get_impl_class(self):
