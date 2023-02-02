@@ -51,6 +51,7 @@ jobs:
     name: Prepare Workflow Run
     runs-on: ubuntu-latest
     outputs:
+      jobs: ${{ steps.define-jobs.outputs.jobs }}
       runners: ${{ steps.runner-types.outputs.runners }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
       testrun: ${{ steps.define-testrun.outputs.testrun }}
@@ -62,7 +63,7 @@ jobs:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
 
       - name: Get Changed Files
-        if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}
+        if: ${{ github.event_name == 'pull_request'}}
         id: changed-files
         uses: dorny/paths-filter@v2
         with:
@@ -120,6 +121,8 @@ jobs:
                 - cicd/golden-images.json
             testrun:
               - added|modified:
+                - *pkg_requirements
+                - *test_requirements
                 - *salt_added_modified
                 - *tests_added_modified
 
@@ -142,23 +145,21 @@ jobs:
           salt-version: "<{ prepare_workflow_salt_version_input }>"
 
       - name: Write Changed Files To A Local File
-        if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}
         run:
           echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
 
       - name: Check Local Changed Files Contents
-        if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}
+        if: ${{ github.event_name == 'pull_request' }}
         run:
           cat changed-files.json
 
       - name: Process Changed Files
-        if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}
         id: process-changed-files
         run:
           tools ci process-changed-files ${{ github.event_name }} changed-files.json
 
       - name: Check Collected Changed Files
-        if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}
+        if: ${{ github.event_name == 'pull_request' }}
         run:
           echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
 
@@ -170,6 +171,15 @@ jobs:
       - name: Check Defined Runners
         run:
           echo '${{ steps.runner-types.outputs.runners }}' | jq -C '.'
+
+      - name: Define Jobs
+        id: define-jobs
+        run:
+          tools ci define-jobs ${{ github.event_name }} changed-files.json
+
+      - name: Check Defined Jobs
+        run:
+          echo '${{ steps.define-jobs.outputs.jobs }}' | jq -C '.'
 
       - name: Define Testrun
         id: define-testrun

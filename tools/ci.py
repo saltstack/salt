@@ -76,8 +76,20 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
     if not changed_files.exists():
         ctx.error(f"The '{changed_files}' file does not exist.")
         ctx.exit(1)
+
+    contents = changed_files.read_text()
+    if not contents:
+        if event_name == "pull_request":
+            ctx.error(f"The '{changed_files}' file is empty.")
+            ctx.exit(1)
+        else:
+            ctx.debug(f"The '{changed_files}' file is empty.")
+            with open(github_output, "a", encoding="utf-8") as wfh:
+                wfh.write(f"changed-files={json.dumps({})}\n")
+            ctx.exit(0)
+
     try:
-        changed_files_contents = json.loads(changed_files.read_text())
+        changed_files_contents = json.loads(contents)
     except Exception as exc:
         ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
         ctx.exit(1)
@@ -196,6 +208,132 @@ def runner_types(ctx: Context, event_name: str):
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"runners={json.dumps(runners)}")
     ctx.exit(0)
+
+
+@ci.command(
+    name="define-jobs",
+    arguments={
+        "event_name": {
+            "help": "The name of the GitHub event being processed.",
+        },
+        "changed_files": {
+            "help": (
+                "Path to '.json' file containing the payload of changed files "
+                "from the 'dorny/paths-filter' GitHub action."
+            ),
+        },
+    },
+)
+def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
+    """
+    Set GH Actions 'jobs' output to know which jobs should run.
+    """
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if github_step_summary is None:
+        ctx.warn("The 'GITHUB_STEP_SUMMARY' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_step_summary is not None
+
+    jobs = {
+        "docs": True,
+        "lint": True,
+        "test": True,
+        "prepare-release": True,
+        "build-source-tarball": True,
+        "build-deps-onedir": True,
+        "build-salt-onedir": True,
+        "build-pkgs": True,
+    }
+    if event_name != "pull_request":
+        # In this case, all defined jobs should run
+        ctx.info("Writing 'jobs' to the github outputs file")
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"jobs={json.dumps(jobs)}\n")
+
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                f"All defined jobs will run due to event type of {event_name!r}.\n"
+            )
+        return
+
+    if not changed_files.exists():
+        ctx.error(f"The '{changed_files}' file does not exist.")
+        ctx.error(
+            "FYI, the command 'tools process-changed-files <changed-files-path>' "
+            "needs to run prior to this one."
+        )
+        ctx.exit(1)
+    try:
+        changed_files_contents = json.loads(changed_files.read_text())
+    except Exception as exc:
+        ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
+        ctx.exit(1)
+
+    # So, it's a pull request...
+    # Based on which files changed, we can decide what jobs to run.
+    required_docs_changes: set[str] = {
+        changed_files_contents["docs"],
+        changed_files_contents["salt"],
+    }
+    if required_docs_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'docs' job.\n")
+        jobs["docs"] = False
+
+    required_lint_changes: set[str] = {
+        changed_files_contents["salt"],
+        changed_files_contents["tests"],
+        changed_files_contents["lint"],
+    }
+    if required_lint_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'lint' job.\n")
+        jobs["lint"] = False
+
+    required_test_changes: set[str] = {
+        changed_files_contents["testrun"],
+        changed_files_contents["golden_images"],
+    }
+    if required_test_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'test' jobs.\n")
+        jobs["test"] = False
+
+    if not jobs["test"]:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            for job in (
+                "build-source-tarball",
+                "build-deps-onedir",
+                "build-salt-onedir",
+                "build-pkgs",
+            ):
+                wfh.write(f"De-selecting the '{job}' job.\n")
+                jobs[job] = False
+
+    with open(github_step_summary, "a", encoding="utf-8") as wfh:
+        wfh.write("Selected Jobs:\n")
+        for name, value in sorted(jobs.items()):
+            wfh.write(f" - {name}: {value}\n")
+        wfh.write(
+            "\n<details>\n<summary>All Changed Files (click me)</summary>\n<pre>\n"
+        )
+        for path in sorted(json.loads(changed_files_contents["repo_files"])):
+            wfh.write(f"{path}\n")
+        wfh.write("</pre>\n</details>\n")
+
+    ctx.info("Writing 'jobs' to the github outputs file")
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"jobs={json.dumps(jobs)}\n")
 
 
 @ci.command(
