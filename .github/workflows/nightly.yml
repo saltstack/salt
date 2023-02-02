@@ -26,6 +26,7 @@ jobs:
     name: Prepare Workflow Run
     runs-on: ubuntu-latest
     outputs:
+      jobs: ${{ steps.define-jobs.outputs.jobs }}
       runners: ${{ steps.runner-types.outputs.runners }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
       testrun: ${{ steps.define-testrun.outputs.testrun }}
@@ -37,7 +38,7 @@ jobs:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
 
       - name: Get Changed Files
-        if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}
+        if: ${{ github.event_name == 'pull_request'}}
         id: changed-files
         uses: dorny/paths-filter@v2
         with:
@@ -95,6 +96,8 @@ jobs:
                 - cicd/golden-images.json
             testrun:
               - added|modified:
+                - *pkg_requirements
+                - *test_requirements
                 - *salt_added_modified
                 - *tests_added_modified
 
@@ -117,23 +120,21 @@ jobs:
           salt-version: ""
 
       - name: Write Changed Files To A Local File
-        if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}
         run:
           echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
 
       - name: Check Local Changed Files Contents
-        if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}
+        if: ${{ github.event_name == 'pull_request' }}
         run:
           cat changed-files.json
 
       - name: Process Changed Files
-        if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}
         id: process-changed-files
         run:
           tools ci process-changed-files ${{ github.event_name }} changed-files.json
 
       - name: Check Collected Changed Files
-        if: ${{ github.event_name != 'schedule' && github.event_name != 'push'}}
+        if: ${{ github.event_name == 'pull_request' }}
         run:
           echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
 
@@ -145,6 +146,15 @@ jobs:
       - name: Check Defined Runners
         run:
           echo '${{ steps.runner-types.outputs.runners }}' | jq -C '.'
+
+      - name: Define Jobs
+        id: define-jobs
+        run:
+          tools ci define-jobs ${{ github.event_name }} changed-files.json
+
+      - name: Check Defined Jobs
+        run:
+          echo '${{ steps.define-jobs.outputs.jobs }}' | jq -C '.'
 
       - name: Define Testrun
         id: define-testrun
@@ -171,7 +181,6 @@ jobs:
         id: set-cache-seed
         run: |
           echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
-
   pre-commit:
     name: Pre-Commit
     if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
@@ -183,7 +192,7 @@ jobs:
 
   docs:
     name: Build Docs
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['docs'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     uses: ./.github/workflows/docs-action.yml
     needs:
       - prepare-workflow
@@ -192,7 +201,7 @@ jobs:
 
   lint:
     name: Lint
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['lint'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     uses: ./.github/workflows/lint-action.yml
     needs:
       - prepare-workflow
@@ -201,7 +210,7 @@ jobs:
 
   prepare-release:
     name: Prepare Release
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['prepare-release'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
     uses: ./.github/workflows/prepare-release.yml
@@ -211,7 +220,7 @@ jobs:
 
   build-source-tarball:
     name: Build Source Tarball
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-source-tarball'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
       - prepare-release
@@ -240,7 +249,7 @@ jobs:
 
   build-deps-onedir:
     name: Build Dependencies Onedir
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
     uses: ./.github/workflows/build-deps-onedir.yml
@@ -252,6 +261,7 @@ jobs:
 
   build-salt-onedir:
     name: Build Salt Onedir
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-salt-onedir'] }}
     needs:
       - prepare-workflow
       - build-deps-onedir
@@ -265,6 +275,7 @@ jobs:
 
   build-pkgs:
     name: Build Salt Packages
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -276,7 +287,7 @@ jobs:
 
   windows-2016:
     name: Windows 2016
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -292,7 +303,7 @@ jobs:
 
   windows-2019:
     name: Windows 2019
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -308,7 +319,7 @@ jobs:
 
   windows-2022:
     name: Windows 2022
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -324,7 +335,7 @@ jobs:
 
   macos-12:
     name: macOS 12
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -340,7 +351,7 @@ jobs:
 
   almalinux-8:
     name: Alma Linux 8
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -356,7 +367,7 @@ jobs:
 
   almalinux-9:
     name: Alma Linux 9
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -372,7 +383,7 @@ jobs:
 
   amazonlinux-2:
     name: Amazon Linux 2
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -388,7 +399,7 @@ jobs:
 
   archlinux-lts:
     name: Arch Linux LTS
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -404,7 +415,7 @@ jobs:
 
   centos-7:
     name: CentOS 7
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -420,7 +431,7 @@ jobs:
 
   centosstream-8:
     name: CentOS Stream 8
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -436,7 +447,7 @@ jobs:
 
   centosstream-9:
     name: CentOS Stream 9
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -452,7 +463,7 @@ jobs:
 
   debian-10:
     name: Debian 10
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -468,7 +479,7 @@ jobs:
 
   debian-11:
     name: Debian 11
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -484,7 +495,7 @@ jobs:
 
   debian-11-arm64:
     name: Debian 11 Arm64
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -500,7 +511,7 @@ jobs:
 
   fedora-36:
     name: Fedora 36
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -516,7 +527,7 @@ jobs:
 
   opensuse-15:
     name: Opensuse 15
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -532,7 +543,7 @@ jobs:
 
   photonos-3:
     name: Photon OS 3
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -548,7 +559,7 @@ jobs:
 
   photonos-4:
     name: Photon OS 4
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -564,7 +575,7 @@ jobs:
 
   ubuntu-1804:
     name: Ubuntu 18.04
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -580,7 +591,7 @@ jobs:
 
   ubuntu-2004:
     name: Ubuntu 20.04
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -596,7 +607,7 @@ jobs:
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -612,7 +623,7 @@ jobs:
 
   ubuntu-2204:
     name: Ubuntu 22.04
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
@@ -628,7 +639,7 @@ jobs:
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
