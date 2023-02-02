@@ -36,9 +36,15 @@ docs = command_group(
 
 @docs.command(
     name="man",
+    arguments={
+        "no_clean": {
+            "help": "Don't cleanup prior to building",
+        }
+    },
 )
-def man(ctx: Context):
-    ctx.run("make", "clean", cwd="doc/", check=True)
+def man(ctx: Context, no_clean: bool = False):
+    if no_clean is False:
+        ctx.run("make", "clean", cwd="doc/", check=True)
     ctx.run("make", "man", "SHPINXOPTS=-W", cwd="doc/", check=True)
     for root, dirs, files in os.walk("doc/_build/man"):
         for file in files:
@@ -47,26 +53,50 @@ def man(ctx: Context):
 
 @docs.command(
     name="html",
+    arguments={
+        "no_clean": {
+            "help": "Don't cleanup prior to building",
+        },
+        "archive": {
+            "help": "Compress the generated documentation into the provided archive.",
+        },
+    },
 )
-def html(ctx: Context):
-    ctx.run("make", "clean", cwd="doc/", check=True)
+def html(ctx: Context, no_clean: bool = False, archive: pathlib.Path = None):
+    if no_clean is False:
+        ctx.run("make", "clean", cwd="doc/", check=True)
     ctx.run("make", "html", "SHPINXOPTS=-W", cwd="doc/", check=True)
+    if archive is not None:
+        ctx.info(f"Compressing the generated documentation to '{archive}'...")
+        ctx.run("tar", "caf", str(archive.resolve()), ".", cwd="doc/_build/html")
 
 
 @docs.command(
     name="epub",
+    arguments={
+        "no_clean": {
+            "help": "Don't cleanup prior to building",
+        }
+    },
 )
-def epub(ctx: Context):
-    ctx.run("make", "clean", cwd="doc/", check=True)
+def epub(ctx: Context, no_clean: bool = False):
+    if no_clean is False:
+        ctx.run("make", "clean", cwd="doc/", check=True)
     ctx.run("make", "epub", "SHPINXOPTS=-W", cwd="doc/", check=True)
 
 
 @docs.command(
     name="pdf",
+    arguments={
+        "no_clean": {
+            "help": "Don't cleanup prior to building",
+        }
+    },
 )
-def pdf(ctx: Context):
+def pdf(ctx: Context, no_clean: bool = False):
     if not shutil.which("inkscape"):
         ctx.warn("No inkscape binary found")
         ctx.exit(1)
-    ctx.run("make", "clean", cwd="doc/", check=True)
+    if no_clean is False:
+        ctx.run("make", "clean", cwd="doc/", check=True)
     ctx.run("make", "pdf", "SHPINXOPTS=-W", cwd="doc/", check=True)

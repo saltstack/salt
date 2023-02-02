@@ -245,7 +245,6 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
         assert github_step_summary is not None
 
     jobs = {
-        "docs": True,
         "lint": True,
         "test": True,
         "prepare-release": True,
@@ -281,15 +280,6 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
 
     # So, it's a pull request...
     # Based on which files changed, we can decide what jobs to run.
-    required_docs_changes: set[str] = {
-        changed_files_contents["docs"],
-        changed_files_contents["salt"],
-    }
-    if required_docs_changes == {"false"}:
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("De-selecting the 'docs' job.\n")
-        jobs["docs"] = False
-
     required_lint_changes: set[str] = {
         changed_files_contents["salt"],
         changed_files_contents["tests"],
