@@ -34,7 +34,7 @@ idna==2.8
     #   requests
 immutables==0.15
     # via contextvars
-importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+importlib-metadata==6.0.0
     # via -r requirements/darwin.txt
 jaraco.classes==3.2.1
     # via jaraco.collections

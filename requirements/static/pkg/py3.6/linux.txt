@@ -26,7 +26,7 @@ idna==2.8
     # via requests
 immutables==0.14
     # via contextvars
-importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+importlib-metadata==4.6.4
     # via -r requirements/static/pkg/linux.in
 importlib-resources==5.2.2
     # via jaraco.text

@@ -8,7 +8,7 @@ on:
 
 env:
   COLUMNS: 160
-  CACHE_SEED: SEED-5  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-0  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
 
 permissions:

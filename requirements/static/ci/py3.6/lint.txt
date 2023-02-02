@@ -448,7 +448,7 @@ idna==3.2
     #   yarl
 immutables==0.16
     # via contextvars
-importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+importlib-metadata==4.6.4
     # via
     #   -r requirements/static/pkg/linux.in
     #   backports.entry-points-selectable
