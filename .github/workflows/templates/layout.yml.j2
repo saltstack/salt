@@ -51,7 +51,7 @@ jobs:
     name: Prepare Workflow Run
     runs-on: ubuntu-latest
     outputs:
-      jobs: ${{ steps.define-jobs.outputs.jobs }}
+      runners: ${{ steps.runner-types.outputs.runners }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
       testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
@@ -162,14 +162,14 @@ jobs:
         run:
           echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
 
-      - name: Define Jobs To Run
-        id: define-jobs
+      - name: Define Runner Types
+        id: runner-types
         run:
-          tools ci define-jobs ${{ github.event_name }}
+          tools ci runner-types ${{ github.event_name }}
 
-      - name: Check Collected Jobs
+      - name: Check Defined Runners
         run:
-          echo '${{ steps.define-jobs.outputs.jobs }}' | jq -C '.'
+          echo '${{ steps.runner-types.outputs.runners }}' | jq -C '.'
 
       - name: Define Testrun
         id: define-testrun
