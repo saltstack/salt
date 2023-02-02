@@ -2315,6 +2315,12 @@ def managed(
     win_perms_reset=False,
     verify_ssl=True,
     use_etag=False,
+    signature=None,
+    source_hash_sig=None,
+    signed_by_any=None,
+    signed_by_all=None,
+    keyring=None,
+    gnupghome=None,
     **kwargs,
 ):
     r"""
@@ -2911,6 +2917,54 @@ def managed(
         the ``source_hash`` parameter.
 
         .. versionadded:: 3005
+
+    signature
+        Ensure a valid GPG signature exists on the selected ``source`` file.
+        Set this to true for inline signatures, or to a file URI retrievable by
+        ``cp.cache_file`` for a detached one.
+
+        .. note::
+
+            This signature will be enforced regardless of source type and will be
+            required on the final output, therefore this does not lend itself well
+            when templates are rendered.
+            The file will not be modified, meaning inline signatures are not
+            removed.
+
+        .. versionadded:: 3007
+
+    source_hash_sig
+        When ``source_hash`` is a file and ``skip_verify`` is not true and ``use_etag``
+        is not true, ensure a valid GPG signature exists on the source hash file.
+        Set this to ``true`` for an inline (clearsigned) signature, or to a file URI
+        retrievable by ``cp.cache_file`` for a detached one. The cached file
+        will be deleted if the signature verification fails.
+
+        .. versionadded:: 3007
+
+    signed_by_any
+        When verifying signatures either on the managed file or its source hash file,
+        require at least one valid signature from one of a list of key fingerprints.
+        This is passed to ``gpg.verify``.
+
+        .. versionadded:: 3007
+
+    signed_by_all
+        When verifying signatures either on the managed file or its source hash file,
+        require a valid signature from each of the key fingerprints in this list.
+        This is passed to ``gpg.verify``.
+
+        .. versionadded:: 3007
+
+    keyring
+        When verifying signatures, use this keyring.
+
+        .. versionadded:: 3007
+
+    gnupghome
+        When verifying signatures, use this GnuPG home.
+
+        .. versionadded:: 3007
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -2931,6 +2985,15 @@ def managed(
 
     if selinux is not None and not salt.utils.platform.is_linux():
         return _error(ret, "The 'selinux' option is only supported on Linux")
+
+    if signature or source_hash_sig:
+        # Fail early in case the gpg module is not present
+        try:
+            __salt__["gpg.verify"]
+        except KeyError:
+            _error(
+                ret, "Cannot verify signatures because the gpg module was not loaded"
+            )
 
     if selinux:
         seuser = selinux.get("seuser", None)
@@ -3220,6 +3283,11 @@ def managed(
                     serange=serange,
                     verify_ssl=verify_ssl,
                     follow_symlinks=follow_symlinks,
+                    source_hash_sig=source_hash_sig,
+                    signed_by_any=signed_by_any,
+                    signed_by_all=signed_by_all,
+                    keyring=keyring,
+                    gnupghome=gnupghome,
                     **kwargs,
                 )
 
@@ -3283,6 +3351,11 @@ def managed(
             skip_verify,
             verify_ssl=verify_ssl,
             use_etag=use_etag,
+            source_hash_sig=source_hash_sig,
+            signed_by_any=signed_by_any,
+            signed_by_all=signed_by_all,
+            keyring=keyring,
+            gnupghome=gnupghome,
             **kwargs,
         )
     except Exception as exc:  # pylint: disable=broad-except
@@ -3338,6 +3411,11 @@ def managed(
                 setype=setype,
                 serange=serange,
                 use_etag=use_etag,
+                signature=signature,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3417,6 +3495,11 @@ def managed(
                 setype=setype,
                 serange=serange,
                 use_etag=use_etag,
+                signature=signature,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -8939,6 +9022,11 @@ def cached(
     skip_verify=False,
     saltenv="base",
     use_etag=False,
+    source_hash_sig=None,
+    signed_by_any=None,
+    signed_by_all=None,
+    keyring=None,
+    gnupghome=None,
 ):
     """
     .. versionadded:: 2017.7.3
@@ -8996,6 +9084,38 @@ def cached(
 
         .. versionadded:: 3005
 
+    source_hash_sig
+        When ``source_hash`` is a file and ``skip_verify`` is not true and ``use_etag``
+        is not true, ensure a valid GPG signature exists on the source hash file.
+        Set this to ``true`` for an inline (clearsigned) signature, or to a file URI
+        retrievable by ``cp.cache_file`` for a detached one. The cached file
+        will be deleted if the signature verification fails.
+
+        .. versionadded:: 3007
+
+    signed_by_any
+        When verifying signatures either on the managed file or its source hash file,
+        require at least one valid signature from one of a list of key fingerprints.
+        This is passed to ``gpg.verify``.
+
+        .. versionadded:: 3007
+
+    signed_by_all
+        When verifying signatures either on the managed file or its source hash file,
+        require a valid signature from each of the key fingerprints in this list.
+        This is passed to ``gpg.verify``.
+
+        .. versionadded:: 3007
+
+    keyring
+        When verifying signatures, use this keyring.
+
+        .. versionadded:: 3007
+
+    gnupghome
+        When verifying signatures, use this GnuPG home.
+
+        .. versionadded:: 3007
 
     This state will in most cases not be useful in SLS files, but it is useful
     when writing a state or remote-execution module that needs to make sure
@@ -9062,6 +9182,11 @@ def cached(
                 source_hash=source_hash,
                 source_hash_name=source_hash_name,
                 saltenv=saltenv,
+                source_hash_sig=source_hash_sig,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
             )
         except CommandExecutionError as exc:
             ret["comment"] = exc.strerror
