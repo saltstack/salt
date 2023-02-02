@@ -71,6 +71,7 @@ runs:
 
     - name: Install Salt Onedir Package Dependencies
       shell: bash
+      if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
       run: |
         if [ "${{ inputs.platform }}" != "windows" ]; then
           artifacts/${{ inputs.package-name }}/bin/python3 -m pip install -r requirements/static/pkg/py${PY_VERSION}/${{ inputs.platform }}.txt --no-binary=':all:'
