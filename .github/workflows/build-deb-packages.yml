@@ -44,18 +44,24 @@ jobs:
           apt update
           apt install -y python3 python3-venv python3-pip build-essential devscripts debhelper bash-completion git
 
-      - name: Download Release Changes
+      - name: Download Release Patch
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}.diff
+          name: salt-${{ inputs.salt-version }}.patch
           path: pkgs/checkout/
 
-      - name: Apply release changes
+      - name: Configure Git
+        shell: bash
+        run: |
+          git config --global user.name "Salt Project Packaging"
+          git config --global user.email saltproject-packaging@vmware.com
+
+      - name: Apply Release Patch
         shell: bash
         run: |
           cd pkgs/checkout/
-          git apply salt-${{ inputs.salt-version }}.diff
-          rm salt-${{ inputs.salt-version }}.diff
+          git am --committer-date-is-author-date salt-${{ inputs.salt-version }}.patch
+          rm salt-${{ inputs.salt-version }}.patch
 
       - name: Build Deb
         env:

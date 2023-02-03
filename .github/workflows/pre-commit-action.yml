@@ -8,6 +8,14 @@ on:
         required: true
         type: string
         description: JSON string containing information about changed files
+      pre-commit-version:
+        required: true
+        type: string
+        description: The pre-commit version to install
+      cache-seed:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
 
 env:
   PRE_COMMIT_VERSION: "2.21.0"
@@ -33,14 +41,10 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/setup-actionlint
       - uses: ./.github/actions/setup-shellcheck
-
-      - name: Install Pre-Commit
-        env:
-          PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
-          PIP_EXTRA_INDEX_URL: https://pypi.org/simple
-        run: |
-          pip install wheel "pre-commit==${PRE_COMMIT_VERSION}"
-          pre-commit install --install-hooks
+      - uses: ./.github/actions/setup-pre-commit
+        with:
+          version: ${{ inputs.pre-commit-version }}
+          cache-seed: ${{ inputs.cache-seed }}
 
       - name: Check ALL Files On Branch
         if: github.event_name != 'pull_request'
