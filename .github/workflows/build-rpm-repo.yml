@@ -40,19 +40,15 @@ jobs:
           - distro: amazon
             version: "2"
             arch: x86_64
-            key-id: 0E08A149DE57BFBE
           - distro: redhat
             version: "7"
             arch: x86_64
-            key-id: 0E08A149DE57BFBE
           - distro: redhat
             version: "8"
             arch: x86_64
-            key-id: 0E08A149DE57BFBE
           - distro: redhat
             version: "9"
             arch: x86_64
-            key-id: 37A710479D30D7B6
 
     steps:
       - uses: actions/checkout@v3
@@ -83,70 +79,39 @@ jobs:
           EOF
 
       - name: Get Secrets
-        if: ${{ matrix.key-id == '0E08A149DE57BFBE' }}
         env:
           SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
         run: |
           SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
           echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
-          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys \
-            --query SecretString --output text | jq .default_key -r \
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256-2023 \
+            --query SecretString --output text | jq .default_key -r | base64 -d \
             | gpg --passphrase-file "${SECRETS_KEY_FILE}" -d - \
             | gpg --import -
-          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys \
-            --query SecretString --output text| jq .default_passphrase -r \
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256-2023 \
+            --query SecretString --output text| jq .default_passphrase -r | base64 -d \
             | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o "${GNUPGHOME}/passphrase" -d -
           rm "$SECRETS_KEY_FILE"
           echo "passphrase-file ${GNUPGHOME}/passphrase" >> "${GNUPGHOME}/gpg.conf"
 
-      - name: Get Secrets
-        if: ${{ matrix.key-id == '37A710479D30D7B6' }}
+      - name: Download `SALT-PROJECT-GPG-PUBKEY-2023.gpg`
         env:
           SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
         run: |
           SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
           echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
-          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256 \
-            --query SecretString --output text | jq .default_key -r \
-            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -d - \
-            | gpg --import -
-          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256 \
-            --query SecretString --output text| jq .default_passphrase -r \
-            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o "${GNUPGHOME}/passphrase" -d -
-          rm "$SECRETS_KEY_FILE"
-          echo "passphrase-file ${GNUPGHOME}/passphrase" >> "${GNUPGHOME}/gpg.conf"
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/saltstack-gpg-key3-file \
+            --query SecretString --output text| jq .base64 -r | base64 -d \
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o ~/SALT-PROJECT-GPG-PUBKEY-2023.gpg -d -
+          rm "${SECRETS_KEY_FILE}"
 
       - name: Create Repository Path
         run: |
           mkdir -p artifacts/pkgs/repo
 
-      - name: Download `salt-archive-keyring.gpg`
-        if: ${{ matrix.key-id == '0E08A149DE57BFBE' }}
-        env:
-          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
-        run: |
-          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
-          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
-          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/saltstack-gpg-key-file \
-            --query SecretString --output text| jq .base64 -r | base64 -d \
-            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o ~/SALTSTACK-GPG-KEY.pub -d -
-          rm "${SECRETS_KEY_FILE}"
-
-      - name: Download `salt-archive-keyring.gpg`
-        if: ${{ matrix.key-id == '37A710479D30D7B6' }}
-        env:
-          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
-        run: |
-          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
-          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
-          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/saltstack-gpg-key2-file \
-            --query SecretString --output text| jq .base64 -r | base64 -d \
-            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o ~/SALTSTACK-GPG-KEY2.pub -d -
-          rm "${SECRETS_KEY_FILE}"
-
       - name: Create Repository
         run: |
-          tools pkg-repo rpm --key-id=${{ matrix.key-id }} --distro-arch=${{ matrix.arch }} \
+          tools pkg-repo rpm --key-id=64CBBC8173D76B3F --distro-arch=${{ matrix.arch }} \
             ${{ inputs.nightly-build && '--nightly-build' || ''  }} --salt-version=${{ inputs.salt-version }} \
             ${{ inputs.rc-build && '--rc-build' || ''  }} --distro=${{ matrix.distro }} \
             --distro-version=${{ matrix.version }} \

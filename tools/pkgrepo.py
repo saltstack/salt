@@ -146,11 +146,11 @@ def debian(
     label: str = distro_details["label"]
     codename: str = distro_details["codename"]
 
-    salt_archive_keyring_gpg_file = (
-        pathlib.Path("~/salt-archive-keyring.gpg").expanduser().resolve()
+    salt_project_gpg_pub_key_file = (
+        pathlib.Path("~/SALT-PROJECT-GPG-PUBKEY-2023.gpg").expanduser().resolve()
     )
-    if not salt_archive_keyring_gpg_file:
-        ctx.error(f"The file '{salt_archive_keyring_gpg_file}' does not exist.")
+    if not salt_project_gpg_pub_key_file:
+        ctx.error(f"The file '{salt_project_gpg_pub_key_file}' does not exist.")
         ctx.exit(1)
 
     ftp_archive_config_suite = ""
@@ -190,10 +190,10 @@ def debian(
     ctx.info(f"Writing {ftp_archive_config_file} ...")
     ftp_archive_config_file.write_text(textwrap.dedent(ftp_archive_config))
 
-    ctx.info(f"Copying {salt_archive_keyring_gpg_file} to {create_repo_path} ...")
+    ctx.info(f"Copying {salt_project_gpg_pub_key_file} to {create_repo_path} ...")
     shutil.copyfile(
-        salt_archive_keyring_gpg_file,
-        create_repo_path / salt_archive_keyring_gpg_file.name,
+        salt_project_gpg_pub_key_file,
+        create_repo_path / salt_project_gpg_pub_key_file.name,
     )
 
     pool_path = create_repo_path / "pool"
@@ -370,16 +370,12 @@ def rpm(
         ctx.info(f"The {distro_arch} arch is an alias for 'arm64'. Adjusting.")
         distro_arch = "arm64"
 
-    if key_id == "0E08A149DE57BFBE":
-        saltstack_gpg_key_file = (
-            pathlib.Path("~/SALTSTACK-GPG-KEY.pub").expanduser().resolve()
-        )
-    else:
-        saltstack_gpg_key_file = (
-            pathlib.Path("~/SALTSTACK-GPG-KEY2.pub").expanduser().resolve()
-        )
-    if not saltstack_gpg_key_file.exists():
-        ctx.error(f"The file '{saltstack_gpg_key_file}' does not exist.")
+    salt_project_gpg_pub_key_file = (
+        pathlib.Path("~/SALT-PROJECT-GPG-PUBKEY-2023.gpg").expanduser().resolve()
+    )
+
+    if not salt_project_gpg_pub_key_file.exists():
+        ctx.error(f"The file '{salt_project_gpg_pub_key_file}' does not exist.")
         ctx.exit(1)
 
     ctx.info("Creating repository directory structure ...")
@@ -392,10 +388,10 @@ def rpm(
         create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
     create_repo_path.joinpath("SRPMS").mkdir(exist_ok=True, parents=True)
 
-    ctx.info(f"Copying {saltstack_gpg_key_file} to {create_repo_path} ...")
+    ctx.info(f"Copying {salt_project_gpg_pub_key_file} to {create_repo_path} ...")
     shutil.copyfile(
-        saltstack_gpg_key_file,
-        create_repo_path / saltstack_gpg_key_file.name,
+        salt_project_gpg_pub_key_file,
+        create_repo_path / salt_project_gpg_pub_key_file.name,
     )
 
     for fpath in incoming.iterdir():
@@ -407,7 +403,14 @@ def rpm(
         shutil.copyfile(fpath, dpath)
         if fpath.suffix == ".rpm":
             ctx.info(f"Running 'rpmsign' on {dpath} ...")
-            ctx.run("rpmsign", "--key-id", key_id, "--addsign", str(dpath))
+            ctx.run(
+                "rpmsign",
+                "--key-id",
+                key_id,
+                "--addsign",
+                "--digest-algo=sha256",
+                str(dpath),
+            )
 
     createrepo = shutil.which("createrepo")
     if createrepo is None:
@@ -545,11 +548,11 @@ def windows(
         assert incoming is not None
         assert repo_path is not None
         assert key_id is not None
-    salt_archive_keyring_gpg_file = (
-        pathlib.Path("~/salt-archive-keyring.gpg").expanduser().resolve()
+    salt_project_gpg_pub_key_file = (
+        pathlib.Path("~/SALT-PROJECT-GPG-PUBKEY-2023.gpg").expanduser().resolve()
     )
-    if not salt_archive_keyring_gpg_file:
-        ctx.error(f"The file '{salt_archive_keyring_gpg_file}' does not exist.")
+    if not salt_project_gpg_pub_key_file:
+        ctx.error(f"The file '{salt_project_gpg_pub_key_file}' does not exist.")
         ctx.exit(1)
 
     ctx.info("Creating repository directory structure ...")
@@ -613,10 +616,10 @@ def windows(
         ctx.info("GPG Signing '{fpath.relative_to(repo_path)}' ...")
         ctx.run("gpg", "-u", key_id, "-o" f"{fpath}.asc", "-a", "-b", "-s", str(fpath))
 
-    ctx.info(f"Copying {salt_archive_keyring_gpg_file} to {create_repo_path} ...")
+    ctx.info(f"Copying {salt_project_gpg_pub_key_file} to {create_repo_path} ...")
     shutil.copyfile(
-        salt_archive_keyring_gpg_file,
-        create_repo_path / salt_archive_keyring_gpg_file.name,
+        salt_project_gpg_pub_key_file,
+        create_repo_path / salt_project_gpg_pub_key_file.name,
     )
 
     repo_json["latest"] = repo_json[salt_version]
@@ -676,11 +679,11 @@ def macos(
         assert incoming is not None
         assert repo_path is not None
         assert key_id is not None
-    salt_archive_keyring_gpg_file = (
-        pathlib.Path("~/salt-archive-keyring.gpg").expanduser().resolve()
+    salt_project_gpg_pub_key_file = (
+        pathlib.Path("~/SALT-PROJECT-GPG-PUBKEY-2023.gpg").expanduser().resolve()
     )
-    if not salt_archive_keyring_gpg_file:
-        ctx.error(f"The file '{salt_archive_keyring_gpg_file}' does not exist.")
+    if not salt_project_gpg_pub_key_file:
+        ctx.error(f"The file '{salt_project_gpg_pub_key_file}' does not exist.")
         ctx.exit(1)
 
     ctx.info("Creating repository directory structure ...")
@@ -735,10 +738,10 @@ def macos(
         ctx.info("GPG Signing '{fpath.relative_to(repo_path)}' ...")
         ctx.run("gpg", "-u", key_id, "-o" f"{fpath}.asc", "-a", "-b", "-s", str(fpath))
 
-    ctx.info(f"Copying {salt_archive_keyring_gpg_file} to {create_repo_path} ...")
+    ctx.info(f"Copying {salt_project_gpg_pub_key_file} to {create_repo_path} ...")
     shutil.copyfile(
-        salt_archive_keyring_gpg_file,
-        create_repo_path / salt_archive_keyring_gpg_file.name,
+        salt_project_gpg_pub_key_file,
+        create_repo_path / salt_project_gpg_pub_key_file.name,
     )
 
     repo_json["latest"] = repo_json[salt_version]
@@ -798,11 +801,11 @@ def onedir(
         assert incoming is not None
         assert repo_path is not None
         assert key_id is not None
-    salt_archive_keyring_gpg_file = (
-        pathlib.Path("~/salt-archive-keyring.gpg").expanduser().resolve()
+    salt_project_gpg_pub_key_file = (
+        pathlib.Path("~/SALT-PROJECT-GPG-PUBKEY-2023.gpg").expanduser().resolve()
     )
-    if not salt_archive_keyring_gpg_file:
-        ctx.error(f"The file '{salt_archive_keyring_gpg_file}' does not exist.")
+    if not salt_project_gpg_pub_key_file:
+        ctx.error(f"The file '{salt_project_gpg_pub_key_file}' does not exist.")
         ctx.exit(1)
 
     ctx.info("Creating repository directory structure ...")
@@ -869,10 +872,10 @@ def onedir(
         ctx.info("GPG Signing '{fpath.relative_to(repo_path)}' ...")
         ctx.run("gpg", "-u", key_id, "-o" f"{fpath}.asc", "-a", "-b", "-s", str(fpath))
 
-    ctx.info(f"Copying {salt_archive_keyring_gpg_file} to {create_repo_path} ...")
+    ctx.info(f"Copying {salt_project_gpg_pub_key_file} to {create_repo_path} ...")
     shutil.copyfile(
-        salt_archive_keyring_gpg_file,
-        create_repo_path / salt_archive_keyring_gpg_file.name,
+        salt_project_gpg_pub_key_file,
+        create_repo_path / salt_project_gpg_pub_key_file.name,
     )
 
     repo_json["latest"] = repo_json[salt_version]

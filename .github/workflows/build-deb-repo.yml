@@ -40,39 +40,30 @@ jobs:
           - distro: debian
             version: "10"
             arch: x86_64
-            key-id: 0E08A149DE57BFBE
           - distro: debian
             version: "10"
             arch: aarch64
-            key-id: 0E08A149DE57BFBE
           - distro: debian
             version: "11"
             arch: x86_64
-            key-id: 0E08A149DE57BFBE
           - distro: debian
             version: "11"
             arch: aarch64
-            key-id: 0E08A149DE57BFBE
           - distro: ubuntu
             version: "18.04"
             arch: x86_64
-            key-id: 0E08A149DE57BFBE
           - distro: ubuntu
             version: "20.04"
             arch: x86_64
-            key-id: 0E08A149DE57BFBE
           - distro: ubuntu
             version: "20.04"
             arch: aarch64
-            key-id: 0E08A149DE57BFBE
           - distro: ubuntu
             version: "22.04"
             arch: x86_64
-            key-id: 0E08A149DE57BFBE
           - distro: ubuntu
             version: "22.04"
             arch: aarch64
-            key-id: 0E08A149DE57BFBE
 
     steps:
       - uses: actions/checkout@v3
@@ -102,41 +93,40 @@ jobs:
           pinentry-mode loopback
           EOF
 
-
       - name: Get Secrets
         env:
           SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
         run: |
           SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
           echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
-          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys \
-            --query SecretString --output text | jq .default_key -r \
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256-2023 \
+            --query SecretString --output text | jq .default_key -r | base64 -d \
             | gpg --passphrase-file "${SECRETS_KEY_FILE}" -d - \
             | gpg --import -
-          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys \
-            --query SecretString --output text| jq .default_passphrase -r \
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256-2023 \
+            --query SecretString --output text| jq .default_passphrase -r | base64 -d \
             | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o "${GNUPGHOME}/passphrase" -d -
           rm "$SECRETS_KEY_FILE"
           echo "passphrase-file ${GNUPGHOME}/passphrase" >> "${GNUPGHOME}/gpg.conf"
 
-      - name: Create Repository Path
-        run: |
-          mkdir -p artifacts/pkgs/repo
-
-      - name: Download `salt-archive-keyring.gpg`
+      - name: Download `SALT-PROJECT-GPG-PUBKEY-2023.gpg`
         env:
           SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
         run: |
           SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
           echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
-          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/salt-archive-keyring-gpg-file \
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/saltstack-gpg-key3-file \
             --query SecretString --output text| jq .base64 -r | base64 -d \
-            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o ~/salt-archive-keyring.gpg -d -
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o ~/SALT-PROJECT-GPG-PUBKEY-2023.gpg -d -
           rm "${SECRETS_KEY_FILE}"
+
+      - name: Create Repository Path
+        run: |
+          mkdir -p artifacts/pkgs/repo
 
       - name: Create Repository
         run: |
-          tools pkg-repo deb --key-id=${{ matrix.key-id }} --distro-arch=${{ matrix.arch }} \
+          tools pkg-repo deb --key-id=64CBBC8173D76B3F --distro-arch=${{ matrix.arch }} \
             ${{ inputs.nightly-build && '--nightly-build' || '' }} --salt-version=${{ inputs.salt-version }} \
             ${{ inputs.rc-build && '--rc-build' || '' }} --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
