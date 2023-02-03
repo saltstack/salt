@@ -52,9 +52,16 @@ if IS_WINDOWS:
 
         import salt.utils.winapi
     else:
-        # This uses .NET to get network settings and is faster than WMI
-        import clr
-        from System.Net import NetworkInformation
+        try:
+            # This uses .NET to get network settings and is faster than WMI
+            import clr
+            from System.Net import NetworkInformation
+        except ImportError:
+            # Just in case clr input fails for some reason
+            import wmi
+
+            import salt.utils.winapi
+            USE_WMI = True
 
 # TODO: Should we deprecate support for pythonnet 2.5.2, these enumerations can
 # TODO: be deleted
