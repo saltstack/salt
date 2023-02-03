@@ -61,6 +61,7 @@ if IS_WINDOWS:
             import wmi
 
             import salt.utils.winapi
+
             USE_WMI = True
 
 # TODO: Should we deprecate support for pythonnet 2.5.2, these enumerations can
