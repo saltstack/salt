@@ -33,11 +33,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Download Release Changes
-        uses: actions/download-artifact@v3
-        with:
-          name: salt-${{ inputs.salt-version }}.diff
-
       - name: Download System Dependencies
         run: |
           yum -y update
@@ -49,11 +44,23 @@ jobs:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: artifacts/
 
-      - name: Apply release changes
+      - name: Download Release Patch
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ inputs.salt-version }}.patch
+
+      - name: Configure Git
         shell: bash
         run: |
-          git apply salt-${{ inputs.salt-version }}.diff
-          rm salt-${{ inputs.salt-version }}.diff
+          git config --global user.name "Salt Project Packaging"
+          git config --global user.email saltproject-packaging@vmware.com
+          git config --global --add safe.directory "$(pwd)"
+
+      - name: Apply Release Patch
+        shell: bash
+        run: |
+          git am --committer-date-is-author-date salt-${{ inputs.salt-version }}.patch
+          rm salt-${{ inputs.salt-version }}.patch
 
       - name: Build RPM
         env:

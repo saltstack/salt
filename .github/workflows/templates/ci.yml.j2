@@ -1,10 +1,12 @@
 <%- extends 'layout.yml.j2' %>
+<%- set pre_commit_version = "3.0.4" %>
 
 <%- block on %>
 on:
   push: {}
   pull_request: {}
 <%- endblock on %>
+
 
 <%- block jobs %>
   <{- super() }>
@@ -19,7 +21,9 @@ on:
     needs:
       - prepare-workflow
     with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+      pre-commit-version: "<{ pre_commit_version }>"
 
   <%- endif %>
 
@@ -127,16 +131,35 @@ on:
         run: |
           git diff --color
 
-      - name: Create release changes diff
+      - name: Configure Git
         shell: bash
         run: |
-          git diff --no-color > salt-${{ needs.prepare-workflow.outputs.salt-version }}.diff
+          git config --global user.name "Salt Project Packaging"
+          git config --global user.email saltproject-packaging@vmware.com
 
-      - name: Upload Source Tarball as an Artifact
+      - name: Setup Pre-Commit
+        uses: ./.github/actions/setup-pre-commit
+        with:
+          version: "<{ pre_commit_version }>"
+          cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+      - name: Commit Changes
+        shell: bash
+        run: |
+          # Run it twice so that pre-commit can fix anything that can be automatically fixed.
+          git commit -am "Release v${{ needs.prepare-workflow.outputs.salt-version }}" || \
+            git commit -am "Release v${{ needs.prepare-workflow.outputs.salt-version }}"
+
+      - name: Create release changes patch
+        shell: bash
+        run: |
+          git format-patch --keep-subject --binary --stdout HEAD^ > salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+
+      - name: Upload Changes Diff Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.diff
-          path: salt-${{ needs.prepare-workflow.outputs.salt-version }}.diff
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          path: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
           retention-days: 7
           if-no-files-found: error
 
