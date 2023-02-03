@@ -327,23 +327,23 @@ jobs:
 #          report_paths: 'artifacts/xml-unittests-output/*.xml'
 #          annotate_only: true
 
-      - name: Report Salt Code Coverage(${{ matrix.tests-chunk }})
-        if: always() && job.status != 'cancelled'
-        continue-on-error: true
-        run: |
-          nox --force-color -e report-coverage -- salt
-
-      - name: Report Tests Code Coverage(${{ matrix.tests-chunk }})
-        if: always() && job.status != 'cancelled'
-        continue-on-error: true
-        run: |
-          nox --force-color -e report-coverage -- tests
-
-      - name: Report Combined Code Coverage(${{ matrix.tests-chunk }})
-        continue-on-error: true
-        if: always() && job.status != 'cancelled'
-        run: |
-          nox --force-color -e report-coverage
+#      - name: Report Salt Code Coverage(${{ matrix.tests-chunk }})
+#        if: always() && job.status != 'cancelled'
+#        continue-on-error: true
+#        run: |
+#          nox --force-color -e report-coverage -- salt
+#
+#      - name: Report Tests Code Coverage(${{ matrix.tests-chunk }})
+#        if: always() && job.status != 'cancelled'
+#        continue-on-error: true
+#        run: |
+#          nox --force-color -e report-coverage -- tests
+#
+#      - name: Report Combined Code Coverage(${{ matrix.tests-chunk }})
+#        continue-on-error: true
+#        if: always() && job.status != 'cancelled'
+#        run: |
+#          nox --force-color -e report-coverage
 
 
   report:
