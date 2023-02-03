@@ -1357,6 +1357,7 @@ class SaltMasterWindows(SaltMaster):
     """
     Subclassed just to tweak the binary paths if needed and factory classes.
     """
+
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
         self.script_name = cli_scripts.generate_script(
