@@ -190,6 +190,19 @@ jobs:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ inputs.arch }}-${{ inputs.pkg-type }}
           path: pkg/artifacts/
 
+      - name: Download Onedir Tarball as an Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          path: artifacts/
+
+      - name: Decompress Onedir Tarball
+        shell: bash
+        run: |
+          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+          cd artifacts
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+
       - name: List Packages
         run: |
           tree pkg/artifacts
