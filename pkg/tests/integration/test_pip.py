@@ -24,7 +24,7 @@ def wipe_pydeps(pypath, install_salt):
     finally:
         for dep in ["pep8", "PyGithub"]:
             subprocess.run(
-                install_salt.binary_paths["pip"] + ["uninstall", dep],
+                install_salt.binary_paths["pip"] + ["uninstall", "-y", dep],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 check=False,
@@ -66,7 +66,7 @@ def test_pip_non_root(install_salt, test_account, pypath):
     check_path = pypath / "pep8"
     # Lets make sure pep8 is not currently installed
     subprocess.run(
-        install_salt.binary_paths["pip"] + ["uninstall", "pep8"],
+        install_salt.binary_paths["pip"] + ["uninstall", "-y", "pep8"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
