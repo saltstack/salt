@@ -73,6 +73,9 @@ class SaltPkgInstall:
     no_uninstall: bool = attr.ib(default=False)
 
     distro_id: str = attr.ib(init=False)
+    distro_codename: str = attr.ib(init=False)
+    distro_name: str = attr.ib(init=False)
+    distro_version: str = attr.ib(init=False)
     pkg_mngr: str = attr.ib(init=False)
     rm_pkg: str = attr.ib(init=False)
     salt_pkgs: List[str] = attr.ib(init=False)
@@ -100,6 +103,18 @@ class SaltPkgInstall:
     @distro_id.default
     def _default_distro_id(self):
         return distro.id().lower()
+
+    @distro_codename.default
+    def _default_distro_codename(self):
+        return distro.codename().lower()
+
+    @distro_name.default
+    def _default_distro_name(self):
+        return distro.name().lower()
+
+    @distro_version.default
+    def _default_distro_version(self):
+        return distro.version().lower()
 
     @pkg_mngr.default
     def _default_pkg_mngr(self):
@@ -527,33 +542,31 @@ class SaltPkgInstall:
         else:
             major_ver = self.major
         min_ver = f"{major_ver}"
-        os_name, version, code_name = distro.linux_distribution()
-        if os_name:
-            os_name = os_name.split()[0].lower()
-        if os_name == "centos" or os_name == "fedora":
-            os_name = "redhat"
+        distro_name = self.distro_name
+        if distro_name == "centos" or distro_name == "fedora":
+            distro_name = "redhat"
         root_url = "salt/py3/"
         if self.classic:
             root_url = "py3/"
 
-        if os_name.lower() in ["redhat", "centos", "amazon", "fedora"]:
+        if self.distro_name in ["redhat", "centos", "amazon", "fedora"]:
             for fp in pathlib.Path("/etc", "yum.repos.d").glob("epel*"):
                 fp.unlink()
             gpg_key = "SALTSTACK-GPG-KEY.pub"
-            if version == "9":
+            if self.distro_version == "9":
                 gpg_key = "SALTSTACK-GPG-KEY2.pub"
             ret = self.proc.run(
                 "rpm",
                 "--import",
-                f"https://repo.saltproject.io/{root_url}{os_name}/{version}/x86_64/{major_ver}/{gpg_key}",
+                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/x86_64/{major_ver}/{gpg_key}",
             )
             self._check_retcode(ret)
             ret = self.proc.run(
                 "curl",
                 "-fsSL",
-                f"https://repo.saltproject.io/{root_url}{os_name}/{version}/x86_64/{major_ver}.repo",
+                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/x86_64/{major_ver}.repo",
                 "-o",
-                f"/etc/yum.repos.d/salt-{os_name}.repo",
+                f"/etc/yum.repos.d/salt-{distro_name}.repo",
             )
             self._check_retcode(ret)
             ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
@@ -566,7 +579,7 @@ class SaltPkgInstall:
             )
             self._check_retcode(ret)
 
-        elif os_name.lower() in ["debian", "ubuntu"]:
+        elif distro_name in ["debian", "ubuntu"]:
             ret = self.proc.run(self.pkg_mngr, "install", "curl", "-y")
             self._check_retcode(ret)
             ret = self.proc.run(self.pkg_mngr, "install", "apt-transport-https", "-y")
@@ -576,7 +589,7 @@ class SaltPkgInstall:
                 "-fsSL",
                 "-o",
                 "/usr/share/keyrings/salt-archive-keyring.gpg",
-                f"https://repo.saltproject.io/{root_url}{os_name}/{version}/amd64/{major_ver}/salt-archive-keyring.gpg",
+                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/amd64/{major_ver}/salt-archive-keyring.gpg",
             )
             self._check_retcode(ret)
             with open(
@@ -584,7 +597,7 @@ class SaltPkgInstall:
             ) as fp:
                 fp.write(
                     "deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg arch=amd64] "
-                    f"https://repo.saltproject.io/{root_url}{os_name}/{version}/amd64/{major_ver} {code_name} main"
+                    f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/amd64/{major_ver} {self.distro_codename} main"
                 )
             ret = self.proc.run(self.pkg_mngr, "update")
             self._check_retcode(ret)
@@ -595,7 +608,7 @@ class SaltPkgInstall:
                 "-y",
             )
             self._check_retcode(ret)
-
+            self.stop_services()
         elif platform.is_windows():
             win_pkg = f"salt-{min_ver}-1-windows-amd64.exe"
             win_pkg_url = (
