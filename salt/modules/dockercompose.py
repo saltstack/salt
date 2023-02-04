@@ -659,17 +659,22 @@ def stop(path, service_names=None):
         try:
             if HAS_PYTHON_ON_WHALES:
                 project.compose.stop(services=service_names)
+                if debug:
+                    for container in project.ps(all=True):
+                        if service_names is None or container.name in service_names:
+                            debug_ret[container.name] = dict(container.state)
+                            result[container.name] = container.state.status
             else:
                 project.stop(service_names)
-            if debug and not HAS_PYTHON_ON_WHALES:
-                for container in project.containers(stopped=True):
-                    if (
-                        service_names is None
-                        or container.get("Name")[1:] in service_names
-                    ):
-                        container.inspect_if_not_inspected()
-                        debug_ret[container.get("Name")] = container.inspect()
-                        result[container.get("Name")] = "stopped"
+                if debug:
+                    for container in project.containers(stopped=True):
+                        if (
+                            service_names is None
+                            or container.get("Name")[1:] in service_names
+                        ):
+                            container.inspect_if_not_inspected()
+                            debug_ret[container.get("Name")] = container.inspect()
+                            result[container.get("Name")] = "stopped"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
