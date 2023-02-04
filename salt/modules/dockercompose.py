@@ -146,7 +146,7 @@ MIN_DOCKERCOMPOSE = (1, 5, 0)
 VERSION_RE = r"([\d.]+)"
 
 log = logging.getLogger(__name__)
-debug = False
+debug = True
 
 __virtualname__ = "dockercompose"
 DEFAULT_DC_FILENAMES = ("docker-compose.yml", "docker-compose.yaml")
@@ -491,7 +491,7 @@ def create(path, docker_compose):
 
         salt myminion dockercompose.create /path/where/docker-compose/stored content
     """
-    # TODO: needs adjustment for python on whales
+    # TODO: needs deprecation. does not match "create" functionality of docker-compose.
     if docker_compose:
         ret = __write_docker_compose(path, docker_compose, already_existed=False)
         if isinstance(ret, dict):
@@ -606,24 +606,28 @@ def restart(path, service_names=None):
     project = __load_project(path)
     debug_ret = {}
     result = {}
-    # TODO: needs work
     if isinstance(project, dict):
         return project
     else:
         try:
             if HAS_PYTHON_ON_WHALES:
                 project.compose.restart(services=service_names, quiet=True)
+                if debug:
+                    for container in project.ps(all=True):
+                        if service_names is None or container.name in service_names:
+                            debug_ret[container.name] = dict(container.state)
+                            result[container.name] = "restarted"
             else:
                 project.restart(service_names)
-            if debug and not HAS_PYTHON_ON_WHALES:
-                for container in project.containers():
-                    if (
-                        service_names is None
-                        or container.get("Name")[1:] in service_names
-                    ):
-                        container.inspect_if_not_inspected()
-                        debug_ret[container.get("Name")] = container.inspect()
-                        result[container.get("Name")] = "restarted"
+                if debug:
+                    for container in project.containers():
+                        if (
+                            service_names is None
+                            or container.get("Name")[1:] in service_names
+                        ):
+                            container.inspect_if_not_inspected()
+                            debug_ret[container.get("Name")] = container.inspect()
+                            result[container.get("Name")] = "restarted"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -652,7 +656,6 @@ def stop(path, service_names=None):
     project = __load_project(path)
     debug_ret = {}
     result = {}
-    # TODO: needs work (debug output)
     if isinstance(project, dict):
         return project
     else:
@@ -663,7 +666,7 @@ def stop(path, service_names=None):
                     for container in project.ps(all=True):
                         if service_names is None or container.name in service_names:
                             debug_ret[container.name] = dict(container.state)
-                            result[container.name] = container.state.status
+                            result[container.name] = "stopped"
             else:
                 project.stop(service_names)
                 if debug:
@@ -703,24 +706,28 @@ def pause(path, service_names=None):
     project = __load_project(path)
     debug_ret = {}
     result = {}
-    # TODO: needs work (debug output)
     if isinstance(project, dict):
         return project
     else:
         try:
             if HAS_PYTHON_ON_WHALES:
                 project.compose.pause(services=service_names)
+                if debug:
+                    for container in project.ps(all=True):
+                        if service_names is None or container.name in service_names:
+                            debug_ret[container.name] = dict(container.state)
+                            result[container.name] = "paused"
             else:
                 project.pause(service_names)
-            if debug and not HAS_PYTHON_ON_WHALES:
-                for container in project.containers():
-                    if (
-                        service_names is None
-                        or container.get("Name")[1:] in service_names
-                    ):
-                        container.inspect_if_not_inspected()
-                        debug_ret[container.get("Name")] = container.inspect()
-                        result[container.get("Name")] = "paused"
+                if debug:
+                    for container in project.containers():
+                        if (
+                            service_names is None
+                            or container.get("Name")[1:] in service_names
+                        ):
+                            container.inspect_if_not_inspected()
+                            debug_ret[container.get("Name")] = container.inspect()
+                            result[container.get("Name")] = "paused"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -749,24 +756,28 @@ def unpause(path, service_names=None):
     project = __load_project(path)
     debug_ret = {}
     result = {}
-    # TODO: needs work (debug output)
     if isinstance(project, dict):
         return project
     else:
         try:
             if HAS_PYTHON_ON_WHALES:
                 project.compose.unpause(services=service_names)
+                if debug:
+                    for container in project.ps(all=True):
+                        if service_names is None or container.name in service_names:
+                            debug_ret[container.name] = dict(container.state)
+                            result[container.name] = "unpaused"
             else:
                 project.unpause(service_names)
-            if debug and not HAS_PYTHON_ON_WHALES:
-                for container in project.containers():
-                    if (
-                        service_names is None
-                        or container.get("Name")[1:] in service_names
-                    ):
-                        container.inspect_if_not_inspected()
-                        debug_ret[container.get("Name")] = container.inspect()
-                        result[container.get("Name")] = "unpaused"
+                if debug:
+                    for container in project.containers():
+                        if (
+                            service_names is None
+                            or container.get("Name")[1:] in service_names
+                        ):
+                            container.inspect_if_not_inspected()
+                            debug_ret[container.get("Name")] = container.inspect()
+                            result[container.get("Name")] = "unpaused"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -795,24 +806,28 @@ def start(path, service_names=None):
     project = __load_project(path)
     debug_ret = {}
     result = {}
-    # TODO: needs work (debug output)
     if isinstance(project, dict):
         return project
     else:
         try:
             if HAS_PYTHON_ON_WHALES:
                 project.compose.start(services=service_names)
+                if debug:
+                    for container in project.ps(all=True):
+                        if service_names is None or container.name in service_names:
+                            debug_ret[container.name] = dict(container.state)
+                            result[container.name] = "started"
             else:
                 project.start(service_names)
-            if debug and not HAS_PYTHON_ON_WHALES:
-                for container in project.containers():
-                    if (
-                        service_names is None
-                        or container.get("Name")[1:] in service_names
-                    ):
-                        container.inspect_if_not_inspected()
-                        debug_ret[container.get("Name")] = container.inspect()
-                        result[container.get("Name")] = "started"
+                if debug:
+                    for container in project.containers():
+                        if (
+                            service_names is None
+                            or container.get("Name")[1:] in service_names
+                        ):
+                            container.inspect_if_not_inspected()
+                            debug_ret[container.get("Name")] = container.inspect()
+                            result[container.get("Name")] = "started"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -841,24 +856,28 @@ def kill(path, service_names=None):
     project = __load_project(path)
     debug_ret = {}
     result = {}
-    # TODO: needs work (debug output)
     if isinstance(project, dict):
         return project
     else:
         try:
             if HAS_PYTHON_ON_WHALES:
                 project.compose.kill(services=service_names)
+                if debug:
+                    for container in project.ps(all=True):
+                        if service_names is None or container.name in service_names:
+                            debug_ret[container.name] = dict(container.state)
+                            result[container.name] = "killed"
             else:
                 project.kill(service_names)
-            if debug and not HAS_PYTHON_ON_WHALES:
-                for container in project.containers(stopped=True):
-                    if (
-                        service_names is None
-                        or container.get("Name")[1:] in service_names
-                    ):
-                        container.inspect_if_not_inspected()
-                        debug_ret[container.get("Name")] = container.inspect()
-                        result[container.get("Name")] = "killed"
+                if debug:
+                    for container in project.containers(stopped=True):
+                        if (
+                            service_names is None
+                            or container.get("Name")[1:] in service_names
+                        ):
+                            container.inspect_if_not_inspected()
+                            debug_ret[container.get("Name")] = container.inspect()
+                            result[container.get("Name")] = "killed"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -976,17 +995,21 @@ def up(path, service_names=None):
         try:
             if HAS_PYTHON_ON_WHALES:
                 project.compose.up(services=service_names, detach=True)
+                if debug:
+                    for container in project.ps(all=True):
+                        if service_names is None or container.name in service_names:
+                            debug_ret[container.name] = dict(container.state)
             else:
                 result = _get_convergence_plans(project, service_names)
                 ret = project.up(service_names)
-            if debug and not HAS_PYTHON_ON_WHALES:
-                for container in ret:
-                    if (
-                        service_names is None
-                        or container.get("Name")[1:] in service_names
-                    ):
-                        container.inspect_if_not_inspected()
-                        debug_ret[container.get("Name")] = container.inspect()
+                if debug:
+                    for container in ret:
+                        if (
+                            service_names is None
+                            or container.get("Name")[1:] in service_names
+                        ):
+                            container.inspect_if_not_inspected()
+                            debug_ret[container.get("Name")] = container.inspect()
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
