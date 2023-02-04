@@ -615,7 +615,7 @@ def windows(
     for fpath in create_repo_path.iterdir():
         if fpath.suffix in (".msi", ".exe"):
             continue
-        ctx.info("GPG Signing '{fpath.relative_to(repo_path)}' ...")
+        ctx.info(f"GPG Signing '{fpath.relative_to(repo_path)}' ...")
         ctx.run("gpg", "-u", key_id, "-o" f"{fpath}.asc", "-a", "-b", "-s", str(fpath))
 
     ctx.info(f"Copying {salt_project_gpg_pub_key_file} to {create_repo_path} ...")
@@ -640,6 +640,25 @@ def windows(
         latest_link.symlink_to(create_repo_path.name)
 
     repo_json_path.write_text(json.dumps(repo_json))
+
+    ctx.info("Downloading any pre-existing 'minor/repo.json' file")
+    if nightly_build:
+        bucket_name = "salt-project-prod-salt-artifacts-nightly"
+    else:
+        bucket_name = "salt-project-prod-salt-artifacts-staging"
+
+    minor_repo_json_path = create_repo_path / "minor" / "repo.json"
+    bucket_url = f"s3://{bucket_name}/{minor_repo_json_path.relative_to(repo_path)}"
+    ret = ctx.run(
+        "aws", "s3", "cp", bucket_url, minor_repo_json_path.parent, check=False
+    )
+    if ret.returncode:
+        minor_repo_json = {}
+    else:
+        minor_repo_json = json.loads(str(minor_repo_json_path))
+
+    minor_repo_json[salt_version] = repo_json[salt_version]
+    minor_repo_json_path.write_text(json.dumps(minor_repo_json))
 
     ctx.info("Done")
 
@@ -749,7 +768,7 @@ def macos(
     for fpath in create_repo_path.iterdir():
         if fpath.suffix in (".pkg",):
             continue
-        ctx.info("GPG Signing '{fpath.relative_to(repo_path)}' ...")
+        ctx.info(f"GPG Signing '{fpath.relative_to(repo_path)}' ...")
         ctx.run("gpg", "-u", key_id, "-o" f"{fpath}.asc", "-a", "-b", "-s", str(fpath))
 
     ctx.info(f"Copying {salt_project_gpg_pub_key_file} to {create_repo_path} ...")
@@ -774,6 +793,25 @@ def macos(
         latest_link.symlink_to(create_repo_path.name)
 
     repo_json_path.write_text(json.dumps(repo_json))
+
+    ctx.info("Downloading any pre-existing 'minor/repo.json' file")
+    if nightly_build:
+        bucket_name = "salt-project-prod-salt-artifacts-nightly"
+    else:
+        bucket_name = "salt-project-prod-salt-artifacts-staging"
+
+    minor_repo_json_path = create_repo_path / "minor" / "repo.json"
+    bucket_url = f"s3://{bucket_name}/{minor_repo_json_path.relative_to(repo_path)}"
+    ret = ctx.run(
+        "aws", "s3", "cp", bucket_url, minor_repo_json_path.parent, check=False
+    )
+    if ret.returncode:
+        minor_repo_json = {}
+    else:
+        minor_repo_json = json.loads(str(minor_repo_json_path))
+
+    minor_repo_json[salt_version] = repo_json[salt_version]
+    minor_repo_json_path.write_text(json.dumps(minor_repo_json))
 
     ctx.info("Done")
 
@@ -895,7 +933,7 @@ def onedir(
     for fpath in create_repo_path.iterdir():
         if fpath.suffix in (".gpg", ".pkg"):
             continue
-        ctx.info("GPG Signing '{fpath.relative_to(repo_path)}' ...")
+        ctx.info(f"GPG Signing '{fpath.relative_to(repo_path)}' ...")
         ctx.run("gpg", "-u", key_id, "-o" f"{fpath}.asc", "-a", "-b", "-s", str(fpath))
 
     ctx.info(f"Copying {salt_project_gpg_pub_key_file} to {create_repo_path} ...")
@@ -920,6 +958,25 @@ def onedir(
         latest_link.symlink_to(create_repo_path.name)
 
     repo_json_path.write_text(json.dumps(repo_json))
+
+    ctx.info("Downloading any pre-existing 'minor/repo.json' file")
+    if nightly_build:
+        bucket_name = "salt-project-prod-salt-artifacts-nightly"
+    else:
+        bucket_name = "salt-project-prod-salt-artifacts-staging"
+
+    minor_repo_json_path = create_repo_path / "minor" / "repo.json"
+    bucket_url = f"s3://{bucket_name}/{minor_repo_json_path.relative_to(repo_path)}"
+    ret = ctx.run(
+        "aws", "s3", "cp", bucket_url, minor_repo_json_path.parent, check=False
+    )
+    if ret.returncode:
+        minor_repo_json = {}
+    else:
+        minor_repo_json = json.loads(str(minor_repo_json_path))
+
+    minor_repo_json[salt_version] = repo_json[salt_version]
+    minor_repo_json_path.write_text(json.dumps(minor_repo_json))
 
     ctx.info("Done")
 
