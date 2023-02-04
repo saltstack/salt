@@ -27,7 +27,7 @@ jobs:
           - aarch64
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/centos:stream9
+      image: ghcr.io/saltstack/salt-ci-containers/packaging:centosstream-9
 
     steps:
       - uses: actions/checkout@v3
@@ -36,8 +36,6 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}.diff
-
-
 
       - name: Download System Dependencies
         run: |
@@ -66,7 +64,7 @@ jobs:
       - name: Upload RPMs
         uses: actions/upload-artifact@v3
         with:
-          name: salt-${{ matrix.arch }}-rpms
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm-pkgs
           path: ~/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
           retention-days: 7
           if-no-files-found: error

@@ -705,6 +705,12 @@ def apply_(mods=None, **kwargs):
 
             salt '*' state.apply localconfig=/path/to/minion.yml
 
+    state_events
+        The state_events option sends progress events as each function in
+        a state run completes execution.
+
+        .. versionadded:: 3006.0
+
 
     .. rubric:: APPLYING INDIVIDUAL SLS FILES (A.K.A. :py:func:`STATE.SLS <salt.modules.state.sls>`)
 
@@ -816,6 +822,12 @@ def apply_(mods=None, **kwargs):
             module types.
 
         .. versionadded:: 2017.7.8,2018.3.3,2019.2.0
+
+    state_events
+        The state_events option sends progress events as each function in
+        a state run completes execution.
+
+        .. versionadded:: 3006.0
     """
     if mods:
         return sls(mods, **kwargs)
@@ -974,7 +986,7 @@ def run_request(name="default", **kwargs):
     return {}
 
 
-def highstate(test=None, queue=None, **kwargs):
+def highstate(test=None, queue=None, state_events=None, **kwargs):
     """
     Retrieve the state data from the salt master for this minion and execute it
 
@@ -1072,6 +1084,12 @@ def highstate(test=None, queue=None, **kwargs):
 
         .. versionadded:: 2015.8.4
 
+    state_events
+        The state_events option sends progress events as each function in
+        a state run completes execution.
+
+        .. versionadded:: 3006.0
+
     CLI Examples:
 
     .. code-block:: bash
@@ -1127,6 +1145,9 @@ def highstate(test=None, queue=None, **kwargs):
             "Pillar data must be formatted as a dictionary, unless pillar_enc "
             "is specified."
         )
+
+    if state_events is not None:
+        opts["state_events"] = state_events
 
     try:
         st_ = salt.state.HighState(
@@ -1186,7 +1207,15 @@ def highstate(test=None, queue=None, **kwargs):
         return ret
 
 
-def sls(mods, test=None, exclude=None, queue=None, sync_mods=None, **kwargs):
+def sls(
+    mods,
+    test=None,
+    exclude=None,
+    queue=None,
+    sync_mods=None,
+    state_events=None,
+    **kwargs
+):
     """
     Execute the states in one or more SLS files
 
@@ -1296,6 +1325,12 @@ def sls(mods, test=None, exclude=None, queue=None, sync_mods=None, **kwargs):
 
         .. versionadded:: 2017.7.8,2018.3.3,2019.2.0
 
+    state_events
+        The state_events option sends progress events as each function in
+        a state run completes execution.
+
+        .. versionadded:: 3006.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -1381,6 +1416,9 @@ def sls(mods, test=None, exclude=None, queue=None, sync_mods=None, **kwargs):
             __salt__["saltutil.sync_{}".format(module_type)](saltenv=opts["saltenv"])
         except KeyError:
             log.warning("Invalid custom module type '%s', ignoring", module_type)
+
+    if state_events is not None:
+        opts["state_events"] = state_events
 
     try:
         st_ = salt.state.HighState(
@@ -1765,7 +1803,7 @@ def show_states(queue=None, **kwargs):
         return list(states.keys())
 
 
-def sls_id(id_, mods, test=None, queue=None, **kwargs):
+def sls_id(id_, mods, test=None, queue=None, state_events=None, **kwargs):
     """
     Call a single ID from the named module(s) and handle all requisites
 
@@ -1834,6 +1872,9 @@ def sls_id(id_, mods, test=None, queue=None, **kwargs):
             "Pillar data must be formatted as a dictionary, unless pillar_enc "
             "is specified."
         )
+
+    if state_events is not None:
+        opts["state_events"] = state_events
 
     try:
         st_ = salt.state.HighState(

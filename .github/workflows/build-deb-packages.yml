@@ -24,7 +24,7 @@ jobs:
           - aarch64
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/debian:11
+      image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-11
 
     steps:
       - uses: actions/checkout@v3
@@ -72,7 +72,7 @@ jobs:
       - name: Upload DEBs
         uses: actions/upload-artifact@v3
         with:
-          name: salt-${{ matrix.arch }}-debs
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb-pkgs
           path: ${{ github.workspace }}/pkgs/*
           retention-days: 7
           if-no-files-found: error
