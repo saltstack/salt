@@ -41,7 +41,7 @@ import salt.utils.pkg.rpm
 import salt.utils.systemd
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import LooseVersion
 
 try:
     import yum
@@ -559,7 +559,7 @@ def latest_version(*names, **kwargs):
         # Sort by version number (highest to lowest) for loop below
         updates = sorted(
             _yum_pkginfo(out["stdout"]),
-            key=lambda pkginfo: _LooseVersion(pkginfo.version),
+            key=lambda pkginfo: LooseVersion(pkginfo.version),
             reverse=True,
         )
 
@@ -963,14 +963,14 @@ def list_repo_pkgs(*args, **kwargs):
     yum_version = (
         None
         if _yum() != "yum"
-        else _LooseVersion(
+        else LooseVersion(
             __salt__["cmd.run"](["yum", "--version"], python_shell=False)
             .splitlines()[0]
             .strip()
         )
     )
     # Really old version of yum; does not even have --showduplicates option
-    if yum_version and yum_version < _LooseVersion("3.2.13"):
+    if yum_version and yum_version < LooseVersion("3.2.13"):
         cmd_prefix = ["--quiet"]
         if cacheonly:
             cmd_prefix.append("-C")
@@ -982,7 +982,7 @@ def list_repo_pkgs(*args, **kwargs):
                 _parse_output(out["stdout"], strict=True)
     # The --showduplicates option is added in 3.2.13, but the
     # repository-packages subcommand is only in 3.4.3 and newer
-    elif yum_version and yum_version < _LooseVersion("3.4.3"):
+    elif yum_version and yum_version < LooseVersion("3.4.3"):
         cmd_prefix = ["--quiet", "--showduplicates"]
         if cacheonly:
             cmd_prefix.append("-C")
@@ -1018,7 +1018,7 @@ def list_repo_pkgs(*args, **kwargs):
             # Sort versions newest to oldest
             for pkgname in ret[reponame]:
                 sorted_versions = sorted(
-                    (_LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
+                    (LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
                 )
                 ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
         return ret
@@ -1029,7 +1029,7 @@ def list_repo_pkgs(*args, **kwargs):
                 byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
         for pkgname in byrepo_ret:
             sorted_versions = sorted(
-                (_LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
+                (LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
             )
             byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
         return byrepo_ret

@@ -25,7 +25,6 @@ from distutils.command.install_lib import install_lib
 from distutils.errors import DistutilsArgError
 from distutils.version import LooseVersion  # pylint: disable=blacklisted-module
 
-import setuptools
 from setuptools import setup
 from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.develop import develop
@@ -108,9 +107,9 @@ try:
 except ImportError:
     HAS_ESKY = False
 
-SALT_VERSION = os.path.join(os.path.abspath(SETUP_DIRNAME), "salt", "version.py")
+SALT_VERSION_MODULE = os.path.join(os.path.abspath(SETUP_DIRNAME), "salt", "version.py")
 SALT_VERSION_HARDCODED = os.path.join(
-    os.path.abspath(SETUP_DIRNAME), "salt", "_version.py"
+    os.path.abspath(SETUP_DIRNAME), "salt", "_version.txt"
 )
 SALT_SYSPATHS_HARDCODED = os.path.join(
     os.path.abspath(SETUP_DIRNAME), "salt", "_syspaths.py"
@@ -170,7 +169,12 @@ PACKAGED_FOR_SALT_SSH = os.path.isfile(PACKAGED_FOR_SALT_SSH_FILE)
 
 
 # pylint: disable=W0122
-exec(compile(open(SALT_VERSION).read(), SALT_VERSION, "exec"))
+if os.path.exists(SALT_VERSION_HARDCODED):
+    with open(SALT_VERSION_HARDCODED, encoding="utf-8") as rfh:
+        SALT_VERSION = rfh.read().strip()
+else:
+    exec(compile(open(SALT_VERSION_MODULE).read(), SALT_VERSION_MODULE, "exec"))
+    SALT_VERSION = str(__saltstack_version__)  # pylint: disable=undefined-variable
 # pylint: enable=W0122
 
 
@@ -222,23 +226,23 @@ class WriteSaltVersion(Command):
                 sys.stderr.flush()
 
             if not self.distribution.with_salt_version:
-                salt_version = (
-                    __saltstack_version__  # pylint: disable=undefined-variable
-                )
+                salt_version = SALT_VERSION
             else:
                 from salt.version import SaltStackVersion
 
                 salt_version = SaltStackVersion.parse(
                     self.distribution.with_salt_version
                 )
-
-            # pylint: disable=E0602
-            open(self.distribution.salt_version_hardcoded_path, "w").write(
-                INSTALL_VERSION_TEMPLATE.format(
-                    date=DATE, full_version_info=salt_version.full_info_all_versions
+            if os.path.exists(self.distribution.salt_version_hardcoded_path):
+                log.warn(
+                    "The 'salt/_version.txt' file already exists. Not overwriting it."
                 )
-            )
-            # pylint: enable=E0602
+                return
+
+            with open(
+                self.distribution.salt_version_hardcoded_path, "w", encoding="utf-8"
+            ) as wfh:
+                wfh.write(str(salt_version))
 
 
 class GenerateSaltSyspaths(Command):
@@ -317,7 +321,7 @@ class Develop(develop):
         (
             "write-salt-version",
             None,
-            "Generate Salt's _version.py file which allows proper version "
+            "Generate Salt's _version.txt file which allows proper version "
             "reporting. This defaults to False on develop/editable setups. "
             "If WRITE_SALT_VERSION is found in the environment this flag is "
             "switched to True.",
@@ -334,7 +338,7 @@ class Develop(develop):
             "mimic-salt-install",
             None,
             "Mimmic the install command when running the develop command. "
-            "This will generate salt's _version.py and _syspaths.py files. "
+            "This will generate salt's _version.txt and _syspaths.py files. "
             "Generate Salt's _syspaths.py file which allows tweaking some "
             "This defaults to False on develop/editable setups. "
             "If MIMIC_INSTALL is found in the environment this flag is "
@@ -480,10 +484,10 @@ class Sdist(sdist):
 
         sdist.make_release_tree(self, base_dir, files)
 
-        # Let's generate salt/_version.py to include in the sdist tarball
+        # Let's generate salt/_version.txt to include in the sdist tarball
         self.distribution.running_salt_sdist = True
         self.distribution.salt_version_hardcoded_path = os.path.join(
-            base_dir, "salt", "_version.py"
+            base_dir, "salt", "_version.txt"
         )
         self.run_command("write_salt_version")
 
@@ -683,20 +687,20 @@ class Build(build):
     def run(self):
         # Run build.run function
         build.run(self)
-        salt_build_ver_file = os.path.join(self.build_lib, "salt", "_version.py")
+        salt_build_ver_file = os.path.join(self.build_lib, "salt", "_version.txt")
 
         if getattr(self.distribution, "with_salt_version", False):
-            # Write the hardcoded salt version module salt/_version.py
+            # Write the hardcoded salt version module salt/_version.txt
             self.distribution.salt_version_hardcoded_path = salt_build_ver_file
             self.run_command("write_salt_version")
 
         if getattr(self.distribution, "build_egg", False):
-            # we are building an egg package. need to include _version.py
+            # we are building an egg package. need to include _version.txt
             self.distribution.salt_version_hardcoded_path = salt_build_ver_file
             self.run_command("write_salt_version")
 
         if getattr(self.distribution, "build_wheel", False):
-            # we are building a wheel package. need to include _version.py
+            # we are building a wheel package. need to include _version.txt
             self.distribution.salt_version_hardcoded_path = salt_build_ver_file
             self.run_command("write_salt_version")
 
@@ -704,7 +708,7 @@ class Build(build):
             # If our install attribute is present and set to True, we'll go
             # ahead and write our install time python modules.
 
-            # Write the hardcoded salt version module salt/_version.py
+            # Write the hardcoded salt version module salt/_version.txt
             self.run_command("write_salt_version")
 
             # Write the system paths file
@@ -731,17 +735,17 @@ class Install(install):
             sys.exit(1)
 
         # Let's set the running_salt_install attribute so we can add
-        # _version.py in the build command
+        # _version.txt in the build command
         self.distribution.running_salt_install = True
         self.distribution.salt_version_hardcoded_path = os.path.join(
-            self.build_lib, "salt", "_version.py"
+            self.build_lib, "salt", "_version.txt"
         )
         if IS_WINDOWS_PLATFORM:
             # Download the required DLLs
             self.distribution.salt_download_windows_dlls = True
             self.run_command("download-windows-dlls")
             self.distribution.salt_download_windows_dlls = None
-        # need to ensure _version.py is created in build dir before install
+        # need to ensure _version.txt is created in build dir before install
         if not os.path.exists(os.path.join(self.build_lib)):
             if not self.skip_build:
                 self.run_command("build")
@@ -935,7 +939,7 @@ class SaltDistribution(distutils.dist.Distribution):
         self.with_salt_version = None
 
         self.name = "salt-ssh" if PACKAGED_FOR_SALT_SSH else "salt"
-        self.salt_version = __version__  # pylint: disable=undefined-variable
+        self.salt_version = SALT_VERSION
         self.description = (
             "Portable, distributed, remote execution and configuration management"
             " system"
@@ -1022,23 +1026,13 @@ class SaltDistribution(distutils.dist.Distribution):
             modules.append(os.path.relpath(root, SETUP_DIRNAME).replace(os.sep, "."))
         return modules
 
-    # ----- Static Data -------------------------------------------------------------------------------------------->
-    @property
-    def _property_dependency_links(self):
-        return [
-            "https://github.com/saltstack/salt-testing/tarball/develop#egg=SaltTesting"
-        ]
-
-    @property
-    def _property_tests_require(self):
-        return ["SaltTesting"]
-
-    # <---- Static Data ----------------------------------------------------------------------------------------------
-
     # ----- Dynamic Data -------------------------------------------------------------------------------------------->
     @property
     def _property_package_data(self):
         package_data = {
+            "salt": [
+                "_version.txt",
+            ],
             "salt.templates": [
                 "rh_ip/*.jinja",
                 "suse_ip/*.jinja",
@@ -1046,13 +1040,11 @@ class SaltDistribution(distutils.dist.Distribution):
                 "virt/*.jinja",
                 "git/*",
                 "lxc/*",
-            ]
+            ],
         }
         if not IS_WINDOWS_PLATFORM:
             package_data["salt.cloud"] = ["deploy/*.sh"]
 
-        if not self.ssh_packaging and not PACKAGED_FOR_SALT_SSH:
-            package_data["salt.daemons.flo"] = ["*.flo"]
         return package_data
 
     @property

@@ -1,0 +1,1 @@
+Fixed syndic eauth. Now jobs will be published when a valid eauth user is targeting allowed minions/functions.

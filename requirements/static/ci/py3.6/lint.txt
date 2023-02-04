@@ -342,13 +342,13 @@ bcrypt==3.2.0
     # via
     #   paramiko
     #   passlib
-boto3==1.18.27 ; python_version >= "3.6"
+boto3==1.21.46 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
     #   moto
 boto==2.49.0
     # via -r requirements/static/ci/common.in
-botocore==1.21.27
+botocore==1.24.46
     # via
     #   boto3
     #   moto
@@ -428,7 +428,7 @@ frozenlist==1.2.0
     # via
     #   aiohttp
     #   aiosignal
-future==0.18.2
+future==0.18.3
     # via textfsm
 genshi==0.7.5
     # via -r requirements/static/ci/common.in
@@ -448,7 +448,7 @@ idna==3.2
     #   yarl
 immutables==0.16
     # via contextvars
-importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+importlib-metadata==4.6.4
     # via
     #   -r requirements/static/pkg/linux.in
     #   backports.entry-points-selectable
@@ -507,6 +507,8 @@ lazy-object-proxy==1.4.3
     # via astroid
 libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
+looseversion==1.0.3
+    # via -r requirements/base.txt
 lxml==4.9.1
     # via
     #   junos-eznc
@@ -642,7 +644,9 @@ oauthlib==3.2.1
 oscrypto==1.2.1
     # via certvalidator
 packaging==21.3
-    # via ansible-core
+    # via
+    #   -r requirements/base.txt
+    #   ansible-core
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
@@ -693,7 +697,7 @@ pyopenssl==20.0.1
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==3.0.9
+pyparsing==3.0.6
     # via
     #   junos-eznc
     #   packaging
@@ -787,7 +791,7 @@ scp==0.13.6
     # via junos-eznc
 semantic-version==2.9.0
     # via etcd3-py
-setproctitle==1.2.2 ; python_version < "3.10"
+setproctitle==1.2.3
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via

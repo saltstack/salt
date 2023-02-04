@@ -22,20 +22,37 @@ depending on the version of Windows this is run on. Once support for Windows
 
 import platform
 
+import salt.utils.win_reg
 from salt._compat import ipaddress
-from salt.utils.versions import StrictVersion
 
 IS_WINDOWS = platform.system() == "Windows"
 
 __virtualname__ = "win_network"
 
 if IS_WINDOWS:
-    USE_WMI = StrictVersion(platform.version()) < StrictVersion("6.2")
+    # pythonnet 3.0.1 requires .NET 4.7.2 (461808). This isn't installed by
+    # default until Windows Server 2019 / Windows 10 1809 (10.1.17763). But, it
+    # can be installed on older versions of Windows. So, instead of checking
+    # platform here, let's check the version of .NET
+    net_release = salt.utils.win_reg.read_value(
+        hive="HKLM",
+        key=r"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full",
+        vname="Release",
+    )
+    # If the registry key is not found, or the value is less than 461808, we
+    # need to use WMI
+    if not net_release["success"] or net_release["vdata"] < 461808:
+        USE_WMI = True
+    else:
+        USE_WMI = False
     if USE_WMI:
+        # This is supported by all versions of Windows, but the database we're
+        # using hasn't really been optimized, so it is much slower
         import wmi
 
         import salt.utils.winapi
     else:
+        # This uses .NET to get network settings and is faster than WMI
         import clr
         from System.Net import NetworkInformation
 

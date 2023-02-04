@@ -57,7 +57,7 @@ import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.saslprep import saslprep
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import LooseVersion
 
 try:
     import csv
@@ -336,7 +336,7 @@ def _parsed_version(
     )
 
     if psql_version:
-        return _LooseVersion(psql_version)
+        return LooseVersion(psql_version)
     else:
         log.warning(
             "Attempt to parse version of Postgres server failed. "
@@ -998,11 +998,11 @@ def user_list(
         runas=runas,
     )
     if ver:
-        if ver >= _LooseVersion("9.1"):
+        if ver >= LooseVersion("9.1"):
             replication_column = "pg_roles.rolreplication"
         else:
             replication_column = "NULL"
-        if ver >= _LooseVersion("9.5"):
+        if ver >= LooseVersion("9.5"):
             rolcatupdate_column = "NULL"
         else:
             rolcatupdate_column = "pg_roles.rolcatupdate"
@@ -1790,11 +1790,11 @@ def is_available_extension(
 
 def _pg_is_older_ext_ver(a, b):
     """
-    Compare versions of extensions using salt.utils.versions.LooseVersion.
+    Compare versions of extensions using `looseversion.LooseVersion`.
 
     Returns ``True`` if version a is lesser than b.
     """
-    return _LooseVersion(a) < _LooseVersion(b)
+    return LooseVersion(a) < LooseVersion(b)
 
 
 def is_installed_extension(

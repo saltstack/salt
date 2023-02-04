@@ -2167,13 +2167,16 @@ class ClearFuncs(TransportMethods):
             }
 
         # Retrieve the minions list
-        delimiter = clear_load.get("kwargs", {}).get("delimiter", DEFAULT_TARGET_DELIM)
+        delimiter = extra.get("delimiter", DEFAULT_TARGET_DELIM)
+
         _res = self.ckminions.check_minions(
             clear_load["tgt"], clear_load.get("tgt_type", "glob"), delimiter
         )
         minions = _res.get("minions", list())
         missing = _res.get("missing", list())
         ssh_minions = _res.get("ssh_minions", False)
+
+        auth_key = clear_load.get("key", None)
 
         # Check for external auth calls and authenticate
         auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(extra)
@@ -2184,20 +2187,36 @@ class ClearFuncs(TransportMethods):
         else:
             auth_check = self.loadauth.check_authentication(extra, auth_type)
 
-        # Setup authorization list variable and error information
-        auth_list = auth_check.get("auth_list", [])
+        # Setup authorization list
+        syndic_auth_list = None
+        if "auth_list" in extra:
+            syndic_auth_list = extra.pop("auth_list", [])
+        # An auth_list was provided by the syndic and we're running as the same
+        # user as the salt master process.
+        if (
+            syndic_auth_list is not None
+            and auth_key == key[self.opts.get("user", "root")]
+        ):
+            auth_list = syndic_auth_list
+        else:
+            auth_list = auth_check.get("auth_list", [])
+
         err_msg = 'Authentication failure of type "{}" occurred.'.format(auth_type)
 
         if auth_check.get("error"):
             # Authentication error occurred: do not continue.
             log.warning(err_msg)
-            return {
+            err = {
                 "error": {
                     "name": "AuthenticationError",
                     "message": "Authentication error occurred.",
                 }
             }
-
+            if "jid" in clear_load:
+                self.event.fire_event(
+                    {**clear_load, **err}, tagify([clear_load["jid"], "error"], "job")
+                )
+            return err
         # All Token, Eauth, and non-root users must pass the authorization check
         if auth_type != "user" or (auth_type == "user" and auth_list):
             # Authorize the request
@@ -2226,12 +2245,18 @@ class ClearFuncs(TransportMethods):
                         extra["username"],
                     )
                 log.warning(err_msg)
-                return {
+                err = {
                     "error": {
                         "name": "AuthorizationError",
                         "message": "Authorization error occurred.",
                     }
                 }
+                if "jid" in clear_load:
+                    self.event.fire_event(
+                        {**clear_load, **err},
+                        tagify([clear_load["jid"], "error"], "job"),
+                    )
+                return err
 
             # Perform some specific auth_type tasks after the authorization check
             if auth_type == "token":
@@ -2263,6 +2288,9 @@ class ClearFuncs(TransportMethods):
         if jid is None:
             return {"enc": "clear", "load": {"error": "Master failed to assign jid"}}
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
+
+        if self.opts.get("order_masters"):
+            payload["auth_list"] = auth_list
 
         # Send it!
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)

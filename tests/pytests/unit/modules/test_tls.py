@@ -3,7 +3,7 @@ import logging
 import pytest
 
 import salt.modules.tls as tls
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES
 from tests.support.mock import MagicMock, mock_open, patch
 
@@ -406,7 +406,7 @@ def test_cert_info(tls_test_data):
                 # package, causes an error on this test. Newer versions of PyOpenSSL do not have
                 # this issue. If 0.14 is installed and we hit this error, skip the test.
                 OpenSSL = pytest.importorskip("OpenSSL")
-                if LooseVersion(OpenSSL.__version__) == LooseVersion("0.14"):
+                if Version(OpenSSL.__version__) == Version("0.14"):
                     log.exception(err)
                     pytest.skip(
                         "Encountered a package conflict. OpenSSL version 0.14"
@@ -744,7 +744,7 @@ def test_pyOpenSSL_version():
     mock_pgt = MagicMock(return_value=pillarval)
     with patch.dict(
         tls.__dict__,
-        {"OpenSSL_version": LooseVersion("0.1.1"), "X509_EXT_ENABLED": False},
+        {"OpenSSL_version": Version("0.1.1"), "X509_EXT_ENABLED": False},
     ):
         assert tls.__virtual__() == (
             False,
@@ -756,7 +756,7 @@ def test_pyOpenSSL_version():
                     tls.get_extensions(thing)
     with patch.dict(
         tls.__dict__,
-        {"OpenSSL_version": LooseVersion("0.14.1"), "X509_EXT_ENABLED": True},
+        {"OpenSSL_version": Version("0.14.1"), "X509_EXT_ENABLED": True},
     ):
         assert tls.__virtual__()
         with patch.dict(tls.__salt__, {"pillar.get": mock_pgt}):
@@ -764,7 +764,7 @@ def test_pyOpenSSL_version():
             assert tls.get_extensions("client") == pillarval
     with patch.dict(
         tls.__dict__,
-        {"OpenSSL_version": LooseVersion("0.15.1"), "X509_EXT_ENABLED": True},
+        {"OpenSSL_version": Version("0.15.1"), "X509_EXT_ENABLED": True},
     ):
         assert tls.__virtual__()
         with patch.dict(tls.__salt__, {"pillar.get": mock_pgt}):
@@ -793,7 +793,7 @@ def test_pyOpenSSL_version_destructive(tmp_path, tls_test_data):
                 with patch.dict(
                     tls.__dict__,
                     {
-                        "OpenSSL_version": LooseVersion("0.1.1"),
+                        "OpenSSL_version": Version("0.1.1"),
                         "X509_EXT_ENABLED": False,
                     },
                 ):
@@ -809,7 +809,7 @@ def test_pyOpenSSL_version_destructive(tmp_path, tls_test_data):
                 with patch.dict(
                     tls.__dict__,
                     {
-                        "OpenSSL_version": LooseVersion("0.14.1"),
+                        "OpenSSL_version": Version("0.14.1"),
                         "X509_EXT_ENABLED": True,
                     },
                 ):
@@ -825,7 +825,7 @@ def test_pyOpenSSL_version_destructive(tmp_path, tls_test_data):
                 with patch.dict(
                     tls.__dict__,
                     {
-                        "OpenSSL_version": LooseVersion("0.15.1"),
+                        "OpenSSL_version": Version("0.15.1"),
                         "X509_EXT_ENABLED": True,
                     },
                 ):
@@ -864,7 +864,7 @@ def test_pyOpenSSL_version_destructive(tmp_path, tls_test_data):
                 with patch.dict(
                     tls.__dict__,
                     {
-                        "OpenSSL_version": LooseVersion("0.1.1"),
+                        "OpenSSL_version": Version("0.1.1"),
                         "X509_EXT_ENABLED": False,
                     },
                 ):
@@ -875,7 +875,7 @@ def test_pyOpenSSL_version_destructive(tmp_path, tls_test_data):
                 with patch.dict(
                     tls.__dict__,
                     {
-                        "OpenSSL_version": LooseVersion("0.14.1"),
+                        "OpenSSL_version": Version("0.14.1"),
                         "X509_EXT_ENABLED": True,
                     },
                 ):
@@ -885,7 +885,7 @@ def test_pyOpenSSL_version_destructive(tmp_path, tls_test_data):
                 with patch.dict(
                     tls.__dict__,
                     {
-                        "OpenSSL_version": LooseVersion("0.15.1"),
+                        "OpenSSL_version": Version("0.15.1"),
                         "X509_EXT_ENABLED": True,
                     },
                 ):
