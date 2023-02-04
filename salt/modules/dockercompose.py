@@ -146,7 +146,7 @@ MIN_DOCKERCOMPOSE = (1, 5, 0)
 VERSION_RE = r"([\d.]+)"
 
 log = logging.getLogger(__name__)
-debug = True
+debug = False
 
 __virtualname__ = "dockercompose"
 DEFAULT_DC_FILENAMES = ("docker-compose.yml", "docker-compose.yaml")
@@ -491,7 +491,6 @@ def create(path, docker_compose):
 
         salt myminion dockercompose.create /path/where/docker-compose/stored content
     """
-    # TODO: needs deprecation. does not match "create" functionality of docker-compose.
     if docker_compose:
         ret = __write_docker_compose(path, docker_compose, already_existed=False)
         if isinstance(ret, dict):
@@ -509,6 +508,40 @@ def create(path, docker_compose):
         "Successfully created the docker-compose file",
         {"compose.base_dir": path},
         None,
+    )
+
+
+def create_command(path, service_names=None):
+    """
+    Create (but does not start) containers, networks, volumes from the docker-compose file,
+    service_names is a python list, if omitted creates all containers
+
+    path
+        Path where the docker-compose file is stored on the server
+    service_names
+        If specified will create only the containers for the specified services
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockercompose.pull /path/where/docker-compose/stored
+        salt myminion dockercompose.pull /path/where/docker-compose/stored '[janus]'
+    """
+
+    project = __load_project(path)
+    if isinstance(project, dict):
+        return project
+    else:
+        try:
+            if HAS_PYTHON_ON_WHALES:
+                project.compose.create(services=service_names, quiet=True)
+            else:
+                project.create(service_names)
+        except Exception as inst:  # pylint: disable=broad-except
+            return __handle_except(inst)
+    return __standardize_result(
+        True, "creating containers via docker-compose succeeded", None, None
     )
 
 
@@ -612,11 +645,11 @@ def restart(path, service_names=None):
         try:
             if HAS_PYTHON_ON_WHALES:
                 project.compose.restart(services=service_names, quiet=True)
-                if debug:
-                    for container in project.ps(all=True):
-                        if service_names is None or container.name in service_names:
+                for container in project.ps(all=True):
+                    if service_names is None or container.name in service_names:
+                        if debug:
                             debug_ret[container.name] = dict(container.state)
-                            result[container.name] = "restarted"
+                        result[container.name] = "restarted"
             else:
                 project.restart(service_names)
                 if debug:
@@ -662,11 +695,11 @@ def stop(path, service_names=None):
         try:
             if HAS_PYTHON_ON_WHALES:
                 project.compose.stop(services=service_names)
-                if debug:
-                    for container in project.ps(all=True):
-                        if service_names is None or container.name in service_names:
+                for container in project.ps(all=True):
+                    if service_names is None or container.name in service_names:
+                        if debug:
                             debug_ret[container.name] = dict(container.state)
-                            result[container.name] = "stopped"
+                        result[container.name] = "stopped"
             else:
                 project.stop(service_names)
                 if debug:
@@ -712,11 +745,11 @@ def pause(path, service_names=None):
         try:
             if HAS_PYTHON_ON_WHALES:
                 project.compose.pause(services=service_names)
-                if debug:
-                    for container in project.ps(all=True):
-                        if service_names is None or container.name in service_names:
+                for container in project.ps(all=True):
+                    if service_names is None or container.name in service_names:
+                        if debug:
                             debug_ret[container.name] = dict(container.state)
-                            result[container.name] = "paused"
+                        result[container.name] = "paused"
             else:
                 project.pause(service_names)
                 if debug:
@@ -762,11 +795,11 @@ def unpause(path, service_names=None):
         try:
             if HAS_PYTHON_ON_WHALES:
                 project.compose.unpause(services=service_names)
-                if debug:
-                    for container in project.ps(all=True):
-                        if service_names is None or container.name in service_names:
+                for container in project.ps(all=True):
+                    if service_names is None or container.name in service_names:
+                        if debug:
                             debug_ret[container.name] = dict(container.state)
-                            result[container.name] = "unpaused"
+                        result[container.name] = "unpaused"
             else:
                 project.unpause(service_names)
                 if debug:
@@ -812,11 +845,11 @@ def start(path, service_names=None):
         try:
             if HAS_PYTHON_ON_WHALES:
                 project.compose.start(services=service_names)
-                if debug:
-                    for container in project.ps(all=True):
-                        if service_names is None or container.name in service_names:
+                for container in project.ps(all=True):
+                    if service_names is None or container.name in service_names:
+                        if debug:
                             debug_ret[container.name] = dict(container.state)
-                            result[container.name] = "started"
+                        result[container.name] = "started"
             else:
                 project.start(service_names)
                 if debug:
@@ -862,11 +895,11 @@ def kill(path, service_names=None):
         try:
             if HAS_PYTHON_ON_WHALES:
                 project.compose.kill(services=service_names)
-                if debug:
-                    for container in project.ps(all=True):
-                        if service_names is None or container.name in service_names:
+                for container in project.ps(all=True):
+                    if service_names is None or container.name in service_names:
+                        if debug:
                             debug_ret[container.name] = dict(container.state)
-                            result[container.name] = "killed"
+                        result[container.name] = "killed"
             else:
                 project.kill(service_names)
                 if debug:
@@ -934,13 +967,23 @@ def ps(path):
 
     project = __load_project(path)
     result = {}
-    # TODO: needs output adjustment for python on whales
     if isinstance(project, dict):
         return project
     else:
         if HAS_PYTHON_ON_WHALES:
             containers = project.compose.ps()
-            result = containers
+            for container in containers:
+                command = "; ".join(container.config.cmd)
+                exposed_ports = container.config.exposed_ports
+                if len(command) > 80:
+                    command = "{} ...".format(command[:26])
+                result[container.name] = {
+                    "id": container.id,
+                    "name": container.name,
+                    "command": command,
+                    "state": container.state.status,
+                    "ports": exposed_ports,
+                }
         else:
             if USE_FILTERCLASS:
                 containers = sorted(
@@ -989,15 +1032,17 @@ def up(path, service_names=None):
 
     debug_ret = {}
     project = __load_project(path)
+    result = {}
     if isinstance(project, dict):
         return project
     else:
         try:
             if HAS_PYTHON_ON_WHALES:
-                project.compose.up(services=service_names, detach=True)
-                if debug:
-                    for container in project.ps(all=True):
-                        if service_names is None or container.name in service_names:
+                project.compose.up(services=service_names, detach=True, quiet=True)
+                for container in project.ps(all=True):
+                    if service_names is None or container.name in service_names:
+                        result[container.name] = container.state.status
+                        if debug:
                             debug_ret[container.name] = dict(container.state)
             else:
                 result = _get_convergence_plans(project, service_names)
