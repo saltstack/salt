@@ -778,13 +778,22 @@ def _create_onedir_based_repo(
     repo_json["latest"] = repo_json[salt_version]
 
     if nightly_build is False:
-        ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
-        major_version = packaging.version.parse(salt_version).major
-        repo_json[str(major_version)] = repo_json[salt_version]
-        major_link = create_repo_path.parent.parent / str(major_version)
-        major_link.symlink_to(f"minor/{salt_version}")
-        latest_link = create_repo_path.parent.parent / "latest"
-        latest_link.symlink_to(f"minor/{salt_version}")
+        versions_in_repo_json = {}
+        for version in repo_json:
+            if version == "latest":
+                continue
+            versions_in_repo_json[packaging.version.parse(version)] = version
+        latest_version = versions_in_repo_json[
+            sorted(versions_in_repo_json, reverse=True)[0]
+        ]
+        if salt_version == latest_version:
+            ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
+            major_version = packaging.version.parse(salt_version).major
+            repo_json[str(major_version)] = repo_json[salt_version]
+            major_link = create_repo_path.parent.parent / str(major_version)
+            major_link.symlink_to(f"minor/{salt_version}")
+            latest_link = create_repo_path.parent.parent / "latest"
+            latest_link.symlink_to(f"minor/{salt_version}")
         _update_minor_repo_json(
             ctx, repo_path, create_repo_path, salt_version, repo_json
         )
