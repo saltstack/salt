@@ -560,7 +560,9 @@ def windows(
         create_repo_path = repo_path / "salt"
     create_repo_path = create_repo_path / "py3" / "windows"
     repo_json_path = create_repo_path / "repo.json"
-    if nightly_build:
+    if nightly_build is False:
+        create_repo_path = create_repo_path / "minor" / salt_version
+    else:
         create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
     create_repo_path.mkdir(parents=True, exist_ok=True)
 
@@ -623,11 +625,21 @@ def windows(
     )
 
     repo_json["latest"] = repo_json[salt_version]
-    repo_json_path.write_text(json.dumps(repo_json))
 
-    ctx.info("Creating 'latest' symlink ...")
-    latest_link = create_repo_path.parent / "latest"
-    latest_link.symlink_to(create_repo_path.name)
+    if nightly_build is False:
+        ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
+        major_version = packaging.version.parse(salt_version).major
+        repo_json[str(major_version)] = repo_json[salt_version]
+        major_link = create_repo_path.parent.parent / str(major_version)
+        major_link.symlink_to(f"minor/{salt_version}")
+        latest_link = create_repo_path.parent.parent / "latest"
+        latest_link.symlink_to(f"minor/{salt_version}")
+    else:
+        ctx.info("Creating 'latest' symlink ...")
+        latest_link = create_repo_path.parent / "latest"
+        latest_link.symlink_to(create_repo_path.name)
+
+    repo_json_path.write_text(json.dumps(repo_json))
 
     ctx.info("Done")
 
@@ -691,7 +703,9 @@ def macos(
         create_repo_path = repo_path / "salt"
     create_repo_path = create_repo_path / "py3" / "macos"
     repo_json_path = create_repo_path / "repo.json"
-    if nightly_build:
+    if nightly_build is False:
+        create_repo_path = create_repo_path / "minor" / salt_version
+    else:
         create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
     create_repo_path.mkdir(parents=True, exist_ok=True)
 
@@ -745,11 +759,21 @@ def macos(
     )
 
     repo_json["latest"] = repo_json[salt_version]
-    repo_json_path.write_text(json.dumps(repo_json))
 
-    ctx.info("Creating 'latest' symlink ...")
-    latest_link = create_repo_path.parent / "latest"
-    latest_link.symlink_to(create_repo_path.name)
+    if nightly_build is False:
+        ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
+        major_version = packaging.version.parse(salt_version).major
+        repo_json[str(major_version)] = repo_json[salt_version]
+        major_link = create_repo_path.parent.parent / str(major_version)
+        major_link.symlink_to(f"minor/{salt_version}")
+        latest_link = create_repo_path.parent.parent / "latest"
+        latest_link.symlink_to(f"minor/{salt_version}")
+    else:
+        ctx.info("Creating 'latest' symlink ...")
+        latest_link = create_repo_path.parent / "latest"
+        latest_link.symlink_to(create_repo_path.name)
+
+    repo_json_path.write_text(json.dumps(repo_json))
 
     ctx.info("Done")
 
@@ -813,7 +837,9 @@ def onedir(
         create_repo_path = repo_path / "salt"
     create_repo_path = create_repo_path / "py3" / "onedir"
     repo_json_path = create_repo_path / "repo.json"
-    if nightly_build:
+    if nightly_build is False:
+        create_repo_path = create_repo_path / "minor" / salt_version
+    else:
         create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
     create_repo_path.mkdir(parents=True, exist_ok=True)
 
@@ -879,11 +905,21 @@ def onedir(
     )
 
     repo_json["latest"] = repo_json[salt_version]
-    repo_json_path.write_text(json.dumps(repo_json))
 
-    ctx.info("Creating 'latest' symlink ...")
-    latest_link = create_repo_path.parent / "latest"
-    latest_link.symlink_to(create_repo_path.name)
+    if nightly_build is False:
+        ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
+        major_version = packaging.version.parse(salt_version).major
+        repo_json[str(major_version)] = repo_json[salt_version]
+        major_link = create_repo_path.parent.parent / str(major_version)
+        major_link.symlink_to(f"minor/{salt_version}")
+        latest_link = create_repo_path.parent.parent / "latest"
+        latest_link.symlink_to(f"minor/{salt_version}")
+    else:
+        ctx.info("Creating 'latest' symlink ...")
+        latest_link = create_repo_path.parent / "latest"
+        latest_link.symlink_to(create_repo_path.name)
+
+    repo_json_path.write_text(json.dumps(repo_json))
 
     ctx.info("Done")
 
