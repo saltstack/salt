@@ -1761,23 +1761,36 @@ def build(session):
     session.run("python", "-m", "twine", "check", "dist/*")
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="test-pkgs")
-def test_pkgs(session):
-    """
-    pytest pkg tests session
-    """
+def _pkg_test(session, cmd_args, test_type):
     pydir = _get_pydir(session)
+    junit_report_filename = f"test-results-{test_type}"
+    runtests_log_filename = f"runtests-{test_type}"
     # Install requirements
     if _upgrade_pip_setuptools_and_wheel(session):
         requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "pkgtests.txt"
+            "requirements", "static", "ci", pydir, "pkgtests.txt"
         )
 
         install_command = ["--progress-bar=off", "-r", requirements_file]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
-    cmd_args = ["pkg/tests/"] + session.posargs
-    _pytest(session, False, cmd_args)
+    pytest_args = (
+        cmd_args[:]
+        + [
+            f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
+            f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+        ]
+        + session.posargs
+    )
+    _pytest(session, False, pytest_args)
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="test-pkgs")
+def test_pkgs(session):
+    """
+    pytest pkg tests session
+    """
+    _pkg_test(session, ["pkg/tests/"], "pkg")
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="test-upgrade-pkgs")
@@ -1786,27 +1799,18 @@ def test_upgrade_pkgs(session, classic):
     """
     pytest pkg upgrade tests session
     """
-    pydir = _get_pydir(session)
-    # Install requirements
-    if _upgrade_pip_setuptools_and_wheel(session):
-        requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "pkgtests.txt"
-        )
-
-        install_command = ["--progress-bar=off", "-r", requirements_file]
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
-
+    test_type = "pkg_upgrade"
     cmd_args = [
         "pkg/tests/upgrade/test_salt_upgrade.py::test_salt_upgrade",
         "--upgrade",
         "--no-uninstall",
-    ] + session.posargs
+    ]
     if classic:
         cmd_args = cmd_args + ["--classic"]
     try:
-        _pytest(session, False, cmd_args)
+        _pkg_test(session, cmd_args, test_type)
     except nox.command.CommandFailed:
         sys.exit(1)
 
     cmd_args = ["pkg/tests/"] + session.posargs
-    _pytest(session, False, cmd_args)
+    _pkg_test(session, cmd_args, test_type)
