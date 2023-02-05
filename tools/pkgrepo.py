@@ -786,8 +786,6 @@ def _create_onedir_based_repo(
         create_repo_path / salt_project_gpg_pub_key_file.name,
     )
 
-    repo_json["latest"] = repo_json[salt_version]
-
     if nightly_build is False:
         versions_in_repo_json = {}
         for version in repo_json:
@@ -798,6 +796,7 @@ def _create_onedir_based_repo(
             sorted(versions_in_repo_json, reverse=True)[0]
         ]
         if salt_version == latest_version:
+            repo_json["latest"] = repo_json[salt_version]
             ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
             major_version = packaging.version.parse(salt_version).major
             repo_json[str(major_version)] = repo_json[salt_version]
@@ -805,39 +804,26 @@ def _create_onedir_based_repo(
             major_link.symlink_to(f"minor/{salt_version}")
             latest_link = create_repo_path.parent.parent / "latest"
             latest_link.symlink_to(f"minor/{salt_version}")
-        _update_minor_repo_json(
-            ctx, repo_path, create_repo_path, salt_version, repo_json
+
+        ctx.info("Downloading any pre-existing 'minor/repo.json' file")
+        minor_repo_json_path = create_repo_path.parent / "repo.json"
+        bucket_url = f"s3://{bucket_name}/{minor_repo_json_path.relative_to(repo_path)}"
+        ret = ctx.run(
+            "aws", "s3", "cp", bucket_url, minor_repo_json_path.parent, check=False
         )
+        if ret.returncode:
+            minor_repo_json = {}
+        else:
+            minor_repo_json = json.loads(str(minor_repo_json_path))
+
+        minor_repo_json[salt_version] = repo_json[salt_version]
+        minor_repo_json_path.write_text(json.dumps(minor_repo_json))
     else:
         ctx.info("Creating 'latest' symlink ...")
         latest_link = create_repo_path.parent / "latest"
         latest_link.symlink_to(create_repo_path.name)
 
     repo_json_path.write_text(json.dumps(repo_json))
-
-
-def _update_minor_repo_json(
-    ctx: Context,
-    repo_path: pathlib.Path,
-    create_repo_path: pathlib.Path,
-    salt_version: str,
-    repo_json: dict[str, str],
-) -> None:
-    ctx.info("Downloading any pre-existing 'minor/repo.json' file")
-    bucket_name = "salt-project-prod-salt-artifacts-staging"
-
-    minor_repo_json_path = create_repo_path / "minor" / "repo.json"
-    bucket_url = f"s3://{bucket_name}/{minor_repo_json_path.relative_to(repo_path)}"
-    ret = ctx.run(
-        "aws", "s3", "cp", bucket_url, minor_repo_json_path.parent, check=False
-    )
-    if ret.returncode:
-        minor_repo_json = {}
-    else:
-        minor_repo_json = json.loads(str(minor_repo_json_path))
-
-    minor_repo_json[salt_version] = repo_json[salt_version]
-    minor_repo_json_path.write_text(json.dumps(minor_repo_json))
 
 
 def _get_file_checksum(fpath: pathlib.Path, hash_name: str) -> str:
