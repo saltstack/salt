@@ -390,7 +390,9 @@ cherrypy==18.6.1
 ciscoconfparse==1.5.46
     # via napalm
 click==8.0.1
-    # via geomet
+    # via
+    #   geomet
+    #   typer
 clustershell==1.8.3
     # via -r requirements/static/ci/common.in
 colorama==0.4.4
@@ -696,6 +698,8 @@ pycparser==2.20
     # via cffi
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
+pydantic==1.10.4
+    # via python-on-whales
 pyeapi==0.8.4
     # via napalm
 pygit2==1.0.3 ; python_version <= "3.8"
@@ -747,6 +751,8 @@ python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
+python-on-whales==0.57.0
+    # via -r requirements/static/ci/linux.in
 python-telegram-bot==13.7 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
 pytz==2022.1
@@ -795,6 +801,7 @@ requests==2.26.0
     #   msrest
     #   napalm
     #   python-consul
+    #   python-on-whales
     #   pyvmomi
     #   requests-oauthlib
     #   responses
@@ -878,19 +885,25 @@ toml==0.10.2
     #   -r requirements/static/ci/lint.in
 tornado==6.1
     # via python-telegram-bot
+tqdm==4.64.1
+    # via python-on-whales
 transitions==0.8.8
     # via junos-eznc
 twilio==7.9.2
     # via -r requirements/static/ci/linux.in
 typed-ast==1.4.1
     # via astroid
-typing-extensions==3.10.0.0
+typer==0.7.0
+    # via python-on-whales
+typing-extensions==4.4.0
     # via
     #   aiohttp
     #   async-timeout
     #   gitpython
     #   immutables
     #   importlib-metadata
+    #   pydantic
+    #   python-on-whales
     #   yarl
 tzlocal==3.0
     # via apscheduler
