@@ -59,6 +59,9 @@ def generate_workflows(ctx: Context):
         "Scheduled": {
             "template": "scheduled.yml",
         },
+        "Check Workflow Run": {
+            "template": "check-workflow-run.yml",
+        },
     }
     env = Environment(
         block_start_string="<%",
@@ -88,6 +91,9 @@ def generate_workflows(ctx: Context):
             "conclusion_needs": NeedsTracker(),
             "test_salt_needs": NeedsTracker(),
         }
+        if workflow_name == "Check Workflow Run":
+            check_workflows = [wf for wf in sorted(workflows) if wf != workflow_name]
+            context["check_workflows"] = check_workflows
         loaded_template = env.get_template(f"{template}.j2")
         rendered_template = loaded_template.render(**context)
         workflow_path.write_text(rendered_template.rstrip() + "\n")

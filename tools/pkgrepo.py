@@ -548,87 +548,17 @@ def windows(
         assert incoming is not None
         assert repo_path is not None
         assert key_id is not None
-    salt_project_gpg_pub_key_file = (
-        pathlib.Path("~/SALT-PROJECT-GPG-PUBKEY-2023.gpg").expanduser().resolve()
+    _create_onedir_based_repo(
+        ctx,
+        salt_version=salt_version,
+        nightly_build=nightly_build,
+        rc_build=rc_build,
+        repo_path=repo_path,
+        incoming=incoming,
+        key_id=key_id,
+        os="windows",
+        pkg_suffixes=(".msi", ".exe"),
     )
-    if not salt_project_gpg_pub_key_file:
-        ctx.error(f"The file '{salt_project_gpg_pub_key_file}' does not exist.")
-        ctx.exit(1)
-
-    ctx.info("Creating repository directory structure ...")
-    if nightly_build or rc_build:
-        create_repo_path = repo_path / "salt"
-    create_repo_path = create_repo_path / "py3" / "windows"
-    repo_json_path = create_repo_path / "repo.json"
-    if nightly_build:
-        create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
-    create_repo_path.mkdir(parents=True, exist_ok=True)
-
-    ctx.info("Downloading any pre-existing 'repo.json' file")
-    if nightly_build:
-        bucket_name = "salt-project-prod-salt-artifacts-nightly"
-    else:
-        bucket_name = "salt-project-prod-salt-artifacts-staging"
-
-    bucket_url = (
-        f"s3://{bucket_name}/{create_repo_path.relative_to(repo_path)}/repo.json"
-    )
-    ret = ctx.run("aws", "s3", "cp", bucket_url, create_repo_path, check=False)
-    if ret.returncode:
-        repo_json = {}
-    else:
-        repo_json = json.loads(str(repo_json_path))
-
-    if salt_version not in repo_json:
-        repo_json[salt_version] = {}
-
-    hashes_base_path = create_repo_path / f"salt-{salt_version}"
-    for fpath in incoming.iterdir():
-        ctx.info(f"* Processing {fpath} ...")
-        dpath = create_repo_path / fpath.name
-        ctx.info(f"Copying {fpath} to {dpath} ...")
-        shutil.copyfile(fpath, dpath)
-        if "amd64" in dpath.name.lower():
-            arch = "amd64"
-        elif "x86" in dpath.name.lower():
-            arch = "x86"
-        else:
-            ctx.error(
-                f"Cannot pickup the right architecture from the filename '{dpath.name}'."
-            )
-            ctx.exit(1)
-        repo_json[salt_version][dpath.name] = {
-            "name": dpath.name,
-            "version": salt_version,
-            "os": "windows",
-            "arch": arch,
-        }
-        for hash_name in ("blake2b", "sha512", "sha3_512"):
-            ctx.info(f"   * Calculating {hash_name} ...")
-            hexdigest = _get_file_checksum(fpath, hash_name)
-            repo_json[salt_version][dpath.name][hash_name.upper()] = hexdigest
-            with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
-                wfh.write(f"{hexdigest} {dpath.name}\n")
-
-    for fpath in create_repo_path.iterdir():
-        if fpath.suffix in (".msi", ".exe"):
-            continue
-        ctx.info("GPG Signing '{fpath.relative_to(repo_path)}' ...")
-        ctx.run("gpg", "-u", key_id, "-o" f"{fpath}.asc", "-a", "-b", "-s", str(fpath))
-
-    ctx.info(f"Copying {salt_project_gpg_pub_key_file} to {create_repo_path} ...")
-    shutil.copyfile(
-        salt_project_gpg_pub_key_file,
-        create_repo_path / salt_project_gpg_pub_key_file.name,
-    )
-
-    repo_json["latest"] = repo_json[salt_version]
-    repo_json_path.write_text(json.dumps(repo_json))
-
-    ctx.info("Creating 'latest' symlink ...")
-    latest_link = create_repo_path.parent / "latest"
-    latest_link.symlink_to(create_repo_path.name)
-
     ctx.info("Done")
 
 
@@ -679,78 +609,17 @@ def macos(
         assert incoming is not None
         assert repo_path is not None
         assert key_id is not None
-    salt_project_gpg_pub_key_file = (
-        pathlib.Path("~/SALT-PROJECT-GPG-PUBKEY-2023.gpg").expanduser().resolve()
+    _create_onedir_based_repo(
+        ctx,
+        salt_version=salt_version,
+        nightly_build=nightly_build,
+        rc_build=rc_build,
+        repo_path=repo_path,
+        incoming=incoming,
+        key_id=key_id,
+        os="macos",
+        pkg_suffixes=(".pkg",),
     )
-    if not salt_project_gpg_pub_key_file:
-        ctx.error(f"The file '{salt_project_gpg_pub_key_file}' does not exist.")
-        ctx.exit(1)
-
-    ctx.info("Creating repository directory structure ...")
-    if nightly_build or rc_build:
-        create_repo_path = repo_path / "salt"
-    create_repo_path = create_repo_path / "py3" / "macos"
-    repo_json_path = create_repo_path / "repo.json"
-    if nightly_build:
-        create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
-    create_repo_path.mkdir(parents=True, exist_ok=True)
-
-    ctx.info("Downloading any pre-existing 'repo.json' file")
-    if nightly_build:
-        bucket_name = "salt-project-prod-salt-artifacts-nightly"
-    else:
-        bucket_name = "salt-project-prod-salt-artifacts-staging"
-
-    bucket_url = (
-        f"s3://{bucket_name}/{create_repo_path.relative_to(repo_path)}/repo.json"
-    )
-    ret = ctx.run("aws", "s3", "cp", bucket_url, create_repo_path, check=False)
-    if ret.returncode:
-        repo_json = {}
-    else:
-        repo_json = json.loads(str(repo_json_path))
-
-    if salt_version not in repo_json:
-        repo_json[salt_version] = {}
-
-    hashes_base_path = create_repo_path / f"salt-{salt_version}"
-    for fpath in incoming.iterdir():
-        ctx.info(f"* Processing {fpath} ...")
-        dpath = create_repo_path / fpath.name
-        ctx.info(f"Copying {fpath} to {dpath} ...")
-        shutil.copyfile(fpath, dpath)
-        repo_json[salt_version][dpath.name] = {
-            "name": dpath.name,
-            "version": salt_version,
-            "os": "macos",
-            "arch": "x86_64",
-        }
-        for hash_name in ("blake2b", "sha512", "sha3_512"):
-            ctx.info(f"   * Calculating {hash_name} ...")
-            hexdigest = _get_file_checksum(fpath, hash_name)
-            repo_json[salt_version][dpath.name][hash_name.upper()] = hexdigest
-            with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
-                wfh.write(f"{hexdigest} {dpath.name}\n")
-
-    for fpath in create_repo_path.iterdir():
-        if fpath.suffix in (".pkg",):
-            continue
-        ctx.info("GPG Signing '{fpath.relative_to(repo_path)}' ...")
-        ctx.run("gpg", "-u", key_id, "-o" f"{fpath}.asc", "-a", "-b", "-s", str(fpath))
-
-    ctx.info(f"Copying {salt_project_gpg_pub_key_file} to {create_repo_path} ...")
-    shutil.copyfile(
-        salt_project_gpg_pub_key_file,
-        create_repo_path / salt_project_gpg_pub_key_file.name,
-    )
-
-    repo_json["latest"] = repo_json[salt_version]
-    repo_json_path.write_text(json.dumps(repo_json))
-
-    ctx.info("Creating 'latest' symlink ...")
-    latest_link = create_repo_path.parent / "latest"
-    latest_link.symlink_to(create_repo_path.name)
-
     ctx.info("Done")
 
 
@@ -801,6 +670,31 @@ def onedir(
         assert incoming is not None
         assert repo_path is not None
         assert key_id is not None
+    _create_onedir_based_repo(
+        ctx,
+        salt_version=salt_version,
+        nightly_build=nightly_build,
+        rc_build=rc_build,
+        repo_path=repo_path,
+        incoming=incoming,
+        key_id=key_id,
+        os="onedir",
+        pkg_suffixes=(".xz", ".zip"),
+    )
+    ctx.info("Done")
+
+
+def _create_onedir_based_repo(
+    ctx: Context,
+    salt_version: str,
+    nightly_build: bool,
+    rc_build: bool,
+    repo_path: pathlib.Path,
+    incoming: pathlib.Path,
+    key_id: str,
+    os: str,
+    pkg_suffixes: tuple[str, ...],
+):
     salt_project_gpg_pub_key_file = (
         pathlib.Path("~/SALT-PROJECT-GPG-PUBKEY-2023.gpg").expanduser().resolve()
     )
@@ -811,9 +705,11 @@ def onedir(
     ctx.info("Creating repository directory structure ...")
     if nightly_build or rc_build:
         create_repo_path = repo_path / "salt"
-    create_repo_path = create_repo_path / "py3" / "onedir"
+    create_repo_path = create_repo_path / "py3" / os
     repo_json_path = create_repo_path / "repo.json"
-    if nightly_build:
+    if nightly_build is False:
+        create_repo_path = create_repo_path / "minor" / salt_version
+    else:
         create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
     create_repo_path.mkdir(parents=True, exist_ok=True)
 
@@ -835,28 +731,39 @@ def onedir(
     if salt_version not in repo_json:
         repo_json[salt_version] = {}
 
+    hash_suffixes = (
+        ".blake2b",
+        ".sha512",
+        ".sha3_512",
+        ".BLAKE2B",
+        ".SHA512",
+        ".SHA3_512",
+    )
     hashes_base_path = create_repo_path / f"salt-{salt_version}"
     for fpath in incoming.iterdir():
-        if fpath.suffix not in (".xz", ".zip"):
-            ctx.info(f"Ignoring {fpath} ...")
+        if fpath.suffix in hash_suffixes:
             continue
         ctx.info(f"* Processing {fpath} ...")
         dpath = create_repo_path / fpath.name
         ctx.info(f"Copying {fpath} to {dpath} ...")
         shutil.copyfile(fpath, dpath)
-        if "-windows-" in fpath.name:
-            distro = "windows"
-        elif "-darwin-" in fpath.name:
-            distro = "macos"
-        elif "-linux-" in fpath.name:
-            distro = "linux"
-        for arch in ("x86_64", "aarch64", "amd64", "x86"):
-            if arch in fpath.name.lower():
-                break
+        if "-amd64" in dpath.name.lower():
+            arch = "amd64"
+        elif "-x86_64" in dpath.name.lower():
+            arch = "x86_64"
+        elif "-x86" in dpath.name.lower():
+            arch = "x86"
+        elif "-aarch64" in dpath.name.lower():
+            arch = "aarch64"
+        else:
+            ctx.error(
+                f"Cannot pickup the right architecture from the filename '{dpath.name}'."
+            )
+            ctx.exit(1)
         repo_json[salt_version][dpath.name] = {
             "name": dpath.name,
             "version": salt_version,
-            "os": distro,
+            "os": os,
             "arch": arch,
         }
         for hash_name in ("blake2b", "sha512", "sha3_512"):
@@ -867,9 +774,9 @@ def onedir(
                 wfh.write(f"{hexdigest} {dpath.name}\n")
 
     for fpath in create_repo_path.iterdir():
-        if fpath.suffix in (".gpg", ".pkg"):
+        if fpath.suffix in pkg_suffixes:
             continue
-        ctx.info("GPG Signing '{fpath.relative_to(repo_path)}' ...")
+        ctx.info(f"GPG Signing '{fpath.relative_to(repo_path)}' ...")
         ctx.run("gpg", "-u", key_id, "-o" f"{fpath}.asc", "-a", "-b", "-s", str(fpath))
 
     ctx.info(f"Copying {salt_project_gpg_pub_key_file} to {create_repo_path} ...")
@@ -879,13 +786,57 @@ def onedir(
     )
 
     repo_json["latest"] = repo_json[salt_version]
+
+    if nightly_build is False:
+        versions_in_repo_json = {}
+        for version in repo_json:
+            if version == "latest":
+                continue
+            versions_in_repo_json[packaging.version.parse(version)] = version
+        latest_version = versions_in_repo_json[
+            sorted(versions_in_repo_json, reverse=True)[0]
+        ]
+        if salt_version == latest_version:
+            ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
+            major_version = packaging.version.parse(salt_version).major
+            repo_json[str(major_version)] = repo_json[salt_version]
+            major_link = create_repo_path.parent.parent / str(major_version)
+            major_link.symlink_to(f"minor/{salt_version}")
+            latest_link = create_repo_path.parent.parent / "latest"
+            latest_link.symlink_to(f"minor/{salt_version}")
+        _update_minor_repo_json(
+            ctx, repo_path, create_repo_path, salt_version, repo_json
+        )
+    else:
+        ctx.info("Creating 'latest' symlink ...")
+        latest_link = create_repo_path.parent / "latest"
+        latest_link.symlink_to(create_repo_path.name)
+
     repo_json_path.write_text(json.dumps(repo_json))
 
-    ctx.info("Creating 'latest' symlink ...")
-    latest_link = create_repo_path.parent / "latest"
-    latest_link.symlink_to(create_repo_path.name)
 
-    ctx.info("Done")
+def _update_minor_repo_json(
+    ctx: Context,
+    repo_path: pathlib.Path,
+    create_repo_path: pathlib.Path,
+    salt_version: str,
+    repo_json: dict[str, str],
+) -> None:
+    ctx.info("Downloading any pre-existing 'minor/repo.json' file")
+    bucket_name = "salt-project-prod-salt-artifacts-staging"
+
+    minor_repo_json_path = create_repo_path / "minor" / "repo.json"
+    bucket_url = f"s3://{bucket_name}/{minor_repo_json_path.relative_to(repo_path)}"
+    ret = ctx.run(
+        "aws", "s3", "cp", bucket_url, minor_repo_json_path.parent, check=False
+    )
+    if ret.returncode:
+        minor_repo_json = {}
+    else:
+        minor_repo_json = json.loads(str(minor_repo_json_path))
+
+    minor_repo_json[salt_version] = repo_json[salt_version]
+    minor_repo_json_path.write_text(json.dumps(minor_repo_json))
 
 
 def _get_file_checksum(fpath: pathlib.Path, hash_name: str) -> str:
