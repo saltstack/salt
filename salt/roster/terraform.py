@@ -124,7 +124,9 @@ def _add_ssh_key(ret):
     """
     Setups the salt-ssh minion to be accessed with salt-ssh default key
     """
-    priv = None
+    priv = ret.get("priv", None)
+    if priv and os.path.isfile(priv):
+        return  # Use roster_entry explicitly defined "priv"
     if __opts__.get("ssh_use_home_key") and os.path.isfile(
         os.path.expanduser("~/.ssh/id_rsa")
     ):
