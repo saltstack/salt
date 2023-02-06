@@ -6,11 +6,11 @@
 
 netapi modules provide API access to Salt functionality over the network.
 
-The included :ref:`netapi modules <all-netapi-modules>` support REST (over 
+The included :ref:`netapi modules <all-netapi-modules>` support REST (over
 HTTP and WSGI) and WebSockets.
 
 Modules expose functions from the :py:class:`NetapiClient <salt.netapi.NetapiClient>`
-and give access to the same functionality as the Salt commandline tools 
+and give access to the same functionality as the Salt commandline tools
 (:command:`salt`, :command:`salt-run`, etc).
 
 
@@ -62,7 +62,7 @@ multiple netapi modules and multiple instances of each module.
 
 .. admonition:: :conf_master:`netapi_enable_clients`
 
-    Prior to Salt's 3006.0 release all client interfaces were enabled and it 
+    Prior to Salt's 3006.0 release all client interfaces were enabled and it
     was not possible to disable clients individually.
 
 

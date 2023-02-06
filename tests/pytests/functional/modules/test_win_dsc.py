@@ -78,7 +78,7 @@ def ps1_file_multiple():
                 Ensure          = "Present"
                 Contents        = "Hello World from DSC!"
             }
-            
+
             # The File resource can ensure the state of files, or copy them from a source to a destination with persistent updates.
             File HelloWorld2 {
                 DestinationPath = "C:\Temp\HelloWorld2.txt"

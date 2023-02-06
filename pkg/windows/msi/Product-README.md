@@ -233,4 +233,3 @@ Create Product-imgLeft.png from panel.bmp:
 ## Set permissions of the install folder with WixQueryOsWellKnownSID
 
 [doc](http://wixtoolset.org/documentation/manual/v3/customactions/osinfo.html)
-
