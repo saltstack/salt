@@ -178,8 +178,9 @@ def debian(
     }}
     """
     ctx.info("Creating repository directory structure ...")
+    create_repo_path = repo_path
     if nightly_build or rc_build:
-        create_repo_path = repo_path / "salt"
+        create_repo_path = create_repo_path / "salt"
     create_repo_path = create_repo_path / "py3" / distro / distro_version / distro_arch
     if nightly_build is False:
         create_repo_path = create_repo_path / "minor" / salt_version
@@ -379,8 +380,9 @@ def rpm(
         ctx.exit(1)
 
     ctx.info("Creating repository directory structure ...")
+    create_repo_path = repo_path
     if nightly_build or rc_build:
-        create_repo_path = repo_path / "salt"
+        create_repo_path = create_repo_path / "salt"
     create_repo_path = create_repo_path / "py3" / distro / distro_version / distro_arch
     if nightly_build is False:
         create_repo_path = create_repo_path / "minor" / salt_version
@@ -703,8 +705,9 @@ def _create_onedir_based_repo(
         ctx.exit(1)
 
     ctx.info("Creating repository directory structure ...")
+    create_repo_path = repo_path
     if nightly_build or rc_build:
-        create_repo_path = repo_path / "salt"
+        create_repo_path = create_repo_path / "salt"
     create_repo_path = create_repo_path / "py3" / os
     repo_json_path = create_repo_path / "repo.json"
     if nightly_build is False:
