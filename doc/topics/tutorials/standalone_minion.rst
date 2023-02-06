@@ -15,14 +15,14 @@ things:
 
     When running Salt in masterless mode, it is not required to run the
     salt-minion daemon. By default the salt-minion daemon will attempt to
-    connect to a master and fail. The salt-call command stands on its own  
+    connect to a master and fail. The salt-call command stands on its own
     and does not need the salt-minion daemon.
-    
+
     As of version 2016.11.0 you can have a running minion (with engines and
     beacons) without a master connection. If you wish to run the salt-minion
-    daemon you will need to set the :conf_minion:`master_type` configuration 
+    daemon you will need to set the :conf_minion:`master_type` configuration
     setting to be set to 'disable'.
-   
+
 
 
 Minion Configuration
@@ -106,4 +106,3 @@ External Pillars
 ================
 
 :ref:`External pillars <external-pillars>` are supported when running in masterless mode.
-

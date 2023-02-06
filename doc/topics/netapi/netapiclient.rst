@@ -5,7 +5,7 @@ NetapiClient
 ============
 
 The :py:class:`NetapiClient` class provides access to
-:ref:`Python API client interfaces <client-interfaces>` when 
+:ref:`Python API client interfaces <client-interfaces>` when
 :ref:`developing netapi modules <netapi-writing>`
 
 .. autoclass:: salt.netapi.NetapiClient

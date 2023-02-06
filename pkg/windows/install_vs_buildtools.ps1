@@ -170,4 +170,3 @@ if ( $install_build_tools ) {
 Write-Host $("-" * 80)
 Write-Host "Install Visual Studio Build Tools Completed" -ForegroundColor Cyan
 Write-Host $("=" * 80)
-

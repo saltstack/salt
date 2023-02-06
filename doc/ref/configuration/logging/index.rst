@@ -240,8 +240,8 @@ at the ``debug`` level, and sets a custom module to the ``all`` level:
 
 .. conf_log:: log_fmt_jid
 
-You can determine what log call name to use here by adding ``%(module)s`` to the 
-log format. Typically, it is the path of the file which generates the log 
+You can determine what log call name to use here by adding ``%(module)s`` to the
+log format. Typically, it is the path of the file which generates the log
 without the trailing ``.py`` and with path separators replaced with ``.``
 
 
