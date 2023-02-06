@@ -424,7 +424,7 @@ jobs:
 
   amazonlinux-2-pkg-tests:
     name: Amazon Linux 2 Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -439,7 +439,7 @@ jobs:
 
   centos-7-pkg-tests:
     name: CentOS 7 Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -455,7 +455,7 @@ jobs:
 
   centosstream-8-pkg-tests:
     name: CentOS 8 Stream Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -470,7 +470,7 @@ jobs:
 
   centosstream-9-pkg-tests:
     name: CentOS 9 Stream Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -485,7 +485,7 @@ jobs:
 
   debian-10-pkg-tests:
     name: Debian 10 Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -500,7 +500,7 @@ jobs:
 
   debian-11-pkg-tests:
     name: Debian 11 Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -515,7 +515,7 @@ jobs:
 
   debian-11-arm64-pkg-tests:
     name: Debian 11 Arm64 Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -531,7 +531,7 @@ jobs:
 
   ubuntu-1804-pkg-tests:
     name: Ubuntu 18.04 Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -546,7 +546,7 @@ jobs:
 
   ubuntu-2004-pkg-tests:
     name: Ubuntu 20.04 Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -561,7 +561,7 @@ jobs:
 
   ubuntu-2004-arm64-pkg-tests:
     name: Ubuntu 20.04 Arm64 Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -576,7 +576,7 @@ jobs:
 
   ubuntu-2204-pkg-tests:
     name: Ubuntu 22.04 Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -591,7 +591,7 @@ jobs:
 
   ubuntu-2204-arm64-pkg-tests:
     name: Ubuntu 22.04 Arm64 Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -621,7 +621,7 @@ jobs:
 
   windows-2016-nsis-pkg-tests:
     name: Windows 2016 NSIS Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -636,7 +636,7 @@ jobs:
 
   windows-2016-msi-pkg-tests:
     name: Windows 2016 MSI Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -651,7 +651,7 @@ jobs:
 
   windows-2019-nsis-pkg-tests:
     name: Windows 2019 NSIS Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -666,7 +666,7 @@ jobs:
 
   windows-2019-msi-pkg-tests:
     name: Windows 2019 MSI Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -681,7 +681,7 @@ jobs:
 
   windows-2022-nsis-pkg-tests:
     name: Windows 2022 NSIS Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
@@ -696,7 +696,7 @@ jobs:
 
   windows-2022-msi-pkg-tests:
     name: Windows 2022 MSI Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
