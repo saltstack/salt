@@ -59,6 +59,9 @@ jobs:
       - name: Apply Release Patch
         shell: bash
         run: |
+          pwd
+          ls
+          git status
           git am --committer-date-is-author-date salt-${{ inputs.salt-version }}.patch
           rm salt-${{ inputs.salt-version }}.patch
 
