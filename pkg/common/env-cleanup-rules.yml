@@ -258,7 +258,6 @@ pkg:
       - *ci_windows_file_patterns
       - "**/Scripts/py.exe"
       - "**/Scripts/pyw.exe"
-      - "**/Scripts/pythonw.exe"
       - "**/Scripts/venvlauncher.exe"
       - "**/Scripts/venvwlauncher.exe"
       - "**/Scripts/wheel*"

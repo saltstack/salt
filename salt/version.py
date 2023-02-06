@@ -323,7 +323,9 @@ class SaltStackVersion:
         self.mbugfix = mbugfix
         self.pre_type = pre_type
         self.pre_num = pre_num
-        if self.new_version(major):
+        if self.can_have_dot_zero(major):
+            vnames_key = (major, 0)
+        elif self.new_version(major):
             vnames_key = (major,)
         else:
             vnames_key = (major, minor)

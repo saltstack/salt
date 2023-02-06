@@ -451,7 +451,7 @@ idna==2.8
     #   yarl
 immutables==0.16
     # via contextvars
-importlib-metadata==4.8.1 ; python_version >= "3.6" and python_version < "3.10"
+importlib-metadata==4.8.1
     # via -r requirements/static/pkg/linux.in
 iniconfig==1.1.1
     # via pytest

@@ -193,7 +193,6 @@ if ( $PKG ) {
     $binaries = @(
         "py.exe",
         "pyw.exe",
-        "pythonw.exe",
         "venvlauncher.exe",
         "venvwlauncher.exe"
     )

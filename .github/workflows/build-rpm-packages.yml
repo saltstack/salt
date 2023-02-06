@@ -1,4 +1,5 @@
-name: Build Salt Packages
+---
+name: Build RPM Packages
 
 on:
   workflow_call:
@@ -27,17 +28,10 @@ jobs:
           - aarch64
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/centos:stream9
+      image: ghcr.io/saltstack/salt-ci-containers/packaging:centosstream-9
 
     steps:
       - uses: actions/checkout@v3
-
-      - name: Download Release Changes
-        uses: actions/download-artifact@v3
-        with:
-          name: salt-${{ inputs.salt-version }}.diff
-
-
 
       - name: Download System Dependencies
         run: |
@@ -50,23 +44,35 @@ jobs:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: artifacts/
 
-      - name: Apply release changes
+      - name: Download Release Patch
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ inputs.salt-version }}.patch
+
+      - name: Configure Git
         shell: bash
         run: |
-          git apply salt-${{ inputs.salt-version }}.diff
-          rm salt-${{ inputs.salt-version }}.diff
+          git config --global user.name "Salt Project Packaging"
+          git config --global user.email saltproject-packaging@vmware.com
+          git config --global --add safe.directory "$(pwd)"
+
+      - name: Apply Release Patch
+        shell: bash
+        run: |
+          git am --committer-date-is-author-date salt-${{ inputs.salt-version }}.patch
+          rm salt-${{ inputs.salt-version }}.patch
 
       - name: Build RPM
         env:
           SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
         run: |
           echo "${{ inputs.salt-version }}" > salt/_version.txt
-          rpmbuild -bb --define="_salt_src $(pwd)" $(pwd)/pkg/rpm/salt.spec
+          rpmbuild -bb --define="_salt_src $(pwd)" "$(pwd)/pkg/rpm/salt.spec"
 
       - name: Upload RPMs
         uses: actions/upload-artifact@v3
         with:
-          name: salt-${{ matrix.arch }}-rpms
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm-pkgs
           path: ~/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
           retention-days: 7
           if-no-files-found: error
