@@ -4,6 +4,8 @@
 #
 #    pip-compile --output-file=requirements/static/ci/py3.6/pkgtests.txt requirements/base.txt requirements/static/ci/pkgtests.in requirements/zeromq.txt
 #
+atomicwrites==1.4.1
+    # via pytest
 attrs==22.2.0
     # via
     #   pytest
@@ -19,12 +21,17 @@ cheroot==9.0.0
     # via cherrypy
 cherrypy==18.8.0
     # via -r requirements/static/ci/pkgtests.in
+colorama==0.4.5
+    # via pytest
 contextvars==2.4
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/base.txt
 distlib==0.3.6
     # via virtualenv
 distro==1.8.0
     # via
+    #   -r requirements/base.txt
     #   -r requirements/base.txt
     #   pytest-skip-markers
 filelock==3.4.1
@@ -59,13 +66,20 @@ jaraco.functools==3.4.0
 jaraco.text==3.7.0
     # via jaraco.collections
 jinja2==3.0.3
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/base.txt
 jmespath==0.10.0
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/base.txt
 looseversion==1.0.3
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/base.txt
 markupsafe==2.0.1
     # via
+    #   -r requirements/base.txt
     #   -r requirements/base.txt
     #   jinja2
 more-itertools==8.14.0
@@ -77,9 +91,11 @@ more-itertools==8.14.0
 msgpack==1.0.4
     # via
     #   -r requirements/base.txt
+    #   -r requirements/base.txt
     #   pytest-salt-factories
 packaging==21.3
     # via
+    #   -r requirements/base.txt
     #   -r requirements/base.txt
     #   pytest
 platformdirs==2.4.0
@@ -91,11 +107,14 @@ portend==3.0.0
 psutil==5.9.4
     # via
     #   -r requirements/base.txt
+    #   -r requirements/base.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
 py==1.11.0
     # via pytest
+pycparser==2.21
+    # via pythonnet
 pycryptodomex==3.16.0
     # via -r requirements/crypto.txt
 pyparsing==3.0.9
@@ -125,16 +144,27 @@ pytest==7.0.1
     #   pytest-skip-markers
     #   pytest-system-statistics
     #   pytest-tempdir
+pythonnet==2.5.2 ; python_version < "3.7" and sys_platform == "win32"
+    # via -r requirements/static/ci/pkgtests.in
 pytz==2022.7.1
     # via tempora
+pywin32==305
+    # via
+    #   cherrypy
+    #   pytest-skip-markers
+    #   wmi
 pyyaml==6.0
-    # via -r requirements/base.txt
-pyzmq==25.0.0 ; python_version < "3.9"
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/base.txt
+pyzmq==22.0.3 ; python_version < "3.9" and sys_platform == "win32"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
 requests==2.27.1
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/base.txt
 six==1.16.0
     # via cheroot
 tempora==4.1.2
@@ -151,6 +181,8 @@ urllib3==1.26.14
     # via requests
 virtualenv==20.17.1
     # via pytest-salt-factories
+wmi==1.5.1 ; sys_platform == "win32"
+    # via -r requirements/static/ci/pkgtests.in
 zc.lockfile==2.0
     # via cherrypy
 zipp==3.6.0
