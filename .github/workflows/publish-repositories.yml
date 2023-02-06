@@ -33,10 +33,15 @@ jobs:
           name: salt-${{ inputs.salt-version }}-${{ inputs.environment }}-repo
           path: repo/
 
+      - name: Decompress Repository Artifacts
+        run: |
+          find repo/ -type f -name '*.tar.gz' -print -exec tar xvf {} \;
+          find repo/ -type f -name '*.tar.gz' -print -exec rm -f {} \;
+
       - name: Show Repository
         run: |
-          tree -a repo/
+          tree -a artifacts/pkgs/repo/
 
       - name: Upload Repository Contents(${{ inputs.environment }})
         run: |
-          aws s3 cp --acl bucket-owner-full-control --recursive repo/ s3://salt-project-prod-salt-artifacts-${{ inputs.environment }}
+          aws s3 cp --color on --acl bucket-owner-full-control --recursive artifacts/pkgs/repo/ s3://salt-project-prod-salt-artifacts-${{ inputs.environment }}
