@@ -538,7 +538,7 @@ class SaltPkgInstall:
         upgrade tests.
         """
         if platform.is_darwin():
-            major_ver = f"{self.major}-{self.pkg_version}"
+            major_ver = f"{self.major}.{self.minor}-{self.pkg_version}"
         else:
             major_ver = self.major
         min_ver = f"{major_ver}"
