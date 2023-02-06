@@ -143,6 +143,7 @@ jobs:
         uses: ./.github/actions/setup-salt-version
         with:
           salt-version: "<{ prepare_workflow_salt_version_input }>"
+          validate-version: true
 
       - name: Write Changed Files To A Local File
         run:
