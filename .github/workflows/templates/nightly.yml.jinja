@@ -55,7 +55,3 @@ concurrency:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
     secrets: inherit
 <%- endblock jobs %>
-
-<%- block pipeline_exit_status %>
-<{ super() }>
-<%- endblock pipeline_exit_status %>

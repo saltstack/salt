@@ -22,6 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on: ubuntu-latest
@@ -208,9 +209,10 @@ jobs:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
 
   prepare-release:
-    name: Prepare Release
+    name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['prepare-release'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-    runs-on: ubuntu-latest
+    runs-on:
+      - ubuntu-latest
     needs:
       - prepare-workflow
     steps:

@@ -41,6 +41,9 @@ class NeedsTracker:
             need = self._needs.pop(0)
             yield need
 
+    def __bool__(self):
+        return bool(self._needs)
+
 
 @cgroup.command(
     name="generate-workflows",
@@ -55,6 +58,9 @@ def generate_workflows(ctx: Context):
         },
         "Nightly": {
             "template": "nightly.yml",
+        },
+        "Stage Release": {
+            "template": "staging.yml",
         },
         "Scheduled": {
             "template": "scheduled.yml",
@@ -90,6 +96,7 @@ def generate_workflows(ctx: Context):
             "includes": includes,
             "conclusion_needs": NeedsTracker(),
             "test_salt_needs": NeedsTracker(),
+            "prepare_workflow_needs": NeedsTracker(),
         }
         if workflow_name == "Check Workflow Run":
             check_workflows = [wf for wf in sorted(workflows) if wf != workflow_name]
