@@ -95,9 +95,10 @@ jobs:
             --repo-path=artifacts/pkgs/repo
 
       - name: Upload Repository As An Artifact
-        uses: actions/upload-artifact@v3
+        uses: ./.github/actions/upload-artifact
         with:
           name: salt-${{ inputs.salt-version }}-${{ inputs.environment }}-repo
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
+          archive-name: macos-repo
