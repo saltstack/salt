@@ -98,9 +98,17 @@ class Recompress:
         "overwrite": {
             "help": "Overwrite 'salt/_version.txt' if it already exists",
         },
+        "validate_version": {
+            "help": "Validate, and normalize, the passed Salt Version",
+        },
     },
 )
-def set_salt_version(ctx: Context, salt_version: str, overwrite: bool = False):
+def set_salt_version(
+    ctx: Context,
+    salt_version: str,
+    overwrite: bool = False,
+    validate_version: bool = False,
+):
     """
     Write the Salt version to 'salt/_version.txt'
     """
@@ -121,6 +129,29 @@ def set_salt_version(ctx: Context, salt_version: str, overwrite: bool = False):
         ret = ctx.run(shutil.which("python3"), "salt/version.py", capture=True)
         salt_version = ret.stdout.strip().decode()
         ctx.info(f"Discovered Salt version: {salt_version!r}")
+    elif validate_version:
+        ctx.info(f"Validating and normalizing the salt version {salt_version!r}...")
+        with ctx.virtualenv(
+            name="set-salt-version",
+            requirements_files=[REPO_ROOT / "requirements" / "base.txt"],
+        ) as venv:
+            code = f"""
+            import sys
+            import salt.version
+            parsed_version = salt.version.SaltStackVersion.parse("{salt_version}")
+            if parsed_version.name is None:
+                # When we run out of names, or we stop supporting version names
+                # we'll need to remove this version check.
+                print("'{{}}' is not a valid Salt Version.".format(parsed_version), file=sys.stderr, flush=True)
+                sys.exit(1)
+            sys.stdout.write(str(parsed_version))
+            sys.stdout.flush()
+            """
+            ret = venv.run_code(code, capture=True, check=False)
+            if ret.returncode:
+                ctx.error(ret.stderr.decode())
+                ctx.exit(ctx.returncode)
+            salt_version = ret.stdout.strip().decode()
 
     if not REPO_ROOT.joinpath("salt").is_dir():
         ctx.error(
