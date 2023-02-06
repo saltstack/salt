@@ -537,16 +537,20 @@ class SaltPkgInstall:
             gpg_key = "SALTSTACK-GPG-KEY.pub"
             if self.distro_version == "9":
                 gpg_key = "SALTSTACK-GPG-KEY2.pub"
+            if platform.is_aarch64():
+                arch = "aarch64"
+            else:
+                arch = "x86_64"
             ret = self.proc.run(
                 "rpm",
                 "--import",
-                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/x86_64/{major_ver}/{gpg_key}",
+                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}/{gpg_key}",
             )
             self._check_retcode(ret)
             ret = self.proc.run(
                 "curl",
                 "-fsSL",
-                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/x86_64/{major_ver}.repo",
+                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}.repo",
                 "-o",
                 f"/etc/yum.repos.d/salt-{distro_name}.repo",
             )
@@ -566,20 +570,24 @@ class SaltPkgInstall:
             self._check_retcode(ret)
             ret = self.proc.run(self.pkg_mngr, "install", "apt-transport-https", "-y")
             self._check_retcode(ret)
+            if platform.is_aarch64():
+                arch = "arm64"
+            else:
+                arch = "amd64"
             ret = self.proc.run(
                 "curl",
                 "-fsSL",
                 "-o",
                 "/usr/share/keyrings/salt-archive-keyring.gpg",
-                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/amd64/{major_ver}/salt-archive-keyring.gpg",
+                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}/salt-archive-keyring.gpg",
             )
             self._check_retcode(ret)
             with open(
                 pathlib.Path("/etc", "apt", "sources.list.d", "salt.list"), "w"
             ) as fp:
                 fp.write(
-                    "deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg arch=amd64] "
-                    f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/amd64/{major_ver} {self.distro_codename} main"
+                    f"deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg arch={arch}] "
+                    f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver} {self.distro_codename} main"
                 )
             ret = self.proc.run(self.pkg_mngr, "update")
             self._check_retcode(ret)
