@@ -439,7 +439,7 @@ idna==3.2
     #   yarl
 immutables==0.16
     # via contextvars
-importlib_metadata==4.6.3 ; python_version >= "3.10"
+importlib-metadata==6.0.0
     # via -r requirements/static/pkg/linux.in
 ipaddress==1.0.23
     # via kubernetes
