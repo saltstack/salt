@@ -26,8 +26,8 @@ concurrency:
 
 jobs:
 
-  check-permissions:
-    name: Check Permissions
+  check-requirements:
+    name: Check Requirements
     runs-on: ubuntu-latest
     steps:
       - name: Check For Admin Permission
@@ -36,11 +36,21 @@ jobs:
           require: admin
           username: ${{ github.triggering_actor }}
 
+      - name: Check Branch
+        run: |
+          echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
+          if [ "${{ github.ref_name }}" != "master" ]; then
+              echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
+              exit 1
+          else
+              echo "Allowed"
+          fi
+
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on: ubuntu-latest
     needs:
-      - check-permissions
+      - check-requirements
     outputs:
       jobs: ${{ steps.define-jobs.outputs.jobs }}
       runners: ${{ steps.runner-types.outputs.runners }}
@@ -873,7 +883,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     needs:
-      - check-permissions
+      - check-requirements
       - prepare-workflow
       - pre-commit
       - lint
