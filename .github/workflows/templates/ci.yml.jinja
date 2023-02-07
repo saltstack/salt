@@ -103,7 +103,7 @@ on:
       - name: Update Debian changelog
         shell: bash
         run: |
-          tools changelog update-deb --draft --salt-version="1:${{ needs.prepare-workflow.outputs.salt-version }}"
+          tools changelog update-deb "1:${{ needs.prepare-workflow.outputs.salt-version }}" --draft
           tools changelog update-deb
 
       - name: Update RPM changelog
