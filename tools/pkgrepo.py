@@ -16,17 +16,26 @@ from typing import TYPE_CHECKING
 import packaging.version
 from ptscripts import Context, command_group
 
+import tools.pkg
+
 log = logging.getLogger(__name__)
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # Define the command group
-pkg = command_group(
-    name="pkg-repo", help="Packaging Repository Related Commands", description=__doc__
+repo = command_group(
+    name="repo",
+    help="Packaging Repository Related Commands",
+    description=__doc__,
+    parent=tools.pkg.pkg,
+)
+
+create = command_group(
+    name="create", help="Packaging Repository Creation Related Commands", parent=repo
 )
 
 
-@pkg.command(
+@create.command(
     name="deb",
     arguments={
         "salt_version": {
@@ -290,7 +299,7 @@ def debian(
     ctx.info("Done")
 
 
-@pkg.command(
+@create.command(
     name="rpm",
     arguments={
         "salt_version": {
@@ -503,7 +512,7 @@ def rpm(
     ctx.info("Done")
 
 
-@pkg.command(
+@create.command(
     name="windows",
     arguments={
         "salt_version": {
@@ -564,7 +573,7 @@ def windows(
     ctx.info("Done")
 
 
-@pkg.command(
+@create.command(
     name="macos",
     arguments={
         "salt_version": {
@@ -625,7 +634,7 @@ def macos(
     ctx.info("Done")
 
 
-@pkg.command(
+@create.command(
     name="onedir",
     arguments={
         "salt_version": {

@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # Define the command group
-cl = command_group(
+changelog = command_group(
     name="changelog",
     help="Changelog tools",
     description=__doc__,
@@ -118,7 +118,7 @@ def _get_salt_version():
     )
 
 
-@cl.command(
+@changelog.command(
     name="update-rpm",
     arguments={
         "salt_version": {
@@ -168,7 +168,7 @@ def update_rpm(ctx: Context, salt_version: str, draft: bool = False):
         os.remove(tmpspec)
 
 
-@cl.command(
+@changelog.command(
     name="update-deb",
     arguments={
         "salt_version": {
@@ -211,7 +211,7 @@ def update_deb(ctx: Context, salt_version: str, draft: bool = False):
         os.remove(tmpchanges)
 
 
-@cl.command(
+@changelog.command(
     name="update-release-notes",
     arguments={
         "salt_version": {
@@ -257,7 +257,7 @@ def update_release_notes(ctx: Context, salt_version: str, draft: bool = False):
         os.remove(tmpnotes)
 
 
-@cl.command(
+@changelog.command(
     name="update-changelog-md",
     arguments={
         "salt_version": {
