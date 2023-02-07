@@ -26,10 +26,11 @@ concurrency:
 
 <%- block pre_jobs %>
 
-  <%- do prepare_workflow_needs.append('check-permissions') %>
+  <%- set job_name = "check-requirements" %>
 
-  check-permissions:
-    name: Check Permissions
+  <{ job_name }>:
+  <%- do prepare_workflow_needs.append(job_name) %>
+    name: Check Requirements
     runs-on: ubuntu-latest
     steps:
       - name: Check For Admin Permission
@@ -37,6 +38,21 @@ concurrency:
         with:
           require: admin
           username: ${{ github.triggering_actor }}
+
+      - name: Check Branch
+        run: |
+
+          {#-
+              Should we allow other branches?
+          #}
+          echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
+          if [ "${{ github.ref_name }}" != "master" ]; then
+              echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
+              exit 1
+          else
+              echo "Allowed"
+          fi
+
 <%- endblock pre_jobs %>
 
 
