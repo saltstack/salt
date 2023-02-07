@@ -93,7 +93,6 @@ def synchronized(
     passwordfile=None,
     exclude=None,
     excludefrom=None,
-    prepare=False,
     dryrun=False,
     additional_opts=None,
 ):
@@ -105,9 +104,6 @@ def synchronized(
 
     source
         Source directory.
-
-    prepare
-        Create destination directory if it does not exists.
 
     delete
         Delete extraneous files from the destination dirs (True or False)
@@ -141,12 +137,10 @@ def synchronized(
 
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    if not os.path.exists(name) and not force and not prepare:
+    if not os.path.exists(name) and not force:
         ret["result"] = False
         ret["comment"] = "Destination directory {dest} was not found.".format(dest=name)
     else:
-        if not os.path.exists(name) and prepare:
-            os.makedirs(name)
 
         if __opts__["test"]:
             dryrun = True
