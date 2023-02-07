@@ -731,17 +731,18 @@ def _create_onedir_based_repo(
     if salt_version not in repo_json:
         repo_json[salt_version] = {}
 
-    hash_suffixes = (
+    copy_exclusions = (
         ".blake2b",
         ".sha512",
         ".sha3_512",
         ".BLAKE2B",
         ".SHA512",
         ".SHA3_512",
+        ".json",
     )
     hashes_base_path = create_repo_path / f"salt-{salt_version}"
     for fpath in incoming.iterdir():
-        if fpath.suffix in hash_suffixes:
+        if fpath.suffix in copy_exclusions:
             continue
         ctx.info(f"* Processing {fpath} ...")
         dpath = create_repo_path / fpath.name
