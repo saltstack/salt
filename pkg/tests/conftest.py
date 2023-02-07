@@ -35,6 +35,10 @@ def version():
         if _version:
             _version = _version.groups()[0].replace("_", "-").replace("~", "")
             _version = _version.split("-")[0]
+            # TODO: Remove this clause.  This is to handle a versioning difficulty between pre-3006
+            # dev versions and older salt versions on deb-based distros
+            if _version.startswith("1:"):
+                _version = _version[2:]
             break
     return _version
 
