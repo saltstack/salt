@@ -24,6 +24,7 @@ known_third_party = [
     filename = "CHANGELOG.md"
     directory = "changelog/"
     start_string = "# Changelog\n"
+    issue_format = "`#{issue} <https://github.com/saltstack/salt/{issue}>`_"
 
     [[tool.towncrier.type]]
         directory = "removed"
