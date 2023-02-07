@@ -446,6 +446,8 @@ idna==2.8
     #   yarl
 immutables==0.15
     # via contextvars
+importlib-metadata==6.0.0
+    # via -r requirements/darwin.txt
 iniconfig==1.0.1
     # via pytest
 ipaddress==1.0.22
@@ -875,6 +877,8 @@ yarl==1.7.2
     # via aiohttp
 zc.lockfile==2.0
     # via cherrypy
+zipp==3.12.0
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

@@ -24,6 +24,8 @@ jmespath==1.0.1
     #   botocore
 markupsafe==2.1.2
     # via jinja2
+packaging==23.0
+    # via -r requirements/static/ci/tools.in
 pygments==2.13.0
     # via rich
 python-dateutil==2.8.2

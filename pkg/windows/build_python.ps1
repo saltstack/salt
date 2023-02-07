@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
 Script that builds Python from source using the Relative Environment for Python
 project (relenv):
