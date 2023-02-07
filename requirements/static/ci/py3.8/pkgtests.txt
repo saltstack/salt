@@ -22,14 +22,11 @@ cheroot==9.0.0
 cherrypy==18.8.0
     # via -r requirements/static/ci/pkgtests.in
 contextvars==2.4
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/base.txt
+    # via -r requirements/base.txt
 distlib==0.3.6
     # via virtualenv
 distro==1.8.0
     # via
-    #   -r requirements/base.txt
     #   -r requirements/base.txt
     #   pytest-skip-markers
 exceptiongroup==1.1.0
@@ -59,20 +56,13 @@ jaraco.functools==3.5.2
 jaraco.text==3.11.0
     # via jaraco.collections
 jinja2==3.1.2
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/base.txt
+    # via -r requirements/base.txt
 jmespath==1.0.1
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/base.txt
+    # via -r requirements/base.txt
 looseversion==1.0.3
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/base.txt
+    # via -r requirements/base.txt
 markupsafe==2.1.1
     # via
-    #   -r requirements/base.txt
     #   -r requirements/base.txt
     #   jinja2
 more-itertools==9.0.0
@@ -85,11 +75,9 @@ more-itertools==9.0.0
 msgpack==1.0.4
     # via
     #   -r requirements/base.txt
-    #   -r requirements/base.txt
     #   pytest-salt-factories
 packaging==23.0
     # via
-    #   -r requirements/base.txt
     #   -r requirements/base.txt
     #   pytest
 platformdirs==2.6.2
@@ -100,7 +88,6 @@ portend==3.1.0
     # via cherrypy
 psutil==5.9.4
     # via
-    #   -r requirements/base.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -137,17 +124,13 @@ pytest==7.2.1
 pytz==2022.7.1
     # via tempora
 pyyaml==6.0
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/base.txt
+    # via -r requirements/base.txt
 pyzmq==22.0.3 ; python_version < "3.9"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
 requests==2.28.2
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/base.txt
+    # via -r requirements/base.txt
 six==1.16.0
     # via cheroot
 tempora==5.2.0

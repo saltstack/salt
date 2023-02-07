@@ -20,14 +20,11 @@ cheroot==9.0.0
 cherrypy==18.8.0
     # via -r requirements/static/ci/pkgtests.in
 contextvars==2.4
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/base.txt
+    # via -r requirements/base.txt
 distlib==0.3.6
     # via virtualenv
 distro==1.8.0
     # via
-    #   -r requirements/base.txt
     #   -r requirements/base.txt
     #   pytest-skip-markers
 filelock==3.4.1
@@ -62,20 +59,13 @@ jaraco.functools==3.4.0
 jaraco.text==3.7.0
     # via jaraco.collections
 jinja2==3.0.3
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/base.txt
+    # via -r requirements/base.txt
 jmespath==0.10.0
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/base.txt
+    # via -r requirements/base.txt
 looseversion==1.0.3
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/base.txt
+    # via -r requirements/base.txt
 markupsafe==2.0.1
     # via
-    #   -r requirements/base.txt
     #   -r requirements/base.txt
     #   jinja2
 more-itertools==8.14.0
@@ -87,11 +77,9 @@ more-itertools==8.14.0
 msgpack==1.0.4
     # via
     #   -r requirements/base.txt
-    #   -r requirements/base.txt
     #   pytest-salt-factories
 packaging==21.3
     # via
-    #   -r requirements/base.txt
     #   -r requirements/base.txt
     #   pytest
 platformdirs==2.4.0
@@ -102,7 +90,6 @@ portend==3.0.0
     # via cherrypy
 psutil==5.9.4
     # via
-    #   -r requirements/base.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -141,17 +128,13 @@ pytest==7.0.1
 pytz==2022.7.1
     # via tempora
 pyyaml==6.0
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/base.txt
+    # via -r requirements/base.txt
 pyzmq==22.0.3 ; python_version < "3.9"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
 requests==2.27.1
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/base.txt
+    # via -r requirements/base.txt
 six==1.16.0
     # via cheroot
 tempora==4.1.2
