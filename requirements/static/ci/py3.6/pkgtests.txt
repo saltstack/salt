@@ -4,8 +4,6 @@
 #
 #    pip-compile --output-file=requirements/static/ci/py3.6/pkgtests.txt requirements/base.txt requirements/static/ci/pkgtests.in requirements/zeromq.txt
 #
-atomicwrites==1.4.1
-    # via pytest
 attrs==22.2.0
     # via
     #   pytest
@@ -21,8 +19,6 @@ cheroot==9.0.0
     # via cherrypy
 cherrypy==18.8.0
     # via -r requirements/static/ci/pkgtests.in
-colorama==0.4.5
-    # via pytest
 contextvars==2.4
     # via
     #   -r requirements/base.txt
@@ -113,8 +109,6 @@ psutil==5.9.4
     #   pytest-system-statistics
 py==1.11.0
     # via pytest
-pycparser==2.21
-    # via pythonnet
 pycryptodomex==3.16.0
     # via -r requirements/crypto.txt
 pyparsing==3.0.9
@@ -144,20 +138,13 @@ pytest==7.0.1
     #   pytest-skip-markers
     #   pytest-system-statistics
     #   pytest-tempdir
-pythonnet==2.5.2 ; python_version < "3.7" and sys_platform == "win32"
-    # via -r requirements/static/ci/pkgtests.in
 pytz==2022.7.1
     # via tempora
-pywin32==305
-    # via
-    #   cherrypy
-    #   pytest-skip-markers
-    #   wmi
 pyyaml==6.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/base.txt
-pyzmq==22.0.3 ; python_version < "3.9" and sys_platform == "win32"
+pyzmq==22.0.3 ; python_version < "3.9"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -181,8 +168,6 @@ urllib3==1.26.14
     # via requests
 virtualenv==20.17.1
     # via pytest-salt-factories
-wmi==1.5.1 ; sys_platform == "win32"
-    # via -r requirements/static/ci/pkgtests.in
 zc.lockfile==2.0
     # via cherrypy
 zipp==3.6.0
