@@ -247,11 +247,12 @@ def update_release_notes(ctx: Context, salt_version: str, draft: bool = False):
         wfp.write(changes)
     try:
         with open(tmpnotes) as rfp:
+            contents = rfp.read().strip()
             if draft:
-                ctx.info(rfp.read())
+                ctx.print(contents, soft_wrap=True)
             else:
                 with open(f"doc/topics/releases/{salt_version}.rst", "w") as wfp:
-                    wfp.write(rfp.read())
+                    wfp.write(contents)
     finally:
         os.remove(tmpnotes)
 
