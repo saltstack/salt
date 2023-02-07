@@ -606,7 +606,7 @@ jobs:
 
   macos-12-pkg-tests:
     name: macOS 12 Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.jobs)['github-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
       - build-pkgs
