@@ -638,11 +638,15 @@ def pkg_matrix(ctx: Context, distro_slug: str):
     Generate the test matrix.
     """
     _matrix = []
-    for sess in (
+    sessions = [
         "test-pkgs-3",
         "'test-upgrade-pkgs-3(classic=False)'",
-        "'test-upgrade-pkgs-3(classic=True)'",
-    ):
+    ]
+    if distro_slug not in ["centosstream-9", "ubuntu-22.04"]:
+        # Packages for these OSs where never built for classic previously
+        sessions.append("'test-upgrade-pkgs-3(classic=True)'")
+
+    for sess in sessions:
         _matrix.append({"nox-session": sess})
     print(json.dumps(_matrix))
     ctx.exit(0)

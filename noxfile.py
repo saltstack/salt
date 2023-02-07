@@ -11,8 +11,10 @@ import gzip
 import json
 import os
 import pathlib
+import platform
 import shutil
 import sqlite3
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -1807,10 +1809,16 @@ def test_upgrade_pkgs(session, classic):
     ]
     if classic:
         cmd_args = cmd_args + ["--classic"]
+        if "amzn2" in platform.release():
+            # Workaround for installing and running classic packages from 3005.1
+            # on amazon linux 2. They can only run with importlib-metadata<5.0.0.
+            subprocess.run(
+                ["pip3", "install", "importlib-metadata==4.13.0"], check=False
+            )
     try:
         _pkg_test(session, cmd_args, test_type)
     except nox.command.CommandFailed:
         sys.exit(1)
 
-    cmd_args = ["pkg/tests/"] + session.posargs
+    cmd_args = ["pkg/tests/", "--no-install"] + session.posargs
     _pkg_test(session, cmd_args, test_type)
