@@ -95,7 +95,7 @@ jobs:
 
       - name: Create Repository
         run: |
-          tools pkg-repo windows --key-id=64CBBC8173D76B3F \
+          tools pkg repo create windows --key-id=64CBBC8173D76B3F \
             ${{ inputs.nightly-build && '--nightly-build' || ''  }} --salt-version=${{ inputs.salt-version }} \
             ${{ inputs.rc-build && '--rc-build' || ''  }} --incoming=artifacts/pkgs/incoming \
             --repo-path=artifacts/pkgs/repo

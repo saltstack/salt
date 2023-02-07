@@ -126,7 +126,7 @@ jobs:
 
       - name: Create Repository
         run: |
-          tools pkg-repo deb --key-id=64CBBC8173D76B3F --distro-arch=${{ matrix.arch }} \
+          tools pkg repo create deb --key-id=64CBBC8173D76B3F --distro-arch=${{ matrix.arch }} \
             ${{ inputs.nightly-build && '--nightly-build' || '' }} --salt-version=${{ inputs.salt-version }} \
             ${{ inputs.rc-build && '--rc-build' || '' }} --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
