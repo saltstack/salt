@@ -483,9 +483,7 @@ class SaltPkgInstall:
                 # branch has not been updated with code so the versions might
                 # be the same and you can still install and test the new
                 # package.
-                ret = self.proc.run(
-                    self.pkg_mngr, "upgrade", "-y", "--allow-downgrades", *self.pkgs
-                )
+                ret = self.proc.run(self.pkg_mngr, "upgrade", "-y", *self.pkgs)
             else:
                 ret = self.proc.run(self.pkg_mngr, "upgrade", "-y", *self.pkgs)
                 if (
