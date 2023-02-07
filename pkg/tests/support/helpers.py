@@ -675,7 +675,7 @@ class SaltPkgInstall:
                 f"https://repo.saltproject.io/salt/py3/macos/{major_ver}/{mac_pkg}"
             )
             if self.classic:
-                mac_pkg = f"salt-{min_ver}-1-py3-x86_64.pkg"
+                mac_pkg = f"salt-{min_ver}-py3-x86_64.pkg"
                 mac_pkg_url = f"https://repo.saltproject.io/osx/{mac_pkg}"
             mac_pkg_path = f"/tmp/{mac_pkg}"
             ret = self.proc.run(
