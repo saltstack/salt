@@ -249,12 +249,12 @@ jobs:
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
-      # TODO: Remove the --salt_version argument post 3006 release.  This was to handle versioning
+      # TODO: Remove the --salt-version argument post 3006 release.  This was to handle versioning
       # issues on pre-3006 development versions on deb-based distros.
       - name: Update Debian changelog
         shell: bash
         run: |
-          tools changelog update-deb --draft --salt_version="1:${{ needs.prepare-workflow.outputs.salt-version }}"
+          tools changelog update-deb --draft --salt-version="1:${{ needs.prepare-workflow.outputs.salt-version }}"
           tools changelog update-deb
 
       - name: Update RPM changelog
