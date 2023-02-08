@@ -13,7 +13,7 @@ import shutil
 import sys
 import textwrap
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import packaging.version
 from ptscripts import Context, command_group
@@ -45,6 +45,9 @@ log = logging.getLogger(__name__)
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 GPG_KEY_FILENAME = "SALT-PROJECT-GPG-PUBKEY-2023"
+NIGHTLY_BUCKET_NAME = "salt-project-prod-salt-artifacts-nightly"
+STAGING_BUCKET_NAME = "salt-project-prod-salt-artifacts-staging"
+RELEASE_BUCKET_NAME = "salt-project-prod-salt-artifacts-release"
 
 # Define the command group
 repo = command_group(
@@ -732,34 +735,14 @@ def _create_onedir_based_repo(
         repo_json_path = create_repo_path.parent / "repo.json"
 
     if nightly_build:
-        bucket_name = "salt-project-prod-salt-artifacts-nightly"
+        bucket_name = NIGHTLY_BUCKET_NAME
     else:
-        bucket_name = "salt-project-prod-salt-artifacts-staging"
+        bucket_name = STAGING_BUCKET_NAME
 
     s3 = boto3.client("s3")
-    try:
-        ret = s3.head_object(
-            Bucket=bucket_name, Key=str(repo_json_path.relative_to(repo_path))
-        )
-        ctx.info("Downloading existing 'repo.json' file")
-        size = ret["ContentLength"]
-        with repo_json_path.open("wb") as wfh:
-            with create_progress_bar(file_progress=True) as progress:
-                task = progress.add_task(description="Downloading...", total=size)
-            s3.download_fileobj(
-                Bucket=bucket_name,
-                Key=str(repo_json_path.relative_to(repo_path)),
-                Fileobj=wfh,
-                Callback=UpdateProgress(progress, task),
-            )
-        with repo_json_path.open() as rfh:
-            repo_json = json.load(rfh)
-    except ClientError as exc:
-        if "Error" not in exc.response:
-            raise
-        if exc.response["Error"]["Code"] != "404":
-            raise
-        repo_json = {}
+    repo_json = _get_repo_json_file_contents(
+        ctx, bucket_name=bucket_name, repo_path=repo_path, repo_json_path=repo_json_path
+    )
 
     if salt_version not in repo_json:
         repo_json[salt_version] = {}
@@ -842,29 +825,12 @@ def _create_onedir_based_repo(
             latest_link.symlink_to(f"minor/{salt_version}")
 
         minor_repo_json_path = create_repo_path.parent / "repo.json"
-        try:
-            ret = s3.head_object(
-                Bucket=bucket_name, Key=str(minor_repo_json_path.relative_to(repo_path))
-            )
-            size = ret["ContentLength"]
-            ctx.info("Downloading existing 'minor/repo.json' file")
-            with minor_repo_json_path.open("wb") as wfh:
-                with create_progress_bar(file_progress=True) as progress:
-                    task = progress.add_task(description="Downloading...", total=size)
-                s3.download_fileobj(
-                    Bucket=bucket_name,
-                    Key=str(minor_repo_json_path.relative_to(repo_path)),
-                    Fileobj=wfh,
-                    Callback=UpdateProgress(progress, task),
-                )
-            with minor_repo_json_path.open() as rfh:
-                minor_repo_json = json.load(rfh)
-        except ClientError as exc:
-            if "Error" not in exc.response:
-                raise
-            if exc.response["Error"]["Code"] != "404":
-                raise
-            minor_repo_json = {}
+        minor_repo_json = _get_repo_json_file_contents(
+            ctx,
+            bucket_name=bucket_name,
+            repo_path=repo_path,
+            repo_json_path=minor_repo_json_path,
+        )
         minor_repo_json[salt_version] = repo_json[salt_version]
         minor_repo_json_path.write_text(json.dumps(minor_repo_json))
     else:
@@ -873,6 +839,39 @@ def _create_onedir_based_repo(
         latest_link.symlink_to(create_repo_path.name)
 
     repo_json_path.write_text(json.dumps(repo_json))
+
+
+def _get_repo_json_file_contents(
+    ctx: Context,
+    bucket_name: str,
+    repo_path: pathlib.Path,
+    repo_json_path: pathlib.Path,
+) -> dict[str, Any]:
+    s3 = boto3.client("s3")
+    repo_json: dict[str, Any] = {}
+    try:
+        ret = s3.head_object(
+            Bucket=bucket_name, Key=str(repo_json_path.relative_to(repo_path))
+        )
+        ctx.info("Downloading existing 'repo.json' file")
+        size = ret["ContentLength"]
+        with repo_json_path.open("wb") as wfh:
+            with create_progress_bar(file_progress=True) as progress:
+                task = progress.add_task(description="Downloading...", total=size)
+            s3.download_fileobj(
+                Bucket=bucket_name,
+                Key=str(repo_json_path.relative_to(repo_path)),
+                Fileobj=wfh,
+                Callback=UpdateProgress(progress, task),
+            )
+        with repo_json_path.open() as rfh:
+            repo_json = json.load(rfh)
+    except ClientError as exc:
+        if "Error" not in exc.response:
+            raise
+        if exc.response["Error"]["Code"] != "404":
+            raise
+    return repo_json
 
 
 def _get_file_checksum(fpath: pathlib.Path, hash_name: str) -> str:
@@ -952,11 +951,11 @@ def _publish_repo(
     Publish packaging repositories.
     """
     if nightly_build:
-        bucket_name = "salt-project-prod-salt-artifacts-nightly"
+        bucket_name = NIGHTLY_BUCKET_NAME
     elif stage:
-        bucket_name = "salt-project-prod-salt-artifacts-staging"
+        bucket_name = STAGING_BUCKET_NAME
     else:
-        bucket_name = "salt-project-prod-salt-artifacts-release"
+        bucket_name = RELEASE_BUCKET_NAME
 
     ctx.info("Preparing upload ...")
     s3 = boto3.client("s3")
