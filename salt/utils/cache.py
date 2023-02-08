@@ -203,14 +203,14 @@ class CacheCli:
         """
         published the given minions to the ConCache
         """
-        self.cupd_out.send(salt.payload.dumps(minions))
+        self.cupd_out.send(salt.payload.dumps(minions))  # pylint: disable=missing-kwoa
 
     def get_cached(self):
         """
         queries the ConCache for a list of currently connected minions
         """
         msg = salt.payload.dumps("minions")
-        self.creq_out.send(msg)
+        self.creq_out.send(msg)  # pylint: disable=missing-kwoa
         min_list = salt.payload.loads(self.creq_out.recv())
         return min_list
 
