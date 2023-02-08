@@ -42,8 +42,8 @@ Description: shared libraries that salt requires for all packages
 
 Package: salt-master
 Architecture: amd64 arm64
-Replaces: salt-common (<= 3005.1)
-Breaks: salt-common (<= 3005.1)
+Replaces: salt-common (<= 3005.1+ds-4)
+Breaks: salt-common (<= 3005.1+ds-4)
 Depends: salt-common (= ${source:Version}),
          ${misc:Depends}
 Description: remote manager to administer servers via salt
