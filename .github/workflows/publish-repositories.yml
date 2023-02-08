@@ -26,6 +26,15 @@ jobs:
     environment: ${{ inputs.environment }}
 
     steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Download Repository Artifact
         uses: actions/download-artifact@v3
@@ -44,4 +53,5 @@ jobs:
 
       - name: Upload Repository Contents(${{ inputs.environment }})
         run: |
-          aws s3 cp --color on --acl bucket-owner-full-control --recursive artifacts/pkgs/repo/ s3://salt-project-prod-salt-artifacts-${{ inputs.environment }}
+          tools pkg repo publish ${{ inputs.environment }} \
+            ${{ contains(inputs.salt-version, 'rc') && '--rc-build' || '' }} artifacts/pkgs/repo/
