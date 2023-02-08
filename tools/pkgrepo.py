@@ -44,6 +44,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+GPG_KEY_FILENAME = "SALT-PROJECT-GPG-PUBKEY-2023"
 
 # Define the command group
 repo = command_group(
@@ -184,13 +185,6 @@ def debian(
     label: str = distro_details["label"]
     codename: str = distro_details["codename"]
 
-    salt_project_gpg_pub_key_file = (
-        pathlib.Path("~/SALT-PROJECT-GPG-PUBKEY-2023.gpg").expanduser().resolve()
-    )
-    if not salt_project_gpg_pub_key_file:
-        ctx.error(f"The file '{salt_project_gpg_pub_key_file}' does not exist.")
-        ctx.exit(1)
-
     ftp_archive_config_suite = ""
     if distro == "debian":
         suitename: str = distro_details["suitename"]
@@ -229,12 +223,13 @@ def debian(
     ctx.info(f"Writing {ftp_archive_config_file} ...")
     ftp_archive_config_file.write_text(textwrap.dedent(ftp_archive_config))
 
-    ctx.info(f"Copying {salt_project_gpg_pub_key_file} to {create_repo_path} ...")
-    shutil.copyfile(
-        salt_project_gpg_pub_key_file,
-        create_repo_path / salt_project_gpg_pub_key_file.name,
+    keyfile_gpg = create_repo_path / GPG_KEY_FILENAME
+    ctx.info(
+        f"Exporting GnuPG Key '{key_id}' to {keyfile_gpg.relative_to(repo_path)}.pub ..."
     )
-
+    ctx.run(
+        "gpg", "--armor", "-o", str(keyfile_gpg.with_suffix(".pub")), "--export", key_id
+    )
     pool_path = create_repo_path / "pool"
     pool_path.mkdir(exist_ok=True)
     for fpath in incoming.iterdir():
@@ -409,14 +404,6 @@ def rpm(
         ctx.info(f"The {distro_arch} arch is an alias for 'arm64'. Adjusting.")
         distro_arch = "arm64"
 
-    salt_project_gpg_pub_key_file = (
-        pathlib.Path("~/SALT-PROJECT-GPG-PUBKEY-2023.gpg").expanduser().resolve()
-    )
-
-    if not salt_project_gpg_pub_key_file.exists():
-        ctx.error(f"The file '{salt_project_gpg_pub_key_file}' does not exist.")
-        ctx.exit(1)
-
     ctx.info("Creating repository directory structure ...")
     create_repo_path = _create_repo_path(
         repo_path,
@@ -428,11 +415,11 @@ def rpm(
         nightly_build=nightly_build,
     )
 
-    ctx.info(f"Copying {salt_project_gpg_pub_key_file} to {create_repo_path} ...")
-    shutil.copyfile(
-        salt_project_gpg_pub_key_file,
-        create_repo_path / salt_project_gpg_pub_key_file.name,
+    keyfile_gpg = create_repo_path / GPG_KEY_FILENAME
+    ctx.info(
+        f"Exporting GnuPG Key '{key_id}' to {keyfile_gpg.relative_to(repo_path)}.gpg ..."
     )
+    ctx.run("gpg", "-o", str(keyfile_gpg.with_suffix(".gpg")), "--export", key_id)
 
     for fpath in incoming.iterdir():
         if ".src" in fpath.suffixes:
@@ -596,7 +583,7 @@ def windows(
         repo_path=repo_path,
         incoming=incoming,
         key_id=key_id,
-        os="windows",
+        distro="windows",
         pkg_suffixes=(".msi", ".exe"),
     )
     ctx.info("Done")
@@ -657,7 +644,7 @@ def macos(
         repo_path=repo_path,
         incoming=incoming,
         key_id=key_id,
-        os="macos",
+        distro="macos",
         pkg_suffixes=(".pkg",),
     )
     ctx.info("Done")
@@ -718,7 +705,7 @@ def onedir(
         repo_path=repo_path,
         incoming=incoming,
         key_id=key_id,
-        os="onedir",
+        distro="onedir",
         pkg_suffixes=(".xz", ".zip"),
     )
     ctx.info("Done")
@@ -732,19 +719,12 @@ def _create_onedir_based_repo(
     repo_path: pathlib.Path,
     incoming: pathlib.Path,
     key_id: str,
-    os: str,
+    distro: str,
     pkg_suffixes: tuple[str, ...],
 ):
-    salt_project_gpg_pub_key_file = (
-        pathlib.Path("~/SALT-PROJECT-GPG-PUBKEY-2023.gpg").expanduser().resolve()
-    )
-    if not salt_project_gpg_pub_key_file:
-        ctx.error(f"The file '{salt_project_gpg_pub_key_file}' does not exist.")
-        ctx.exit(1)
-
     ctx.info("Creating repository directory structure ...")
     create_repo_path = _create_repo_path(
-        repo_path, salt_version, os, rc_build=rc_build, nightly_build=nightly_build
+        repo_path, salt_version, distro, rc_build=rc_build, nightly_build=nightly_build
     )
     if nightly_build is False:
         repo_json_path = create_repo_path.parent.parent / "repo.json"
@@ -817,7 +797,7 @@ def _create_onedir_based_repo(
         repo_json[salt_version][dpath.name] = {
             "name": dpath.name,
             "version": salt_version,
-            "os": os,
+            "os": distro,
             "arch": arch,
         }
         for hash_name in ("blake2b", "sha512", "sha3_512"):
@@ -831,12 +811,15 @@ def _create_onedir_based_repo(
         if fpath.suffix in pkg_suffixes:
             continue
         ctx.info(f"GPG Signing '{fpath.relative_to(repo_path)}' ...")
-        ctx.run("gpg", "-u", key_id, "-o" f"{fpath}.asc", "-a", "-b", "-s", str(fpath))
+        ctx.run("gpg", "-u", key_id, "-o", f"{fpath}.asc", "-a", "-b", "-s", str(fpath))
 
-    ctx.info(f"Copying {salt_project_gpg_pub_key_file} to {create_repo_path} ...")
-    shutil.copyfile(
-        salt_project_gpg_pub_key_file,
-        create_repo_path / salt_project_gpg_pub_key_file.name,
+    keyfile_gpg = create_repo_path / GPG_KEY_FILENAME
+    ctx.info(
+        f"Exporting GnuPG Key '{key_id}' to {keyfile_gpg.relative_to(repo_path)}.{{gpg,pub}} ..."
+    )
+    ctx.run("gpg", "-o", str(keyfile_gpg.with_suffix(".gpg")), "--export", key_id)
+    ctx.run(
+        "gpg", "--armor", "-o", str(keyfile_gpg.with_suffix(".pub")), "--export", key_id
     )
 
     if nightly_build is False:
