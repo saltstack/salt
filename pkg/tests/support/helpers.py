@@ -481,105 +481,7 @@ class SaltPkgInstall:
     def _install_pkgs(self, upgrade=False):
         if upgrade:
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
-            upgrade_location = "/tmp/testing/pkg/artifacts"
-            if self.distro_id in ("ubuntu", "debian"):
-                # --allow-downgrades and yum's downgrade is a workaround since
-                # dpkg/yum is seeing 3005 version as a greater version than our nightly builds.
-                # Also this helps work around the situation when the Salt
-                # branch has not been updated with code so the versions might
-                # be the same and you can still install and test the new
-                # package.
-                ## DGM ret = self.proc.run(
-                ## DGM     self.pkg_mngr, "upgrade", "-y", "--allow-downgrades", *self.pkgs
-                ## DGM )
-                # due to apt perferring released builds vs nightly builds,
-                # need to give preference to the nightly build
-
-                # get first package
-                dgm_pkg_version_name = self.pkgs[0]
-                log.debug(
-                    f"DGM _install_pkgs attempt self.pkgs '{self.pkgs}', dgm_pkg_version_name '{dgm_pkg_version_name}'"
-                )
-                dgm_pkg_version_list = dgm_pkg_version_name.split("_")
-                log.debug(
-                    f"DGM _install_pkgs attempt dgm_pkg_version_list '{dgm_pkg_version_list}'"
-                )
-                if len(dgm_pkg_version_list) < 3:
-                    log.debug(
-                        f"DGM Unable to retrieve package version from package name '{dgm_pkg_version_name}', length '{len(dgm_pkg_version_list)}'"
-                    )
-                    log.error("Unable to retrieve package version from package name")
-                    return False
-
-                dgm_pkg_version = dgm_pkg_version_list[1]
-                log.debug(
-                    f"DGM _install_pkgs attempt dgm_pkg_version '{dgm_pkg_version}'"
-                )
-                with open(
-                    pathlib.Path("/etc", "apt", "/etc/apt/preferences.d", "salt.pref"),
-                    "w",
-                ) as fp:
-                    fp.write(
-                        "Package: salt-*\n"
-                        f"Pin: version {dgm_pkg_version}\n"
-                        "Pin-Priority: 1001\n"
-                    )
-                log.debug(
-                    f"DGM _install_pkgs attempt upgrade to version '{dgm_pkg_version}'"
-                )
-
-                root_url = "salt/py3/"
-                if self.classic:
-                    root_url = "py3/"
-                ## only classic 3005 has arm64 support
-                if platform.is_aarch64() and self.classic:
-                    arch = "arm64"
-                else:
-                    arch = "amd64"
-                ret = self.proc.run("mkdir", "-p", "/etc/apt/keyrings")
-                log.debug(
-                    f"DGM _install_pkgs arch '{arch}', version '{dgm_pkg_version}', salt-archive-keyring-2023.gpg"
-                )
-                self._check_retcode(ret)
-                ret = self.proc.run(
-                    "cp",
-                    "-a",
-                    f"{upgrade_location}/salt-archive-keyring-2023.gpg",
-                    "/etc/apt/keyrings/",
-                )
-                self._check_retcode(ret)
-                with open(
-                    pathlib.Path("/etc", "apt", "sources.list.d", "salt.list"), "w"
-                ) as fp:
-                    fp.write(
-                        f"deb [signed-by=/etc/apt/keyrings/salt-archive-keyring-2023.gpg arch={arch}] "
-                        f"file://{upgrade_location} {self.distro_codename} main"
-                    )
-                ret = self.proc.run(self.pkg_mngr, "update")
-                self._check_retcode(ret)
-
-                log.debug("DGM _install_pkgs attempt upgrade now")
-                ret = self.proc.run(
-                    self.pkg_mngr, "upgrade", "-y", "--allow-downgrades", *self.pkgs
-                )
-                log.debug(
-                    f"DGM _install_pkgs upgrade result ret.returncode '{ret.returncode}', stdout '{ret.stdout}'"
-                )
-                self._check_retcode(ret)
-            else:
-                ret = self.proc.run(self.pkg_mngr, "upgrade", "-y", *self.pkgs)
-                if (
-                    ret.returncode != 0
-                    or "does not update installed package" in ret.stdout
-                    or "cannot update it" in ret.stderr
-                ):
-                    log.info(
-                        "The new packages version is not returning as new. Attempting to downgrade"
-                    )
-                    ret = self.proc.run(self.pkg_mngr, "downgrade", "-y", *self.pkgs)
-                    if ret.returncode != 0:
-                        log.error("Could not install the packages")
-                        return False
+            ret = self.proc.run(self.pkg_mngr, "upgrade", "-y", *self.pkgs)
         else:
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
             ret = self.proc.run(self.pkg_mngr, "install", "-y", *self.pkgs)
@@ -669,14 +571,13 @@ class SaltPkgInstall:
             ret = self.proc.run(self.pkg_mngr, "install", "apt-transport-https", "-y")
             self._check_retcode(ret)
             ## only classic 3005 has arm64 support
-            if platform.is_aarch64() and root_url.startswith("py3"):
+            if self.major >= "3006" and platform.is_aarch64():
+                arch = "arm64"
+            elif platform.is_aarch64() and self.classic:
                 arch = "arm64"
             else:
                 arch = "amd64"
             ret = self.proc.run("mkdir", "-p", "/etc/apt/keyrings")
-            log.debug(
-                f"DGM install_previous arch '{arch}', major version '{major_ver}'"
-            )
             self._check_retcode(ret)
             ret = self.proc.run(
                 "curl",
