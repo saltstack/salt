@@ -216,15 +216,15 @@ def debian(
     }}
     """
     ctx.info("Creating repository directory structure ...")
-    create_repo_path = repo_path
-    if nightly_build or rc_build:
-        create_repo_path = create_repo_path / "salt"
-    create_repo_path = create_repo_path / "py3" / distro / distro_version / distro_arch
-    if nightly_build is False:
-        create_repo_path = create_repo_path / "minor" / salt_version
-    else:
-        create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
-    create_repo_path.mkdir(exist_ok=True, parents=True)
+    create_repo_path = _create_repo_path(
+        repo_path,
+        salt_version,
+        distro,
+        distro_version=distro_version,
+        distro_arch=distro_arch,
+        rc_build=rc_build,
+        nightly_build=nightly_build,
+    )
     ftp_archive_config_file = create_repo_path / "apt-ftparchive.conf"
     ctx.info(f"Writing {ftp_archive_config_file} ...")
     ftp_archive_config_file.write_text(textwrap.dedent(ftp_archive_config))
@@ -418,15 +418,15 @@ def rpm(
         ctx.exit(1)
 
     ctx.info("Creating repository directory structure ...")
-    create_repo_path = repo_path
-    if nightly_build or rc_build:
-        create_repo_path = create_repo_path / "salt"
-    create_repo_path = create_repo_path / "py3" / distro / distro_version / distro_arch
-    if nightly_build is False:
-        create_repo_path = create_repo_path / "minor" / salt_version
-    else:
-        create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
-    create_repo_path.joinpath("SRPMS").mkdir(exist_ok=True, parents=True)
+    create_repo_path = _create_repo_path(
+        repo_path,
+        salt_version,
+        distro,
+        distro_version=distro_version,
+        distro_arch=distro_arch,
+        rc_build=rc_build,
+        nightly_build=nightly_build,
+    )
 
     ctx.info(f"Copying {salt_project_gpg_pub_key_file} to {create_repo_path} ...")
     shutil.copyfile(
@@ -743,16 +743,13 @@ def _create_onedir_based_repo(
         ctx.exit(1)
 
     ctx.info("Creating repository directory structure ...")
-    create_repo_path = repo_path
-    if nightly_build or rc_build:
-        create_repo_path = create_repo_path / "salt"
-    create_repo_path = create_repo_path / "py3" / os
-    repo_json_path = create_repo_path / "repo.json"
+    create_repo_path = _create_repo_path(
+        repo_path, salt_version, os, rc_build=rc_build, nightly_build=nightly_build
+    )
     if nightly_build is False:
-        create_repo_path = create_repo_path / "minor" / salt_version
+        repo_json_path = create_repo_path.parent.parent / "repo.json"
     else:
-        create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
-    create_repo_path.mkdir(parents=True, exist_ok=True)
+        repo_json_path = create_repo_path.parent / "repo.json"
 
     ctx.info("Downloading any pre-existing 'repo.json' file")
     if nightly_build:
@@ -949,12 +946,6 @@ def _publish_repo(
         bucket_name = "salt-project-prod-salt-artifacts-staging"
     else:
         bucket_name = "salt-project-prod-salt-artifacts-release"
-    if rc_build:
-        bucket_folder = "salt_rc/"
-    elif nightly_build:
-        bucket_folder = "salt-dev/"
-    else:
-        bucket_folder = ""
 
     ctx.info("Preparing upload ...")
     s3 = boto3.client("s3")
@@ -979,7 +970,7 @@ def _publish_repo(
                     continue
                 objects = []
                 for entry in ret["Contents"]:
-                    objects.append({"Key": f"{bucket_folder}{entry['Key']}"})
+                    objects.append({"Key": entry["Key"]})
                 to_delete_paths[path] = objects
             except ClientError as exc:
                 if "Error" not in exc.response:
@@ -997,7 +988,7 @@ def _publish_repo(
         )
         for base, objects in to_delete_paths.items():
             relpath = base.relative_to(repo_path)
-            bucket_uri = f"s3://{bucket_name}/{bucket_folder}{relpath}"
+            bucket_uri = f"s3://{bucket_name}/{relpath}"
             progress.update(task, description=f"Deleting {bucket_uri}")
             try:
                 ret = s3.delete_objects(
@@ -1017,13 +1008,13 @@ def _publish_repo(
         for upload_path in to_upload_paths:
             relpath = upload_path.relative_to(repo_path)
             size = upload_path.stat().st_size
-            ctx.info(f"  {bucket_folder}{relpath}")
+            ctx.info(f"  {relpath}")
             with create_progress_bar(ctx, upload_progress=True) as progress:
                 task = progress.add_task(description="Uploading...", total=size)
                 s3.upload_file(
                     str(upload_path),
                     bucket_name,
-                    f"{bucket_folder}{relpath}",
+                    str(relpath),
                     Callback=UpdateProgress(progress, task),
                 )
     except KeyboardInterrupt:
@@ -1059,3 +1050,30 @@ def create_progress_bar(ctx: Context, upload_progress: bool = False, **kwargs):
         expand=True,
         **kwargs,
     )
+
+
+def _create_repo_path(
+    repo_path: pathlib.Path,
+    salt_version: str,
+    distro: str,
+    distro_version: str | None = None,  # pylint: disable=bad-whitespace
+    distro_arch: str | None = None,  # pylint: disable=bad-whitespace
+    rc_build: bool = False,
+    nightly_build: bool = False,
+):
+    create_repo_path = repo_path
+    if nightly_build:
+        create_repo_path = create_repo_path / "salt-dev"
+    elif nightly_build:
+        create_repo_path = create_repo_path / "salt_rc"
+    create_repo_path = create_repo_path / "salt" / "py3" / distro
+    if distro_version:
+        create_repo_path = create_repo_path / distro_version
+    if distro_arch:
+        create_repo_path = create_repo_path / distro_arch
+    if nightly_build is False:
+        create_repo_path = create_repo_path / "minor" / salt_version
+    else:
+        create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
+    create_repo_path.mkdir(exist_ok=True, parents=True)
+    return create_repo_path
