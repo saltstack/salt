@@ -111,7 +111,8 @@ class SaltPkgInstall:
 
     @distro_name.default
     def _default_distro_name(self):
-        return distro.name().split()[0].lower()
+        if distro.name():
+            return distro.name().split()[0].lower()
 
     @distro_version.default
     def _default_distro_version(self):
