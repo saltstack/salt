@@ -226,13 +226,9 @@ def debian(
     ctx.info(f"Writing {ftp_archive_config_file} ...")
     ftp_archive_config_file.write_text(textwrap.dedent(ftp_archive_config))
 
-    keyfile_gpg = create_repo_path / GPG_KEY_FILENAME
-    ctx.info(
-        f"Exporting GnuPG Key '{key_id}' to {keyfile_gpg.relative_to(repo_path)}.pub ..."
-    )
-    ctx.run(
-        "gpg", "--armor", "-o", str(keyfile_gpg.with_suffix(".pub")), "--export", key_id
-    )
+    # Export the GPG key in use
+    _export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+
     pool_path = create_repo_path / "pool"
     pool_path.mkdir(exist_ok=True)
     for fpath in incoming.iterdir():
@@ -418,11 +414,8 @@ def rpm(
         nightly_build=nightly_build,
     )
 
-    keyfile_gpg = create_repo_path / GPG_KEY_FILENAME
-    ctx.info(
-        f"Exporting GnuPG Key '{key_id}' to {keyfile_gpg.relative_to(repo_path)}.gpg ..."
-    )
-    ctx.run("gpg", "-o", str(keyfile_gpg.with_suffix(".gpg")), "--export", key_id)
+    # Export the GPG key in use
+    _export_gpg_key(ctx, key_id, repo_path, create_repo_path)
 
     for fpath in incoming.iterdir():
         if ".src" in fpath.suffixes:
@@ -739,7 +732,6 @@ def _create_onedir_based_repo(
     else:
         bucket_name = STAGING_BUCKET_NAME
 
-    s3 = boto3.client("s3")
     repo_json = _get_repo_json_file_contents(
         ctx, bucket_name=bucket_name, repo_path=repo_path, repo_json_path=repo_json_path
     )
@@ -794,16 +786,23 @@ def _create_onedir_based_repo(
         if fpath.suffix in pkg_suffixes:
             continue
         ctx.info(f"GPG Signing '{fpath.relative_to(repo_path)}' ...")
-        ctx.run("gpg", "-u", key_id, "-o", f"{fpath}.asc", "-a", "-b", "-s", str(fpath))
+        signature_fpath = fpath.parent / f"{fpath.name}.asc"
+        if signature_fpath.exists():
+            signature_fpath.unlink()
+        ctx.run(
+            "gpg",
+            "--local-user",
+            key_id,
+            "--output",
+            str(signature_fpath),
+            "--armor",
+            "--detach-sign",
+            "--sign",
+            str(fpath),
+        )
 
-    keyfile_gpg = create_repo_path / GPG_KEY_FILENAME
-    ctx.info(
-        f"Exporting GnuPG Key '{key_id}' to {keyfile_gpg.relative_to(repo_path)}.{{gpg,pub}} ..."
-    )
-    ctx.run("gpg", "-o", str(keyfile_gpg.with_suffix(".gpg")), "--export", key_id)
-    ctx.run(
-        "gpg", "--armor", "-o", str(keyfile_gpg.with_suffix(".pub")), "--export", key_id
-    )
+    # Export the GPG key in use
+    _export_gpg_key(ctx, key_id, repo_path, create_repo_path)
 
     if nightly_build is False:
         versions_in_repo_json = {}
@@ -1086,3 +1085,22 @@ def _create_repo_path(
         create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
     create_repo_path.mkdir(exist_ok=True, parents=True)
     return create_repo_path
+
+
+def _export_gpg_key(
+    ctx: Context, key_id: str, repo_path: pathlib.Path, create_repo_path: pathlib.Path
+):
+    keyfile_gpg = create_repo_path.joinpath(GPG_KEY_FILENAME).with_suffix(".gpg")
+    if keyfile_gpg.exists():
+        keyfile_gpg.unlink()
+    ctx.info(
+        f"Exporting GnuPG Key '{key_id}' to {keyfile_gpg.relative_to(repo_path)} ..."
+    )
+    ctx.run("gpg", "--output", str(keyfile_gpg), "--export", key_id)
+    keyfile_pub = create_repo_path.joinpath(GPG_KEY_FILENAME).with_suffix(".pub")
+    if keyfile_pub.exists():
+        keyfile_pub.unlink()
+    ctx.info(
+        f"Exporting GnuPG Key '{key_id}' to {keyfile_pub.relative_to(repo_path)} ..."
+    )
+    ctx.run("gpg", "--armor", "--output", str(keyfile_pub), "--export", key_id)
