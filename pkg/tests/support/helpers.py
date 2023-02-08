@@ -267,6 +267,7 @@ class SaltPkgInstall:
                         self.onedir = True
                         self.installer_pkg = True
                         self.bin_dir = self.root / "salt" / "bin"
+                        self.run_root = self.bin_dir / "run"
                     elif file_ext == "tar.gz":
                         with tarfile.open(f_path) as tar:
                             # The first item will be called salt
@@ -334,21 +335,25 @@ class SaltPkgInstall:
                     "pip": [str(self.run_root), "pip"],
                 }
             else:
+                if os.path.exists(self.install_dir / "bin" / "salt"):
+                    install_dir = self.install_dir / "bin"
+                else:
+                    install_dir = self.install_dir
                 self.binary_paths = {
-                    "salt": [self.install_dir / "salt"],
-                    "api": [self.install_dir / "salt-api"],
-                    "call": [self.install_dir / "salt-call"],
-                    "cloud": [self.install_dir / "salt-cloud"],
-                    "cp": [self.install_dir / "salt-cp"],
-                    "key": [self.install_dir / "salt-key"],
-                    "master": [self.install_dir / "salt-master"],
-                    "minion": [self.install_dir / "salt-minion"],
-                    "proxy": [self.install_dir / "salt-proxy"],
-                    "run": [self.install_dir / "salt-run"],
-                    "ssh": [self.install_dir / "salt-ssh"],
-                    "syndic": [self.install_dir / "salt-syndic"],
-                    "spm": [self.install_dir / "spm"],
-                    "pip": [self.install_dir / "salt-pip"],
+                    "salt": [install_dir / "salt"],
+                    "api": [install_dir / "salt-api"],
+                    "call": [install_dir / "salt-call"],
+                    "cloud": [install_dir / "salt-cloud"],
+                    "cp": [install_dir / "salt-cp"],
+                    "key": [install_dir / "salt-key"],
+                    "master": [install_dir / "salt-master"],
+                    "minion": [install_dir / "salt-minion"],
+                    "proxy": [install_dir / "salt-proxy"],
+                    "run": [install_dir / "salt-run"],
+                    "ssh": [install_dir / "salt-ssh"],
+                    "syndic": [install_dir / "salt-syndic"],
+                    "spm": [install_dir / "spm"],
+                    "pip": [install_dir / "salt-pip"],
                     "python": [self.install_dir / "bin" / "python3"],
                 }
 
@@ -514,10 +519,10 @@ class SaltPkgInstall:
         Install previous version. This is used for
         upgrade tests.
         """
-        if platform.is_darwin():
-            major_ver = f"{self.major}.{self.minor}-{self.pkg_version}"
-        else:
-            major_ver = self.major
+        major_ver = self.major
+        minor_ver = self.minor
+        pkg_version = self.pkg_version
+
         min_ver = f"{major_ver}"
         distro_name = self.distro_name
         if distro_name == "centos" or distro_name == "fedora":
@@ -617,22 +622,22 @@ class SaltPkgInstall:
             self.ssm_bin = self.bin_dir / "ssm.exe"
 
         elif platform.is_darwin():
-            mac_pkg = f"salt-{min_ver}-macos-x86_64.pkg"
-            mac_pkg_url = (
-                f"https://repo.saltproject.io/salt/py3/macos/{major_ver}/{mac_pkg}"
-            )
             if self.classic:
-                mac_pkg = f"salt-{min_ver}-1-py3-x86_64.pkg"
+                mac_pkg = f"salt-{min_ver}.{minor_ver}-1-py3-x86_64.pkg"
                 mac_pkg_url = f"https://repo.saltproject.io/osx/{mac_pkg}"
+            else:
+                mac_pkg = f"salt-{min_ver}.{minor_ver}-1-macos-x86_64.pkg"
+                mac_pkg_url = f"https://repo.saltproject.io/salt/py3/macos/{major_ver}.{minor_ver}-1/{mac_pkg}"
             mac_pkg_path = f"/tmp/{mac_pkg}"
-            ret = self.proc.run(
-                "curl",
-                "-fsSL",
-                "-o",
-                f"/tmp/{mac_pkg}",
-                f"{mac_pkg_url}",
-            )
-            self._check_retcode(ret)
+            if not os.path.exists(mac_pkg_path):
+                ret = self.proc.run(
+                    "curl",
+                    "-fsSL",
+                    "-o",
+                    f"/tmp/{mac_pkg}",
+                    f"{mac_pkg_url}",
+                )
+                self._check_retcode(ret)
 
             ret = self.proc.run("installer", "-pkg", mac_pkg_path, "-target", "/")
             self._check_retcode(ret)
@@ -1198,6 +1203,8 @@ class PkgMixin:
                 self.salt_pkg_install.run_root
             ):
                 return str(self.salt_pkg_install.run_root)
+            elif os.path.exists(self.salt_pkg_install.bin_dir / self.script_name):
+                return str(self.salt_pkg_install.bin_dir / self.script_name)
             else:
                 return str(self.salt_pkg_install.install_dir / self.script_name)
         return super().get_script_path()
