@@ -31,7 +31,7 @@ def wipe_pydeps(pypath, install_salt):
             )
 
 
-def test_pip_install(install_salt):
+def test_pip_install(salt_call_cli):
     """
     Test pip.install and ensure module can use installed library
     """
@@ -39,20 +39,15 @@ def test_pip_install(install_salt):
     repo = "https://github.com/saltstack/salt.git"
 
     try:
-        test_bin = os.path.join(*install_salt.binary_paths["call"])
-        install = install_salt.proc.run(test_bin, "--local", "pip.install", dep)
+        install = salt_call_cli.run("--local", "pip.install", dep)
         assert install.returncode == 0
 
-        use_lib = install_salt.proc.run(
-            test_bin, "--local", "github.get_repo_info", repo
-        )
+        use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
         assert "Authentication information could" in use_lib.stderr
     finally:
-        ret = install_salt.proc.run(test_bin, "--local", "pip.uninstall", dep)
+        ret = salt_call_cli.run("--local", "pip.uninstall", dep)
         assert ret.returncode == 0
-        use_lib = install_salt.proc.run(
-            test_bin, "--local", "github.get_repo_info", repo
-        )
+        use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
         assert "The github execution module cannot be loaded" in use_lib.stderr
 
 
