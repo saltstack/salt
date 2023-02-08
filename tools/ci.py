@@ -510,7 +510,11 @@ def matrix(ctx: Context, distro_slug: str):
     _matrix = []
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
-            if distro_slug not in ("centosstream-9", "ubuntu-22.04-arm64"):
+            if distro_slug not in (
+                "centosstream-9",
+                "ubuntu-22.04",
+                "ubuntu-22.04-arm64",
+            ):
                 # Only run TCP transport tests on these distributions
                 continue
         for chunk in ("unit", "functional", "integration", "scenarios"):
@@ -540,7 +544,11 @@ def transport_matrix(ctx: Context, distro_slug: str):
     _matrix = []
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
-            if distro_slug not in ("centosstream-9", "ubuntu-22.04-arm64"):
+            if distro_slug not in (
+                "centosstream-9",
+                "ubuntu-22.04",
+                "ubuntu-22.04-arm64",
+            ):
                 # Only run TCP transport tests on these distributions
                 continue
         _matrix.append({"transport": transport})
