@@ -1,32 +1,15 @@
+# Do not edit these workflows directly as the changes made will be overwritten.
+# Instead, edit the template '.github/workflows/templates/ci.yml.j2'
+---
 name: CI
-
 on:
   push: {}
   pull_request: {}
-  schedule:
-    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
-    - cron: '0 */8 * * *'  # Run every 8 hours
-  workflow_dispatch:
-    inputs:
-      salt-version:
-        type: string
-        default: ""
-        description: >
-          The Salt version to set prior to running tests or building packages.
-          If not set, it is discover at run time, like, for example, capturing
-          the output of running `python3 salt/version.py`
-      testrun-type:
-        description: Type of test run
-        required: true
-        default: 'full'
-        type: choice
-        options:
-          - full
-          - changed
 
 env:
   COLUMNS: 160
   CACHE_SEED: SEED-0  # Bump the number to invalidate all caches
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
 
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
@@ -37,15 +20,16 @@ concurrency:
   # not cancel previous builds.
   # However, for every new build against the same pull request source branch,
   # all older builds against that same branch get canceled.
-  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
-  prepare-ci:
-    name: Prepare CI
+  prepare-workflow:
+    name: Prepare Workflow Run
     runs-on: ubuntu-latest
     outputs:
-      jobs: ${{ steps.process-changed-files.outputs.jobs }}
+      jobs: ${{ steps.define-jobs.outputs.jobs }}
+      runners: ${{ steps.runner-types.outputs.runners }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
       testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
@@ -54,7 +38,9 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
+
       - name: Get Changed Files
+        if: ${{ github.event_name == 'pull_request'}}
         id: changed-files
         uses: dorny/paths-filter@v2
         with:
@@ -112,6 +98,8 @@ jobs:
                 - cicd/golden-images.json
             testrun:
               - added|modified:
+                - *pkg_requirements
+                - *test_requirements
                 - *salt_added_modified
                 - *tests_added_modified
 
@@ -123,17 +111,23 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
+      - name: Pretty Print The GH Actions Event
+        run:
+          tools ci print-gh-event
+
       - name: Setup Salt Version
         id: setup-salt-version
         uses: ./.github/actions/setup-salt-version
         with:
-          salt-version: "${{ inputs.salt-version }}"
+          salt-version: ""
+          validate-version: true
 
       - name: Write Changed Files To A Local File
         run:
           echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
 
       - name: Check Local Changed Files Contents
+        if: ${{ github.event_name == 'pull_request' }}
         run:
           cat changed-files.json
 
@@ -142,14 +136,28 @@ jobs:
         run:
           tools ci process-changed-files ${{ github.event_name }} changed-files.json
 
-      - name: Check Collected Jobs
-        run:
-          echo '${{ steps.process-changed-files.outputs.jobs }}' | jq -C '.'
-
       - name: Check Collected Changed Files
-        if: ${{ github.event_name != 'schedule' }}
+        if: ${{ github.event_name == 'pull_request' }}
         run:
           echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
+
+      - name: Define Runner Types
+        id: runner-types
+        run:
+          tools ci runner-types ${{ github.event_name }}
+
+      - name: Check Defined Runners
+        run:
+          echo '${{ steps.runner-types.outputs.runners }}' | jq -C '.'
+
+      - name: Define Jobs
+        id: define-jobs
+        run:
+          tools ci define-jobs ${{ github.event_name }} changed-files.json
+
+      - name: Check Defined Jobs
+        run:
+          echo '${{ steps.define-jobs.outputs.jobs }}' | jq -C '.'
 
       - name: Define Testrun
         id: define-testrun
@@ -176,368 +184,594 @@ jobs:
         id: set-cache-seed
         run: |
           echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          mkdir exitstatus
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ inputs.distro-slug }}-prepare-ci
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
-
   pre-commit:
     name: Pre-Commit
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     uses: ./.github/workflows/pre-commit-action.yml
     needs:
-      - prepare-ci
+      - prepare-workflow
     with:
-      changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
-
-  docs:
-    name: Build Docs
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
-    uses: ./.github/workflows/docs-action.yml
-    needs:
-      - prepare-ci
-    with:
-      changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+      pre-commit-version: "3.0.4"
 
   lint:
     name: Lint
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['lint'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     uses: ./.github/workflows/lint-action.yml
     needs:
-      - prepare-ci
+      - prepare-workflow
     with:
-      changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
+      changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
 
-  twine-check:
-    name: Twine Check
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
-    uses: ./.github/workflows/twine-check-action.yml
+  prepare-release:
+    name: Prepare Release
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['prepare-release'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    runs-on: ubuntu-latest
     needs:
-      - prepare-ci
+      - prepare-workflow
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        id: setup-python
+        with:
+          python-version: "3.10"
+
+      - name: Cache Python Tools Virtualenvs
+        id: tools-venvs-dependencies-cache
+        uses: actions/cache@v3
+        with:
+          path: .tools-venvs/
+          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.setup-python.outputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+
+      - name: Cache Sphinx Doctrees
+        uses: actions/cache@v3
+        with:
+          path: doc/_build/doctrees/
+          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|sphinx-doctrees|${{ steps.setup-python.outputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+      - name: Update Debian changelog
+        shell: bash
+        run: |
+          tools changelog update-deb --draft
+          tools changelog update-deb
+
+      - name: Update RPM changelog
+        shell: bash
+        run: |
+          tools changelog update-rpm --draft
+          tools changelog update-rpm
+
+      - name: Update Release Notes
+        shell: bash
+        run: |
+          tools changelog update-release-notes --draft
+          tools changelog update-release-notes
+
+      - name: Build Documentation
+        shell: bash
+        run: |
+          tools docs html --no-clean --archive salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs.tar.xz
+
+      - name: Generate MAN Pages
+        shell: bash
+        run: |
+          tools docs man --no-clean
+
+      - name: Upload Built Documentation Archive
+        uses: actions/upload-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs.tar.xz
+          path: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs.tar.xz
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Update Changelog
+        shell: bash
+        run: |
+          tools changelog update-changelog-md --draft
+          tools changelog update-changelog-md
+
+      - name: Show Changes Diff
+        shell: bash
+        run: |
+          git diff --color
+
+      - name: Configure Git
+        shell: bash
+        run: |
+          git config --global user.name "Salt Project Packaging"
+          git config --global user.email saltproject-packaging@vmware.com
+
+      - name: Setup Pre-Commit
+        uses: ./.github/actions/setup-pre-commit
+        with:
+          version: "3.0.4"
+          cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+      - name: Commit Changes
+        shell: bash
+        run: |
+          # Run it twice so that pre-commit can fix anything that can be automatically fixed.
+          git commit -am "Release v${{ needs.prepare-workflow.outputs.salt-version }}" || \
+            git commit -am "Release v${{ needs.prepare-workflow.outputs.salt-version }}"
+
+      - name: Create release changes patch
+        shell: bash
+        run: |
+          git format-patch --keep-subject --binary --stdout HEAD^ > salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+
+      - name: Upload Changes Diff Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          path: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          retention-days: 7
+          if-no-files-found: error
+
+  build-source-tarball:
+    name: Build Source Tarball
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-source-tarball'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    needs:
+      - prepare-workflow
+      - prepare-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+      - name: Build Source Tarball
+        uses: ./.github/actions/build-source-tarball
+        with:
+          salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+  build-deps-onedir:
+    name: Build Dependencies Onedir
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+    uses: ./.github/workflows/build-deps-onedir.yml
     with:
-      changed-files: ${{ needs.prepare-ci.outputs.changed-files }}
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+
+  build-salt-onedir:
+    name: Build Salt Onedir
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-salt-onedir'] }}
+    needs:
+      - prepare-workflow
+      - build-deps-onedir
+      - build-source-tarball
+    uses: ./.github/workflows/build-salt-onedir.yml
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+
+  build-pkgs:
+    name: Build Salt Packages
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/build-packages.yml
+    with:
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
 
   windows-2016:
     name: Windows 2016
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2016
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2019:
     name: Windows 2019
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2019
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2022:
     name: Windows 2022
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: windows-2022
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   macos-12:
-    name: MacOS 12
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['github-hosted-runners'] }}
+    name: macOS 12
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action-macos.yml
     with:
       distro-slug: macos-12
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: darwin
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   almalinux-8:
     name: Alma Linux 8
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: almalinux-8
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   almalinux-9:
     name: Alma Linux 9
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: almalinux-9
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   amazonlinux-2:
     name: Amazon Linux 2
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: amazonlinux-2
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   archlinux-lts:
     name: Arch Linux LTS
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: archlinux-lts
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   centos-7:
     name: CentOS 7
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centos-7
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   centosstream-8:
     name: CentOS Stream 8
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centosstream-8
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   centosstream-9:
     name: CentOS Stream 9
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: centosstream-9
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   debian-10:
     name: Debian 10
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-10
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   debian-11:
     name: Debian 11
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-11
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   debian-11-arm64:
-    name: Debian 11 ARM64
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    name: Debian 11 Arm64
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: debian-11-arm64
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   fedora-36:
     name: Fedora 36
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: fedora-36
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   opensuse-15:
     name: Opensuse 15
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: opensuse-15
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
-  photon-3:
+  photonos-3:
     name: Photon OS 3
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: photonos-3
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
-  photon-4:
+  photonos-4:
     name: Photon OS 4
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: photonos-4
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-1804:
     name: Ubuntu 18.04
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-18.04
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2004:
     name: Ubuntu 20.04
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-20.04
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-20.04-arm64
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2204:
     name: Ubuntu 22.04
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-22.04
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64
-    if: ${{ fromJSON(needs.prepare-ci.outputs.jobs)['self-hosted-runners'] }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
-      - prepare-ci
+      - prepare-workflow
+      - build-salt-onedir
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: ubuntu-22.04-arm64
-      nox-session: ci-test
-      testrun: ${{ needs.prepare-ci.outputs.testrun }}
-      salt-version: "${{ needs.prepare-ci.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-ci.outputs.cache-seed }}
-
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
-    runs-on: ubuntu-latest
     if: always()
+    runs-on: ubuntu-latest
     needs:
+      - prepare-workflow
       - pre-commit
-      - docs
       - lint
-      - twine-check
+      - build-deps-onedir
+      - build-salt-onedir
+      - build-pkgs
+      - windows-2016
+      - windows-2019
+      - windows-2022
+      - macos-12
       - almalinux-8
       - almalinux-9
       - amazonlinux-2
@@ -550,38 +784,28 @@ jobs:
       - debian-11-arm64
       - fedora-36
       - opensuse-15
-      - photon-3
-      - photon-4
+      - photonos-3
+      - photonos-4
       - ubuntu-1804
       - ubuntu-2004
       - ubuntu-2004-arm64
       - ubuntu-2204
       - ubuntu-2204-arm64
-      - windows-2016
-      - windows-2019
-      - windows-2022
-      - macos-12
     steps:
-    - name: Download Exit Status Files
-      if: always()
-      uses: actions/download-artifact@v3
-      with:
-        name: exitstatus
-        path: exitstatus
+      - name: Get workflow information
+        id: get-workflow-info
+        uses: technote-space/workflow-conclusion-action@v3
 
-    - name: Delete Exit Status Artifacts
-      if: always()
-      uses: geekyeggo/delete-artifact@v2
-      with:
-        name: exitstatus
-        failOnError: false
+      - name: Set Pipeline Exit Status
+        shell: bash
+        run: |
+          if [ "${{ steps.get-workflow-info.outputs.conclusion }}" != "success" ]; then
+            exit 1
+          else
+            exit 0
+          fi
 
-    - name: Set Pipeline Exit Status
-      run: |
-        tree exitstatus
-        grep -RE 'failure|cancelled' exitstatus/ && exit 1 || exit 0
-
-    - name: Done
-      if: always()
-      run:
-        echo "All worflows finished"
+      - name: Done
+        if: always()
+        run:
+          echo "All worflows finished"

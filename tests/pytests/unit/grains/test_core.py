@@ -2144,8 +2144,8 @@ def test_enable_fqdns_without_patching():
         "salt.grains.core.__salt__",
         {"network.fqdns": MagicMock(return_value="my.fake.domain")},
     ):
-        # fqdns is disabled by default on Windows
-        if salt.utils.platform.is_windows():
+        # fqdns is disabled by default on Windows and macOS
+        if salt.utils.platform.is_windows() or salt.utils.platform.is_darwin():
             assert core.fqdns() == {"fqdns": []}
         else:
             assert core.fqdns() == "my.fake.domain"

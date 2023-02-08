@@ -1,0 +1,61 @@
+<%- set gh_environment = gh_environment|default("nightly") %>
+<%- extends 'ci.yml.j2' %>
+
+<%- block on %>
+
+on:
+  schedule:
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
+    - cron: '0 3 * * *'  # Every day at 3AM
+
+<%- endblock on %>
+
+<%- block concurrency %>
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: false
+
+<%- endblock concurrency %>
+
+<%- block jobs %>
+  <{- super() }>
+
+  build-repositories:
+    <%- do conclusion_needs.append('build-repositories') %>
+    name: Build Repositories
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/build-repos.yml
+    with:
+      environment: <{ gh_environment }>
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      <%- if gh_environment == "nightly" %>
+      nightly-build: true
+      <%- else %>
+      nightly-build: false
+      <%- endif %>
+      rc-build: ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') }}
+    secrets:
+      SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+
+  publish-repositories:
+    <%- do conclusion_needs.append('publish-repositories') %>
+    name: Publish Repositories
+    needs:
+      - prepare-workflow
+      - build-repositories
+      <%- for need in test_salt_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+    uses: ./.github/workflows/publish-repositories.yml
+    with:
+      environment: <{ gh_environment }>
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+    secrets: inherit
+<%- endblock jobs %>
+
+<%- block pipeline_exit_status %>
+<{ super() }>
+<%- endblock pipeline_exit_status %>

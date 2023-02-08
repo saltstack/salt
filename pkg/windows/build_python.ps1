@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
 Script that builds Python from source using the Relative Environment for Python
 project (relenv):
@@ -41,7 +41,7 @@ param(
     [String] $Version = "3.8.16",
 
     [Parameter(Mandatory=$false)]
-    [ValidateSet("x64", "x86")]
+    [ValidateSet("x64", "x86", "amd64")]
     [Alias("a")]
     # The System Architecture to build. "x86" will build a 32-bit installer.
     # "x64" will build a 64-bit installer. Default is: x64
@@ -51,7 +51,12 @@ param(
     [Alias("b")]
     # Build python from source instead of fetching a tarball
     # Requires VC Build Tools
-    [Switch] $Build
+    [Switch] $Build,
+
+    [Parameter(Mandatory=$false)]
+    [Alias("c")]
+    # Don't pretify the output of the Write-Result
+    [Switch] $CICD
 
 )
 
@@ -63,14 +68,21 @@ param(
 $ProgressPreference = "SilentlyContinue"
 $ErrorActionPreference = "Stop"
 
+if ( $Architecture -eq "amd64" ) {
+  $Architecture = "x64"
+}
+
 #-------------------------------------------------------------------------------
 # Script Functions
 #-------------------------------------------------------------------------------
 
 function Write-Result($result, $ForegroundColor="Green") {
-    $position = 80 - $result.Length - [System.Console]::CursorLeft
-    Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
-}
+    if ( $CICD ) {
+        Write-Host $result -ForegroundColor $ForegroundColor
+    } else {
+        $position = 80 - $result.Length - [System.Console]::CursorLeft
+        Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+    }}
 
 #-------------------------------------------------------------------------------
 # Start the Script

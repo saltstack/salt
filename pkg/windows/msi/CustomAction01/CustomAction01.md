@@ -25,28 +25,28 @@
 				I postpone to understand this and do not change TargetFrameworkVersion (leaving it at v2.0).
 
 
-				
+
 *******************************
 *******************************
 *******************************
 *******************************
-				
+
 
 Archive for the attempt to read settings from conf/minion into a ini file.
 
-Idea was 
+Idea was
  1) read simple keys from the config file into a ini file
  2) read properties from ini file.
 
  Idea failed because reading ini files (in Appsearch) always preceeds reading a config file in Customaction before="Appsearch".
- 
- The ini file  Search path is c:\windows 
- 
+
+ The ini file  Search path is c:\windows
+
  The ini file is  read by WiX IniFileSearch in product.wxs
- 
- 
+
+
 List<string> iniContent = new List<string>();
-iniContent.Add("[Backup]"); 
+iniContent.Add("[Backup]");
 What should be the "known location" to store settings after uninstall?
 string iniFilePath32 = @"C:\windows\system32\config\systemprofile\Local\SaltStack\Salt\";
 string iniFilePath64 = @"C:\windows\SysWOW64\config\systemprofile\Local\SaltStack\Salt\";
@@ -57,9 +57,9 @@ write_this(iniFile, iniContent.ToArray());
         private static void write_this(string thefile, string[] thecontent) {
             using (var fs = new FileStream(thefile, FileMode.OpenOrCreate, FileAccess.ReadWrite)) {
                 using (var fw = new StreamWriter(fs)) {
-                    foreach (string line in thecontent) { 
+                    foreach (string line in thecontent) {
                         fw.Write(line);
-                        fw.Write(System.Environment.NewLine); 
+                        fw.Write(System.Environment.NewLine);
                     };
                     fw.Flush(); // Added
                 }

@@ -5,11 +5,16 @@ These commands are used to build Salt packages.
 from __future__ import annotations
 
 import fnmatch
+import gzip
+import hashlib
+import json
 import logging
 import os
 import pathlib
 import shutil
 import sys
+import tarfile
+import tempfile
 
 import yaml
 from ptscripts import Context, command_group
@@ -20,6 +25,63 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # Define the command group
 pkg = command_group(name="pkg", help="Packaging Related Commands", description=__doc__)
+
+
+class Recompress:
+    """
+    Helper class to re-compress a ``.tag.gz`` file to make it reproducible.
+    """
+
+    def __init__(self, mtime):
+        self.mtime = int(mtime)
+
+    def tar_reset(self, tarinfo):
+        """
+        Reset user, group, mtime, and mode to create reproducible tar.
+        """
+        tarinfo.uid = tarinfo.gid = 0
+        tarinfo.uname = tarinfo.gname = "root"
+        tarinfo.mtime = self.mtime
+        if tarinfo.type == tarfile.DIRTYPE:
+            tarinfo.mode = 0o755
+        else:
+            tarinfo.mode = 0o644
+        if tarinfo.pax_headers:
+            raise ValueError(tarinfo.name, tarinfo.pax_headers)
+        return tarinfo
+
+    def recompress(self, targz):
+        """
+        Re-compress the passed path.
+        """
+        tempd = pathlib.Path(tempfile.mkdtemp()).resolve()
+        d_src = tempd.joinpath("src")
+        d_src.mkdir()
+        d_tar = tempd.joinpath(targz.stem)
+        d_targz = tempd.joinpath(targz.name)
+        with tarfile.open(d_tar, "w|") as wfile:
+            with tarfile.open(targz, "r:gz") as rfile:
+                rfile.extractall(d_src)
+                extracted_dir = next(pathlib.Path(d_src).iterdir())
+                for name in sorted(extracted_dir.rglob("*")):
+                    wfile.add(
+                        str(name),
+                        filter=self.tar_reset,
+                        recursive=False,
+                        arcname=str(name.relative_to(d_src)),
+                    )
+
+        with open(d_tar, "rb") as rfh:
+            with gzip.GzipFile(
+                fileobj=open(d_targz, "wb"), mode="wb", filename="", mtime=self.mtime
+            ) as gz:  # pylint: disable=invalid-name
+                while True:
+                    chunk = rfh.read(1024)
+                    if not chunk:
+                        break
+                    gz.write(chunk)
+        targz.unlink()
+        shutil.move(str(d_targz), str(targz))
 
 
 @pkg.command(
@@ -36,9 +98,17 @@ pkg = command_group(name="pkg", help="Packaging Related Commands", description=_
         "overwrite": {
             "help": "Overwrite 'salt/_version.txt' if it already exists",
         },
+        "validate_version": {
+            "help": "Validate, and normalize, the passed Salt Version",
+        },
     },
 )
-def set_salt_version(ctx: Context, salt_version: str, overwrite: bool = False):
+def set_salt_version(
+    ctx: Context,
+    salt_version: str,
+    overwrite: bool = False,
+    validate_version: bool = False,
+):
     """
     Write the Salt version to 'salt/_version.txt'
     """
@@ -59,6 +129,29 @@ def set_salt_version(ctx: Context, salt_version: str, overwrite: bool = False):
         ret = ctx.run(shutil.which("python3"), "salt/version.py", capture=True)
         salt_version = ret.stdout.strip().decode()
         ctx.info(f"Discovered Salt version: {salt_version!r}")
+    elif validate_version:
+        ctx.info(f"Validating and normalizing the salt version {salt_version!r}...")
+        with ctx.virtualenv(
+            name="set-salt-version",
+            requirements_files=[REPO_ROOT / "requirements" / "base.txt"],
+        ) as venv:
+            code = f"""
+            import sys
+            import salt.version
+            parsed_version = salt.version.SaltStackVersion.parse("{salt_version}")
+            if parsed_version.name is None:
+                # When we run out of names, or we stop supporting version names
+                # we'll need to remove this version check.
+                print("'{{}}' is not a valid Salt Version.".format(parsed_version), file=sys.stderr, flush=True)
+                sys.exit(1)
+            sys.stdout.write(str(parsed_version))
+            sys.stdout.flush()
+            """
+            ret = venv.run_code(code, capture=True, check=False)
+            if ret.returncode:
+                ctx.error(ret.stderr.decode())
+                ctx.exit(ctx.returncode)
+            salt_version = ret.stdout.strip().decode()
 
     if not REPO_ROOT.joinpath("salt").is_dir():
         ctx.error(
@@ -118,7 +211,7 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
 
     When running on Windows and macOS, some additional cleanup is also done.
     """
-    with open(str(REPO_ROOT / "cicd" / "env-cleanup-files.yml")) as rfh:
+    with open(str(REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml")) as rfh:
         patterns = yaml.safe_load(rfh.read())
 
     if pkg:
@@ -133,18 +226,19 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
     else:
         patterns = patterns["linux"]
 
+    def unnest_lists(patterns):
+        if isinstance(patterns, list):
+            for pattern in patterns:
+                yield from unnest_lists(pattern)
+        else:
+            yield patterns
+
     dir_patterns = set()
-    for pattern in patterns["dir_patterns"]:
-        if isinstance(pattern, list):
-            dir_patterns.update(set(pattern))
-            continue
+    for pattern in unnest_lists(patterns["dir_patterns"]):
         dir_patterns.add(pattern)
 
     file_patterns = set()
-    for pattern in patterns["file_patterns"]:
-        if isinstance(pattern, list):
-            file_patterns.update(set(pattern))
-            continue
+    for pattern in unnest_lists(patterns["file_patterns"]):
         file_patterns.add(pattern)
 
     for root, dirs, files in os.walk(cleanup_path, topdown=True, followlinks=False):
@@ -175,3 +269,93 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
                     except FileNotFoundError:
                         pass
                     break
+
+
+@pkg.command(
+    name="generate-hashes",
+    arguments={
+        "files": {
+            "help": "The files to generate the hashes for.",
+            "nargs": "*",
+        },
+    },
+)
+def generate_hashes(ctx: Context, files: list[pathlib.Path]):
+    """
+    Generate "blake2b", "sha512" and "sha3_512" hashes for the passed files.
+    """
+    for fpath in files:
+        ctx.info(f"* Processing {fpath} ...")
+        hashes = {}
+        for hash_name in ("blake2b", "sha512", "sha3_512"):
+            ctx.info(f"   * Calculating {hash_name} ...")
+            with fpath.open("rb") as rfh:
+                try:
+                    digest = hashlib.file_digest(rfh, hash_name)  # type: ignore[attr-defined]
+                except AttributeError:
+                    # Python < 3.11
+                    buf = bytearray(2**18)  # Reusable buffer to reduce allocations.
+                    view = memoryview(buf)
+                    digest = getattr(hashlib, hash_name)()
+                    while True:
+                        size = rfh.readinto(buf)
+                        if size == 0:
+                            break  # EOF
+                        digest.update(view[:size])
+            digest_file_path = fpath.parent / f"{fpath.name}.{hash_name.upper()}"
+            hexdigest = digest.hexdigest()
+            ctx.info(f"   * Writing {digest_file_path} ...")
+            digest_file_path.write_text(digest.hexdigest())
+            hashes[hash_name] = hexdigest
+        hashes_json_path = fpath.parent / f"{fpath.name}.json"
+        ctx.info(f"   * Writing {hashes_json_path} ...")
+        hashes_json_path.write_text(json.dumps(hashes))
+    ctx.info("Done")
+
+
+@pkg.command(
+    name="source-tarball",
+    venv_config={
+        "requirements_files": [
+            REPO_ROOT / "requirements" / "build.txt",
+        ]
+    },
+)
+def source_tarball(ctx: Context):
+    shutil.rmtree("dist/", ignore_errors=True)
+    timestamp = ctx.run(
+        "git",
+        "show",
+        "-s",
+        "--format=%at",
+        "HEAD",
+        capture=True,
+    ).stdout.strip()
+    env = {
+        **os.environ,
+        **{
+            "SOURCE_DATE_EPOCH": str(timestamp),
+        },
+    }
+    ctx.run(
+        "python3",
+        "-m",
+        "build",
+        "--sdist",
+        str(REPO_ROOT),
+        env=env,
+        check=True,
+    )
+    # Recreate sdist to be reproducible
+    recompress = Recompress(timestamp)
+    for targz in REPO_ROOT.joinpath("dist").glob("*.tar.gz"):
+        ctx.info(f"Re-compressing {targz.relative_to(REPO_ROOT)} ...")
+        recompress.recompress(targz)
+    sha256sum = shutil.which("sha256sum")
+    if sha256sum:
+        packages = [
+            str(pkg.relative_to(REPO_ROOT))
+            for pkg in REPO_ROOT.joinpath("dist").iterdir()
+        ]
+        ctx.run("sha256sum", *packages)
+    ctx.run("python3", "-m", "twine", "check", "dist/*", check=True)

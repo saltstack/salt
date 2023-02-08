@@ -17,7 +17,13 @@ param(
     # The version of Salt to be built. If this is not passed, the script will
     # attempt to get it from the git describe command on the Salt source
     # repo
-    [String] $Version
+    [String] $Version,
+
+    [Parameter(Mandatory=$false)]
+    [Alias("c")]
+    # Don't pretify the output of the Write-Result
+    [Switch] $CICD
+
 )
 
 #-------------------------------------------------------------------------------
@@ -33,8 +39,12 @@ $ErrorActionPreference = "Stop"
 #-------------------------------------------------------------------------------
 
 function Write-Result($result, $ForegroundColor="Green") {
-    $position = 80 - $result.Length - [System.Console]::CursorLeft
-    Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+    if ( $CICD ) {
+        Write-Host $result -ForegroundColor $ForegroundColor
+    } else {
+        $position = 80 - $result.Length - [System.Console]::CursorLeft
+        Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+    }
 }
 
 #-------------------------------------------------------------------------------
