@@ -79,7 +79,7 @@ def generate_workflows(ctx: Context):
         template: str = cast(str, details["template"])
         includes: dict[str, bool] = cast(dict, details.get("includes") or {})
         workflow_path = WORKFLOWS / template
-        template_path = TEMPLATES / f"{template}.j2"
+        template_path = TEMPLATES / f"{template}.jinja"
         ctx.info(
             f"Generating '{workflow_path.relative_to(REPO_ROOT)}' from "
             f"template '{template_path.relative_to(REPO_ROOT)}' ..."
@@ -94,7 +94,7 @@ def generate_workflows(ctx: Context):
         if workflow_name == "Check Workflow Run":
             check_workflows = [wf for wf in sorted(workflows) if wf != workflow_name]
             context["check_workflows"] = check_workflows
-        loaded_template = env.get_template(f"{template}.j2")
+        loaded_template = env.get_template(template_path.name)
         rendered_template = loaded_template.render(**context)
         workflow_path.write_text(rendered_template.rstrip() + "\n")
 
