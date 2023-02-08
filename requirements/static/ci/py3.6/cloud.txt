@@ -768,7 +768,7 @@ pyyaml==6.0.1
     #   junos-eznc
     #   kubernetes
     #   yamlordereddictloader
-pyzmq==21.0.2 ; python_version < "3.9"
+pyzmq==23.2.0 ; python_version >= "3.6"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
