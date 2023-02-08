@@ -579,7 +579,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-windows-py3.7-zmq-requirements
         name: Windows CI Py3.7 ZeroMQ Requirements
-        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.7/windows\.txt))$
+        files: requirements/((base|zeromq|pytest|windows)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.7/windows\.txt))$
         pass_filenames: false
         args:
           - -v
