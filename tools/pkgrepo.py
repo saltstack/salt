@@ -707,6 +707,53 @@ def onedir(
     ctx.info("Done")
 
 
+@publish.command(
+    arguments={
+        "repo_path": {
+            "help": "Local path for the repository that shall be published.",
+        },
+    }
+)
+def nightly(ctx: Context, repo_path: pathlib.Path):
+    """
+    Publish to the nightly bucket.
+    """
+    _publish_repo(ctx, repo_path=repo_path, nightly_build=True)
+
+
+@publish.command(
+    arguments={
+        "repo_path": {
+            "help": "Local path for the repository that shall be published.",
+        },
+        "rc_build": {
+            "help": "Release Candidate repository target",
+        },
+    }
+)
+def staging(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
+    """
+    Publish to the staging bucket.
+    """
+    _publish_repo(ctx, repo_path=repo_path, rc_build=rc_build, stage=True)
+
+
+@publish.command(
+    arguments={
+        "repo_path": {
+            "help": "Local path for the repository that shall be published.",
+        },
+        "rc_build": {
+            "help": "Release Candidate repository target",
+        },
+    }
+)
+def release(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
+    """
+    Publish to the release bucket.
+    """
+
+
 def _create_onedir_based_repo(
     ctx: Context,
     salt_version: str,
@@ -732,12 +779,7 @@ def _create_onedir_based_repo(
     else:
         bucket_name = STAGING_BUCKET_NAME
 
-    repo_json = _get_repo_json_file_contents(
-        ctx, bucket_name=bucket_name, repo_path=repo_path, repo_json_path=repo_json_path
-    )
-
-    if salt_version not in repo_json:
-        repo_json[salt_version] = {}
+    release_json = {}
 
     copy_exclusions = (
         ".blake2b",
@@ -769,7 +811,7 @@ def _create_onedir_based_repo(
                 f"Cannot pickup the right architecture from the filename '{dpath.name}'."
             )
             ctx.exit(1)
-        repo_json[salt_version][dpath.name] = {
+        release_json[dpath.name] = {
             "name": dpath.name,
             "version": salt_version,
             "os": distro,
@@ -778,7 +820,7 @@ def _create_onedir_based_repo(
         for hash_name in ("blake2b", "sha512", "sha3_512"):
             ctx.info(f"   * Calculating {hash_name} ...")
             hexdigest = _get_file_checksum(fpath, hash_name)
-            repo_json[salt_version][dpath.name][hash_name.upper()] = hexdigest
+            release_json[dpath.name][hash_name.upper()] = hexdigest
             with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
 
@@ -804,20 +846,26 @@ def _create_onedir_based_repo(
     # Export the GPG key in use
     _export_gpg_key(ctx, key_id, repo_path, create_repo_path)
 
+    repo_json = _get_repo_json_file_contents(
+        ctx, bucket_name=bucket_name, repo_path=repo_path, repo_json_path=repo_json_path
+    )
     if nightly_build is False:
         versions_in_repo_json = {}
         for version in repo_json:
             if version == "latest":
                 continue
             versions_in_repo_json[packaging.version.parse(version)] = version
-        latest_version = versions_in_repo_json[
-            sorted(versions_in_repo_json, reverse=True)[0]
-        ]
+        if versions_in_repo_json:
+            latest_version = versions_in_repo_json[
+                sorted(versions_in_repo_json, reverse=True)[0]
+            ]
+        else:
+            latest_version = salt_version
         if salt_version == latest_version:
-            repo_json["latest"] = repo_json[salt_version]
+            repo_json["latest"] = release_json
             ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
             major_version = packaging.version.parse(salt_version).major
-            repo_json[str(major_version)] = repo_json[salt_version]
+            repo_json[str(major_version)] = release_json
             major_link = create_repo_path.parent.parent / str(major_version)
             major_link.symlink_to(f"minor/{salt_version}")
             latest_link = create_repo_path.parent.parent / "latest"
@@ -830,7 +878,20 @@ def _create_onedir_based_repo(
             repo_path=repo_path,
             repo_json_path=minor_repo_json_path,
         )
-        minor_repo_json[salt_version] = repo_json[salt_version]
+        versions_in_repo_json = {}
+        for version in minor_repo_json:
+            if version == "latest":
+                continue
+            versions_in_repo_json[packaging.version.parse(version)] = version
+        if versions_in_repo_json:
+            latest_version = versions_in_repo_json[
+                sorted(versions_in_repo_json, reverse=True)[0]
+            ]
+        else:
+            latest_version = salt_version
+        if salt_version == latest_version:
+            minor_repo_json["latest"] = release_json
+        minor_repo_json[salt_version] = release_json
         minor_repo_json_path.write_text(json.dumps(minor_repo_json))
     else:
         ctx.info("Creating 'latest' symlink ...")
@@ -890,53 +951,6 @@ def _get_file_checksum(fpath: pathlib.Path, hash_name: str) -> str:
                 digest.update(view[:size])
     hexdigest: str = digest.hexdigest()
     return hexdigest
-
-
-@publish.command(
-    arguments={
-        "repo_path": {
-            "help": "Local path for the repository that shall be published.",
-        },
-    }
-)
-def nightly(ctx: Context, repo_path: pathlib.Path):
-    """
-    Publish to the nightly bucket.
-    """
-    _publish_repo(ctx, repo_path=repo_path, nightly_build=True)
-
-
-@publish.command(
-    arguments={
-        "repo_path": {
-            "help": "Local path for the repository that shall be published.",
-        },
-        "rc_build": {
-            "help": "Release Candidate repository target",
-        },
-    }
-)
-def staging(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
-    """
-    Publish to the staging bucket.
-    """
-    _publish_repo(ctx, repo_path=repo_path, rc_build=rc_build, stage=True)
-
-
-@publish.command(
-    arguments={
-        "repo_path": {
-            "help": "Local path for the repository that shall be published.",
-        },
-        "rc_build": {
-            "help": "Release Candidate repository target",
-        },
-    }
-)
-def release(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
-    """
-    Publish to the release bucket.
-    """
 
 
 def _publish_repo(
