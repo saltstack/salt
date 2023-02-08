@@ -793,7 +793,7 @@ pyyaml==6.0.1
     #   kubernetes
     #   yamllint
     #   yamlordereddictloader
-pyzmq==18.0.1 ; python_version < "3.9"
+pyzmq==23.2.0 ; python_version >= "3.6"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories

@@ -774,7 +774,7 @@ pyyaml==6.0.1
     #   napalm
     #   yamllint
     #   yamlordereddictloader
-pyzmq==23.2.0 ; python_version >= "3.9"
+pyzmq==23.2.0 ; python_version >= "3.6"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories

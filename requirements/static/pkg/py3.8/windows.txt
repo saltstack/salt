@@ -108,7 +108,7 @@ pywin32==303
     #   wmi
 pyyaml==6.0.1
     # via -r requirements/base.txt
-pyzmq==22.0.3 ; python_version < "3.9" and sys_platform == "win32"
+pyzmq==22.0.3 ; sys_platform == "win32"
     # via -r requirements/zeromq.txt
 requests==2.31.0 ; python_version >= "3.7"
     # via
