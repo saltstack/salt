@@ -360,7 +360,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
     if TYPE_CHECKING:
         assert github_step_summary is not None
 
-    if event_name in ("push", "schedule"):
+    if event_name != "pull_request":
         # In this case, a full test run is in order
         ctx.info("Writing 'testrun' to the github outputs file")
         testrun = {"type": "full"}

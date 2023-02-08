@@ -36,7 +36,7 @@ concurrency:
   # not cancel previous builds.
   # However, for every new build against the same pull request source branch,
   # all older builds against that same branch get canceled.
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
 <%- endblock concurrency %>
@@ -143,6 +143,7 @@ jobs:
         uses: ./.github/actions/setup-salt-version
         with:
           salt-version: "<{ prepare_workflow_salt_version_input }>"
+          validate-version: true
 
       - name: Write Changed Files To A Local File
         run:

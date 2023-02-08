@@ -118,6 +118,7 @@ jobs:
         uses: ./.github/actions/setup-salt-version
         with:
           salt-version: ""
+          validate-version: true
 
       - name: Write Changed Files To A Local File
         run:

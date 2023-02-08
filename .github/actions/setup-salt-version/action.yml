@@ -12,6 +12,10 @@ inputs:
       The Salt version to set prior to running tests or building packages.
       If not set, it is discover at run time, like, for example, capturing
       the output of running `python3 salt/version.py`
+  validate-version:
+    type: boolean
+    default: false
+    description: Validate the passed version.
 outputs:
   salt-version:
     value: ${{ steps.setup-salt-version.outputs.salt-version }}
@@ -32,4 +36,4 @@ runs:
         if [ "${{ inputs.cwd }}" != "" ]; then
           cd "${{ inputs.cwd }}"
         fi
-        tools pkg set-salt-version ${{ inputs.salt-version }}
+        tools pkg set-salt-version ${{ inputs.validate-version == 'true' && '--validate-version' || '' }} ${{ inputs.salt-version }}
