@@ -476,28 +476,7 @@ class SaltPkgInstall:
     def _install_pkgs(self, upgrade=False):
         if upgrade:
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
-            if self.distro_id in ("ubuntu", "debian"):
-                # --allow-downgrades and yum's downgrade is a workaround since
-                # dpkg/yum is seeing 3005 version as a greater version than our nightly builds.
-                # Also this helps work around the situation when the Salt
-                # branch has not been updated with code so the versions might
-                # be the same and you can still install and test the new
-                # package.
-                ret = self.proc.run(self.pkg_mngr, "upgrade", "-y", *self.pkgs)
-            else:
-                ret = self.proc.run(self.pkg_mngr, "upgrade", "-y", *self.pkgs)
-                if (
-                    ret.returncode != 0
-                    or "does not update installed package" in ret.stdout
-                    or "cannot update it" in ret.stderr
-                ):
-                    log.info(
-                        "The new packages version is not returning as new. Attempting to downgrade"
-                    )
-                    ret = self.proc.run(self.pkg_mngr, "downgrade", "-y", *self.pkgs)
-                    if ret.returncode != 0:
-                        log.error("Could not install the packages")
-                        return False
+            ret = self.proc.run(self.pkg_mngr, "upgrade", "-y", *self.pkgs)
         else:
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
             ret = self.proc.run(self.pkg_mngr, "install", "-y", *self.pkgs)
