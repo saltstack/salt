@@ -751,21 +751,35 @@ def _create_onedir_based_repo(
     else:
         repo_json_path = create_repo_path.parent / "repo.json"
 
-    ctx.info("Downloading any pre-existing 'repo.json' file")
     if nightly_build:
         bucket_name = "salt-project-prod-salt-artifacts-nightly"
     else:
         bucket_name = "salt-project-prod-salt-artifacts-staging"
 
-    bucket_url = (
-        f"s3://{bucket_name}/{create_repo_path.relative_to(repo_path)}/repo.json"
-    )
-    ret = ctx.run("aws", "s3", "cp", bucket_url, create_repo_path, check=False)
-    if ret.returncode:
-        repo_json = {}
-    else:
+    s3 = boto3.client("s3")
+    try:
+        ret = s3.head_object(
+            Bucket=bucket_name, Key=str(repo_json_path.relative_to(repo_path))
+        )
+        ctx.info("Downloading existing 'repo.json' file")
+        size = ret["ContentLength"]
+        with repo_json_path.open("wb") as wfh:
+            with create_progress_bar(file_progress=True) as progress:
+                task = progress.add_task(description="Downloading...", total=size)
+            s3.download_fileobj(
+                Bucket=bucket_name,
+                Key=str(repo_json_path.relative_to(repo_path)),
+                Fileobj=wfh,
+                Callback=UpdateProgress(progress, task),
+            )
         with repo_json_path.open() as rfh:
             repo_json = json.load(rfh)
+    except ClientError as exc:
+        if "Error" not in exc.response:
+            raise
+        if exc.response["Error"]["Code"] != "404":
+            raise
+        repo_json = {}
 
     if salt_version not in repo_json:
         repo_json[salt_version] = {}
@@ -844,18 +858,30 @@ def _create_onedir_based_repo(
             latest_link = create_repo_path.parent.parent / "latest"
             latest_link.symlink_to(f"minor/{salt_version}")
 
-        ctx.info("Downloading any pre-existing 'minor/repo.json' file")
         minor_repo_json_path = create_repo_path.parent / "repo.json"
-        bucket_url = f"s3://{bucket_name}/{minor_repo_json_path.relative_to(repo_path)}"
-        ret = ctx.run(
-            "aws", "s3", "cp", bucket_url, minor_repo_json_path.parent, check=False
-        )
-        if ret.returncode:
-            minor_repo_json = {}
-        else:
+        try:
+            ret = s3.head_object(
+                Bucket=bucket_name, Key=str(minor_repo_json_path.relative_to(repo_path))
+            )
+            size = ret["ContentLength"]
+            ctx.info("Downloading existing 'minor/repo.json' file")
+            with minor_repo_json_path.open("wb") as wfh:
+                with create_progress_bar(file_progress=True) as progress:
+                    task = progress.add_task(description="Downloading...", total=size)
+                s3.download_fileobj(
+                    Bucket=bucket_name,
+                    Key=str(minor_repo_json_path.relative_to(repo_path)),
+                    Fileobj=wfh,
+                    Callback=UpdateProgress(progress, task),
+                )
             with minor_repo_json_path.open() as rfh:
                 minor_repo_json = json.load(rfh)
-
+        except ClientError as exc:
+            if "Error" not in exc.response:
+                raise
+            if exc.response["Error"]["Code"] != "404":
+                raise
+            minor_repo_json = {}
         minor_repo_json[salt_version] = repo_json[salt_version]
         minor_repo_json_path.write_text(json.dumps(minor_repo_json))
     else:
@@ -984,7 +1010,7 @@ def _publish_repo(
             path = pathlib.Path(dirpath, fpath)
             to_upload_paths.append(path)
 
-    with create_progress_bar(ctx) as progress:
+    with create_progress_bar() as progress:
         task = progress.add_task(
             "Deleting directories to override.", total=len(to_delete_paths)
         )
@@ -1011,7 +1037,7 @@ def _publish_repo(
             relpath = upload_path.relative_to(repo_path)
             size = upload_path.stat().st_size
             ctx.info(f"  {relpath}")
-            with create_progress_bar(ctx, upload_progress=True) as progress:
+            with create_progress_bar(file_progress=True) as progress:
                 task = progress.add_task(description="Uploading...", total=size)
                 s3.upload_file(
                     str(upload_path),
@@ -1032,8 +1058,8 @@ class UpdateProgress:
         self.progress.update(self.task, advance=chunk_size)
 
 
-def create_progress_bar(ctx: Context, upload_progress: bool = False, **kwargs):
-    if upload_progress:
+def create_progress_bar(file_progress: bool = False, **kwargs):
+    if file_progress:
         return Progress(
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
@@ -1041,7 +1067,6 @@ def create_progress_bar(ctx: Context, upload_progress: bool = False, **kwargs):
             TransferSpeedColumn(),
             TextColumn("eta"),
             TimeRemainingColumn(),
-            console=ctx.console,
             **kwargs,
         )
     return Progress(
