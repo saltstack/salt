@@ -23,7 +23,7 @@ clr-loader==0.2.4
     # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==3.4.7
+cryptography==39.0.1
     # via
     #   -r requirements/windows.txt
     #   pyopenssl
