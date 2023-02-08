@@ -961,10 +961,14 @@ def _publish_repo(
     to_delete_paths: dict[pathlib.Path, list[dict[str, str]]] = {}
     to_upload_paths: list[pathlib.Path] = []
     for dirpath, dirnames, filenames in os.walk(repo_path, followlinks=True):
-        if "latest" in dirnames:
-            # Since we can't check for existing folders, only existing files(objects),
-            # let's use one which must exist if the folder also exists
-            path = pathlib.Path(dirpath, "latest")
+        for dirname in dirnames:
+            path = pathlib.Path(dirpath, dirname)
+            if not path.is_symlink():
+                continue
+            # This is a symlink, then we need to delete all files under
+            # that directory in S3 because S3 does not understand symlinks
+            # and we would end up adding files to that folder instead of
+            # replacing it.
             try:
                 relpath = path.relative_to(repo_path)
                 ret = s3.list_objects(
