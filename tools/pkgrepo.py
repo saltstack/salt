@@ -7,8 +7,10 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import pathlib
 import shutil
+import sys
 import textwrap
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -17,6 +19,27 @@ import packaging.version
 from ptscripts import Context, command_group
 
 import tools.pkg
+
+try:
+    import boto3
+    from botocore.exceptions import ClientError
+    from rich.progress import (
+        BarColumn,
+        Column,
+        DownloadColumn,
+        Progress,
+        TextColumn,
+        TimeRemainingColumn,
+        TransferSpeedColumn,
+    )
+except ImportError:
+    print(
+        "\nPlease run 'python -m pip install -r "
+        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
+        file=sys.stderr,
+        flush=True,
+    )
+    raise
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +55,12 @@ repo = command_group(
 
 create = command_group(
     name="create", help="Packaging Repository Creation Related Commands", parent=repo
+)
+
+publish = command_group(
+    name="publish",
+    help="Packaging Repository Publication Related Commands",
+    parent=repo,
 )
 
 
@@ -855,3 +884,174 @@ def _get_file_checksum(fpath: pathlib.Path, hash_name: str) -> str:
                 digest.update(view[:size])
     hexdigest: str = digest.hexdigest()
     return hexdigest
+
+
+@publish.command(
+    arguments={
+        "repo_path": {
+            "help": "Local path for the repository that shall be published.",
+        },
+    }
+)
+def nightly(ctx: Context, repo_path: pathlib.Path):
+    """
+    Publish to the nightly bucket.
+    """
+    _publish_repo(ctx, repo_path=repo_path, nightly_build=True)
+
+
+@publish.command(
+    arguments={
+        "repo_path": {
+            "help": "Local path for the repository that shall be published.",
+        },
+        "rc_build": {
+            "help": "Release Candidate repository target",
+        },
+    }
+)
+def staging(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
+    """
+    Publish to the staging bucket.
+    """
+    _publish_repo(ctx, repo_path=repo_path, rc_build=rc_build, stage=True)
+
+
+@publish.command(
+    arguments={
+        "repo_path": {
+            "help": "Local path for the repository that shall be published.",
+        },
+        "rc_build": {
+            "help": "Release Candidate repository target",
+        },
+    }
+)
+def release(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
+    """
+    Publish to the release bucket.
+    """
+
+
+def _publish_repo(
+    ctx: Context,
+    repo_path: pathlib.Path,
+    nightly_build: bool = False,
+    rc_build: bool = False,
+    stage: bool = False,
+):
+    """
+    Publish packaging repositories.
+    """
+    if nightly_build:
+        bucket_name = "salt-project-prod-salt-artifacts-nightly"
+    elif stage:
+        bucket_name = "salt-project-prod-salt-artifacts-staging"
+    else:
+        bucket_name = "salt-project-prod-salt-artifacts-release"
+    if rc_build:
+        bucket_folder = "salt_rc/"
+    elif nightly_build:
+        bucket_folder = "salt-dev/"
+    else:
+        bucket_folder = ""
+
+    ctx.info("Preparing upload ...")
+    s3 = boto3.client("s3")
+    to_delete_paths: dict[pathlib.Path, list[dict[str, str]]] = {}
+    to_upload_paths: list[pathlib.Path] = []
+    for dirpath, dirnames, filenames in os.walk(repo_path, followlinks=True):
+        if "latest" in dirnames:
+            # Since we can't check for existing folders, only existing files(objects),
+            # let's use one which must exist if the folder also exists
+            path = pathlib.Path(dirpath, "latest")
+            try:
+                relpath = path.relative_to(repo_path)
+                ret = s3.list_objects(
+                    Bucket=bucket_name,
+                    Prefix=str(relpath),
+                )
+                if "Contents" not in ret:
+                    continue
+                objects = []
+                for entry in ret["Contents"]:
+                    objects.append({"Key": f"{bucket_folder}{entry['Key']}"})
+                to_delete_paths[path] = objects
+            except ClientError as exc:
+                if "Error" not in exc.response:
+                    raise
+                if exc.response["Error"]["Code"] != "404":
+                    raise
+
+        for fpath in filenames:
+            path = pathlib.Path(dirpath, fpath)
+            to_upload_paths.append(path)
+
+    with create_progress_bar(ctx) as progress:
+        task = progress.add_task(
+            "Deleting directories to override.", total=len(to_delete_paths)
+        )
+        for base, objects in to_delete_paths.items():
+            relpath = base.relative_to(repo_path)
+            bucket_uri = f"s3://{bucket_name}/{bucket_folder}{relpath}"
+            progress.update(task, description=f"Deleting {bucket_uri}")
+            try:
+                ret = s3.delete_objects(
+                    Bucket=bucket_name,
+                    Delete={"Objects": objects},
+                )
+            except ClientError:
+                log.exception(f"Failed to delete {bucket_uri}")
+            finally:
+                progress.update(task, advance=1)
+
+    def update_progress(progress, task, chunk):
+        progress.update(task, completed=chunk)
+
+    try:
+        ctx.info("Uploading repository ...")
+        for upload_path in to_upload_paths:
+            relpath = upload_path.relative_to(repo_path)
+            size = upload_path.stat().st_size
+            ctx.info(f"  {bucket_folder}{relpath}")
+            with create_progress_bar(ctx, upload_progress=True) as progress:
+                task = progress.add_task(description="Uploading...", total=size)
+                s3.upload_file(
+                    str(upload_path),
+                    bucket_name,
+                    f"{bucket_folder}{relpath}",
+                    Callback=UpdateProgress(progress, task),
+                )
+    except KeyboardInterrupt:
+        pass
+
+
+class UpdateProgress:
+    def __init__(self, progress, task):
+        self.progress = progress
+        self.task = task
+
+    def __call__(self, chunk_size):
+        self.progress.update(self.task, advance=chunk_size)
+
+
+def create_progress_bar(ctx: Context, upload_progress: bool = False, **kwargs):
+    if upload_progress:
+        return Progress(
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            DownloadColumn(),
+            TransferSpeedColumn(),
+            TextColumn("eta"),
+            TimeRemainingColumn(),
+            console=ctx.console,
+            **kwargs,
+        )
+    return Progress(
+        TextColumn(
+            "[progress.description]{task.description}", table_column=Column(ratio=3)
+        ),
+        BarColumn(),
+        expand=True,
+        **kwargs,
+    )
