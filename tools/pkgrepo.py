@@ -764,7 +764,8 @@ def _create_onedir_based_repo(
     if ret.returncode:
         repo_json = {}
     else:
-        repo_json = json.loads(str(repo_json_path))
+        with repo_json_path.open() as rfh:
+            repo_json = json.load(rfh)
 
     if salt_version not in repo_json:
         repo_json[salt_version] = {}
@@ -852,7 +853,8 @@ def _create_onedir_based_repo(
         if ret.returncode:
             minor_repo_json = {}
         else:
-            minor_repo_json = json.loads(str(minor_repo_json_path))
+            with minor_repo_json_path.open() as rfh:
+                minor_repo_json = json.load(rfh)
 
         minor_repo_json[salt_version] = repo_json[salt_version]
         minor_repo_json_path.write_text(json.dumps(minor_repo_json))
