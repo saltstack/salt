@@ -104,7 +104,7 @@ on:
         shell: bash
         run: |
           tools changelog update-deb "1:${{ needs.prepare-workflow.outputs.salt-version }}" --draft
-          tools changelog update-deb
+          tools changelog update-deb "1:${{ needs.prepare-workflow.outputs.salt-version }}"
 
       - name: Update RPM changelog
         shell: bash
