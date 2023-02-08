@@ -85,7 +85,7 @@ pyyaml==5.4.1
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
     #   -r requirements/base.txt
-pyzmq==18.0.1 ; python_version < "3.9"
+pyzmq==23.2.0
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
     #   -r requirements/zeromq.txt
