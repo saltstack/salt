@@ -441,7 +441,7 @@ idna==2.8
     #   yarl
 immutables==0.16
     # via contextvars
-importlib_metadata==4.6.3 ; python_version >= "3.10"
+importlib-metadata==6.0.0
     # via -r requirements/static/pkg/linux.in
 iniconfig==1.1.1
     # via pytest
@@ -753,7 +753,7 @@ pyyaml==5.4.1
     #   junos-eznc
     #   kubernetes
     #   yamlordereddictloader
-pyzmq==23.2.0 ; python_version >= "3.9"
+pyzmq==23.2.0
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories

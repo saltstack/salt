@@ -76,8 +76,20 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
     if not changed_files.exists():
         ctx.error(f"The '{changed_files}' file does not exist.")
         ctx.exit(1)
+
+    contents = changed_files.read_text()
+    if not contents:
+        if event_name == "pull_request":
+            ctx.error(f"The '{changed_files}' file is empty.")
+            ctx.exit(1)
+        else:
+            ctx.debug(f"The '{changed_files}' file is empty.")
+            with open(github_output, "a", encoding="utf-8") as wfh:
+                wfh.write(f"changed-files={json.dumps({})}\n")
+            ctx.exit(0)
+
     try:
-        changed_files_contents = json.loads(changed_files.read_text())
+        changed_files_contents = json.loads(contents)
     except Exception as exc:
         ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
         ctx.exit(1)
@@ -115,16 +127,16 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
 
 
 @ci.command(
-    name="define-jobs",
+    name="runner-types",
     arguments={
         "event_name": {
             "help": "The name of the GitHub event being processed.",
         },
     },
 )
-def define_jobs(ctx: Context, event_name: str):
+def runner_types(ctx: Context, event_name: str):
     """
-    Set GH Actions outputs for what should build or not.
+    Set GH Actions 'runners' output to know what can run where.
     """
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is None:
@@ -153,8 +165,8 @@ def define_jobs(ctx: Context, event_name: str):
     # Let's it print until the end
     time.sleep(1)
 
-    ctx.info("Selecting which type of jobs(self hosted runners or not) to run")
-    jobs = {"github-hosted-runners": False, "self-hosted-runners": False}
+    ctx.info("Selecting which type of runners(self hosted runners or not) to run")
+    runners = {"github-hosted": False, "self-hosted": False}
     if event_name == "pull_request":
         ctx.info("Running from a pull request event")
         pr_event_data = gh_event["pull_request"]
@@ -165,17 +177,17 @@ def define_jobs(ctx: Context, event_name: str):
             # If this is a pull request coming from the same repository, don't run anything
             ctx.info("Pull request is coming from the same repository.")
             ctx.info("Not running any jobs since they will run against the branch")
-            ctx.info("Writing 'jobs' to the github outputs file")
+            ctx.info("Writing 'runners' to the github outputs file")
             with open(github_output, "a", encoding="utf-8") as wfh:
-                wfh.write(f"jobs={json.dumps(jobs)}\n")
+                wfh.write(f"runners={json.dumps(runners)}\n")
             ctx.exit(0)
 
         # This is a PR from a forked repository
         ctx.info("Pull request is not comming from the same repository")
-        jobs["github-hosted-runners"] = jobs["self-hosted-runners"] = True
-        ctx.info("Writing 'jobs' to the github outputs file")
+        runners["github-hosted"] = runners["self-hosted"] = True
+        ctx.info("Writing 'runners' to the github outputs file")
         with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"jobs={json.dumps(jobs)}\n")
+            wfh.write(f"runners={json.dumps(runners)}\n")
         ctx.exit(0)
 
     # This is a push or a scheduled event
@@ -183,19 +195,135 @@ def define_jobs(ctx: Context, event_name: str):
     if gh_event["repository"]["fork"] is True:
         # This is running on a forked repository, don't run tests
         ctx.info("The push event is on a forked repository")
-        jobs["github-hosted-runners"] = True
-        ctx.info("Writing 'jobs' to the github outputs file")
+        runners["github-hosted"] = True
+        ctx.info("Writing 'runners' to the github outputs file")
         with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"jobs={json.dumps(jobs)}\n")
+            wfh.write(f"runners={json.dumps(runners)}\n")
         ctx.exit(0)
 
     # Not running on a fork, run everything
     ctx.info(f"The {event_name!r} event is from the main repository")
-    jobs["github-hosted-runners"] = jobs["self-hosted-runners"] = True
+    runners["github-hosted"] = runners["self-hosted"] = True
+    ctx.info("Writing 'runners' to the github outputs file")
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"runners={json.dumps(runners)}")
+    ctx.exit(0)
+
+
+@ci.command(
+    name="define-jobs",
+    arguments={
+        "event_name": {
+            "help": "The name of the GitHub event being processed.",
+        },
+        "changed_files": {
+            "help": (
+                "Path to '.json' file containing the payload of changed files "
+                "from the 'dorny/paths-filter' GitHub action."
+            ),
+        },
+    },
+)
+def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
+    """
+    Set GH Actions 'jobs' output to know which jobs should run.
+    """
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if github_step_summary is None:
+        ctx.warn("The 'GITHUB_STEP_SUMMARY' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_step_summary is not None
+
+    jobs = {
+        "lint": True,
+        "test": True,
+        "prepare-release": True,
+        "build-source-tarball": True,
+        "build-deps-onedir": True,
+        "build-salt-onedir": True,
+        "build-pkgs": True,
+    }
+    if event_name != "pull_request":
+        # In this case, all defined jobs should run
+        ctx.info("Writing 'jobs' to the github outputs file")
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"jobs={json.dumps(jobs)}\n")
+
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                f"All defined jobs will run due to event type of {event_name!r}.\n"
+            )
+        return
+
+    if not changed_files.exists():
+        ctx.error(f"The '{changed_files}' file does not exist.")
+        ctx.error(
+            "FYI, the command 'tools process-changed-files <changed-files-path>' "
+            "needs to run prior to this one."
+        )
+        ctx.exit(1)
+    try:
+        changed_files_contents = json.loads(changed_files.read_text())
+    except Exception as exc:
+        ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
+        ctx.exit(1)
+
+    # So, it's a pull request...
+    # Based on which files changed, we can decide what jobs to run.
+    required_lint_changes: set[str] = {
+        changed_files_contents["salt"],
+        changed_files_contents["tests"],
+        changed_files_contents["lint"],
+    }
+    if required_lint_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'lint' job.\n")
+        jobs["lint"] = False
+
+    required_test_changes: set[str] = {
+        changed_files_contents["testrun"],
+        changed_files_contents["golden_images"],
+    }
+    if required_test_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'test' jobs.\n")
+        jobs["test"] = False
+
+    if not jobs["test"]:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            for job in (
+                "build-source-tarball",
+                "build-deps-onedir",
+                "build-salt-onedir",
+                "build-pkgs",
+            ):
+                wfh.write(f"De-selecting the '{job}' job.\n")
+                jobs[job] = False
+
+    with open(github_step_summary, "a", encoding="utf-8") as wfh:
+        wfh.write("Selected Jobs:\n")
+        for name, value in sorted(jobs.items()):
+            wfh.write(f" - {name}: {value}\n")
+        wfh.write(
+            "\n<details>\n<summary>All Changed Files (click me)</summary>\n<pre>\n"
+        )
+        for path in sorted(json.loads(changed_files_contents["repo_files"])):
+            wfh.write(f"{path}\n")
+        wfh.write("</pre>\n</details>\n")
+
     ctx.info("Writing 'jobs' to the github outputs file")
     with open(github_output, "a", encoding="utf-8") as wfh:
-        wfh.write(f"jobs={json.dumps(jobs)}")
-    ctx.exit(0)
+        wfh.write(f"jobs={json.dumps(jobs)}\n")
 
 
 @ci.command(
@@ -232,7 +360,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
     if TYPE_CHECKING:
         assert github_step_summary is not None
 
-    if event_name in ("push", "schedule"):
+    if event_name != "pull_request":
         # In this case, a full test run is in order
         ctx.info("Writing 'testrun' to the github outputs file")
         testrun = {"type": "full"}
@@ -382,4 +510,89 @@ def transport_matrix(ctx: Context, distro_slug: str):
                 continue
         _matrix.append({"transport": transport})
     print(json.dumps(_matrix))
+    ctx.exit(0)
+
+
+@ci.command(
+    name="rerun-workflow",
+)
+def rerun_workflow(ctx: Context):
+    """
+    Re-run failed workflows, up to a maximum of 3 times.
+
+    Only restarts workflows for which less than 25% of the jobs failed.
+    """
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is None:
+        ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event_path is not None
+
+    try:
+        gh_event = json.loads(open(gh_event_path).read())
+    except Exception as exc:
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
+        ctx.exit(1)
+
+    workflow_run = gh_event["workflow_run"]
+    ctx.info(
+        f"Processing Workflow ID {workflow_run['id']}, attempt {workflow_run['run_attempt']}..."
+    )
+    if workflow_run["run_attempt"] >= 3:
+        ctx.info(
+            f"This workflow has failed for the past {workflow_run['run_attempt']} attempts. "
+            "Not re-running it."
+        )
+        ctx.exit(0)
+
+    run_id = str(workflow_run["id"])
+    repository = workflow_run["repository"]["full_name"]
+    page = 1
+    total = failed = 0
+    # Get all jobs from workflow run to see how many failed
+    while True:
+        cmdline = [
+            "gh",
+            "api",
+            "-H",
+            "Accept: application/vnd.github+json",
+            f"/repos/{repository}/actions/runs/{run_id}/jobs?filter=latest&per_page=100&page={page}",
+        ]
+        ret = ctx.run(*cmdline, capture=True, check=False)
+        if ret.returncode:
+            ctx.error("Failed to get the jobs for the workflow run")
+            ctx.exit(0)
+
+        jobs = json.loads(ret.stdout.strip().decode())["jobs"]
+        if not jobs:
+            break
+
+        for job in jobs:
+            total += 1
+            if job["conclusion"] == "failure":
+                failed += 1
+        page += 1
+
+    ctx.info(f"{failed} out of {total} jobs failed.")
+    if failed > total / 2:
+        ctx.info("More than half of the jobs failed. Not automatically restarting.")
+        ctx.exit(0)
+
+    cmdline = [
+        "gh",
+        "run",
+        "-R",
+        repository,
+        "rerun",
+        run_id,
+        "--failed",
+    ]
+    ctx.info(f"Running {' '.join(cmdline)!r} ...")
+    ret = ctx.run(*cmdline, check=False)
+    if ret.returncode:
+        ctx.error("Failed to re-run workflow")
+    else:
+        ctx.info("Restarted workflow successfully")
     ctx.exit(0)

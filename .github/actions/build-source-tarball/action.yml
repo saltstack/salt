@@ -29,16 +29,22 @@ runs:
       run: |
         nox --version || python3 -m pip install nox==${{ inputs.nox-version }}
 
-    - name: Download Release Changes
+    - name: Download Release Patch
       uses: actions/download-artifact@v3
       with:
-        name: salt-${{ inputs.salt-version }}.diff
+        name: salt-${{ inputs.salt-version }}.patch
 
-    - name: Apply release changes
+    - name: Configure Git
       shell: bash
       run: |
-        git apply salt-${{ inputs.salt-version }}.diff
-        rm salt-${{ inputs.salt-version }}.diff
+        git config --global user.name "Salt Project Packaging"
+        git config --global user.email saltproject-packaging@vmware.com
+
+    - name: Apply Release Patch
+      shell: bash
+      run: |
+        git am --committer-date-is-author-date salt-${{ inputs.salt-version }}.patch
+        rm salt-${{ inputs.salt-version }}.patch
 
     - name: Create Source Tarball
       shell: bash

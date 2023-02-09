@@ -18,4 +18,3 @@ Security
 --------
 
 - Fixed PAM auth to reject auth attempt if user account is locked. (cve-2022-22967)
-

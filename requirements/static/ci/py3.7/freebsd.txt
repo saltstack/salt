@@ -453,7 +453,7 @@ idna==2.8
     #   yarl
 immutables==0.15
     # via contextvars
-importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+importlib-metadata==4.6.4
     # via
     #   -r requirements/static/pkg/freebsd.in
     #   backports.entry-points-selectable
@@ -788,7 +788,7 @@ pyyaml==5.4.1
     #   napalm
     #   yamllint
     #   yamlordereddictloader
-pyzmq==18.0.1 ; python_version < "3.9"
+pyzmq==23.2.0
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories

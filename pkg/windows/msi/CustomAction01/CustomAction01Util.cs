@@ -1,4 +1,4 @@
-﻿using Microsoft.Deployment.WindowsInstaller;
+using Microsoft.Deployment.WindowsInstaller;
 using Microsoft.Tools.WindowsInstallerXml;
 using Microsoft.Win32;
 using System;

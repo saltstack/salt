@@ -460,7 +460,7 @@ idna==2.8
     #   yarl
 immutables==0.14
     # via contextvars
-importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+importlib-metadata==4.6.4
     # via
     #   -r requirements/static/pkg/linux.in
     #   backports.entry-points-selectable
@@ -795,7 +795,7 @@ pyyaml==5.4.1
     #   kubernetes
     #   yamllint
     #   yamlordereddictloader
-pyzmq==18.0.1 ; python_version < "3.9"
+pyzmq==23.2.0
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories

@@ -323,4 +323,3 @@ namespace MinionConfigurationExtension {
         }
     }
 }
-

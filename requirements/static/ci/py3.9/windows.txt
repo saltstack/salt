@@ -127,7 +127,7 @@ idna==2.8
     #   yarl
 immutables==0.15
     # via contextvars
-importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+importlib-metadata==6.0.0
     # via -r requirements/windows.txt
 iniconfig==1.0.1
     # via pytest
@@ -320,7 +320,7 @@ pyyaml==5.4.1
     #   clustershell
     #   kubernetes
     #   yamllint
-pyzmq==23.2.0 ; python_version >= "3.9"
+pyzmq==22.0.3 ; sys_platform == "win32"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
