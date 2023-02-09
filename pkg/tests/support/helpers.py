@@ -65,7 +65,7 @@ class SaltPkgInstall:
     run_root: pathlib.Path = attr.ib(default=None)
     ssm_bin: pathlib.Path = attr.ib(default=None)
     bin_dir: pathlib.Path = attr.ib(default=None)
-    # The artifact is an installer (exe, pkg, rpm, deb)
+    # The artifact is an installer (exe, msi, pkg, rpm, deb)
     installer_pkg: bool = attr.ib(default=False)
     upgrade: bool = attr.ib(default=False)
     # install salt or not. This allows someone
@@ -220,7 +220,7 @@ class SaltPkgInstall:
         if platform.is_darwin():
             file_ext_re = r"tar\.gz|pkg"
         if platform.is_windows():
-            file_ext_re = "zip|exe"
+            file_ext_re = "zip|exe|msi"
         for f_path in ARTIFACTS_DIR.glob("**/*.*"):
             f_path = str(f_path)
             if re.search(f"salt-(.*).({file_ext_re})$", f_path, re.IGNORECASE):
@@ -251,7 +251,7 @@ class SaltPkgInstall:
                                     "Unexpected archive layout. First: %s",
                                     first.filename,
                                 )
-                    elif file_ext == "exe":
+                    elif file_ext in ["exe", "msi"]:
                         self.onedir = True
                         self.installer_pkg = True
                         self.root = self.install_dir.parent
@@ -470,19 +470,19 @@ class SaltPkgInstall:
             elif pkg.endswith("exe"):
                 # Install the package
                 log.debug("Installing: %s", str(pkg))
-                if upgrade:
-                    ret = self.proc.run(str(pkg), "/S")
-                else:
-                    ret = self.proc.run(str(pkg), "/start-minion=0", "/S")
+                ret = self.proc.run(str(pkg), "/start-minion=0", "/S")
                 self._check_retcode(ret)
                 # Remove the service installed by the installer
                 log.debug("Removing installed salt-minion service")
-                self.proc.run(
-                    str(self.ssm_bin),
-                    "remove",
-                    "salt-minion",
-                    "confirm",
-                )
+                self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
+            elif pkg.endswith("msi"):
+                # Install the package
+                log.debug("Installing: %s", str(pkg))
+                ret = self.proc.run("cmd", "/c", "msiexec.exe", "/qn", "/i", str(pkg), 'START_MINION=""', "&&", "exit", "ERRORLEVEL")
+                self._check_retcode(ret)
+                # Remove the service installed by the installer
+                log.debug("Removing installed salt-minion service")
+                self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
             else:
                 log.error("Unknown package type: %s", pkg)
             if self.system_service:
@@ -651,8 +651,14 @@ class SaltPkgInstall:
 
             with open(pkg_path, "wb") as fp:
                 fp.write(ret.content)
-            ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
-            self._check_retcode(ret)
+            if pkg_path.endswith("exe"):
+                ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
+                self._check_retcode(ret)
+            elif win_pkg.endswith("msi"):
+                ret = self.proc.run("cmd", "/c", "msiexec.exe", "/qn", "/i", pkg_path, 'START_MINION=""', "&&", "exit", "ERRORLEVEL")
+                self._check_retcode(ret)
+            else:
+                log.error("Unknown package type: %s", pkg_path)
             log.debug("Removing installed salt-minion service")
             self.proc.run(
                 "cmd", "/c", str(self.ssm_bin), "remove", "salt-minion", "confirm"
@@ -734,6 +740,15 @@ class SaltPkgInstall:
                     self.ssm_bin.unlink()
                 except PermissionError:
                     atexit.register(self.ssm_bin.unlink)
+            pkg = self.pkgs[0]
+            log.info("Uninstalling %s", pkg)
+            if pkg.endswith("exe"):
+                uninst = self.install_dir / "uninst.exe"
+                ret = self.proc.run(uninst, "/S")
+                self._check_retcode(ret)
+            elif pkg.endswith("msi"):
+                ret = self.proc.run("cmd", "/c", "msiexec.exe", "/qn", "/x", pkg, "&&", "exit", "0")
+                # self._check_retcode(ret)
         if platform.is_darwin():
             # From here: https://stackoverflow.com/a/46118276/4581998
             daemons_dir = pathlib.Path(os.sep, "Library", "LaunchDaemons")
