@@ -770,7 +770,15 @@ class SaltPkgInstall:
                 self._check_retcode(ret)
             elif pkg.endswith("msi"):
                 ret = self.proc.run(
-                    "cmd", "/c", "msiexec.exe", "/qn", "/x", pkg, "&&", "exit", "ERRORLEVEL"
+                    "cmd",
+                    "/c",
+                    "msiexec.exe",
+                    "/qn",
+                    "/x",
+                    pkg,
+                    "&&",
+                    "exit",
+                    "ERRORLEVEL",
                 )
                 # self._check_retcode(ret)
         if platform.is_darwin():
