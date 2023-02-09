@@ -577,7 +577,7 @@ class SaltPkgInstall:
                 arch = "arm64"
             else:
                 arch = "amd64"
-            pathlib.PATH("/etc/apt/keyrings").mkdir(parents=True, exist_ok=True)
+            pathlib.Path("/etc/apt/keyrings").mkdir(parents=True, exist_ok=True)
             ret = self.proc.run(
                 "curl",
                 "-fsSL",
