@@ -19,19 +19,11 @@ import packaging.version
 from ptscripts import Context, command_group
 
 import tools.pkg
+import tools.utils
 
 try:
     import boto3
     from botocore.exceptions import ClientError
-    from rich.progress import (
-        BarColumn,
-        Column,
-        DownloadColumn,
-        Progress,
-        TextColumn,
-        TimeRemainingColumn,
-        TransferSpeedColumn,
-    )
 except ImportError:
     print(
         "\nPlease run 'python -m pip install -r "
@@ -42,12 +34,6 @@ except ImportError:
     raise
 
 log = logging.getLogger(__name__)
-
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-GPG_KEY_FILENAME = "SALT-PROJECT-GPG-PUBKEY-2023"
-NIGHTLY_BUCKET_NAME = "salt-project-prod-salt-artifacts-nightly"
-STAGING_BUCKET_NAME = "salt-project-prod-salt-artifacts-staging"
-RELEASE_BUCKET_NAME = "salt-project-prod-salt-artifacts-release"
 
 # Define the command group
 repo = command_group(
@@ -227,7 +213,7 @@ def debian(
     ftp_archive_config_file.write_text(textwrap.dedent(ftp_archive_config))
 
     # Export the GPG key in use
-    _export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
 
     pool_path = create_repo_path / "pool"
     pool_path.mkdir(exist_ok=True)
@@ -415,7 +401,7 @@ def rpm(
     )
 
     # Export the GPG key in use
-    _export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
 
     for fpath in incoming.iterdir():
         if ".src" in fpath.suffixes:
@@ -775,9 +761,9 @@ def _create_onedir_based_repo(
         repo_json_path = create_repo_path.parent / "repo.json"
 
     if nightly_build:
-        bucket_name = NIGHTLY_BUCKET_NAME
+        bucket_name = tools.utils.NIGHTLY_BUCKET_NAME
     else:
-        bucket_name = STAGING_BUCKET_NAME
+        bucket_name = tools.utils.STAGING_BUCKET_NAME
 
     release_json = {}
 
@@ -827,24 +813,10 @@ def _create_onedir_based_repo(
     for fpath in create_repo_path.iterdir():
         if fpath.suffix in pkg_suffixes:
             continue
-        ctx.info(f"GPG Signing '{fpath.relative_to(repo_path)}' ...")
-        signature_fpath = fpath.parent / f"{fpath.name}.asc"
-        if signature_fpath.exists():
-            signature_fpath.unlink()
-        ctx.run(
-            "gpg",
-            "--local-user",
-            key_id,
-            "--output",
-            str(signature_fpath),
-            "--armor",
-            "--detach-sign",
-            "--sign",
-            str(fpath),
-        )
+        tools.utils.gpg_sign(ctx, key_id, fpath)
 
     # Export the GPG key in use
-    _export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
 
     repo_json = _get_repo_json_file_contents(
         ctx, bucket_name=bucket_name, repo_path=repo_path, repo_json_path=repo_json_path
@@ -902,13 +874,13 @@ def _get_repo_json_file_contents(
         ctx.info(f"Downloading existing '{repo_json_path.relative_to(repo_path)}' file")
         size = ret["ContentLength"]
         with repo_json_path.open("wb") as wfh:
-            with create_progress_bar(file_progress=True) as progress:
+            with tools.utils.create_progress_bar(file_progress=True) as progress:
                 task = progress.add_task(description="Downloading...", total=size)
             s3.download_fileobj(
                 Bucket=bucket_name,
                 Key=str(repo_json_path.relative_to(repo_path)),
                 Fileobj=wfh,
-                Callback=UpdateProgress(progress, task),
+                Callback=tools.utils.UpdateProgress(progress, task),
             )
         with repo_json_path.open() as rfh:
             repo_json = json.load(rfh)
@@ -950,11 +922,11 @@ def _publish_repo(
     Publish packaging repositories.
     """
     if nightly_build:
-        bucket_name = NIGHTLY_BUCKET_NAME
+        bucket_name = tools.utils.NIGHTLY_BUCKET_NAME
     elif stage:
-        bucket_name = STAGING_BUCKET_NAME
+        bucket_name = tools.utils.STAGING_BUCKET_NAME
     else:
-        bucket_name = RELEASE_BUCKET_NAME
+        bucket_name = tools.utils.RELEASE_BUCKET_NAME
 
     ctx.info("Preparing upload ...")
     s3 = boto3.client("s3")
@@ -991,7 +963,7 @@ def _publish_repo(
             path = pathlib.Path(dirpath, fpath)
             to_upload_paths.append(path)
 
-    with create_progress_bar() as progress:
+    with tools.utils.create_progress_bar() as progress:
         task = progress.add_task(
             "Deleting directories to override.", total=len(to_delete_paths)
         )
@@ -1015,46 +987,16 @@ def _publish_repo(
             relpath = upload_path.relative_to(repo_path)
             size = upload_path.stat().st_size
             ctx.info(f"  {relpath}")
-            with create_progress_bar(file_progress=True) as progress:
+            with tools.utils.create_progress_bar(file_progress=True) as progress:
                 task = progress.add_task(description="Uploading...", total=size)
                 s3.upload_file(
                     str(upload_path),
                     bucket_name,
                     str(relpath),
-                    Callback=UpdateProgress(progress, task),
+                    Callback=tools.utils.UpdateProgress(progress, task),
                 )
     except KeyboardInterrupt:
         pass
-
-
-class UpdateProgress:
-    def __init__(self, progress, task):
-        self.progress = progress
-        self.task = task
-
-    def __call__(self, chunk_size):
-        self.progress.update(self.task, advance=chunk_size)
-
-
-def create_progress_bar(file_progress: bool = False, **kwargs):
-    if file_progress:
-        return Progress(
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            DownloadColumn(),
-            TransferSpeedColumn(),
-            TextColumn("eta"),
-            TimeRemainingColumn(),
-            **kwargs,
-        )
-    return Progress(
-        TextColumn(
-            "[progress.description]{task.description}", table_column=Column(ratio=3)
-        ),
-        BarColumn(),
-        expand=True,
-        **kwargs,
-    )
 
 
 def _create_repo_path(
@@ -1082,25 +1024,6 @@ def _create_repo_path(
         create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
     create_repo_path.mkdir(exist_ok=True, parents=True)
     return create_repo_path
-
-
-def _export_gpg_key(
-    ctx: Context, key_id: str, repo_path: pathlib.Path, create_repo_path: pathlib.Path
-):
-    keyfile_gpg = create_repo_path.joinpath(GPG_KEY_FILENAME).with_suffix(".gpg")
-    if keyfile_gpg.exists():
-        keyfile_gpg.unlink()
-    ctx.info(
-        f"Exporting GnuPG Key '{key_id}' to {keyfile_gpg.relative_to(repo_path)} ..."
-    )
-    ctx.run("gpg", "--output", str(keyfile_gpg), "--export", key_id)
-    keyfile_pub = create_repo_path.joinpath(GPG_KEY_FILENAME).with_suffix(".pub")
-    if keyfile_pub.exists():
-        keyfile_pub.unlink()
-    ctx.info(
-        f"Exporting GnuPG Key '{key_id}' to {keyfile_pub.relative_to(repo_path)} ..."
-    )
-    ctx.run("gpg", "--armor", "--output", str(keyfile_pub), "--export", key_id)
 
 
 def _get_latest_version(*versions: str) -> Version:
