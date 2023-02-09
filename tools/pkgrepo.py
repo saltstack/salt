@@ -309,7 +309,7 @@ def debian(
     ctx.run(*cmdline, cwd=create_repo_path)
     if nightly_build is False:
         ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
-        major_version = packaging.version.parse(salt_version).major
+        major_version = Version(salt_version).major
         major_link = create_repo_path.parent.parent / str(major_version)
         major_link.symlink_to(f"minor/{salt_version}")
         latest_link = create_repo_path.parent.parent / "latest"
@@ -506,7 +506,7 @@ def rpm(
 
     if nightly_build is False and rc_build is False:
         ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
-        major_version = packaging.version.parse(salt_version).major
+        major_version = Version(salt_version).major
         major_link = create_repo_path.parent.parent / str(major_version)
         major_link.symlink_to(f"minor/{salt_version}")
         latest_link = create_repo_path.parent.parent / "latest"
@@ -850,27 +850,6 @@ def _create_onedir_based_repo(
         ctx, bucket_name=bucket_name, repo_path=repo_path, repo_json_path=repo_json_path
     )
     if nightly_build is False:
-        versions_in_repo_json = {}
-        for version in repo_json:
-            if version == "latest":
-                continue
-            versions_in_repo_json[packaging.version.parse(version)] = version
-        if versions_in_repo_json:
-            latest_version = versions_in_repo_json[
-                sorted(versions_in_repo_json, reverse=True)[0]
-            ]
-        else:
-            latest_version = salt_version
-        if salt_version == latest_version:
-            repo_json["latest"] = release_json
-            ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
-            major_version = packaging.version.parse(salt_version).major
-            repo_json[str(major_version)] = release_json
-            major_link = create_repo_path.parent.parent / str(major_version)
-            major_link.symlink_to(f"minor/{salt_version}")
-            latest_link = create_repo_path.parent.parent / "latest"
-            latest_link.symlink_to(f"minor/{salt_version}")
-
         minor_repo_json_path = create_repo_path.parent / "repo.json"
         minor_repo_json = _get_repo_json_file_contents(
             ctx,
@@ -878,27 +857,34 @@ def _create_onedir_based_repo(
             repo_path=repo_path,
             repo_json_path=minor_repo_json_path,
         )
-        versions_in_repo_json = {}
-        for version in minor_repo_json:
-            if version == "latest":
-                continue
-            versions_in_repo_json[packaging.version.parse(version)] = version
-        if versions_in_repo_json:
-            latest_version = versions_in_repo_json[
-                sorted(versions_in_repo_json, reverse=True)[0]
-            ]
-        else:
-            latest_version = salt_version
-        if salt_version == latest_version:
-            minor_repo_json["latest"] = release_json
         minor_repo_json[salt_version] = release_json
-        minor_repo_json_path.write_text(json.dumps(minor_repo_json))
+        minor_latest_version = _get_latest_version(*list(minor_repo_json))
+        if str(minor_latest_version) not in minor_repo_json:
+            minor_latest_version = Version(salt_version)
+        minor_repo_json["latest"] = minor_repo_json[str(minor_latest_version)]
+        ctx.info(f"Writing {minor_repo_json_path} ...")
+        minor_repo_json_path.write_text(json.dumps(minor_repo_json, sort_keys=True))
+
+        if _get_latest_version(*list(repo_json)).major <= Version(salt_version).major:
+            repo_json["latest"] = release_json
+            ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
+            major_version = Version(salt_version).major
+            repo_json[str(major_version)] = release_json
+            major_link = create_repo_path.parent.parent / str(major_version)
+            if major_link.exists():
+                major_link.unlink()
+            major_link.symlink_to(f"minor/{salt_version}")
+            latest_link = create_repo_path.parent.parent / "latest"
+            if latest_link.exists():
+                latest_link.unlink()
+            latest_link.symlink_to(f"minor/{salt_version}")
     else:
         ctx.info("Creating 'latest' symlink ...")
         latest_link = create_repo_path.parent / "latest"
         latest_link.symlink_to(create_repo_path.name)
 
-    repo_json_path.write_text(json.dumps(repo_json))
+    ctx.info(f"Writing {repo_json_path} ...")
+    repo_json_path.write_text(json.dumps(repo_json, sort_keys=True))
 
 
 def _get_repo_json_file_contents(
@@ -913,7 +899,7 @@ def _get_repo_json_file_contents(
         ret = s3.head_object(
             Bucket=bucket_name, Key=str(repo_json_path.relative_to(repo_path))
         )
-        ctx.info("Downloading existing 'repo.json' file")
+        ctx.info(f"Downloading existing '{repo_json_path.relative_to(repo_path)}' file")
         size = ret["ContentLength"]
         with repo_json_path.open("wb") as wfh:
             with create_progress_bar(file_progress=True) as progress:
@@ -1023,9 +1009,6 @@ def _publish_repo(
             finally:
                 progress.update(task, advance=1)
 
-    def update_progress(progress, task, chunk):
-        progress.update(task, completed=chunk)
-
     try:
         ctx.info("Uploading repository ...")
         for upload_path in to_upload_paths:
@@ -1118,3 +1101,47 @@ def _export_gpg_key(
         f"Exporting GnuPG Key '{key_id}' to {keyfile_pub.relative_to(repo_path)} ..."
     )
     ctx.run("gpg", "--armor", "--output", str(keyfile_pub), "--export", key_id)
+
+
+def _get_latest_version(*versions: str) -> Version:
+    _versions = []
+    for version in set(versions):
+        if version == "latest":
+            continue
+        _versions.append(Version(version))
+    if _versions:
+        _versions.sort(reverse=True)
+        return _versions[0]
+    return Version("0.0.0")
+
+
+class Version(packaging.version.Version):
+    def __lt__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__lt__(other)
+
+    def __le__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__le__(other)
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__eq__(other)
+
+    def __ge__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__ge__(other)
+
+    def __gt__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__gt__(other)
+
+    def __ne__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__ne__(other)
