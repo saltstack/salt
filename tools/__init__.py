@@ -6,6 +6,7 @@ import tools.docs
 import tools.pkg
 import tools.pkgrepo
 import tools.pre_commit
+import tools.release
 import tools.vm
 
 for name in ("boto3", "botocore", "urllib3"):
