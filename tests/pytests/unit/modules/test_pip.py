@@ -1,5 +1,6 @@
 import os
 import sys
+from textwrap import dedent
 
 import pytest
 
@@ -156,7 +157,7 @@ def test_install_editable_without_egg_fails():
 
 def test_install_multiple_editable():
     editables = [
-        "git+https://github.com/jek/blinker.git#egg=Blinker",
+        "git+https://github.com/saltstack/istr.git@v1.0.1#egg=iStr",
         "git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting",
     ]
 
@@ -192,7 +193,7 @@ def test_install_multiple_editable():
 def test_install_multiple_pkgs_and_editables():
     pkgs = ["pep8", "salt"]
     editables = [
-        "git+https://github.com/jek/blinker.git#egg=Blinker",
+        "git+https://github.com/saltstack/istr.git@v1.0.1#egg=iStr",
         "git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting",
     ]
 
@@ -1422,7 +1423,7 @@ def test_freeze_command_with_all():
             )
 
 
-def test_list_command():
+def test_list_freeze_parse_command():
     eggs = [
         "M2Crypto==0.21.1",
         "-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev",
@@ -1434,7 +1435,7 @@ def test_list_command():
     mock = MagicMock(return_value={"retcode": 0, "stdout": "\n".join(eggs)})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch("salt.modules.pip.version", MagicMock(return_value=mock_version)):
-            ret = pip.list_()
+            ret = pip.list_freeze_parse()
             expected = [sys.executable, "-m", "pip", "freeze"]
             mock.assert_called_with(
                 expected,
@@ -1458,11 +1459,11 @@ def test_list_command():
         with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
             pytest.raises(
                 CommandExecutionError,
-                pip.list_,
+                pip.list_freeze_parse,
             )
 
 
-def test_list_command_with_all():
+def test_list_freeze_parse_command_with_all():
     eggs = [
         "M2Crypto==0.21.1",
         "-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev",
@@ -1479,7 +1480,7 @@ def test_list_command_with_all():
     mock = MagicMock(return_value={"retcode": 0, "stdout": "\n".join(eggs)})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch("salt.modules.pip.version", MagicMock(return_value=mock_version)):
-            ret = pip.list_()
+            ret = pip.list_freeze_parse()
             expected = [sys.executable, "-m", "pip", "freeze", "--all"]
             mock.assert_called_with(
                 expected,
@@ -1504,11 +1505,11 @@ def test_list_command_with_all():
         with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
             pytest.raises(
                 CommandExecutionError,
-                pip.list_,
+                pip.list_freeze_parse,
             )
 
 
-def test_list_command_with_prefix():
+def test_list_freeze_parse_command_with_prefix():
     eggs = [
         "M2Crypto==0.21.1",
         "-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev",
@@ -1519,7 +1520,7 @@ def test_list_command_with_prefix():
     mock = MagicMock(return_value={"retcode": 0, "stdout": "\n".join(eggs)})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
-            ret = pip.list_(prefix="bb")
+            ret = pip.list_freeze_parse(prefix="bb")
             expected = [sys.executable, "-m", "pip", "freeze"]
             mock.assert_called_with(
                 expected,
@@ -1680,7 +1681,7 @@ def test_resolve_requirements_chain_function():
 def test_when_upgrade_is_called_and_there_are_available_upgrades_it_should_call_correct_command(
     expected_user,
 ):
-    fake_run_all = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    fake_run_all = MagicMock(return_value={"retcode": 0, "stdout": "{}"})
     pip_user = expected_user
     with patch.dict(pip.__salt__, {"cmd.run_all": fake_run_all}), patch(
         "salt.modules.pip.list_upgrades", autospec=True, return_value=[pip_user]
@@ -1692,7 +1693,7 @@ def test_when_upgrade_is_called_and_there_are_available_upgrades_it_should_call_
         pip.upgrade(user=pip_user)
 
         fake_run_all.assert_any_call(
-            ["some-other-pip", "install", "-U", "freeze", "--all", pip_user],
+            ["some-other-pip", "install", "-U", "list", "--format=json", pip_user],
             runas=pip_user,
             cwd=None,
             use_vt=False,
@@ -1805,3 +1806,76 @@ def test_install_target_from_VENV_PIP_TARGET_in_resulting_command():
             use_vt=False,
             python_shell=False,
         )
+
+
+def test_list():
+    json_out = dedent(
+        """
+    [
+      {
+        "name": "idemenv",
+        "version": "0.2.0",
+        "editable_project_location": "/home/debian/idemenv"
+      },
+      {
+        "name": "MarkupSafe",
+        "version": "2.1.1"
+      },
+      {
+        "name": "pip",
+        "version": "22.3.1"
+      },
+      {
+        "name": "pop",
+        "version": "23.0.0"
+      },
+      {
+        "name": "salt",
+        "version": "3006.0+0na.5b18e86"
+      },
+      {
+        "name": "typing_extensions",
+        "version": "4.4.0"
+      },
+      {
+        "name": "unattended-upgrades",
+        "version": "0.1"
+      },
+      {
+        "name": "yarl",
+        "version": "1.8.2"
+      }
+    ]
+    """
+    )
+    mock_version = "22.3.1"
+    mock = MagicMock(return_value={"retcode": 0, "stdout": json_out})
+    with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+        with patch("salt.modules.pip.version", MagicMock(return_value=mock_version)):
+            ret = pip.list_()
+            expected = [sys.executable, "-m", "pip", "list", "--format=json"]
+            mock.assert_called_with(
+                expected,
+                cwd=None,
+                runas=None,
+                python_shell=False,
+            )
+            assert ret == {
+                "MarkupSafe": "2.1.1",
+                "idemenv": "0.2.0",
+                "pip": "22.3.1",
+                "pop": "23.0.0",
+                "salt": "3006.0+0na.5b18e86",
+                "typing_extensions": "4.4.0",
+                "unattended-upgrades": "0.1",
+                "yarl": "1.8.2",
+            }
+
+    # Non zero returncode raises exception?
+    mock = MagicMock(return_value={"retcode": 1, "stderr": "CABOOOOMMM!"})
+    with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+        with patch("salt.modules.pip.version", MagicMock(return_value="22.3.1")):
+            pytest.raises(
+                CommandExecutionError,
+                pip.list_,
+            )

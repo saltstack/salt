@@ -1,9 +1,11 @@
 import logging
+import time
 
 import pytest
 from saltfactories.utils import random_string
 
 import salt.cache
+from salt.exceptions import SaltCacheError
 from tests.pytests.functional.cache.helpers import run_common_cache_tests
 
 pytest.importorskip("redis")
@@ -50,6 +52,17 @@ def cache(minion_opts, redis_container):
 
 
 def test_caching(subtests, cache):
+    # The container seems to need some time, let's give it some
+    timeout = 20
+    start = time.time()
+    while time.time() < start + timeout:
+        try:
+            cache.contains("fnord")
+            break
+        except SaltCacheError:
+            time.sleep(1)
+    else:
+        pytest.fail("Failed to connect to redis container")
     run_common_cache_tests(subtests, cache)
 
 

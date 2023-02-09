@@ -272,7 +272,7 @@ contributions! But your PR will be labeled ``Needs Testcase`` and
 ``Help Wanted`` until someone can get to write the tests/documentation.
 Of course, if you have a desire but just lack the skill we are more than
 happy to collaborate and help out! There's the `documentation working
-group <https://saltstack.gitlab.io/open/docs/docs-hub/topics/home.html>`__ 
+group <https://saltstack.gitlab.io/open/docs/docs-hub/topics/home.html>`__
 and the `testing working group <https://github.com/saltstack/community/tree/master/working_groups/wg-Testing>`__.
 We also regularly stream our test clinic `live on
 Twitch <https://www.twitch.tv/saltprojectoss>`__ every Tuesday afternoon
@@ -289,7 +289,7 @@ the ``salt/doc`` folder for documentation. Sphinx is used to generate the
 documentation, and does require ``imagemagick``. See `Set up imagemagick`_ for
 more information.
 
-Before submitting a documentation PR, it helps to first build the Salt docs 
+Before submitting a documentation PR, it helps to first build the Salt docs
 locally on your machine and preview them. Local previews helps you:
 
 - Debug potential documentation output errors before submitting a PR.
@@ -297,30 +297,30 @@ locally on your machine and preview them. Local previews helps you:
   more than 30 minutes to run on a PR.
 - Ensures the final output looks the way you intended it to look.
 
-To set up your local environment to preview the core Salt and module 
+To set up your local environment to preview the core Salt and module
 documentation:
 
 #. Install the documentation dependencies. For example, on Ubuntu:
 
    ::
-   
+
        sudo apt-get update
 
        sudo apt-get install -y enchant-2 git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils inkscape
 
-#. Navigate to the folder where you store your Salt repository and remove any 
+#. Navigate to the folder where you store your Salt repository and remove any
    `.nox` directories that might be in that folder:
 
    ::
-   
+
        rm -rf .nox
 
-#. Install `pyenv` for the version of Python needed to run the docs. As of the 
+#. Install `pyenv` for the version of Python needed to run the docs. As of the
    time of writing, the Salt docs theme is not compatible with Python 3.10, so
    you'll need to run 3.9 or earlier. For example:
 
    ::
-   
+
        pyenv install 3.7.15
        pyenv virtualenv 3.7.15 salt-docs
        echo 'salt-docs' > .python-version
@@ -328,14 +328,14 @@ documentation:
 #. Activate `pyenv` if it's not auto-activated:
 
    ::
-   
+
        pyenv exec pip install -U pip setuptools wheel
 
 #. Install `nox` into your pyenv environment, which is the utility that will
    build the Salt documentation:
 
    ::
-   
+
        pyenv exec pip install nox
 
 
@@ -346,7 +346,7 @@ with this one-liner:
 
    python -m nox -e 'docs-html(compress=False, clean=False)'; cd doc/_build/html; python -m webbrowser http://localhost:8000/contents.html; python -m http.server
 
-The first time you build the docs, it will take a while because there are a 
+The first time you build the docs, it will take a while because there are a
 *lot* of modules. Maybe you should go grab some dessert if you already finished
 that sandwich. But once nox and Sphinx are done building the docs, python should
 launch your default browser with the URL
@@ -581,7 +581,7 @@ When you open your PR, a reviewer will get automatically assigned. If
 your PR is submitted during the week you should be able to expect some
 kind of communication within that business day. If your tests are
 passing and we're not in a code freeze, ideally your code will be merged
-that week or month. If you haven't heard from your assigned reviewer, ping them 
+that week or month. If you haven't heard from your assigned reviewer, ping them
 on GitHub, `irc <https://web.libera.chat/#salt>`__, or Community Slack.
 
 It's likely that your reviewer will leave some comments that need

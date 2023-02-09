@@ -169,7 +169,10 @@ autosummary_generate = True
 autosummary_generate_overwrite = False
 
 # In case building docs throws import errors, please add the top level package name below
-autodoc_mock_imports = []
+autodoc_mock_imports = [
+    "cherrypy",
+    "xmltodict",
+]
 
 # strip git rev as there won't necessarily be a release based on it
 stripped_release = re.sub(r"-\d+-g[0-9a-f]+$", "", release)
@@ -205,11 +208,11 @@ rst_prolog = """\
 extlinks = {
     "blob": (
         "https://github.com/saltstack/salt/blob/%s/%%s" % repo_primary_branch,
-        None,
+        "%s",
     ),
-    "issue": ("https://github.com/saltstack/salt/issues/%s", "issue #"),
-    "pull": ("https://github.com/saltstack/salt/pull/%s", "PR #"),
-    "formula_url": ("https://github.com/saltstack-formulas/%s", ""),
+    "issue": ("https://github.com/saltstack/salt/issues/%s", "issue %s"),
+    "pull": ("https://github.com/saltstack/salt/pull/%s", "PR %s"),
+    "formula_url": ("https://github.com/saltstack-formulas/%s", "url %s"),
 }
 
 
