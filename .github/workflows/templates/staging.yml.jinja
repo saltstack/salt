@@ -58,6 +58,63 @@ concurrency:
 
 <%- block jobs %>
   <{- super() }>
+
+  upload-release-artifacts:
+    <%- do conclusion_needs.append('upload-release-artifacts') %>
+    name: Upload Release Artifacts
+    needs:
+      - prepare-workflow
+      - build-docs
+      - build-repositories
+    environment: <{ gh_environment }>
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Download Release Patch
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          path: artifacts/release
+
+      - name: Download Source Tarball
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+          path: artifacts/release
+
+      - name: Download Release Documentation (HTML)
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-html.tar.xz
+          path: artifacts/release
+
+      - name: Download Release Documentation (ePub)
+        uses: actions/download-artifact@v3
+        with:
+          name: Salt-${{ needs.prepare-workflow.outputs.salt-version }}.epub
+          path: artifacts/release
+
+      {#-
+
+      - name: Download Release Documentation (PDF)
+        uses: actions/download-artifact@v3
+        with:
+          name: Salt-${{ needs.prepare-workflow.outputs.salt-version }}.pdf
+          path: artifacts/release
+
+      #}
+
+      - name: Upload Release Artifacts
+        run: |
+          tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
+
   {#- We need the test.pypi.org upload job added here #}
   {#- We need the package upload tests against staging added here #}
 <%- endblock jobs %>
