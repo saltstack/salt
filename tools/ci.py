@@ -640,9 +640,19 @@ def pkg_matrix(ctx: Context, distro_slug: str):
     _matrix = []
     sessions = [
         "test-pkgs-3",
-        "'test-upgrade-pkgs-3(classic=False)'",
     ]
-    if distro_slug not in ["centosstream-9", "ubuntu-22.04"]:
+    if distro_slug not in [
+        "debian-11-arm64",
+        "ubuntu-20.04-arm64",
+        "ubuntu-22.04-arm64",
+    ]:
+        # These OS's never had arm64 packages built for them
+        # with the tiamate onedir packages.
+        # we will need to ensure when we release 3006.0
+        # we allow for 3006.0 jobs to run, because then
+        # we will have arm64 onedir packages to upgrade from
+        sessions.append("'test-upgrade-pkgs-3(classic=False)'")
+    if distro_slug not in ["centosstream-9", "ubuntu-22.04", "ubuntu-22.04-arm64"]:
         # Packages for these OSs where never built for classic previously
         sessions.append("'test-upgrade-pkgs-3(classic=True)'")
 
