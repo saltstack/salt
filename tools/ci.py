@@ -312,10 +312,18 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
     }
     if required_test_changes == {"false"}:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("De-selecting the 'test' and 'test-pkg' jobs.\n")
-        jobs["test"] = jobs["test-pkg"] = False
+            wfh.write("De-selecting the 'test' job.\n")
+        jobs["test"] = False
 
-    if not jobs["test"]:
+    required_pkg_test_changes: set[str] = {
+        changed_files_contents["pkg_tests"],
+    }
+    if required_pkg_test_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'test-pkg' job.\n")
+        jobs["test-pkg"] = False
+
+    if not jobs["test"] and not jobs["pkg-test"]:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             for job in (
                 "build-source-tarball",
