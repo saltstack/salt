@@ -141,12 +141,16 @@ jobs:
             golden_images:
               - added|modified:
                 - cicd/golden-images.json
+            pkg-tests:
+              - added|modified: &pkg_tests_added_modified
+                - pkg/tests/**/*.py
             testrun:
               - added|modified:
                 - *pkg_requirements
                 - *test_requirements
                 - *salt_added_modified
                 - *tests_added_modified
+                - *pkg_tests_added_modified
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
