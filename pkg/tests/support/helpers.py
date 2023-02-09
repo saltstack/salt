@@ -466,10 +466,14 @@ class SaltPkgInstall:
                 # Install the package
                 log.debug("Installing: %s", str(pkg))
                 ret = self.proc.run(str(pkg), "/start-minion=0", "/S")
+                log.debug("Installing return: %s", str(ret))
                 self._check_retcode(ret)
                 # Remove the service installed by the installer
                 log.debug("Removing installed salt-minion service")
-                self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
+                ret2 = self.proc.run(
+                    str(self.ssm_bin), "remove", "salt-minion", "confirm"
+                )
+                log.debug("Removing return: %s", str(ret))
             elif pkg.endswith("msi"):
                 # Install the package
                 log.debug("Installing: %s", str(pkg))

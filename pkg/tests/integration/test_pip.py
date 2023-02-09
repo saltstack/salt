@@ -9,7 +9,7 @@ from pytestskipmarkers.utils import platform
 @pytest.fixture
 def pypath():
     if platform.is_windows():
-        return pathlib.Path(os.getenv("ProgramFiles"), "Salt Project", "Salt")
+        return pathlib.Path(os.getenv("ProgramFiles"), "Salt Project", "Salt", "bin")
     elif platform.is_darwin():
         return pathlib.Path(f"{os.sep}opt", "salt", "bin")
     else:
