@@ -261,7 +261,7 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
 
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(
-                f"All defined jobs will run due to event type of {event_name!r}.\n"
+                f"All defined jobs will run due to event type of `{event_name}`.\n"
             )
         return
 
@@ -368,7 +368,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             wfh.write(f"testrun={json.dumps(testrun)}\n")
 
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write(f"Full test run chosen due to event type of {event_name!r}.\n")
+            wfh.write(f"Full test run chosen due to event type of `{event_name}`.\n")
         return
 
     if not changed_files.exists():
