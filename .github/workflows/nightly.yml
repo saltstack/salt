@@ -100,9 +100,11 @@ jobs:
             golden_images:
               - added|modified:
                 - cicd/golden-images.json
-            pkg-tests:
+            pkg_tests:
               - added|modified: &pkg_tests_added_modified
-                - pkg/tests/**/*.py
+                - pkg/**
+                - *pkg_requirements
+                - *salt_added_modified
             testrun:
               - added|modified:
                 - *pkg_requirements
