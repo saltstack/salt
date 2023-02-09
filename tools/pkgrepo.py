@@ -208,6 +208,7 @@ def debian(
         rc_build=rc_build,
         nightly_build=nightly_build,
     )
+
     ftp_archive_config_file = create_repo_path / "apt-ftparchive.conf"
     ctx.info(f"Writing {ftp_archive_config_file} ...")
     ftp_archive_config_file.write_text(textwrap.dedent(ftp_archive_config))
@@ -294,15 +295,27 @@ def debian(
     ctx.info(f"Running '{' '.join(cmdline)}' ...")
     ctx.run(*cmdline, cwd=create_repo_path)
     if nightly_build is False:
-        ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
+        remote_versions = _get_remote_versions(
+            tools.utils.STAGING_BUCKET_NAME,
+            create_repo_path.parent.relative_to(repo_path),
+        )
         major_version = Version(salt_version).major
-        major_link = create_repo_path.parent.parent / str(major_version)
-        major_link.symlink_to(f"minor/{salt_version}")
-        latest_link = create_repo_path.parent.parent / "latest"
-        latest_link.symlink_to(f"minor/{salt_version}")
+        matching_major = None
+        for version in remote_versions:
+            if version.major == major_version:
+                matching_major = version
+                break
+        if not matching_major or matching_major < salt_version:
+            major_link = create_repo_path.parent.parent / str(major_version)
+            ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
+            major_link.symlink_to(f"minor/{salt_version}")
+        if not remote_versions or remote_versions[0] < salt_version:
+            latest_link = create_repo_path.parent.parent / "latest"
+            ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
+            latest_link.symlink_to(f"minor/{salt_version}")
     else:
-        ctx.info("Creating 'latest' symlink ...")
         latest_link = create_repo_path.parent / "latest"
+        ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
         latest_link.symlink_to(create_repo_path.name)
 
     ctx.info("Done")
@@ -487,18 +500,31 @@ def rpm(
     _create_repo_file(repo_file_path, salt_version)
 
     if nightly_build is False and rc_build is False:
-        ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
+        remote_versions = _get_remote_versions(
+            tools.utils.STAGING_BUCKET_NAME,
+            create_repo_path.parent.relative_to(repo_path),
+        )
         major_version = Version(salt_version).major
-        major_link = create_repo_path.parent.parent / str(major_version)
-        major_link.symlink_to(f"minor/{salt_version}")
-        latest_link = create_repo_path.parent.parent / "latest"
-        latest_link.symlink_to(f"minor/{salt_version}")
-        for name in (major_version, "latest"):
-            repo_file_path = create_repo_path.parent.parent / f"{name}.repo"
-            _create_repo_file(repo_file_path, name)
+        matching_major = None
+        for version in remote_versions:
+            if version.major == major_version:
+                matching_major = version
+                break
+        if not matching_major or matching_major < salt_version:
+            major_link = create_repo_path.parent.parent / str(major_version)
+            ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
+            major_link.symlink_to(f"minor/{salt_version}")
+            repo_file_path = create_repo_path.parent.parent / f"{major_version}.repo"
+            _create_repo_file(repo_file_path, str(major_version))
+        if not remote_versions or remote_versions[0] < salt_version:
+            latest_link = create_repo_path.parent.parent / "latest"
+            ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
+            latest_link.symlink_to(f"minor/{salt_version}")
+            repo_file_path = create_repo_path.parent.parent / "latest.repo"
+            _create_repo_file(repo_file_path, "latest")
     else:
-        ctx.info("Creating 'latest' symlink and 'latest.repo' file ...")
         latest_link = create_repo_path.parent / "latest"
+        ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
         latest_link.symlink_to(create_repo_path.name)
         repo_file_path = create_repo_path.parent.parent / "latest.repo"
         _create_repo_file(repo_file_path, "latest")
@@ -734,6 +760,29 @@ def release(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
     """
     Publish to the release bucket.
     """
+
+
+def _get_remote_versions(bucket_name: str, remote_path: str):
+    remote_path = str(remote_path)
+    if not remote_path.endswith("/"):
+        remote_path += "/"
+
+    s3 = boto3.client("s3")
+    ret = s3.list_objects(
+        Bucket=bucket_name,
+        Delimiter="/",
+        Prefix=remote_path,
+    )
+    if "CommonPrefixes" not in ret:
+        return []
+    versions = []
+    for entry in ret["CommonPrefixes"]:
+        _, version = entry["Prefix"].rstrip("/").rsplit("/", 1)
+        if version == "latest":
+            continue
+        versions.append(Version(version))
+    versions.sort(reverse=True)
+    return versions
 
 
 def _create_onedir_based_repo(
