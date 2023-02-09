@@ -478,7 +478,18 @@ class SaltPkgInstall:
             elif pkg.endswith("msi"):
                 # Install the package
                 log.debug("Installing: %s", str(pkg))
-                ret = self.proc.run("cmd", "/c", "msiexec.exe", "/qn", "/i", str(pkg), 'START_MINION=""', "&&", "exit", "ERRORLEVEL")
+                ret = self.proc.run(
+                    "cmd",
+                    "/c",
+                    "msiexec.exe",
+                    "/qn",
+                    "/i",
+                    str(pkg),
+                    'START_MINION=""',
+                    "&&",
+                    "exit",
+                    "ERRORLEVEL",
+                )
                 self._check_retcode(ret)
                 # Remove the service installed by the installer
                 log.debug("Removing installed salt-minion service")
@@ -655,7 +666,18 @@ class SaltPkgInstall:
                 ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
                 self._check_retcode(ret)
             elif win_pkg.endswith("msi"):
-                ret = self.proc.run("cmd", "/c", "msiexec.exe", "/qn", "/i", pkg_path, 'START_MINION=""', "&&", "exit", "ERRORLEVEL")
+                ret = self.proc.run(
+                    "cmd",
+                    "/c",
+                    "msiexec.exe",
+                    "/qn",
+                    "/i",
+                    pkg_path,
+                    'START_MINION=""',
+                    "&&",
+                    "exit",
+                    "ERRORLEVEL",
+                )
                 self._check_retcode(ret)
             else:
                 log.error("Unknown package type: %s", pkg_path)
@@ -747,7 +769,9 @@ class SaltPkgInstall:
                 ret = self.proc.run(uninst, "/S")
                 self._check_retcode(ret)
             elif pkg.endswith("msi"):
-                ret = self.proc.run("cmd", "/c", "msiexec.exe", "/qn", "/x", pkg, "&&", "exit", "0")
+                ret = self.proc.run(
+                    "cmd", "/c", "msiexec.exe", "/qn", "/x", pkg, "&&", "exit", "ERRORLEVEL"
+                )
                 # self._check_retcode(ret)
         if platform.is_darwin():
             # From here: https://stackoverflow.com/a/46118276/4581998
