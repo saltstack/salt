@@ -890,6 +890,10 @@ def _create_onedir_based_repo(
         )
         minor_repo_json[salt_version] = release_json
         minor_versions = _parse_versions(*list(minor_repo_json))
+        ctx.info(
+            f"Collected versions from {minor_repo_json_path.relative_to(repo_path)}: "
+            f"{', '.join(str(vs) for vs in minor_versions)}"
+        )
         if not minor_versions:
             minor_latest_version = Version(salt_version)
         else:
@@ -897,29 +901,45 @@ def _create_onedir_based_repo(
         if str(minor_latest_version) not in minor_repo_json:
             minor_latest_version = Version(salt_version)
 
+        ctx.info(f"Minor Latest Version: {minor_latest_version}")
+
         major_version = Version(salt_version).major
+        major_link = create_repo_path.parent.parent / str(major_version)
         if minor_latest_version <= salt_version:
             minor_repo_json["latest"] = release_json
             # This is the latest minor, update the major in the top level repo.json
             # to this version
             repo_json[str(major_version)] = release
-            major_link = create_repo_path.parent.parent / str(major_version)
             ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
             if major_link.exists():
                 major_link.unlink()
             major_link.symlink_to(f"minor/{salt_version}")
+        else:
+            ctx.info(
+                f"Not creating the '{major_link.relative_to(repo_path)}' symlink "
+                f"since {minor_latest_version} > {salt_version}"
+            )
 
         ctx.info(f"Writing {minor_repo_json_path} ...")
         minor_repo_json_path.write_text(json.dumps(minor_repo_json, sort_keys=True))
 
         major_versions = _parse_versions(*list(repo_json))
+        ctx.info(
+            f"Collected versions from {repo_json_path.relative_to(repo_path)}: "
+            f"{', '.join(str(vs) for vs in major_versions)}"
+        )
+        latest_link = create_repo_path.parent.parent / "latest"
         if major_versions[0].major <= major_version:
             repo_json["latest"] = release_json
-            latest_link = create_repo_path.parent.parent / "latest"
             ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
             if latest_link.exists():
                 latest_link.unlink()
             latest_link.symlink_to(f"minor/{salt_version}")
+        else:
+            ctx.info(
+                f"Not creating the '{latest_link.relative_to(repo_path)}' symlink "
+                f"since {major_versions[0].major} > {major_version}"
+            )
     else:
         latest_link = create_repo_path.parent / "latest"
         ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
