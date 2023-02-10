@@ -456,10 +456,6 @@ def rpm(
             base_url = "py3/"
             repo_file_contents = "[salt-repo]"
         base_url += f"{distro}/{url_suffix}"
-        if distro_version == "9":
-            gpg_key = f"{base_url}/SALTSTACK-GPG-KEY2.pub"
-        else:
-            gpg_key = f"{base_url}/SALTSTACK-GPG-KEY.pub"
         if distro == "amazon":
             distro_name = "Amazon Linux"
         else:
@@ -478,7 +474,7 @@ def rpm(
         enabled=1
         enabled_metadata=1
         gpgcheck=1
-        gpgkey={gpg_key}
+        gpgkey={base_url}/{tools.utils.GPG_KEY_FILENAME}.pub
         """
 
     if nightly_build:
