@@ -715,6 +715,84 @@ def onedir(
     ctx.info("Done")
 
 
+@create.command(
+    name="src",
+    arguments={
+        "salt_version": {
+            "help": "The salt version for which to build the repository",
+            "required": True,
+        },
+        "repo_path": {
+            "help": "Path where the repository shall be created.",
+            "required": True,
+        },
+        "key_id": {
+            "help": "The GnuPG key ID used to sign.",
+            "required": True,
+        },
+        "incoming": {
+            "help": (
+                "The path to the directory containing the files that should added to "
+                "the repository."
+            ),
+            "required": True,
+        },
+        "nightly_build": {
+            "help": "Developement repository target",
+        },
+        "rc_build": {
+            "help": "Release Candidate repository target",
+        },
+    },
+)
+def src(
+    ctx: Context,
+    salt_version: str = None,
+    incoming: pathlib.Path = None,
+    repo_path: pathlib.Path = None,
+    key_id: str = None,
+    nightly_build: bool = False,
+    rc_build: bool = False,
+):
+    """
+    Create the onedir repository.
+    """
+    if TYPE_CHECKING:
+        assert salt_version is not None
+        assert incoming is not None
+        assert repo_path is not None
+        assert key_id is not None
+
+    ctx.info("Creating repository directory structure ...")
+    create_repo_path = _create_repo_path(
+        repo_path,
+        salt_version,
+        "src",
+        rc_build=rc_build,
+        nightly_build=nightly_build,
+    )
+    hashes_base_path = create_repo_path / f"salt-{salt_version}"
+    for fpath in incoming.iterdir():
+        if fpath.suffix not in (".gz",):
+            continue
+        ctx.info(f"* Processing {fpath} ...")
+        dpath = create_repo_path / fpath.name
+        ctx.info(f"Copying {fpath} to {dpath} ...")
+        shutil.copyfile(fpath, dpath)
+        for hash_name in ("blake2b", "sha512", "sha3_512"):
+            ctx.info(f"   * Calculating {hash_name} ...")
+            hexdigest = _get_file_checksum(fpath, hash_name)
+            with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
+                wfh.write(f"{hexdigest} {dpath.name}\n")
+
+    for fpath in create_repo_path.iterdir():
+        tools.utils.gpg_sign(ctx, key_id, fpath)
+
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+    ctx.info("Done")
+
+
 @publish.command(
     arguments={
         "repo_path": {
@@ -1113,7 +1191,9 @@ def _create_repo_path(
     if distro_arch:
         create_repo_path = create_repo_path / distro_arch
     if nightly_build is False:
-        create_repo_path = create_repo_path / "minor" / salt_version
+        if distro != "src":
+            create_repo_path = create_repo_path / "minor"
+        create_repo_path = create_repo_path / salt_version
     else:
         create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
     create_repo_path.mkdir(exist_ok=True, parents=True)

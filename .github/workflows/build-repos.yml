@@ -25,6 +25,17 @@ env:
   COLUMNS: 160
 
 jobs:
+  build-src:
+    name: Build Source Repository
+    uses: ./.github/workflows/build-src-repo.yml
+    with:
+      environment: ${{ inputs.environment }}
+      salt-version: "${{ inputs.salt-version }}"
+      nightly-build: ${{ inputs.nightly-build }}
+      rc-build: ${{ inputs.rc-build }}
+    secrets:
+      SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+
   build-deb:
     name: Build DEB Repositories
     uses: ./.github/workflows/build-deb-repo.yml
