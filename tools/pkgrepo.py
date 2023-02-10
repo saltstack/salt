@@ -958,74 +958,78 @@ def _create_onedir_based_repo(
     repo_json = _get_repo_json_file_contents(
         ctx, bucket_name=bucket_name, repo_path=repo_path, repo_json_path=repo_json_path
     )
-    if nightly_build is False:
-        major_version = Version(salt_version).major
-        minor_repo_json_path = create_repo_path.parent / "repo.json"
-        minor_repo_json = _get_repo_json_file_contents(
-            ctx,
-            bucket_name=bucket_name,
-            repo_path=repo_path,
-            repo_json_path=minor_repo_json_path,
-        )
-        minor_repo_json[salt_version] = release_json
-        versions = _parse_versions(*list(minor_repo_json))
-        ctx.info(
-            f"Collected versions from {minor_repo_json_path.relative_to(repo_path)}: "
-            f"{', '.join(str(vs) for vs in versions)}"
-        )
-        minor_versions = [v for v in versions if v.major == major_version]
-        ctx.info(
-            f"Collected versions(Matching major: {major_version}) from {minor_repo_json_path.relative_to(repo_path)}: "
-            f"{', '.join(str(vs) for vs in minor_versions)}"
-        )
-        if not versions:
-            latest_version = Version(salt_version)
-        else:
-            latest_version = versions[0]
-        if not minor_versions:
-            latest_minor_version = Version(salt_version)
-        else:
-            latest_minor_version = minor_versions[0]
-
-        ctx.info(f"Release Version: {salt_version}")
-        ctx.info(f"Latest Repo Version: {latest_version}")
-        ctx.info(f"Latest Release Minor Version: {latest_minor_version}")
-
-        latest_link = create_repo_path.parent.parent / "latest"
-        if latest_version <= salt_version:
-            repo_json["latest"] = release_json
-            ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
-            if latest_link.exists():
-                latest_link.unlink()
-            latest_link.symlink_to(f"minor/{salt_version}")
-        else:
-            ctx.info(
-                f"Not creating the '{latest_link.relative_to(repo_path)}' symlink "
-                f"since {latest_version} > {salt_version}"
-            )
-
-        major_link = create_repo_path.parent.parent / str(major_version)
-        if latest_minor_version <= salt_version:
-            minor_repo_json["latest"] = release_json
-            # This is the latest minor, update the major in the top level repo.json
-            # to this version
-            repo_json[str(major_version)] = release_json
-            ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
-            if major_link.exists():
-                major_link.unlink()
-            major_link.symlink_to(f"minor/{salt_version}")
-        else:
-            ctx.info(
-                f"Not creating the '{major_link.relative_to(repo_path)}' symlink "
-                f"since {latest_minor_version} > {salt_version}"
-            )
-
-        ctx.info(f"Writing {minor_repo_json_path} ...")
-        minor_repo_json_path.write_text(json.dumps(minor_repo_json, sort_keys=True))
-    else:
+    if nightly_build is True:
         latest_link = create_repo_path.parent / "latest"
         ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
         latest_link.symlink_to(create_repo_path.name)
+
+        ctx.info(f"Writing {repo_json_path} ...")
+        repo_json_path.write_text(json.dumps(repo_json, sort_keys=True))
+        return
+
+    major_version = Version(salt_version).major
+    minor_repo_json_path = create_repo_path.parent / "repo.json"
+    minor_repo_json = _get_repo_json_file_contents(
+        ctx,
+        bucket_name=bucket_name,
+        repo_path=repo_path,
+        repo_json_path=minor_repo_json_path,
+    )
+    minor_repo_json[salt_version] = release_json
+    versions = _parse_versions(*list(minor_repo_json))
+    ctx.info(
+        f"Collected versions from {minor_repo_json_path.relative_to(repo_path)}: "
+        f"{', '.join(str(vs) for vs in versions)}"
+    )
+    minor_versions = [v for v in versions if v.major == major_version]
+    ctx.info(
+        f"Collected versions(Matching major: {major_version}) from {minor_repo_json_path.relative_to(repo_path)}: "
+        f"{', '.join(str(vs) for vs in minor_versions)}"
+    )
+    if not versions:
+        latest_version = Version(salt_version)
+    else:
+        latest_version = versions[0]
+    if not minor_versions:
+        latest_minor_version = Version(salt_version)
+    else:
+        latest_minor_version = minor_versions[0]
+
+    ctx.info(f"Release Version: {salt_version}")
+    ctx.info(f"Latest Repo Version: {latest_version}")
+    ctx.info(f"Latest Release Minor Version: {latest_minor_version}")
+
+    latest_link = create_repo_path.parent.parent / "latest"
+    if latest_version <= salt_version:
+        repo_json["latest"] = release_json
+        ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
+        if latest_link.exists():
+            latest_link.unlink()
+        latest_link.symlink_to(f"minor/{salt_version}")
+    else:
+        ctx.info(
+            f"Not creating the '{latest_link.relative_to(repo_path)}' symlink "
+            f"since {latest_version} > {salt_version}"
+        )
+
+    major_link = create_repo_path.parent.parent / str(major_version)
+    if latest_minor_version <= salt_version:
+        minor_repo_json["latest"] = release_json
+        # This is the latest minor, update the major in the top level repo.json
+        # to this version
+        repo_json[str(major_version)] = release_json
+        ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
+        if major_link.exists():
+            major_link.unlink()
+        major_link.symlink_to(f"minor/{salt_version}")
+    else:
+        ctx.info(
+            f"Not creating the '{major_link.relative_to(repo_path)}' symlink "
+            f"since {latest_minor_version} > {salt_version}"
+        )
+
+    ctx.info(f"Writing {minor_repo_json_path} ...")
+    minor_repo_json_path.write_text(json.dumps(minor_repo_json, sort_keys=True))
 
     ctx.info(f"Writing {repo_json_path} ...")
     repo_json_path.write_text(json.dumps(repo_json, sort_keys=True))
