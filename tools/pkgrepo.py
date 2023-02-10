@@ -4,6 +4,7 @@ These commands are used to build the pacakge repository files.
 # pylint: disable=resource-leakage,broad-except
 from __future__ import annotations
 
+import fnmatch
 import hashlib
 import json
 import logging
@@ -11,6 +12,7 @@ import os
 import pathlib
 import shutil
 import sys
+import tempfile
 import textwrap
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
@@ -827,18 +829,271 @@ def staging(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
 
 @publish.command(
     arguments={
-        "repo_path": {
-            "help": "Local path for the repository that shall be published.",
+        "salt_version": {
+            "help": "The salt version to release.",
         },
         "rc_build": {
             "help": "Release Candidate repository target",
         },
     }
 )
-def release(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
+def release(ctx: Context, salt_version: str, rc_build: bool = False):
     """
     Publish to the release bucket.
     """
+    if rc_build:
+        bucket_folder = "salt_rc/py3"
+    else:
+        bucket_folder = "salt/py3"
+
+    files_to_copy: list[str]
+    files_to_delete: list[str] = []
+    files_to_duplicate: list[tuple[str, str]] = []
+
+    ctx.info("Grabing remote file listing of files to copy...")
+
+    glob_match = f"{bucket_folder}/**/minor/{salt_version}/**"
+    files_to_copy = _get_repo_file_list(
+        bucket_name=tools.utils.STAGING_BUCKET_NAME,
+        bucket_folder=bucket_folder,
+        glob_match=glob_match,
+    )
+    glob_match = f"{bucket_folder}/**/src/{salt_version}/**"
+    files_to_copy.extend(
+        _get_repo_file_list(
+            bucket_name=tools.utils.STAGING_BUCKET_NAME,
+            bucket_folder=bucket_folder,
+            glob_match=glob_match,
+        )
+    )
+
+    if not files_to_copy:
+        ctx.error(f"Could not find any files related to the '{salt_version}' release.")
+        ctx.exit(1)
+
+    onedir_listing: dict[str, list[str]] = {}
+    s3 = boto3.client("s3")
+    with tools.utils.create_progress_bar() as progress:
+        task = progress.add_task(
+            "Copying files between buckets", total=len(files_to_copy)
+        )
+        for fpath in files_to_copy:
+            if fpath.startswith(f"{bucket_folder}/windows/"):
+                if "windows" not in onedir_listing:
+                    onedir_listing["windows"] = []
+                onedir_listing["windows"].append(fpath)
+            elif fpath.startswith(f"{bucket_folder}/macos/"):
+                if "macos" not in onedir_listing:
+                    onedir_listing["macos"] = []
+                onedir_listing["macos"].append(fpath)
+            elif fpath.startswith(f"{bucket_folder}/onedir/"):
+                if "onedir" not in onedir_listing:
+                    onedir_listing["onedir"] = []
+                onedir_listing["onedir"].append(fpath)
+            ctx.info(f" * Copying {fpath}")
+            try:
+                s3.copy_object(
+                    Bucket=tools.utils.RELEASE_BUCKET_NAME,
+                    Key=fpath,
+                    CopySource={
+                        "Bucket": tools.utils.STAGING_BUCKET_NAME,
+                        "Key": fpath,
+                    },
+                    MetadataDirective="COPY",
+                    TaggingDirective="COPY",
+                    ServerSideEncryption="aws:kms",
+                )
+            except ClientError:
+                log.exception(f"Failed to copy {fpath}")
+            finally:
+                progress.update(task, advance=1)
+
+    # Now let's get the onedir based repositories where we need to update several repo.json
+    major_version = packaging.version.parse(salt_version).major
+    with tempfile.TemporaryDirectory(prefix=f"{salt_version}_release_") as tsd:
+        repo_path = pathlib.Path(tsd)
+        for distro in ("windows", "macos", "onedir"):
+
+            create_repo_path = _create_repo_path(
+                repo_path,
+                salt_version,
+                distro,
+                rc_build=rc_build,
+            )
+            repo_json_path = create_repo_path.parent.parent / "repo.json"
+
+            release_repo_json = _get_repo_json_file_contents(
+                ctx,
+                bucket_name=tools.utils.RELEASE_BUCKET_NAME,
+                repo_path=repo_path,
+                repo_json_path=repo_json_path,
+            )
+            minor_repo_json_path = create_repo_path.parent / "repo.json"
+
+            staging_minor_repo_json = _get_repo_json_file_contents(
+                ctx,
+                bucket_name=tools.utils.STAGING_BUCKET_NAME,
+                repo_path=repo_path,
+                repo_json_path=minor_repo_json_path,
+            )
+            release_minor_repo_json = _get_repo_json_file_contents(
+                ctx,
+                bucket_name=tools.utils.RELEASE_BUCKET_NAME,
+                repo_path=repo_path,
+                repo_json_path=minor_repo_json_path,
+            )
+
+            release_json = staging_minor_repo_json[salt_version]
+
+            major_version = Version(salt_version).major
+            versions = _parse_versions(*list(release_minor_repo_json))
+            ctx.info(
+                f"Collected versions from {minor_repo_json_path.relative_to(repo_path)}: "
+                f"{', '.join(str(vs) for vs in versions)}"
+            )
+            minor_versions = [v for v in versions if v.major == major_version]
+            ctx.info(
+                f"Collected versions(Matching major: {major_version}) from {minor_repo_json_path.relative_to(repo_path)}: "
+                f"{', '.join(str(vs) for vs in minor_versions)}"
+            )
+            if not versions:
+                latest_version = Version(salt_version)
+            else:
+                latest_version = versions[0]
+            if not minor_versions:
+                latest_minor_version = Version(salt_version)
+            else:
+                latest_minor_version = minor_versions[0]
+
+            ctx.info(f"Release Version: {salt_version}")
+            ctx.info(f"Latest Repo Version: {latest_version}")
+            ctx.info(f"Latest Release Minor Version: {latest_minor_version}")
+
+            # Add the minor version
+            release_minor_repo_json[salt_version] = release_json
+
+            if latest_version <= salt_version:
+                release_repo_json["latest"] = release_json
+                glob_match = f"{bucket_folder}/{distro}/**/latest/**"
+                files_to_delete.extend(
+                    _get_repo_file_list(
+                        bucket_name=tools.utils.RELEASE_BUCKET_NAME,
+                        bucket_folder=bucket_folder,
+                        glob_match=glob_match,
+                    )
+                )
+                for fpath in onedir_listing[distro]:
+                    files_to_duplicate.append(
+                        (fpath, fpath.replace(f"minor/{salt_version}", "latest"))
+                    )
+
+            if latest_minor_version <= salt_version:
+                release_minor_repo_json["latest"] = release_json
+                glob_match = f"{bucket_folder}/{distro}/**/{major_version}/**"
+                files_to_delete.extend(
+                    _get_repo_file_list(
+                        bucket_name=tools.utils.RELEASE_BUCKET_NAME,
+                        bucket_folder=bucket_folder,
+                        glob_match=glob_match,
+                    )
+                )
+                for fpath in onedir_listing[distro]:
+                    files_to_duplicate.append(
+                        (
+                            fpath,
+                            fpath.replace(f"minor/{salt_version}", str(major_version)),
+                        )
+                    )
+
+            ctx.info(f"Writing {minor_repo_json_path} ...")
+            minor_repo_json_path.write_text(
+                json.dumps(release_minor_repo_json, sort_keys=True)
+            )
+            ctx.info(f"Writing {repo_json_path} ...")
+            repo_json_path.write_text(json.dumps(release_repo_json, sort_keys=True))
+
+        if files_to_delete:
+            with tools.utils.create_progress_bar() as progress:
+                task = progress.add_task(
+                    "Deleting directories to override.", total=len(files_to_delete)
+                )
+                try:
+                    s3.delete_objects(
+                        Bucket=tools.utils.RELEASE_BUCKET_NAME,
+                        Delete={
+                            "Objects": [
+                                {"Key": path for path in files_to_delete},
+                            ]
+                        },
+                    )
+                except ClientError:
+                    log.exception("Failed to delete remote files")
+                finally:
+                    progress.update(task, advance=1)
+
+        with tools.utils.create_progress_bar() as progress:
+            task = progress.add_task(
+                "Copying files between buckets", total=len(files_to_duplicate)
+            )
+            for src, dst in files_to_duplicate:
+                ctx.info(f" * Copying {src}\n        -> {dst}")
+                try:
+                    s3.copy_object(
+                        Bucket=tools.utils.RELEASE_BUCKET_NAME,
+                        Key=dst,
+                        CopySource={
+                            "Bucket": tools.utils.STAGING_BUCKET_NAME,
+                            "Key": src,
+                        },
+                        MetadataDirective="COPY",
+                        TaggingDirective="COPY",
+                        ServerSideEncryption="aws:kms",
+                    )
+                except ClientError:
+                    log.exception(f"Failed to copy {fpath}")
+                finally:
+                    progress.update(task, advance=1)
+
+        for dirpath, dirnames, filenames in os.walk(repo_path, followlinks=True):
+            for path in filenames:
+                upload_path = pathlib.Path(dirpath, path)
+                relpath = upload_path.relative_to(repo_path)
+                size = upload_path.stat().st_size
+                ctx.info(f"  {relpath}")
+                with tools.utils.create_progress_bar(file_progress=True) as progress:
+                    task = progress.add_task(description="Uploading...", total=size)
+                    s3.upload_file(
+                        str(upload_path),
+                        tools.utils.RELEASE_BUCKET_NAME,
+                        str(relpath),
+                        Callback=tools.utils.UpdateProgress(progress, task),
+                    )
+
+
+def _get_repo_file_list(
+    bucket_name: str, bucket_folder: str, glob_match: str
+) -> list[str]:
+    s3 = boto3.client("s3")
+    matches: list[str] = []
+    continuation_token = None
+    while True:
+        kwargs: dict[str, str] = {}
+        if continuation_token:
+            kwargs["ContinuationToken"] = continuation_token
+        ret = s3.list_objects_v2(
+            Bucket=bucket_name,
+            Prefix=bucket_folder,
+            FetchOwner=False,
+            **kwargs,
+        )
+        contents = ret.pop("Contents", None)
+        if contents is None:
+            break
+        matches.extend(fnmatch.filter([e["Key"] for e in contents], glob_match))
+        if not ret["IsTruncated"]:
+            break
+        continuation_token = ret["NextContinuationToken"]
+    return matches
 
 
 def _get_remote_versions(bucket_name: str, remote_path: str):
@@ -1048,7 +1303,9 @@ def _get_repo_json_file_contents(
         ret = s3.head_object(
             Bucket=bucket_name, Key=str(repo_json_path.relative_to(repo_path))
         )
-        ctx.info(f"Downloading existing '{repo_json_path.relative_to(repo_path)}' file")
+        ctx.info(
+            f"Downloading existing '{repo_json_path.relative_to(repo_path)}' file from bucket {bucket_name}"
+        )
         size = ret["ContentLength"]
         with repo_json_path.open("wb") as wfh:
             with tools.utils.create_progress_bar(file_progress=True) as progress:
