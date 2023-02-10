@@ -39,12 +39,6 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
-      - name: Download Windows Packages
-        uses: actions/download-artifact@v3
-        with:
-          name: salt-${{ inputs.salt-version }}-x86-windows-pkgs
-          path: artifacts/pkgs/incoming
-
       - name: Download Linux x86_64 Onedir Archive
         uses: actions/download-artifact@v3
         with:
