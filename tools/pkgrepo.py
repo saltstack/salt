@@ -842,10 +842,24 @@ def _create_onedir_based_repo(
                 f"Cannot pickup the right architecture from the filename '{dpath.name}'."
             )
             ctx.exit(1)
+        if distro == "onedir":
+            if "-onedir-linux-" in dpath.name.lower():
+                release_os = "linux"
+            elif "-onedir-darwin-" in dpath.name.lower():
+                release_os = "macos"
+            elif "-onedir-windows-" in dpath.name.lower():
+                release_os = "windows"
+            else:
+                ctx.error(
+                    f"Cannot pickup the right OS from the filename '{dpath.name}'."
+                )
+                ctx.exit(1)
+        else:
+            release_os = distro
         release_json[dpath.name] = {
             "name": dpath.name,
             "version": salt_version,
-            "os": distro,
+            "os": release_os,
             "arch": arch,
         }
         for hash_name in ("blake2b", "sha512", "sha3_512"):
