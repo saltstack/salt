@@ -1,0 +1,1 @@
+When copying ssh_pre_flight script to target host, ensure the destination directory exists prior to copy.

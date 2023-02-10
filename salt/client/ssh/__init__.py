@@ -1009,7 +1009,7 @@ class Single:
         """
         script = os.path.join(tempfile.gettempdir(), self.ssh_pre_file)
 
-        self.shell.send(self.ssh_pre_flight, script)
+        self.shell.send(self.ssh_pre_flight, script, makedirs=True)
 
         return self.execute_script(script, script_args=self.ssh_pre_flight_args)
 
