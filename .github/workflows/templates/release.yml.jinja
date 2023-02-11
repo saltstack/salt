@@ -64,19 +64,80 @@ permissions:
           ssh-key: ${{ secrets.GHA_SSH_KEY }}
           fetch-depth: 0  # Full clone to also get the tags
 
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup GnuPG
+        run: |
+          sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
+          GNUPGHOME="$(mktemp -d -p /run/gpg)"
+          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
+          cat <<EOF > "${GNUPGHOME}/gpg.conf"
+          batch
+          no-tty
+          pinentry-mode loopback
+          EOF
+
+      - name: Get Secrets
+        env:
+          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+        run: |
+          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
+          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256-2023 \
+            --query SecretString --output text | jq .default_key -r | base64 -d \
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -d - \
+            | gpg --import -
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256-2023 \
+            --query SecretString --output text| jq .default_passphrase -r | base64 -d \
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o "${GNUPGHOME}/passphrase" -d -
+          rm "$SECRETS_KEY_FILE"
+          echo "passphrase-file ${GNUPGHOME}/passphrase" >> "${GNUPGHOME}/gpg.conf"
+
       - name: Configure Git
         shell: bash
         run: |
           git config --global user.name "Salt Project Packaging"
           git config --global user.email saltproject-packaging@vmware.com
+          git config --global user.signingkey 64CBBC8173D76B3F
+          git config --global commit.gpgsign true
 
-      - name: Download The Release Artifacts
+      - name: Release Salt ${{ inputs.salt-version }}
+        id: release
         run: |
-          aws --region us-west-2 s3 cp --recursive s3://salt-project-prod-salt-artifacts-staging/release-artifacts/${{ inputs.salt-version }}/ release-artifacts
-      - name: Apply Release Patch
-        shell: bash
+          tools pkg repo publish release ${{ inputs.salt-version }}
+
+      - name: Apply The Release Patch
         run: |
           git am --committer-date-is-author-date release-artifacts/salt-${{ inputs.salt-version }}.patch
+          rm release-artifacts/salt-${{ inputs.salt-version }}.patch
+
+      - name: Tag The v${{ inputs.salt-version }} Release
+        run: |
+          git tag -m "Release v${{ inputs.salt-version }}" -as v${{ inputs.salt-version }}
+
+      - name: Push Changes
+        uses: ad-m/github-push-action@v0.6.0
+        with:
+          ssh: true
+          tags: true
+          atomic: true
+
+      - name: Create Github Release
+        uses: ncipollo/release-action@v1.12.0
+        with:
+          artifactErrorsFailBuild: true
+          artifacts: ${{ steps.release.outputs.release-artifacts }}
+          bodyFile: ${{ steps.release.outputs.release-messsage-file }}
+          draft: false
+          generateReleaseNotes: false
+          makeLatest: ${{ steps.release.outputs.make-latest }}
+          name: v${{ inputs.salt-version }}
+          prerelease: ${{ contains(inputs.salt-version, 'rc') }}
+          removeArtifacts: true
+          replacesArtifacts: true
+          tag: v${{ inputs.salt-version }}
+
 
 <%- endblock pre_jobs %>
 

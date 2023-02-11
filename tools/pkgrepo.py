@@ -835,12 +835,21 @@ def staging(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
         "rc_build": {
             "help": "Release Candidate repository target",
         },
+        "key_id": {
+            "help": "The GnuPG key ID used to sign.",
+            "required": True,
+        },
     }
 )
-def release(ctx: Context, salt_version: str, rc_build: bool = False):
+def release(
+    ctx: Context, salt_version: str, key_id: str = None, rc_build: bool = False
+):
     """
     Publish to the release bucket.
     """
+    if TYPE_CHECKING:
+        assert key_id is not None
+
     if rc_build:
         bucket_folder = "salt_rc/py3"
     else:
@@ -850,7 +859,7 @@ def release(ctx: Context, salt_version: str, rc_build: bool = False):
     files_to_delete: list[str] = []
     files_to_duplicate: list[tuple[str, str]] = []
 
-    ctx.info("Grabing remote file listing of files to copy...")
+    ctx.info("Grabbing remote file listing of files to copy...")
 
     glob_match = f"{bucket_folder}/**/minor/{salt_version}/**"
     files_to_copy = _get_repo_file_list(
@@ -890,6 +899,10 @@ def release(ctx: Context, salt_version: str, rc_build: bool = False):
                 if "onedir" not in onedir_listing:
                     onedir_listing["onedir"] = []
                 onedir_listing["onedir"].append(fpath)
+            else:
+                if "package" not in onedir_listing:
+                    onedir_listing["package"] = []
+                onedir_listing["package"].append(fpath)
             ctx.info(f" * Copying {fpath}")
             try:
                 s3.copy_object(
@@ -909,6 +922,8 @@ def release(ctx: Context, salt_version: str, rc_build: bool = False):
                 progress.update(task, advance=1)
 
     # Now let's get the onedir based repositories where we need to update several repo.json
+    update_latest = False
+    update_minor = False
     major_version = packaging.version.parse(salt_version).major
     with tempfile.TemporaryDirectory(prefix=f"{salt_version}_release_") as tsd:
         repo_path = pathlib.Path(tsd)
@@ -973,6 +988,7 @@ def release(ctx: Context, salt_version: str, rc_build: bool = False):
             release_minor_repo_json[salt_version] = release_json
 
             if latest_version <= salt_version:
+                update_latest = True
                 release_repo_json["latest"] = release_json
                 glob_match = f"{bucket_folder}/{distro}/**/latest/**"
                 files_to_delete.extend(
@@ -988,6 +1004,7 @@ def release(ctx: Context, salt_version: str, rc_build: bool = False):
                     )
 
             if latest_minor_version <= salt_version:
+                update_minor = True
                 release_minor_repo_json["latest"] = release_json
                 glob_match = f"{bucket_folder}/{distro}/**/{major_version}/**"
                 files_to_delete.extend(
@@ -1011,6 +1028,44 @@ def release(ctx: Context, salt_version: str, rc_build: bool = False):
             )
             ctx.info(f"Writing {repo_json_path} ...")
             repo_json_path.write_text(json.dumps(release_repo_json, sort_keys=True))
+
+        # Now lets handle latest and minor updates for non one dir based repositories
+        onedir_based_paths = (
+            f"{bucket_folder}/windows/",
+            f"{bucket_folder}/macos/",
+            f"{bucket_folder}/onedir/",
+        )
+        if update_latest:
+            glob_match = f"{bucket_folder}/**/latest/**"
+            for fpath in _get_repo_file_list(
+                bucket_name=tools.utils.RELEASE_BUCKET_NAME,
+                bucket_folder=bucket_folder,
+                glob_match=glob_match,
+            ):
+                if fpath.startswith(onedir_based_paths):
+                    continue
+                files_to_delete.append(fpath)
+
+            for fpath in onedir_listing["package"]:
+                files_to_duplicate.append(
+                    (fpath, fpath.replace(f"minor/{salt_version}", "latest"))
+                )
+
+        if update_minor:
+            glob_match = f"{bucket_folder}/**/{major_version}/**"
+            for fpath in _get_repo_file_list(
+                bucket_name=tools.utils.RELEASE_BUCKET_NAME,
+                bucket_folder=bucket_folder,
+                glob_match=glob_match,
+            ):
+                if fpath.startswith(onedir_based_paths):
+                    continue
+                files_to_delete.append(fpath)
+
+            for fpath in onedir_listing["package"]:
+                files_to_duplicate.append(
+                    (fpath, fpath.replace(f"minor/{salt_version}", str(major_version)))
+                )
 
         if files_to_delete:
             with tools.utils.create_progress_bar() as progress:
@@ -1068,6 +1123,89 @@ def release(ctx: Context, salt_version: str, rc_build: bool = False):
                         str(relpath),
                         Callback=tools.utils.UpdateProgress(progress, task),
                     )
+
+    # Let's now download the release artifacts stored in staging
+    artifacts_path = pathlib.Path.cwd() / "release-artifacts"
+    artifacts_path.mkdir(exist_ok=True)
+    release_artifacts_listing: dict[pathlib.Path, int] = {}
+    continuation_token = None
+    while True:
+        kwargs: dict[str, str] = {}
+        if continuation_token:
+            kwargs["ContinuationToken"] = continuation_token
+        ret = s3.list_objects_v2(
+            Bucket=tools.utils.STAGING_BUCKET_NAME,
+            Prefix=f"release-artifacts/{salt_version}",
+            FetchOwner=False,
+            **kwargs,
+        )
+        contents = ret.pop("Contents", None)
+        if contents is None:
+            break
+        for entry in contents:
+            entry_path = pathlib.Path(entry["Key"])
+            release_artifacts_listing[entry_path] = entry["Size"]
+        if not ret["IsTruncated"]:
+            break
+        continuation_token = ret["NextContinuationToken"]
+
+    for entry_path, size in release_artifacts_listing.items():
+        ctx.info(f" * {entry_path.name}")
+        local_path = artifacts_path / entry_path.name
+        with local_path.open("wb") as wfh:
+            with tools.utils.create_progress_bar(file_progress=True) as progress:
+                task = progress.add_task(description="Downloading...", total=size)
+            s3.download_fileobj(
+                Bucket=tools.utils.STAGING_BUCKET_NAME,
+                Key=str(entry_path),
+                Fileobj=wfh,
+                Callback=tools.utils.UpdateProgress(progress, task),
+            )
+
+    for artifact in artifacts_path.iterdir():
+        if artifact.suffix == ".patch":
+            continue
+        tools.utils.gpg_sign(ctx, key_id, artifact)
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, artifacts_path)
+
+    release_message = f"""\
+    # Welcome to Salt v{salt_version}
+
+    * For the latest release notes, see: [Release notes](https://docs.saltproject.io/en/latest/topics/releases/{salt_version}.html)
+    * For installation instructions, go to the [Salt install guide](https://docs.saltproject.io/salt/install-guide/en/latest/index.html)
+    * To access packages for the latest releases, go to the [Salt repository](https://repo.saltproject.io/)
+
+    The Salt Project Team.
+    """
+    release_message_path = artifacts_path / "gh-release-body.md"
+    release_message_path.write_text(textwrap.dedent(release_message).strip())
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set. Stop processing.")
+        ctx.exit(0)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"release-messsage-file={release_message_path.resolve()}\n")
+
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"make-latest={json.dumps(update_latest)}\n")
+
+    artifacts_to_upload = []
+    for artifact in artifacts_path.iterdir():
+        if artifact.suffix == ".patch":
+            continue
+        if artifact.name == release_message_path.name:
+            continue
+        artifacts_to_upload.append(str(artifact.resolve()))
+
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"release-artifacts={','.join(artifacts_to_upload)}\n")
+    ctx.exit(0)
 
 
 def _get_repo_file_list(
