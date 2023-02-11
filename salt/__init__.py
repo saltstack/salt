@@ -70,7 +70,8 @@ warnings.filterwarnings(
     "",  # No deprecation message match
     DeprecationWarning,  # This filter is for DeprecationWarnings
     r"^(salt|salt\.(.*))$",  # Match module(s) 'salt' and 'salt.<whatever>'
-    append=True,
+    # Do *NOT* add append=True here - if we do, salt's DeprecationWarnings will
+    # never show up
 )
 
 # Filter the backports package UserWarning about being re-imported

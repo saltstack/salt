@@ -10,7 +10,7 @@
 # Variables
 #-------------------------------------------------------------------------------
 SRC_DIR="$(git rev-parse --show-toplevel)"
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REMOVE_DIRS=(
     "$SCRIPT_DIR/relative-environment-for-python"
     "$HOME/.local/relenv"

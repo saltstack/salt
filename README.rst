@@ -41,54 +41,54 @@
 
 About Salt
 ==========
-Built on Python, Salt is an event-driven automation tool and framework to 
-deploy, configure, and manage complex IT systems. Use Salt to automate common 
-infrastructure administration tasks and ensure that all the components of your 
+Built on Python, Salt is an event-driven automation tool and framework to
+deploy, configure, and manage complex IT systems. Use Salt to automate common
+infrastructure administration tasks and ensure that all the components of your
 infrastructure are operating in a consistent desired state.
 
 Salt has many possible uses, including configuration management, which involves:
 
 * Managing operating system deployment and configuration.
 * Installing and configuring software applications and services.
-* Managing servers, virtual machines, containers, databases, web servers, 
+* Managing servers, virtual machines, containers, databases, web servers,
   network devices, and more.
 * Ensuring consistent configuration and preventing configuration drift.
 
-Salt is ideal for configuration management because it is pluggable, 
-customizable, and plays well with many existing technologies. Salt enables you 
-to deploy and manage applications that use any tech stack running on nearly any 
-`operating system <https://docs.saltproject.io/salt/install-guide/en/latest/topics/salt-supported-operating-systems.html>`_, 
-including different types of network devices such as switches and routers from a 
+Salt is ideal for configuration management because it is pluggable,
+customizable, and plays well with many existing technologies. Salt enables you
+to deploy and manage applications that use any tech stack running on nearly any
+`operating system <https://docs.saltproject.io/salt/install-guide/en/latest/topics/salt-supported-operating-systems.html>`_,
+including different types of network devices such as switches and routers from a
 variety of vendors.
 
 In addition to configuration management Salt can also:
 
-* Automate and orchestrate routine IT processes, such as common required tasks 
+* Automate and orchestrate routine IT processes, such as common required tasks
   for scheduled server downtimes or upgrading operating systems or applications.
-* Create self-aware, self-healing systems that can automatically respond to 
+* Create self-aware, self-healing systems that can automatically respond to
   outages, common administration problems, or other important events.
 
 
 About our sponsors
 ==================
-Salt powers VMware's `vRealize Automation SaltStack Config`_, and can be found 
-under the hood of products from Juniper, Cisco, Cloudflare, Nutanix, SUSE, and 
+Salt powers VMware's `vRealize Automation SaltStack Config`_, and can be found
+under the hood of products from Juniper, Cisco, Cloudflare, Nutanix, SUSE, and
 Tieto, to name a few.
 
 The original sponsor of our community, SaltStack, was `acquired by VMware in 2020 <https://www.vmware.com/company/acquisitions/saltstack.html>`_.
 The Salt Project remains an open source ecosystem that VMware supports and
-contributes to. VMware ensures the code integrity and quality of the Salt 
-modules by acting as the official sponsor and manager of the Salt project. Many 
-of the core Salt Project contributors are also VMware employees. This team 
-carefully reviews and enhances the Salt modules to ensure speed, quality, and 
+contributes to. VMware ensures the code integrity and quality of the Salt
+modules by acting as the official sponsor and manager of the Salt project. Many
+of the core Salt Project contributors are also VMware employees. This team
+carefully reviews and enhances the Salt modules to ensure speed, quality, and
 security.
 
 
 Download and install Salt
 =========================
 Salt is tested and packaged to run on CentOS, Debian, RHEL, Ubuntu, MacOS,
-Windows, and more. Download Salt and get started now. See 
-`supported operating systems <https://docs.saltproject.io/salt/install-guide/en/latest/topics/salt-supported-operating-systems.html>`_ 
+Windows, and more. Download Salt and get started now. See
+`supported operating systems <https://docs.saltproject.io/salt/install-guide/en/latest/topics/salt-supported-operating-systems.html>`_
 for more information.
 
 To download and install Salt, see:
@@ -100,8 +100,8 @@ Technical support
 =================
 Report bugs or problems using Salt by opening an issue: `<https://github.com/saltstack/salt/issues>`_
 
-To join our community forum where you can exchange ideas, best practices, 
-discuss technical support questions, and talk to project maintainers, join our 
+To join our community forum where you can exchange ideas, best practices,
+discuss technical support questions, and talk to project maintainers, join our
 Slack workspace: `Salt Project Community Slack`_
 
 
@@ -137,11 +137,11 @@ refer to the `SECURITY.md`_ file found in this repository.
 
 Join our community
 ==================
-Salt is built by the Salt Project community, which includes more than 3,000 
-contributors working in roles just like yours. This well-known and trusted 
-community works together to improve the underlying technology and extend Salt by 
-creating a variety of execution and state modules to accomplish the most common 
-tasks or solve the most important problems that people in your role are likely 
+Salt is built by the Salt Project community, which includes more than 3,000
+contributors working in roles just like yours. This well-known and trusted
+community works together to improve the underlying technology and extend Salt by
+creating a variety of execution and state modules to accomplish the most common
+tasks or solve the most important problems that people in your role are likely
 to face.
 
 If you want to help extend Salt or solve a problem with Salt, you can join our

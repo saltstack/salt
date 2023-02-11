@@ -145,4 +145,3 @@ any number of VMs. On subsequent runs, any VMs that do not exist are created,
 and VMs that are already configured are left unmodified.
 
 See :ref:`Cloud Map File <salt-cloud-map>`.
-
