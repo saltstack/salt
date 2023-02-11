@@ -1769,9 +1769,10 @@ class Schedule:
                             seconds=data["_seconds"]
                         )
                     elif "_skipped" in data and data["_skipped"]:
-                        data["_next_fire_time"] = now + datetime.timedelta(
-                            seconds=data["_seconds"]
-                        )
+                        if data["_next_fire_time"] == now:
+                            data["_next_fire_time"] = now + datetime.timedelta(
+                                seconds=data["_seconds"]
+                            )
                     elif run:
                         data["_next_fire_time"] = now + datetime.timedelta(
                             seconds=data["_seconds"]
