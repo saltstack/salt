@@ -148,7 +148,7 @@ jobs:
           git tag -m "Release v${{ needs.prepare-workflow.outputs.salt-version }}" -as v${{ needs.prepare-workflow.outputs.salt-version }}
 
       - name: Push Changes
-        uses: ad-m/github-push-action@v0.6.0
+        uses: ad-m/github-push-action@b87afee92c6e70ea888be6203a3e9426fda49839
         with:
           ssh: true
           tags: true
