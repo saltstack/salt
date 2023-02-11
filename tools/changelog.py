@@ -252,7 +252,7 @@ def update_rpm(ctx: Context, salt_version: str, draft: bool = False):
     if salt_version is None:
         salt_version = _get_salt_version(ctx)
     changes = _get_pkg_changelog_contents(ctx, salt_version)
-    ctx.info("Salt version is %s", salt_version)
+    ctx.info(f"Salt version is {salt_version}")
     orig = ctx.run(
         "sed",
         f"s/Version: .*/Version: {salt_version}/g",
