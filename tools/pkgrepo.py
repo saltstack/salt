@@ -214,7 +214,7 @@ def debian(
     ftp_archive_config_file.write_text(textwrap.dedent(ftp_archive_config))
 
     # Export the GPG key in use
-    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
 
     pool_path = create_repo_path / "pool"
     pool_path.mkdir(exist_ok=True)
@@ -417,7 +417,7 @@ def rpm(
     )
 
     # Export the GPG key in use
-    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
 
     for fpath in incoming.iterdir():
         if ".src" in fpath.suffixes:
@@ -792,7 +792,7 @@ def src(
         tools.utils.gpg_sign(ctx, key_id, fpath)
 
     # Export the GPG key in use
-    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
     ctx.info("Done")
 
 
@@ -1209,7 +1209,7 @@ def _create_onedir_based_repo(
         tools.utils.gpg_sign(ctx, key_id, fpath)
 
     # Export the GPG key in use
-    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
 
     repo_json = _get_repo_json_file_contents(
         ctx, bucket_name=bucket_name, repo_path=repo_path, repo_json_path=repo_json_path

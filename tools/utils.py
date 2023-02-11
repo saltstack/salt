@@ -51,22 +51,16 @@ def create_progress_bar(file_progress: bool = False, **kwargs):
     )
 
 
-def export_gpg_key(
-    ctx: Context, key_id: str, repo_path: pathlib.Path, create_repo_path: pathlib.Path
-):
-    keyfile_gpg = create_repo_path.joinpath(GPG_KEY_FILENAME).with_suffix(".gpg")
+def export_gpg_key(ctx: Context, key_id: str, export_path: pathlib.Path):
+    keyfile_gpg = export_path.joinpath(GPG_KEY_FILENAME).with_suffix(".gpg")
     if keyfile_gpg.exists():
         keyfile_gpg.unlink()
-    ctx.info(
-        f"Exporting GnuPG Key '{key_id}' to {keyfile_gpg.relative_to(repo_path)} ..."
-    )
+    ctx.info(f"Exporting GnuPG Key '{key_id}' to {keyfile_gpg} ...")
     ctx.run("gpg", "--output", str(keyfile_gpg), "--export", key_id)
-    keyfile_pub = create_repo_path.joinpath(GPG_KEY_FILENAME).with_suffix(".pub")
+    keyfile_pub = export_path.joinpath(GPG_KEY_FILENAME).with_suffix(".pub")
     if keyfile_pub.exists():
         keyfile_pub.unlink()
-    ctx.info(
-        f"Exporting GnuPG Key '{key_id}' to {keyfile_pub.relative_to(repo_path)} ..."
-    )
+    ctx.info(f"Exporting GnuPG Key '{key_id}' to {keyfile_pub} ...")
     ctx.run("gpg", "--armor", "--output", str(keyfile_pub), "--export", key_id)
 
 
