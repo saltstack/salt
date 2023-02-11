@@ -5639,6 +5639,7 @@ def check_managed_changes(
             verify_ssl=verify_ssl,
             ignore_ordering=ignore_ordering,
             ignore_whitespace=ignore_whitespace,
+            ignore_comment_characters=ignore_comment_characters,
             **kwargs,
         )
 
@@ -5676,6 +5677,7 @@ def check_managed_changes(
         follow_symlinks=follow_symlinks,
         ignore_ordering=ignore_ordering,
         ignore_whitespace=ignore_whitespace,
+        ignore_comment_characters=ignore_comment_characters,
     )
     __clean_tmp(sfn)
     return changes
@@ -5833,6 +5835,8 @@ def check_file_meta(
 
     if not lstats:
         changes["newfile"] = name
+        if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
+            return True, changes
         return changes
 
     if "hsum" in source_sum:
