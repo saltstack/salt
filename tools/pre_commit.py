@@ -71,7 +71,6 @@ def generate_workflows(ctx: Context):
         "Release": {
             "template": "release.yml",
             "includes": {
-                "prepare-workflow": False,
                 "pre-commit": False,
                 "lint": False,
                 "salt-tests": False,

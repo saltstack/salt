@@ -34,7 +34,7 @@ permissions:
   <%- set job_name = "check-requirements" %>
 
   <{ job_name }>:
-  <%- do conclusion_needs.append(job_name) %>
+  <%- do prepare_workflow_needs.append(job_name) %>
     name: Check Requirements
     runs-on: ubuntu-latest
     steps:
@@ -58,6 +58,66 @@ permissions:
               echo "Allowed"
           fi
 
+
+<%- endblock pre_jobs %>
+
+<%- if includes.get("prepare-workflow", True) %>
+<%- block prepare_workflow_job %>
+<%- do conclusion_needs.append("prepare-workflow") %>
+
+  prepare-workflow:
+    name: Prepare Workflow Run
+    runs-on: ubuntu-latest
+    <%- if prepare_workflow_needs %>
+    needs:
+      <%- for need in prepare_workflow_needs.iter(consume=False) %>
+      - <{ need }>
+      <%- endfor %>
+    <%- endif %>
+    outputs:
+      salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full clone to also get the tags to get the right salt version
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Pretty Print The GH Actions Event
+        run:
+          tools ci print-gh-event
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "<{ prepare_workflow_salt_version_input }>"
+          validate-version: true
+
+  <%- endblock prepare_workflow_job %>
+  <%- endif %>
+
+<%- block jobs %>
+  <{- super() }>
+
+  release:
+    <%- do conclusion_needs.append('release') %>
+    name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    needs:
+      - prepare-workflow
+    environment: <{ gh_environment }>
+
+    steps:
       - name: Clone The Salt Repository
         uses: actions/checkout@v3
         with:
@@ -102,19 +162,19 @@ permissions:
           git config --global user.signingkey 64CBBC8173D76B3F
           git config --global commit.gpgsign true
 
-      - name: Release Salt ${{ inputs.salt-version }}
+      - name: Setup Salt Release
         id: release
         run: |
-          tools pkg repo publish release ${{ inputs.salt-version }}
+          tools pkg repo publish release ${{ needs.prepare-workflow.outputs.salt-version }}
 
       - name: Apply The Release Patch
         run: |
-          git am --committer-date-is-author-date release-artifacts/salt-${{ inputs.salt-version }}.patch
-          rm release-artifacts/salt-${{ inputs.salt-version }}.patch
+          git am --committer-date-is-author-date release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          rm release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
 
-      - name: Tag The v${{ inputs.salt-version }} Release
+      - name: Tag The v${{ needs.prepare-workflow.outputs.salt-version }} Release
         run: |
-          git tag -m "Release v${{ inputs.salt-version }}" -as v${{ inputs.salt-version }}
+          git tag -m "Release v${{ needs.prepare-workflow.outputs.salt-version }}" -as v${{ needs.prepare-workflow.outputs.salt-version }}
 
       - name: Push Changes
         uses: ad-m/github-push-action@v0.6.0
@@ -132,18 +192,12 @@ permissions:
           draft: false
           generateReleaseNotes: false
           makeLatest: ${{ steps.release.outputs.make-latest }}
-          name: v${{ inputs.salt-version }}
-          prerelease: ${{ contains(inputs.salt-version, 'rc') }}
+          name: v${{ needs.prepare-workflow.outputs.salt-version }}
+          prerelease: ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') }}
           removeArtifacts: true
           replacesArtifacts: true
-          tag: v${{ inputs.salt-version }}
+          tag: v${{ needs.prepare-workflow.outputs.salt-version }}
 
+  {#- We need the pypi.org upload job added here #}
 
-<%- endblock pre_jobs %>
-
-
-<%- block jobs %>
-  <{- super() }>
-  {#- We need the test.pypi.org upload job added here #}
-  {#- We need the package upload tests against staging added here #}
 <%- endblock jobs %>
