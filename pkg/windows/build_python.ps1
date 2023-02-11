@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
 Script that builds Python from source using the Relative Environment for Python
 project (relenv):
@@ -41,7 +41,7 @@ param(
     [String] $Version = "3.8.16",
 
     [Parameter(Mandatory=$false)]
-    [ValidateSet("x64", "x86")]
+    [ValidateSet("x64", "x86", "amd64")]
     [Alias("a")]
     # The System Architecture to build. "x86" will build a 32-bit installer.
     # "x64" will build a 64-bit installer. Default is: x64
@@ -51,14 +51,38 @@ param(
     [Alias("b")]
     # Build python from source instead of fetching a tarball
     # Requires VC Build Tools
-    [Switch] $Build
+    [Switch] $Build,
+
+    [Parameter(Mandatory=$false)]
+    [Alias("c")]
+    # Don't pretify the output of the Write-Result
+    [Switch] $CICD
 
 )
 
+#-------------------------------------------------------------------------------
 # Script Preferences
+#-------------------------------------------------------------------------------
+
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
 $ProgressPreference = "SilentlyContinue"
 $ErrorActionPreference = "Stop"
+
+if ( $Architecture -eq "amd64" ) {
+  $Architecture = "x64"
+}
+
+#-------------------------------------------------------------------------------
+# Script Functions
+#-------------------------------------------------------------------------------
+
+function Write-Result($result, $ForegroundColor="Green") {
+    if ( $CICD ) {
+        Write-Host $result -ForegroundColor $ForegroundColor
+    } else {
+        $position = 80 - $result.Length - [System.Console]::CursorLeft
+        Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+    }}
 
 #-------------------------------------------------------------------------------
 # Start the Script
@@ -90,9 +114,9 @@ if ( Test-Path -Path "$profile" ) {
         Write-Host "Backing up PowerShell Profile: " -NoNewline
         Move-Item -Path "$profile" -Destination "$profile.salt_bak"
         if ( Test-Path -Path "$profile.salt_bak" ) {
-            Write-Host "Success" -ForegroundColor Green
+            Write-Result "Success" -ForegroundColor Green
         } else {
-            Write-Host "Failed" -ForegroundColor Red
+            Write-Result "Failed" -ForegroundColor Red
             exit 1
         }
     }
@@ -104,9 +128,9 @@ if ( ! (Test-Path -Path "$(Split-Path "$profile" -Parent)") ) {
     New-Item -Path "$(Split-Path "$profile" -Parent)" -ItemType Directory | Out-Null
     if ( Test-Path -Path "$(Split-Path "$profile" -Parent)" ) {
         $CREATED_POWERSHELL_PROFILE_DIRECTORY = $true
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     } else {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     }
 }
@@ -114,7 +138,7 @@ if ( ! (Test-Path -Path "$(Split-Path "$profile" -Parent)") ) {
 Write-Host "Creating Temporary PowerShell Profile: " -NoNewline
 '$ProgressPreference = "SilentlyContinue"' | Out-File -FilePath $profile
 '$ErrorActionPreference = "Stop"' | Out-File -FilePath $profile
-Write-Host "Success" -ForegroundColor Green
+Write-Result "Success" -ForegroundColor Green
 
 #-------------------------------------------------------------------------------
 # Make sure we're not in a virtual environment
@@ -124,10 +148,10 @@ if ( $env:VIRTUAL_ENV ) {
     . deactivate
     Write-Host $env:VIRTUAL_ENV
     if ( $env:VIRTUAL_ENV ) {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     } else {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     }
 }
 
@@ -157,10 +181,10 @@ if ( Test-Path -Path "$SCRIPT_DIR\venv" ) {
     Write-Host "Removing virtual environment directory: " -NoNewline
     Remove-Item -Path "$SCRIPT_DIR\venv" -Recurse -Force
     if ( Test-Path -Path "$SCRIPT_DIR\venv" ) {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     } else {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     }
 }
 
@@ -168,10 +192,10 @@ if ( Test-Path -Path "$RELENV_DIR" ) {
     Write-Host "Removing existing relenv directory: " -NoNewline
     Remove-Item -Path "$RELENV_DIR" -Recurse -Force
     if ( Test-Path -Path "$RELENV_DIR" ) {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     } else {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     }
 }
 
@@ -179,10 +203,10 @@ if ( Test-Path -Path "$BUILD_DIR" ) {
     Write-Host "Removing existing build directory: " -NoNewline
     Remove-Item -Path "$BUILD_DIR" -Recurse -Force
     if ( Test-Path -Path "$BUILD_DIR" ) {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     } else {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     }
 }
 
@@ -195,18 +219,18 @@ Start-Process -FilePath "$SYS_PY_BIN" `
               -WorkingDirectory "$SCRIPT_DIR" `
               -Wait -WindowStyle Hidden
 if ( Test-Path -Path "$SCRIPT_DIR\venv" ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed"
+    Write-Result "Failed"
     exit 1
 }
 
 Write-Host "Activating virtual environment: " -NoNewline
 . "$SCRIPT_DIR\venv\Scripts\activate.ps1"
 if ( $env:VIRTUAL_ENV ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
@@ -217,9 +241,9 @@ Write-Host "Installing Relenv: " -NoNewLine
 pip install relenv --disable-pip-version-check | Out-Null
 $output = pip list --disable-pip-version-check
 if ("relenv" -in $output.split()) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
@@ -234,9 +258,9 @@ if ( $Build ) {
     relenv fetch --arch $ARCH | Out-Null
 }
 if ( Test-Path -Path "$RELENV_DIR\build\$ARCH-win.tar.xz") {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
@@ -246,29 +270,28 @@ if ( Test-Path -Path "$RELENV_DIR\build\$ARCH-win.tar.xz") {
 Write-Host "Extracting Python environment: " -NoNewLine
 relenv create --arch $ARCH "$BUILD_DIR"
 If ( Test-Path -Path "$BLD_PY_BIN" ) {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Failed" -ForegroundColor Red
+    Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
 
 #-------------------------------------------------------------------------------
 # Retrieving SSL Libraries
 #-------------------------------------------------------------------------------
-Write-Host "Retrieving SSL Libaries: " -NoNewline
-$libeay_url = "$SALT_DEP_URL/openssl/1.1.1k/libeay32.dll"
-$ssleay_url = "$SALT_DEP_URL/openssl/1.1.1k/ssleay32.dll"
-Invoke-WebRequest -Uri "$libeay_url" -OutFile "$SCRIPTS_DIR\libeay32.dll" | Out-Null
-Invoke-WebRequest -Uri "$ssleay_url" -OutFile "$SCRIPTS_DIR\ssleay32.dll" | Out-Null
-if ( ! (Test-Path -Path "$SCRIPTS_DIR\libeay32.dll") ) {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
-}
-if ( Test-Path -Path "$SCRIPTS_DIR\ssleay32.dll" ) {
-    Write-Host "Success" -ForegroundColor Green
-} else {
-    Write-Host "Failed" -ForegroundColor Red
-    exit 1
+$ssllibs = "libeay32.dll",
+           "ssleay32.dll"
+$ssllibs | ForEach-Object {
+    $url = "$SALT_DEP_URL/openssl/1.1.1k/$_"
+    $file = "$SCRIPTS_DIR\$_"
+    Write-Host "Retrieving $_`: " -NoNewline
+    Invoke-WebRequest -Uri "$url" -OutFile "$file" | Out-Null
+    if ( Test-Path -Path "$file" ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
 }
 
 #-------------------------------------------------------------------------------
@@ -283,10 +306,10 @@ $remove | ForEach-Object {
         Write-Host "Removing $_`: " -NoNewline
         Remove-Item -Path "$BUILD_DIR\Lib\$_" -Recurse -Force
         if (Test-Path -Path "$BUILD_DIR\Lib\$_") {
-            Write-Host "Failed" -ForegroundColor Red
+            Write-Result "Failed" -ForegroundColor Red
             exit 1
         } else {
-            Write-Host "Success" -ForegroundColor Green
+            Write-Result "Success" -ForegroundColor Green
         }
     }
 }
@@ -298,9 +321,9 @@ if ( $CREATED_POWERSHELL_PROFILE_DIRECTORY ) {
     Write-Host "Removing PowerShell Profile Directory: " -NoNewline
     Remove-Item -Path "$(Split-Path "$profile" -Parent)" -Recurse -Force
     if ( !  (Test-Path -Path "$(Split-Path "$profile" -Parent)") ) {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     } else {
-        Write-Host "Failure" -ForegroundColor Red
+        Write-Result "Failure" -ForegroundColor Red
         exit 1
     }
 }
@@ -309,9 +332,9 @@ if ( Test-Path -Path "$profile" ) {
     Write-Host "Removing Temporary PowerShell Profile: " -NoNewline
     Remove-Item -Path "$profile" -Force
     if ( ! (Test-Path -Path "$profile") ) {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     } else {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     }
 }
@@ -320,9 +343,9 @@ if ( Test-Path -Path "$profile.salt_bak" ) {
     Write-Host "Restoring Original PowerShell Profile: " -NoNewline
     Move-Item -Path "$profile.salt_bak" -Destination "$profile"
     if ( Test-Path -Path "$profile" ) {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     } else {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     }
 }

@@ -2,6 +2,7 @@ import pytest
 
 import salt.exceptions
 import salt.returners.mongo_future_return as mongo
+from salt.utils.versions import Version
 from tests.support.mock import patch
 
 
@@ -17,7 +18,6 @@ def configure_loader_modules():
     }
 
 
-@patch("salt.returners.mongo_future_return.PYMONGO_VERSION", "4.3.2", create=True)
 def test_config_exception():
     opts = {
         "mongo.host": "localhost",
@@ -26,6 +26,10 @@ def test_config_exception():
         "mongo.password": "pass",
         "mongo.uri": "mongodb://root:pass@localhost27017/salt?authSource=admin",
     }
-    with patch.dict(mongo.__opts__, opts):
+    with patch(
+        "salt.returners.mongo_future_return.PYMONGO_VERSION",
+        Version("4.3.2"),
+        create=True,
+    ), patch.dict(mongo.__opts__, opts):
         with pytest.raises(salt.exceptions.SaltConfigurationError):
             mongo.returner({})

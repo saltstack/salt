@@ -5,6 +5,17 @@ Manage X509 certificates
 
 :depends: M2Crypto
 
+.. deprecated:: 3006.0
+
+.. warning::
+    This module has been deprecated and will be removed
+    in Salt 3009 (Potassium). Please migrate to the replacement
+    modules. For breaking changes between both versions,
+    you can refer to the :ref:`x509_v2 execution module docs <x509-setup>`.
+
+    They will become the default ``x509`` modules in Salt 3008 (Argon).
+    You can explicitly switch to the new modules before that release
+    by setting ``features: {x509_v2: true}`` in your minion configuration.
 """
 
 import ast
@@ -25,6 +36,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.versions
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.utils.odict import OrderedDict
 
@@ -79,7 +91,15 @@ def __virtual__():
     """
     only load this module if m2crypto is available
     """
+    # salt.features appears to not be setup when invoked via peer publishing
+    if __opts__.get("features", {}).get("x509_v2"):
+        return (False, "Superseded, using x509_v2")
     if HAS_M2:
+        salt.utils.versions.warn_until(
+            "Potassium",
+            "The x509 modules are deprecated. Please migrate to the replacement "
+            "modules (x509_v2). They are the default from Salt 3008 (Argon) onwards.",
+        )
         return __virtualname__
     else:
         return (False, "Could not load x509 module, m2crypto unavailable")

@@ -339,13 +339,13 @@ bcrypt==3.2.0
     # via
     #   paramiko
     #   passlib
-boto3==1.18.46 ; python_version >= "3.6"
+boto3==1.21.46 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
     #   moto
 boto==2.49.0
     # via -r requirements/static/ci/common.in
-botocore==1.21.46
+botocore==1.24.46
     # via
     #   boto3
     #   moto
@@ -428,16 +428,12 @@ frozenlist==1.2.0
     # via
     #   aiohttp
     #   aiosignal
-future==0.18.2
+future==0.18.3
     # via textfsm
 genshi==0.7.5
     # via -r requirements/static/ci/common.in
 geomet==0.2.1.post1
     # via cassandra-driver
-gitdb==4.0.7
-    # via gitpython
-gitpython==3.1.18
-    # via -r requirements/static/ci/common.in
 google-auth==2.1.0
     # via kubernetes
 idna-ssl==1.1.0
@@ -450,7 +446,7 @@ idna==2.8
     #   yarl
 immutables==0.16
     # via contextvars
-importlib-metadata==4.8.1 ; python_version >= "3.6" and python_version < "3.10"
+importlib-metadata==4.8.1
     # via
     #   -r requirements/static/pkg/linux.in
     #   backports.entry-points-selectable
@@ -506,7 +502,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
-looseversion==1.0.2
+looseversion==1.0.3
     # via -r requirements/base.txt
 lxml==4.9.1
     # via
@@ -695,9 +691,8 @@ pyopenssl==20.0.1
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==3.0.9
+pyparsing==3.0.6
     # via
-    #   -r requirements/base.txt
     #   junos-eznc
     #   packaging
 pypsexec==0.1.0
@@ -776,7 +771,7 @@ pyyaml==5.4.1
     #   junos-eznc
     #   kubernetes
     #   yamlordereddictloader
-pyzmq==21.0.2 ; python_version < "3.9"
+pyzmq==23.2.0
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -822,7 +817,7 @@ scp==0.14.1
     # via junos-eznc
 semantic-version==2.9.0
     # via etcd3-py
-setproctitle==1.2.2 ; python_version < "3.10"
+setproctitle==1.2.3
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via
@@ -857,8 +852,6 @@ six==1.16.0
     #   websocket-client
 smbprotocol==0.1.1
     # via pypsexec
-smmap==4.0.0
-    # via gitdb
 sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
@@ -879,7 +872,6 @@ typing-extensions==3.10.0.0
     # via
     #   aiohttp
     #   async-timeout
-    #   gitpython
     #   immutables
     #   importlib-metadata
     #   pytest-shell-utilities

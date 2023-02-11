@@ -39,7 +39,7 @@ from datetime import datetime
 import salt.utils.decorators.path
 import salt.utils.files
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 try:
     import pylxd
@@ -82,7 +82,7 @@ _connection_pool = {}
 
 def __virtual__():
     if HAS_PYLXD:
-        if LooseVersion(pylxd_version()) < LooseVersion(_pylxd_minimal_version):
+        if Version(pylxd_version()) < Version(_pylxd_minimal_version):
             return (
                 False,
                 'The lxd execution module cannot be loaded: pylxd "{}" is '

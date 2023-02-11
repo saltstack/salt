@@ -27,7 +27,7 @@ class N36KPlatform(NXOSPlatform):
     # Captured output from: show install all impact nxos <image>
 
     show_install_all_impact = """
-Installer will perform impact only check. Please wait. 
+Installer will perform impact only check. Please wait.
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
 [####################] 100% -- SUCCESS
@@ -66,9 +66,9 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
     # Captured output from: install all nxos <image>
 
     install_all_disruptive_success = """
-Installer will perform compatibility check first. Please wait. 
+Installer will perform compatibility check first. Please wait.
 Installer is forced disruptive
- 
+
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
 [####################] 100% -- SUCCESS
 

@@ -5,10 +5,10 @@ Release notes
 This page links to the release notes for Salt, including the current, upcoming,
 and past releases.
 
-* New releases and security updates are announced on the 
-  `Salt Project blog <https://saltproject.io/blog/>`_. You can subscribe to an 
+* New releases and security updates are announced on the
+  `Salt Project blog <https://saltproject.io/blog/>`_. You can subscribe to an
   `RSS feed <https://saltproject.io/rss-feeds/>`_ for announcements.
-* See the :ref:`version numbers<version-numbers>` page for more information 
+* See the :ref:`version numbers<version-numbers>` page for more information
   about the version numbering scheme.
 
 

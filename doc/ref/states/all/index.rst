@@ -347,6 +347,7 @@ state modules
     winrepo
     wordpress
     x509
+    x509_v2
     xml
     xmpp
     zabbix_action

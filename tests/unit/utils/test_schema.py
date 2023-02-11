@@ -6,7 +6,7 @@ import salt.utils.json
 import salt.utils.schema as schema
 import salt.utils.stringutils
 import salt.utils.yaml
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 from tests.support.unit import TestCase
 
 try:
@@ -14,10 +14,10 @@ try:
     import jsonschema.exceptions
 
     HAS_JSONSCHEMA = True
-    JSONSCHEMA_VERSION = _LooseVersion(jsonschema.__version__)
+    JSONSCHEMA_VERSION = Version(jsonschema.__version__)
 except ImportError:
     HAS_JSONSCHEMA = False
-    JSONSCHEMA_VERSION = _LooseVersion("0")
+    JSONSCHEMA_VERSION = Version("0")
 
 
 # pylint: disable=unused-import,function-redefined
@@ -531,7 +531,7 @@ class ConfigTestCase(TestCase):
             jsonschema.validate(
                 {"personal_access_token": "foo"}, Requirements.serialize()
             )
-        if JSONSCHEMA_VERSION >= _LooseVersion("3.0.0"):
+        if JSONSCHEMA_VERSION >= Version("3.0.0"):
             self.assertIn(
                 "'ssh_key_file' is a required property", excinfo.exception.message
             )
@@ -811,7 +811,7 @@ class ConfigTestCase(TestCase):
         )
 
     @pytest.mark.skipif(
-        JSONSCHEMA_VERSION <= _LooseVersion("2.5.0"),
+        JSONSCHEMA_VERSION <= Version("2.5.0"),
         reason="Requires jsonschema 2.5.0 or greater",
     )
     def test_ipv4_config_validation(self):
@@ -1846,7 +1846,7 @@ class ConfigTestCase(TestCase):
                 {"item": {"color": "green", "sides": 4, "surfaces": 4}},
                 TestConf.serialize(),
             )
-        if JSONSCHEMA_VERSION < _LooseVersion("2.6.0"):
+        if JSONSCHEMA_VERSION < Version("2.6.0"):
             self.assertIn(
                 "Additional properties are not allowed", excinfo.exception.message
             )
@@ -1878,7 +1878,7 @@ class ConfigTestCase(TestCase):
             jsonschema.validate(
                 {"item": {"sides": "4", "color": "blue"}}, TestConf.serialize()
             )
-        if JSONSCHEMA_VERSION >= _LooseVersion("3.0.0"):
+        if JSONSCHEMA_VERSION >= Version("3.0.0"):
             self.assertIn("'4'", excinfo.exception.message)
             self.assertIn("is not of type", excinfo.exception.message)
             self.assertIn("'boolean'", excinfo.exception.message)
@@ -2003,7 +2003,7 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": ["maybe"]}, TestConf.serialize())
-        if JSONSCHEMA_VERSION >= _LooseVersion("3.0.0"):
+        if JSONSCHEMA_VERSION >= Version("3.0.0"):
             self.assertIn("'maybe'", excinfo.exception.message)
             self.assertIn("is not one of", excinfo.exception.message)
             self.assertIn("'yes'", excinfo.exception.message)
@@ -2067,7 +2067,7 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": ["maybe"]}, TestConf.serialize())
-        if JSONSCHEMA_VERSION >= _LooseVersion("3.0.0"):
+        if JSONSCHEMA_VERSION >= Version("3.0.0"):
             self.assertIn("'maybe'", excinfo.exception.message)
             self.assertIn("is not one of", excinfo.exception.message)
             self.assertIn("'yes'", excinfo.exception.message)
