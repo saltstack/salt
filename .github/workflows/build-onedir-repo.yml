@@ -102,9 +102,11 @@ jobs:
             --query SecretString --output text | jq .default_key -r | base64 -d \
             | gpg --passphrase-file "${SECRETS_KEY_FILE}" -d - \
             | gpg --import -
+          sync
           aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256-2023 \
             --query SecretString --output text| jq .default_passphrase -r | base64 -d \
             | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o "${GNUPGHOME}/passphrase" -d -
+          sync
           rm "$SECRETS_KEY_FILE"
           echo "passphrase-file ${GNUPGHOME}/passphrase" >> "${GNUPGHOME}/gpg.conf"
 
