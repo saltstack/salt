@@ -827,6 +827,58 @@ def staging(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
     _publish_repo(ctx, repo_path=repo_path, rc_build=rc_build, stage=True)
 
 
+@repo.command(name="backup-previous-releases")
+def backup_previous_releases(ctx: Context):
+    """
+    Backup previous releases.
+    """
+    files_in_backup: dict[str, datetime] = {}
+    files_to_backup: list[tuple[str, datetime]] = []
+
+    ctx.info("Grabbing remote listing of files in backup ...")
+    for entry in _get_repo_detailed_file_list(
+        bucket_name=tools.utils.BACKUP_BUCKET_NAME,
+    ):
+        files_in_backup[entry["Key"]] = entry["LastModified"]
+
+    ctx.info("Grabbing remote listing of files to backup ...")
+    for entry in _get_repo_detailed_file_list(
+        bucket_name=tools.utils.RELEASE_BUCKET_NAME,
+    ):
+        files_to_backup.append((entry["Key"], entry["LastModified"]))
+
+    s3 = boto3.client("s3")
+    with tools.utils.create_progress_bar() as progress:
+        task = progress.add_task(
+            "Back up previous releases", total=len(files_to_backup)
+        )
+        for fpath, last_modified in files_to_backup:
+            try:
+                last_modified_backup = files_in_backup.get(fpath)
+                if last_modified_backup and last_modified_backup >= last_modified:
+                    ctx.info(f" * Skipping unmodified {fpath}")
+                    continue
+
+                ctx.info(f" * Backup {fpath}")
+                s3.copy_object(
+                    Bucket=tools.utils.BACKUP_BUCKET_NAME,
+                    Key=fpath,
+                    CopySource={
+                        "Bucket": tools.utils.RELEASE_BUCKET_NAME,
+                        "Key": fpath,
+                    },
+                    MetadataDirective="COPY",
+                    TaggingDirective="COPY",
+                    ServerSideEncryption="aws:kms",
+                )
+            except ClientError as exc:
+                if "PreconditionFailed" not in str(exc):
+                    log.exception(f"Failed to copy {fpath}")
+            finally:
+                progress.update(task, advance=1)
+    ctx.info("Done")
+
+
 @publish.command(
     arguments={
         "salt_version": {
@@ -1208,11 +1260,13 @@ def release(
     ctx.exit(0)
 
 
-def _get_repo_file_list(
-    bucket_name: str, bucket_folder: str, glob_match: str
-) -> list[str]:
+def _get_repo_detailed_file_list(
+    bucket_name: str,
+    bucket_folder: str = "",
+    glob_match: str = "**",
+) -> list[dict[str, Any]]:
     s3 = boto3.client("s3")
-    matches: list[str] = []
+    listing: list[dict[str, Any]] = []
     continuation_token = None
     while True:
         kwargs: dict[str, str] = {}
@@ -1227,11 +1281,24 @@ def _get_repo_file_list(
         contents = ret.pop("Contents", None)
         if contents is None:
             break
-        matches.extend(fnmatch.filter([e["Key"] for e in contents], glob_match))
+        for entry in contents:
+            if fnmatch.fnmatch(entry["Key"], glob_match):
+                listing.append(entry)
         if not ret["IsTruncated"]:
             break
         continuation_token = ret["NextContinuationToken"]
-    return matches
+    return listing
+
+
+def _get_repo_file_list(
+    bucket_name: str, bucket_folder: str, glob_match: str
+) -> list[str]:
+    return [
+        entry["Key"]
+        for entry in _get_repo_detailed_file_list(
+            bucket_name, bucket_folder, glob_match=glob_match
+        )
+    ]
 
 
 def _get_remote_versions(bucket_name: str, remote_path: str):

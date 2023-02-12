@@ -76,6 +76,29 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
           validate-version: true
 
+  backup:
+    name: Backup
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-release
+    needs:
+      - prepare-workflow
+    environment: release
+
+    steps:
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.GHA_SSH_KEY }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Backup Previous Releases
+        run: |
+          tools pkg repo backup-previous-releases
+
   release:
     name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
     runs-on:
@@ -84,6 +107,7 @@ jobs:
       - repo-release
     needs:
       - prepare-workflow
+      - backup
     environment: release
 
     steps:
