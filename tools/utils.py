@@ -19,6 +19,7 @@ GPG_KEY_FILENAME = "SALT-PROJECT-GPG-PUBKEY-2023"
 NIGHTLY_BUCKET_NAME = "salt-project-prod-salt-artifacts-nightly"
 STAGING_BUCKET_NAME = "salt-project-prod-salt-artifacts-staging"
 RELEASE_BUCKET_NAME = "salt-project-prod-salt-artifacts-release"
+BACKUP_BUCKET_NAME = "salt-project-prod-salt-artifacts-backup"
 
 
 class UpdateProgress:

@@ -106,6 +106,29 @@ permissions:
 <%- block jobs %>
   <{- super() }>
 
+  backup:
+    name: Backup
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    needs:
+      - prepare-workflow
+    environment: <{ gh_environment }>
+
+    steps:
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.GHA_SSH_KEY }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Backup Previous Releases
+        run: |
+          tools pkg repo backup-previous-releases
+
   release:
     <%- do conclusion_needs.append('release') %>
     name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
@@ -115,6 +138,7 @@ permissions:
       - repo-<{ gh_environment }>
     needs:
       - prepare-workflow
+      - backup
     environment: <{ gh_environment }>
 
     steps:
