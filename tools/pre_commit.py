@@ -68,6 +68,15 @@ def generate_workflows(ctx: Context):
         "Check Workflow Run": {
             "template": "check-workflow-run.yml",
         },
+        "Release": {
+            "template": "release.yml",
+            "includes": {
+                "prepare-workflow": False,
+                "pre-commit": False,
+                "lint": False,
+                "salt-tests": False,
+            },
+        },
     }
     env = Environment(
         block_start_string="<%",
@@ -99,7 +108,13 @@ def generate_workflows(ctx: Context):
             "prepare_workflow_needs": NeedsTracker(),
         }
         if workflow_name == "Check Workflow Run":
-            check_workflows = [wf for wf in sorted(workflows) if wf != workflow_name]
+            check_workflow_exclusions = {
+                "Release",
+                workflow_name,
+            }
+            check_workflows = [
+                wf for wf in sorted(workflows) if wf not in check_workflow_exclusions
+            ]
             context["check_workflows"] = check_workflows
         loaded_template = env.get_template(template_path.name)
         rendered_template = loaded_template.render(**context)
