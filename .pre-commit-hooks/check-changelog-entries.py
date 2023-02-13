@@ -19,7 +19,9 @@ CHANGELOG_EXTENSIONS = (
     "security",
 )
 CHANGELOG_ENTRY_RE = re.compile(
-    r"([\d]+|(CVE|cve)-[\d]{{4}}-[\d]+)\.({})$".format("|".join(CHANGELOG_EXTENSIONS))
+    r"([\d]+|(CVE|cve)-[\d]{{4}}-[\d]+)\.({})(\.md)?$".format(
+        "|".join(CHANGELOG_EXTENSIONS)
+    )
 )
 
 
@@ -39,8 +41,17 @@ def check_changelog_entries(files):
                 print(
                     "The changelog entry '{}' should have one of the following extensions: {}.".format(
                         path.relative_to(CODE_ROOT),
-                        ", ".join(repr(ext) for ext in CHANGELOG_EXTENSIONS),
+                        ", ".join(f"{ext}.md" for ext in CHANGELOG_EXTENSIONS),
                     ),
+                    file=sys.stderr,
+                    flush=True,
+                )
+                exitcode = 1
+                continue
+            if not path.suffix == ".md":
+                print(
+                    f"Please rename '{path.relative_to(CODE_ROOT)}' to "
+                    f"'{path.relative_to(CODE_ROOT)}.md'",
                     file=sys.stderr,
                     flush=True,
                 )
@@ -72,7 +83,7 @@ def check_changelog_entries(files):
             print(
                 "The changelog entry '{}' should have one of the following extensions: {}.".format(
                     path.relative_to(CODE_ROOT),
-                    ", ".join(repr(ext) for ext in CHANGELOG_EXTENSIONS),
+                    ", ".join(f"{ext}.md" for ext in CHANGELOG_EXTENSIONS),
                 ),
                 file=sys.stderr,
                 flush=True,
@@ -97,6 +108,14 @@ def check_changelog_entries(files):
                 file=sys.stderr,
                 flush=True,
             )
+        if not path.suffix == ".md":
+            print(
+                f"Please rename '{path.relative_to(CODE_ROOT)}' to "
+                f"'{path.relative_to(CODE_ROOT)}.md'",
+                file=sys.stderr,
+                flush=True,
+            )
+            exitcode = 1
     sys.exit(exitcode)
 
 
