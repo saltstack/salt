@@ -6,6 +6,10 @@
 #
 alabaster==0.7.12
     # via sphinx
+attrs==20.3.0
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   markdown-it-py
 babel==2.9.1
     # via sphinx
 certifi==2022.12.7
@@ -40,24 +44,37 @@ jinja2==3.0.3
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
     #   -r requirements/base.txt
+    #   myst-docutils
     #   sphinx
 jmespath==0.10.0
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
     #   -r requirements/base.txt
+linkify-it-py==1.0.3
+    # via myst-docutils
 looseversion==1.0.3
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
     #   -r requirements/base.txt
+markdown-it-py==2.0.1
+    # via
+    #   mdit-py-plugins
+    #   myst-docutils
 markupsafe==2.0.1
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
     #   -r requirements/base.txt
     #   jinja2
+mdit-py-plugins==0.3.0
+    # via myst-docutils
+mdurl==0.1.0
+    # via markdown-it-py
 msgpack==1.0.2
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
     #   -r requirements/base.txt
+myst-docutils[linkify]==0.16.1
+    # via -r requirements/static/ci/docs.in
 packaging==21.3
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
@@ -85,6 +102,7 @@ pyyaml==5.4.1
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
     #   -r requirements/base.txt
+    #   myst-docutils
 pyzmq==23.2.0
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
@@ -110,6 +128,12 @@ sphinxcontrib-qthelp==1.0.3
     # via sphinx
 sphinxcontrib-serializinghtml==1.1.4
     # via sphinx
+typing-extensions==3.10.0.0
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   markdown-it-py
+uc-micro-py==1.0.1
+    # via linkify-it-py
 urllib3==1.26.6
     # via
     #   -c requirements/static/ci/py3.6/linux.txt

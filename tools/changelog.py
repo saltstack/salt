@@ -348,14 +348,15 @@ def update_release_notes(ctx: Context, salt_version: str, draft: bool = False):
         major_version = salt_version
     changes = _get_changelog_contents(ctx, salt_version)
     changes = "\n".join(changes.split("\n")[2:])
-    tmpnotes = f"doc/topics/releases/{salt_version}.rst.tmp"
+    tmpnotes = f"doc/topics/releases/{salt_version}.md.tmp"
     try:
-        with open(f"doc/topics/releases/{major_version}.rst") as rfp:
+        with open(f"doc/topics/releases/{major_version}.md") as rfp:
             existing = rfp.read()
     except FileNotFoundError:
         existing = ""
     with open(tmpnotes, "w") as wfp:
         wfp.write(existing)
+        wfp.write("\n## Changelog\n")
         wfp.write(changes)
     try:
         with open(tmpnotes) as rfp:
@@ -363,7 +364,7 @@ def update_release_notes(ctx: Context, salt_version: str, draft: bool = False):
             if draft:
                 ctx.print(contents, soft_wrap=True)
             else:
-                with open(f"doc/topics/releases/{salt_version}.rst", "w") as wfp:
+                with open(f"doc/topics/releases/{salt_version}.md", "w") as wfp:
                     wfp.write(contents)
     finally:
         os.remove(tmpnotes)
