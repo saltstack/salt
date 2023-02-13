@@ -10,7 +10,7 @@ on:
         description: The Salt version to set prior to building packages.
 
 env:
-  COLUMNS: 160
+  COLUMNS: 190
 
 jobs:
   build:

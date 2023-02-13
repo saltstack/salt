@@ -41,7 +41,7 @@ on:
 
 env:
   NOX_VERSION: "2022.8.7"
-  COLUMNS: 160
+  COLUMNS: 190
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
   PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/

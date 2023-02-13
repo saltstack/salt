@@ -22,7 +22,7 @@ on:
         required: true
 
 env:
-  COLUMNS: 160
+  COLUMNS: 190
 
 jobs:
   build-src:
