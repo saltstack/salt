@@ -1044,6 +1044,18 @@ class VM:
         destination = f"{self.name}:{remote_path}"
         description = "Rsync local checkout to VM..."
         self.rsync(source, destination, description, rsync_flags)
+        if self.is_windows:
+            # Need to set the permissions correctly. Rsync does not
+            # set correct permissions
+            cmd = ["icacls", remote_path, "/T", "/reset"]
+            ret = self.run(cmd, capture=True, check=False)
+            if ret.returncode != 0:
+                self.ctx.exit(ret.returncode, ret.stderr.strip())
+
+            cmd = ["icacls", remote_path, "/grant", "Administrator:(OI)(CI)F", "/T"]
+            ret = self.run(cmd, capture=True, check=False)
+            if ret.returncode != 0:
+                self.ctx.exit(ret.returncode, ret.stderr.strip())
 
     def write_and_upload_dot_env(self, env: dict[str, str]):
         if not env:
@@ -1079,7 +1091,8 @@ class VM:
             self.ctx.exit(1, message=f"{self!r} is not running")
         if env is None:
             env = []
-        env.append("PYTHONUTF8=1")
+        if self.is_windows is False:
+            env.append("PYTHONUTF8=1")
         self.write_ssh_config()
         try:
             ssh_command = self.ssh_command_args(
