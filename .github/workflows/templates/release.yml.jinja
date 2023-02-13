@@ -1,0 +1,88 @@
+<%- set prepare_workflow_salt_version_input = "${{ inputs.salt-version }}" %>
+<%- set gh_environment = "release" %>
+<%- extends 'layout.yml.jinja' %>
+
+<%- block on %>
+
+on:
+  workflow_dispatch:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to get from staging to publish the release.
+
+<%- endblock on %>
+
+<%- block concurrency %>
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}
+  cancel-in-progress: false
+
+<%- endblock concurrency %>
+
+<%- block permissions %>
+
+permissions:
+  contents: write  # To be able to publish the release
+
+<%- endblock permissions %>
+
+<%- block pre_jobs %>
+
+  <%- set job_name = "check-requirements" %>
+
+  <{ job_name }>:
+  <%- do conclusion_needs.append(job_name) %>
+    name: Check Requirements
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check For Admin Permission
+        uses: actions-cool/check-user-permission@v2
+        with:
+          require: admin
+          username: ${{ github.triggering_actor }}
+
+      - name: Check Branch
+        run: |
+
+          {#-
+              Should we allow other branches?
+          #}
+          echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
+          if [ "${{ github.ref_name }}" != "master" ]; then
+              echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
+              exit 1
+          else
+              echo "Allowed"
+          fi
+
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.GHA_SSH_KEY }}
+          fetch-depth: 0  # Full clone to also get the tags
+
+      - name: Configure Git
+        shell: bash
+        run: |
+          git config --global user.name "Salt Project Packaging"
+          git config --global user.email saltproject-packaging@vmware.com
+
+      - name: Download The Release Artifacts
+        run: |
+          aws --region us-west-2 s3 cp --recursive s3://salt-project-prod-salt-artifacts-staging/release-artifacts/${{ inputs.salt-version }}/ release-artifacts
+      - name: Apply Release Patch
+        shell: bash
+        run: |
+          git am --committer-date-is-author-date release-artifacts/salt-${{ inputs.salt-version }}.patch
+
+<%- endblock pre_jobs %>
+
+
+<%- block jobs %>
+  <{- super() }>
+  {#- We need the test.pypi.org upload job added here #}
+  {#- We need the package upload tests against staging added here #}
+<%- endblock jobs %>

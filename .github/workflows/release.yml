@@ -1,0 +1,93 @@
+# Do not edit these workflows directly as the changes made will be overwritten.
+# Instead, edit the template '.github/workflows/templates/release.yml.jinja'
+---
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to get from staging to publish the release.
+
+env:
+  COLUMNS: 190
+  CACHE_SEED: SEED-2  # Bump the number to invalidate all caches
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
+
+permissions:
+  contents: write  # To be able to publish the release
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+
+  check-requirements:
+    name: Check Requirements
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check For Admin Permission
+        uses: actions-cool/check-user-permission@v2
+        with:
+          require: admin
+          username: ${{ github.triggering_actor }}
+
+      - name: Check Branch
+        run: |
+          echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
+          if [ "${{ github.ref_name }}" != "master" ]; then
+              echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
+              exit 1
+          else
+              echo "Allowed"
+          fi
+
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.GHA_SSH_KEY }}
+          fetch-depth: 0  # Full clone to also get the tags
+
+      - name: Configure Git
+        shell: bash
+        run: |
+          git config --global user.name "Salt Project Packaging"
+          git config --global user.email saltproject-packaging@vmware.com
+
+      - name: Download The Release Artifacts
+        run: |
+          aws --region us-west-2 s3 cp --recursive s3://salt-project-prod-salt-artifacts-staging/release-artifacts/${{ inputs.salt-version }}/ release-artifacts
+      - name: Apply Release Patch
+        shell: bash
+        run: |
+          git am --committer-date-is-author-date release-artifacts/salt-${{ inputs.salt-version }}.patch
+
+  set-pipeline-exit-status:
+    # This step is just so we can make github require this step, to pass checks
+    # on a pull request instead of requiring all
+    name: Set the ${{ github.workflow }} Pipeline Exit Status
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      - check-requirements
+    steps:
+      - name: Get workflow information
+        id: get-workflow-info
+        uses: technote-space/workflow-conclusion-action@v3
+
+      - name: Set Pipeline Exit Status
+        shell: bash
+        run: |
+          if [ "${{ steps.get-workflow-info.outputs.conclusion }}" != "success" ]; then
+            exit 1
+          else
+            exit 0
+          fi
+
+      - name: Done
+        if: always()
+        run:
+          echo "All worflows finished"
