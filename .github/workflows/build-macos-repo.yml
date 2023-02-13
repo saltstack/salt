@@ -72,32 +72,22 @@ jobs:
           rm "$SECRETS_KEY_FILE"
           echo "passphrase-file ${GNUPGHOME}/passphrase" >> "${GNUPGHOME}/gpg.conf"
 
-      - name: Download `SALT-PROJECT-GPG-PUBKEY-2023.gpg`
-        env:
-          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
-        run: |
-          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
-          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
-          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/saltstack-gpg-key3-file \
-            --query SecretString --output text| jq .base64 -r | base64 -d \
-            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o ~/SALT-PROJECT-GPG-PUBKEY-2023.gpg -d -
-          rm "${SECRETS_KEY_FILE}"
-
       - name: Create Repository Path
         run: |
           mkdir -p artifacts/pkgs/repo
 
       - name: Create Repository
         run: |
-          tools pkg-repo macos --key-id=64CBBC8173D76B3F \
+          tools pkg repo create macos --key-id=64CBBC8173D76B3F \
             ${{ inputs.nightly-build && '--nightly-build' || ''  }} --salt-version=${{ inputs.salt-version }} \
             ${{ inputs.rc-build && '--rc-build' || ''  }} --incoming=artifacts/pkgs/incoming \
             --repo-path=artifacts/pkgs/repo
 
       - name: Upload Repository As An Artifact
-        uses: actions/upload-artifact@v3
+        uses: ./.github/actions/upload-artifact
         with:
           name: salt-${{ inputs.salt-version }}-${{ inputs.environment }}-repo
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
+          archive-name: macos-repo

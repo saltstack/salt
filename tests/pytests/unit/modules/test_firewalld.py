@@ -40,30 +40,30 @@ def test_list_zones():
             nm-shared
               target: ACCEPT
               icmp-block-inversion: no
-              interfaces: 
-              sources: 
+              interfaces:
+              sources:
               services: dhcp dns ssh
-              ports: 
+              ports:
               protocols: icmp ipv6-icmp
               masquerade: no
-              forward-ports: 
-              source-ports: 
-              icmp-blocks: 
-              rich rules: 
+              forward-ports:
+              source-ports:
+              icmp-blocks:
+              rich rules:
             \trule priority="32767" reject
 
             public
               target: default
               icmp-block-inversion: no
-              interfaces: 
-              sources: 
+              interfaces:
+              sources:
               services: cockpit dhcpv6-client ssh
-              ports: 
-              protocols: 
+              ports:
+              protocols:
               masquerade: no
-              forward-ports: 
-              source-ports: 
-              icmp-blocks: 
+              forward-ports:
+              source-ports:
+              icmp-blocks:
               rich rules:
             """
     )
@@ -218,15 +218,15 @@ def test_list_all():
           target: default
           icmp-block-inversion: no
           interfaces: eth0
-          sources: 
+          sources:
           services: cockpit dhcpv6-client ssh
-          ports: 
-          protocols: 
+          ports:
+          protocols:
           masquerade: no
-          forward-ports: 
-          source-ports: 
-          icmp-blocks: 
-          rich rules: 
+          forward-ports:
+          source-ports:
+          icmp-blocks:
+          rich rules:
         """
     )
     # pylint: enable=trailing-whitespace

@@ -1,4 +1,4 @@
-﻿using Microsoft.Deployment.WindowsInstaller;
+using Microsoft.Deployment.WindowsInstaller;
 using Microsoft.Tools.WindowsInstallerXml;
 using Microsoft.Win32;
 using System;
@@ -159,7 +159,7 @@ namespace MinionConfigurationExtension {
                     session["CONFIG_FOUND"] = "True";
                     session.Log("...MASTER set to kept config");
                 }
- 
+
                 // minion id
                 if (id_from_previous_installation != "") {
                     session.Log("...MINION_ID   kept config   =" + id_from_previous_installation);

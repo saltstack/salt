@@ -93,12 +93,12 @@ Wildcard matching is supported for state identifiers.
 
 * ``*`` matches zero or more characters
 * ``?`` matches a single character
-* ``[]`` matches a single character from the enclosed set 
+* ``[]`` matches a single character from the enclosed set
 
-Note that this does not follow glob rules - dots and slashes are not special, 
+Note that this does not follow glob rules - dots and slashes are not special,
 and it is matching against state identifiers, not file paths.
 
-In the example below, a change in any state managing an apache config file 
+In the example below, a change in any state managing an apache config file
 will reload/restart the service:
 
 .. code-block:: yaml
