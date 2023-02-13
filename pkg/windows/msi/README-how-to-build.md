@@ -82,4 +82,3 @@ Therefore we generate an "internal version":
 
 - Python 2.7 = VC CRT 9.0 = VS 2008
 - Python 3.6 = VC CRT 14.0 = VS 2017
-

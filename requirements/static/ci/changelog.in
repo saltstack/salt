@@ -1,1 +1,3 @@
-towncrier
+towncrier==22.12.0
+looseversion
+packaging

@@ -102,8 +102,8 @@
 #-------------------------------------------------------------------------------
 # Variables
 #-------------------------------------------------------------------------------
-SRC_DIR=$(git rev-parse --show-toplevel)
-SCRIPT_DIR="$SRC_DIR/pkg/osx"
+SRC_DIR="$(git rev-parse --show-toplevel)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CPU_ARCH=$(uname -m)
 
 #-------------------------------------------------------------------------------
@@ -209,7 +209,11 @@ printf "v%.0s" {1..80}; printf "\n"
 #-------------------------------------------------------------------------------
 # Build and Sign Package
 #-------------------------------------------------------------------------------
-"$SCRIPT_DIR/package.sh" "$VERSION"
+if [ "$(id -un)" != "root" ]; then
+    sudo "$SCRIPT_DIR/package.sh" "$VERSION"
+else
+    "$SCRIPT_DIR/package.sh" "$VERSION"
+fi
 
 #-------------------------------------------------------------------------------
 # Notarize Package

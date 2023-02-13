@@ -54,7 +54,7 @@ def _read_proc_file(path, opts):
     """
     Return a dict of JID metadata, or None
     """
-    current_thread = threading.currentThread().name
+    current_thread = threading.current_thread().name
     pid = os.getpid()
     with salt.utils.files.fopen(path, "rb") as fp_:
         buf = fp_.read()
