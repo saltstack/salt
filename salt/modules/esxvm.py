@@ -5,7 +5,7 @@ Module used to access the esx proxy connection methods
     This module will be deprecated in a future release of Salt. VMware strongly
     recommends using the
     `VMware Salt extensions <https://docs.saltproject.io/salt/extensions/salt-ext-modules-vmware/en/latest/all.html>`_
-    instead of the ESXi module. Because the Salt extensions are newer and
+    instead of the ESX VSM module. Because the Salt extensions are newer and
     actively supported by VMware, they are more compatible with current versions
     of ESXi and they work well with the latest features in the VMware product
     line.
