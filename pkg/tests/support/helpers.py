@@ -9,6 +9,7 @@ import shutil
 import tarfile
 import textwrap
 import time
+import winreg
 from typing import TYPE_CHECKING, Any, Dict, List
 from zipfile import ZipFile
 
@@ -252,6 +253,7 @@ class SaltPkgInstall:
                                     first.filename,
                                 )
                     elif file_ext in ["exe", "msi"]:
+                        self.compressed = False
                         self.onedir = True
                         self.installer_pkg = True
                         self.root = self.install_dir.parent
@@ -266,6 +268,7 @@ class SaltPkgInstall:
                         self.root = pathlib.Path(os.sep, "usr", "local", "bin")
 
                     if file_ext == "pkg":
+                        self.compressed = False
                         self.onedir = True
                         self.installer_pkg = True
                         self.bin_dir = self.root / "salt" / "bin"
@@ -306,10 +309,10 @@ class SaltPkgInstall:
         if not self.compressed:
             if platform.is_windows():
                 self.binary_paths = {
-                    "call": ["salt-call"],
-                    "cp": ["salt-cp"],
-                    "minion": ["salt-minion"],
-                    "pip": ["salt-pip"],
+                    "call": ["salt-call.exe"],
+                    "cp": ["salt-cp.exe"],
+                    "minion": ["salt-minion.exe"],
+                    "pip": ["salt-pip.exe"],
                     "python": [python_bin],
                 }
             else:
@@ -467,63 +470,55 @@ class SaltPkgInstall:
                 log.debug("Extracting zip file")
                 with ZipFile(pkg, "r") as zip:
                     zip.extractall(path=self.root)
-            elif pkg.endswith("exe"):
-                # Install the package
-                log.debug("Installing: %s", str(pkg))
-                ret = self.proc.run(str(pkg), "/start-minion=0", "/S")
-                self._check_retcode(ret)
-                # Remove the service installed by the installer
-                log.debug("Removing installed salt-minion service")
-                self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
-            elif pkg.endswith("msi"):
-                # Install the package
-                log.debug("Installing: %s", str(pkg))
-                ret = self.proc.run(
-                    "cmd",
-                    "/c",
-                    "msiexec.exe",
-                    "/qn",
-                    "/i",
-                    str(pkg),
-                    'START_MINION=""',
-                    "&&",
-                    "exit",
-                    "ERRORLEVEL",
-                )
-                self._check_retcode(ret)
-                # Remove the service installed by the installer
-                log.debug("Removing installed salt-minion service")
-                self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
+            elif pkg.endswith("exe") or pkg.endswith("msi"):
+                log.error("Not a compressed package type: %s", pkg)
             else:
                 log.error("Unknown package type: %s", pkg)
             if self.system_service:
                 self._install_ssm_service()
         elif platform.is_darwin():
-            if pkg.endswith("pkg"):
-                daemons_dir = pathlib.Path(os.sep, "Library", "LaunchDaemons")
-                service_name = "com.saltstack.salt.minion"
-                plist_file = daemons_dir / f"{service_name}.plist"
-                log.debug("Installing: %s", str(pkg))
-                ret = self.proc.run("installer", "-pkg", str(pkg), "-target", "/")
-                self._check_retcode(ret)
-                # Stop the service installed by the installer
-                self.proc.run(
-                    "launchctl",
-                    "disable",
-                    f"system/{service_name}",
-                )
-                self.proc.run("launchctl", "bootout", "system", str(plist_file))
-            else:
-                log.debug("Extracting tarball into %s", self.root)
-                with tarfile.open(pkg) as tar:  # , "r:gz")
-                    tar.extractall(path=str(self.root))
+            log.debug("Extracting tarball into %s", self.root)
+            with tarfile.open(pkg) as tar:  # , "r:gz")
+                tar.extractall(path=str(self.root))
         else:
             log.debug("Extracting tarball into %s", self.root)
             with tarfile.open(pkg) as tar:  # , "r:gz")
                 tar.extractall(path=str(self.root))
 
     def _install_pkgs(self, upgrade=False):
-        if upgrade:
+        pkg = self.pkgs[0]
+        if platform.is_windows():
+            if pkg.endswith("exe"):
+                # Install the package
+                log.debug("Installing: %s", str(pkg))
+                ret = self.proc.run(str(pkg), "/start-minion=0", "/S")
+                self._check_retcode(ret)
+            elif pkg.endswith("msi"):
+                # Install the package
+                log.debug("Installing: %s", str(pkg))
+                ret = self.proc.run(
+                    "msiexec.exe", "/qn", "/i", str(pkg), 'START_MINION=""'
+                )
+                self._check_retcode(ret)
+            else:
+                log.error("Invalid package: %s", pkg)
+                return False
+            # Remove the service installed by the installer
+            log.debug("Removing installed salt-minion service")
+            self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
+            log.debug("Adding %s to the path", self.install_dir)
+            os.environ["PATH"] = ";".join([str(self.install_dir), os.getenv("path")])
+        elif platform.is_darwin():
+            daemons_dir = pathlib.Path(os.sep, "Library", "LaunchDaemons")
+            service_name = "com.saltstack.salt.minion"
+            plist_file = daemons_dir / f"{service_name}.plist"
+            log.debug("Installing: %s", str(pkg))
+            ret = self.proc.run("installer", "-pkg", str(pkg), "-target", "/")
+            self._check_retcode(ret)
+            # Stop the service installed by the installer
+            self.proc.run("launchctl", "disable", f"system/{service_name}")
+            self.proc.run("launchctl", "bootout", "system", str(plist_file))
+        elif upgrade:
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
             ret = self.proc.run(self.pkg_mngr, "upgrade", "-y", *self.pkgs)
         else:
@@ -662,29 +657,10 @@ class SaltPkgInstall:
 
             with open(pkg_path, "wb") as fp:
                 fp.write(ret.content)
-            if pkg_path.endswith("exe"):
-                ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
-                self._check_retcode(ret)
-            elif win_pkg.endswith("msi"):
-                ret = self.proc.run(
-                    "cmd",
-                    "/c",
-                    "msiexec.exe",
-                    "/qn",
-                    "/i",
-                    pkg_path,
-                    'START_MINION=""',
-                    "&&",
-                    "exit",
-                    "ERRORLEVEL",
-                )
-                self._check_retcode(ret)
-            else:
-                log.error("Unknown package type: %s", pkg_path)
+            ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
+            self._check_retcode(ret)
             log.debug("Removing installed salt-minion service")
-            self.proc.run(
-                "cmd", "/c", str(self.ssm_bin), "remove", "salt-minion", "confirm"
-            )
+            self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
 
             if self.system_service:
                 self._install_system_service()
@@ -721,66 +697,20 @@ class SaltPkgInstall:
             if self.system_service:
                 # Uninstall the services
                 log.debug("Uninstalling master service")
-                self.proc.run(
-                    str(self.ssm_bin),
-                    "stop",
-                    "salt-master",
-                )
-                self.proc.run(
-                    str(self.ssm_bin),
-                    "remove",
-                    "salt-master",
-                    "confirm",
-                )
+                self.proc.run(str(self.ssm_bin), "stop", "salt-master")
+                self.proc.run(str(self.ssm_bin), "remove", "salt-master", "confirm")
                 log.debug("Uninstalling minion service")
-                self.proc.run(
-                    str(self.ssm_bin),
-                    "stop",
-                    "salt-minion",
-                )
-                self.proc.run(
-                    str(self.ssm_bin),
-                    "remove",
-                    "salt-minion",
-                    "confirm",
-                )
+                self.proc.run(str(self.ssm_bin), "stop", "salt-minion")
+                self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
                 log.debug("Uninstalling api service")
-                self.proc.run(
-                    str(self.ssm_bin),
-                    "stop",
-                    "salt-api",
-                )
-                self.proc.run(
-                    str(self.ssm_bin),
-                    "remove",
-                    "salt-api",
-                    "confirm",
-                )
+                self.proc.run(str(self.ssm_bin), "stop", "salt-api")
+                self.proc.run(str(self.ssm_bin), "remove", "salt-api", "confirm")
             log.debug("Removing the Salt Service Manager")
             if self.ssm_bin:
                 try:
                     self.ssm_bin.unlink()
                 except PermissionError:
                     atexit.register(self.ssm_bin.unlink)
-            pkg = self.pkgs[0]
-            log.info("Uninstalling %s", pkg)
-            if pkg.endswith("exe"):
-                uninst = self.install_dir / "uninst.exe"
-                ret = self.proc.run(uninst, "/S")
-                self._check_retcode(ret)
-            elif pkg.endswith("msi"):
-                ret = self.proc.run(
-                    "cmd",
-                    "/c",
-                    "msiexec.exe",
-                    "/qn",
-                    "/x",
-                    pkg,
-                    "&&",
-                    "exit",
-                    "ERRORLEVEL",
-                )
-                # self._check_retcode(ret)
         if platform.is_darwin():
             # From here: https://stackoverflow.com/a/46118276/4581998
             daemons_dir = pathlib.Path(os.sep, "Library", "LaunchDaemons")
@@ -839,9 +769,39 @@ class SaltPkgInstall:
             shutil.rmtree(str(self.root / "salt"))
 
     def _uninstall_pkgs(self):
-        log.debug("Un-Installing packages:\n%s", pprint.pformat(self.salt_pkgs))
-        ret = self.proc.run(self.pkg_mngr, self.rm_pkg, "-y", *self.salt_pkgs)
-        self._check_retcode(ret)
+        pkg = self.pkgs[0]
+        if platform.is_windows():
+            log.info("Uninstalling %s", pkg)
+            if pkg.endswith("exe"):
+                uninst = self.install_dir / "uninst.exe"
+                ret = self.proc.run(uninst, "/S")
+                self._check_retcode(ret)
+            elif pkg.endswith("msi"):
+                # These make the test suite not return the summary, so we'll
+                # need to remove manually
+                # ret = self.proc.run("msiexec.exe", "/qn", "/x", pkg)
+                # guid = "{5693F9A3-3083-426B-B17B-B860C00C9B84}"
+                # ret = self.proc.run("msiexec.exe", "/qn", "/x", guid)
+                # self._check_retcode(ret)
+
+                # Uninstall Minion Service
+                log.debug("Uninstalling minion service")
+                self.proc.run(str(self.ssm_bin), "stop", "salt-minion")
+                self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
+
+                # Remove install directory
+                shutil.rmtree(self.install_dir, ignore_errors=True)
+
+                # Remove registry entries
+                key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{5693F9A3-3083-426B-B17B-B860C00C9B84}"
+                winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, key)
+
+        elif platform.is_darwin():
+            self._uninstall_compressed()
+        else:
+            log.debug("Un-Installing packages:\n%s", pprint.pformat(self.salt_pkgs))
+            ret = self.proc.run(self.pkg_mngr, self.rm_pkg, "-y", *self.salt_pkgs)
+            self._check_retcode(ret)
 
     def uninstall(self):
         if self.compressed:
