@@ -23,25 +23,11 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
-def version():
+def version(install_salt):
     """
     get version number from artifact
     """
-    _version = ""
-    for artifact in ARTIFACTS_DIR.glob("**/*.*"):
-        _version = re.search(
-            r"([0-9].*)(\-[0-9].fc|\-[0-9].el|\+ds|\_all|\_any|\_amd64|\_arm64|\-[0-9].am|(\-[0-9]-[a-z]*-[a-z]*[0-9_]*.|\-[0-9]*.*)(tar.gz|tar.xz|zip|exe|pkg|rpm|deb))",
-            artifact.name,
-        )
-        if _version:
-            _version = _version.groups()[0].replace("_", "-").replace("~", "")
-            _version = _version.split("-")[0]
-            # TODO: Remove this clause.  This is to handle a versioning difficulty between pre-3006
-            # dev versions and older salt versions on deb-based distros
-            if _version.startswith("1:"):
-                _version = _version[2:]
-            break
-    return _version
+    return install_salt.get_version(version_only=True)
 
 
 def pytest_addoption(parser):
@@ -282,7 +268,9 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         # On windows, using single binary, it has to decompress it and run the command. Too slow.
         # So, just in this scenario, use open mode
         config_overrides["open_mode"] = True
-    if platform.is_windows():
+    # this check will need to be changed to install_salt.relenv
+    # once the package version returns 3006 and not 3005 on master
+    if platform.is_windows() and not install_salt.upgrade:
         salt_factories.system_install = False
         scripts_dir = salt_factories.root_dir / "Scripts"
         scripts_dir.mkdir(exist_ok=True)
