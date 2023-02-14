@@ -1036,12 +1036,13 @@ class VM:
         source = f"{tools.utils.REPO_ROOT}{os.path.sep}"
         # Remote repo path
         remote_path = self.upload_path.as_posix()
+        rsync_remote_path = remote_path
         if self.is_windows:
             for drive in ("c:", "C:"):
                 source = source.replace(drive, "/cygdrive/c")
-                source = source.replace("\\", "/")
-                remote_path = remote_path.replace(drive, "/cygdrive/c")
-        destination = f"{self.name}:{remote_path}"
+                rsync_remote_path = rsync_remote_path.replace(drive, "/cygdrive/c")
+            source = source.replace("\\", "/")
+        destination = f"{self.name}:{rsync_remote_path}"
         description = "Rsync local checkout to VM..."
         self.rsync(source, destination, description, rsync_flags)
         if self.is_windows:
