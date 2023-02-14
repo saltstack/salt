@@ -208,20 +208,21 @@ class Schedule:
             pillar_schedule = self.opts.get("pillar", {}).get("schedule", {})
             if not isinstance(pillar_schedule, dict):
                 raise ValueError("Schedule must be of type dict.")
-            schedule.update(pillar_schedule)
+            schedule.update(copy.deepcopy(pillar_schedule))
         if include_opts:
             opts_schedule = self.opts.get("schedule", {})
             if not isinstance(opts_schedule, dict):
                 raise ValueError("Schedule must be of type dict.")
-            schedule.update(opts_schedule)
+            schedule.update(copy.deepcopy(opts_schedule))
 
         if remove_hidden:
             _schedule = copy.deepcopy(schedule)
-            for job in _schedule:
-                if isinstance(_schedule[job], dict):
-                    for item in _schedule[job]:
+            for job in schedule:
+                if isinstance(schedule[job], dict):
+                    for item in schedule[job]:
                         if item.startswith("_"):
-                            del schedule[job][item]
+                            del _schedule[job][item]
+            return _schedule
         return schedule
 
     def _check_max_running(self, func, data, opts, now):
