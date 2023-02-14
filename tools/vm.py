@@ -1038,6 +1038,8 @@ class VM:
         remote_path = self.upload_path.as_posix()
         if self.is_windows:
             for drive in ("c:", "C:"):
+                source = source.replace(drive, "/cygdrive/c")
+                source = source.replace("\\", "/")
                 remote_path = remote_path.replace(drive, "/cygdrive/c")
         destination = f"{self.name}:{remote_path}"
         description = "Rsync local checkout to VM..."
