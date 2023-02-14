@@ -1796,7 +1796,7 @@ def test_pkgs(session):
     """
     pytest pkg tests session
     """
-    _pkg_test(session, [], "pkg")
+    _pkg_test(session, ["pkg/tests"], "pkg")
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="test-upgrade-pkgs")
