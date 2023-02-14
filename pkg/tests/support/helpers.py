@@ -793,6 +793,7 @@ class SaltPkgInstall:
 
                 # Remove registry entries
                 import winreg
+
                 key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{5693F9A3-3083-426B-B17B-B860C00C9B84}"
                 winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, key)
 
