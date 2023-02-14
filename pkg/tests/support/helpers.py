@@ -88,6 +88,7 @@ class SaltPkgInstall:
     repo_data: str = attr.ib(init=False)
     major: str = attr.ib(init=False)
     minor: str = attr.ib(init=False)
+    relenv: bool = attr.ib(True)
 
     @proc.default
     def _default_proc(self):
@@ -174,7 +175,7 @@ class SaltPkgInstall:
         data = ret.json()
         return data
 
-    def relenv(self, version):
+    def check_relenv(self, version):
         """
         Detects if we are using relenv
         onedir build
@@ -184,7 +185,7 @@ class SaltPkgInstall:
             relenv = True
         return relenv
 
-    def get_version(self):
+    def get_version(self, version_only=False):
         """
         Return the version information
         needed to install a previous version
@@ -192,30 +193,55 @@ class SaltPkgInstall:
         """
         prev_version = self.prev_version
         pkg_version = None
-        if not prev_version:
-            # We did not pass in a version, lets detect the latest
-            # version information of a Salt artifact.
-            latest = list(self.repo_data["latest"].keys())[0]
-            version = self.repo_data["latest"][latest]["version"]
-            if "-" in version:
-                prev_version, pkg_version = version.split("-")
-            else:
-                prev_version, pkg_version = version, None
+        if not self.upgrade:
+            # working with local artifact
+            version = ""
+            for artifact in ARTIFACTS_DIR.glob("**/*.*"):
+                version = re.search(
+                    r"([0-9].*)(\-[0-9].fc|\-[0-9].el|\+ds|\_all|\_any|\_amd64|\_arm64|\-[0-9].am|(\-[0-9]-[a-z]*-[a-z]*[0-9_]*.|\-[0-9]*.*)(tar.gz|tar.xz|zip|exe|pkg|rpm|deb))",
+                    artifact.name,
+                )
+                if version:
+                    version = version.groups()[0].replace("_", "-").replace("~", "")
+                    version = version.split("-")[0]
+                    # TODO: Remove this clause.  This is to handle a versioning difficulty between pre-3006
+                    # dev versions and older salt versions on deb-based distros
+                    if version.startswith("1:"):
+                        version = version[2:]
+                    break
+            major, minor = version.split(".", 1)
         else:
-            # We passed in a version, but lets check if the pkg_version
-            # is defined. Relenv pkgs do not define a pkg build number
-            if "-" not in prev_version and not self.relenv(version=prev_version):
-                pkg_numbers = [x for x in self.repo_data.keys() if prev_version in x]
-                pkg_version = 1
-                for number in pkg_numbers:
-                    number = int(number.split("-")[1])
-                    if number > pkg_version:
-                        pkg_version = number
-        major, minor = prev_version.split(".")
+            if not prev_version:
+                # We did not pass in a version, lets detect the latest
+                # version information of a Salt artifact.
+                latest = list(self.repo_data["latest"].keys())[0]
+                version = self.repo_data["latest"][latest]["version"]
+                if "-" in version:
+                    prev_version, pkg_version = version.split("-")
+                else:
+                    prev_version, pkg_version = version, None
+            else:
+                # We passed in a version, but lets check if the pkg_version
+                # is defined. Relenv pkgs do not define a pkg build number
+                if "-" not in prev_version and not self.check_relenv(
+                    version=prev_version
+                ):
+                    pkg_numbers = [
+                        x for x in self.repo_data.keys() if prev_version in x
+                    ]
+                    pkg_version = 1
+                    for number in pkg_numbers:
+                        number = int(number.split("-")[1])
+                        if number > pkg_version:
+                            pkg_version = number
+            major, minor = prev_version.split(".")
+        if version_only:
+            return version
         return major, minor, prev_version, pkg_version
 
     def __attrs_post_init__(self):
         self.major, self.minor, self.prev_version, self.pkg_version = self.get_version()
+        self.relenv = self.check_relenv(self.major)
         file_ext_re = r"tar\.gz"
         if platform.is_darwin():
             file_ext_re = r"tar\.gz|pkg"
@@ -486,6 +512,10 @@ class SaltPkgInstall:
     def _install_pkgs(self, upgrade=False):
         pkg = self.pkgs[0]
         if platform.is_windows():
+            if upgrade:
+                self.root = self.install_dir.parent
+                self.bin_dir = self.install_dir
+                self.ssm_bin = self.install_dir / "ssm.exe"
             if pkg.endswith("exe"):
                 # Install the package
                 log.debug("Installing: %s", str(pkg))
@@ -505,7 +535,6 @@ class SaltPkgInstall:
             log.debug("Removing installed salt-minion service")
             self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
             log.debug("Adding %s to the path", self.install_dir)
-            os.environ["PATH"] = ";".join([str(self.install_dir), os.getenv("path")])
         elif platform.is_darwin():
             daemons_dir = pathlib.Path(os.sep, "Library", "LaunchDaemons")
             service_name = "com.saltstack.salt.minion"
@@ -559,6 +588,7 @@ class SaltPkgInstall:
         major_ver = self.major
         minor_ver = self.minor
         pkg_version = self.pkg_version
+        full_version = f"{self.major}.{self.minor}-{pkg_version}"
 
         min_ver = f"{major_ver}"
         distro_name = self.distro_name
@@ -641,12 +671,16 @@ class SaltPkgInstall:
             self._check_retcode(ret)
             self.stop_services()
         elif platform.is_windows():
-            win_pkg = f"salt-{min_ver}-1-windows-amd64.exe"
-            win_pkg_url = (
-                f"https://repo.saltproject.io/salt/py3/windows/{major_ver}/{win_pkg}"
-            )
+            self.onedir = True
+            self.installer_pkg = True
+            self.bin_dir = self.install_dir / "bin"
+            self.run_root = self.bin_dir / "salt.exe"
+            self.ssm_bin = self.bin_dir / "ssm.exe"
 
-            if self.classic:
+            if not self.classic:
+                win_pkg = f"salt-{full_version}-windows-amd64.exe"
+                win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{full_version}/{win_pkg}"
+            else:
                 win_pkg = f"Salt-Minion-{min_ver}-1-Py3-AMD64-Setup.exe"
                 win_pkg_url = f"https://repo.saltproject.io/windows/{win_pkg}"
             pkg_path = pathlib.Path(r"C:\TEMP", win_pkg)
@@ -658,16 +692,11 @@ class SaltPkgInstall:
             ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
             self._check_retcode(ret)
             log.debug("Removing installed salt-minion service")
-            self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
+            ret = self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
+            self._check_retcode(ret)
 
             if self.system_service:
                 self._install_system_service()
-
-            self.onedir = True
-            self.installer_pkg = True
-            self.bin_dir = self.install_dir / "bin"
-            self.run_root = self.bin_dir / "salt.exe"
-            self.ssm_bin = self.bin_dir / "ssm.exe"
 
         elif platform.is_darwin():
             if self.classic:
@@ -937,6 +966,9 @@ class SaltPkgInstall:
             self._check_retcode(ret)
 
     def __enter__(self):
+        if platform.is_windows():
+            os.environ["PATH"] = ";".join([str(self.install_dir), os.getenv("path")])
+
         if not self.no_install:
             if self.upgrade:
                 self.install_previous()
