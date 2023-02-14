@@ -109,7 +109,7 @@ pywin32==305
     #   wmi
 pyyaml==5.4.1
     # via -r requirements/base.txt
-pyzmq==22.0.3 ; sys_platform == "win32"
+pyzmq==25.0.0 ; sys_platform == "win32"
     # via -r requirements/zeromq.txt
 requests==2.25.1
     # via
