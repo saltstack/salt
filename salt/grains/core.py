@@ -3230,7 +3230,9 @@ def _hw_data(osdata):
         sysctl = salt.utils.path.which("sysctl")
         hwdata = {"productname": "hw.model"}
         for key, oid in hwdata.items():
-            value = __salt__["cmd.run"]("{} -b {}".format(sysctl, oid))
+            value = __salt__["cmd.run"]("{} -n {}".format(sysctl, oid))
+            if isinstance(value, str):
+                value = value.strip()
             if not value.endswith(" is invalid"):
                 grains[key] = _clean_value(key, value)
     elif osdata["kernel"] == "SunOS" and osdata["cpuarch"].startswith("sparc"):
