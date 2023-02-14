@@ -208,12 +208,12 @@ class Schedule:
             pillar_schedule = self.opts.get("pillar", {}).get("schedule", {})
             if not isinstance(pillar_schedule, dict):
                 raise ValueError("Schedule must be of type dict.")
-            schedule.update(copy.deepcopy(pillar_schedule))
+            schedule.update(pillar_schedule)
         if include_opts:
             opts_schedule = self.opts.get("schedule", {})
             if not isinstance(opts_schedule, dict):
                 raise ValueError("Schedule must be of type dict.")
-            schedule.update(copy.deepcopy(opts_schedule))
+            schedule.update(opts_schedule)
 
         if remove_hidden:
             _schedule = copy.deepcopy(schedule)
