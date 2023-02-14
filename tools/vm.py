@@ -1130,7 +1130,7 @@ class VM:
             "-f",
             f"{self.upload_path.joinpath('noxfile.py').as_posix()}",
             "-e",
-            f"'{nox_session}'",
+            f'"{nox_session}"',
         ]
         if nox_args:
             cmd += nox_args
