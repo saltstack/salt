@@ -259,6 +259,8 @@ jobs:
 
       - name: Build Documentation
         shell: bash
+        env:
+          LATEST_RELEASE: ${{ needs.prepare-workflow.outputs.salt-version }}
         run: |
           tools docs html --no-clean --archive salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs.tar.xz
 
