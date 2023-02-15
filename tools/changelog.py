@@ -7,16 +7,15 @@ from __future__ import annotations
 import datetime
 import logging
 import os
-import pathlib
 import subprocess
 import sys
 import textwrap
 
 from ptscripts import Context, command_group
 
-log = logging.getLogger(__name__)
+import tools.utils
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+log = logging.getLogger(__name__)
 
 # Define the command group
 changelog = command_group(
@@ -25,7 +24,7 @@ changelog = command_group(
     description=__doc__,
     venv_config={
         "requirements_files": [
-            REPO_ROOT
+            tools.utils.REPO_ROOT
             / "requirements"
             / "static"
             / "ci"

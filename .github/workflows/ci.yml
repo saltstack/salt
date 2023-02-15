@@ -7,7 +7,7 @@ on:
   pull_request: {}
 
 env:
-  COLUMNS: 160
+  COLUMNS: 190
   CACHE_SEED: SEED-0  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
 

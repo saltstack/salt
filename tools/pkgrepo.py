@@ -13,25 +13,17 @@ import shutil
 import sys
 import textwrap
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import packaging.version
 from ptscripts import Context, command_group
 
 import tools.pkg
+import tools.utils
 
 try:
     import boto3
     from botocore.exceptions import ClientError
-    from rich.progress import (
-        BarColumn,
-        Column,
-        DownloadColumn,
-        Progress,
-        TextColumn,
-        TimeRemainingColumn,
-        TransferSpeedColumn,
-    )
 except ImportError:
     print(
         "\nPlease run 'python -m pip install -r "
@@ -42,9 +34,6 @@ except ImportError:
     raise
 
 log = logging.getLogger(__name__)
-
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-GPG_KEY_FILENAME = "SALT-PROJECT-GPG-PUBKEY-2023"
 
 # Define the command group
 repo = command_group(
@@ -219,17 +208,14 @@ def debian(
         rc_build=rc_build,
         nightly_build=nightly_build,
     )
+
     ftp_archive_config_file = create_repo_path / "apt-ftparchive.conf"
     ctx.info(f"Writing {ftp_archive_config_file} ...")
     ftp_archive_config_file.write_text(textwrap.dedent(ftp_archive_config))
 
-    keyfile_gpg = create_repo_path / GPG_KEY_FILENAME
-    ctx.info(
-        f"Exporting GnuPG Key '{key_id}' to {keyfile_gpg.relative_to(repo_path)}.pub ..."
-    )
-    ctx.run(
-        "gpg", "--armor", "-o", str(keyfile_gpg.with_suffix(".pub")), "--export", key_id
-    )
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+
     pool_path = create_repo_path / "pool"
     pool_path.mkdir(exist_ok=True)
     for fpath in incoming.iterdir():
@@ -309,15 +295,27 @@ def debian(
     ctx.info(f"Running '{' '.join(cmdline)}' ...")
     ctx.run(*cmdline, cwd=create_repo_path)
     if nightly_build is False:
-        ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
-        major_version = packaging.version.parse(salt_version).major
-        major_link = create_repo_path.parent.parent / str(major_version)
-        major_link.symlink_to(f"minor/{salt_version}")
-        latest_link = create_repo_path.parent.parent / "latest"
-        latest_link.symlink_to(f"minor/{salt_version}")
+        remote_versions = _get_remote_versions(
+            tools.utils.STAGING_BUCKET_NAME,
+            create_repo_path.parent.relative_to(repo_path),
+        )
+        major_version = Version(salt_version).major
+        matching_major = None
+        for version in remote_versions:
+            if version.major == major_version:
+                matching_major = version
+                break
+        if not matching_major or matching_major < salt_version:
+            major_link = create_repo_path.parent.parent / str(major_version)
+            ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
+            major_link.symlink_to(f"minor/{salt_version}")
+        if not remote_versions or remote_versions[0] < salt_version:
+            latest_link = create_repo_path.parent.parent / "latest"
+            ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
+            latest_link.symlink_to(f"minor/{salt_version}")
     else:
-        ctx.info("Creating 'latest' symlink ...")
         latest_link = create_repo_path.parent / "latest"
+        ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
         latest_link.symlink_to(create_repo_path.name)
 
     ctx.info("Done")
@@ -415,11 +413,8 @@ def rpm(
         nightly_build=nightly_build,
     )
 
-    keyfile_gpg = create_repo_path / GPG_KEY_FILENAME
-    ctx.info(
-        f"Exporting GnuPG Key '{key_id}' to {keyfile_gpg.relative_to(repo_path)}.gpg ..."
-    )
-    ctx.run("gpg", "-o", str(keyfile_gpg.with_suffix(".gpg")), "--export", key_id)
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
 
     for fpath in incoming.iterdir():
         if ".src" in fpath.suffixes:
@@ -474,10 +469,6 @@ def rpm(
             base_url = "py3/"
             repo_file_contents = "[salt-repo]"
         base_url += f"{distro}/{url_suffix}"
-        if distro_version == "9":
-            gpg_key = f"{base_url}/SALTSTACK-GPG-KEY2.pub"
-        else:
-            gpg_key = f"{base_url}/SALTSTACK-GPG-KEY.pub"
         if distro == "amazon":
             distro_name = "Amazon Linux"
         else:
@@ -496,7 +487,7 @@ def rpm(
         enabled=1
         enabled_metadata=1
         gpgcheck=1
-        gpgkey={gpg_key}
+        gpgkey={base_url}/{tools.utils.GPG_KEY_FILENAME}.pub
         """
 
     if nightly_build:
@@ -509,18 +500,31 @@ def rpm(
     _create_repo_file(repo_file_path, salt_version)
 
     if nightly_build is False and rc_build is False:
-        ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
-        major_version = packaging.version.parse(salt_version).major
-        major_link = create_repo_path.parent.parent / str(major_version)
-        major_link.symlink_to(f"minor/{salt_version}")
-        latest_link = create_repo_path.parent.parent / "latest"
-        latest_link.symlink_to(f"minor/{salt_version}")
-        for name in (major_version, "latest"):
-            repo_file_path = create_repo_path.parent.parent / f"{name}.repo"
-            _create_repo_file(repo_file_path, name)
+        remote_versions = _get_remote_versions(
+            tools.utils.STAGING_BUCKET_NAME,
+            create_repo_path.parent.relative_to(repo_path),
+        )
+        major_version = Version(salt_version).major
+        matching_major = None
+        for version in remote_versions:
+            if version.major == major_version:
+                matching_major = version
+                break
+        if not matching_major or matching_major < salt_version:
+            major_link = create_repo_path.parent.parent / str(major_version)
+            ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
+            major_link.symlink_to(f"minor/{salt_version}")
+            repo_file_path = create_repo_path.parent.parent / f"{major_version}.repo"
+            _create_repo_file(repo_file_path, str(major_version))
+        if not remote_versions or remote_versions[0] < salt_version:
+            latest_link = create_repo_path.parent.parent / "latest"
+            ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
+            latest_link.symlink_to(f"minor/{salt_version}")
+            repo_file_path = create_repo_path.parent.parent / "latest.repo"
+            _create_repo_file(repo_file_path, "latest")
     else:
-        ctx.info("Creating 'latest' symlink and 'latest.repo' file ...")
         latest_link = create_repo_path.parent / "latest"
+        ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
         latest_link.symlink_to(create_repo_path.name)
         repo_file_path = create_repo_path.parent.parent / "latest.repo"
         _create_repo_file(repo_file_path, "latest")
@@ -711,187 +715,82 @@ def onedir(
     ctx.info("Done")
 
 
-def _create_onedir_based_repo(
+@create.command(
+    name="src",
+    arguments={
+        "salt_version": {
+            "help": "The salt version for which to build the repository",
+            "required": True,
+        },
+        "repo_path": {
+            "help": "Path where the repository shall be created.",
+            "required": True,
+        },
+        "key_id": {
+            "help": "The GnuPG key ID used to sign.",
+            "required": True,
+        },
+        "incoming": {
+            "help": (
+                "The path to the directory containing the files that should added to "
+                "the repository."
+            ),
+            "required": True,
+        },
+        "nightly_build": {
+            "help": "Developement repository target",
+        },
+        "rc_build": {
+            "help": "Release Candidate repository target",
+        },
+    },
+)
+def src(
     ctx: Context,
-    salt_version: str,
-    nightly_build: bool,
-    rc_build: bool,
-    repo_path: pathlib.Path,
-    incoming: pathlib.Path,
-    key_id: str,
-    distro: str,
-    pkg_suffixes: tuple[str, ...],
+    salt_version: str = None,
+    incoming: pathlib.Path = None,
+    repo_path: pathlib.Path = None,
+    key_id: str = None,
+    nightly_build: bool = False,
+    rc_build: bool = False,
 ):
+    """
+    Create the onedir repository.
+    """
+    if TYPE_CHECKING:
+        assert salt_version is not None
+        assert incoming is not None
+        assert repo_path is not None
+        assert key_id is not None
+
     ctx.info("Creating repository directory structure ...")
     create_repo_path = _create_repo_path(
-        repo_path, salt_version, distro, rc_build=rc_build, nightly_build=nightly_build
-    )
-    if nightly_build is False:
-        repo_json_path = create_repo_path.parent.parent / "repo.json"
-    else:
-        repo_json_path = create_repo_path.parent / "repo.json"
-
-    if nightly_build:
-        bucket_name = "salt-project-prod-salt-artifacts-nightly"
-    else:
-        bucket_name = "salt-project-prod-salt-artifacts-staging"
-
-    s3 = boto3.client("s3")
-    try:
-        ret = s3.head_object(
-            Bucket=bucket_name, Key=str(repo_json_path.relative_to(repo_path))
-        )
-        ctx.info("Downloading existing 'repo.json' file")
-        size = ret["ContentLength"]
-        with repo_json_path.open("wb") as wfh:
-            with create_progress_bar(file_progress=True) as progress:
-                task = progress.add_task(description="Downloading...", total=size)
-            s3.download_fileobj(
-                Bucket=bucket_name,
-                Key=str(repo_json_path.relative_to(repo_path)),
-                Fileobj=wfh,
-                Callback=UpdateProgress(progress, task),
-            )
-        with repo_json_path.open() as rfh:
-            repo_json = json.load(rfh)
-    except ClientError as exc:
-        if "Error" not in exc.response:
-            raise
-        if exc.response["Error"]["Code"] != "404":
-            raise
-        repo_json = {}
-
-    if salt_version not in repo_json:
-        repo_json[salt_version] = {}
-
-    copy_exclusions = (
-        ".blake2b",
-        ".sha512",
-        ".sha3_512",
-        ".BLAKE2B",
-        ".SHA512",
-        ".SHA3_512",
-        ".json",
+        repo_path,
+        salt_version,
+        "src",
+        rc_build=rc_build,
+        nightly_build=nightly_build,
     )
     hashes_base_path = create_repo_path / f"salt-{salt_version}"
     for fpath in incoming.iterdir():
-        if fpath.suffix in copy_exclusions:
+        if fpath.suffix not in (".gz",):
             continue
         ctx.info(f"* Processing {fpath} ...")
         dpath = create_repo_path / fpath.name
         ctx.info(f"Copying {fpath} to {dpath} ...")
         shutil.copyfile(fpath, dpath)
-        if "-amd64" in dpath.name.lower():
-            arch = "amd64"
-        elif "-x86_64" in dpath.name.lower():
-            arch = "x86_64"
-        elif "-x86" in dpath.name.lower():
-            arch = "x86"
-        elif "-aarch64" in dpath.name.lower():
-            arch = "aarch64"
-        else:
-            ctx.error(
-                f"Cannot pickup the right architecture from the filename '{dpath.name}'."
-            )
-            ctx.exit(1)
-        repo_json[salt_version][dpath.name] = {
-            "name": dpath.name,
-            "version": salt_version,
-            "os": distro,
-            "arch": arch,
-        }
         for hash_name in ("blake2b", "sha512", "sha3_512"):
             ctx.info(f"   * Calculating {hash_name} ...")
             hexdigest = _get_file_checksum(fpath, hash_name)
-            repo_json[salt_version][dpath.name][hash_name.upper()] = hexdigest
             with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
 
     for fpath in create_repo_path.iterdir():
-        if fpath.suffix in pkg_suffixes:
-            continue
-        ctx.info(f"GPG Signing '{fpath.relative_to(repo_path)}' ...")
-        ctx.run("gpg", "-u", key_id, "-o", f"{fpath}.asc", "-a", "-b", "-s", str(fpath))
+        tools.utils.gpg_sign(ctx, key_id, fpath)
 
-    keyfile_gpg = create_repo_path / GPG_KEY_FILENAME
-    ctx.info(
-        f"Exporting GnuPG Key '{key_id}' to {keyfile_gpg.relative_to(repo_path)}.{{gpg,pub}} ..."
-    )
-    ctx.run("gpg", "-o", str(keyfile_gpg.with_suffix(".gpg")), "--export", key_id)
-    ctx.run(
-        "gpg", "--armor", "-o", str(keyfile_gpg.with_suffix(".pub")), "--export", key_id
-    )
-
-    if nightly_build is False:
-        versions_in_repo_json = {}
-        for version in repo_json:
-            if version == "latest":
-                continue
-            versions_in_repo_json[packaging.version.parse(version)] = version
-        latest_version = versions_in_repo_json[
-            sorted(versions_in_repo_json, reverse=True)[0]
-        ]
-        if salt_version == latest_version:
-            repo_json["latest"] = repo_json[salt_version]
-            ctx.info("Creating '<major-version>' and 'latest' symlinks ...")
-            major_version = packaging.version.parse(salt_version).major
-            repo_json[str(major_version)] = repo_json[salt_version]
-            major_link = create_repo_path.parent.parent / str(major_version)
-            major_link.symlink_to(f"minor/{salt_version}")
-            latest_link = create_repo_path.parent.parent / "latest"
-            latest_link.symlink_to(f"minor/{salt_version}")
-
-        minor_repo_json_path = create_repo_path.parent / "repo.json"
-        try:
-            ret = s3.head_object(
-                Bucket=bucket_name, Key=str(minor_repo_json_path.relative_to(repo_path))
-            )
-            size = ret["ContentLength"]
-            ctx.info("Downloading existing 'minor/repo.json' file")
-            with minor_repo_json_path.open("wb") as wfh:
-                with create_progress_bar(file_progress=True) as progress:
-                    task = progress.add_task(description="Downloading...", total=size)
-                s3.download_fileobj(
-                    Bucket=bucket_name,
-                    Key=str(minor_repo_json_path.relative_to(repo_path)),
-                    Fileobj=wfh,
-                    Callback=UpdateProgress(progress, task),
-                )
-            with minor_repo_json_path.open() as rfh:
-                minor_repo_json = json.load(rfh)
-        except ClientError as exc:
-            if "Error" not in exc.response:
-                raise
-            if exc.response["Error"]["Code"] != "404":
-                raise
-            minor_repo_json = {}
-        minor_repo_json[salt_version] = repo_json[salt_version]
-        minor_repo_json_path.write_text(json.dumps(minor_repo_json))
-    else:
-        ctx.info("Creating 'latest' symlink ...")
-        latest_link = create_repo_path.parent / "latest"
-        latest_link.symlink_to(create_repo_path.name)
-
-    repo_json_path.write_text(json.dumps(repo_json))
-
-
-def _get_file_checksum(fpath: pathlib.Path, hash_name: str) -> str:
-
-    with fpath.open("rb") as rfh:
-        try:
-            digest = hashlib.file_digest(rfh, hash_name)  # type: ignore[attr-defined]
-        except AttributeError:
-            # Python < 3.11
-            buf = bytearray(2**18)  # Reusable buffer to reduce allocations.
-            view = memoryview(buf)
-            digest = getattr(hashlib, hash_name)()
-            while True:
-                size = rfh.readinto(buf)
-                if size == 0:
-                    break  # EOF
-                digest.update(view[:size])
-    hexdigest: str = digest.hexdigest()
-    return hexdigest
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+    ctx.info("Done")
 
 
 @publish.command(
@@ -941,6 +840,253 @@ def release(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
     """
 
 
+def _get_remote_versions(bucket_name: str, remote_path: str):
+    remote_path = str(remote_path)
+    if not remote_path.endswith("/"):
+        remote_path += "/"
+
+    s3 = boto3.client("s3")
+    ret = s3.list_objects(
+        Bucket=bucket_name,
+        Delimiter="/",
+        Prefix=remote_path,
+    )
+    if "CommonPrefixes" not in ret:
+        return []
+    versions = []
+    for entry in ret["CommonPrefixes"]:
+        _, version = entry["Prefix"].rstrip("/").rsplit("/", 1)
+        if version == "latest":
+            continue
+        versions.append(Version(version))
+    versions.sort(reverse=True)
+    return versions
+
+
+def _create_onedir_based_repo(
+    ctx: Context,
+    salt_version: str,
+    nightly_build: bool,
+    rc_build: bool,
+    repo_path: pathlib.Path,
+    incoming: pathlib.Path,
+    key_id: str,
+    distro: str,
+    pkg_suffixes: tuple[str, ...],
+):
+    ctx.info("Creating repository directory structure ...")
+    create_repo_path = _create_repo_path(
+        repo_path, salt_version, distro, rc_build=rc_build, nightly_build=nightly_build
+    )
+    if nightly_build is False:
+        repo_json_path = create_repo_path.parent.parent / "repo.json"
+    else:
+        repo_json_path = create_repo_path.parent / "repo.json"
+
+    if nightly_build:
+        bucket_name = tools.utils.NIGHTLY_BUCKET_NAME
+    else:
+        bucket_name = tools.utils.STAGING_BUCKET_NAME
+
+    release_json = {}
+
+    copy_exclusions = (
+        ".blake2b",
+        ".sha512",
+        ".sha3_512",
+        ".BLAKE2B",
+        ".SHA512",
+        ".SHA3_512",
+        ".json",
+    )
+    hashes_base_path = create_repo_path / f"salt-{salt_version}"
+    for fpath in incoming.iterdir():
+        if fpath.suffix in copy_exclusions:
+            continue
+        ctx.info(f"* Processing {fpath} ...")
+        dpath = create_repo_path / fpath.name
+        ctx.info(f"Copying {fpath} to {dpath} ...")
+        shutil.copyfile(fpath, dpath)
+        if "-amd64" in dpath.name.lower():
+            arch = "amd64"
+        elif "-x86_64" in dpath.name.lower():
+            arch = "x86_64"
+        elif "-x86" in dpath.name.lower():
+            arch = "x86"
+        elif "-aarch64" in dpath.name.lower():
+            arch = "aarch64"
+        else:
+            ctx.error(
+                f"Cannot pickup the right architecture from the filename '{dpath.name}'."
+            )
+            ctx.exit(1)
+        if distro == "onedir":
+            if "-onedir-linux-" in dpath.name.lower():
+                release_os = "linux"
+            elif "-onedir-darwin-" in dpath.name.lower():
+                release_os = "macos"
+            elif "-onedir-windows-" in dpath.name.lower():
+                release_os = "windows"
+            else:
+                ctx.error(
+                    f"Cannot pickup the right OS from the filename '{dpath.name}'."
+                )
+                ctx.exit(1)
+        else:
+            release_os = distro
+        release_json[dpath.name] = {
+            "name": dpath.name,
+            "version": salt_version,
+            "os": release_os,
+            "arch": arch,
+        }
+        for hash_name in ("blake2b", "sha512", "sha3_512"):
+            ctx.info(f"   * Calculating {hash_name} ...")
+            hexdigest = _get_file_checksum(fpath, hash_name)
+            release_json[dpath.name][hash_name.upper()] = hexdigest
+            with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
+                wfh.write(f"{hexdigest} {dpath.name}\n")
+
+    for fpath in create_repo_path.iterdir():
+        if fpath.suffix in pkg_suffixes:
+            continue
+        tools.utils.gpg_sign(ctx, key_id, fpath)
+
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+
+    repo_json = _get_repo_json_file_contents(
+        ctx, bucket_name=bucket_name, repo_path=repo_path, repo_json_path=repo_json_path
+    )
+    if nightly_build is True:
+        latest_link = create_repo_path.parent / "latest"
+        ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
+        latest_link.symlink_to(create_repo_path.name)
+
+        ctx.info(f"Writing {repo_json_path} ...")
+        repo_json_path.write_text(json.dumps(repo_json, sort_keys=True))
+        return
+
+    major_version = Version(salt_version).major
+    minor_repo_json_path = create_repo_path.parent / "repo.json"
+    minor_repo_json = _get_repo_json_file_contents(
+        ctx,
+        bucket_name=bucket_name,
+        repo_path=repo_path,
+        repo_json_path=minor_repo_json_path,
+    )
+    minor_repo_json[salt_version] = release_json
+    versions = _parse_versions(*list(minor_repo_json))
+    ctx.info(
+        f"Collected versions from {minor_repo_json_path.relative_to(repo_path)}: "
+        f"{', '.join(str(vs) for vs in versions)}"
+    )
+    minor_versions = [v for v in versions if v.major == major_version]
+    ctx.info(
+        f"Collected versions(Matching major: {major_version}) from {minor_repo_json_path.relative_to(repo_path)}: "
+        f"{', '.join(str(vs) for vs in minor_versions)}"
+    )
+    if not versions:
+        latest_version = Version(salt_version)
+    else:
+        latest_version = versions[0]
+    if not minor_versions:
+        latest_minor_version = Version(salt_version)
+    else:
+        latest_minor_version = minor_versions[0]
+
+    ctx.info(f"Release Version: {salt_version}")
+    ctx.info(f"Latest Repo Version: {latest_version}")
+    ctx.info(f"Latest Release Minor Version: {latest_minor_version}")
+
+    latest_link = create_repo_path.parent.parent / "latest"
+    if latest_version <= salt_version:
+        repo_json["latest"] = release_json
+        ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
+        if latest_link.exists():
+            latest_link.unlink()
+        latest_link.symlink_to(f"minor/{salt_version}")
+    else:
+        ctx.info(
+            f"Not creating the '{latest_link.relative_to(repo_path)}' symlink "
+            f"since {latest_version} > {salt_version}"
+        )
+
+    major_link = create_repo_path.parent.parent / str(major_version)
+    if latest_minor_version <= salt_version:
+        minor_repo_json["latest"] = release_json
+        # This is the latest minor, update the major in the top level repo.json
+        # to this version
+        repo_json[str(major_version)] = release_json
+        ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
+        if major_link.exists():
+            major_link.unlink()
+        major_link.symlink_to(f"minor/{salt_version}")
+    else:
+        ctx.info(
+            f"Not creating the '{major_link.relative_to(repo_path)}' symlink "
+            f"since {latest_minor_version} > {salt_version}"
+        )
+
+    ctx.info(f"Writing {minor_repo_json_path} ...")
+    minor_repo_json_path.write_text(json.dumps(minor_repo_json, sort_keys=True))
+
+    ctx.info(f"Writing {repo_json_path} ...")
+    repo_json_path.write_text(json.dumps(repo_json, sort_keys=True))
+
+
+def _get_repo_json_file_contents(
+    ctx: Context,
+    bucket_name: str,
+    repo_path: pathlib.Path,
+    repo_json_path: pathlib.Path,
+) -> dict[str, Any]:
+    s3 = boto3.client("s3")
+    repo_json: dict[str, Any] = {}
+    try:
+        ret = s3.head_object(
+            Bucket=bucket_name, Key=str(repo_json_path.relative_to(repo_path))
+        )
+        ctx.info(f"Downloading existing '{repo_json_path.relative_to(repo_path)}' file")
+        size = ret["ContentLength"]
+        with repo_json_path.open("wb") as wfh:
+            with tools.utils.create_progress_bar(file_progress=True) as progress:
+                task = progress.add_task(description="Downloading...", total=size)
+            s3.download_fileobj(
+                Bucket=bucket_name,
+                Key=str(repo_json_path.relative_to(repo_path)),
+                Fileobj=wfh,
+                Callback=tools.utils.UpdateProgress(progress, task),
+            )
+        with repo_json_path.open() as rfh:
+            repo_json = json.load(rfh)
+    except ClientError as exc:
+        if "Error" not in exc.response:
+            raise
+        if exc.response["Error"]["Code"] != "404":
+            raise
+    return repo_json
+
+
+def _get_file_checksum(fpath: pathlib.Path, hash_name: str) -> str:
+
+    with fpath.open("rb") as rfh:
+        try:
+            digest = hashlib.file_digest(rfh, hash_name)  # type: ignore[attr-defined]
+        except AttributeError:
+            # Python < 3.11
+            buf = bytearray(2**18)  # Reusable buffer to reduce allocations.
+            view = memoryview(buf)
+            digest = getattr(hashlib, hash_name)()
+            while True:
+                size = rfh.readinto(buf)
+                if size == 0:
+                    break  # EOF
+                digest.update(view[:size])
+    hexdigest: str = digest.hexdigest()
+    return hexdigest
+
+
 def _publish_repo(
     ctx: Context,
     repo_path: pathlib.Path,
@@ -952,11 +1098,11 @@ def _publish_repo(
     Publish packaging repositories.
     """
     if nightly_build:
-        bucket_name = "salt-project-prod-salt-artifacts-nightly"
+        bucket_name = tools.utils.NIGHTLY_BUCKET_NAME
     elif stage:
-        bucket_name = "salt-project-prod-salt-artifacts-staging"
+        bucket_name = tools.utils.STAGING_BUCKET_NAME
     else:
-        bucket_name = "salt-project-prod-salt-artifacts-release"
+        bucket_name = tools.utils.RELEASE_BUCKET_NAME
 
     ctx.info("Preparing upload ...")
     s3 = boto3.client("s3")
@@ -993,7 +1139,7 @@ def _publish_repo(
             path = pathlib.Path(dirpath, fpath)
             to_upload_paths.append(path)
 
-    with create_progress_bar() as progress:
+    with tools.utils.create_progress_bar() as progress:
         task = progress.add_task(
             "Deleting directories to override.", total=len(to_delete_paths)
         )
@@ -1011,55 +1157,22 @@ def _publish_repo(
             finally:
                 progress.update(task, advance=1)
 
-    def update_progress(progress, task, chunk):
-        progress.update(task, completed=chunk)
-
     try:
         ctx.info("Uploading repository ...")
         for upload_path in to_upload_paths:
             relpath = upload_path.relative_to(repo_path)
             size = upload_path.stat().st_size
             ctx.info(f"  {relpath}")
-            with create_progress_bar(file_progress=True) as progress:
+            with tools.utils.create_progress_bar(file_progress=True) as progress:
                 task = progress.add_task(description="Uploading...", total=size)
                 s3.upload_file(
                     str(upload_path),
                     bucket_name,
                     str(relpath),
-                    Callback=UpdateProgress(progress, task),
+                    Callback=tools.utils.UpdateProgress(progress, task),
                 )
     except KeyboardInterrupt:
         pass
-
-
-class UpdateProgress:
-    def __init__(self, progress, task):
-        self.progress = progress
-        self.task = task
-
-    def __call__(self, chunk_size):
-        self.progress.update(self.task, advance=chunk_size)
-
-
-def create_progress_bar(file_progress: bool = False, **kwargs):
-    if file_progress:
-        return Progress(
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            DownloadColumn(),
-            TransferSpeedColumn(),
-            TextColumn("eta"),
-            TimeRemainingColumn(),
-            **kwargs,
-        )
-    return Progress(
-        TextColumn(
-            "[progress.description]{task.description}", table_column=Column(ratio=3)
-        ),
-        BarColumn(),
-        expand=True,
-        **kwargs,
-    )
 
 
 def _create_repo_path(
@@ -1082,8 +1195,53 @@ def _create_repo_path(
     if distro_arch:
         create_repo_path = create_repo_path / distro_arch
     if nightly_build is False:
-        create_repo_path = create_repo_path / "minor" / salt_version
+        if distro != "src":
+            create_repo_path = create_repo_path / "minor"
+        create_repo_path = create_repo_path / salt_version
     else:
         create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
     create_repo_path.mkdir(exist_ok=True, parents=True)
     return create_repo_path
+
+
+def _parse_versions(*versions: str) -> list[Version]:
+    _versions = []
+    for version in set(versions):
+        if version == "latest":
+            continue
+        _versions.append(Version(version))
+    if _versions:
+        _versions.sort(reverse=True)
+    return _versions
+
+
+class Version(packaging.version.Version):
+    def __lt__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__lt__(other)
+
+    def __le__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__le__(other)
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__eq__(other)
+
+    def __ge__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__ge__(other)
+
+    def __gt__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__gt__(other)
+
+    def __ne__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__ne__(other)
