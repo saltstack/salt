@@ -1226,7 +1226,7 @@ def verify(
         {
             "username": sig.get("username"),
             "key_id": sig["keyid"],
-            "fingerprint": sig["fingerprint"],
+            "fingerprint": sig["pubkey_fingerprint"],
             "trust_level": VERIFY_TRUST_LEVELS[str(sig["trust_level"])]
             if "trust_level" in sig
             else None,
