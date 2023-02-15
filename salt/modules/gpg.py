@@ -1150,7 +1150,7 @@ def verify(
         keys signed the data, verification will fail. Optional.
         Note that this does not take into account trust.
 
-        .. versionadded:: 3006.0
+        .. versionadded:: 3007.0
 
     signed_by_all
         A list of key fingerprints whose signatures are required
@@ -1158,7 +1158,7 @@ def verify(
         not sign the data, verification will fail. Optional.
         Note that this does not take into account trust.
 
-        .. versionadded:: 3006.0
+        .. versionadded:: 3007.0
 
     CLI Example:
 
