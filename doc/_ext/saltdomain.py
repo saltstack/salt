@@ -317,3 +317,4 @@ def setup(app):
         rolename="jinja_ref",
         indextemplate="pair: %s; jinja filters",
     )
+    return dict(parallel_read_safe=True, parallel_write_safe=True)
