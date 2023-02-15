@@ -135,6 +135,7 @@ jobs:
           EOF
 
       - name: Get Secrets
+        id: get-secrets
         env:
           SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
         run: |
@@ -151,6 +152,11 @@ jobs:
           sync
           rm "$SECRETS_KEY_FILE"
           echo "passphrase-file ${GNUPGHOME}/passphrase" >> "${GNUPGHOME}/gpg.conf"
+          TWINE_PASSWORD=$(aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/publishing/publish-pypi \
+            --query SecretString --output text | jq .default_passphrase -r | base64 -d \
+            | gpg --passphrase-file "$SECRETS_KEY_FILE" -d -)
+          echo "::add-mask::$TWINE_PASSWORD"
+          echo "twine-password=$TWINE_PASSWORD" >> "${GITHUB_OUTPUT}"
 
       - name: Configure Git
         shell: bash
@@ -196,6 +202,12 @@ jobs:
           removeArtifacts: true
           replacesArtifacts: true
           tag: v${{ needs.prepare-workflow.outputs.salt-version }}
+
+      - name: Publish to PyPi
+        env:
+          TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
+        run: |
+          tools pkg pypi-upload release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
