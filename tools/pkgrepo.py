@@ -787,6 +787,8 @@ def src(
             hexdigest = _get_file_checksum(fpath, hash_name)
             with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
+            with open(f"{dpath}.{hash_name}", "a+") as wfh:
+                wfh.write(f"{hexdigest} {dpath.name}\n")
 
     for fpath in create_repo_path.iterdir():
         tools.utils.gpg_sign(ctx, key_id, fpath)
@@ -1457,6 +1459,8 @@ def _create_onedir_based_repo(
             hexdigest = _get_file_checksum(fpath, hash_name)
             release_json[dpath.name][hash_name.upper()] = hexdigest
             with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
+                wfh.write(f"{hexdigest} {dpath.name}\n")
+            with open(f"{dpath}.{hash_name}", "a+") as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
 
     for fpath in create_repo_path.iterdir():

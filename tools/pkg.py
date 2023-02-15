@@ -361,3 +361,47 @@ def source_tarball(ctx: Context):
         ]
         ctx.run("sha256sum", *packages)
     ctx.run("python3", "-m", "twine", "check", "dist/*", check=True)
+
+
+@pkg.command(
+    name="pypi-upload",
+    venv_config={
+        "requirements_files": [
+            tools.utils.REPO_ROOT / "requirements" / "build.txt",
+        ]
+    },
+    arguments={
+        "files": {
+            "help": "Files to upload to PyPi",
+            "nargs": "*",
+        },
+        "test": {
+            "help": "When true, upload to test.pypi.org instead",
+        },
+    },
+)
+def pypi_upload(ctx: Context, files: list[pathlib.Path], test: bool = False):
+    ctx.run(
+        "python3", "-m", "twine", "check", *[str(fpath) for fpath in files], check=True
+    )
+    if test is True:
+        repository_url = "https://test.pypi.org/legacy/"
+    else:
+        repository_url = "https://pypi.org/legacy/"
+    if "TWINE_USERNAME" not in os.environ:
+        os.environ["TWINE_USERNAME"] = "__token__"
+    if "TWINE_PASSWORD" not in os.environ:
+        ctx.error("The 'TWINE_PASSWORD' variable is not set. Cannot upload.")
+        ctx.exit(1)
+    cmdline = [
+        "twine",
+        "upload",
+        f"--repository-url={repository_url}",
+        "--username=__token__",
+        *[str(fpath) for fpath in files],
+    ]
+    ctx.info(f"Running '{' '.join(cmdline)}' ...")
+    ret = ctx.run(*cmdline, check=False)
+    if ret.returncode:
+        ctx.error(ret.stderr.strip().decode())
+    ctx.exit(ret.returncode)

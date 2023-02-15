@@ -60,6 +60,7 @@ def generate_workflows(ctx: Context):
             "template": "nightly.yml",
         },
         "Stage Release": {
+            "slug": "staging",
             "template": "staging.yml",
         },
         "Scheduled": {
@@ -101,6 +102,9 @@ def generate_workflows(ctx: Context):
         context = {
             "template": template_path.relative_to(tools.utils.REPO_ROOT),
             "workflow_name": workflow_name,
+            "workflow_slug": (
+                details.get("slug") or workflow_name.lower().replace(" ", "-")
+            ),
             "includes": includes,
             "conclusion_needs": NeedsTracker(),
             "test_salt_needs": NeedsTracker(),

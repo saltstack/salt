@@ -85,6 +85,17 @@ jobs:
             ${{ inputs.rc-build && '--rc-build' || ''  }} --incoming=artifacts/pkgs/incoming \
             --repo-path=artifacts/pkgs/repo
 
+      - name: Upload Standalone Repository As An Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: salt-${{ inputs.salt-version }}-${{ inputs.environment }}-src-repo
+          path: |
+            artifacts/pkgs/repo/salt/py3/src/${{ inputs.salt-version }}/salt-${{ inputs.salt-version }}.tar.gz
+            artifacts/pkgs/repo/salt/py3/src/${{ inputs.salt-version }}/salt-${{ inputs.salt-version }}.tar.gz.*
+            artifacts/pkgs/repo/salt/py3/src/${{ inputs.salt-version }}/*-GPG-*
+          retention-days: 7
+          if-no-files-found: error
+
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
