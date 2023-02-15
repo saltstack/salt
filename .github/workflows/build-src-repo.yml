@@ -1,5 +1,5 @@
 ---
-name: Build macOS Repository
+name: Build Source Repository
 
 on:
   workflow_call:
@@ -26,7 +26,7 @@ env:
 
 jobs:
   build-repo:
-    name: macOS
+    name: Source
     environment: ${{ inputs.environment }}
     runs-on:
       - self-hosted
@@ -39,10 +39,10 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
-      - name: Download macOS x86_64 Packages
+      - name: Download Source Tarball
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-x86_64-macos-pkgs
+          name: salt-${{ inputs.salt-version }}.tar.gz
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG
@@ -78,7 +78,7 @@ jobs:
 
       - name: Create Repository
         run: |
-          tools pkg repo create macos --key-id=64CBBC8173D76B3F \
+          tools pkg repo create src --key-id=64CBBC8173D76B3F \
             ${{ inputs.nightly-build && '--nightly-build' || ''  }} --salt-version=${{ inputs.salt-version }} \
             ${{ inputs.rc-build && '--rc-build' || ''  }} --incoming=artifacts/pkgs/incoming \
             --repo-path=artifacts/pkgs/repo
@@ -90,4 +90,4 @@ jobs:
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
-          archive-name: macos-repo
+          archive-name: src-repo
