@@ -2806,6 +2806,7 @@ def fqdns():
         or salt.utils.platform.is_sunos()
         or salt.utils.platform.is_aix()
         or salt.utils.platform.is_junos()
+        or salt.utils.platform.is_darwin()
         else True,
     ):
         opt = __salt__["network.fqdns"]()

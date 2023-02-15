@@ -13,7 +13,7 @@ from pytestshellutils.utils import ports
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -487,7 +487,7 @@ def _check_min_patch_version(shell):
     ret = shell.run("patch", "--version")
     assert ret.returncode == 0
     version = ret.stdout.strip().split()[2]
-    if _LooseVersion(version) < _LooseVersion(min_patch_ver):
+    if Version(version) < Version(min_patch_ver):
         pytest.xfail(
             "Minimum version of patch not found, expecting {}, found {}".format(
                 min_patch_ver, version

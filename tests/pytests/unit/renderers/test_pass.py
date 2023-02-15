@@ -2,7 +2,6 @@ import importlib
 
 import pytest
 
-import salt.config
 import salt.exceptions
 from tests.support.mock import MagicMock, patch
 
@@ -11,10 +10,10 @@ pass_ = importlib.import_module("salt.renderers.pass")
 
 
 @pytest.fixture
-def configure_loader_modules():
+def configure_loader_modules(master_opts):
     return {
         pass_: {
-            "__opts__": salt.config.DEFAULT_MASTER_OPTS.copy(),
+            "__opts__": master_opts,
             "_get_pass_exec": MagicMock(return_value="/usr/bin/pass"),
         }
     }

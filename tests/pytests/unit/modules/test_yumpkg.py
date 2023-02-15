@@ -1969,24 +1969,25 @@ def test_call_yum_default():
             )
 
 
-@patch("salt.utils.systemd.has_scope", MagicMock(return_value=True))
 def test_call_yum_in_scope():
     """
     Call Yum/Dnf within the scope.
     :return:
     """
-    with patch.dict(yumpkg.__context__, {"yum_bin": "fake-yum"}):
-        with patch.dict(
-            yumpkg.__salt__,
-            {"cmd.run_all": MagicMock(), "config.get": MagicMock(return_value=True)},
-        ):
-            yumpkg._call_yum(["-y", "--do-something"])  # pylint: disable=W0106
-            yumpkg.__salt__["cmd.run_all"].assert_called_once_with(
-                ["systemd-run", "--scope", "fake-yum", "-y", "--do-something"],
-                env={},
-                output_loglevel="trace",
-                python_shell=False,
-            )
+    with patch(
+        "salt.utils.systemd.has_scope", MagicMock(return_value=True)
+    ), patch.dict(yumpkg.__context__, {"yum_bin": "fake-yum"}), patch.dict(
+        yumpkg.__salt__,
+        {"cmd.run_all": MagicMock(), "config.get": MagicMock(return_value=True)},
+    ):
+
+        yumpkg._call_yum(["-y", "--do-something"])  # pylint: disable=W0106
+        yumpkg.__salt__["cmd.run_all"].assert_called_once_with(
+            ["systemd-run", "--scope", "fake-yum", "-y", "--do-something"],
+            env={},
+            output_loglevel="trace",
+            python_shell=False,
+        )
 
 
 def test_call_yum_with_kwargs():

@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING, cast
 
 from ptscripts import Context, command_group
 
+import tools.utils
+
 try:
     import attr
     import boto3
@@ -45,16 +47,18 @@ except ImportError:
 
 
 if TYPE_CHECKING:
+    # pylint: disable=no-name-in-module
     from boto3.resources.factory.ec2 import Instance
+
+    # pylint: enable=no-name-in-module
 
 log = logging.getLogger(__name__)
 
-REPO_ROOT = pathlib.Path(__file__).parent.parent
-STATE_DIR = REPO_ROOT / ".vms-state"
-with REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
+STATE_DIR = tools.utils.REPO_ROOT / ".vms-state"
+with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
     AMIS = json.load(rfh)
 REPO_CHECKOUT_ID = hashlib.sha256(
-    "|".join(list(platform.uname()) + [str(REPO_ROOT)]).encode()
+    "|".join(list(platform.uname()) + [str(tools.utils.REPO_ROOT)]).encode()
 ).hexdigest()
 AWS_REGION = (
     os.environ.get("AWS_DEFAULT_REGION") or os.environ.get("AWS_REGION") or "us-west-2"
@@ -241,6 +245,7 @@ def test(
     rerun_failures: bool = False,
     skip_requirements_install: bool = False,
     print_tests_selection: bool = False,
+    print_system_info: bool = False,
     skip_code_coverage: bool = False,
 ):
     """
@@ -249,6 +254,7 @@ def test(
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
     env = {
         "PRINT_TEST_PLAN_ONLY": "0",
+        "SKIP_INITIAL_ONEDIR_FAILURES": "1",
         "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
     }
     if rerun_failures:
@@ -261,6 +267,10 @@ def test(
         env["SKIP_CODE_COVERAGE"] = "1"
     else:
         env["SKIP_CODE_COVERAGE"] = "0"
+    if print_system_info:
+        env["PRINT_SYSTEM_INFO"] = "1"
+    else:
+        env["PRINT_SYSTEM_INFO"] = "0"
     if (
         skip_requirements_install
         or os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
@@ -269,11 +279,12 @@ def test(
     if "photonos" in name:
         skip_known_failures = os.environ.get("SKIP_INITIAL_PHOTONOS_FAILURES", "1")
         env["SKIP_INITIAL_PHOTONOS_FAILURES"] = skip_known_failures
-    vm.run_nox(
+    returncode = vm.run_nox(
         nox_session=nox_session,
         session_args=nox_session_args,
         env=env,
     )
+    ctx.exit(returncode)
 
 
 @vm.command(
@@ -329,11 +340,12 @@ def testplan(
     if "photonos" in name:
         skip_known_failures = os.environ.get("SKIP_INITIAL_PHOTONOS_FAILURES", "1")
         env["SKIP_INITIAL_PHOTONOS_FAILURES"] = skip_known_failures
-    vm.run_nox(
+    returncode = vm.run_nox(
         nox_session=nox_session,
         session_args=nox_session_args,
         env=env,
     )
+    ctx.exit(returncode)
 
 
 @vm.command(
@@ -357,7 +369,29 @@ def install_dependencies(ctx: Context, name: str, nox_session: str = "ci-test-3"
     Install test dependencies on VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    vm.install_dependencies(nox_session)
+    returncode = vm.install_dependencies(nox_session)
+    ctx.exit(returncode)
+
+
+@vm.command(
+    name="pre-archive-cleanup",
+    arguments={
+        "name": {
+            "help": "The VM Name",
+            "metavar": "VM_NAME",
+        },
+        "pkg": {
+            "help": "Perform extended, pre-packaging cleanup routines",
+        },
+    },
+)
+def pre_archive_cleanup(ctx: Context, name: str, pkg: bool = False):
+    """
+    Pre `.nox` directory compress cleanup.
+    """
+    vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
+    returncode = vm.run_nox(f"pre-archive-cleanup(pkg={pkg})")
+    ctx.exit(returncode)
 
 
 @vm.command(
@@ -374,7 +408,8 @@ def compress_dependencies(ctx: Context, name: str):
     Compress the .nox/ directory in the VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    vm.compress_dependencies()
+    returncode = vm.compress_dependencies()
+    ctx.exit(returncode)
 
 
 @vm.command(
@@ -391,7 +426,8 @@ def decompress_dependencies(ctx: Context, name: str):
     Decompress a dependencies archive into the .nox/ directory in the VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    vm.decompress_dependencies()
+    returncode = vm.decompress_dependencies()
+    ctx.exit(returncode)
 
 
 @vm.command(
@@ -425,7 +461,8 @@ def combine_coverage(ctx: Context, name: str):
     Combine the several code coverage files into a single one in the VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    vm.combine_coverage()
+    returncode = vm.combine_coverage()
+    ctx.exit(returncode)
 
 
 @vm.command(
@@ -864,7 +901,7 @@ class VM:
                             description=f"SSH connection to {host} available!",
                             completed=ssh_connection_timeout,
                         )
-                        return True
+                        break
                     proc.wait(timeout=3)
                     stderr = proc.stderr.read().strip()
                     if stderr:
@@ -894,6 +931,7 @@ class VM:
                 if last_error:
                     error += f". {last_error}"
                 return error
+            return True
 
     def destroy(self):
         try:
@@ -945,18 +983,24 @@ class VM:
             "--exclude",
             ".pytest_cache/",
             "--exclude",
-            "artifacts/",
-            "--exclude",
-            f"{STATE_DIR.relative_to(REPO_ROOT)}{os.path.sep}",
+            f"{STATE_DIR.relative_to(tools.utils.REPO_ROOT)}{os.path.sep}",
             "--exclude",
             "*.py~",
+            # We need to include artifacts/ to be able to include artifacts/salt
+            "--include",
+            "artifacts/",
+            "--include",
+            "artifacts/salt",
+            # But we also want to exclude all other entries under artifacts/
+            "--exclude",
+            "artifacts/*",
         ]
         if self.is_windows:
             # Symlinks aren't handled properly on windows, just replace the
             # symlink with a copy of what's getting symlinked.
             rsync_flags.append("--copy-links")
         # Local repo path
-        source = f"{REPO_ROOT}{os.path.sep}"
+        source = f"{tools.utils.REPO_ROOT}{os.path.sep}"
         # Remote repo path
         remote_path = self.upload_path.as_posix()
         if self.is_windows:
@@ -971,7 +1015,7 @@ class VM:
             return
         write_env = {k: str(v) for (k, v) in env.items()}
         write_env_filename = ".ci-env"
-        write_env_filepath = REPO_ROOT / ".ci-env"
+        write_env_filepath = tools.utils.REPO_ROOT / ".ci-env"
         write_env_filepath.write_text(json.dumps(write_env))
 
         # Local path
@@ -1037,7 +1081,7 @@ class VM:
             "-f",
             f"{self.upload_path.joinpath('noxfile.py').as_posix()}",
             "-e",
-            nox_session,
+            f"'{nox_session}'",
         ]
         if nox_args:
             cmd += nox_args
@@ -1045,8 +1089,9 @@ class VM:
             cmd += ["--"] + session_args
         if env is None:
             env = {}
-        if "CI" in os.environ:
-            env["CI"] = os.environ["CI"]
+        for key in ("CI", "PIP_INDEX_URL", "PIP_EXTRA_INDEX_URL"):
+            if key in os.environ:
+                env[key] = os.environ[key]
         env["PYTHONUTF8"] = "1"
         env["OUTPUT_COLUMNS"] = str(self.ctx.console.width)
         env["GITHUB_ACTIONS_PIPELINE"] = "1"
@@ -1062,25 +1107,25 @@ class VM:
             capture=False,
             pseudo_terminal=True,
         )
-        self.ctx.exit(ret.returncode)
+        return ret.returncode
 
     def combine_coverage(self):
         """
         Combine the code coverage databases
         """
-        self.run_nox("combine-coverage", session_args=[self.name])
+        return self.run_nox("combine-coverage", session_args=[self.name])
 
     def compress_dependencies(self):
         """
         Compress .nox/ into nox.<vm-name>.tar.* in the VM
         """
-        self.run_nox("compress-dependencies", session_args=[self.name])
+        return self.run_nox("compress-dependencies", session_args=[self.name])
 
     def decompress_dependencies(self):
         """
         Decompress nox.<vm-name>.tar.* if it exists in the VM
         """
-        self.run_nox("decompress-dependencies", session_args=[self.name])
+        return self.run_nox("decompress-dependencies", session_args=[self.name])
 
     def download_dependencies(self):
         """
@@ -1110,7 +1155,17 @@ class VM:
         source = f"{self.name}:{remote_path}/"
         destination = "artifacts/"
         description = f"Downloading {source} ..."
-        self.rsync(source, destination, description)
+        self.rsync(
+            source,
+            destination,
+            description,
+            [
+                "--exclude",
+                f"{remote_path}/artifacts/salt",
+                "--exclude",
+                f"{remote_path}/artifacts/salt-*.*",
+            ],
+        )
 
     def rsync(self, source, destination, description, rsync_flags: list[str] = None):
         """
@@ -1179,7 +1234,7 @@ class VM:
         pseudo_terminal: bool = False,
         env: list[str] = None,
         log_command_level: int = logging.INFO,
-        ssh_options: list[str] | None = None,
+        ssh_options: list[str] | None = None,  # pylint: disable=bad-whitespace
     ) -> list[str]:
         ssh = shutil.which("ssh")
         if TYPE_CHECKING:
@@ -1187,7 +1242,7 @@ class VM:
         _ssh_command_args = [
             ssh,
             "-F",
-            str(self.ssh_config_file.relative_to(REPO_ROOT)),
+            str(self.ssh_config_file.relative_to(tools.utils.REPO_ROOT)),
         ]
         if ssh_options:
             _ssh_command_args.extend(ssh_options)

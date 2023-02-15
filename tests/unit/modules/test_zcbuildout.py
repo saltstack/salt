@@ -243,8 +243,16 @@ class BuildoutTestCase(Base):
             "",
             buildout._get_bootstrap_content(os.path.join(self.tdir, "var", "tb", "1")),
         )
+
+        if (
+            salt.utils.platform.is_windows()
+            and os.environ.get("GITHUB_ACTIONS_PIPELINE", "0") == "0"
+        ):
+            line_break = "\r\n"
+        else:
+            line_break = "\n"
         self.assertEqual(
-            "foo\n",
+            f"foo{line_break}",
             buildout._get_bootstrap_content(os.path.join(self.tdir, "var", "tb", "2")),
         )
 

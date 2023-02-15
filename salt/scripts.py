@@ -7,6 +7,7 @@ import functools
 import logging
 import os
 import signal
+import subprocess
 import sys
 import threading
 import time
@@ -585,3 +586,16 @@ def salt_unity():
         sys.argv.pop(1)
         s_fun = getattr(sys.modules[__name__], "salt_{}".format(cmd))
     s_fun()
+
+
+def salt_pip():
+    """
+    Proxy to current python's pip
+    """
+    command = [
+        sys.executable,
+        "-m",
+        "pip",
+    ] + sys.argv[1:]
+    ret = subprocess.run(command, shell=False, check=False)
+    sys.exit(ret.returncode)

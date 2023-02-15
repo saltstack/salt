@@ -163,7 +163,15 @@ def test_setup(salt_ssh_cli, ssh_container_name, ssh_sub_container_name, ssh_pas
     ret = salt_ssh_cli.run(
         "--passwd", ssh_password, "--key-deploy", "test.ping", minion_tgt="*"
     )
-    assert ret.returncode == 0
+    try:
+        assert ret.returncode == 0
+    except AssertionError:
+        # Sleep and Repeat in case of failure to reduce flakyness
+        time.sleep(5)
+        ret = salt_ssh_cli.run(
+            "--passwd", ssh_password, "--key-deploy", "test.ping", minion_tgt="*"
+        )
+        assert ret.returncode == 0
     for id in possible_ids:
         assert id in ret.data
         assert ret.data[id] is True

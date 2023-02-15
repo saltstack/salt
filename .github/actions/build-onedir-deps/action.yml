@@ -1,0 +1,85 @@
+---
+name: build-onedir-deps
+description: Build Onedir Dependencies
+inputs:
+  platform:
+    required: true
+    type: string
+    description: The platform to build
+  arch:
+    required: true
+    type: string
+    description: The platform arch to build
+  package-name:
+    required: false
+    type: string
+    description: The onedir package name to create
+    default: salt
+  cache-seed:
+    required: true
+    type: string
+    description: Seed used to invalidate caches
+
+
+env:
+  COLUMNS: 190
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Cache Deps Onedir Package Directory
+      id: onedir-pkg-cache
+      uses: actions/cache@v3
+      with:
+        path: artifacts/${{ inputs.package-name }}
+        key: ${{ inputs.cache-seed }}|relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt', '.github/actions/build-onedir-deps/action.yml') }}
+
+    - name: Create Onedir Directory
+      shell: bash
+      if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
+      run: |
+        python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+        python3 -m relenv create --arch=${{ inputs.arch }} artifacts/${{ inputs.package-name }}
+
+    - name: Get Onedir Python Version
+      shell: bash
+      if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
+      run: |
+        if [ "${{ inputs.platform }}" != "windows" ]; then
+          PY_VERSION=$(artifacts/${{ inputs.package-name }}/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info))")
+        else
+          PY_VERSION=$(artifacts/${{ inputs.package-name }}/Scripts/python -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info))")
+        fi
+        echo "PY_VERSION=$PY_VERSION" >> "$GITHUB_ENV"
+
+    - name: Upgrade Setuptools & Pip
+      shell: bash
+      if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
+      run: |
+        if [ "${{ inputs.platform }}" != "windows" ]; then
+          artifacts/${{ inputs.package-name }}/bin/python3 -m pip install -U "pip>=22.3.1,<23.0"
+          artifacts/${{ inputs.package-name }}/bin/python3 -m pip install -U "setuptools>=65.6.3,<66"
+        else
+          artifacts/${{ inputs.package-name }}/Scripts/python -m pip install -U "pip>=22.3.1,<23.0"
+          artifacts/${{ inputs.package-name }}/Scripts/python -m pip install -U "setuptools>=65.6.3,<66"
+        fi
+
+    - name: Install Salt Onedir Package Dependencies
+      shell: bash
+      if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
+      run: |
+        if [ "${{ inputs.platform }}" != "windows" ]; then
+          artifacts/${{ inputs.package-name }}/bin/python3 -m pip install -r requirements/static/pkg/py${PY_VERSION}/${{ inputs.platform }}.txt --no-binary=':all:'
+        else
+          artifacts/${{ inputs.package-name }}/Scripts/python -m pip install -r requirements/static/pkg/py${PY_VERSION}/${{ inputs.platform }}.txt
+        fi
+
+    - name: Cleanup Salt Onedir Directory
+      shell: bash
+      run: |
+        tools pkg pre-archive-cleanup artifacts/${{ inputs.package-name }}

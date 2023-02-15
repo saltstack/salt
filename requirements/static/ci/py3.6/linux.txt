@@ -348,13 +348,13 @@ bcrypt==3.1.6
     # via
     #   paramiko
     #   passlib
-boto3==1.17.67 ; python_version >= "3.6"
+boto3==1.21.46 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
     #   moto
 boto==2.49.0
     # via -r requirements/static/ci/common.in
-botocore==1.20.67
+botocore==1.24.46
     # via
     #   boto3
     #   moto
@@ -440,16 +440,12 @@ frozenlist==1.2.0
     # via
     #   aiohttp
     #   aiosignal
-future==0.17.1
+future==0.18.3
     # via textfsm
 genshi==0.7.5
     # via -r requirements/static/ci/common.in
 geomet==0.1.2
     # via cassandra-driver
-gitdb==4.0.5
-    # via gitpython
-gitpython==3.1.12
-    # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
 hglib==2.6.1
@@ -464,7 +460,7 @@ idna==2.8
     #   yarl
 immutables==0.14
     # via contextvars
-importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+importlib-metadata==4.6.4
     # via
     #   -r requirements/static/pkg/linux.in
     #   backports.entry-points-selectable
@@ -501,7 +497,7 @@ jinja2==3.0.3
     #   ansible-core
     #   junos-eznc
     #   moto
-jmespath==0.9.4
+jmespath==0.10.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
@@ -521,6 +517,8 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
+looseversion==1.0.3
+    # via -r requirements/base.txt
 lxml==4.9.1
     # via
     #   junos-eznc
@@ -652,8 +650,9 @@ oauthlib==3.2.1
     # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
-packaging==19.2
+packaging==21.3
     # via
+    #   -r requirements/base.txt
     #   ansible-core
     #   pytest
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
@@ -710,7 +709,7 @@ pyopenssl==19.1.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==2.4.5
+pyparsing==3.0.6
     # via
     #   junos-eznc
     #   packaging
@@ -796,7 +795,7 @@ pyyaml==5.4.1
     #   kubernetes
     #   yamllint
     #   yamlordereddictloader
-pyzmq==18.0.1 ; python_version < "3.9"
+pyzmq==23.2.0
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -839,13 +838,13 @@ rpm-vercmp==0.1.2
     # via -r requirements/static/pkg/linux.in
 rsa==4.7.2
     # via google-auth
-s3transfer==0.4.2
+s3transfer==0.5.2
     # via boto3
 scp==0.13.2
     # via junos-eznc
 semantic-version==2.9.0
     # via etcd3-py
-setproctitle==1.1.10 ; python_version < "3.10"
+setproctitle==1.2.3
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via
@@ -866,7 +865,6 @@ six==1.16.0
     #   mock
     #   more-itertools
     #   ncclient
-    #   packaging
     #   paramiko
     #   pynacl
     #   pyopenssl
@@ -883,8 +881,6 @@ slack-bolt==1.15.5
     # via -r requirements/static/ci/linux.in
 slack-sdk==3.19.5
     # via slack-bolt
-smmap==3.0.4
-    # via gitdb
 sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7

@@ -16,7 +16,7 @@ import salt.loader
 import salt.modules.boto_vpc as boto_vpc
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -94,7 +94,7 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
+    elif Version(boto.__version__) < Version(required_boto_version):
         return False
     else:
         return True
@@ -106,7 +106,7 @@ def _get_boto_version():
     """
     if not HAS_BOTO:
         return False
-    return LooseVersion(boto.__version__)
+    return Version(boto.__version__)
 
 
 def _get_moto_version():
@@ -114,10 +114,10 @@ def _get_moto_version():
     Returns the moto version
     """
     try:
-        return LooseVersion(str(moto.__version__))
+        return Version(str(moto.__version__))
     except AttributeError:
         try:
-            return LooseVersion(pkg_resources.get_distribution("moto").version)
+            return Version(pkg_resources.get_distribution("moto").version)
         except DistributionNotFound:
             return False
 
@@ -130,7 +130,7 @@ def _has_required_moto():
     if not HAS_MOTO:
         return False
     else:
-        if _get_moto_version() < LooseVersion(required_moto_version):
+        if _get_moto_version() < Version(required_moto_version):
             return False
         return True
 
@@ -634,7 +634,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         # With moto 0.4.25 through 0.4.30, is_default is set to True.
         # 0.4.24 and older and 0.4.31 and newer, is_default is False
-        if LooseVersion("0.4.25") <= _get_moto_version() < LooseVersion("0.4.31"):
+        if Version("0.4.25") <= _get_moto_version() < Version("0.4.31"):
             is_default = True
         else:
             is_default = False

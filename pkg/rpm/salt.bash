@@ -1,1 +1,1 @@
-../salt.bash
+../common/salt.bash

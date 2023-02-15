@@ -2,6 +2,7 @@
 Integration tests for salt-ssh logging
 """
 import logging
+import time
 
 import pytest
 from saltfactories.utils import random_string
@@ -117,6 +118,16 @@ def test_log_password(salt_ssh_cli, caplog, ssh_auth):
         ret = salt_ssh_cli.run("--log-level=trace", "test.ping", minion_tgt="pyvertest")
     if "kex_exchange_identification" in ret.stdout:
         pytest.skip("Container closed ssh connection, skipping for now")
+    try:
+        assert ret.returncode == 0
+    except AssertionError:
+        time.sleep(5)
+        with caplog.at_level(logging.TRACE):
+            ret = salt_ssh_cli.run(
+                "--log-level=trace", "test.ping", minion_tgt="pyvertest"
+            )
+        if "kex_exchange_identification" in ret.stdout:
+            pytest.skip("Container closed ssh connection, skipping for now")
+        assert ret.returncode == 0
     assert ssh_pass not in caplog.text
-    assert ret.returncode == 0
     assert ret.data is True

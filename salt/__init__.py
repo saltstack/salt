@@ -35,6 +35,12 @@ class TornadoImporter:
         sys.modules[name] = mod
         return mod
 
+    def create_module(self, spec):
+        return self.load_module(spec.name)
+
+    def exec_module(self, module):
+        return None
+
 
 class SixRedirectImporter:
     def find_module(self, module_name, package_path=None):
@@ -47,6 +53,12 @@ class SixRedirectImporter:
         sys.modules[name] = mod
         return mod
 
+    def create_module(self, spec):
+        return self.load_module(spec.name)
+
+    def exec_module(self, module):
+        return None
+
 
 # Try our importer first
 sys.meta_path = [TornadoImporter(), SixRedirectImporter()] + sys.meta_path
@@ -58,7 +70,8 @@ warnings.filterwarnings(
     "",  # No deprecation message match
     DeprecationWarning,  # This filter is for DeprecationWarnings
     r"^(salt|salt\.(.*))$",  # Match module(s) 'salt' and 'salt.<whatever>'
-    append=True,
+    # Do *NOT* add append=True here - if we do, salt's DeprecationWarnings will
+    # never show up
 )
 
 # Filter the backports package UserWarning about being re-imported

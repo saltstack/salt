@@ -823,7 +823,6 @@ class LocalClient:
                 listen=True,
                 **kwargs
             )
-
             if not self.pub_data:
                 yield self.pub_data
             else:
@@ -1191,6 +1190,13 @@ class LocalClient:
                 # if we got None, then there were no events
                 if raw is None:
                     break
+                if "error" in raw.get("data", {}):
+                    yield {
+                        "error": {
+                            "name": "AuthorizationError",
+                            "message": "Authorization error occurred.",
+                        }
+                    }
                 if "minions" in raw.get("data", {}):
                     minions.update(raw["data"]["minions"])
                     if "missing" in raw.get("data", {}):
@@ -1707,6 +1713,8 @@ class LocalClient:
                                     "retcode": salt.defaults.exitcodes.EX_GENERIC,
                                 }
                             }
+                elif "error" in min_ret:
+                    raise AuthorizationError("Authorization error occurred")
                 else:
                     yield {id_: min_ret}
 
@@ -1825,11 +1833,7 @@ class LocalClient:
         if kwargs:
             payload_kwargs["kwargs"] = kwargs
 
-        # If we have a salt user, add it to the payload
-        if self.opts["syndic_master"] and "user" in kwargs:
-            payload_kwargs["user"] = kwargs["user"]
-        elif self.salt_user:
-            payload_kwargs["user"] = self.salt_user
+        payload_kwargs["user"] = self.salt_user
 
         # If we're a syndication master, pass the timeout
         if self.opts["order_masters"]:

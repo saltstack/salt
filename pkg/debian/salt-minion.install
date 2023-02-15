@@ -1,0 +1,3 @@
+conf/minion /etc/salt
+pkg/common/salt-minion.service /lib/systemd/system
+pkg/common/fish-completions/salt-minion.fish /usr/share/fish/vendor_completions.d

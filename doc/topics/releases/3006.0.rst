@@ -31,13 +31,12 @@ for more information.
 All salt-api functionality disabled by default
 ----------------------------------------------
 
-All netapi clients, which provide the functionality to salt-api, will now
-be disabled by default. If you use the salt-api you must add the new
-`netapi_enable_clients` option to your salt master config. This is
-a breaking change and the salt-api will not function without this
-new configuration option.
-See `Netapi module <https://docs.saltproject.io/en/latest/topics/netapi/index.html#introduction-to-netapi-modules>`
-for more information.
+All netapi clients, which provide the functionality to ``salt-api``, will now
+be disabled by default as a security precaution. If you use ``salt-api``, you
+must add the new ``netapi_enable_clients`` option to your salt master config.
+This is a breaking change and the ``salt-api`` will not function without this
+new configuration option. See :ref:`netapi-enable-clients` for more
+information.
 
 
 How do I migrate to the onedir packages?

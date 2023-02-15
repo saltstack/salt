@@ -4,15 +4,26 @@
 #
 #    pip-compile --output-file=requirements/static/ci/py3.8/changelog.txt --pip-args='--constraint=requirements/static/ci/py3.8/linux.txt' requirements/static/ci/changelog.in
 #
-click==7.1.2
+click-default-group==1.2.2
     # via towncrier
+click==7.1.2
+    # via
+    #   click-default-group
+    #   towncrier
 incremental==17.5.0
     # via towncrier
-jinja2==3.0.3
+jinja2==3.1.2
     # via towncrier
+looseversion==1.0.3
+    # via -r requirements/static/ci/changelog.in
 markupsafe==2.0.1
     # via jinja2
-toml==0.10.1
-    # via towncrier
-towncrier==19.2.0
+packaging==23.0
     # via -r requirements/static/ci/changelog.in
+tomli==2.0.1
+    # via towncrier
+towncrier==22.12.0
+    # via -r requirements/static/ci/changelog.in
+
+# The following packages are considered to be unsafe in a requirements file:
+# setuptools
