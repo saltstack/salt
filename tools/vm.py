@@ -1046,8 +1046,8 @@ class VM:
         description = "Rsync local checkout to VM..."
         self.rsync(source, destination, description, rsync_flags)
         if self.is_windows:
-            # rsync sets very strict file permissions and disables inheritance.
-            # Need to reset permissions so they inherit from the parent
+            # rsync sets very strict file permissions and disables inheritance
+            # we only need to reset permissions so they inherit from the parent
             cmd = ["icacls", remote_path, "/T", "/reset"]
             ret = self.run(cmd, capture=True, check=False)
             if ret.returncode != 0:
