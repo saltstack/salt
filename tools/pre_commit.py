@@ -5,17 +5,17 @@ These commands are used by pre-commit.
 from __future__ import annotations
 
 import logging
-import pathlib
 import shutil
 from typing import TYPE_CHECKING, cast
 
 from jinja2 import Environment, FileSystemLoader
 from ptscripts import Context, command_group
 
+import tools.utils
+
 log = logging.getLogger(__name__)
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-WORKFLOWS = REPO_ROOT / ".github" / "workflows"
+WORKFLOWS = tools.utils.REPO_ROOT / ".github" / "workflows"
 TEMPLATES = WORKFLOWS / "templates"
 
 # Define the command group
@@ -81,11 +81,11 @@ def generate_workflows(ctx: Context):
         workflow_path = WORKFLOWS / template
         template_path = TEMPLATES / f"{template}.jinja"
         ctx.info(
-            f"Generating '{workflow_path.relative_to(REPO_ROOT)}' from "
-            f"template '{template_path.relative_to(REPO_ROOT)}' ..."
+            f"Generating '{workflow_path.relative_to(tools.utils.REPO_ROOT)}' from "
+            f"template '{template_path.relative_to(tools.utils.REPO_ROOT)}' ..."
         )
         context = {
-            "template": template_path.relative_to(REPO_ROOT),
+            "template": template_path.relative_to(tools.utils.REPO_ROOT),
             "workflow_name": workflow_name,
             "includes": includes,
             "conclusion_needs": NeedsTracker(),
