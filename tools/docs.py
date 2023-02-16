@@ -65,7 +65,7 @@ def man(ctx: Context, no_clean: bool = False):
 def html(ctx: Context, no_clean: bool = False, archive: pathlib.Path = None):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
-    ctx.run("make", "html", "SPHINXOPTS=-W", cwd="doc/", check=True)
+    ctx.run("make", "html", "SPHINXOPTS=-W --keep-going", cwd="doc/", check=True)
     if archive is not None:
         ctx.info(f"Compressing the generated documentation to '{archive}'...")
         ctx.run("tar", "caf", str(archive.resolve()), ".", cwd="doc/_build/html")
@@ -100,3 +100,23 @@ def pdf(ctx: Context, no_clean: bool = False):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
     ctx.run("make", "pdf", "SPHINXOPTS=-W", cwd="doc/", check=True)
+
+
+@docs.command(
+    name="linkcheck",
+    arguments={
+        "no_clean": {
+            "help": "Don't cleanup prior to building",
+        }
+    },
+)
+def linkcheck(ctx: Context, no_clean: bool = False):
+    if no_clean is False:
+        ctx.run("make", "clean", cwd="doc/", check=True)
+    ctx.run(
+        "make",
+        "linkcheck",
+        "SPHINXOPTS=-W -j auto --keep-going --color",
+        cwd="doc/",
+        check=True,
+    )
