@@ -268,21 +268,31 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         # On windows, using single binary, it has to decompress it and run the command. Too slow.
         # So, just in this scenario, use open mode
         config_overrides["open_mode"] = True
-    # this check will need to be changed to install_salt.relenv
-    # once the package version returns 3006 and not 3005 on master
-    if platform.is_windows() and not install_salt.upgrade:
+    master_script = False
+    if platform.is_windows():
+        if install_salt.classic:
+            master_script = True
+        # this check will need to be changed to install_salt.relenv
+        # once the package version returns 3006 and not 3005 on master
+        elif not install_salt.upgrade:
+            master_script = True
+
+    if master_script:
         salt_factories.system_install = False
         scripts_dir = salt_factories.root_dir / "Scripts"
         scripts_dir.mkdir(exist_ok=True)
         salt_factories.scripts_dir = scripts_dir
         config_overrides["open_mode"] = True
+        python_executable = install_salt.bin_dir / "Scripts" / "python.exe"
+        if install_salt.classic:
+            python_executable = install_salt.bin_dir / "python.exe"
         factory = salt_factories.salt_master_daemon(
             random_string("master-"),
             defaults=config_defaults,
             overrides=config_overrides,
             factory_class=SaltMasterWindows,
             salt_pkg_install=install_salt,
-            python_executable=install_salt.bin_dir / "Scripts" / "python.exe",
+            python_executable=python_executable,
         )
         salt_factories.system_install = True
     else:
