@@ -45,7 +45,7 @@ docs = command_group(
 def man(ctx: Context, no_clean: bool = False):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
-    ctx.run("make", "man", "SPHINXOPTS=-W -j auto", cwd="doc/", check=True)
+    ctx.run("make", "man", "SPHINXOPTS=-W", cwd="doc/", check=True)
     for root, dirs, files in os.walk("doc/_build/man"):
         for file in files:
             shutil.copy(os.path.join(root, file), os.path.join("doc/man", file))
@@ -65,7 +65,7 @@ def man(ctx: Context, no_clean: bool = False):
 def html(ctx: Context, no_clean: bool = False, archive: pathlib.Path = None):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
-    ctx.run("make", "html", "SPHINXOPTS=-W -j auto", cwd="doc/", check=True)
+    ctx.run("make", "html", "SPHINXOPTS=-W", cwd="doc/", check=True)
     if archive is not None:
         ctx.info(f"Compressing the generated documentation to '{archive}'...")
         ctx.run("tar", "caf", str(archive.resolve()), ".", cwd="doc/_build/html")
@@ -82,7 +82,7 @@ def html(ctx: Context, no_clean: bool = False, archive: pathlib.Path = None):
 def epub(ctx: Context, no_clean: bool = False):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
-    ctx.run("make", "epub", "SPHINXOPTS=-W -j auto", cwd="doc/", check=True)
+    ctx.run("make", "epub", "SPHINXOPTS=-W", cwd="doc/", check=True)
 
 
 @docs.command(
@@ -99,4 +99,4 @@ def pdf(ctx: Context, no_clean: bool = False):
         ctx.exit(1)
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
-    ctx.run("make", "pdf", "SPHINXOPTS=-W -j auto", cwd="doc/", check=True)
+    ctx.run("make", "pdf", "SPHINXOPTS=-W", cwd="doc/", check=True)
