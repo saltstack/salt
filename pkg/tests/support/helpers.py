@@ -204,7 +204,7 @@ class SaltPkgInstall:
             version = ""
             for artifact in ARTIFACTS_DIR.glob("**/*.*"):
                 version = re.search(
-                    r"([0-9].*)(\-[0-9].fc|\-[0-9].el|\+ds|\_all|\_any|\_amd64|\_arm64|\-[0-9].am|(\-[0-9]-[a-z]*-[a-z]*[0-9_]*.|\-[0-9]*.*)(tar.gz|tar.xz|zip|exe|pkg|rpm|deb))",
+                    r"([0-9].*)(\-[0-9].fc|\-[0-9].el|\+ds|\_all|\_any|\_amd64|\_arm64|\-[0-9].am|(\-[0-9]-[a-z]*-[a-z]*[0-9_]*.|\-[0-9]*.*)(tar.gz|tar.xz|zip|exe|msi|pkg|rpm|deb))",
                     artifact.name,
                 )
                 if version:
