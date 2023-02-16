@@ -331,15 +331,31 @@ linkcheck_ignore = [
     r"https://github.com/watching",
     r"dash-feed://",
     r"https://github.com/saltstack/salt/",
-    r"http://bootstrap.saltstack.org",
     r"https://bootstrap.saltproject.io",
     r"https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh",
     r"media.readthedocs.org/dash/salt/latest/salt.xml",
     r"https://portal.aws.amazon.com/gp/aws/securityCredentials",
-    r"https://help.github.com/articles/fork-a-repo",
     r"dash-feed://https%3A//media.readthedocs.org/dash/salt/latest/salt.xml",
+    r"(?i)dns:.*",
+    r"TCP:4506",
+    r"https?://",
+    r"https://cloud.github.com/downloads/saltstack/.*",
+    r"https://INFOBLOX/.*",
+    r"https://SOMESERVERIP:.*",
+    r"https://community.saltstack.com/.*",
+    # GitHub Users
+    r"https://github.com/[^/]$",
+    # GitHub Salt Forks
+    r"https://github.com/[^/]/salt$",
+    r"tag:key=value",
+    r"jdbc:mysql:.*",
+    r"http:post",
 ]
-
+linkcheck_exclude_documents = [
+    r"topics/releases/(2015|2016)\..*\.rst",
+    r"topics/releases/saltapi/0\.8\.0.*",
+]
+linkcheck_timeout = 10
 linkcheck_anchors = False
 
 ### Manpage options
