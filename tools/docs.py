@@ -76,7 +76,7 @@ def html(ctx: Context, no_clean: bool = False, archive: pathlib.Path = None):
     arguments={
         "no_clean": {
             "help": "Don't cleanup prior to building",
-        }
+        },
     },
 )
 def epub(ctx: Context, no_clean: bool = False):

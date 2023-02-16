@@ -252,6 +252,7 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
         "lint": True,
         "test": True,
         "prepare-release": True,
+        "build-docs": True,
         "build-source-tarball": True,
         "build-deps-onedir": True,
         "build-salt-onedir": True,
@@ -293,6 +294,15 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write("De-selecting the 'lint' job.\n")
         jobs["lint"] = False
+
+    required_docs_changes: set[str] = {
+        changed_files_contents["salt"],
+        changed_files_contents["docs"],
+    }
+    if required_docs_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'build-docs' job.\n")
+        jobs["build-docs"] = False
 
     required_test_changes: set[str] = {
         changed_files_contents["testrun"],
