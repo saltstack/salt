@@ -675,22 +675,6 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
-  ubuntu-1804:
-    name: Ubuntu 18.04
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir
-    uses: ./.github/workflows/test-action.yml
-    with:
-      distro-slug: ubuntu-18.04
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-
   ubuntu-2004:
     name: Ubuntu 20.04
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -786,7 +770,6 @@ jobs:
       - opensuse-15
       - photonos-3
       - photonos-4
-      - ubuntu-1804
       - ubuntu-2004
       - ubuntu-2004-arm64
       - ubuntu-2204
