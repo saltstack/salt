@@ -1,4 +1,5 @@
 import pytest
+from pytestskipmarkers.utils import platform
 from saltfactories.utils.functional import MultiStateResult
 
 
@@ -16,11 +17,14 @@ def test_services(install_salt, salt_cli, salt_minion):
     elif install_salt.distro_id in ("centos", "redhat", "amzn", "fedora"):
         services_enabled = []
         services_disabled = ["salt-master", "salt-minion", "salt-syndic", "salt-api"]
+    elif platform.is_darwin():
+        services_enabled = ["salt-minion"]
+        services_disabled = []
     else:
         pytest.fail(f"Don't know how to handle os_family={install_salt.distro_id}")
 
     for service in services_enabled:
-        assert salt_cli.run("service.enabled")
+        assert "True" in salt_cli.run("service.enabled", service).stdout
 
     for service in services_disabled:
-        assert salt_cli.run("service.disabled")
+        assert "True" in salt_cli.run("service.disabled", service).stdout
