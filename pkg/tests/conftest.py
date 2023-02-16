@@ -309,7 +309,7 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
 
 
 @pytest.fixture(scope="session")
-def salt_minion(salt_master, install_salt):
+def salt_minion(salt_factories, salt_master, install_salt):
     """
     Start up a minion
     """
@@ -331,6 +331,14 @@ def salt_minion(salt_master, install_salt):
         "file_roots": salt_master.config["file_roots"].copy(),
         "pillar_roots": salt_master.config["pillar_roots"].copy(),
     }
+    if platform.is_windows():
+        config_overrides["winrepo_dir"] = (
+            rf"{salt_factories.root_dir}\srv\salt\win\repo"
+        )
+        config_overrides["winrepo_dir_ng"] = (
+            rf"{salt_factories.root_dir}\srv\salt\win\repo_ng"
+        )
+        config_overrides["winrepo_source_dir"] = r"salt://win/repo_ng"
     factory = salt_master.salt_minion_daemon(
         minion_id,
         overrides=config_overrides,

@@ -43,6 +43,12 @@ try:
 except ImportError:
     HAS_PWD = False
 
+try:
+    import winreg
+
+    HAS_WINREG = True
+except ImportError:
+    HAS_WINREG = False
 
 TESTS_DIR = pathlib.Path(__file__).resolve().parent.parent
 CODE_DIR = TESTS_DIR.parent
@@ -534,7 +540,18 @@ class SaltPkgInstall:
             # Remove the service installed by the installer
             log.debug("Removing installed salt-minion service")
             self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
-            log.debug("Adding %s to the path", self.install_dir)
+            # The installer updates the path for the system, but that doesn't
+            # make it to this python sessions, so we need to update that
+            if HAS_WINREG:
+                log.debug("Adding %s to the path", self.install_dir)
+                path_key = winreg.OpenKeyEx(
+                    winreg.HKEY_LOCAL_MACHINE,
+                    r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+                )
+                current_path = winreg.QueryValueEx(path_key, "path")[0]
+                path_key.Close()
+                os.environ["PATH"] = current_path
+
         elif platform.is_darwin():
             daemons_dir = pathlib.Path(os.sep, "Library", "LaunchDaemons")
             service_name = "com.saltstack.salt.minion"
@@ -817,13 +834,41 @@ class SaltPkgInstall:
                 self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
 
                 # Remove install directory
+                log.debug("Removing install directory")
                 shutil.rmtree(self.install_dir, ignore_errors=True)
 
                 # Remove registry entries
-                import winreg
+                if HAS_WINREG:
+                    log.debug("Removing registry entries")
+                    key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{5693F9A3-3083-426B-B17B-B860C00C9B84}"
+                    winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, key)
 
-                key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{5693F9A3-3083-426B-B17B-B860C00C9B84}"
-                winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, key)
+            # Remove install dir from the path
+            if HAS_WINREG:
+                path_key = winreg.OpenKeyEx(
+                    winreg.HKEY_LOCAL_MACHINE,
+                    r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+                )
+                current_path = winreg.QueryValueEx(path_key, "path")
+                path_key.Close()
+                if str(self.install_dir) in current_path:
+                    log.debug("Removing %s from the path", self.install_dir)
+                    path_key = winreg.OpenKeyEx(
+                        winreg.HKEY_LOCAL_MACHINE,
+                        r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+                        0,
+                        winreg.KEY_SET_VALUE,
+                    )
+                    new_path = []
+                    path_list = current_path.split(";")
+                    for item in path_list:
+                        if item == str(self.install_dir):
+                            continue
+                        new_path.append(item)
+                    winreg.SetValueEx(
+                        path_key, "path", 1, winreg.REG_SZ, ";".join(new_path)
+                    )
+                    path_key.Close()
 
         elif platform.is_darwin():
             self._uninstall_compressed()
