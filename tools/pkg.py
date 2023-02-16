@@ -101,6 +101,9 @@ class Recompress:
         "validate_version": {
             "help": "Validate, and normalize, the passed Salt Version",
         },
+        "release": {
+            "help": "When true, also update salt/versions.py to set the version as released",
+        },
     },
 )
 def set_salt_version(
@@ -108,6 +111,7 @@ def set_salt_version(
     salt_version: str,
     overwrite: bool = False,
     validate_version: bool = False,
+    release: bool = False,
 ):
     """
     Write the Salt version to 'salt/_version.txt'
@@ -166,6 +170,22 @@ def set_salt_version(
         ctx.exit(1)
 
     ctx.info(f"Successfuly wrote {salt_version!r} to 'salt/_version.txt'")
+
+    if release:
+        version_instance = tools.utils.Version(salt_version)
+        with open(tools.utils.REPO_ROOT / "salt" / "version.py", "r+") as rwfh:
+            contents = rwfh.read()
+            contents = contents.replace(
+                f"info=({version_instance.major}, {version_instance.minor}))",
+                f"info=({version_instance.major}, {version_instance.minor}),  released=True)",
+            )
+            rwfh.seek(0)
+            rwfh.write(contents)
+            rwfh.truncate()
+
+        ctx.info(
+            f"Successfuly marked {salt_version!r} as released in 'salt/version.py'"
+        )
 
     gh_env_file = os.environ.get("GITHUB_ENV", None)
     if gh_env_file is not None:

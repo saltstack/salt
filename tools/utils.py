@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pathlib
 
+import packaging.version
 from ptscripts import Context
 from rich.progress import (
     BarColumn,
@@ -81,3 +82,35 @@ def gpg_sign(ctx: Context, key_id: str, path: pathlib.Path):
         "--sign",
         str(path),
     )
+
+
+class Version(packaging.version.Version):
+    def __lt__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__lt__(other)
+
+    def __le__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__le__(other)
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__eq__(other)
+
+    def __ge__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__ge__(other)
+
+    def __gt__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__gt__(other)
+
+    def __ne__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__ne__(other)

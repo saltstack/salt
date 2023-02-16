@@ -94,6 +94,9 @@ on:
         uses: ./.github/actions/setup-salt-version
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+          <%- if prepare_actual_release %>
+          release: true
+          <%- endif %>
 
       - name: Update Debian changelog
         shell: bash
