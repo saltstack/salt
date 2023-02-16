@@ -246,6 +246,9 @@ class SyncClientMixin(ClientStateMixin):
             self.functions[fun], arglist, pub_data
         )
         low = {"fun": fun, "arg": args, "kwarg": kwargs}
+        if "user" in pub_data:
+            low["__user__"] = pub_data["user"]
+
         return self.low(fun, low, print_event=print_event, full_return=full_return)
 
     @property
