@@ -8,7 +8,6 @@ debian-11-arm64: ami-04e4cf9e06c8507fd
 debian-11-amd64: ami-0bdd4ad44797176d5
 opensuse-15-x86_64: ami-0f082f48aaf8d7025
 photon-3-x86_64: ami-0796b16d4f04f5f39
-ubuntu-1804-amd64: ami-025d583cda1198992
 ubuntu-2004-arm64: ami-0274b3bc5e9f97e25
 ubuntu-2004-amd64: ami-09721ea22726563cd
 ubuntu-2204-amd64: ami-007efe8c00884373a

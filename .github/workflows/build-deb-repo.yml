@@ -50,9 +50,6 @@ jobs:
             version: "11"
             arch: aarch64
           - distro: ubuntu
-            version: "18.04"
-            arch: x86_64
-          - distro: ubuntu
             version: "20.04"
             arch: x86_64
           - distro: ubuntu

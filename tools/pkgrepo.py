@@ -136,10 +136,6 @@ def debian(
             },
         },
         "ubuntu": {
-            "18.04": {
-                "label": "salt_ubuntu1804",
-                "codename": "bionic",
-            },
             "20.04": {
                 "label": "salt_ubuntu2004",
                 "codename": "focal",
