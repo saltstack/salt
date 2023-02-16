@@ -56,24 +56,18 @@ on:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
-        id: setup-python
-        with:
-          python-version: "3.10"
+      - name: Get Python Version
+        id: get-python-version
+        run: |
+          PY_VERSION=$(python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info))")
+          echo "python-version=$PY_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Cache Python Tools Virtualenvs
         id: tools-venvs-dependencies-cache
         uses: actions/cache@v3
         with:
           path: .tools-venvs/
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.setup-python.outputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
-
-      - name: Cache Sphinx Doctrees
-        uses: actions/cache@v3
-        with:
-          path: doc/_build/doctrees/
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|sphinx-doctrees|${{ steps.setup-python.outputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -102,25 +96,13 @@ on:
           tools changelog update-release-notes --draft
           tools changelog update-release-notes
 
-      - name: Build Documentation
-        shell: bash
-        env:
-          LATEST_RELEASE: ${{ needs.prepare-workflow.outputs.salt-version }}
-        run: |
-          tools docs html --no-clean --archive salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs.tar.xz
-
       - name: Generate MAN Pages
         shell: bash
+        env:
+          LATEST_RELEASE: "${{ needs.prepare-workflow.outputs.salt-version }}"
+          SALT_ON_SALTSTACK: "1"
         run: |
-          tools docs man --no-clean
-
-      - name: Upload Built Documentation Archive
-        uses: actions/upload-artifact@v3
-        with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs.tar.xz
-          path: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs.tar.xz
-          retention-days: 7
-          if-no-files-found: error
+          tools docs man
 
       - name: Update Changelog
         shell: bash
@@ -164,6 +146,24 @@ on:
           path: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
           retention-days: 7
           if-no-files-found: error
+
+  <%- endif %>
+
+
+  <%- set job_name = "build-docs" %>
+  <%- if includes.get(job_name, True) %>
+
+  <{ job_name }>:
+    <%- do conclusion_needs.append(job_name) %>
+    name: Documentation
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-source-tarball
+    uses: ./.github/workflows/build-docs.yml
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
   <%- endif %>
 

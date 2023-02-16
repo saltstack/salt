@@ -8,3 +8,5 @@ self-hosted-runner:
     - repo-nightly
     - repo-staging
     - repo-release
+    - medium
+    - large
