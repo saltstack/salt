@@ -22,6 +22,7 @@ from ptscripts import Context, command_group
 
 import tools.pkg
 import tools.utils
+from tools.utils import Version
 
 try:
     import boto3
@@ -1731,35 +1732,3 @@ def _parse_versions(*versions: str) -> list[Version]:
     if _versions:
         _versions.sort(reverse=True)
     return _versions
-
-
-class Version(packaging.version.Version):
-    def __lt__(self, other):
-        if not isinstance(other, self.__class__):
-            other = self.__class__(other)
-        return super().__lt__(other)
-
-    def __le__(self, other):
-        if not isinstance(other, self.__class__):
-            other = self.__class__(other)
-        return super().__le__(other)
-
-    def __eq__(self, other):
-        if not isinstance(other, self.__class__):
-            other = self.__class__(other)
-        return super().__eq__(other)
-
-    def __ge__(self, other):
-        if not isinstance(other, self.__class__):
-            other = self.__class__(other)
-        return super().__ge__(other)
-
-    def __gt__(self, other):
-        if not isinstance(other, self.__class__):
-            other = self.__class__(other)
-        return super().__gt__(other)
-
-    def __ne__(self, other):
-        if not isinstance(other, self.__class__):
-            other = self.__class__(other)
-        return super().__ne__(other)

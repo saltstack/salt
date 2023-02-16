@@ -278,6 +278,7 @@ jobs:
         uses: ./.github/actions/setup-salt-version
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+          release: true
 
       - name: Update Debian changelog
         shell: bash
