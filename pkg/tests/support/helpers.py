@@ -191,6 +191,21 @@ class SaltPkgInstall:
             relenv = True
         return relenv
 
+    def update_process_path(self):
+        # The installer updates the path for the system, but that doesn't
+        # make it to this python session, so we need to update that
+        if HAS_WINREG:
+            log.debug("Adding %s to the path", self.install_dir)
+            # Get the updated system path from the registry
+            path_key = winreg.OpenKeyEx(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+            )
+            current_path = winreg.QueryValueEx(path_key, "path")[0]
+            path_key.Close()
+            # Update the path for the current running process
+            os.environ["PATH"] = current_path
+
     def get_version(self, version_only=False):
         """
         Return the version information
@@ -540,17 +555,7 @@ class SaltPkgInstall:
             # Remove the service installed by the installer
             log.debug("Removing installed salt-minion service")
             self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
-            # The installer updates the path for the system, but that doesn't
-            # make it to this python sessions, so we need to update that
-            if HAS_WINREG:
-                log.debug("Adding %s to the path", self.install_dir)
-                path_key = winreg.OpenKeyEx(
-                    winreg.HKEY_LOCAL_MACHINE,
-                    r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
-                )
-                current_path = winreg.QueryValueEx(path_key, "path")[0]
-                path_key.Close()
-                os.environ["PATH"] = current_path
+            self.update_process_path()
 
         elif platform.is_darwin():
             daemons_dir = pathlib.Path(os.sep, "Library", "LaunchDaemons")
@@ -845,12 +850,14 @@ class SaltPkgInstall:
 
             # Remove install dir from the path
             if HAS_WINREG:
+                # Get the current system path
                 path_key = winreg.OpenKeyEx(
                     winreg.HKEY_LOCAL_MACHINE,
                     r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
                 )
-                current_path = winreg.QueryValueEx(path_key, "path")
+                current_path = winreg.QueryValueEx(path_key, "path")[0]
                 path_key.Close()
+                # If the install path is in the path let's remove it
                 if str(self.install_dir) in current_path:
                     log.debug("Removing %s from the path", self.install_dir)
                     path_key = winreg.OpenKeyEx(
@@ -1012,7 +1019,7 @@ class SaltPkgInstall:
 
     def __enter__(self):
         if platform.is_windows():
-            os.environ["PATH"] = ";".join([str(self.install_dir), os.getenv("path")])
+            self.update_process_path()
 
         if not self.no_install:
             if self.upgrade:
