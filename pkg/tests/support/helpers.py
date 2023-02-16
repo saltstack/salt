@@ -267,7 +267,6 @@ class SaltPkgInstall:
                         self.root = pathlib.Path(os.sep, "usr", "local", "bin")
 
                     if file_ext == "pkg":
-                        self.compressed = False
                         self.onedir = True
                         self.installer_pkg = True
                         self.bin_dir = self.root / "salt" / "bin"
@@ -315,25 +314,21 @@ class SaltPkgInstall:
                     "python": [python_bin],
                 }
             else:
-                if os.path.exists(self.install_dir / "bin" / "salt"):
-                    install_dir = self.install_dir / "bin"
-                else:
-                    install_dir = self.install_dir
                 self.binary_paths = {
-                    "salt": [install_dir / "salt"],
-                    "api": [install_dir / "salt-api"],
-                    "call": [install_dir / "salt-call"],
-                    "cloud": [install_dir / "salt-cloud"],
-                    "cp": [install_dir / "salt-cp"],
-                    "key": [install_dir / "salt-key"],
-                    "master": [install_dir / "salt-master"],
-                    "minion": [install_dir / "salt-minion"],
-                    "proxy": [install_dir / "salt-proxy"],
-                    "run": [install_dir / "salt-run"],
-                    "ssh": [install_dir / "salt-ssh"],
-                    "syndic": [install_dir / "salt-syndic"],
-                    "spm": [install_dir / "spm"],
-                    "pip": [install_dir / "salt-pip"],
+                    "salt": ["salt"],
+                    "api": ["salt-api"],
+                    "call": ["salt-call"],
+                    "cloud": ["salt-cloud"],
+                    "cp": ["salt-cp"],
+                    "key": ["salt-key"],
+                    "master": ["salt-master"],
+                    "minion": ["salt-minion"],
+                    "proxy": ["salt-proxy"],
+                    "run": ["salt-run"],
+                    "ssh": ["salt-ssh"],
+                    "syndic": ["salt-syndic"],
+                    "spm": ["spm"],
+                    "pip": ["salt-pip"],
                     "python": [python_bin],
                 }
         else:
@@ -374,21 +369,25 @@ class SaltPkgInstall:
                         "python": [python_bin],
                     }
                 else:
+                    if os.path.exists(self.install_dir / "bin" / "salt"):
+                        install_dir = self.install_dir / "bin"
+                    else:
+                        install_dir = self.install_dir
                     self.binary_paths = {
-                        "salt": [self.install_dir / "salt"],
-                        "api": [self.install_dir / "salt-api"],
-                        "call": [self.install_dir / "salt-call"],
-                        "cloud": [self.install_dir / "salt-cloud"],
-                        "cp": [self.install_dir / "salt-cp"],
-                        "key": [self.install_dir / "salt-key"],
-                        "master": [self.install_dir / "salt-master"],
-                        "minion": [self.install_dir / "salt-minion"],
-                        "proxy": [self.install_dir / "salt-proxy"],
-                        "run": [self.install_dir / "salt-run"],
-                        "ssh": [self.install_dir / "salt-ssh"],
-                        "syndic": [self.install_dir / "salt-syndic"],
-                        "spm": [self.install_dir / "spm"],
-                        "pip": [self.install_dir / "salt-pip"],
+                        "salt": [install_dir / "salt"],
+                        "api": [install_dir / "salt-api"],
+                        "call": [install_dir / "salt-call"],
+                        "cloud": [install_dir / "salt-cloud"],
+                        "cp": [install_dir / "salt-cp"],
+                        "key": [install_dir / "salt-key"],
+                        "master": [install_dir / "salt-master"],
+                        "minion": [install_dir / "salt-minion"],
+                        "proxy": [install_dir / "salt-proxy"],
+                        "run": [install_dir / "salt-run"],
+                        "ssh": [install_dir / "salt-ssh"],
+                        "syndic": [install_dir / "salt-syndic"],
+                        "spm": [install_dir / "spm"],
+                        "pip": [install_dir / "salt-pip"],
                         "python": [python_bin],
                     }
 
