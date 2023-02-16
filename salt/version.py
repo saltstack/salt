@@ -554,7 +554,7 @@ class SaltStackVersion:
         parts.extend(["major={}".format(self.major), "minor={}".format(self.minor)])
 
         if self.new_version(self.major):
-            if not self.minor:
+            if not self.can_have_dot_zero(self.major) and not self.minor:
                 parts.remove("".join([x for x in parts if re.search("^minor*", x)]))
         else:
             parts.extend(["bugfix={}".format(self.bugfix)])
