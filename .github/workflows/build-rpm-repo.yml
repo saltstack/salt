@@ -48,6 +48,15 @@ jobs:
           - distro: redhat
             version: "9"
             arch: x86_64
+          - distro: fedora
+            version: "36"
+            arch: x86_64
+          - distro: fedora
+            version: "37"
+            arch: x86_64
+          - distro: fedora
+            version: "38"
+            arch: x86_64
 
     steps:
       - uses: actions/checkout@v3
