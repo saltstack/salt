@@ -331,6 +331,8 @@ jobs:
 
       - name: Commit Changes
         shell: bash
+        env:
+          SKIP: lint-salt,lint-tests
         run: |
           # Run it twice so that pre-commit can fix anything that can be automatically fixed.
           git commit -am "Release v${{ needs.prepare-workflow.outputs.salt-version }}" || \
