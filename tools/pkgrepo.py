@@ -388,6 +388,7 @@ def rpm(
     distro_info = {
         "amazon": ["2"],
         "redhat": ["7", "8", "9"],
+        "fedora": ["36", "37", "38"],
     }
     display_name = f"{distro.capitalize()} {distro_version}"
     if distro_version not in distro_info[distro]:
