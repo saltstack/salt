@@ -55,14 +55,13 @@ on_saltstack = "SALT_ON_SALTSTACK" in os.environ
 project = "Salt"
 # This is the default branch on GitHub for the Salt project
 repo_primary_branch = "master"
-major_version = str(salt.version.__saltstack_version__.major)
-latest_release = major_version
-if salt.version.__saltstack_version__.can_have_dot_zero(major_version):
-    latest_release = ".".join([str(x) for x in salt.version.__saltstack_version__.info])
-latest_release = (
-    # Use next unreleased version if LATEST_RELEASE is undefined env var
-    os.environ.get("LATEST_RELEASE", latest_release)
-)  # latest release (3003)
+if "LATEST_RELEASE" not in os.environ:
+    salt_version = salt.version.__saltstack_version__
+else:
+    salt_version = salt.version.SaltStackVersion.parse(os.environ["LATEST_RELEASE"])
+
+major_version = str(salt_version.major)
+latest_release = ".".join([str(x) for x in salt_version.info])
 previous_release = os.environ.get(
     "PREVIOUS_RELEASE", "previous_release"
 )  # latest release from previous branch (3002.5)
@@ -149,8 +148,7 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.imgconverter",
     "sphinx.ext.intersphinx",
-    "httpdomain",
-    "youtube",
+    "sphinxcontrib.httpdomain",
     "saltrepo",
     "myst_parser",
     #'saltautodoc', # Must be AFTER autodoc
@@ -170,10 +168,7 @@ autosummary_generate = True
 autosummary_generate_overwrite = False
 
 # In case building docs throws import errors, please add the top level package name below
-autodoc_mock_imports = [
-    "cherrypy",
-    "xmltodict",
-]
+autodoc_mock_imports = []
 
 # strip git rev as there won't necessarily be a release based on it
 stripped_release = re.sub(r"-\d+-g[0-9a-f]+$", "", release)
