@@ -23,7 +23,6 @@ jobs:
       - x86_64
     strategy:
       fail-fast: false
-      max-parallel: 6
       matrix:
         docs-output:
           - linkcheck
