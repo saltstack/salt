@@ -44,6 +44,10 @@ immutables==0.15
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   contextvars
+importlib-metadata==4.6.4
+    # via
+    #   -c requirements/static/ci/py3.7/linux.txt
+    #   sphinxcontrib-spelling
 jaraco.classes==3.2.1
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
@@ -121,6 +125,8 @@ pycryptodomex==3.9.8
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   -r requirements/crypto.txt
+pyenchant==3.2.2
+    # via sphinxcontrib-spelling
 pygments==2.8.1
     # via sphinx
 pyparsing==3.0.9
@@ -157,6 +163,7 @@ snowballstemmer==2.1.0
 sphinx==3.5.2 ; python_version < "3.9"
     # via
     #   -r requirements/static/ci/docs.in
+    #   sphinxcontrib-spelling
     #   sphinxcontrib.httpdomain
 sphinxcontrib-applehelp==1.0.2
     # via sphinx
@@ -170,6 +177,8 @@ sphinxcontrib-qthelp==1.0.3
     # via sphinx
 sphinxcontrib-serializinghtml==1.1.4
     # via sphinx
+sphinxcontrib-spelling==7.7.0
+    # via -r requirements/static/ci/docs.in
 sphinxcontrib.httpdomain==1.8.1
     # via -r requirements/static/ci/docs.in
 tempora==4.1.1
@@ -179,6 +188,7 @@ tempora==4.1.1
 typing-extensions==3.10.0.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
+    #   importlib-metadata
     #   markdown-it-py
     #   myst-docutils
 uc-micro-py==1.0.1
@@ -191,6 +201,10 @@ zc.lockfile==1.4
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   cherrypy
+zipp==3.5.0
+    # via
+    #   -c requirements/static/ci/py3.7/linux.txt
+    #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

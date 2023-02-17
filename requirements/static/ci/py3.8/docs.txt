@@ -121,6 +121,8 @@ pycryptodomex==3.9.8
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/crypto.txt
+pyenchant==3.2.2
+    # via sphinxcontrib-spelling
 pygments==2.8.1
     # via sphinx
 pytz==2022.1
@@ -153,6 +155,7 @@ snowballstemmer==2.1.0
 sphinx==3.5.2 ; python_version < "3.9"
     # via
     #   -r requirements/static/ci/docs.in
+    #   sphinxcontrib-spelling
     #   sphinxcontrib.httpdomain
 sphinxcontrib-applehelp==1.0.2
     # via sphinx
@@ -166,6 +169,8 @@ sphinxcontrib-qthelp==1.0.3
     # via sphinx
 sphinxcontrib-serializinghtml==1.1.4
     # via sphinx
+sphinxcontrib-spelling==7.7.0
+    # via -r requirements/static/ci/docs.in
 sphinxcontrib.httpdomain==1.8.1
     # via -r requirements/static/ci/docs.in
 tempora==4.1.1
