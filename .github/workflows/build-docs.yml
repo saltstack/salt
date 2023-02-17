@@ -27,6 +27,7 @@ jobs:
       matrix:
         docs-output:
           - linkcheck
+          - spellcheck
           - html
           - epub
           # - pdf
@@ -141,3 +142,13 @@ jobs:
           SALT_ON_SALTSTACK: "1"
         run: |
           tools docs linkcheck
+
+      - name: Check Documentation Spelling
+        if: ${{ matrix.docs-output == 'spellcheck' }}
+        shell: bash
+        continue-on-error: true
+        env:
+          LATEST_RELEASE: "${{ inputs.salt-version }}"
+          SALT_ON_SALTSTACK: "1"
+        run: |
+          tools docs spellcheck

@@ -120,3 +120,23 @@ def linkcheck(ctx: Context, no_clean: bool = False):
         cwd="doc/",
         check=True,
     )
+
+
+@docs.command(
+    name="spellcheck",
+    arguments={
+        "no_clean": {
+            "help": "Don't cleanup prior to building",
+        }
+    },
+)
+def spellcheck(ctx: Context, no_clean: bool = False):
+    if no_clean is False:
+        ctx.run("make", "clean", cwd="doc/", check=True)
+    ctx.run(
+        "make",
+        "spelling",
+        "SPHINXOPTS=-W -j auto --keep-going --color",
+        cwd="doc/",
+        check=True,
+    )

@@ -131,6 +131,7 @@ else:  # latest or something else
 needs_sphinx = "1.3"
 
 spelling_lang = "en_US"
+spelling_show_suggestions = True
 language = "en"
 locale_dirs = [
     "_locale",
@@ -151,16 +152,10 @@ extensions = [
     "sphinxcontrib.httpdomain",
     "saltrepo",
     "myst_parser",
+    "sphinxcontrib.spelling",
     #'saltautodoc', # Must be AFTER autodoc
     #'shorturls',
 ]
-
-try:
-    import sphinxcontrib.spelling  # false positive, pylint: disable=unused-import
-except ImportError:
-    pass
-else:
-    extensions += ["sphinxcontrib.spelling"]
 
 modindex_common_prefix = ["salt."]
 
