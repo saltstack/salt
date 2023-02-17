@@ -1,12 +1,13 @@
-import pytest
 import logging
 from pathlib import Path
+
+import pytest
 
 import salt.loader
 import salt.pillar
 import salt.utils.cache
 from salt.utils.odict import OrderedDict
-from saltfactories.utils.tempfiles import temp_directory
+
 
 @pytest.mark.parametrize(
     "envs",
@@ -151,5 +152,8 @@ def test_pillar_get_cache_disk(temp_salt_minion, caplog):
             saltenv="base",
         )
         fresh_pillar = pillar.fetch_pillar()
-        assert not (f"Error reading cache file at '{tmp_cachefile}': Unpack failed: incomplete input" in caplog.messages)
+        assert not (
+            f"Error reading cache file at '{tmp_cachefile}': Unpack failed: incomplete input"
+            in caplog.messages
+        )
         assert fresh_pillar == {}
