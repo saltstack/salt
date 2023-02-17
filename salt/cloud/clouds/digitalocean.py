@@ -180,6 +180,7 @@ def list_nodes(call=None):
         )
     return _list_nodes()
 
+
 def list_nodes_full(call=None, for_output=True):
     """
     Return a list of the VMs that are on the provider
@@ -1268,6 +1269,7 @@ def unassign_floating_ip(kwargs=None, call=None):
 
     return result
 
+
 def _get_vpc_by_name(name):
     """
     Helper function to format and parse vpc data.
@@ -1302,6 +1304,7 @@ def _get_vpc_by_name(name):
     ret[name] = None
 
     return ret
+
 
 def _list_nodes(full=False, for_output=False):
     """
