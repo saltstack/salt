@@ -1276,7 +1276,7 @@ def _get_vpc_by_name(name):
     page = 1
     ret = {}
 
-    log.debug("Matching vpc name with: %s",name)
+    log.debug("Matching vpc name with: %s", name)
     while fetch:
         items = query(method="vpcs", command="?page=" + str(page) + "&per_page=200")
         for node in items["vpcs"]:
