@@ -79,6 +79,20 @@ from the ``kevinopenstack`` profile above, you would use:
 
     salt-call sdb.get sdb://kevinopenstack/password
 
+To get SDB sub-keys, ie
+
+.. code-block:: yaml
+
+    users:
+      user1:
+        id: 12345
+
+use a colon to separate sub key values
+
+.. code-block:: bash
+
+    salt-call sdb.get sdb://users:user1:id
+
 .. warning::
     The ``vault`` driver previously only supported splitting the path and key with
     a question mark. This has since been deprecated in favor of using the standard
