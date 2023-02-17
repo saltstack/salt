@@ -26,7 +26,6 @@ jobs:
     if: ${{ inputs.self-hosted-runners }}
     strategy:
       fail-fast: false
-      max-parallel: 2
       matrix:
         arch:
           - x86_64
