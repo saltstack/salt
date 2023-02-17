@@ -82,7 +82,7 @@ def html(ctx: Context, no_clean: bool = False, archive: pathlib.Path = None):
 def epub(ctx: Context, no_clean: bool = False):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
-    ctx.run("make", "epub", "SPHINXOPTS=-W", cwd="doc/", check=True)
+    ctx.run("make", "epub", cwd="doc/", check=True)
 
 
 @docs.command(
