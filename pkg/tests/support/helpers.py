@@ -194,17 +194,24 @@ class SaltPkgInstall:
     def update_process_path(self):
         # The installer updates the path for the system, but that doesn't
         # make it to this python session, so we need to update that
-        if HAS_WINREG:
-            log.debug("Adding %s to the path", self.install_dir)
-            # Get the updated system path from the registry
-            path_key = winreg.OpenKeyEx(
-                winreg.HKEY_LOCAL_MACHINE,
-                r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
-            )
-            current_path = winreg.QueryValueEx(path_key, "path")[0]
-            path_key.Close()
-            # Update the path for the current running process
-            os.environ["PATH"] = current_path
+        os.environ["PATH"] = ";".join([str(self.install_dir), os.getenv("path")])
+
+        # When the MSI installer is run from self.proc.run, it doesn't update
+        # the registry. When run from a normal command prompt it does. Until we
+        # figure that out, we will update the process path as above. This
+        # doesn't really check that the path is being set though... but I see
+        # no other way around this
+        # if HAS_WINREG:
+        #     log.debug("Refreshing the path")
+        #     # Get the updated system path from the registry
+        #     path_key = winreg.OpenKeyEx(
+        #         winreg.HKEY_LOCAL_MACHINE,
+        #         r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+        #     )
+        #     current_path = winreg.QueryValueEx(path_key, "path")[0]
+        #     path_key.Close()
+        #     # Update the path for the current running process
+        #     os.environ["PATH"] = current_path
 
     def get_version(self, version_only=False):
         """
@@ -844,6 +851,10 @@ class SaltPkgInstall:
                 shutil.rmtree(self.install_dir, ignore_errors=True)
 
                 # Remove registry entries
+                # This only removes the Add/Remove programs entry from the
+                # registry. There are a lot of remnants of Salt still in the
+                # registry... thousands. This will be the case until we figure
+                # out why we can't uninstall the MSI using self.proc.run
                 if HAS_WINREG:
                     log.debug("Removing registry entries")
                     key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{5693F9A3-3083-426B-B17B-B860C00C9B84}"
