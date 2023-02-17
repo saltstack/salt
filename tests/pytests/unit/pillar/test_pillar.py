@@ -144,7 +144,7 @@ def test_pillar_get_cache_disk(temp_salt_minion, caplog):
         opts["pillar_cache"] = True
         opts["cachedir"] = str(temp_path)
 
-        caplog.at_level(logging.ERROR)
+        caplog.at_level(logging.DEBUG)
         pillar = salt.pillar.PillarCache(
             opts=opts,
             grains=salt.loader.grains(opts),
