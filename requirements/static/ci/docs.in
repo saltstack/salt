@@ -3,3 +3,5 @@
 sphinx>=3.5.1; python_version < '3.9'
 sphinx>=6.1.0; python_version >= '3.9'
 myst-docutils[linkify]
+sphinxcontrib.httpdomain
+cherrypy

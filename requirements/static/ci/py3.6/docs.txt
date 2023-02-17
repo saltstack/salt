@@ -20,6 +20,14 @@ chardet==3.0.4
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
     #   requests
+cheroot==8.5.2
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   cherrypy
+cherrypy==18.6.1
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   -r requirements/static/ci/docs.in
 contextvars==2.4
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
@@ -40,6 +48,32 @@ immutables==0.14
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
     #   contextvars
+importlib-metadata==4.6.4
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   importlib-resources
+importlib-resources==1.5.0
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   jaraco.text
+jaraco.classes==3.2.1
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   jaraco.collections
+jaraco.collections==3.4.0
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   cherrypy
+jaraco.functools==2.0
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   cheroot
+    #   jaraco.text
+    #   tempora
+jaraco.text==3.5.1
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   jaraco.collections
 jinja2==3.0.3
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
@@ -69,6 +103,13 @@ mdit-py-plugins==0.3.0
     # via myst-docutils
 mdurl==0.1.0
     # via markdown-it-py
+more-itertools==5.0.0
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   cheroot
+    #   cherrypy
+    #   jaraco.classes
+    #   jaraco.functools
 msgpack==1.0.2
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
@@ -80,6 +121,10 @@ packaging==21.3
     #   -c requirements/static/ci/py3.6/linux.txt
     #   -r requirements/base.txt
     #   sphinx
+portend==2.4
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   cherrypy
 psutil==5.8.0
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
@@ -98,6 +143,7 @@ pytz==2022.1
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
     #   babel
+    #   tempora
 pyyaml==5.4.1
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
@@ -112,10 +158,18 @@ requests==2.25.1
     #   -c requirements/static/ci/py3.6/linux.txt
     #   -r requirements/base.txt
     #   sphinx
+six==1.16.0
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   cheroot
+    #   more-itertools
+    #   sphinxcontrib.httpdomain
 snowballstemmer==2.1.0
     # via sphinx
 sphinx==3.5.2 ; python_version < "3.9"
-    # via -r requirements/static/ci/docs.in
+    # via
+    #   -r requirements/static/ci/docs.in
+    #   sphinxcontrib.httpdomain
 sphinxcontrib-applehelp==1.0.2
     # via sphinx
 sphinxcontrib-devhelp==1.0.2
@@ -128,9 +182,16 @@ sphinxcontrib-qthelp==1.0.3
     # via sphinx
 sphinxcontrib-serializinghtml==1.1.4
     # via sphinx
+sphinxcontrib.httpdomain==1.8.1
+    # via -r requirements/static/ci/docs.in
+tempora==4.1.1
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   portend
 typing-extensions==3.10.0.0
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
+    #   importlib-metadata
     #   markdown-it-py
 uc-micro-py==1.0.1
     # via linkify-it-py
@@ -138,6 +199,15 @@ urllib3==1.26.6
     # via
     #   -c requirements/static/ci/py3.6/linux.txt
     #   requests
+zc.lockfile==1.4
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   cherrypy
+zipp==3.5.0
+    # via
+    #   -c requirements/static/ci/py3.6/linux.txt
+    #   importlib-metadata
+    #   importlib-resources
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
