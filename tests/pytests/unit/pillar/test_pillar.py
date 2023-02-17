@@ -1,9 +1,12 @@
 import pytest
+import logging
+from pathlib import Path
 
 import salt.loader
 import salt.pillar
+import salt.utils.cache
 from salt.utils.odict import OrderedDict
-
+from saltfactories.utils.tempfiles import temp_directory
 
 @pytest.mark.parametrize(
     "envs",
@@ -123,3 +126,30 @@ def test_pillar_envs_path_substitution(env, temp_salt_minion, tmp_path):
 
     # The __env__ string in the path has been substituted for the actual env
     assert pillar.opts["pillar_roots"] == expected
+
+
+def test_pillar_get_cache_disk(temp_salt_minion, caplog):
+    # create faked path for cache
+    with pytest.helpers.temp_directory() as temp_path:
+        tmp_cachedir = Path(str(temp_path) + "/pillar_cache/")
+        tmp_cachedir.mkdir(parents=True)
+        assert tmp_cachedir.exists()
+        tmp_cachefile = Path(str(temp_path) + "/pillar_cache/" + temp_salt_minion.id)
+        tmp_cachefile.touch()
+        assert tmp_cachefile.exists()
+
+        opts = temp_salt_minion.config.copy()
+        opts["pillarenv"] = None
+        opts["pillar_cache"] = True
+        opts["cachedir"] = str(temp_path)
+
+        caplog.at_level(logging.ERROR)
+        pillar = salt.pillar.PillarCache(
+            opts=opts,
+            grains=salt.loader.grains(opts),
+            minion_id=temp_salt_minion.id,
+            saltenv="base",
+        )
+        fresh_pillar = pillar.fetch_pillar()
+        assert not (f"Error reading cache file at '{tmp_cachefile}': Unpack failed: incomplete input" in caplog.messages)
+        assert fresh_pillar == {}
