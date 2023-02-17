@@ -553,6 +553,8 @@ class SaltPkgInstall:
             elif pkg.endswith("msi"):
                 # Install the package
                 log.debug("Installing: %s", str(pkg))
+                # START_MINION="" does not work as documented. The service is
+                # still starting. We need to fix this for RC2
                 ret = self.proc.run(
                     "msiexec.exe", "/qn", "/i", str(pkg), 'START_MINION=""'
                 )
@@ -560,6 +562,13 @@ class SaltPkgInstall:
             else:
                 log.error("Invalid package: %s", pkg)
                 return False
+
+            # Stop the service installed by the installer. We only need this
+            # until we fix the issue where the MSI installer is starting the
+            # salt-minion service when it shouldn't
+            log.debug("Removing installed salt-minion service")
+            self.proc.run(str(self.ssm_bin), "stop", "salt-minion")
+
             # Remove the service installed by the installer
             log.debug("Removing installed salt-minion service")
             self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
