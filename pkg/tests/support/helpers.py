@@ -94,7 +94,8 @@ class SaltPkgInstall:
     repo_data: str = attr.ib(init=False)
     major: str = attr.ib(init=False)
     minor: str = attr.ib(init=False)
-    relenv: bool = attr.ib(True)
+    relenv: bool = attr.ib(default=True)
+    file_ext: bool = attr.ib(default=None)
 
     @proc.default
     def _default_proc(self):
@@ -281,14 +282,14 @@ class SaltPkgInstall:
                 # Compressed can be zip, tar.gz, exe, or pkg. All others are
                 # deb and rpm
                 self.compressed = True
-                file_ext = os.path.splitext(f_path)[1].strip(".")
-                if file_ext == "gz":
+                self.file_ext = os.path.splitext(f_path)[1].strip(".")
+                if self.file_ext == "gz":
                     if f_path.endswith("tar.gz"):
-                        file_ext = "tar.gz"
+                        self.file_ext = "tar.gz"
                 self.pkgs.append(f_path)
                 if platform.is_windows():
                     self.root = pathlib.Path(os.getenv("LocalAppData")).resolve()
-                    if file_ext == "zip":
+                    if self.file_ext == "zip":
                         with ZipFile(f_path, "r") as zip:
                             first = zip.infolist()[0]
                             if first.filename == "salt/ssm.exe":
@@ -305,7 +306,7 @@ class SaltPkgInstall:
                                     "Unexpected archive layout. First: %s",
                                     first.filename,
                                 )
-                    elif file_ext in ["exe", "msi"]:
+                    elif self.file_ext in ["exe", "msi"]:
                         self.compressed = False
                         self.onedir = True
                         self.installer_pkg = True
@@ -313,20 +314,20 @@ class SaltPkgInstall:
                         self.bin_dir = self.install_dir
                         self.ssm_bin = self.install_dir / "ssm.exe"
                     else:
-                        log.error("Unexpected file extension: %s", file_ext)
+                        log.error("Unexpected file extension: %s", self.file_ext)
                 else:
                     if platform.is_darwin():
                         self.root = pathlib.Path(os.sep, "opt")
                     else:
                         self.root = pathlib.Path(os.sep, "usr", "local", "bin")
 
-                    if file_ext == "pkg":
+                    if self.file_ext == "pkg":
                         self.compressed = False
                         self.onedir = True
                         self.installer_pkg = True
                         self.bin_dir = self.root / "salt" / "bin"
                         self.run_root = self.bin_dir / "run"
-                    elif file_ext == "tar.gz":
+                    elif self.file_ext == "tar.gz":
                         with tarfile.open(f_path) as tar:
                             # The first item will be called salt
                             first = next(iter(tar.getmembers()))
@@ -345,7 +346,7 @@ class SaltPkgInstall:
                                     first.isfile(),
                                 )
                     else:
-                        log.error("Unexpected file extension: %s", file_ext)
+                        log.error("Unexpected file extension: %s", self.file_ext)
 
             if re.search(
                 r"salt(.*)(x86_64|all|amd64|aarch64|arm64)\.(rpm|deb)$", f_path
@@ -713,14 +714,19 @@ class SaltPkgInstall:
             self.onedir = True
             self.installer_pkg = True
             self.bin_dir = self.install_dir / "bin"
-            self.run_root = self.bin_dir / "salt.exe"
+            self.run_root = self.bin_dir / f"salt.exe"
             self.ssm_bin = self.bin_dir / "ssm.exe"
+            if self.file_ext == "msi":
+                self.ssm_bin = self.install_dir / "ssm.exe"
 
             if not self.classic:
-                win_pkg = f"salt-{full_version}-windows-amd64.exe"
+                win_pkg = f"salt-{full_version}-windows-amd64.{self.file_ext}"
                 win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{full_version}/{win_pkg}"
             else:
-                win_pkg = f"Salt-Minion-{min_ver}-1-Py3-AMD64-Setup.exe"
+                if self.file_ext == "msi":
+                    win_pkg = f"Salt-Minion-{min_ver}-1-Py3-AMD64.{self.file_ext}"
+                elif self.file_ext == "exe":
+                    win_pkg = f"Salt-Minion-{min_ver}-1-Py3-AMD64-Setup.{self.file_ext}"
                 win_pkg_url = f"https://repo.saltproject.io/windows/{win_pkg}"
             pkg_path = pathlib.Path(r"C:\TEMP", win_pkg)
             pkg_path.parent.mkdir(exist_ok=True)
@@ -728,8 +734,19 @@ class SaltPkgInstall:
 
             with open(pkg_path, "wb") as fp:
                 fp.write(ret.content)
-            ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
-            self._check_retcode(ret)
+            if self.file_ext == "msi":
+                ret = self.proc.run(
+                    "msiexec.exe", "/qn", "/i", str(pkg_path), 'START_MINION=""'
+                )
+                self._check_retcode(ret)
+            else:
+                ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
+                self._check_retcode(ret)
+
+            # Stop the service installed by the installer
+            log.debug("Removing installed salt-minion service")
+            self.proc.run(str(self.ssm_bin), "stop", "salt-minion")
+
             log.debug("Removing installed salt-minion service")
             ret = self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
             self._check_retcode(ret)
