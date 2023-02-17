@@ -1053,12 +1053,6 @@ class VM:
             if ret.returncode != 0:
                 self.ctx.exit(ret.returncode, ret.stderr.strip())
 
-            # Maybe this will fix the issue with the MSI not installing
-            cmd = ["icacls", remote_path, "/grant", "Administrator:(OI)(CI)F", "/T"]
-            ret = self.run(cmd, capture=True, check=False)
-            if ret.returncode != 0:
-                self.ctx.exit(ret.returncode, ret.stderr.strip())
-
     def write_and_upload_dot_env(self, env: dict[str, str]):
         if not env:
             return
