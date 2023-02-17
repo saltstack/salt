@@ -62,13 +62,38 @@ def man(ctx: Context, no_clean: bool = False):
         },
     },
 )
-def html(ctx: Context, no_clean: bool = False, archive: pathlib.Path = None):
+def html(
+    ctx: Context,
+    no_clean: bool = False,
+    archive: pathlib.Path = os.environ.get("ARCHIVE_FILENAME"),  # type: ignore[assignment]
+):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
     ctx.run("make", "html", "SPHINXOPTS=-W --keep-going", cwd="doc/", check=True)
+    github_output = os.environ.get("GITHUB_OUTPUT")
     if archive is not None:
         ctx.info(f"Compressing the generated documentation to '{archive}'...")
         ctx.run("tar", "caf", str(archive.resolve()), ".", cwd="doc/_build/html")
+
+        if github_output is not None:
+            with open(github_output, "a", encoding="utf-8") as wfh:
+                wfh.write(
+                    "has-artifacts=true\n"
+                    f"artifact-name={archive.resolve().name}\n"
+                    f"artifact-path={archive.resolve()}\n"
+                )
+    elif github_output is not None:
+        artifact = tools.utils.REPO_ROOT / "doc" / "_build" / "html"
+        if "LATEST_RELEASE" in os.environ:
+            artifact_name = f"salt-{os.environ['LATEST_RELEASE']}-docs-html"
+        else:
+            artifact_name = "salt-docs-html"
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                "has-artifacts=true\n"
+                f"artifact-name={artifact_name}\n"
+                f"artifact-path={artifact.resolve()}\n"
+            )
 
 
 @docs.command(
@@ -83,6 +108,21 @@ def epub(ctx: Context, no_clean: bool = False):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
     ctx.run("make", "epub", cwd="doc/", check=True)
+
+    artifact = tools.utils.REPO_ROOT / "doc" / "_build" / "epub" / "Salt.epub"
+    if "LATEST_RELEASE" in os.environ:
+        shutil.move(
+            artifact, artifact.parent / f"Salt-{os.environ['LATEST_RELEASE']}.epub"
+        )
+        artifact = artifact.parent / f"Salt-{os.environ['LATEST_RELEASE']}.epub"
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                "has-artifacts=true\n"
+                f"artifact-name={artifact.resolve().name}\n"
+                f"artifact-path={artifact.resolve()}\n"
+            )
 
 
 @docs.command(
@@ -100,6 +140,21 @@ def pdf(ctx: Context, no_clean: bool = False):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
     ctx.run("make", "pdf", "SPHINXOPTS=-W", cwd="doc/", check=True)
+
+    artifact = tools.utils.REPO_ROOT / "doc" / "_build" / "latex" / "Salt.pdf"
+    if "LATEST_RELEASE" in os.environ:
+        shutil.move(
+            artifact, artifact.parent / f"Salt-{os.environ['LATEST_RELEASE']}.pdf"
+        )
+        artifact = artifact.parent / f"Salt-{os.environ['LATEST_RELEASE']}.pdf"
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                "has-artifacts=true\n"
+                f"artifact-name={artifact.resolve().name}\n"
+                f"artifact-path={artifact.resolve()}\n"
+            )
 
 
 @docs.command(
@@ -120,6 +175,10 @@ def linkcheck(ctx: Context, no_clean: bool = False):
         cwd="doc/",
         check=True,
     )
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write("has-artifacts=false\n")
 
 
 @docs.command(
@@ -140,3 +199,7 @@ def spellcheck(ctx: Context, no_clean: bool = False):
         cwd="doc/",
         check=True,
     )
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write("has-artifacts=false\n")

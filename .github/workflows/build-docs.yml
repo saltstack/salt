@@ -77,78 +77,22 @@ jobs:
           sudo cp -rfv .builddocs/builddocs/files/fonts/opentype/*.otf /usr/share/fonts/opentype/
           sudo fc-cache -f -v
 
-      - name: Build Documentation (HTML)
-        if: ${{ matrix.docs-output == 'html' }}
+      - name: Build Documentation (${{ matrix.docs-output }})
+        id: build-docs
         shell: bash
+        continue-on-error: ${{ matrix.docs-output == 'linkcheck' || matrix.docs-output == 'spellcheck' }}
         env:
           LATEST_RELEASE: "${{ inputs.salt-version }}"
           SALT_ON_SALTSTACK: "1"
+          ARCHIVE_FILENAME: "${{ format('salt-{0}-docs-{1}.tar.xz', inputs.salt-version, matrix.docs-output) }}"
         run: |
-          tools docs html --archive salt-${{ inputs.salt-version }}-docs-html.tar.xz
+          tools docs ${{ matrix.docs-output }}
 
-      - name: Upload Built Documentation Archive (HTML)
-        if: ${{ matrix.docs-output == 'html' }}
+      - name: Upload Built Documentation Artifact(${{ matrix.docs-output }})
+        if: ${{ steps.build-docs.outputs.has-artifacts == 'true' }}
         uses: actions/upload-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-docs-html.tar.xz
-          path: salt-${{ inputs.salt-version }}-docs-html.tar.xz
+          name: ${{ steps.build-docs.outputs.artifact-name }}
+          path: ${{ steps.build-docs.outputs.artifact-path }}
           retention-days: 7
           if-no-files-found: error
-
-      - name: Build Documentation (ePUB)
-        if: ${{ matrix.docs-output == 'epub' }}
-        shell: bash
-        env:
-          LATEST_RELEASE: "${{ inputs.salt-version }}"
-          SALT_ON_SALTSTACK: "1"
-        run: |
-          tools docs epub
-          mv doc/_build/epub/Salt.epub doc/_build/epub/salt-${{ inputs.salt-version }}.epub
-
-      - name: Upload Built Documentation Archive (ePub)
-        if: ${{ matrix.docs-output == 'epub' }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: salt-${{ inputs.salt-version }}.epub
-          path: doc/_build/epub/salt-${{ inputs.salt-version }}.epub
-          retention-days: 7
-          if-no-files-found: error
-
-      - name: Build Documentation (PDF)
-        if: ${{ matrix.docs-output == 'pdf' }}
-        shell: bash
-        env:
-          LATEST_RELEASE: "${{ inputs.salt-version }}"
-          SALT_ON_SALTSTACK: "1"
-        run: |
-          tools docs pdf
-          mv doc/_build/latex/Salt.pdf doc/_build/latex/salt-${{ inputs.salt-version }}.pdf
-
-      - name: Upload Built Documentation Archive (PDF)
-        if: ${{ matrix.docs-output == 'pdf' }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: salt-${{ inputs.salt-version }}.pdf
-          path: doc/_build/latex/Salt-${{ inputs.salt-version }}.pdf
-          retention-days: 7
-          if-no-files-found: error
-
-      - name: Check Documentation Links
-        if: ${{ matrix.docs-output == 'linkcheck' }}
-        shell: bash
-        continue-on-error: true
-        env:
-          LATEST_RELEASE: "${{ inputs.salt-version }}"
-          SALT_ON_SALTSTACK: "1"
-        run: |
-          tools docs linkcheck
-
-      - name: Check Documentation Spelling
-        if: ${{ matrix.docs-output == 'spellcheck' }}
-        shell: bash
-        continue-on-error: true
-        env:
-          LATEST_RELEASE: "${{ inputs.salt-version }}"
-          SALT_ON_SALTSTACK: "1"
-        run: |
-          tools docs spellcheck
