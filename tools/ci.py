@@ -13,9 +13,9 @@ from typing import TYPE_CHECKING
 
 from ptscripts import Context, command_group
 
-log = logging.getLogger(__name__)
+import tools.utils
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+log = logging.getLogger(__name__)
 
 # Define the command group
 ci = command_group(name="ci", help="CI Related Commands", description=__doc__)
@@ -107,7 +107,11 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
                 if not entry:
                     loaded_data.remove(entry)
                 try:
-                    entry = REPO_ROOT.joinpath(entry).resolve().relative_to(REPO_ROOT)
+                    entry = (
+                        tools.utils.REPO_ROOT.joinpath(entry)
+                        .resolve()
+                        .relative_to(tools.utils.REPO_ROOT)
+                    )
                 except ValueError:
                     ctx.error(
                         f"While processing the changed files key {key!r}, the "
@@ -261,7 +265,7 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
 
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(
-                f"All defined jobs will run due to event type of {event_name!r}.\n"
+                f"All defined jobs will run due to event type of `{event_name}`.\n"
             )
         return
 
@@ -368,7 +372,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             wfh.write(f"testrun={json.dumps(testrun)}\n")
 
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write(f"Full test run chosen due to event type of {event_name!r}.\n")
+            wfh.write(f"Full test run chosen due to event type of `{event_name}`.\n")
         return
 
     if not changed_files.exists():
@@ -417,10 +421,12 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             wfh.write("</pre>\n</details>\n")
         testrun = {"type": "full"}
     else:
-        testrun_changed_files_path = REPO_ROOT / "testrun-changed-files.txt"
+        testrun_changed_files_path = tools.utils.REPO_ROOT / "testrun-changed-files.txt"
         testrun = {
             "type": "changed",
-            "from-filenames": str(testrun_changed_files_path.relative_to(REPO_ROOT)),
+            "from-filenames": str(
+                testrun_changed_files_path.relative_to(tools.utils.REPO_ROOT)
+            ),
         }
         ctx.info(f"Writing {testrun_changed_files_path.name} ...")
         selected_changed_files = []

@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING, cast
 
 from ptscripts import Context, command_group
 
+import tools.utils
+
 try:
     import attr
     import boto3
@@ -52,12 +54,11 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-REPO_ROOT = pathlib.Path(__file__).parent.parent
-STATE_DIR = REPO_ROOT / ".vms-state"
-with REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
+STATE_DIR = tools.utils.REPO_ROOT / ".vms-state"
+with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
     AMIS = json.load(rfh)
 REPO_CHECKOUT_ID = hashlib.sha256(
-    "|".join(list(platform.uname()) + [str(REPO_ROOT)]).encode()
+    "|".join(list(platform.uname()) + [str(tools.utils.REPO_ROOT)]).encode()
 ).hexdigest()
 AWS_REGION = (
     os.environ.get("AWS_DEFAULT_REGION") or os.environ.get("AWS_REGION") or "us-west-2"
@@ -982,7 +983,7 @@ class VM:
             "--exclude",
             ".pytest_cache/",
             "--exclude",
-            f"{STATE_DIR.relative_to(REPO_ROOT)}{os.path.sep}",
+            f"{STATE_DIR.relative_to(tools.utils.REPO_ROOT)}{os.path.sep}",
             "--exclude",
             "*.py~",
             # We need to include artifacts/ to be able to include artifacts/salt
@@ -999,7 +1000,7 @@ class VM:
             # symlink with a copy of what's getting symlinked.
             rsync_flags.append("--copy-links")
         # Local repo path
-        source = f"{REPO_ROOT}{os.path.sep}"
+        source = f"{tools.utils.REPO_ROOT}{os.path.sep}"
         # Remote repo path
         remote_path = self.upload_path.as_posix()
         if self.is_windows:
@@ -1014,7 +1015,7 @@ class VM:
             return
         write_env = {k: str(v) for (k, v) in env.items()}
         write_env_filename = ".ci-env"
-        write_env_filepath = REPO_ROOT / ".ci-env"
+        write_env_filepath = tools.utils.REPO_ROOT / ".ci-env"
         write_env_filepath.write_text(json.dumps(write_env))
 
         # Local path
@@ -1241,7 +1242,7 @@ class VM:
         _ssh_command_args = [
             ssh,
             "-F",
-            str(self.ssh_config_file.relative_to(REPO_ROOT)),
+            str(self.ssh_config_file.relative_to(tools.utils.REPO_ROOT)),
         ]
         if ssh_options:
             _ssh_command_args.extend(ssh_options)

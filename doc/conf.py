@@ -151,7 +151,8 @@ extensions = [
     "sphinx.ext.intersphinx",
     "httpdomain",
     "youtube",
-    "saltrepo"
+    "saltrepo",
+    "myst_parser",
     #'saltautodoc', # Must be AFTER autodoc
     #'shorturls',
 ]
@@ -215,6 +216,7 @@ extlinks = {
     "formula_url": ("https://github.com/saltstack-formulas/%s", "url %s"),
 }
 
+myst_gfm_only = True
 
 # ----- Localization -------------------------------------------------------->
 locale_dirs = ["locale/"]

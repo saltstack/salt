@@ -104,6 +104,8 @@ on:
 
       - name: Build Documentation
         shell: bash
+        env:
+          LATEST_RELEASE: ${{ needs.prepare-workflow.outputs.salt-version }}
         run: |
           tools docs html --no-clean --archive salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs.tar.xz
 
@@ -562,23 +564,6 @@ on:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: photonos-4
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-
-  ubuntu-1804:
-    <%- do test_salt_needs.append('ubuntu-1804') %>
-    name: Ubuntu 18.04
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir
-    uses: ./.github/workflows/test-action.yml
-    with:
-      distro-slug: ubuntu-18.04
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
