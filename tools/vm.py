@@ -555,15 +555,21 @@ class VM:
                 {"Name": "tag:instance-client-id", "Values": [REPO_CHECKOUT_ID]},
             ]
             log.info(f"Checking existing instance of {self.name}({self.config.ami})...")
-            instances = list(
-                self.ec2.instances.filter(
-                    Filters=filters,
+            try:
+                instances = list(
+                    self.ec2.instances.filter(
+                        Filters=filters,
+                    )
                 )
-            )
-            for _instance in instances:
-                if _instance.state["Name"] == "running":
-                    instance = _instance
-                    break
+                for _instance in instances:
+                    if _instance.state["Name"] == "running":
+                        instance = _instance
+                        break
+            except ClientError as exc:
+                if "RequestExpired" not in str(exc):
+                    raise
+                self.ctx.error(str(exc))
+                self.ctx.exit(1)
         if instance:
             self.instance = instance
 
