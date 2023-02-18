@@ -652,7 +652,7 @@ netmiko==3.2.0
     # via napalm
 ntc-templates==1.4.1
     # via junos-eznc
-oauthlib==3.2.1
+oauthlib==3.2.2
     # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
