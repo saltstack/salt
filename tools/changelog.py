@@ -339,9 +339,14 @@ def update_deb(ctx: Context, salt_version: str, draft: bool = False):
         "draft": {
             "help": "Do not make any changes, instead output what would be changed.",
         },
+        "release": {
+            "help": "Update for an actual release and not just a temporary CI build.",
+        },
     },
 )
-def update_release_notes(ctx: Context, salt_version: str, draft: bool = False):
+def update_release_notes(
+    ctx: Context, salt_version: str, draft: bool = False, release: bool = False
+):
     if salt_version is None:
         salt_version = _get_salt_version(ctx)
     if "+" in salt_version:
@@ -362,6 +367,8 @@ def update_release_notes(ctx: Context, salt_version: str, draft: bool = False):
             # Salt {salt_version} release notes - UNRELEASED
             """
         )
+    if release is True:
+        existing = existing.replace(" - UNRELEASED", "")
     with open(tmpnotes, "w") as wfp:
         wfp.write(existing)
         wfp.write("\n## Changelog\n")
