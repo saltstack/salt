@@ -111,8 +111,8 @@ on:
       - name: Update Release Notes
         shell: bash
         run: |
-          tools changelog update-release-notes --draft
-          tools changelog update-release-notes
+          tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %>
+          tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %>
 
       - name: Generate MAN Pages
         shell: bash

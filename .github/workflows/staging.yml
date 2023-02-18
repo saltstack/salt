@@ -290,8 +290,8 @@ jobs:
       - name: Update Release Notes
         shell: bash
         run: |
-          tools changelog update-release-notes --draft
-          tools changelog update-release-notes
+          tools changelog update-release-notes --draft --release
+          tools changelog update-release-notes --release
 
       - name: Generate MAN Pages
         shell: bash
