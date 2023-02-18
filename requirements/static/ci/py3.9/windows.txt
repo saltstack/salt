@@ -408,7 +408,7 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
-werkzeug==2.0.3
+werkzeug==2.2.3
     # via
     #   moto
     #   pytest-httpserver
