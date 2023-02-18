@@ -94,6 +94,10 @@ vm.add_argument("--region", help="The AWS region.", default=AWS_REGION)
         "retries": {
             "help": "How many times to retry creating and connecting to a vm",
         },
+        "environment": {
+            "help": "The AWS environment to use.",
+            "choices": ("prod", "test"),
+        },
     }
 )
 def create(
@@ -104,6 +108,7 @@ def create(
     no_delete: bool = False,
     no_destroy_on_failure: bool = False,
     retries: int = 0,
+    environment: str = None,
 ):
     """
     Create VM.
@@ -117,7 +122,10 @@ def create(
         attempts += 1
         vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
         created = vm.create(
-            key_name=key_name, instance_type=instance_type, no_delete=no_delete
+            key_name=key_name,
+            instance_type=instance_type,
+            no_delete=no_delete,
+            environment=environment,
         )
         if created is True:
             break
@@ -604,11 +612,20 @@ class VM:
         )
         self.ssh_config_file.write_text(ssh_config)
 
-    def create(self, key_name=None, instance_type=None, no_delete=False):
+    def create(
+        self,
+        key_name=None,
+        instance_type=None,
+        no_delete=False,
+        environment=None,
+    ):
         if self.is_running:
             log.info(f"{self!r} is already running...")
             return True
         self.get_ec2_resource.cache_clear()
+
+        if environment is None:
+            environment = "prod"
 
         create_timeout = self.config.create_timeout
         create_timeout_progress = 0
@@ -637,6 +654,10 @@ class VM:
                         "Values": ["salt-project"],
                     },
                     {
+                        "Name": "tag:spb:environment",
+                        "Values": [environment],
+                    },
+                    {
                         "Name": "tag:spb:image-id",
                         "Values": [self.config.ami],
                     },
@@ -647,7 +668,7 @@ class VM:
             )
             for details in response.get("LaunchTemplates"):
                 if launch_template_name is not None:
-                    log.info(
+                    log.warning(
                         "Multiple launch templates for the same AMI. This is not "
                         "supposed to happen. Picked the first one listed: %s",
                         response,
@@ -685,10 +706,12 @@ class VM:
                 for tag in subnet.tags:
                     if tag["Key"] != "Name":
                         continue
-                    if started_in_ci and "-private-" in tag["Value"]:
+                    private_value = f"-{environment}-vpc-private-"
+                    if started_in_ci and private_value in tag["Value"]:
                         subnets[subnet.id] = subnet.available_ip_address_count
                         break
-                    if started_in_ci is False and "-public-" in tag["Value"]:
+                    public_value = f"-{environment}-vpc-public-"
+                    if started_in_ci is False and public_value in tag["Value"]:
                         subnets[subnet.id] = subnet.available_ip_address_count
                         break
             if subnets:
