@@ -390,7 +390,7 @@ contextvars==2.4
     # via -r requirements/base.txt
 croniter==1.0.15 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-cryptography==3.4.7
+cryptography==39.0.1
     # via
     #   adal
     #   ansible-core
