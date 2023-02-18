@@ -658,7 +658,7 @@ ntlm-auth==1.3.0
     # via
     #   requests-ntlm
     #   smbprotocol
-oauthlib==3.2.1
+oauthlib==3.2.2
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator

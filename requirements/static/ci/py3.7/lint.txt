@@ -656,7 +656,7 @@ ntc-templates==2.2.2
     # via
     #   junos-eznc
     #   netmiko
-oauthlib==3.2.1
+oauthlib==3.2.2
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
