@@ -355,7 +355,13 @@ def update_release_notes(ctx: Context, salt_version: str, draft: bool = False):
         with open(f"doc/topics/releases/{major_version}.md") as rfp:
             existing = rfp.read()
     except FileNotFoundError:
-        existing = ""
+        existing = textwrap.dedent(
+            f"""\
+            [](#release-{salt_version})
+
+            # Salt {salt_version} release notes - UNRELEASED
+            """
+        )
     with open(tmpnotes, "w") as wfp:
         wfp.write(existing)
         wfp.write("\n## Changelog\n")
