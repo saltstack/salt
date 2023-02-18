@@ -14,7 +14,7 @@ aiosignal==1.2.0
     # via aiohttp
 ansible-core==2.11.7
     # via ansible
-ansible==4.4.0
+ansible==7.0.0
     # via -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
