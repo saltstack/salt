@@ -834,7 +834,7 @@ tempora==4.1.1
     # via portend
 textfsm==1.1.2
     # via ntc-templates
-timelib==0.2.5
+timelib==0.2.5 ; python_version < "3.11"
     # via -r requirements/static/pkg/linux.in
 toml==0.10.2
     # via

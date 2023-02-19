@@ -874,7 +874,7 @@ textfsm==1.1.0
     #   napalm
     #   netmiko
     #   ntc-templates
-timelib==0.2.5
+timelib==0.2.5 ; python_version < "3.11"
     # via -r requirements/darwin.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
