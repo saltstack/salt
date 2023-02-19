@@ -10,6 +10,10 @@ inputs:
     required: true
     type: string
     description: The platform arch to build
+  python-version:
+    required: true
+    type: string
+    description: The python version to build
   package-name:
     required: false
     type: string
@@ -37,14 +41,14 @@ runs:
       uses: actions/cache@v3
       with:
         path: artifacts/${{ inputs.package-name }}
-        key: ${{ inputs.cache-seed }}|relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt', '.github/actions/build-onedir-deps/action.yml') }}
+        key: ${{ inputs.cache-seed }}|relenv|${{ env.RELENV_VERSION }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt', '.github/actions/build-onedir-deps/action.yml') }}
 
     - name: Create Onedir Directory
       shell: bash
       if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
       run: |
         python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
-        python3 -m relenv create --arch=${{ inputs.arch }} artifacts/${{ inputs.package-name }}
+        python3 -m relenv create --arch=${{ inputs.arch }} --python=${{ inputs.python-version }} artifacts/${{ inputs.package-name }}
 
     - name: Get Onedir Python Version
       shell: bash

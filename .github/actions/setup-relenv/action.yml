@@ -10,6 +10,10 @@ inputs:
     required: true
     type: string
     description: The platform arch to build
+  python-version:
+    required: true
+    type: string
+    description: The version of python to build
   cache-seed:
     required: true
     type: string
@@ -34,13 +38,13 @@ runs:
     - name: Set environment variables
       shell: bash
       run: |
-        echo RELENV_VERSION="$(python3 -m pip show relenv | grep Version | cut -d ' ' -f2)" >> $GITHUB_ENV
+        echo RELENV_VERSION="$(relenv --version)" >> $GITHUB_ENV
 
     - name: Cache Relenv Data Directory
       uses: actions/cache@v3
       with:
         path: ${{ github.workspace }}/.relenv
-        key: ${{ inputs.cache-seed }}|relenv|${{ env.RELENV_VERSION }}|${{ inputs.platform }}|${{ inputs.arch }}
+        key: ${{ inputs.cache-seed }}|relenv|${{ env.RELENV_VERSION }}|${{ inputs.python-version }}|${{ inputs.platform }}|${{ inputs.arch }}
 
     - name: Fetch Toolchain
       if: ${{ inputs.platform == 'linux' }}
@@ -51,4 +55,4 @@ runs:
     - name: Fetch Native Python Build
       shell: bash
       run: |
-        python3 -m relenv fetch --arch=${{ inputs.arch }}
+        python3 -m relenv fetch --arch=${{ inputs.arch }} --python=${{ inputs.python-version }}
