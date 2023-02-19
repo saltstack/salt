@@ -97,7 +97,7 @@ six==1.16.0
     #   python-dateutil
 tempora==4.1.1
     # via portend
-timelib==0.2.5
+timelib==0.2.5 ; python_version < "3.11"
     # via -r requirements/static/pkg/linux.in
 typing-extensions==3.10.0.0
     # via importlib-metadata

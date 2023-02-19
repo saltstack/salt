@@ -126,8 +126,6 @@ smmap==4.0.0
     # via gitdb
 tempora==4.1.1
     # via portend
-timelib==0.2.5
-    # via -r requirements/windows.txt
 urllib3==1.26.6
     # via
     #   -r requirements/windows.txt

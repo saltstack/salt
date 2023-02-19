@@ -376,8 +376,6 @@ strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
 tempora==4.1.1
     # via portend
-timelib==0.2.5
-    # via -r requirements/windows.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
 typing-extensions==4.4.0

@@ -842,7 +842,7 @@ strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
 tempora==4.1.1
     # via portend
-timelib==0.2.5
+timelib==0.2.5 ; python_version < "3.11"
     # via -r requirements/static/pkg/linux.in
 toml==0.10.2
     # via -r requirements/static/ci/common.in
