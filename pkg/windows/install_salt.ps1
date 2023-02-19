@@ -73,6 +73,8 @@ $SITE_PKGS_DIR = "$BUILD_DIR\Lib\site-packages"
 $SCRIPTS_DIR   = "$BUILD_DIR\Scripts"
 $PYTHON_BIN    = "$SCRIPTS_DIR\python.exe"
 $PY_VERSION    = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
+$PY_MAJOR_VERSION = "$($PY_VERSION.Major)"
+$PY_MINOR_VERSION = "$($PY_VERSION.Minor)"
 $PY_VERSION    = "$($PY_VERSION.Major).$($PY_VERSION.Minor)"
 $ARCH          = $(. $PYTHON_BIN -c "import platform; print(platform.architecture()[0])")
 
@@ -161,8 +163,8 @@ if ( ! (Test-Path -Path "$SCRIPTS_DIR\wmitest*") ) {
 # Move DLL's to Python Root and win32
 # The dlls have to be in Python directory and the site-packages\win32 directory
 # TODO: Change this to 310... maybe
-$dlls = "pythoncom38.dll",
-        "pywintypes38.dll"
+$dlls = "pythoncom$($PY_MAJOR_VERSION)$($PY_MINOR_VERSION).dll",
+        "pywintypes$($PY_MAJOR_VERSION)$($PY_MINOR_VERSION).dll"
 $dlls | ForEach-Object {
     if ( -not ( Test-Path -Path "$SCRIPTS_DIR\$_" ) ) {
         Write-Host "Copying $_ to Scripts: " -NoNewline
