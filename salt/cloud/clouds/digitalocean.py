@@ -366,11 +366,9 @@ def create(vm_):
     if vpc_name is not None:
         vpc = _get_vpc_by_name(vpc_name)
         if vpc is None:
-            raise SaltCloudConfigError(
-                "Invalid VPC name provided"
-            )
+            raise SaltCloudConfigError("Invalid VPC name provided")
         else:
-            kwargs["vpc_uuid"] = vpc[vpc_name]['id']
+            kwargs["vpc_uuid"] = vpc[vpc_name]["id"]
     else:
         private_networking = config.get_cloud_config_value(
             "private_networking",
@@ -626,7 +624,7 @@ def query(
         )
     )
     # vpcs method doesn't like the / at the end.
-    if method == 'vpcs':
+    if method == "vpcs":
         path = "{}/{}".format(base_path, method)
     else:
         path = "{}/{}/".format(base_path, method)
