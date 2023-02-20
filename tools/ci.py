@@ -306,6 +306,7 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
 
     required_test_changes: set[str] = {
         changed_files_contents["testrun"],
+        changed_files_contents["workflows"],
         changed_files_contents["golden_images"],
     }
     if required_test_changes == {"false"}:
