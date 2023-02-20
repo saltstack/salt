@@ -508,12 +508,13 @@ lxml==4.9.1
     #   ncclient
 mako==1.2.2
     # via -r requirements/static/ci/common.in
-markupsafe==2.0.1
+markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
     #   mako
     #   moto
+    #   werkzeug
 mercurial==6.0.1
     # via -r requirements/static/ci/linux.in
 mock==3.0.5
@@ -904,7 +905,7 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
-werkzeug==2.0.3
+werkzeug==2.2.3
     # via
     #   moto
     #   pytest-httpserver
