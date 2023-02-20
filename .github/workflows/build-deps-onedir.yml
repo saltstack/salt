@@ -26,18 +26,18 @@ on:
       python-version-linux:
         required: false
         type: string
-        default: 3.10.9
+        default: 3.11.2
         description: The version of python to use with relenv
       python-version-macos:
         required: false
         type: string
-        default: 3.10.9
+        default: 3.11.2
         description: The version of python to use with relenv
       python-version-windows:
         required: false
         type: string
         description: The version of python to use with relenv on Windows
-        default: 3.10.9
+        default: 3.11.2
 
 env:
   RELENV_DATA: "${{ github.workspace }}/.relenv"
