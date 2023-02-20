@@ -20,7 +20,7 @@ cherrypy==18.6.1
     # via -r requirements/windows.txt
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==3.4.7
+cryptography==39.0.1
     # via
     #   -r requirements/windows.txt
     #   pyopenssl
