@@ -7,6 +7,7 @@ import os
 import sys
 import tempfile
 import traceback
+import json
 from pathlib import Path
 
 import jinja2
@@ -419,10 +420,32 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             else:
                 log.warning("Jinja2 environment %s is not recognized", k)
 
+    def parse_jinja_file_opts(tmplstr: str, env: str):
+        # Same Jinja override prefix as Ansible
+        JINJA2_OVERRIDE = "#jinja2:"
+        # Loop starting lines beginning with #
+        for line in tmplstr.splitlines():
+            if not line.startswith(JINJA2_OVERRIDE):
+                continue
+
+            if line.startswith(JINJA2_OVERRIDE):
+                # Remove "#jinja2:" from line where we found it
+                jstring = line.replace(JINJA2_OVERRIDE, "")
+                try:
+                    # Hope it parses into JSON, if so use helper to get it
+                    # into JINJA options
+                    jdata = json.loads(jstring)
+                    opt_jinja_env_helper(jdata, env)
+                except:
+                    # Should we log more here?
+                    log.warning("Unable to parse Jinja2 options string")
+
     if "sls" in context and context["sls"] != "":
         opt_jinja_env_helper(opt_jinja_sls_env, "jinja_sls_env")
+        parse_jinja_file_opts(tmplstr, "jinja_sls_env")
     else:
         opt_jinja_env_helper(opt_jinja_env, "jinja_env")
+        parse_jinja_file_opts(tmplstr, "jinja_env")
 
     if opts.get("allow_undefined", False):
         jinja_env = jinja2.sandbox.SandboxedEnvironment(**env_args)
