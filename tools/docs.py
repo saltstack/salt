@@ -12,9 +12,9 @@ import sys
 
 from ptscripts import Context, command_group
 
-log = logging.getLogger(__name__)
+import tools.utils
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+log = logging.getLogger(__name__)
 
 # Define the command group
 docs = command_group(
@@ -23,7 +23,7 @@ docs = command_group(
     description=__doc__,
     venv_config={
         "requirements_files": [
-            REPO_ROOT
+            tools.utils.REPO_ROOT
             / "requirements"
             / "static"
             / "ci"
@@ -45,7 +45,7 @@ docs = command_group(
 def man(ctx: Context, no_clean: bool = False):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
-    ctx.run("make", "man", "SHPINXOPTS=-W", cwd="doc/", check=True)
+    ctx.run("make", "man", "SPHINXOPTS=-W", cwd="doc/", check=True)
     for root, dirs, files in os.walk("doc/_build/man"):
         for file in files:
             shutil.copy(os.path.join(root, file), os.path.join("doc/man", file))
@@ -62,13 +62,38 @@ def man(ctx: Context, no_clean: bool = False):
         },
     },
 )
-def html(ctx: Context, no_clean: bool = False, archive: pathlib.Path = None):
+def html(
+    ctx: Context,
+    no_clean: bool = False,
+    archive: pathlib.Path = os.environ.get("ARCHIVE_FILENAME"),  # type: ignore[assignment]
+):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
-    ctx.run("make", "html", "SHPINXOPTS=-W", cwd="doc/", check=True)
+    ctx.run("make", "html", "SPHINXOPTS=-W --keep-going", cwd="doc/", check=True)
+    github_output = os.environ.get("GITHUB_OUTPUT")
     if archive is not None:
         ctx.info(f"Compressing the generated documentation to '{archive}'...")
         ctx.run("tar", "caf", str(archive.resolve()), ".", cwd="doc/_build/html")
+
+        if github_output is not None:
+            with open(github_output, "a", encoding="utf-8") as wfh:
+                wfh.write(
+                    "has-artifacts=true\n"
+                    f"artifact-name={archive.resolve().name}\n"
+                    f"artifact-path={archive.resolve()}\n"
+                )
+    elif github_output is not None:
+        artifact = tools.utils.REPO_ROOT / "doc" / "_build" / "html"
+        if "LATEST_RELEASE" in os.environ:
+            artifact_name = f"salt-{os.environ['LATEST_RELEASE']}-docs-html"
+        else:
+            artifact_name = "salt-docs-html"
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                "has-artifacts=true\n"
+                f"artifact-name={artifact_name}\n"
+                f"artifact-path={artifact.resolve()}\n"
+            )
 
 
 @docs.command(
@@ -76,13 +101,28 @@ def html(ctx: Context, no_clean: bool = False, archive: pathlib.Path = None):
     arguments={
         "no_clean": {
             "help": "Don't cleanup prior to building",
-        }
+        },
     },
 )
 def epub(ctx: Context, no_clean: bool = False):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
-    ctx.run("make", "epub", "SHPINXOPTS=-W", cwd="doc/", check=True)
+    ctx.run("make", "epub", cwd="doc/", check=True)
+
+    artifact = tools.utils.REPO_ROOT / "doc" / "_build" / "epub" / "Salt.epub"
+    if "LATEST_RELEASE" in os.environ:
+        shutil.move(
+            artifact, artifact.parent / f"Salt-{os.environ['LATEST_RELEASE']}.epub"
+        )
+        artifact = artifact.parent / f"Salt-{os.environ['LATEST_RELEASE']}.epub"
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                "has-artifacts=true\n"
+                f"artifact-name={artifact.resolve().name}\n"
+                f"artifact-path={artifact.resolve()}\n"
+            )
 
 
 @docs.command(
@@ -99,4 +139,67 @@ def pdf(ctx: Context, no_clean: bool = False):
         ctx.exit(1)
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
-    ctx.run("make", "pdf", "SHPINXOPTS=-W", cwd="doc/", check=True)
+    ctx.run("make", "pdf", "SPHINXOPTS=-W", cwd="doc/", check=True)
+
+    artifact = tools.utils.REPO_ROOT / "doc" / "_build" / "latex" / "Salt.pdf"
+    if "LATEST_RELEASE" in os.environ:
+        shutil.move(
+            artifact, artifact.parent / f"Salt-{os.environ['LATEST_RELEASE']}.pdf"
+        )
+        artifact = artifact.parent / f"Salt-{os.environ['LATEST_RELEASE']}.pdf"
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                "has-artifacts=true\n"
+                f"artifact-name={artifact.resolve().name}\n"
+                f"artifact-path={artifact.resolve()}\n"
+            )
+
+
+@docs.command(
+    name="linkcheck",
+    arguments={
+        "no_clean": {
+            "help": "Don't cleanup prior to building",
+        }
+    },
+)
+def linkcheck(ctx: Context, no_clean: bool = False):
+    if no_clean is False:
+        ctx.run("make", "clean", cwd="doc/", check=True)
+    ctx.run(
+        "make",
+        "linkcheck",
+        "SPHINXOPTS=-W -j auto --keep-going --color",
+        cwd="doc/",
+        check=True,
+    )
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write("has-artifacts=false\n")
+
+
+@docs.command(
+    name="spellcheck",
+    arguments={
+        "no_clean": {
+            "help": "Don't cleanup prior to building",
+        }
+    },
+)
+def spellcheck(ctx: Context, no_clean: bool = False):
+    if no_clean is False:
+        ctx.run("make", "clean", cwd="doc/", check=True)
+    ctx.run(
+        "make",
+        "spelling",
+        "SPHINXOPTS=-W -j auto --keep-going --color",
+        cwd="doc/",
+        check=True,
+    )
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write("has-artifacts=false\n")

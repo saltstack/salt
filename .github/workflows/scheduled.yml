@@ -9,7 +9,7 @@ on:
     - cron: '0 */8 * * *'  # Run every 8 hours
 
 env:
-  COLUMNS: 160
+  COLUMNS: 190
   CACHE_SEED: SEED-0  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
 
@@ -211,24 +211,18 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
-        id: setup-python
-        with:
-          python-version: "3.10"
+      - name: Get Python Version
+        id: get-python-version
+        run: |
+          PY_VERSION=$(python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info))")
+          echo "python-version=$PY_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Cache Python Tools Virtualenvs
         id: tools-venvs-dependencies-cache
         uses: actions/cache@v3
         with:
           path: .tools-venvs/
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.setup-python.outputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
-
-      - name: Cache Sphinx Doctrees
-        uses: actions/cache@v3
-        with:
-          path: doc/_build/doctrees/
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|sphinx-doctrees|${{ steps.setup-python.outputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -257,23 +251,13 @@ jobs:
           tools changelog update-release-notes --draft
           tools changelog update-release-notes
 
-      - name: Build Documentation
-        shell: bash
-        run: |
-          tools docs html --no-clean --archive salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs.tar.xz
-
       - name: Generate MAN Pages
         shell: bash
+        env:
+          LATEST_RELEASE: "${{ needs.prepare-workflow.outputs.salt-version }}"
+          SALT_ON_SALTSTACK: "1"
         run: |
-          tools docs man --no-clean
-
-      - name: Upload Built Documentation Archive
-        uses: actions/upload-artifact@v3
-        with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs.tar.xz
-          path: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs.tar.xz
-          retention-days: 7
-          if-no-files-found: error
+          tools docs man
 
       - name: Update Changelog
         shell: bash
@@ -317,6 +301,17 @@ jobs:
           path: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
           retention-days: 7
           if-no-files-found: error
+
+  build-docs:
+    name: Documentation
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-docs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-source-tarball
+    uses: ./.github/workflows/build-docs.yml
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
   build-source-tarball:
     name: Build Source Tarball
@@ -625,6 +620,38 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
+  fedora-37:
+    name: Fedora 37
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: fedora-37
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  fedora-38:
+    name: Fedora 38
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: fedora-38
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
   opensuse-15:
     name: Opensuse 15
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -666,22 +693,6 @@ jobs:
     uses: ./.github/workflows/test-action.yml
     with:
       distro-slug: photonos-4
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-
-  ubuntu-1804:
-    name: Ubuntu 18.04
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir
-    uses: ./.github/workflows/test-action.yml
-    with:
-      distro-slug: ubuntu-18.04
       nox-session: ci-test-onedir
       platform: linux
       arch: x86_64
@@ -763,6 +774,7 @@ jobs:
       - prepare-workflow
       - pre-commit
       - lint
+      - build-docs
       - build-deps-onedir
       - build-salt-onedir
       - build-pkgs
@@ -781,10 +793,11 @@ jobs:
       - debian-11
       - debian-11-arm64
       - fedora-36
+      - fedora-37
+      - fedora-38
       - opensuse-15
       - photonos-3
       - photonos-4
-      - ubuntu-1804
       - ubuntu-2004
       - ubuntu-2004-arm64
       - ubuntu-2204

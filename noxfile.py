@@ -1629,20 +1629,22 @@ def changelog(session, draft, force):
     """
     Generate salt's changelog
     """
+    session_warn(
+        session,
+        "Please stop using this nox session and start using the 'tools' command shown below.",
+    )
     if _upgrade_pip_setuptools_and_wheel(session):
         requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "changelog.txt"
+            "requirements", "static", "ci", _get_pydir(session), "tools.txt"
         )
         install_command = ["--progress-bar=off", "-r", requirements_file]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
-    town_cmd = ["towncrier", "build", "--version={}".format(session.posargs[0])]
+    cmd = ["tools", "changelog", "update-changelog-md"]
     if draft:
-        town_cmd.append("--draft")
-    if force:
-        # Do not ask, just remove news fragments
-        town_cmd.append("--yes")
-    session.run(*town_cmd)
+        cmd.append("--draft")
+    cmd.append(session.posargs[0])
+    session.run(*cmd)
 
 
 class Recompress:

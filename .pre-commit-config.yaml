@@ -46,8 +46,19 @@ repos:
           )$
 
   - repo: https://github.com/s0undt3ch/python-tools-scripts
-    rev: "0.10.2"
+    rev: "0.10.4"
     hooks:
+      - id: tools
+        alias: check-changelog-entries
+        name: Check Changelog Entries
+        args:
+          - changelog
+          - pre-commit-checks
+        additional_dependencies:
+          - boto3==1.21.46
+          - pyyaml==6.0
+          - jinja2==3.1.2
+          - packaging==23.0
       - id: tools
         alias: generate-workflows
         name: Generate GitHub Workflow Templates
@@ -1079,15 +1090,6 @@ repos:
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/tools.in
   # <---- Tools -----------------------------------------------------------------------------------------------------
-
-  # ----- Local Hooks ----------------------------------------------------------------------------------------------->
-  - repo: local
-    hooks:
-      - id: check-changelog-entries
-        name: Check Changelog Entries
-        entry: .pre-commit-hooks/check-changelog-entries.py
-        language: script
-  # <---- Local Hooks ------------------------------------------------------------------------------------------------
 
   # ----- Code Formatting ------------------------------------------------------------------------------------------->
   - repo: https://github.com/asottile/pyupgrade

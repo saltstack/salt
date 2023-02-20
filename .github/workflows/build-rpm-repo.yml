@@ -22,7 +22,7 @@ on:
         required: true
 
 env:
-  COLUMNS: 160
+  COLUMNS: 190
 
 jobs:
   build-repo:
@@ -34,7 +34,6 @@ jobs:
       - repo-${{ inputs.environment }}
     strategy:
       fail-fast: false
-      max-parallel: 2
       matrix:
         include:
           - distro: amazon
@@ -48,6 +47,15 @@ jobs:
             arch: x86_64
           - distro: redhat
             version: "9"
+            arch: x86_64
+          - distro: fedora
+            version: "36"
+            arch: x86_64
+          - distro: fedora
+            version: "37"
+            arch: x86_64
+          - distro: fedora
+            version: "38"
             arch: x86_64
 
     steps:

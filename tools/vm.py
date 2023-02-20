@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING, cast
 
 from ptscripts import Context, command_group
 
+import tools.utils
+
 try:
     import attr
     import boto3
@@ -52,12 +54,11 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-REPO_ROOT = pathlib.Path(__file__).parent.parent
-STATE_DIR = REPO_ROOT / ".vms-state"
-with REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
+STATE_DIR = tools.utils.REPO_ROOT / ".vms-state"
+with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
     AMIS = json.load(rfh)
 REPO_CHECKOUT_ID = hashlib.sha256(
-    "|".join(list(platform.uname()) + [str(REPO_ROOT)]).encode()
+    "|".join(list(platform.uname()) + [str(tools.utils.REPO_ROOT)]).encode()
 ).hexdigest()
 AWS_REGION = (
     os.environ.get("AWS_DEFAULT_REGION") or os.environ.get("AWS_REGION") or "us-west-2"
@@ -93,6 +94,10 @@ vm.add_argument("--region", help="The AWS region.", default=AWS_REGION)
         "retries": {
             "help": "How many times to retry creating and connecting to a vm",
         },
+        "environment": {
+            "help": "The AWS environment to use.",
+            "choices": ("prod", "test"),
+        },
     }
 )
 def create(
@@ -103,6 +108,7 @@ def create(
     no_delete: bool = False,
     no_destroy_on_failure: bool = False,
     retries: int = 0,
+    environment: str = None,
 ):
     """
     Create VM.
@@ -116,7 +122,10 @@ def create(
         attempts += 1
         vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
         created = vm.create(
-            key_name=key_name, instance_type=instance_type, no_delete=no_delete
+            key_name=key_name,
+            instance_type=instance_type,
+            no_delete=no_delete,
+            environment=environment,
         )
         if created is True:
             break
@@ -554,15 +563,21 @@ class VM:
                 {"Name": "tag:instance-client-id", "Values": [REPO_CHECKOUT_ID]},
             ]
             log.info(f"Checking existing instance of {self.name}({self.config.ami})...")
-            instances = list(
-                self.ec2.instances.filter(
-                    Filters=filters,
+            try:
+                instances = list(
+                    self.ec2.instances.filter(
+                        Filters=filters,
+                    )
                 )
-            )
-            for _instance in instances:
-                if _instance.state["Name"] == "running":
-                    instance = _instance
-                    break
+                for _instance in instances:
+                    if _instance.state["Name"] == "running":
+                        instance = _instance
+                        break
+            except ClientError as exc:
+                if "RequestExpired" not in str(exc):
+                    raise
+                self.ctx.error(str(exc))
+                self.ctx.exit(1)
         if instance:
             self.instance = instance
 
@@ -597,11 +612,20 @@ class VM:
         )
         self.ssh_config_file.write_text(ssh_config)
 
-    def create(self, key_name=None, instance_type=None, no_delete=False):
+    def create(
+        self,
+        key_name=None,
+        instance_type=None,
+        no_delete=False,
+        environment=None,
+    ):
         if self.is_running:
             log.info(f"{self!r} is already running...")
             return True
         self.get_ec2_resource.cache_clear()
+
+        if environment is None:
+            environment = "prod"
 
         create_timeout = self.config.create_timeout
         create_timeout_progress = 0
@@ -630,6 +654,10 @@ class VM:
                         "Values": ["salt-project"],
                     },
                     {
+                        "Name": "tag:spb:environment",
+                        "Values": [environment],
+                    },
+                    {
                         "Name": "tag:spb:image-id",
                         "Values": [self.config.ami],
                     },
@@ -640,7 +668,7 @@ class VM:
             )
             for details in response.get("LaunchTemplates"):
                 if launch_template_name is not None:
-                    log.info(
+                    log.warning(
                         "Multiple launch templates for the same AMI. This is not "
                         "supposed to happen. Picked the first one listed: %s",
                         response,
@@ -678,10 +706,12 @@ class VM:
                 for tag in subnet.tags:
                     if tag["Key"] != "Name":
                         continue
-                    if started_in_ci and "-private-" in tag["Value"]:
+                    private_value = f"-{environment}-vpc-private-"
+                    if started_in_ci and private_value in tag["Value"]:
                         subnets[subnet.id] = subnet.available_ip_address_count
                         break
-                    if started_in_ci is False and "-public-" in tag["Value"]:
+                    public_value = f"-{environment}-vpc-public-"
+                    if started_in_ci is False and public_value in tag["Value"]:
                         subnets[subnet.id] = subnet.available_ip_address_count
                         break
             if subnets:
@@ -982,7 +1012,7 @@ class VM:
             "--exclude",
             ".pytest_cache/",
             "--exclude",
-            f"{STATE_DIR.relative_to(REPO_ROOT)}{os.path.sep}",
+            f"{STATE_DIR.relative_to(tools.utils.REPO_ROOT)}{os.path.sep}",
             "--exclude",
             "*.py~",
             # We need to include artifacts/ to be able to include artifacts/salt
@@ -999,7 +1029,7 @@ class VM:
             # symlink with a copy of what's getting symlinked.
             rsync_flags.append("--copy-links")
         # Local repo path
-        source = f"{REPO_ROOT}{os.path.sep}"
+        source = f"{tools.utils.REPO_ROOT}{os.path.sep}"
         # Remote repo path
         remote_path = self.upload_path.as_posix()
         if self.is_windows:
@@ -1014,7 +1044,7 @@ class VM:
             return
         write_env = {k: str(v) for (k, v) in env.items()}
         write_env_filename = ".ci-env"
-        write_env_filepath = REPO_ROOT / ".ci-env"
+        write_env_filepath = tools.utils.REPO_ROOT / ".ci-env"
         write_env_filepath.write_text(json.dumps(write_env))
 
         # Local path
@@ -1241,7 +1271,7 @@ class VM:
         _ssh_command_args = [
             ssh,
             "-F",
-            str(self.ssh_config_file.relative_to(REPO_ROOT)),
+            str(self.ssh_config_file.relative_to(tools.utils.REPO_ROOT)),
         ]
         if ssh_options:
             _ssh_command_args.extend(ssh_options)
