@@ -1,8 +1,8 @@
 {
   "almalinux-8": {
-    "ami": "ami-0708f5cff435866cd",
+    "ami": "ami-0605535c900176e44",
     "ami_description": "CI Image of AlmaLinux 8 x86_64",
-    "ami_name": "salt-project/ci/almalinux/8/x86_64/20230216.0528",
+    "ami_name": "salt-project/ci/almalinux/8/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -10,9 +10,9 @@
     "ssh_username": "ec2-user"
   },
   "almalinux-9": {
-    "ami": "ami-0e1378bb117d042b0",
+    "ami": "ami-0bfbbfb035a16aa67",
     "ami_description": "CI Image of AlmaLinux 9 x86_64",
-    "ami_name": "salt-project/ci/almalinux/9/x86_64/20230216.0528",
+    "ami_name": "salt-project/ci/almalinux/9/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -20,9 +20,9 @@
     "ssh_username": "ec2-user"
   },
   "amazonlinux-2": {
-    "ami": "ami-06c1223b35589b91d",
+    "ami": "ami-0b85ffe08394a6e7c",
     "ami_description": "CI Image of AmazonLinux 2 x86_64",
-    "ami_name": "salt-project/ci/amazonlinux/2/x86_64/20230216.0528",
+    "ami_name": "salt-project/ci/amazonlinux/2/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -30,9 +30,9 @@
     "ssh_username": "ec2-user"
   },
   "archlinux-lts": {
-    "ami": "ami-09e092a0d37c2994d",
+    "ami": "ami-063db28c7923c95f9",
     "ami_description": "CI Image of ArchLinux lts x86_64",
-    "ami_name": "salt-project/ci/archlinux/lts/x86_64/20230216.0529",
+    "ami_name": "salt-project/ci/archlinux/lts/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "false",
     "instance_type": "t3a.large",
@@ -40,9 +40,9 @@
     "ssh_username": "arch"
   },
   "centos-7": {
-    "ami": "ami-08820f92ce35a631d",
+    "ami": "ami-0c114f33cd54afb03",
     "ami_description": "CI Image of CentOS 7 x86_64",
-    "ami_name": "salt-project/ci/centos/7/x86_64/20230216.0529",
+    "ami_name": "salt-project/ci/centos/7/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -50,9 +50,9 @@
     "ssh_username": "centos"
   },
   "centosstream-8": {
-    "ami": "ami-0a86ae96155f73764",
+    "ami": "ami-0a75815b2af074b46",
     "ami_description": "CI Image of CentOSStream 8 x86_64",
-    "ami_name": "salt-project/ci/centosstream/8/x86_64/20230216.0541",
+    "ami_name": "salt-project/ci/centosstream/8/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -60,9 +60,9 @@
     "ssh_username": "cloud-user"
   },
   "centosstream-9": {
-    "ami": "ami-0d86221d8e9e59fb9",
+    "ami": "ami-0eeefe9055b5d9630",
     "ami_description": "CI Image of CentOSStream 9 x86_64",
-    "ami_name": "salt-project/ci/centosstream/9/x86_64/20230216.0541",
+    "ami_name": "salt-project/ci/centosstream/9/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -70,9 +70,9 @@
     "ssh_username": "ec2-user"
   },
   "debian-10": {
-    "ami": "ami-0fd6eece6b43a23f7",
+    "ami": "ami-01664f466e18c0803",
     "ami_description": "CI Image of Debian 10 x86_64",
-    "ami_name": "salt-project/ci/debian/10/x86_64/20230216.0528",
+    "ami_name": "salt-project/ci/debian/10/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -80,9 +80,9 @@
     "ssh_username": "admin"
   },
   "debian-11-arm64": {
-    "ami": "ami-0fefd3d31f4280ae6",
+    "ami": "ami-07b235058177e8c22",
     "ami_description": "CI Image of Debian 11 arm64",
-    "ami_name": "salt-project/ci/debian/11/arm64/20230216.0529",
+    "ami_name": "salt-project/ci/debian/11/arm64/20230220.1156",
     "arch": "arm64",
     "cloudwatch-agent-available": "false",
     "instance_type": "m6g.large",
@@ -90,9 +90,9 @@
     "ssh_username": "admin"
   },
   "debian-11": {
-    "ami": "ami-05e5be3e4bf712f40",
+    "ami": "ami-032287fde000ed111",
     "ami_description": "CI Image of Debian 11 x86_64",
-    "ami_name": "salt-project/ci/debian/11/x86_64/20230216.0529",
+    "ami_name": "salt-project/ci/debian/11/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -100,9 +100,9 @@
     "ssh_username": "admin"
   },
   "fedora-36": {
-    "ami": "ami-0b446080e40bab801",
+    "ami": "ami-0139632eacf432cb8",
     "ami_description": "CI Image of Fedora 36 x86_64",
-    "ami_name": "salt-project/ci/fedora/36/x86_64/20230216.0528",
+    "ami_name": "salt-project/ci/fedora/36/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -110,9 +110,9 @@
     "ssh_username": "fedora"
   },
   "fedora-37": {
-    "ami": "ami-0a953c92edf8ee295",
+    "ami": "ami-0bd4d6d08c9e59606",
     "ami_description": "CI Image of Fedora 37 x86_64",
-    "ami_name": "salt-project/ci/fedora/37/x86_64/20230216.0529",
+    "ami_name": "salt-project/ci/fedora/37/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -120,9 +120,9 @@
     "ssh_username": "fedora"
   },
   "fedora-38": {
-    "ami": "ami-0dec9f741db7f629a",
+    "ami": "ami-04faf7622a63a6632",
     "ami_description": "CI Image of Fedora 38 x86_64",
-    "ami_name": "salt-project/ci/fedora/38/x86_64/20230216.0529",
+    "ami_name": "salt-project/ci/fedora/38/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -130,9 +130,9 @@
     "ssh_username": "fedora"
   },
   "opensuse-15": {
-    "ami": "ami-09a641121b8c7bbb8",
+    "ami": "ami-06014e2cb5d08dba2",
     "ami_description": "CI Image of Opensuse 15 x86_64",
-    "ami_name": "salt-project/ci/opensuse/15/x86_64/20230216.0528",
+    "ami_name": "salt-project/ci/opensuse/15/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -140,9 +140,9 @@
     "ssh_username": "ec2-user"
   },
   "photonos-3": {
-    "ami": "ami-0c2a76bc94da0e1ad",
+    "ami": "ami-0868c9e1ac7bab552",
     "ami_description": "CI Image of PhotonOS 3 x86_64",
-    "ami_name": "salt-project/ci/photonos/3/x86_64/20230216.0529",
+    "ami_name": "salt-project/ci/photonos/3/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -150,9 +150,9 @@
     "ssh_username": "root"
   },
   "photonos-4": {
-    "ami": "ami-0a8db1eed6c805c75",
+    "ami": "ami-0bd5723a927300435",
     "ami_description": "CI Image of PhotonOS 4 x86_64",
-    "ami_name": "salt-project/ci/photonos/4/x86_64/20230216.0529",
+    "ami_name": "salt-project/ci/photonos/4/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -160,9 +160,9 @@
     "ssh_username": "root"
   },
   "ubuntu-20.04-arm64": {
-    "ami": "ami-0db63a47ac7b19b9e",
+    "ami": "ami-050ef2a49e7ab25d9",
     "ami_description": "CI Image of Ubuntu 20.04 arm64",
-    "ami_name": "salt-project/ci/ubuntu/20.04/arm64/20230216.0529",
+    "ami_name": "salt-project/ci/ubuntu/20.04/arm64/20230220.1156",
     "arch": "arm64",
     "cloudwatch-agent-available": "true",
     "instance_type": "m6g.large",
@@ -170,9 +170,9 @@
     "ssh_username": "ubuntu"
   },
   "ubuntu-20.04": {
-    "ami": "ami-0c2eab8a4788fb9cb",
+    "ami": "ami-0dd91400b62731387",
     "ami_description": "CI Image of Ubuntu 20.04 x86_64",
-    "ami_name": "salt-project/ci/ubuntu/20.04/x86_64/20230216.0538",
+    "ami_name": "salt-project/ci/ubuntu/20.04/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -180,9 +180,9 @@
     "ssh_username": "ubuntu"
   },
   "ubuntu-22.04-arm64": {
-    "ami": "ami-0c76f45747d9f2350",
+    "ami": "ami-0e185c664438a374f",
     "ami_description": "CI Image of Ubuntu 22.04 arm64",
-    "ami_name": "salt-project/ci/ubuntu/22.04/arm64/20230216.0530",
+    "ami_name": "salt-project/ci/ubuntu/22.04/arm64/20230220.1156",
     "arch": "arm64",
     "cloudwatch-agent-available": "true",
     "instance_type": "m6g.large",
@@ -190,9 +190,9 @@
     "ssh_username": "ubuntu"
   },
   "ubuntu-22.04": {
-    "ami": "ami-0c0f726ed9c745a97",
+    "ami": "ami-054df5d9f56f2144b",
     "ami_description": "CI Image of Ubuntu 22.04 x86_64",
-    "ami_name": "salt-project/ci/ubuntu/22.04/x86_64/20230216.0540",
+    "ami_name": "salt-project/ci/ubuntu/22.04/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
@@ -200,9 +200,9 @@
     "ssh_username": "ubuntu"
   },
   "windows-2016": {
-    "ami": "ami-0d24f748e46e8da27",
+    "ami": "ami-005f1bcbecd69fec9",
     "ami_description": "CI Image of Windows 2016 x86_64",
-    "ami_name": "salt-project/ci/windows/2016/x86_64/20230216.0529",
+    "ami_name": "salt-project/ci/windows/2016/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.xlarge",
@@ -210,9 +210,9 @@
     "ssh_username": "Administrator"
   },
   "windows-2019": {
-    "ami": "ami-0cc2909fbc6cc5209",
+    "ami": "ami-0f972bd95e3d7671d",
     "ami_description": "CI Image of Windows 2019 x86_64",
-    "ami_name": "salt-project/ci/windows/2019/x86_64/20230216.0529",
+    "ami_name": "salt-project/ci/windows/2019/x86_64/20230220.1311",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.xlarge",
@@ -220,9 +220,9 @@
     "ssh_username": "Administrator"
   },
   "windows-2022": {
-    "ami": "ami-0cc644d5940f33368",
+    "ami": "ami-0c99d04af93b78866",
     "ami_description": "CI Image of Windows 2022 x86_64",
-    "ami_name": "salt-project/ci/windows/2022/x86_64/20230216.0529",
+    "ami_name": "salt-project/ci/windows/2022/x86_64/20230220.1156",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.xlarge",
