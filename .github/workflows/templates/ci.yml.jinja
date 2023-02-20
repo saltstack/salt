@@ -58,16 +58,16 @@ on:
 
       - name: Get Python Version
         id: get-python-version
-        run: |
-          PY_VERSION=$(python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info))")
-          echo "python-version=$PY_VERSION" >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/get-python-version
+        with:
+          python-binary: python3
 
       - name: Cache Python Tools Virtualenvs
         id: tools-venvs-dependencies-cache
         uses: actions/cache@v3
         with:
           path: .tools-venvs/
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt') }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
