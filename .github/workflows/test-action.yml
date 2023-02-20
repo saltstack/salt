@@ -20,7 +20,7 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to running tests.
-      cache-seed:
+      cache-prefix:
         required: true
         type: string
         description: Seed used to invalidate caches
@@ -101,9 +101,8 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
-      # Skip jobs if nox.*.tar.* is already cached
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: actions/download-artifact@v3
@@ -218,7 +217,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
       - name: PyPi Proxy
         run: |

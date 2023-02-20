@@ -25,7 +25,7 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to running tests.
-      cache-seed:
+      cache-prefix:
         required: true
         type: string
         description: Seed used to invalidate caches
@@ -98,7 +98,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
 
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -114,8 +114,6 @@ jobs:
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
-
-      # Skip jobs if nox.*.tar.* is already cached
       - name: Set up Python ${{ inputs.python-version }}
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: actions/setup-python@v4
@@ -204,7 +202,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
 
       - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v4

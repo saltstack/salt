@@ -18,6 +18,11 @@ on:
         required: true
         type: string
         description: Seed used to invalidate caches
+      relenv-version:
+        required: false
+        type: string
+        default: 0.6.0
+        description: The version of relenv to use
       python-version-linux:
         required: false
         type: string
@@ -69,6 +74,7 @@ jobs:
         with:
           platform: linux
           arch: ${{ matrix.arch }}
+          version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
           python-version: ${{ inputs.python-version-linux }}
 

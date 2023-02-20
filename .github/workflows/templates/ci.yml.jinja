@@ -218,6 +218,10 @@ on:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+      relenv-version: "<{ relenv_version }>"
+      python-version-linux: "<{ python_version_linux }>"
+      python-version-macos: "<{ python_version_macos }>"
+      python-version-windows: "<{ python_version_windows }>"
 
   <%- endif %>
 
@@ -239,6 +243,10 @@ on:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+      relenv-version: "<{ relenv_version }>"
+      python-version-linux: "<{ python_version_linux }>"
+      python-version-macos: "<{ python_version_macos }>"
+      python-version-windows: "<{ python_version_windows }>"
 
   <%- endif %>
 
@@ -280,7 +288,7 @@ on:
       arch: amd64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_windows }>
 
   windows-2019:
     <%- do test_salt_needs.append('windows-2019') %>
@@ -297,7 +305,7 @@ on:
       arch: amd64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_windows }>
 
   windows-2022:
     <%- do test_salt_needs.append('windows-2022') %>
@@ -314,7 +322,7 @@ on:
       arch: amd64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_windows }>
 
   macos-12:
     <%- do test_salt_needs.append('macos-12') %>
@@ -331,7 +339,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_macos }>
 
   almalinux-8:
     <%- do test_salt_needs.append('almalinux-8') %>
@@ -348,7 +356,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   almalinux-9:
     <%- do test_salt_needs.append('almalinux-9') %>
@@ -365,7 +373,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   amazonlinux-2:
     <%- do test_salt_needs.append('amazonlinux-2') %>
@@ -382,7 +390,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   archlinux-lts:
     <%- do test_salt_needs.append('archlinux-lts') %>
@@ -399,7 +407,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   centos-7:
     <%- do test_salt_needs.append('centos-7') %>
@@ -416,7 +424,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   centosstream-8:
     <%- do test_salt_needs.append('centosstream-8') %>
@@ -433,7 +441,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   centosstream-9:
     <%- do test_salt_needs.append('centosstream-9') %>
@@ -450,7 +458,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   debian-10:
     <%- do test_salt_needs.append('debian-10') %>
@@ -467,7 +475,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   debian-11:
     <%- do test_salt_needs.append('debian-11') %>
@@ -484,7 +492,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   debian-11-arm64:
     <%- do test_salt_needs.append('debian-11-arm64') %>
@@ -501,7 +509,7 @@ on:
       arch: aarch64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   fedora-36:
     <%- do test_salt_needs.append('fedora-36') %>
@@ -518,7 +526,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   fedora-37:
     <%- do test_salt_needs.append('fedora-37') %>
@@ -535,7 +543,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   fedora-38:
     <%- do test_salt_needs.append('fedora-38') %>
@@ -552,7 +560,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   opensuse-15:
     <%- do test_salt_needs.append('opensuse-15') %>
@@ -569,7 +577,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   photonos-3:
     <%- do test_salt_needs.append('photonos-3') %>
@@ -586,7 +594,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   photonos-4:
     <%- do test_salt_needs.append('photonos-4') %>
@@ -603,7 +611,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   ubuntu-2004:
     <%- do test_salt_needs.append('ubuntu-2004') %>
@@ -620,7 +628,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   ubuntu-2004-arm64:
     <%- do test_salt_needs.append('ubuntu-2004-arm64') %>
@@ -637,7 +645,7 @@ on:
       arch: aarch64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   ubuntu-2204:
     <%- do test_salt_needs.append('ubuntu-2204') %>
@@ -654,7 +662,7 @@ on:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   ubuntu-2204-arm64:
     <%- do test_salt_needs.append('ubuntu-2204-arm64') %>
@@ -671,7 +679,7 @@ on:
       arch: aarch64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
 
   <%- endif %>
 
