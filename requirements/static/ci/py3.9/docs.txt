@@ -86,7 +86,7 @@ markdown-it-py==2.1.0
     # via
     #   mdit-py-plugins
     #   myst-docutils
-markupsafe==2.0.1
+markupsafe==2.1.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt

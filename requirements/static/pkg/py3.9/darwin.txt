@@ -57,7 +57,7 @@ looseversion==1.0.2
     # via -r requirements/base.txt
 mako==1.2.2
     # via -r requirements/darwin.txt
-markupsafe==2.0.1
+markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2

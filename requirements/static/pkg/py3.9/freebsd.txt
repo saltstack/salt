@@ -45,7 +45,7 @@ jmespath==1.0.1
     # via -r requirements/base.txt
 looseversion==1.0.2
     # via -r requirements/base.txt
-markupsafe==2.0.1
+markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2

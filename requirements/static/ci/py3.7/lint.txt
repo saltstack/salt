@@ -521,12 +521,13 @@ lxml==4.9.1
     #   ncclient
 mako==1.2.2
     # via -r requirements/static/ci/common.in
-markupsafe==2.0.1
+markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
     #   mako
     #   moto
+    #   werkzeug
 mccabe==0.6.1
     # via pylint
 mercurial==6.0.1
@@ -911,7 +912,7 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
-werkzeug==2.0.1
+werkzeug==2.2.3
     # via moto
 wrapt==1.11.1
     # via astroid
