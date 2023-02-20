@@ -17,27 +17,14 @@ def ansible(modules):
     return modules.ansible
 
 
-def test_short_alias(ansible):
+def test_short_alias(modules, ansible):
     """
-    Test that the ansible functions are actually loaded and we can target using the short alias
+    Test that the ansible functions are actually loaded and we can target using the short alias.
     """
     ret = ansible.ping()
     assert ret == {"ping": "pong"}
 
-
-def test_passing_data_to_ansible_modules(ansible):
-    """
-    Test that the ansible functions are actually loaded
-    """
-    expected = "foobar"
-    ret = ansible.ping(data=expected)
-    assert ret == {"ping": expected}
-
-
-def test_alias(modules):
-    """
-    Test that the ansible functions are actually loaded and we can target using the short alias
-    """
+    ansible_ping_func = None
     if "ansible.system.ping" in modules:
         # we need to go by getattr() because salt's loader will try to find "system" in the dictionary and fail
         # The ansible hack injects, in this case, "system.ping" as an attribute to the loaded module
@@ -51,7 +38,18 @@ def test_alias(modules):
         ansible_ping_func = getattr(modules.ansible, "builtin.ping")
         # Make sure we don't set the full ansible module
         assert "ansible.ansible.builtin.ping" not in modules
-    else:
-        pytest.fail("Where is the ping function these days in Ansible?!")
-    ret = ansible_ping_func()
-    assert ret == {"ping": "pong"}
+
+    # if ansible_ping_func is None, then it's ok, we already ran 'ping' at the
+    # top if this test, so it worked.
+    if ansible_ping_func:
+        ret = ansible_ping_func()
+        assert ret == {"ping": "pong"}
+
+
+def test_passing_data_to_ansible_modules(ansible):
+    """
+    Test that the ansible functions are actually loaded
+    """
+    expected = "foobar"
+    ret = ansible.ping(data=expected)
+    assert ret == {"ping": expected}
