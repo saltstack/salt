@@ -77,6 +77,11 @@ jobs:
               - added|modified:
                 - doc/**
                 - *doc_requirements
+            workflows:
+              - added|modified:
+                - .github/actions/**/action.yml
+                - .github/workflows/*.yml
+                - .github/workflows/templates/*.yml.jinja2
             salt:
               - added|modified: &salt_added_modified
                 - setup.py
@@ -213,16 +218,16 @@ jobs:
 
       - name: Get Python Version
         id: get-python-version
-        run: |
-          PY_VERSION=$(python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info))")
-          echo "python-version=$PY_VERSION" >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/get-python-version
+        with:
+          python-binary: python3
 
       - name: Cache Python Tools Virtualenvs
         id: tools-venvs-dependencies-cache
         uses: actions/cache@v3
         with:
           path: .tools-venvs/
-          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/*.txt') }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -353,6 +358,10 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+      relenv-version: "0.6.0"
+      python-version-linux: "3.10.9"
+      python-version-macos: "3.10.9"
+      python-version-windows: "3.10.9"
 
   build-salt-onedir:
     name: Build Salt Onedir
@@ -367,6 +376,10 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+      relenv-version: "0.6.0"
+      python-version-linux: "3.10.9"
+      python-version-macos: "3.10.9"
+      python-version-windows: "3.10.9"
 
   build-pkgs:
     name: Build Salt Packages
@@ -394,7 +407,7 @@ jobs:
       arch: amd64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   windows-2019:
     name: Windows 2019
@@ -410,7 +423,7 @@ jobs:
       arch: amd64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   windows-2022:
     name: Windows 2022
@@ -426,7 +439,7 @@ jobs:
       arch: amd64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   macos-12:
     name: macOS 12
@@ -442,7 +455,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   almalinux-8:
     name: Alma Linux 8
@@ -458,7 +471,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   almalinux-9:
     name: Alma Linux 9
@@ -474,7 +487,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   amazonlinux-2:
     name: Amazon Linux 2
@@ -490,7 +503,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   archlinux-lts:
     name: Arch Linux LTS
@@ -506,7 +519,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   centos-7:
     name: CentOS 7
@@ -522,7 +535,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   centosstream-8:
     name: CentOS Stream 8
@@ -538,7 +551,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   centosstream-9:
     name: CentOS Stream 9
@@ -554,7 +567,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   debian-10:
     name: Debian 10
@@ -570,7 +583,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   debian-11:
     name: Debian 11
@@ -586,7 +599,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   debian-11-arm64:
     name: Debian 11 Arm64
@@ -602,7 +615,7 @@ jobs:
       arch: aarch64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   fedora-36:
     name: Fedora 36
@@ -618,7 +631,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   fedora-37:
     name: Fedora 37
@@ -634,7 +647,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   fedora-38:
     name: Fedora 38
@@ -650,7 +663,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   opensuse-15:
     name: Opensuse 15
@@ -666,7 +679,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   photonos-3:
     name: Photon OS 3
@@ -682,7 +695,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   photonos-4:
     name: Photon OS 4
@@ -698,7 +711,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   ubuntu-2004:
     name: Ubuntu 20.04
@@ -714,7 +727,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64
@@ -730,7 +743,7 @@ jobs:
       arch: aarch64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   ubuntu-2204:
     name: Ubuntu 22.04
@@ -746,7 +759,7 @@ jobs:
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64
@@ -762,7 +775,7 @@ jobs:
       arch: aarch64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.9
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks

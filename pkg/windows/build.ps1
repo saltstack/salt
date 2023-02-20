@@ -40,6 +40,8 @@ param(
     [ValidatePattern("^\d{1,2}.\d{1,2}.\d{1,2}$")]
     [ValidateSet(
         # Until Pythonnet supports newer versions
+        "3.10.10",
+        "3.10.9",
         #"3.10.5",
         #"3.10.4",
         #"3.10.3",
