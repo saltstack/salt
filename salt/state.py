@@ -2302,6 +2302,7 @@ class State:
             "__running__": immutabletypes.freeze(running) if running else {},
             "__instance_id__": self.instance_id,
             "__lowstate__": immutabletypes.freeze(chunks) if chunks else {},
+            "__user__": self.opt.get("user", "UNKOWN"),
         }
 
         if "__env__" in low:

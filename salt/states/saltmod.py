@@ -780,6 +780,11 @@ def runner(name, **kwargs):
         log.debug("Unable to fire args event due to missing __orchestration_jid__")
         jid = None
 
+    try:
+        kwargs["__pub_user"] = __user__
+    except NameError:
+        log.warning("Unable to find user for fire args event due to missing __user__")
+
     if __opts__.get("test", False):
         ret = {
             "name": name,
