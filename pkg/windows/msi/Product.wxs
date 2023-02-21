@@ -21,6 +21,9 @@ IMCAC - Immediate Custom Action - It's immediate
     Id           = "*"
     Language     = "1033">
 
+    <!-- This line needed to fix the progress bar on later versions of Windows -->
+    <UIRef Id="WixUI_ErrorProgressText" />
+
     <!--  Install per Machine -->
     <Package
       InstallScope      = "perMachine"

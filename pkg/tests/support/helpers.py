@@ -864,10 +864,29 @@ class SaltPkgInstall:
                 # registry. There are a lot of remnants of Salt still in the
                 # registry... thousands. This will be the case until we figure
                 # out why we can't uninstall the MSI using self.proc.run
+                # Additionally, we don't know the GUID assigned to the Salt
+                # installation, so we need to search all entries for Salt Minion
                 if HAS_WINREG:
-                    log.debug("Removing registry entries")
-                    key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{5693F9A3-3083-426B-B17B-B860C00C9B84}"
-                    winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, key)
+                    base_key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+                    # Connect to the Uninstall registry location
+                    key = winreg.OpenKey(
+                        winreg.HKEY_LOCAL_MACHINE, base_key, 0, winreg.KEY_READ
+                    )
+                    for i in range(0, winreg.QueryInfoKey(key)[0]):
+                        guid = winreg.EnumKey(key, i)
+                        # Connect to each sub key
+                        sub_key = winreg.OpenKey(key, guid, 0, winreg.KEY_READ)
+                        try:
+                            # Search for DisplayName. Not every sub key has one
+                            display_name = winreg.QueryValueEx(sub_key, "DisplayName")[
+                                0
+                            ]
+                        except FileNotFoundError:
+                            continue
+                        if display_name.startswith("Salt Minion"):
+                            log.debug("Removing registry entry")
+                            winreg.DeleteKey(key, guid)
+                            break
 
             # Remove install dir from the path
             if HAS_WINREG:
@@ -880,7 +899,6 @@ class SaltPkgInstall:
                 path_key.Close()
                 # If the install path is in the path let's remove it
                 if str(self.install_dir) in current_path:
-                    log.debug("Removing %s from the path", self.install_dir)
                     path_key = winreg.OpenKeyEx(
                         winreg.HKEY_LOCAL_MACHINE,
                         r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
@@ -891,6 +909,7 @@ class SaltPkgInstall:
                     path_list = current_path.split(";")
                     for item in path_list:
                         if item == str(self.install_dir):
+                            log.debug("Removing %s from the path", item)
                             continue
                         new_path.append(item)
                     winreg.SetValueEx(
