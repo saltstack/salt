@@ -139,7 +139,7 @@ pywin32==305
     #   wmi
 pyyaml==6.0
     # via -r requirements/base.txt
-pyzmq==25.0.0 ; python_version >= "3.9"
+pyzmq==25.0.0 ; sys_platform == "win32"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
