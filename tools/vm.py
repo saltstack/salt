@@ -1073,7 +1073,6 @@ class VM:
             self.ctx.exit(1, message=f"{self!r} is not running")
         if env is None:
             env = []
-        env.append("PYTHONUTF8=1")
         self.write_ssh_config()
         try:
             ssh_command = self.ssh_command_args(
@@ -1121,7 +1120,6 @@ class VM:
         for key in ("CI", "PIP_INDEX_URL", "PIP_EXTRA_INDEX_URL"):
             if key in os.environ:
                 env[key] = os.environ[key]
-        env["PYTHONUTF8"] = "1"
         env["OUTPUT_COLUMNS"] = str(self.ctx.console.width)
         env["GITHUB_ACTIONS_PIPELINE"] = "1"
         self.write_and_upload_dot_env(env)
