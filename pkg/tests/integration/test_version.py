@@ -58,7 +58,7 @@ def test_compare_versions(version, binary, install_salt):
 
     if binary in install_salt.binary_paths:
         ret = install_salt.proc.run(*install_salt.binary_paths[binary], "--version")
-        ret.stdout.matcher.fnmatch_lines([f"*{version}"])
+        ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
     else:
         pytest.skip(f"Binary not available: {binary}")
 
