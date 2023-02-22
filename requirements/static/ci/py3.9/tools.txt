@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements/static/ci/py3.9/tools.txt --pip-args='--constraint=requirements/static/ci/py3.9/linux.txt' requirements/static/ci/tools.in
 #
-attrs==22.1.0
+attrs==22.2.0
     # via
     #   -r requirements/static/ci/tools.in
     #   python-tools-scripts

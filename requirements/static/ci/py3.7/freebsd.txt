@@ -22,7 +22,7 @@ async-timeout==4.0.2
     # via aiohttp
 asynctest==0.13.0
     # via aiohttp
-attrs==20.3.0
+attrs==22.2.0
     # via
     #   aiohttp
     #   jsonschema
