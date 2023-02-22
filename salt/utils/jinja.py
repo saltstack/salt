@@ -2,13 +2,12 @@
 Jinja loading utils to enable a more powerful backend for jinja templates
 """
 
-
 import itertools
 import logging
 import os.path
-import pipes
 import pprint
 import re
+import shlex
 import time
 import uuid
 import warnings
@@ -442,7 +441,7 @@ def quote(txt):
 
         'my_text'
     """
-    return pipes.quote(txt)
+    return shlex.quote(txt)
 
 
 @jinja_filter()
