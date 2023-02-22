@@ -11,7 +11,6 @@ as those returned here
 
 import datetime
 import hashlib
-import locale
 import logging
 import os
 import platform
@@ -35,6 +34,7 @@ import salt.modules.smbios
 import salt.utils.args
 import salt.utils.dns
 import salt.utils.files
+import salt.utils.locales
 import salt.utils.network
 import salt.utils.path
 import salt.utils.pkg.rpm
@@ -2708,7 +2708,7 @@ def locale_info():
         (
             grains["locale_info"]["defaultlanguage"],
             grains["locale_info"]["defaultencoding"],
-        ) = locale.getdefaultlocale()
+        ) = salt.utils.locales.getdefaultlocale()
     except Exception:  # pylint: disable=broad-except
         # locale.getdefaultlocale can ValueError!! Catch anything else it
         # might do, per #2205
