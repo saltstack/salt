@@ -891,19 +891,16 @@ class SaltPkgInstall:
             # Remove install dir from the path
             if HAS_WINREG:
                 # Get the current system path
-                path_key = winreg.OpenKeyEx(
-                    winreg.HKEY_LOCAL_MACHINE,
-                    r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+                env_key = (
+                    r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
                 )
+                path_key = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, env_key)
                 current_path = winreg.QueryValueEx(path_key, "path")[0]
                 path_key.Close()
                 # If the install path is in the path let's remove it
                 if str(self.install_dir) in current_path:
                     path_key = winreg.OpenKeyEx(
-                        winreg.HKEY_LOCAL_MACHINE,
-                        r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
-                        0,
-                        winreg.KEY_SET_VALUE,
+                        winreg.HKEY_LOCAL_MACHINE, env_key, 0, winreg.KEY_SET_VALUE
                     )
                     new_path = []
                     path_list = current_path.split(";")
