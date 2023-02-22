@@ -4,6 +4,7 @@ import platform
 import posixpath
 import sys
 import tempfile
+import types
 
 import pytest
 
@@ -79,14 +80,12 @@ class PathJoinTestCase(TestCase):
         assert actual == expected
 
     def __patch_path(self):
-        import imp
-
         modules = list(self.BUILTIN_MODULES[:])
         modules.pop(modules.index("posix"))
         modules.append("nt")
 
         code = """'''Salt unittest loaded NT module'''"""
-        module = imp.new_module("nt")
+        module = types.ModuleType("nt")
         exec(code, module.__dict__)
         sys.modules["nt"] = module
 
