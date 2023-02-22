@@ -879,7 +879,7 @@ xmltodict==0.12.0
     # via moto
 yamllint==1.26.3
     # via -r requirements/static/ci/linux.in
-yarl==1.7.2
+yarl==1.8.2
     # via aiohttp
 zc.lockfile==1.4
     # via cherrypy

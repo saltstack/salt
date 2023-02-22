@@ -423,7 +423,7 @@ xmltodict==0.12.0
     #   pywinrm
 yamllint==1.26.3
     # via -r requirements/static/ci/windows.in
-yarl==1.7.2
+yarl==1.8.2
     # via aiohttp
 zc.lockfile==2.0
     # via cherrypy
