@@ -14,7 +14,8 @@ clustershell
 croniter>=0.3.0,!=0.3.22"; sys_platform != 'win32'
 dnspython
 docker
-etcd3-py==0.1.6 ; python_version >= '3.6'
+etcd3-py==0.1.6 ; sys_platform != 'darwin'
+etcd3-py==0.1.6 ; python_version < '3.11' and sys_platform == 'darwin'
 gitpython>=3.1.30; python_version >= '3.7'
 jmespath
 jsonschema

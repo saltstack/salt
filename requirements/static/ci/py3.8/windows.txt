@@ -96,7 +96,7 @@ docker-pycreds==0.4.0
     # via docker
 docker==2.7.0
     # via -r requirements/static/ci/common.in
-etcd3-py==0.1.6 ; python_version >= "3.6"
+etcd3-py==0.1.6 ; sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
 exceptiongroup==1.0.4
     # via pytest
