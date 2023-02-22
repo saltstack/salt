@@ -655,7 +655,7 @@ oauthlib==3.2.2
     # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
-packaging==22.0
+packaging==23.0
     # via
     #   -r requirements/base.txt
     #   ansible-core

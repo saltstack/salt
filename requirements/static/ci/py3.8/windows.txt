@@ -197,7 +197,7 @@ multidict==6.0.2
     #   yarl
 ntlm-auth==1.5.0
     # via requests-ntlm
-packaging==21.3
+packaging==23.0
     # via
     #   -r requirements/base.txt
     #   pytest
@@ -244,8 +244,6 @@ pyopenssl==20.0.1
     # via
     #   -r requirements/windows.txt
     #   etcd3-py
-pyparsing==3.0.9
-    # via packaging
 pyrsistent==0.17.3
     # via jsonschema
 pytest-custom-exit-code==0.3.0

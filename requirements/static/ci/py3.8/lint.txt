@@ -652,7 +652,7 @@ oauthlib==3.2.2
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
-packaging==21.3
+packaging==23.0
     # via
     #   -r requirements/base.txt
     #   ansible-core
@@ -713,9 +713,7 @@ pyopenssl==20.0.1
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
 pyparsing==3.0.9
-    # via
-    #   junos-eznc
-    #   packaging
+    # via junos-eznc
 pyrsistent==0.18.0
     # via jsonschema
 pyserial==3.5
