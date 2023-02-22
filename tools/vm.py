@@ -265,6 +265,8 @@ def test(
         "SKIP_INITIAL_ONEDIR_FAILURES": "1",
         "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
     }
+    if "LANG" in os.environ:
+        env["LANG"] = os.environ["LANG"]
     if rerun_failures:
         env["RERUN_FAILURES"] = "1"
     if print_tests_selection:
