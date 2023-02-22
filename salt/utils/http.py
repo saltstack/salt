@@ -5,7 +5,7 @@ and the like, but also useful for basic HTTP testing.
 .. versionadded:: 2015.5.0
 """
 
-import cgi
+import email.message
 import gzip
 import http.client
 import http.cookiejar
@@ -483,15 +483,12 @@ def query(
         result_headers = dict(result.info())
         result_text = result.read()
         if "Content-Type" in result_headers:
-            res_content_type, res_params = cgi.parse_header(
-                result_headers["Content-Type"]
-            )
-            if (
-                res_content_type.startswith("text/")
-                and "charset" in res_params
-                and not isinstance(result_text, str)
-            ):
-                result_text = result_text.decode(res_params["charset"])
+            msg = email.message.EmailMessage()
+            msg.add_header("Content-Type", result_headers["Content-Type"])
+            if msg.get_content_type().startswith("text/"):
+                content_charset = msg.get_content_charset()
+                if content_charset and not isinstance(result_text, str):
+                    result_text = result_text.decode(content_charset)
         if isinstance(result_text, bytes) and decode_body:
             result_text = result_text.decode("utf-8")
         ret["body"] = result_text
@@ -636,15 +633,12 @@ def query(
         result_headers = result.headers
         result_text = result.body
         if "Content-Type" in result_headers:
-            res_content_type, res_params = cgi.parse_header(
-                result_headers["Content-Type"]
-            )
-            if (
-                res_content_type.startswith("text/")
-                and "charset" in res_params
-                and not isinstance(result_text, str)
-            ):
-                result_text = result_text.decode(res_params["charset"])
+            msg = email.message.EmailMessage()
+            msg.add_header("Content-Type", result_headers["Content-Type"])
+            if msg.get_content_type().startswith("text/"):
+                content_charset = msg.get_content_charset()
+                if content_charset and not isinstance(result_text, str):
+                    result_text = result_text.decode(content_charset)
         if isinstance(result_text, bytes) and decode_body:
             result_text = result_text.decode("utf-8")
         ret["body"] = result_text
