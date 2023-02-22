@@ -924,7 +924,7 @@ yamllint==1.26.3
     # via -r requirements/static/ci/freebsd.in
 yamlordereddictloader==0.4.0
     # via junos-eznc
-yarl==1.7.2
+yarl==1.8.2
     # via aiohttp
 zc.lockfile==1.4
     # via cherrypy

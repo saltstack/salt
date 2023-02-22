@@ -918,7 +918,7 @@ yamlordereddictloader==0.4.0
     # via
     #   -r requirements/static/ci/darwin.in
     #   junos-eznc
-yarl==1.7.2
+yarl==1.8.2
     # via aiohttp
 zc.lockfile==2.0
     # via cherrypy
