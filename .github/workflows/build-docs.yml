@@ -59,6 +59,7 @@ jobs:
           python-binary: python3
 
       - name: Setup Python Tools Scripts
+        id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Cache Python Tools Docs Virtualenv
@@ -66,7 +67,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .tools-venvs/docs
-          key: ${{ inputs.cache-seed }}|${{ github.workflow }}|tools-venvs|docs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/docs.txt') }}
+          key: ${{ inputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|docs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/docs.txt') }}
 
       - name: Prepare Docs Build
         run: |
