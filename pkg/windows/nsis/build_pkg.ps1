@@ -129,6 +129,20 @@ if ( $estimated_size -gt 0 ) {
 }
 
 #-------------------------------------------------------------------------------
+# Copy the icon file to the build_env directory
+#-------------------------------------------------------------------------------
+
+Write-Host "Copying icon file to build env: " -NoNewline
+Copy-Item "$INSTALLER_DIR\salt.ico" "$BUILDENV_DIR" | Out-Null
+if ( Test-Path -Path "$INSTALLER_DIR\salt.ico" ) {
+    Write-Result "Success" -ForegroundColor Green
+} else {
+    Write-Result "Failed" -ForegroundColor Red
+    Write-Host "Failed to find salt.ico in build_env directory"
+    exit 1
+}
+
+#-------------------------------------------------------------------------------
 # Build the Installer
 #-------------------------------------------------------------------------------
 
