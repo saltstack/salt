@@ -176,7 +176,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 looseversion==1.0.2
     # via -r requirements/base.txt
-lxml==4.9.1
+lxml==4.9.2
     # via -r requirements/windows.txt
 mako==1.2.2
     # via
