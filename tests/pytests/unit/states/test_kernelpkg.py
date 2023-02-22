@@ -1,5 +1,5 @@
 """
-    Test cases for salt.states.aptpkg
+    Test cases for salt.states.kernelpkg
 """
 
 
