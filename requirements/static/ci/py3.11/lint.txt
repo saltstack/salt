@@ -610,7 +610,7 @@ oauthlib==3.2.2
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
-packaging==21.3
+packaging==23.0
     # via
     #   -r requirements/base.txt
     #   ansible-core
@@ -663,8 +663,6 @@ pyopenssl==20.0.1
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==3.0.9
-    # via packaging
 pyrsistent==0.18.0
     # via jsonschema
 python-consul==1.1.0

@@ -586,7 +586,7 @@ oauthlib==3.2.2
     # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
-packaging==21.3
+packaging==23.0
     # via
     #   -r requirements/base.txt
     #   pytest
@@ -628,8 +628,6 @@ pyjwt==2.4.0
     # via adal
 pyopenssl==19.0.0
     # via -r requirements/darwin.txt
-pyparsing==3.0.9
-    # via packaging
 pyrsistent==0.17.3
     # via jsonschema
 pytest-custom-exit-code==0.3.0
