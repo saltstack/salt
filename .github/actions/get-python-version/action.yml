@@ -1,0 +1,31 @@
+---
+name: get-python-version
+description: Setup Relenv
+inputs:
+  python-binary:
+    required: true
+    type: string
+    description: The python binary to get the version from
+outputs:
+  binary:
+    value: ${{ steps.get-python-version.outputs.binary }}
+  version:
+    value: ${{ steps.get-python-version.outputs.version }}
+  full-version:
+    value: ${{ steps.get-python-version.outputs.full-version }}
+
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Get Python Version
+      id: get-python-version
+      shell: bash
+      run: |
+        echo "binary=${{ inputs.python-binary }}" >> "$GITHUB_OUTPUT"
+        PY_VERSION=$(${{ inputs.python-binary }} -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info))")
+        echo "version=$PY_VERSION" >> "$GITHUB_OUTPUT"
+        PY_FULL_VERSION=$(${{ inputs.python-binary }} -c "import sys; sys.stdout.write('{}.{}.{}'.format(*sys.version_info))")
+        echo "full-version=$PY_FULL_VERSION" >> "$GITHUB_OUTPUT"

@@ -18,6 +18,29 @@ on:
         required: true
         type: string
         description: Seed used to invalidate caches
+      relenv-version:
+        required: false
+        type: string
+        default: 0.6.0
+        description: The version of relenv to use
+      python-version-linux:
+        required: false
+        type: string
+        default: 3.10.9
+        description: The version of python to use with relenv
+      python-version-macos:
+        required: false
+        type: string
+        default: 3.10.9
+        description: The version of python to use with relenv
+      python-version-windows:
+        required: false
+        type: string
+        description: The version of python to use with relenv on Windows
+        default: 3.10.9
+
+env:
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
 
 jobs:
 
@@ -41,7 +64,9 @@ jobs:
         with:
           platform: linux
           arch: ${{ matrix.arch }}
+          version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
+          python-version: ${{ inputs.python-version-linux }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -51,6 +76,7 @@ jobs:
         with:
           platform: linux
           arch: ${{ matrix.arch }}
+          python-version: ${{ inputs.python-version-linux }}
           cache-seed: ${{ inputs.cache-seed }}
 
 
@@ -79,6 +105,7 @@ jobs:
           platform: windows
           arch: ${{ matrix.arch }}
           cache-seed: ${{ inputs.cache-seed }}
+          python-version: ${{ inputs.python-version-windows }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -89,6 +116,7 @@ jobs:
           platform: windows
           arch: ${{ matrix.arch }}
           cache-seed: ${{ inputs.cache-seed }}
+          python-version: ${{ inputs.python-version-windows }}
 
 
   build-deps-macos:
@@ -115,6 +143,7 @@ jobs:
           platform: darwin
           arch: ${{ matrix.arch }}
           cache-seed: ${{ inputs.cache-seed }}
+          python-version: ${{ inputs.python-version-macos }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -125,3 +154,4 @@ jobs:
           platform: darwin
           arch: ${{ matrix.arch }}
           cache-seed: ${{ inputs.cache-seed }}
+          python-version: ${{ inputs.python-version-macos }}
