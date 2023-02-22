@@ -28,7 +28,7 @@ astroid==2.3.3
     # via pylint
 async-timeout==4.0.2
     # via aiohttp
-attrs==21.2.0
+attrs==22.2.0
     # via
     #   aiohttp
     #   jsonschema
