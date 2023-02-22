@@ -17,7 +17,7 @@ and are called in this order:
 build.ps1
 
 .EXAMPLE
-build.ps1 -Version 3005 -PythonVersion 3.8.13
+build.ps1 -Version 3005 -PythonVersion 3.10.9
 
 #>
 
@@ -39,22 +39,8 @@ param(
     [Parameter(Mandatory=$false)]
     [ValidatePattern("^\d{1,2}.\d{1,2}.\d{1,2}$")]
     [ValidateSet(
-        # Until Pythonnet supports newer versions
-        "3.10.10",
-        "3.10.9",
-        #"3.10.5",
-        #"3.10.4",
-        #"3.10.3",
-        #"3.9.13",
-        #"3.9.12",
-        #"3.9.11",
-        "3.8.16",
-        "3.8.15",
-        "3.8.14",
-        "3.8.13",
-        "3.8.12",
-        "3.8.11",
-        "3.8.10"
+        "3.11.2",
+        "3.10.9"
     )]
     [Alias("p")]
     # The version of Python to be built. Pythonnet only supports up to Python
@@ -62,7 +48,7 @@ param(
     # supported up to 3.8. So we're pinned to the latest version of Python 3.8.
     # We may have to drop support for pycurl.
     # Default is: 3.8.16
-    [String] $PythonVersion = "3.8.16",
+    [String] $PythonVersion = "3.10.9",
 
     [Parameter(Mandatory=$false)]
     [Alias("b")]
