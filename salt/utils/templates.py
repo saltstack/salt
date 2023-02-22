@@ -2,12 +2,14 @@
 Template render systems
 """
 import codecs
+import importlib.machinery
+import importlib.util
 import logging
 import os
+import pathlib
 import sys
 import tempfile
 import traceback
-from pathlib import Path
 
 import jinja2
 import jinja2.ext
@@ -30,17 +32,6 @@ from salt.loader.context import NamedLoaderContext
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import Version
-
-if sys.version_info[:2] >= (3, 5):
-    import importlib.machinery  # pylint: disable=no-name-in-module,import-error
-    import importlib.util  # pylint: disable=no-name-in-module,import-error
-
-    USE_IMPORTLIB = True
-else:
-    import imp
-
-    USE_IMPORTLIB = False
-
 
 log = logging.getLogger(__name__)
 
@@ -118,7 +109,7 @@ def generate_sls_context(tmplpath, sls):
 
     if tmplpath:
         # Normalize template path
-        template = str(Path(tmplpath).as_posix())
+        template = str(pathlib.Path(tmplpath).as_posix())
 
         # Determine proper template name without root
         if not sls:
@@ -663,18 +654,14 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
     base_fname = os.path.basename(sfn)
     name = base_fname.split(".")[0]
 
-    if USE_IMPORTLIB:
-        # pylint: disable=no-member
-        loader = importlib.machinery.SourceFileLoader(name, sfn)
-        spec = importlib.util.spec_from_file_location(name, sfn, loader=loader)
-        if spec is None:
-            raise ImportError()
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        # pylint: enable=no-member
-        sys.modules[name] = mod
-    else:
-        mod = imp.load_source(name, sfn)
+    loader = importlib.machinery.SourceFileLoader(name, sfn)
+    spec = importlib.util.spec_from_file_location(name, sfn, loader=loader)
+    if spec is None:
+        raise ImportError()
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    # pylint: enable=no-member
+    sys.modules[name] = mod
 
     # File templates need these set as __var__
     if "__env__" not in kwargs and "saltenv" in kwargs:

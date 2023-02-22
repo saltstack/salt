@@ -8,7 +8,6 @@
 import collections
 import compileall
 import copy
-import imp
 import inspect
 import logging
 import os
@@ -35,15 +34,15 @@ log = logging.getLogger(__name__)
 
 def remove_bytecode(module_path):
     paths = [module_path + "c"]
-    if hasattr(imp, "get_tag"):
-        modname, ext = os.path.splitext(module_path.split(os.sep)[-1])
-        paths.append(
-            os.path.join(
-                os.path.dirname(module_path),
-                "__pycache__",
-                "{}.{}.pyc".format(modname, imp.get_tag()),
-            )
+    cache_tag = sys.implementation.cache_tag
+    modname, ext = os.path.splitext(module_path.split(os.sep)[-1])
+    paths.append(
+        os.path.join(
+            os.path.dirname(module_path),
+            "__pycache__",
+            "{}.{}.pyc".format(modname, cache_tag),
         )
+    )
     for path in paths:
         if os.path.exists(path):
             os.unlink(path)
