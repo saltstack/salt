@@ -1298,10 +1298,7 @@ def _get_vpc_by_name(name):
             fetch = "next" in items["links"]["pages"]
         except KeyError:
             fetch = False
-
-    ret[name] = None
-
-    return ret
+    return None
 
 
 def _list_nodes(full=False, for_output=False):
