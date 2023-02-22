@@ -4,6 +4,7 @@
 # pylxd>=2.2.5
 yamlordereddictloader
 pygit2>=1.2.0; python_version >= '3.7'
+pygit2>=1.11.1; python_version >= '3.10'
 yamllint
 mercurial
 hglib
