@@ -4,7 +4,7 @@
 
 
 import logging
-from inspect import ArgSpec
+from inspect import FullArgSpec
 
 import salt.states.module as module
 from tests.support.mixins import LoaderModuleMockMixin
@@ -117,11 +117,25 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.aspec = ArgSpec(
-            args=["hello", "world"], varargs=None, keywords=None, defaults=False
+        cls.aspec = FullArgSpec(
+            args=["hello", "world"],
+            varargs=None,
+            varkw=None,
+            defaults=False,
+            kwonlyargs=None,
+            kwonlydefaults=None,
+            annotations=None,
         )
 
-        cls.bspec = ArgSpec(args=[], varargs="names", keywords="kwargs", defaults=None)
+        cls.bspec = FullArgSpec(
+            args=[],
+            varargs="names",
+            varkw=None,
+            defaults=None,
+            kwonlyargs="kwargs",
+            kwonlydefaults=None,
+            annotations=None,
+        )
 
     @classmethod
     def tearDownClass(cls):
