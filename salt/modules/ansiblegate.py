@@ -410,6 +410,7 @@ def playbooks(
         },
         "cwd": rundir,
         "cmd": " ".join(command),
+        "reset_system_locale": False,
     }
     ret = __salt__["cmd.run_all"](**cmd_kwargs)
     log.debug("Ansible Playbook Return: %s", ret)
@@ -606,7 +607,9 @@ def _explore_path(path, playbook_extension, hosts_filename, syntax_check):
         check_command = ["ansible-playbook", "--syntax-check"]
         try:
             for pb in list(ret):
-                if __salt__["cmd.retcode"](check_command + [ret[pb]]):
+                if __salt__["cmd.retcode"](
+                    check_command + [ret[pb]], reset_system_locale=False
+                ):
                     del ret[pb]
         except Exception as exc:
             raise CommandExecutionError(
