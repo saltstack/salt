@@ -402,7 +402,7 @@ filelock==3.0.12
     # via virtualenv
 flaky==3.7.0
     # via -r requirements/pytest.txt
-genshi==0.7.5
+genshi==0.7.7
     # via -r requirements/static/ci/common.in
 geomet==0.1.2
     # via cassandra-driver
