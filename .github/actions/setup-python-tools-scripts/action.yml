@@ -2,6 +2,10 @@
 name: setup-python-tools-scripts
 description: Setup 'python-tools-scripts'
 
+outputs:
+  version:
+    value: ${{ steps.get-version.outputs.version }}
+
 
 env:
   PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
@@ -23,3 +27,10 @@ runs:
       shell: bash
       run: |
         python3 -m pip install -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+
+    - name: Get 'python-tools-scripts' Version
+      id: get-version
+      shell: bash
+      run: |
+        VERSION=$(tools --version)
+        echo "version=$VERSION" >> "${GITHUB_OUTPUT}"

@@ -15,7 +15,7 @@ inputs:
     type: string
     description: The onedir package name to create
     default: salt
-  cache-seed:
+  cache-prefix:
     required: true
     type: string
     description: Seed used to invalidate caches
@@ -45,7 +45,7 @@ runs:
       uses: actions/cache@v3
       with:
         path: artifacts/${{ inputs.package-name }}
-        key: ${{ inputs.cache-seed }}|relenv|${{ env.RELENV_VERSION }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt', '.github/actions/build-onedir-deps/action.yml') }}
+        key: ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt', '.github/actions/build-onedir-deps/action.yml') }}
 
     - name: Download Source Tarball
       uses: actions/download-artifact@v3

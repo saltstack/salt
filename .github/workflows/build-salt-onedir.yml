@@ -71,6 +71,7 @@ jobs:
 
       - name: Setup Relenv
         uses: ./.github/actions/setup-relenv
+        id: setup-relenv
         with:
           platform: linux
           arch: ${{ matrix.arch }}
@@ -83,9 +84,9 @@ jobs:
         with:
           platform: linux
           arch: ${{ matrix.arch }}
-          cache-seed: ${{ inputs.cache-seed }}
           salt-version: "${{ inputs.salt-version }}"
-          python-version: ${{ inputs.python-version-linux }}
+          python-version: "${{ inputs.python-version-linux }}"
+          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
 
 
   build-salt-windows:
@@ -107,6 +108,7 @@ jobs:
           python-version: "3.10"
 
       - name: Setup Relenv
+        id: setup-relenv
         uses: ./.github/actions/setup-relenv
         with:
           platform: windows
@@ -128,9 +130,9 @@ jobs:
         with:
           platform: windows
           arch: ${{ matrix.arch }}
-          cache-seed: ${{ inputs.cache-seed }}
           salt-version: "${{ inputs.salt-version }}"
-          python-version: ${{ inputs.python-version-windows }}
+          python-version: "${{ inputs.python-version-windows }}"
+          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
 
 
   build-salt-macos:
@@ -151,6 +153,7 @@ jobs:
           python-version: "3.10"
 
       - name: Setup Relenv
+        id: setup-relenv
         uses: ./.github/actions/setup-relenv
         with:
           platform: darwin
@@ -172,6 +175,6 @@ jobs:
         with:
           platform: darwin
           arch: ${{ matrix.arch }}
-          cache-seed: ${{ inputs.cache-seed }}
           salt-version: "${{ inputs.salt-version }}"
-          python-version: ${{ inputs.python-version-macos }}
+          python-version: "${{ inputs.python-version-macos }}"
+          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
