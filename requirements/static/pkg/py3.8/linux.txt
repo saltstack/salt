@@ -61,7 +61,7 @@ pycparser==2.17
     # via cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pyopenssl==19.1.0
+pyopenssl==23.0.0
     # via -r requirements/static/pkg/linux.in
 python-dateutil==2.8.1
     # via -r requirements/static/pkg/linux.in
@@ -83,7 +83,6 @@ six==1.16.0
     # via
     #   cheroot
     #   more-itertools
-    #   pyopenssl
     #   python-dateutil
 tempora==4.1.1
     # via portend

@@ -1,3 +1,4 @@
-Fix pre-commit by changing the pyzmq requirements:
+Additional required package upgrades
 
 * It's now `pyzmq>=20.0.0` on all platforms, and `<=22.0.3` just for windows.
+* Upgrade to `pyopenssl==23.0.0` due to the cryptography upgrade.
