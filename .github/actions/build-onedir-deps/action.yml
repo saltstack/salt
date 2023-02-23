@@ -69,9 +69,9 @@ runs:
       if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
       run: |
         if [ "${{ inputs.platform }}" != "windows" ]; then
-          ${{ steps.get-python-version.outputs.binary }} -m pip install -r requirements/static/pkg/py${{ steps.get-python-version.outputs.version }}/${{ inputs.platform }}.txt --no-binary=':all:'
+          ${{ steps.get-python-version.outputs.binary }} -m pip install -v -r requirements/static/pkg/py${{ steps.get-python-version.outputs.version }}/${{ inputs.platform }}.txt --no-binary=':all:'
         else
-          ${{ steps.get-python-version.outputs.binary }} -m pip install -r requirements/static/pkg/py${{ steps.get-python-version.outputs.version }}/${{ inputs.platform }}.txt
+          ${{ steps.get-python-version.outputs.binary }} -m pip install -v -r requirements/static/pkg/py${{ steps.get-python-version.outputs.version }}/${{ inputs.platform }}.txt
         fi
 
     - name: Cleanup Salt Onedir Directory
