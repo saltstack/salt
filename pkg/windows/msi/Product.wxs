@@ -465,10 +465,7 @@ IMCAC - Immediate Custom Action - It's immediate
               SecondFailureActionType="none"
               ThirdFailureActionType="none" />
           </ServiceInstall>
-          <ServiceControl Name="salt-minion" Remove="uninstall" Stop="both" Start="install" Wait="yes" Id="sc1">
-            <ServiceArgument />
-          </ServiceControl>
-          <CreateFolder />
+          <ServiceControl Name="salt-minion" Remove="uninstall" Stop="both" Start="install" Wait="yes" Id="sc1" />
           <util:EventSource Log="Application" Name="ssm" EventMessageFile="[#ssm.exe]" />
           <RegistryKey Root="HKLM" Key="System\CurrentControlSet\Services\salt-minion">
             <RegistryKey Key="Parameters">
