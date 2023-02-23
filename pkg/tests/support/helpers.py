@@ -860,76 +860,8 @@ class SaltPkgInstall:
                 ret = self.proc.run(uninst, "/S")
                 self._check_retcode(ret)
             elif pkg.endswith("msi"):
-                # These make the test suite not return the summary, so we'll
-                # need to remove manually
-                # ret = self.proc.run("msiexec.exe", "/qn", "/x", pkg)
-                # guid = "{5693F9A3-3083-426B-B17B-B860C00C9B84}"
-                # ret = self.proc.run("msiexec.exe", "/qn", "/x", guid)
-                # self._check_retcode(ret)
-
-                # Uninstall Minion Service
-                log.debug("Uninstalling minion service")
-                self.proc.run(str(self.ssm_bin), "stop", "salt-minion")
-                self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
-
-                # Remove install directory
-                log.debug("Removing install directory")
-                shutil.rmtree(self.install_dir, ignore_errors=True)
-
-                # Remove registry entries
-                # This only removes the Add/Remove programs entry from the
-                # registry. There are a lot of remnants of Salt still in the
-                # registry... thousands. This will be the case until we figure
-                # out why we can't uninstall the MSI using self.proc.run
-                # Additionally, we don't know the GUID assigned to the Salt
-                # installation, so we need to search all entries for Salt Minion
-                if HAS_WINREG:
-                    base_key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
-                    # Connect to the Uninstall registry location
-                    key = winreg.OpenKey(
-                        winreg.HKEY_LOCAL_MACHINE, base_key, 0, winreg.KEY_READ
-                    )
-                    for i in range(0, winreg.QueryInfoKey(key)[0]):
-                        guid = winreg.EnumKey(key, i)
-                        # Connect to each sub key
-                        sub_key = winreg.OpenKey(key, guid, 0, winreg.KEY_READ)
-                        try:
-                            # Search for DisplayName. Not every sub key has one
-                            display_name = winreg.QueryValueEx(sub_key, "DisplayName")[
-                                0
-                            ]
-                        except FileNotFoundError:
-                            continue
-                        if display_name.startswith("Salt Minion"):
-                            log.debug("Removing registry entry")
-                            winreg.DeleteKey(key, guid)
-                            break
-
-            # Remove install dir from the path
-            if HAS_WINREG:
-                # Get the current system path
-                env_key = (
-                    r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
-                )
-                path_key = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, env_key)
-                current_path = winreg.QueryValueEx(path_key, "path")[0]
-                path_key.Close()
-                # If the install path is in the path let's remove it
-                if str(self.install_dir) in current_path:
-                    path_key = winreg.OpenKeyEx(
-                        winreg.HKEY_LOCAL_MACHINE, env_key, 0, winreg.KEY_SET_VALUE
-                    )
-                    new_path = []
-                    path_list = current_path.split(";")
-                    for item in path_list:
-                        if item == str(self.install_dir):
-                            log.debug("Removing %s from the path", item)
-                            continue
-                        new_path.append(item)
-                    winreg.SetValueEx(
-                        path_key, "path", 1, winreg.REG_SZ, ";".join(new_path)
-                    )
-                    path_key.Close()
+                ret = self.proc.run("msiexec.exe", "/qn", "/x", pkg)
+                self._check_retcode(ret)
 
         elif platform.is_darwin():
             self._uninstall_compressed()

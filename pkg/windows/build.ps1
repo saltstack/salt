@@ -40,7 +40,7 @@ param(
     [ValidatePattern("^\d{1,2}.\d{1,2}.\d{1,2}$")]
     [ValidateSet(
         "3.11.2",
-        "3.10.9"
+        "3.10.10"
     )]
     [Alias("p")]
     # The version of Python to be built. Pythonnet only supports up to Python
@@ -48,7 +48,7 @@ param(
     # supported up to 3.8. So we're pinned to the latest version of Python 3.8.
     # We may have to drop support for pycurl.
     # Default is: 3.8.16
-    [String] $PythonVersion = "3.10.9",
+    [String] $PythonVersion = "3.10.10",
 
     [Parameter(Mandatory=$false)]
     [Alias("b")]
