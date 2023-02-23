@@ -106,6 +106,7 @@ jobs:
         with:
           platform: windows
           arch: ${{ matrix.arch }}
+          version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
           python-version: ${{ inputs.python-version-windows }}
 
@@ -145,6 +146,7 @@ jobs:
         with:
           platform: darwin
           arch: ${{ matrix.arch }}
+          version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
           python-version: ${{ inputs.python-version-macos }}
 
