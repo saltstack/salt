@@ -241,7 +241,7 @@ pymssql==2.2.1
     # via -r requirements/windows.txt
 pymysql==1.0.2
     # via -r requirements/windows.txt
-pyopenssl==20.0.1
+pyopenssl==23.0.0
     # via
     #   -r requirements/windows.txt
     #   etcd3-py
@@ -367,7 +367,6 @@ six==1.15.0
     #   jsonschema
     #   kubernetes
     #   mock
-    #   pyopenssl
     #   python-dateutil
     #   pyvmomi
     #   pywinrm
