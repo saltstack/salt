@@ -80,7 +80,7 @@ pycparser==2.21
     #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pyopenssl==19.0.0
+pyopenssl==23.0.0
     # via -r requirements/darwin.txt
 python-dateutil==2.8.0
     # via -r requirements/darwin.txt
@@ -102,7 +102,6 @@ setproctitle==1.1.10
 six==1.16.0
     # via
     #   cheroot
-    #   pyopenssl
     #   python-dateutil
 smmap==3.0.2
     # via gitdb
