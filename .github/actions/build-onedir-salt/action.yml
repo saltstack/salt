@@ -15,10 +15,14 @@ inputs:
     type: string
     description: The onedir package name to create
     default: salt
-  cache-seed:
+  cache-prefix:
     required: true
     type: string
     description: Seed used to invalidate caches
+  python-version:
+    required: true
+    type: string
+    description: The python version to build
   salt-version:
     type: string
     required: true
@@ -26,7 +30,7 @@ inputs:
 
 
 env:
-  COLUMNS: 160
+  COLUMNS: 190
   PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
   PIP_EXTRA_INDEX_URL: https://pypi.org/simple
 
@@ -41,7 +45,7 @@ runs:
       uses: actions/cache@v3
       with:
         path: artifacts/${{ inputs.package-name }}
-        key: ${{ inputs.cache-seed }}|relenv|${{ env.RELENV_VERSION }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt', '.github/actions/build-onedir-deps/action.yml') }}
+        key: ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt', '.github/actions/build-onedir-deps/action.yml') }}
 
     - name: Download Source Tarball
       uses: actions/download-artifact@v3

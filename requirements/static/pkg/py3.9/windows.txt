@@ -23,7 +23,7 @@ clr-loader==0.2.4
     # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==3.4.7
+cryptography==39.0.1
     # via
     #   -r requirements/windows.txt
     #   pyopenssl
@@ -62,7 +62,7 @@ lxml==4.9.1
     # via -r requirements/windows.txt
 mako==1.2.2
     # via -r requirements/windows.txt
-markupsafe==2.0.1
+markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
@@ -110,7 +110,7 @@ pywin32==305
     #   wmi
 pyyaml==5.4.1
     # via -r requirements/base.txt
-pyzmq==22.0.3 ; sys_platform == "win32"
+pyzmq==25.0.0 ; sys_platform == "win32"
     # via -r requirements/zeromq.txt
 requests==2.25.1
     # via

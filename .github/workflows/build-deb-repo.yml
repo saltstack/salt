@@ -22,7 +22,7 @@ on:
         required: true
 
 env:
-  COLUMNS: 160
+  COLUMNS: 190
 
 jobs:
   build-repo:
@@ -34,7 +34,6 @@ jobs:
       - repo-${{ inputs.environment }}
     strategy:
       fail-fast: false
-      max-parallel: 2
       matrix:
         include:
           - distro: debian
@@ -49,9 +48,6 @@ jobs:
           - distro: debian
             version: "11"
             arch: aarch64
-          - distro: ubuntu
-            version: "18.04"
-            arch: x86_64
           - distro: ubuntu
             version: "20.04"
             arch: x86_64

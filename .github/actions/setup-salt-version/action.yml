@@ -22,7 +22,7 @@ outputs:
     description: The Salt version written to `salt/_version.txt`
 
 env:
-  COLUMNS: 160
+  COLUMNS: 190
 
 runs:
   using: composite
