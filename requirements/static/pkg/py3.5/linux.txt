@@ -62,7 +62,7 @@ pycparser==2.17
     # via cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pyopenssl==19.1.0
+pyopenssl==20.0.0
     # via -r requirements/static/pkg/linux.in
 python-dateutil==2.8.1
     # via -r requirements/static/pkg/linux.in

@@ -709,7 +709,7 @@ pymysql==1.0.2 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
 pynacl==1.4.0
     # via paramiko
-pyopenssl==19.1.0
+pyopenssl==23.0.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
@@ -835,7 +835,6 @@ six==1.16.0
     #   ncclient
     #   paramiko
     #   pynacl
-    #   pyopenssl
     #   python-consul
     #   python-dateutil
     #   pyvmomi

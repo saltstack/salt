@@ -699,7 +699,7 @@ pyjwt==2.4.0
     # via adal
 pynacl==1.4.0
     # via paramiko
-pyopenssl==20.0.1
+pyopenssl==23.0.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
@@ -853,7 +853,6 @@ six==1.16.0
     #   paramiko
     #   profitbricks
     #   pynacl
-    #   pyopenssl
     #   pypsexec
     #   python-dateutil
     #   pyvmomi
