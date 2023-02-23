@@ -5,6 +5,7 @@
 <%- set python_version_macos = "3.10.10" %>
 <%- set python_version_windows = "3.10.10" %>
 <%- set relenv_version = "0.7.0" %>
+<%- set prepare_actual_release = prepare_actual_release | default(False) %>
 ---
 name: <{ workflow_name }>
 
@@ -164,6 +165,14 @@ jobs:
         with:
           salt-version: "<{ prepare_workflow_salt_version_input }>"
           validate-version: true
+
+      <%- if prepare_actual_release %>
+
+      - name: Check Existing Releases
+        run: |
+          tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+
+      <%- endif %>
 
       - name: Write Changed Files To A Local File
         run:

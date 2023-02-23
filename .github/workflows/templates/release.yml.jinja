@@ -100,6 +100,10 @@ permissions:
           salt-version: "<{ prepare_workflow_salt_version_input }>"
           validate-version: true
 
+      - name: Check Existing Releases
+        run: |
+          tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+
   <%- endblock prepare_workflow_job %>
   <%- endif %>
 

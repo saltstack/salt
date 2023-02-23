@@ -1260,6 +1260,57 @@ def release(
     ctx.exit(0)
 
 
+@repo.command(
+    name="confirm-unreleased",
+    arguments={
+        "salt_version": {
+            "help": "The salt version to check",
+        },
+        "repository": {
+            "help": (
+                "The full repository name, ie, 'saltstack/salt' on GitHub "
+                "to run the checks against."
+            )
+        },
+    },
+)
+def confirm_unreleased(
+    ctx: Context, salt_version: str, repository: str = "saltstack/salt"
+):
+    """
+    Confirm that the passed version is not yet tagged and/or released.
+    """
+    with ctx.web as web:
+        web.headers.update({"Accept": "application/vnd.github+json"})
+        ret = web.get(f"https://api.github.com/repos/{repository}/tags")
+        if ret.status_code != 200:
+            ctx.error(
+                f"Failed to get the tags for repository {repository!r}: {ret.reason}"
+            )
+            ctx.exit(1)
+        for tag in ret.json():
+            if tag["name"] in (salt_version, f"v{salt_version}"):
+                ctx.error(f"There's already a '{tag['name']}' tag.")
+                ctx.exit(1)
+        # Maybe there's a release but no tag?!
+        ret = web.get(f"https://api.github.com/repos/{repository}/releases")
+        if ret.status_code != 200:
+            ctx.error(
+                f"Failed to get the tags for repository {repository!r}: {ret.reason}"
+            )
+            ctx.exit(1)
+        for release in ret.json():
+            if release["name"] in (salt_version, f"v{salt_version}"):
+                ctx.error(f"There's already a '{release['name']}' release.")
+                ctx.exit(1)
+            if release["tag_name"] in (salt_version, f"v{salt_version}"):
+                ctx.error(f"There's already a '{release['tag_name']}' release.")
+                ctx.exit(1)
+
+    ctx.info(f"Could not find a release for Salt Version '{salt_version}'")
+    ctx.exit(0)
+
+
 def _get_repo_detailed_file_list(
     bucket_name: str,
     bucket_folder: str = "",
