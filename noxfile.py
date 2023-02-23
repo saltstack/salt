@@ -323,8 +323,26 @@ def _install_requirements(
     requirements_type="ci",
     onedir=False,
 ):
+    env = {
+        "RELENV_DATA": str(REPO_ROOT / ".relenv"),
+    }
     if onedir and IS_LINUX:
-        session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
+        import platform
+
+        arch = platform.machine()
+        if arch != "x86_64":
+            arch = "aarch64"
+        session_run_always(
+            session, "python3", "-m", "relenv", "toolchain", "fetch", env=env
+        )
+        env["CC"] = str(
+            REPO_ROOT
+            / ".relenv"
+            / "toolchain"
+            / f"{arch}-linux-gnu"
+            / "bin"
+            / f"{arch}-linux-gnu-gcc"
+        )
 
     if not _upgrade_pip_setuptools_and_wheel(session, onedir=onedir):
         return False
@@ -334,12 +352,12 @@ def _install_requirements(
         session, transport, requirements_type=requirements_type
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    session.install(*install_command, silent=PIP_INSTALL_SILENT, env=env)
 
     if extra_requirements:
         install_command = ["--progress-bar=off"]
         install_command += list(extra_requirements)
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+        session.install(*install_command, silent=PIP_INSTALL_SILENT, env=env)
 
     if EXTRA_REQUIREMENTS_INSTALL:
         session.log(
@@ -351,7 +369,7 @@ def _install_requirements(
         # we're already using, we want to maintain the locked version
         install_command = ["--progress-bar=off", "--constraint", requirements_file]
         install_command += EXTRA_REQUIREMENTS_INSTALL.split()
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+        session.install(*install_command, silent=PIP_INSTALL_SILENT, env=env)
 
     return True
 

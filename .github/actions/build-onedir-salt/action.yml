@@ -52,6 +52,12 @@ runs:
       with:
         name: salt-${{ inputs.salt-version }}.tar.gz
 
+    - name: Set CC Env Var
+      if: steps.onedir-pkg-cache.outputs.cache-hit != 'true' && inputs.platform == 'linux'
+      shell: bash
+      run: |
+        echo "CC=${RELENV_DATA}/toolchain/${{ inputs.arch }}-linux-gnu/bin/${{ inputs.arch }}-linux-gnu-gcc" >> "${GITHUB_ENV}"
+
     - name: Install Salt Into Onedir
       if: ${{ inputs.platform != 'windows' }}
       env:
