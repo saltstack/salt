@@ -473,7 +473,7 @@ namespace MinionConfigurationExtension {
                         Int32 pid = Int32.Parse(ProcessID);
                         String ExecutablePath = wmi_obj["ExecutablePath"].ToString();
                         String CommandLine = wmi_obj["CommandLine"].ToString();
-                        if (CommandLine.ToLower().Contains("salt") || ExecutablePath.ToLower().Contains("salt")) {
+                        if (CommandLine.ToLower().Contains("salt-minion") || ExecutablePath.ToLower().Contains("salt\\scripts\\python.exe")) {
                             session.Log("...kill_python_exe " + ExecutablePath + " " + CommandLine);
                             Process proc11 = Process.GetProcessById(pid);
                             proc11.Kill();
