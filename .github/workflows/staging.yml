@@ -151,6 +151,10 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
           validate-version: true
 
+      - name: Check Existing Releases
+        run: |
+          tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+
       - name: Write Changed Files To A Local File
         run:
           echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
