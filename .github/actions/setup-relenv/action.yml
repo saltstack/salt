@@ -53,10 +53,14 @@ runs:
     - name: Fetch Toolchain
       if: ${{ inputs.platform == 'linux' }}
       shell: bash
+      env:
+        RELENV_FETCH_VERSION: "${{ inputs.version }}"
       run: |
         python3 -m relenv toolchain fetch --arch=${{ inputs.arch }}
 
     - name: Fetch Native Python Build
       shell: bash
+      env:
+        RELENV_FETCH_VERSION: "${{ inputs.version }}"
       run: |
         python3 -m relenv fetch --arch=${{ inputs.arch }} --python=${{ inputs.python-version }}
