@@ -1818,3 +1818,23 @@ def test_upgrade_pkgs(session, classic):
 
     cmd_args = ["pkg/tests/", "--no-install"] + session.posargs
     _pkg_test(session, cmd_args, test_type)
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="test-download-pkgs")
+def test_download_pkgs(session):
+    """
+    pytest pkg download tests session
+    """
+    test_type = "pkg_download"
+    # Install requirements
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "pkgtests.txt"
+        )
+
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    # cmd_args = ["pkg/tests/download/test_pkg_download.py"] + session.posargs
+    cmd_args = [] + session.posargs
+    _pytest(session, False, cmd_args)

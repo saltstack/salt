@@ -7,6 +7,7 @@ import pathlib
 import subprocess
 
 import attr
+import packaging
 import pytest
 import requests
 from pytestskipmarkers.utils import platform
@@ -182,16 +183,17 @@ def pkg_container(
 
 @pytest.fixture(scope="module")
 def root_url():
+    repo_type = os.environ.get("SALT_REPO_TYPE", "staging")
     root_url = os.environ.get("SALT_REPO_ROOT_URL", "repo.saltproject.io")
-    if "staging" in root_url:
-        staging_repo_user = os.environ.get("STAGING_REPO_USER")
-        staging_repo_pass = os.environ.get("STAGING_REPO_PASS")
-        if not staging_repo_user or not staging_repo_pass:
+    if "staging" in root_url or repo_type == "staging":
+        salt_repo_user = os.environ.get("SALT_REPO_USER")
+        salt_repo_pass = os.environ.get("SALT_REPO_PASS")
+        if not salt_repo_user or not salt_repo_pass:
             pytest.skip(
-                "Values for Staging User or Staging Password are unavailable. Skipping."
+                "Values for Repo User or Repo Password are unavailable. Skipping."
             )
         root_url = "https://{}:{}@{}/salt/py3".format(
-            staging_repo_user, staging_repo_pass, root_url
+            salt_repo_user, salt_repo_pass, root_url
         )
     else:
         root_url = "https://{}/salt/py3".format(root_url)
@@ -199,8 +201,11 @@ def root_url():
 
 
 @pytest.fixture(scope="module")
-def minor_url():
-    minor_url = "minor/"
+def minor_url(salt_release):
+    if "." in salt_release:
+        minor_url = "minor/"
+    else:
+        minor_url = ""
     yield minor_url
 
 
@@ -215,10 +220,15 @@ def salt_release():
 
 
 def setup_amazon(os_version, os_codename, root_url, minor_url, salt_release):
+    if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
+        GPG_FILE = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
+    else:
+        GPG_FILE = "salt-archive-keyring.gpg"
+
     cmds = [
         "pwd",
-        "sudo rpm --import {}/amazon/2/x86_64/{}{}/SALTSTACK-GPG-KEY.pub".format(
-            root_url, minor_url, salt_release
+        "sudo rpm --import {}/amazon/2/x86_64/{}{}/{}".format(
+            root_url, minor_url, salt_release, GPG_FILE
         ),
         "curl -fsSL -o /etc/yum.repos.d/salt-amzn.repo {}/amazon/2/x86_64/{}{}.repo".format(
             root_url, minor_url, salt_release
@@ -244,17 +254,22 @@ def setup_amazon(os_version, os_codename, root_url, minor_url, salt_release):
 
 
 def setup_redhat(os_version, os_codename, root_url, minor_url, salt_release):
+    if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
+        GPG_FILE = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
+    else:
+        GPG_FILE = "SALTSTACK-GPG-KEY2.pub"
+
     cmds = []
     if os_version >= 9:
         cmds.append(
-            "sudo rpm --import {}/redhat/{}/x86_64/{}{}/SALTSTACK-GPG-KEY2.pub".format(
-                root_url, os_version, minor_url, salt_release
+            "sudo rpm --import {}/redhat/{}/x86_64/{}{}/{}".format(
+                root_url, os_version, minor_url, salt_release, GPG_FILE
             )
         )
     else:
         cmds.append(
-            "sudo rpm --import {}/redhat/{}/x86_64/{}{}/SALTSTACK-GPG-KEY.pub".format(
-                root_url, os_version, minor_url, salt_release
+            "sudo rpm --import {}/redhat/{}/x86_64/{}{}/{}".format(
+                root_url, os_version, minor_url, salt_release, GPG_FILE
             )
         )
 
@@ -276,8 +291,8 @@ def setup_redhat(os_version, os_codename, root_url, minor_url, salt_release):
         [
             "sh",
             "-c",
-            "echo gpgkey={}/redhat/{}/x86_64/{}{}/SALTSTACK-GPG-KEY.pub >> /etc/yum.repos.d/salt.repo".format(
-                root_url, os_version, minor_url, salt_release
+            "echo gpgkey={}/redhat/{}/x86_64/{}{}/{} >> /etc/yum.repos.d/salt.repo".format(
+                root_url, os_version, minor_url, salt_release, GPG_FILE
             ),
         ]
     )
@@ -289,18 +304,23 @@ def setup_redhat(os_version, os_codename, root_url, minor_url, salt_release):
 
 
 def setup_debian(os_version, os_codename, root_url, minor_url, salt_release):
+    if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
+        GPG_FILE = "SALT-PROJECT-GPG-PUBKEY-2023.gpg"
+    else:
+        GPG_FILE = "salt-archive-keyring.gpg"
+
     cmds = [
         "apt-get update -y",
         "apt-get install sudo -y",
         "apt-get install curl -y",
-        "sudo curl -fsSL -o /usr/share/keyrings/salt-archive-keyring.gpg {}/debian/{}/amd64/{}{}/salt-archive-keyring.gpg".format(
-            root_url, os_version, minor_url, salt_release
+        "sudo curl -fsSL -o /usr/share/keyrings/{} {}/debian/{}/amd64/{}{}/{}".format(
+            GPG_FILE, root_url, os_version, minor_url, salt_release, GPG_FILE
         ),
         [
             "sh",
             "-c",
-            'echo "deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg arch=amd64] {}/debian/{}/amd64/{}{} {} main" | sudo tee /etc/apt/sources.list.d/salt.list'.format(
-                root_url, os_version, minor_url, salt_release, os_codename
+            'echo "deb [signed-by=/usr/share/keyrings/{} arch=amd64] {}/debian/{}/amd64/{}{} {} main" | sudo tee /etc/apt/sources.list.d/salt.list'.format(
+                GPG_FILE, root_url, os_version, minor_url, salt_release, os_codename
             ),
         ],
         "sudo apt-get update",
@@ -310,18 +330,23 @@ def setup_debian(os_version, os_codename, root_url, minor_url, salt_release):
 
 
 def setup_ubuntu(os_version, os_codename, root_url, minor_url, salt_release):
+    if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
+        GPG_FILE = "SALT-PROJECT-GPG-PUBKEY-2023.gpg"
+    else:
+        GPG_FILE = "salt-archive-keyring.gpg"
+
     cmds = [
         "apt-get update -y",
         "apt-get install sudo -y",
         "apt-get install curl -y",
-        "sudo curl -fsSL -o /usr/share/keyrings/salt-archive-keyring.gpg {}/ubuntu/{}/amd64/{}{}/salt-archive-keyring.gpg".format(
-            root_url, os_version, minor_url, salt_release
+        "sudo curl -fsSL -o /usr/share/keyrings/{} {}/ubuntu/{}/amd64/{}{}/{}".format(
+            GPG_FILE, root_url, os_version, minor_url, salt_release, GPG_FILE
         ),
         [
             "sh",
             "-c",
-            'echo "deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg arch=amd64] {}/ubuntu/{}/amd64/{}{} {} main" | sudo tee /etc/apt/sources.list.d/salt.list'.format(
-                root_url, os_version, minor_url, salt_release, os_codename
+            'echo "deb [signed-by=/usr/share/keyrings/{} arch=amd64] {}/ubuntu/{}/amd64/{}{} {} main" | sudo tee /etc/apt/sources.list.d/salt.list'.format(
+                GPG_FILE, root_url, os_version, minor_url, salt_release, os_codename
             ),
         ],
         "sudo apt-get update",
