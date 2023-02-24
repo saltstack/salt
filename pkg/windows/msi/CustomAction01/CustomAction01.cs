@@ -464,20 +464,21 @@ namespace MinionConfigurationExtension {
             // because a running process can prevent removal of files
             // Get full path and command line from running process
             // see https://github.com/saltstack/salt/issues/42862
-            session.Log("...BEGIN kill_python_exe");
-            using (var wmi_searcher = new ManagementObjectSearcher
-                ("SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE Name = 'python.exe'")) {
+            session.Log("...BEGIN kill_python_exe (CustomAction01.cs)");
+            using (
+                var wmi_searcher = new ManagementObjectSearcher(
+                    "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE CommandLine LIKE '%salt-minion%'"
+                )
+            ) {
                 foreach (ManagementObject wmi_obj in wmi_searcher.Get()) {
                     try {
                         String ProcessID = wmi_obj["ProcessID"].ToString();
                         Int32 pid = Int32.Parse(ProcessID);
                         String ExecutablePath = wmi_obj["ExecutablePath"].ToString();
                         String CommandLine = wmi_obj["CommandLine"].ToString();
-                        if (CommandLine.ToLower().Contains("salt-minion") || ExecutablePath.ToLower().Contains("salt\\scripts\\python.exe")) {
-                            session.Log("...kill_python_exe " + ExecutablePath + " " + CommandLine);
-                            Process proc11 = Process.GetProcessById(pid);
-                            proc11.Kill();
-                        }
+                        session.Log("...kill_python_exe " + ExecutablePath + " " + CommandLine);
+                        Process proc11 = Process.GetProcessById(pid);
+                        proc11.Kill();
                     } catch (Exception) {
                         // ignore wmiresults without these properties
                     }
