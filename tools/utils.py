@@ -114,3 +114,6 @@ class Version(packaging.version.Version):
         if not isinstance(other, self.__class__):
             other = self.__class__(other)
         return super().__ne__(other)
+
+    def __hash__(self):
+        return hash(str(self))
