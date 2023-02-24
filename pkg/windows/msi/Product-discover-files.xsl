@@ -14,7 +14,7 @@ xmlns:msxsl="urn:schemas-microsoft-com:xslt" exclude-result-prefixes="msxsl">
 </xsl:template>
 
 <!-- BEGIN remove component for python.exe from dist-amd64.wxs because it must be in service.wxs -->
-<!-- 
+<!--
 <xsl:key name="excludepython" match="wix:Component[contains(wix:File/@Source, 'python.exe')]" use="@Id"/>
 <xsl:template match="wix:Component[key('excludepython', @Id)]"/>
 <xsl:template match="wix:ComponentRef[key('excludepython', @Id)]"/>

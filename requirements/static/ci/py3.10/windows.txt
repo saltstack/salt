@@ -125,6 +125,8 @@ idna==2.8
     #   yarl
 immutables==0.15
     # via contextvars
+importlib-metadata==6.0.0
+    # via -r requirements/windows.txt
 iniconfig==1.0.1
     # via pytest
 ioloop==0.1a0
@@ -254,7 +256,7 @@ pytest-helpers-namespace==2021.12.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.6
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc22 ; sys_platform == "win32"
+pytest-salt-factories==1.0.0rc21 ; sys_platform == "win32"
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.7.0
     # via pytest-salt-factories
@@ -316,7 +318,7 @@ pyyaml==5.4.1
     #   clustershell
     #   kubernetes
     #   yamllint
-pyzmq==23.2.0 ; python_version >= "3.9"
+pyzmq==25.0.0 ; sys_platform == "win32"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -403,7 +405,7 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
-werkzeug==2.2.2
+werkzeug==2.2.3
     # via
     #   moto
     #   pytest-httpserver
@@ -421,6 +423,8 @@ yarl==1.8.1
     # via aiohttp
 zc.lockfile==2.0
     # via cherrypy
+zipp==3.12.0
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

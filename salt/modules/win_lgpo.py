@@ -1826,6 +1826,18 @@ class _policy_info:
                         },
                         "Transform": self.enabled_one_disabled_zero_no_not_defined_transform,
                     },
+                    "RelaxMinimumPasswordLengthLimits": {
+                        "Policy": "Relax minimum password length limits",
+                        "lgpo_section": self.password_policy_gpedit_path,
+                        "Settings": self.enabled_one_disabled_zero.keys(),
+                        "Registry": {
+                            "Hive": "HKEY_LOCAL_MACHINE",
+                            "Path": "SYSTEM\\CurrentControlSet\\Control\\SAM",
+                            "Value": "RelaxMinimumPasswordLengthLimits",
+                            "Type": "REG_DWORD",
+                        },
+                        "Transform": self.enabled_one_disabled_zero_transform,
+                    },
                     "AdminAccountStatus": {
                         "Policy": "Accounts: Administrator account status",
                         "Settings": self.enabled_one_disabled_zero_no_not_defined.keys(),

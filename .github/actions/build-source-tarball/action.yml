@@ -2,6 +2,10 @@
 name: build-source-tarball
 description: Build Source Tarball
 inputs:
+  salt-version:
+    type: string
+    required: true
+    description: The Salt version to set prior to building the tarball.
   nox-version:
     required: false
     type: string
@@ -10,7 +14,7 @@ inputs:
 
 
 env:
-  COLUMNS: 160
+  COLUMNS: 190
   PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
   PIP_EXTRA_INDEX_URL: https://pypi.org/simple
 
@@ -20,36 +24,37 @@ runs:
 
   steps:
 
-    - name: Install Nox
-      shell: bash
-      run: |
-        nox --version || python3 -m pip install nox==${{ inputs.nox-version }}
-
-    - name: Download Release Changes
+    - name: Download Release Patch
       uses: actions/download-artifact@v3
       with:
-        name: salt-${{ env.SALT_VERSION }}.diff
+        name: salt-${{ inputs.salt-version }}.patch
 
-    - name: Apply release changes
+    - name: Configure Git
       shell: bash
       run: |
-        git apply salt-${{ env.SALT_VERSION }}.diff
-        rm salt-${{ env.SALT_VERSION }}.diff
+        git config --global user.name "Salt Project Packaging"
+        git config --global user.email saltproject-packaging@vmware.com
+
+    - name: Apply Release Patch
+      shell: bash
+      run: |
+        git am --committer-date-is-author-date salt-${{ inputs.salt-version }}.patch
+        rm salt-${{ inputs.salt-version }}.patch
 
     - name: Create Source Tarball
       shell: bash
       run: |
-        nox -e build
+        tools pkg source-tarball
 
     - name: Create Hash Files
       shell: bash
       run: |
-        tools pkg generate-hashes dist/salt-${{ env.SALT_VERSION }}.tar.gz
+        tools pkg generate-hashes dist/salt-${{ inputs.salt-version }}.tar.gz
 
     - name: Upload Source Tarball as an Artifact
       uses: actions/upload-artifact@v3
       with:
-        name: salt-${{ env.SALT_VERSION }}.tar.gz
+        name: salt-${{ inputs.salt-version }}.tar.gz
         path: dist/salt-*.tar.gz*
         retention-days: 7
         if-no-files-found: error

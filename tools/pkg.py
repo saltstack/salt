@@ -19,9 +19,9 @@ import tempfile
 import yaml
 from ptscripts import Context, command_group
 
-log = logging.getLogger(__name__)
+import tools.utils
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+log = logging.getLogger(__name__)
 
 # Define the command group
 pkg = command_group(name="pkg", help="Packaging Related Commands", description=__doc__)
@@ -98,20 +98,28 @@ class Recompress:
         "overwrite": {
             "help": "Overwrite 'salt/_version.txt' if it already exists",
         },
+        "validate_version": {
+            "help": "Validate, and normalize, the passed Salt Version",
+        },
     },
 )
-def set_salt_version(ctx: Context, salt_version: str, overwrite: bool = False):
+def set_salt_version(
+    ctx: Context,
+    salt_version: str,
+    overwrite: bool = False,
+    validate_version: bool = False,
+):
     """
     Write the Salt version to 'salt/_version.txt'
     """
-    salt_version_file = REPO_ROOT / "salt" / "_version.txt"
+    salt_version_file = tools.utils.REPO_ROOT / "salt" / "_version.txt"
     if salt_version_file.exists():
         if not overwrite:
             ctx.error("The 'salt/_version.txt' file already exists")
             ctx.exit(1)
         salt_version_file.unlink()
     if salt_version is None:
-        if not REPO_ROOT.joinpath(".git").exists():
+        if not tools.utils.REPO_ROOT.joinpath(".git").exists():
             ctx.error(
                 "Apparently not running from a Salt repository checkout. "
                 "Unable to discover the Salt version."
@@ -121,15 +129,38 @@ def set_salt_version(ctx: Context, salt_version: str, overwrite: bool = False):
         ret = ctx.run(shutil.which("python3"), "salt/version.py", capture=True)
         salt_version = ret.stdout.strip().decode()
         ctx.info(f"Discovered Salt version: {salt_version!r}")
+    elif validate_version:
+        ctx.info(f"Validating and normalizing the salt version {salt_version!r}...")
+        with ctx.virtualenv(
+            name="set-salt-version",
+            requirements_files=[tools.utils.REPO_ROOT / "requirements" / "base.txt"],
+        ) as venv:
+            code = f"""
+            import sys
+            import salt.version
+            parsed_version = salt.version.SaltStackVersion.parse("{salt_version}")
+            if parsed_version.name is None:
+                # When we run out of names, or we stop supporting version names
+                # we'll need to remove this version check.
+                print("'{{}}' is not a valid Salt Version.".format(parsed_version), file=sys.stderr, flush=True)
+                sys.exit(1)
+            sys.stdout.write(str(parsed_version))
+            sys.stdout.flush()
+            """
+            ret = venv.run_code(code, capture=True, check=False)
+            if ret.returncode:
+                ctx.error(ret.stderr.decode())
+                ctx.exit(ctx.returncode)
+            salt_version = ret.stdout.strip().decode()
 
-    if not REPO_ROOT.joinpath("salt").is_dir():
+    if not tools.utils.REPO_ROOT.joinpath("salt").is_dir():
         ctx.error(
             "The path 'salt/' is not a directory. Unable to write 'salt/_version.txt'"
         )
         ctx.exit(1)
 
     try:
-        REPO_ROOT.joinpath("salt/_version.txt").write_text(salt_version)
+        tools.utils.REPO_ROOT.joinpath("salt/_version.txt").write_text(salt_version)
     except Exception as exc:
         ctx.error(f"Unable to write 'salt/_version.txt': {exc}")
         ctx.exit(1)
@@ -180,7 +211,9 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
 
     When running on Windows and macOS, some additional cleanup is also done.
     """
-    with open(str(REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml")) as rfh:
+    with open(
+        str(tools.utils.REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml")
+    ) as rfh:
         patterns = yaml.safe_load(rfh.read())
 
     if pkg:
@@ -284,6 +317,11 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
 
 @pkg.command(
     name="source-tarball",
+    venv_config={
+        "requirements_files": [
+            tools.utils.REPO_ROOT / "requirements" / "build.txt",
+        ]
+    },
 )
 def source_tarball(ctx: Context):
     shutil.rmtree("dist/", ignore_errors=True)
@@ -295,26 +333,31 @@ def source_tarball(ctx: Context):
         "HEAD",
         capture=True,
     ).stdout.strip()
-    env = {**os.environ, **{"SOURCE_DATE_EPOCH": str(timestamp)}}
+    env = {
+        **os.environ,
+        **{
+            "SOURCE_DATE_EPOCH": str(timestamp),
+        },
+    }
     ctx.run(
         "python3",
         "-m",
         "build",
         "--sdist",
-        str(REPO_ROOT),
+        str(tools.utils.REPO_ROOT),
         env=env,
         check=True,
     )
     # Recreate sdist to be reproducible
     recompress = Recompress(timestamp)
-    for targz in REPO_ROOT.joinpath("dist").glob("*.tar.gz"):
-        ctx.info("Re-compressing %s...", targz.relative_to(REPO_ROOT))
+    for targz in tools.utils.REPO_ROOT.joinpath("dist").glob("*.tar.gz"):
+        ctx.info(f"Re-compressing {targz.relative_to(tools.utils.REPO_ROOT)} ...")
         recompress.recompress(targz)
     sha256sum = shutil.which("sha256sum")
     if sha256sum:
         packages = [
-            str(pkg.relative_to(REPO_ROOT))
-            for pkg in REPO_ROOT.joinpath("dist").iterdir()
+            str(pkg.relative_to(tools.utils.REPO_ROOT))
+            for pkg in tools.utils.REPO_ROOT.joinpath("dist").iterdir()
         ]
         ctx.run("sha256sum", *packages)
     ctx.run("python3", "-m", "twine", "check", "dist/*", check=True)

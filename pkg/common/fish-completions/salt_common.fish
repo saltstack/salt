@@ -436,4 +436,3 @@ function __fish_salt_prefix_with_arg_name
 		tee
 	end
 end
-

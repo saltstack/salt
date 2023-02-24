@@ -10,7 +10,6 @@ ECHO_STR = "The FitnessGram Pacer Test is a multistage aerobic capacity test"
 
 pytestmark = [
     pytest.mark.slow_test,
-    pytest.mark.windows_whitelisted,
 ]
 
 

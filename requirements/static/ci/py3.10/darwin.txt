@@ -446,6 +446,8 @@ idna==2.8
     #   yarl
 immutables==0.15
     # via contextvars
+importlib-metadata==6.0.0
+    # via -r requirements/darwin.txt
 iniconfig==1.0.1
     # via pytest
 ipaddress==1.0.22
@@ -496,12 +498,13 @@ mako==1.2.2
     # via
     #   -r requirements/darwin.txt
     #   -r requirements/static/ci/common.in
-markupsafe==2.0.1
+markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
     #   mako
     #   moto
+    #   werkzeug
 mercurial==6.0.1
     # via -r requirements/static/ci/darwin.in
 mock==3.0.5
@@ -618,7 +621,7 @@ ncclient==0.6.9
     # via junos-eznc
 netaddr==0.7.19
     # via junos-eznc
-oauthlib==3.2.1
+oauthlib==3.2.2
     # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
@@ -750,7 +753,7 @@ pyyaml==5.4.1
     #   kubernetes
     #   yamllint
     #   yamlordereddictloader
-pyzmq==23.2.0 ; python_version >= "3.9"
+pyzmq==23.2.0
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -859,7 +862,7 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
-werkzeug==2.0.3
+werkzeug==2.2.3
     # via
     #   moto
     #   pytest-httpserver
@@ -875,6 +878,8 @@ yarl==1.7.2
     # via aiohttp
 zc.lockfile==2.0
     # via cherrypy
+zipp==3.12.0
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
