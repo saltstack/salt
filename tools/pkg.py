@@ -175,17 +175,19 @@ def set_salt_version(
         version_instance = tools.utils.Version(salt_version)
         with open(tools.utils.REPO_ROOT / "salt" / "version.py", "r+") as rwfh:
             contents = rwfh.read()
-            contents = contents.replace(
-                f"info=({version_instance.major}, {version_instance.minor}))",
-                f"info=({version_instance.major}, {version_instance.minor}),  released=True)",
-            )
-            rwfh.seek(0)
-            rwfh.write(contents)
-            rwfh.truncate()
+            match = f"info=({version_instance.major}, {version_instance.minor}))"
+            if match in contents:
+                contents = contents.replace(
+                    match,
+                    f"info=({version_instance.major}, {version_instance.minor}),  released=True)",
+                )
+                rwfh.seek(0)
+                rwfh.write(contents)
+                rwfh.truncate()
 
-        ctx.info(
-            f"Successfuly marked {salt_version!r} as released in 'salt/version.py'"
-        )
+                ctx.info(
+                    f"Successfuly marked {salt_version!r} as released in 'salt/version.py'"
+                )
 
     gh_env_file = os.environ.get("GITHUB_ENV", None)
     if gh_env_file is not None:
