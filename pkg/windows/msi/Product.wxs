@@ -29,6 +29,9 @@ IMCAC - Immediate Custom Action - It's immediate
       InstallPrivileges = "elevated"
     />
 
+    <!-- Prevent downgrade -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
     <!-- Do not create cab files -->
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
 
@@ -60,7 +63,7 @@ IMCAC - Immediate Custom Action - It's immediate
 
     <!-- Properties default values. For Properties unset by default see README.md -->
     <Property Id="CONFIG_TYPE"              Value="Default" />
-    <Property Id="START_MINION"             Value="1" />
+    <!-- <Property Id="START_MINION"             Value="1" /> -->
     <Property Id="ROOTDRIVE"                Value="C:\" />  <!-- Prevent msi to choose the drive with most free space -->
     <Property Id="ARPPRODUCTICON"           Value="icon.ico" />
     <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
@@ -68,9 +71,17 @@ IMCAC - Immediate Custom Action - It's immediate
     <Property Id="WIXUI_INSTALLDIR"         Value="INSTALLDIR" />
 
     <!-- Allow command line alias for Property  -->
-    <SetProperty Id="INSTALLDIR"  Value="[INSTALLFOLDER]"   Before="LaunchConditions">INSTALLFOLDER</SetProperty>
+    <SetProperty Id="INSTALLDIR"    Value="[INSTALLFOLDER]" Before="LaunchConditions">INSTALLFOLDER</SetProperty>
+
+    <!--
+    This sets the checkbox in the UI:
+    - If START_MINION is not passed, default to 1.
+    - If START_MINION is passed a value greater than 0, set to 1
+    -->
+    <SetProperty Id="START_MINION"  Value="1" Before="LaunchConditions">(NOT START_MINION) or (START_MINION != "0")</SetProperty>
+
     <!-- MINION_CONFIG implies REMOVE_CONFIG  -->
-    <SetProperty Id="REMOVE_CONFIG" Value="1"               Before="LaunchConditions">MINION_CONFIG</SetProperty>
+    <SetProperty Id="REMOVE_CONFIG" Value="1" Before="LaunchConditions">MINION_CONFIG</SetProperty>
 
     <!-- Search for old config minion file -->
     <Property Id="OLD_CONF_EXISTS">
@@ -141,6 +152,7 @@ IMCAC - Immediate Custom Action - It's immediate
       Set objShell = CreateObject("WScript.Shell")
       objShell.Run "net stop salt-minion", 0, true
     </CustomAction>
+
     <!-- This is the import statement for the Custom Actions:
             IMCAC, DECAC, etc...
     -->
@@ -181,6 +193,13 @@ IMCAC - Immediate Custom Action - It's immediate
       -->
       <Custom Action="stopSalt"                 Before="InstallValidate"          >1</Custom>
 
+      <!--
+      On uninstall or upgrade: stop salt python.exe processes that would lock dll's
+      - This will only run on silent installs. /quiet or /qn
+      - All other installs will display a dialog box of process that need to be closed
+      -->
+      <Custom Action="kill_python_exe"          After="StopServices"              >(REMOVE ~= "ALL") or WIX_UPGRADE_DETECTED</Custom>
+
       <!-- ReadConfig_IMCAC must be called before CostInitialize so features can depend on properties set-->
       <Custom Action="ReadConfig_IMCAC"         Before="CostInitialize"           >NOT Installed</Custom>
       <Custom Action="del_NSIS_DECAC"           After="InstallInitialize"         >nsis_install_found</Custom>
@@ -199,9 +218,6 @@ IMCAC - Immediate Custom Action - It's immediate
 
       <!-- Optionally start the service  -->
       <StartServices Sequence="5900">START_MINION</StartServices>
-
-      <!-- On uninstall or upgrade: stop salt python.exe processes that would lock dll's -->
-      <Custom Action="kill_python_exe"          After="StopServices"              >(REMOVE ~= "ALL") or WIX_UPGRADE_DETECTED</Custom>
 
       <!-- On uninstall (not upgrade): delete config and cache -->
       <Custom Action="DeleteConfig_CADH"        Before="DeleteConfig_DECAC"       >REMOVE ~= "ALL"</Custom>
@@ -227,9 +243,6 @@ IMCAC - Immediate Custom Action - It's immediate
     <CustomAction Id="DeleteConfig_CADH"  Property="DeleteConfig_DECAC"  Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];" />
     <CustomAction Id="DeleteConfig2_CADH" Property="DeleteConfig2_DECAC" Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];" />
     <CustomAction Id="MoveInsecureConfig_CADH" Property="MoveInsecureConfig_DECAC" Value="INSECURE_CONFIG_FOUND=[INSECURE_CONFIG_FOUND];" />
-
-    <!-- Prevent downgrade -->
-    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
 
     <!-- Install VC++ runtime -->
     <DirectoryRef Id="TARGETDIR">
