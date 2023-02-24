@@ -310,8 +310,7 @@ def update_release_notes(
         pathlib.Path(release_notes_path).write_text(
             textwrap.dedent(
                 f"""\
-                [](#release-{salt_version})
-
+                (release-{salt_version})=
                 # Salt {salt_version} release notes - UNRELEASED
                 """
             )
