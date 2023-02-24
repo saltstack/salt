@@ -355,9 +355,9 @@ def update_release_notes(
         major_version = salt_version
     changes = _get_changelog_contents(ctx, salt_version)
     changes = "\n".join(changes.split("\n")[2:])
-    tmpnotes = f"doc/topics/releases/{salt_version}.md.tmp"
+    release_notes_path = f"doc/topics/releases/{major_version}.md"
     try:
-        with open(f"doc/topics/releases/{major_version}.md") as rfp:
+        with open(release_notes_path) as rfp:
             existing = rfp.read()
     except FileNotFoundError:
         existing = textwrap.dedent(
@@ -367,22 +367,26 @@ def update_release_notes(
             # Salt {salt_version} release notes - UNRELEASED
             """
         )
+        pathlib.Path(release_notes_path).touch()
+        ctx.run("git", "add", release_notes_path)
     if release is True:
         existing = existing.replace(" - UNRELEASED", "")
-    with open(tmpnotes, "w") as wfp:
+
+    tmp_release_notes_path = f"{release_notes_path}.tmp"
+    with open(tmp_release_notes_path, "w") as wfp:
         wfp.write(existing)
         wfp.write("\n## Changelog\n")
         wfp.write(changes)
     try:
-        with open(tmpnotes) as rfp:
+        with open(tmp_release_notes_path) as rfp:
             contents = rfp.read().strip()
             if draft:
                 ctx.print(contents, soft_wrap=True)
             else:
-                with open(f"doc/topics/releases/{salt_version}.md", "w") as wfp:
+                with open(release_notes_path, "w") as wfp:
                     wfp.write(contents)
     finally:
-        os.remove(tmpnotes)
+        os.remove(tmp_release_notes_path)
 
 
 @changelog.command(
