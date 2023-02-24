@@ -171,56 +171,7 @@ def _get_pkg_changelog_contents(ctx: Context, version: str):
     """
     changes = _get_changelog_contents(ctx, version)
     changes = "\n".join(changes.split("\n")[2:])
-    changes = changes.replace(
-        textwrap.dedent(
-            """
-        Removed
-        -------
-
-        """
-        ),
-        "",
-    )
-    changes = changes.replace(
-        textwrap.dedent(
-            """
-        Deprecated
-        ----------
-
-        """
-        ),
-        "",
-    )
-    changes = changes.replace(
-        textwrap.dedent(
-            """
-        Changed
-        -------
-
-        """
-        ),
-        "",
-    )
-    changes = changes.replace(
-        textwrap.dedent(
-            """
-        Fixed
-        -----
-
-        """
-        ),
-        "",
-    )
-    changes = changes.replace(
-        textwrap.dedent(
-            """
-        Added
-        -----
-
-        """
-        ),
-        "",
-    )
+    changes = changes.replace("### ", "# ").replace("\n\n\n", "\n\n")
     return changes
 
 
