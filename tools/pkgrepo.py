@@ -54,6 +54,32 @@ publish = command_group(
 )
 
 
+_deb_distro_info = {
+    "debian": {
+        "10": {
+            "label": "deb10ary",
+            "codename": "buster",
+            "suitename": "oldstable",
+        },
+        "11": {
+            "label": "deb11ary",
+            "codename": "bullseye",
+            "suitename": "stable",
+        },
+    },
+    "ubuntu": {
+        "20.04": {
+            "label": "salt_ubuntu2004",
+            "codename": "focal",
+        },
+        "22.04": {
+            "label": "salt_ubuntu2204",
+            "codename": "jammy",
+        },
+    },
+}
+
+
 @create.command(
     name="deb",
     arguments={
@@ -66,7 +92,7 @@ publish = command_group(
         },
         "distro": {
             "help": "The debian based distribution to build the repository for",
-            "choices": ("debian", "ubuntu"),
+            "choices": list(_deb_distro_info),
             "required": True,
         },
         "distro_version": {
@@ -122,32 +148,8 @@ def debian(
         assert incoming is not None
         assert repo_path is not None
         assert key_id is not None
-    distro_info = {
-        "debian": {
-            "10": {
-                "label": "deb10ary",
-                "codename": "buster",
-                "suitename": "oldstable",
-            },
-            "11": {
-                "label": "deb11ary",
-                "codename": "bullseye",
-                "suitename": "stable",
-            },
-        },
-        "ubuntu": {
-            "20.04": {
-                "label": "salt_ubuntu2004",
-                "codename": "focal",
-            },
-            "22.04": {
-                "label": "salt_ubuntu2204",
-                "codename": "jammy",
-            },
-        },
-    }
     display_name = f"{distro.capitalize()} {distro_version}"
-    if distro_version not in distro_info[distro]:
+    if distro_version not in _deb_distro_info[distro]:
         ctx.error(f"Support for {display_name} is missing.")
         ctx.exit(1)
 
@@ -159,7 +161,7 @@ def debian(
         ctx.info(f"The {distro_arch} arch is an alias for 'arm64'. Adjusting.")
         distro_arch = "arm64"
 
-    distro_details = distro_info[distro][distro_version]
+    distro_details = _deb_distro_info[distro][distro_version]
 
     ctx.info("Distribution Details:")
     ctx.info(distro_details)
@@ -317,6 +319,13 @@ def debian(
     ctx.info("Done")
 
 
+_rpm_distro_info = {
+    "amazon": ["2"],
+    "redhat": ["7", "8", "9"],
+    "fedora": ["36", "37", "38"],
+}
+
+
 @create.command(
     name="rpm",
     arguments={
@@ -329,7 +338,7 @@ def debian(
         },
         "distro": {
             "help": "The debian based distribution to build the repository for",
-            "choices": ("amazon", "redhat"),
+            "choices": list(_rpm_distro_info),
             "required": True,
         },
         "distro_version": {
@@ -385,13 +394,8 @@ def rpm(
         assert incoming is not None
         assert repo_path is not None
         assert key_id is not None
-    distro_info = {
-        "amazon": ["2"],
-        "redhat": ["7", "8", "9"],
-        "fedora": ["36", "37", "38"],
-    }
     display_name = f"{distro.capitalize()} {distro_version}"
-    if distro_version not in distro_info[distro]:
+    if distro_version not in _rpm_distro_info[distro]:
         ctx.error(f"Support for {display_name} is missing.")
         ctx.exit(1)
 
