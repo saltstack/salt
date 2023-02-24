@@ -647,9 +647,12 @@ def rerun_workflow(ctx: Context):
         "distro_slug": {
             "help": "The distribution slug to generate the matrix for",
         },
+        "pkg_type": {
+            "help": "The distribution slug to generate the matrix for",
+        },
     },
 )
-def pkg_matrix(ctx: Context, distro_slug: str):
+def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
     """
     Generate the test matrix.
     """
@@ -657,18 +660,25 @@ def pkg_matrix(ctx: Context, distro_slug: str):
     sessions = [
         "test-pkgs-3",
     ]
-    if distro_slug not in [
-        "debian-11-arm64",
-        "ubuntu-20.04-arm64",
-        "ubuntu-22.04-arm64",
-    ]:
+    if (
+        distro_slug
+        not in [
+            "debian-11-arm64",
+            "ubuntu-20.04-arm64",
+            "ubuntu-22.04-arm64",
+        ]
+        and "MSI" != pkg_type
+    ):
         # These OS's never had arm64 packages built for them
         # with the tiamate onedir packages.
         # we will need to ensure when we release 3006.0
         # we allow for 3006.0 jobs to run, because then
         # we will have arm64 onedir packages to upgrade from
         sessions.append("'test-upgrade-pkgs-3(classic=False)'")
-    if distro_slug not in ["centosstream-9", "ubuntu-22.04", "ubuntu-22.04-arm64"]:
+    if (
+        distro_slug not in ["centosstream-9", "ubuntu-22.04", "ubuntu-22.04-arm64"]
+        and "MSI" != pkg_type
+    ):
         # Packages for these OSs where never built for classic previously
         sessions.append("'test-upgrade-pkgs-3(classic=True)'")
 
