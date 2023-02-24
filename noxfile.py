@@ -334,11 +334,15 @@ def _install_requirements(
         session, transport, requirements_type=requirements_type
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
+    if CI_RUN:
+        install_command.insert(0, "-v")
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     if extra_requirements:
         install_command = ["--progress-bar=off"]
         install_command += list(extra_requirements)
+        if CI_RUN:
+            install_command.insert(0, "-v")
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     if EXTRA_REQUIREMENTS_INSTALL:
@@ -351,6 +355,8 @@ def _install_requirements(
         # we're already using, we want to maintain the locked version
         install_command = ["--progress-bar=off", "--constraint", requirements_file]
         install_command += EXTRA_REQUIREMENTS_INSTALL.split()
+        if CI_RUN:
+            install_command.insert(0, "-v")
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     return True
@@ -361,9 +367,10 @@ def _install_coverage_requirement(session):
         coverage_requirement = COVERAGE_REQUIREMENT
         if coverage_requirement is None:
             coverage_requirement = "coverage==5.2"
-        session.install(
-            "--progress-bar=off", coverage_requirement, silent=PIP_INSTALL_SILENT
-        )
+        install_command = ["--progress-bar=off", coverage_requirement]
+        if CI_RUN:
+            install_command.insert(0, "-v")
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
 
 def _run_with_coverage(session, *test_cmd, env=None):
