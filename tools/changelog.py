@@ -303,11 +303,18 @@ def update_release_notes(
         salt_version = _get_salt_version(ctx)
     changes = _get_changelog_contents(ctx, salt_version)
     changes = "\n".join(changes.split("\n")[2:])
-    release_notes_path = "doc/topics/releases/{}.md".format(
-        ".".join(str(part) for part in salt_version.release)
-    )
-    if not os.path.exists(release_notes_path):
-        pathlib.Path(release_notes_path).write_text(
+    if salt_version.local:
+        # This is a dev release, let's pick up the latest changelog file
+        versions = {}
+        for fpath in pathlib.Path("doc/topics/releases").glob("*.md"):
+            versions[(Version(fpath.stem))] = fpath
+        release_notes_path = versions[sorted(versions)[-1]]
+    else:
+        release_notes_path = pathlib.Path("doc/topics/releases") / "{}.md".format(
+            ".".join(str(part) for part in salt_version.release)
+        )
+    if not release_notes_path.exists():
+        release_notes_path.write_text(
             textwrap.dedent(
                 f"""\
                 (release-{salt_version})=
@@ -315,28 +322,24 @@ def update_release_notes(
                 """
             )
         )
-        ctx.run("git", "add", release_notes_path)
+        ctx.run("git", "add", str(release_notes_path))
         ctx.info(f"Created bare {release_notes_path} release notes file")
 
-    with open(release_notes_path) as rfp:
-        existing = rfp.read()
+    existing = release_notes_path.read_text()
 
     if release is True:
         existing = existing.replace(" - UNRELEASED", "")
 
-    tmp_release_notes_path = f"{release_notes_path}.tmp"
-    with open(tmp_release_notes_path, "w") as wfp:
-        wfp.write(existing)
-        wfp.write("\n## Changelog\n")
-        wfp.write(changes)
+    tmp_release_notes_path = (
+        release_notes_path.parent / f"{release_notes_path.name}.tmp"
+    )
+    tmp_release_notes_path.write_text(f"{existing}\n## Changelog\n{changes}")
     try:
-        with open(tmp_release_notes_path) as rfp:
-            contents = rfp.read().strip()
-            if draft:
-                ctx.print(contents, soft_wrap=True)
-            else:
-                with open(release_notes_path, "w") as wfp:
-                    wfp.write(contents)
+        contents = tmp_release_notes_path.read_text().strip()
+        if draft:
+            ctx.print(contents, soft_wrap=True)
+        else:
+            release_notes_path.write_text(contents)
     finally:
         os.remove(tmp_release_notes_path)
 
