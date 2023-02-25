@@ -5,6 +5,8 @@ name: CI
 on:
   push: {}
   pull_request: {}
+permissions:
+  pull-requests: write
 
 env:
   COLUMNS: 190
