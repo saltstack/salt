@@ -130,7 +130,7 @@ jobs:
       - name: Get Test Labels
         id: get-test-labels
         run:
-          echo hello labels
+          echo ${{ github.event.pull_request.labels.*.name }}
 
       - name: Write Changed Files To A Local File
         run:
