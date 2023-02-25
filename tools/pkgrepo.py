@@ -495,6 +495,7 @@ def rpm(
         gpgcheck=1
         gpgkey={base_url}/{tools.utils.GPG_KEY_FILENAME}.pub
         """
+        create_repo_path.write_text(repo_file_contents)
 
     if nightly_build:
         repo_file_path = create_repo_path.parent / "nightly.repo"
