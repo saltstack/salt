@@ -125,12 +125,16 @@ jobs:
           salt-version: ""
           validate-version: true
 
-      - name: Get Test Labels
-        id: get-test-labels
+      - name: Get Pull Data
+        id: get-pull-data
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run:
-          gh api repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/pulls/10 --jq '.labels.[].name'
+        run: |
+          REPOSITORY_OWNER=${{ github.repository_owner }}
+          REPOSITORY_NAME=${{ github.repository.name }}
+          PULL_DATA=$(gh api repos/$REPOSITORY_OWNER/$REPOSITORY_NAME/pulls/10)
+          echo $PULL_DATA
 
       - name: Write Changed Files To A Local File
         run:
