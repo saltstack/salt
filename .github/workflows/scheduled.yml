@@ -125,6 +125,11 @@ jobs:
           salt-version: ""
           validate-version: true
 
+      - name: Get Pull Number
+        id: get-pull-number
+        run:
+          echo $GITHUB_REF
+
       - name: Get Pull Data
         id: get-pull-data
         shell: bash
