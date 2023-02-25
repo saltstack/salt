@@ -475,8 +475,10 @@ def rpm(
         base_url += f"{distro}/{url_suffix}"
         if distro == "amazon":
             distro_name = "Amazon Linux"
-        else:
+        elif distro == "redhat":
             distro_name = "RHEL/CentOS"
+        else:
+            distro_name = distro.capitalize()
 
         if int(distro_version) < 8:
             failovermethod = "\n        failovermethod=priority\n"
