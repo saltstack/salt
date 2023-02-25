@@ -154,6 +154,16 @@ jobs:
           salt-version: "<{ prepare_workflow_salt_version_input }>"
           validate-version: true
 
+      - name: Get Labels
+        labels:
+          skip_fast_tests: ${{ contains(github.event.pull_request.labels.*.name, 'fast_tests') }}
+          skip_slow_tests: ${{ contains(github.event.pull_request.labels.*.name, 'slow_tests') }}
+          skip_core_tests: ${{ contains(github.event.pull_request.labels.*.name, 'core_tests') }}
+
+      - name: Echo Labels
+        run:
+          echo '${{ toJson(steps.get-labels.labels)}}'
+
       - name: Write Changed Files To A Local File
         run:
           echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json

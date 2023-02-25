@@ -127,6 +127,16 @@ jobs:
           salt-version: ""
           validate-version: true
 
+      - name: Get Labels
+        labels:
+          skip_fast_tests: ${{ contains(github.event.pull_request.labels.*.name, 'fast_tests') }}
+          skip_slow_tests: ${{ contains(github.event.pull_request.labels.*.name, 'slow_tests') }}
+          skip_core_tests: ${{ contains(github.event.pull_request.labels.*.name, 'core_tests') }}
+
+      - name: Echo Labels
+        run:
+          echo '${{ toJson(steps.get-labels.labels)}}'
+
       - name: Write Changed Files To A Local File
         run:
           echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
@@ -795,22 +805,6 @@ jobs:
       nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
-
-  ubuntu-2204-dumb:
-    name: Ubuntu 22.04 dumb
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir
-    uses: ./.github/workflows/test-action.yml
-    with:
-      distro-slug: ubuntu-22.04
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
