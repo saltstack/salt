@@ -129,6 +129,8 @@ jobs:
 
       - name: Get Test Labels
         id: get-test-labels
+        run:
+          echo hello labels
 
       - name: Write Changed Files To A Local File
         run:
