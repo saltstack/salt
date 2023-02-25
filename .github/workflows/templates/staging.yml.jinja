@@ -65,7 +65,7 @@ concurrency:
     needs:
       - prepare-workflow
       - build-docs
-      - build-repositories
+      - publish-repositories
     environment: <{ gh_environment }>
     runs-on:
       - self-hosted
@@ -117,12 +117,29 @@ concurrency:
 
   {#- We need the package upload tests against staging added here #}
 
+  test-repositories:
+    <%- do conclusion_needs.append('test-repositories') %>
+    name: Test Staging Repository
+    needs:
+      - prepare-workflow
+      - upload-release-artifacts
+    environment: <{ gh_environment }>
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    steps:
+
+      - name: Stub
+        run: |
+          echo "just a stub"
+
   publish-pypi:
     <%- do conclusion_needs.append('publish-pypi') %>
     name: Publish to PyPi(test)
     needs:
       - prepare-workflow
-      - build-repositories
+      - test-repositories
     environment: <{ gh_environment }>
     runs-on:
       - self-hosted
