@@ -158,6 +158,7 @@ jobs:
         id: get-pull-number
         run:
           echo $GITHUB_REF
+          echo $GITHUB_EVENT_PATH
 
       - name: Get Pull Data
         id: get-pull-data
