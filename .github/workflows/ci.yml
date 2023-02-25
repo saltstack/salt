@@ -127,6 +127,11 @@ jobs:
           salt-version: ""
           validate-version: true
 
+      - name: Get Test Labels
+        id: get-test-labels
+        t: test
+
+
       - name: Write Changed Files To A Local File
         run:
           echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
