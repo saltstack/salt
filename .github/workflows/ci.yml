@@ -129,8 +129,6 @@ jobs:
 
       - name: Get Test Labels
         id: get-test-labels
-        t: test
-
 
       - name: Write Changed Files To A Local File
         run:
