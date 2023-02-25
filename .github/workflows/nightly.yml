@@ -133,8 +133,7 @@ jobs:
           REPOSITORY_OWNER: ${{ github.repository_owner }}
           REPOSITORY_NAME: ${{ github.event.repository.name }}
         run:
-          PULL_NUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
-          echo PULL_DATA=$(gh api repos/$REPOSITORY_OWNER/$REPOSITORY_NAME/pulls/$PULL_NUMBER)
+          echo PULL_DATA=$(gh api repos/$REPOSITORY_OWNER/$REPOSITORY_NAME/pulls/10)
 
       - name: Write Changed Files To A Local File
         run:
