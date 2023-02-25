@@ -125,10 +125,6 @@ jobs:
           salt-version: ""
           validate-version: true
 
-      - name: Get Labels
-        skip_fast_tests: ${{ contains(github.event.pull_request.labels.*.name, 'fast_tests') }}
-
-
       - name: Write Changed Files To A Local File
         run:
           echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
