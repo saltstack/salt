@@ -134,7 +134,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY_OWNER: ${{ github.repository_owner }}
           REPOSITORY_NAME: ${{ github.event.repository.name }}
-        run: |
+        run:
           echo PULL_DATA=$(gh api repos/$REPOSITORY_OWNER/$REPOSITORY_NAME/pulls/10)
 
       - name: Write Changed Files To A Local File
