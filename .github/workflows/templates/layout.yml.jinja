@@ -54,6 +54,8 @@ jobs:
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on: ubuntu-latest
+    permissions:
+        pull-requests: write
     outputs:
       jobs: ${{ steps.define-jobs.outputs.jobs }}
       runners: ${{ steps.runner-types.outputs.runners }}
@@ -156,11 +158,10 @@ jobs:
 
       - name: Get Test Labels
         id: get-test-labels
-        run:
-          gh api repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/pulls/10 --jq '.labels.[].name'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+        run:
+          gh api repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/pulls/10 --jq '.labels.[].name'
 
       - name: Write Changed Files To A Local File
         run:
