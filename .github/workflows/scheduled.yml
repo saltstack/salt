@@ -128,9 +128,9 @@ jobs:
       - name: Get Pull Number
         id: get-pull-number
         env:
-          E2: ${{ toJson(github.issue.number) }}
+          E: ${{ toJson(github) }}
         run:
-          echo $E2
+          echo $E
 
       - name: Get Pull Data
         id: get-pull-data
