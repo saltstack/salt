@@ -888,7 +888,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-docs
-      - build-repositories
+      - publish-repositories
     environment: staging
     runs-on:
       - self-hosted
@@ -928,11 +928,27 @@ jobs:
         run: |
           tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
 
+  test-repositories:
+    name: Test Staging Repository
+    needs:
+      - prepare-workflow
+      - upload-release-artifacts
+    environment: staging
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-staging
+    steps:
+
+      - name: Stub
+        run: |
+          echo "just a stub"
+
   publish-pypi:
     name: Publish to PyPi(test)
     needs:
       - prepare-workflow
-      - build-repositories
+      - test-repositories
     environment: staging
     runs-on:
       - self-hosted
@@ -998,6 +1014,7 @@ jobs:
       - build-repositories
       - publish-repositories
       - upload-release-artifacts
+      - test-repositories
       - publish-pypi
     steps:
       - name: Get workflow information
