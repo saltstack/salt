@@ -157,7 +157,7 @@ jobs:
       - name: Get Test Labels
         id: get-test-labels
         run:
-          gh api repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/pulls/${{ github.event.pull_request.number }} --jq '.labels.[].name'
+          gh api repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/pulls/10 --jq '.labels.[].name'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
