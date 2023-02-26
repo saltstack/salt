@@ -481,20 +481,22 @@ def rpm(
             distro_name = distro.capitalize()
 
         if int(distro_version) < 8:
-            failovermethod = "\n        failovermethod=priority\n"
+            failovermethod = "\n            failovermethod=priority"
         else:
             failovermethod = ""
 
-        repo_file_contents += f"""
-        name=Salt repo for {distro_name} {distro_version} PY3
-        baseurl=https://repo.saltproject.io/{base_url}
-        skip_if_unavailable=True{failovermethod}
-        priority=10
-        enabled=1
-        enabled_metadata=1
-        gpgcheck=1
-        gpgkey={base_url}/{tools.utils.GPG_KEY_FILENAME}.pub
-        """
+        repo_file_contents += textwrap.dedent(
+            f"""
+            name=Salt repo for {distro_name} {distro_version} PY3
+            baseurl=https://repo.saltproject.io/{base_url}
+            skip_if_unavailable=True{failovermethod}
+            priority=10
+            enabled=1
+            enabled_metadata=1
+            gpgcheck=1
+            gpgkey={base_url}/{tools.utils.GPG_KEY_FILENAME}.pub
+            """
+        )
         create_repo_path.write_text(repo_file_contents)
 
     if nightly_build:
