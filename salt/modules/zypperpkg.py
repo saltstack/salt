@@ -2570,6 +2570,8 @@ def _find_ptf_packages(pkgs, root=None):
     for line in output.splitlines():
         if not line.strip():
             continue
+        if ":" not in line:
+            continue
         pkg, provides = line.split(":", 1)
         if "ptf()" in provides:
             ptfs.append(pkg)
