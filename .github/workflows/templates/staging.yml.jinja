@@ -20,6 +20,11 @@ on:
 
 <%- endblock on %>
 
+<%- block env %>
+  <{- super() }>
+  REPO_BASE_URL: "https://${{ secrets.SALT_REPO_USER }}:${{ secrets.SALT_REPO_PASS }}@${{ secrets.SALT_REPO_DOMAIN }}"
+<%- endblock env %>
+
 <%- block concurrency %>
 
 concurrency:
@@ -120,28 +125,17 @@ concurrency:
         run: |
           tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
 
-  test-repositories:
-    <%- do conclusion_needs.append('test-repositories') %>
-    name: Test Staging Repository
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-pkg-repo-uploads.yml
-    with:
-      environment: <{ gh_environment }>
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-    secrets:
-      salt-repo-user: secrets.SALT_REPO_USER
-      salt-repo-pass: secrets.SALT_REPO_PASS
-      salt-repo-domain: secrets.SALT_REPO_DOMAIN
+  <%- include "test-pkg-repo-uploads.yml.jinja" %>
 
   publish-pypi:
     <%- do conclusion_needs.append('publish-pypi') %>
     name: Publish to PyPi(test)
     needs:
       - prepare-workflow
-      - test-repositories
       - upload-release-artifacts
+      <%- for need in test_repo_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
     environment: <{ gh_environment }>
     runs-on:
       - self-hosted
