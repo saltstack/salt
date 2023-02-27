@@ -467,19 +467,21 @@ namespace MinionConfigurationExtension {
             session.Log("...BEGIN kill_python_exe (CustomAction01.cs)");
             using (
                 var wmi_searcher = new ManagementObjectSearcher(
-                    "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE CommandLine LIKE '%salt-minion%'"
+                    "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE CommandLine LIKE '%salt-minion%' AND NOT CommandLine LIKE '%msiexec%'"
                 )
             ) {
                 foreach (ManagementObject wmi_obj in wmi_searcher.Get()) {
+                    String ProcessID = wmi_obj["ProcessID"].ToString();
+                    Int32 pid = Int32.Parse(ProcessID);
+                    String ExecutablePath = wmi_obj["ExecutablePath"].ToString();
+                    String CommandLine = wmi_obj["CommandLine"].ToString();
+                    session.Log("...kill_python_exe " + ExecutablePath + " " + CommandLine);
+                    Process proc11 = Process.GetProcessById(pid);
                     try {
-                        String ProcessID = wmi_obj["ProcessID"].ToString();
-                        Int32 pid = Int32.Parse(ProcessID);
-                        String ExecutablePath = wmi_obj["ExecutablePath"].ToString();
-                        String CommandLine = wmi_obj["CommandLine"].ToString();
-                        session.Log("...kill_python_exe " + ExecutablePath + " " + CommandLine);
-                        Process proc11 = Process.GetProcessById(pid);
                         proc11.Kill();
-                    } catch (Exception) {
+                    } catch (Exception exc) {
+                        session.Log("...kill_python_exe " + ExecutablePath + " " + CommandLine);
+                        session.Log(exc.ToString());
                         // ignore wmiresults without these properties
                     }
                 }
