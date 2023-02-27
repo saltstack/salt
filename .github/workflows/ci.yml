@@ -130,7 +130,7 @@ jobs:
       - name: Get Pull Number
         id: get-pull-number
         env:
-          E: ${{ toJson(github) }}
+          E: ${{ toJson(github.sha) }}
         run:
           echo $E
 
