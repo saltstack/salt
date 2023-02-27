@@ -129,9 +129,9 @@ jobs:
         id: get-pull-number
         uses: actions/github-script@v6
         env:
-          E: ${{ github.rest.repos.listPullRequestsAssociatedWithCommit({commit_sah: github.sha,
-                                                                         owner: github.repo.owner,
-                                                                         repo: github.repo.repo})}}
+          E: ${{ github.rest.repos.listPullRequestsAssociatedWithCommit(commit_sah: github.sha,
+                                                                        owner: github.repo.owner,
+                                                                        repo: github.repo.repo)}}
         run:
           echo $E
 
