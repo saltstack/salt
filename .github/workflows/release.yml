@@ -568,6 +568,142 @@ jobs:
         run: |
           salt-cloud --version
 
+  test-macos-repo:
+    name: Test macOS Repository
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+        version:
+          - "12"
+    runs-on:
+      - macos-${{ matrix.version }}
+    environment: release
+    needs:
+      - prepare-workflow
+      - publish-repositories
+
+    steps:
+
+      - name: Install Salt
+        run: |
+          curl -fsSL -o /tmp/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}.pkg \
+            ${{ env.REPO_BASE_URL }}/macos/minor/${{ needs.prepare-workflow.outputs.salt-version}}/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}.pkg || \
+            curl -fsSL -o /tmp/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}-unsigned.pkg \
+            ${{ env.REPO_BASE_URL }}/macos/minor/${{ needs.prepare-workflow.outputs.salt-version}}/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}-unsigned.pkg
+
+          if [ -f /tmp/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}.pkg ]; then
+              installer -pkg /tmp/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}.pkg -target /
+          elif [ -f /tmp/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}-unsigned.pkg ]; then
+              installer -pkg /tmp/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}-unsigned.pkg -target /
+          else
+            echo "No downloaded Package?"
+            exit 1
+          fi
+
+      - name: Test `salt-call --local test.versions`
+        run: |
+          salt-call --local test.versions
+
+      - name: Test `salt-call --local grains.items`
+        run: |
+          salt-call --local grains.items
+
+      - name: Test `salt --version`
+        run: |
+          salt --version
+
+      - name: Test `salt-master --version`
+        run: |
+          salt-master --version
+
+      - name: Test `salt-minion --version`
+        run: |
+          salt-minion --version
+
+      - name: Test `salt-ssh --version`
+        run: |
+          salt-ssh --version
+
+      - name: Test `salt-syndic --version`
+        run: |
+          salt-syndic --version
+
+      - name: Test `salt-api --version`
+        run: |
+          salt-api --version
+
+      - name: Test `salt-cloud --version`
+        run: |
+          salt-cloud --version
+
+  test-windows-setup-repo:
+    name: Test Windows Repository(setup)
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86
+          - AMD64
+        version:
+          - "2019"
+    runs-on:
+      - windows-${{ matrix.version }}
+    environment: release
+    needs:
+      - prepare-workflow
+      - publish-repositories
+
+    steps:
+
+      - name: Download Salt
+        shell: bash
+        run: |
+          curl -fsSL -o Salt-Minion-${{ needs.prepare-workflow.outputs.salt-version }}-Py3-${{ matrix.arch }}-Setup.exe \
+            ${{ env.REPO_BASE_URL }}/windows/minor/${{ needs.prepare-workflow.outputs.salt-version}}/Salt-Minion-${{ needs.prepare-workflow.outputs.salt-version }}-Py3-${{ matrix.arch }}-Setup.exe
+
+      - name: Install Salt
+        shell: powershell
+        run: |
+          Salt-Minion-${{ needs.prepare-workflow.outputs.salt-version }}-Py3-${{ matrix.arch }}.exe /start-minion=0 /S
+
+      - name: Test `salt-call --local test.versions`
+        run: |
+          salt-call --local test.versions
+
+      - name: Test `salt-call --local grains.items`
+        run: |
+          salt-call --local grains.items
+
+      - name: Test `salt --version`
+        run: |
+          salt --version
+
+      - name: Test `salt-master --version`
+        run: |
+          salt-master --version
+
+      - name: Test `salt-minion --version`
+        run: |
+          salt-minion --version
+
+      - name: Test `salt-ssh --version`
+        run: |
+          salt-ssh --version
+
+      - name: Test `salt-syndic --version`
+        run: |
+          salt-syndic --version
+
+      - name: Test `salt-api --version`
+        run: |
+          salt-api --version
+
+      - name: Test `salt-cloud --version`
+        run: |
+          salt-cloud --version
+
   release:
     name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
     runs-on:
@@ -584,6 +720,8 @@ jobs:
       - test-debian-repo
       - test-fedora-repo
       - test-ubuntu-repo
+      - test-macos-repo
+      - test-windows-setup-repo
     environment: release
     steps:
       - name: Clone The Salt Repository
