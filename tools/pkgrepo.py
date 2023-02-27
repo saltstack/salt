@@ -1184,7 +1184,43 @@ def release(
                         Callback=tools.utils.UpdateProgress(progress, task),
                     )
 
-    # Let's now download the release artifacts stored in staging
+
+@publish.command(
+    arguments={
+        "salt_version": {
+            "help": "The salt version to release.",
+        },
+        "rc_build": {
+            "help": "Release Candidate repository target",
+        },
+        "key_id": {
+            "help": "The GnuPG key ID used to sign.",
+            "required": True,
+        },
+        "repository": {
+            "help": (
+                "The full repository name, ie, 'saltstack/salt' on GitHub "
+                "to run the checks against."
+            )
+        },
+    }
+)
+def github(
+    ctx: Context,
+    salt_version: str,
+    key_id: str = None,
+    rc_build: bool = False,
+    repository: str = "saltstack/salt",
+):
+    """
+    Publish the release on GitHub releases.
+    """
+    if TYPE_CHECKING:
+        assert key_id is not None
+
+    s3 = boto3.client("s3")
+
+    # Let's download the release artifacts stored in staging
     artifacts_path = pathlib.Path.cwd() / "release-artifacts"
     artifacts_path.mkdir(exist_ok=True)
     release_artifacts_listing: dict[pathlib.Path, int] = {}
@@ -1226,6 +1262,7 @@ def release(
         if artifact.suffix == ".patch":
             continue
         tools.utils.gpg_sign(ctx, key_id, artifact)
+
     # Export the GPG key in use
     tools.utils.export_gpg_key(ctx, key_id, artifacts_path)
 
@@ -1257,8 +1294,13 @@ def release(
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"release-messsage-file={release_message_path.resolve()}\n")
 
+    releases = _get_salt_releases(ctx, repository)
+    if Version(salt_version) >= releases[-1]:
+        make_latest = True
+    else:
+        make_latest = False
     with open(github_output, "a", encoding="utf-8") as wfh:
-        wfh.write(f"make-latest={json.dumps(update_latest)}\n")
+        wfh.write(f"make-latest={json.dumps(make_latest)}\n")
 
     artifacts_to_upload = []
     for artifact in artifacts_path.iterdir():
@@ -1293,6 +1335,19 @@ def confirm_unreleased(
     """
     Confirm that the passed version is not yet tagged and/or released.
     """
+    releases = _get_salt_releases(ctx, repository)
+    if Version(salt_version) in releases:
+        ctx.error(f"There's already a '{salt_version}' tag or github release.")
+        ctx.exit(1)
+    ctx.info(f"Could not find a release for Salt Version '{salt_version}'")
+    ctx.exit(0)
+
+
+def _get_salt_releases(ctx: Context, repository: str) -> list[Version]:
+    """
+    Return a list of salt versions
+    """
+    versions = set()
     with ctx.web as web:
         web.headers.update({"Accept": "application/vnd.github+json"})
         ret = web.get(f"https://api.github.com/repos/{repository}/tags")
@@ -1302,26 +1357,38 @@ def confirm_unreleased(
             )
             ctx.exit(1)
         for tag in ret.json():
-            if tag["name"] in (salt_version, f"v{salt_version}"):
-                ctx.error(f"There's already a '{tag['name']}' tag.")
-                ctx.exit(1)
-        # Maybe there's a release but no tag?!
+            name = tag["name"]
+            if name.startswith("v"):
+                name = name[1:]
+            if "-" in name:
+                # We're not going to parse dash tags
+                continue
+            if "docs" in name:
+                # We're not going to consider doc tags
+                continue
+            versions.add(Version(name))
+
+        # Now let's go through the github releases
         ret = web.get(f"https://api.github.com/repos/{repository}/releases")
         if ret.status_code != 200:
             ctx.error(
-                f"Failed to get the tags for repository {repository!r}: {ret.reason}"
+                f"Failed to get the releases for repository {repository!r}: {ret.reason}"
             )
             ctx.exit(1)
         for release in ret.json():
-            if release["name"] in (salt_version, f"v{salt_version}"):
-                ctx.error(f"There's already a '{release['name']}' release.")
-                ctx.exit(1)
-            if release["tag_name"] in (salt_version, f"v{salt_version}"):
-                ctx.error(f"There's already a '{release['tag_name']}' release.")
-                ctx.exit(1)
-
-    ctx.info(f"Could not find a release for Salt Version '{salt_version}'")
-    ctx.exit(0)
+            name = release["name"]
+            if name.startswith("v"):
+                name = name[1:]
+            if not name:
+                print(123, release)
+            if name and "-" not in name and "docs" not in name:
+                # We're not going to parse dash or docs releases
+                versions.add(Version(name))
+            name = release["tag_name"]
+            if "-" not in name and "docs" not in name:
+                # We're not going to parse dash or docs releases
+                versions.add(Version(name))
+    return sorted(versions)
 
 
 def _get_repo_detailed_file_list(
