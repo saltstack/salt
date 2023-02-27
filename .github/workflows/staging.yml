@@ -858,30 +858,6 @@ jobs:
     needs:
       - prepare-workflow
       - build-repositories
-      - windows-2016
-      - windows-2019
-      - windows-2022
-      - macos-12
-      - almalinux-8
-      - almalinux-9
-      - amazonlinux-2
-      - archlinux-lts
-      - centos-7
-      - centosstream-8
-      - centosstream-9
-      - debian-10
-      - debian-11
-      - debian-11-arm64
-      - fedora-36
-      - fedora-37
-      - fedora-38
-      - opensuse-15
-      - photonos-3
-      - photonos-4
-      - ubuntu-2004
-      - ubuntu-2004-arm64
-      - ubuntu-2204
-      - ubuntu-2204-arm64
     uses: ./.github/workflows/publish-repositories.yml
     with:
       environment: staging
@@ -1592,6 +1568,30 @@ jobs:
       - publish-repositories
       - upload-release-artifacts
       - publish-pypi
+      - windows-2016
+      - windows-2019
+      - windows-2022
+      - macos-12
+      - almalinux-8
+      - almalinux-9
+      - amazonlinux-2
+      - archlinux-lts
+      - centos-7
+      - centosstream-8
+      - centosstream-9
+      - debian-10
+      - debian-11
+      - debian-11-arm64
+      - fedora-36
+      - fedora-37
+      - fedora-38
+      - opensuse-15
+      - photonos-3
+      - photonos-4
+      - ubuntu-2004
+      - ubuntu-2004-arm64
+      - ubuntu-2204
+      - ubuntu-2204-arm64
     steps:
       - name: Get workflow information
         id: get-workflow-info

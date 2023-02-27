@@ -46,9 +46,11 @@ concurrency:
     needs:
       - prepare-workflow
       - build-repositories
+      <%- if workflow_slug == "nightly" %>
       <%- for need in test_salt_needs.iter(consume=True) %>
       - <{ need }>
       <%- endfor %>
+      <%- endif %>
     uses: ./.github/workflows/publish-repositories.yml
     with:
       environment: <{ gh_environment }>
