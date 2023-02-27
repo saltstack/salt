@@ -129,7 +129,7 @@ pytz==2022.7.1
     # via tempora
 pyyaml==6.0
     # via -r requirements/base.txt
-pyzmq==22.0.3 ; python_version < "3.9"
+pyzmq==22.0.3
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
