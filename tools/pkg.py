@@ -420,8 +420,10 @@ def pypi_upload(ctx: Context, files: list[pathlib.Path], test: bool = False):
         "upload",
         f"--repository-url={repository_url}",
         "--username=__token__",
-        *[str(fpath) for fpath in files],
     ]
+    if test is True:
+        cmdline.append("--skip-existing")
+    cmdline.extend([str(fpath) for fpath in files])
     ctx.info(f"Running '{' '.join(cmdline)}' ...")
     ret = ctx.run(*cmdline, check=False)
     if ret.returncode:

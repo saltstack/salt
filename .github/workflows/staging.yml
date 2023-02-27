@@ -10,6 +10,10 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages and staging the release.
+      skip-salt-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt test suite.
 
 env:
   COLUMNS: 190
@@ -186,7 +190,7 @@ jobs:
       - name: Define Jobs
         id: define-jobs
         run: |
-          tools ci define-jobs ${{ github.event_name }} changed-files.json
+          tools ci define-jobs ${{ inputs.skip-salt-test-suite && '--skip-tests' || '' }} ${{ github.event_name }} changed-files.json
 
       - name: Check Defined Jobs
         run: |
@@ -888,7 +892,7 @@ jobs:
     needs:
       - prepare-workflow
       - build-docs
-      - publish-repositories
+      - build-repositories
     environment: staging
     runs-on:
       - self-hosted
@@ -932,23 +936,22 @@ jobs:
     name: Test Staging Repository
     needs:
       - prepare-workflow
-      - upload-release-artifacts
-    environment: staging
-    runs-on:
-      - self-hosted
-      - linux
-      - repo-staging
-    steps:
-
-      - name: Stub
-        run: |
-          echo "just a stub"
+      - publish-repositories
+    uses: ./.github/workflows/test-pkg-repo-uploads.yml
+    with:
+      environment: staging
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+    secrets:
+      salt-repo-user: secrets.SALT_REPO_USER
+      salt-repo-pass: secrets.SALT_REPO_PASS
+      salt-repo-domain: secrets.SALT_REPO_DOMAIN
 
   publish-pypi:
     name: Publish to PyPi(test)
     needs:
       - prepare-workflow
       - test-repositories
+      - upload-release-artifacts
     environment: staging
     runs-on:
       - self-hosted

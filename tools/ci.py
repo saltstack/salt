@@ -220,6 +220,9 @@ def runner_types(ctx: Context, event_name: str):
         "event_name": {
             "help": "The name of the GitHub event being processed.",
         },
+        "skip_tests": {
+            "help": "Skip running the Salt tests",
+        },
         "changed_files": {
             "help": (
                 "Path to '.json' file containing the payload of changed files "
@@ -228,7 +231,9 @@ def runner_types(ctx: Context, event_name: str):
         },
     },
 )
-def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
+def define_jobs(
+    ctx: Context, event_name: str, changed_files: pathlib.Path, skip_tests: bool = False
+):
     """
     Set GH Actions 'jobs' output to know which jobs should run.
     """
@@ -258,6 +263,10 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
         "build-salt-onedir": True,
         "build-pkgs": True,
     }
+
+    if skip_tests:
+        jobs["test"] = False
+
     if event_name != "pull_request":
         # In this case, all defined jobs should run
         ctx.info("Writing 'jobs' to the github outputs file")
@@ -309,7 +318,7 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
         changed_files_contents["workflows"],
         changed_files_contents["golden_images"],
     }
-    if required_test_changes == {"false"}:
+    if jobs["test"] and required_test_changes == {"false"}:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write("De-selecting the 'test' jobs.\n")
         jobs["test"] = False

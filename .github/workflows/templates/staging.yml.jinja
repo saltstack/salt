@@ -1,4 +1,5 @@
 <%- set prepare_workflow_salt_version_input = "${{ inputs.salt-version }}" %>
+<%- set prepare_workflow_skip_test_suite = " ${{ inputs.skip-salt-test-suite && '--skip-tests' || '' }}" %>
 <%- set gh_environment = "staging" %>
 <%- set prepare_actual_release = True %>
 <%- extends 'nightly.yml.jinja' %>
@@ -12,6 +13,10 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages and staging the release.
+      skip-salt-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt test suite.
 
 <%- endblock on %>
 
@@ -65,7 +70,7 @@ concurrency:
     needs:
       - prepare-workflow
       - build-docs
-      - publish-repositories
+      - build-repositories
     environment: <{ gh_environment }>
     runs-on:
       - self-hosted
@@ -115,24 +120,20 @@ concurrency:
         run: |
           tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
 
-  {#- We need the package upload tests against staging added here #}
-
   test-repositories:
     <%- do conclusion_needs.append('test-repositories') %>
     name: Test Staging Repository
     needs:
       - prepare-workflow
-      - upload-release-artifacts
-    environment: <{ gh_environment }>
-    runs-on:
-      - self-hosted
-      - linux
-      - repo-<{ gh_environment }>
-    steps:
-
-      - name: Stub
-        run: |
-          echo "just a stub"
+      - publish-repositories
+    uses: ./.github/workflows/test-pkg-repo-uploads.yml
+    with:
+      environment: <{ gh_environment }>
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+    secrets:
+      salt-repo-user: secrets.SALT_REPO_USER
+      salt-repo-pass: secrets.SALT_REPO_PASS
+      salt-repo-domain: secrets.SALT_REPO_DOMAIN
 
   publish-pypi:
     <%- do conclusion_needs.append('publish-pypi') %>
@@ -140,6 +141,7 @@ concurrency:
     needs:
       - prepare-workflow
       - test-repositories
+      - upload-release-artifacts
     environment: <{ gh_environment }>
     runs-on:
       - self-hosted

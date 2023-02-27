@@ -93,8 +93,6 @@ jobs:
     steps:
       - name: Clone The Salt Repository
         uses: actions/checkout@v3
-        with:
-          ssh-key: ${{ secrets.GHA_SSH_KEY }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -103,7 +101,7 @@ jobs:
         run: |
           tools pkg repo backup-previous-releases
 
-  release:
+  publish-release-bucket:
     name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
     runs-on:
       - self-hosted
@@ -114,6 +112,40 @@ jobs:
       - backup
     environment: release
 
+    steps:
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Publish Release Repository
+        run: |
+          tools pkg repo publish release --key-id=64CBBC8173D76B3F ${{ needs.prepare-workflow.outputs.salt-version }}
+
+  test-repositories:
+    name: Test Staging Repository
+    needs:
+      - prepare-workflow
+      - publish-release-bucket
+    uses: ./.github/workflows/test-pkg-repo-uploads.yml
+    with:
+      environment: release
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+    secrets:
+      salt-repo-domain: secrets.SALT_REPO_DOMAIN
+
+  release:
+    name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-release
+    needs:
+      - prepare-workflow
+      - backup
+      - test-repositories
+    environment: release
     steps:
       - name: Clone The Salt Repository
         uses: actions/checkout@v3
@@ -152,11 +184,11 @@ jobs:
           sync
           rm "$SECRETS_KEY_FILE"
           echo "passphrase-file ${GNUPGHOME}/passphrase" >> "${GNUPGHOME}/gpg.conf"
-          TWINE_PASSWORD=$(aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/publishing/publish-pypi \
-            --query SecretString --output text | jq .default_passphrase -r | base64 -d \
-            | gpg --passphrase-file "$SECRETS_KEY_FILE" -d -)
-          echo "::add-mask::$TWINE_PASSWORD"
-          echo "twine-password=$TWINE_PASSWORD" >> "${GITHUB_OUTPUT}"
+
+      - name: Prepare Release
+        id: prepare-release
+        run: |
+          tools pkg repo publish github --repository ${{ github.repository }} --key-id=64CBBC8173D76B3F ${{ needs.prepare-workflow.outputs.salt-version }}
 
       - name: Configure Git
         shell: bash
@@ -166,11 +198,6 @@ jobs:
           git config --global user.email saltproject-packaging@vmware.com
           git config --global user.signingkey 64CBBC8173D76B3F
           git config --global commit.gpgsign true
-
-      - name: Prepare Release
-        id: prepare-release
-        run: |
-          tools pkg repo publish release --key-id=64CBBC8173D76B3F ${{ needs.prepare-workflow.outputs.salt-version }}
 
       - name: Apply The Release Patch
         run: |
@@ -218,6 +245,8 @@ jobs:
     needs:
       - check-requirements
       - prepare-workflow
+      - publish-release-bucket
+      - test-repositories
       - release
     steps:
       - name: Get workflow information
