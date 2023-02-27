@@ -426,23 +426,6 @@ on:
       pkg-type: deb
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
-
-  ubuntu-1804-pkg-tests:
-    <%- do test_salt_needs.append('ubuntu-1804-pkg-tests') %>
-    name: Ubuntu 18.04 Package Tests
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-pkgs
-    uses: ./.github/workflows/test-packages-action.yml
-    with:
-      distro-slug: ubuntu-18.04
-      platform: linux
-      arch: x86_64
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      pkg-type: deb
-      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
-
   ubuntu-2004-pkg-tests:
     <%- do test_salt_needs.append('ubuntu-2004-pkg-tests') %>
     name: Ubuntu 20.04 Package Tests
