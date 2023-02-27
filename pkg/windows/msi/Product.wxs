@@ -63,7 +63,7 @@ IMCAC - Immediate Custom Action - It's immediate
 
     <!-- Properties default values. For Properties unset by default see README.md -->
     <Property Id="CONFIG_TYPE"              Value="Default" />
-    <!-- <Property Id="START_MINION"             Value="1" /> -->
+    <Property Id="START_MINION"             Value="1" />
     <Property Id="ROOTDRIVE"                Value="C:\" />  <!-- Prevent msi to choose the drive with most free space -->
     <Property Id="ARPPRODUCTICON"           Value="icon.ico" />
     <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
@@ -74,11 +74,12 @@ IMCAC - Immediate Custom Action - It's immediate
     <SetProperty Id="INSTALLDIR"    Value="[INSTALLFOLDER]" Before="LaunchConditions">INSTALLFOLDER</SetProperty>
 
     <!--
-    This sets the checkbox in the UI:
+    This attempts to set the checkbox in the UI:
     - If START_MINION is not passed, default to 1.
-    - If START_MINION is passed a value greater than 0, set to 1
+    - If START_MINION is passed a value that is not "0"
+    So far it's not working, so commented out for now
     -->
-    <SetProperty Id="START_MINION"  Value="1" Before="LaunchConditions">(NOT START_MINION) or (START_MINION != "0")</SetProperty>
+<!--     <SetProperty Id="START_MINION"  Value="1" Before="LaunchConditions"><![CDATA[NOT START_MINION OR START_MINION <> "0"]]></SetProperty> -->
 
     <!-- MINION_CONFIG implies REMOVE_CONFIG  -->
     <SetProperty Id="REMOVE_CONFIG" Value="1" Before="LaunchConditions">MINION_CONFIG</SetProperty>
@@ -217,6 +218,7 @@ IMCAC - Immediate Custom Action - It's immediate
       <Custom Action="WriteConfig_DECAC"        After="WriteIniValues"            >NOT Installed</Custom>
 
       <!-- Optionally start the service  -->
+      <!-- https://learn.microsoft.com/en-us/windows/win32/msi/suggested-installexecutesequence -->
       <StartServices Sequence="5900">START_MINION</StartServices>
 
       <!-- On uninstall (not upgrade): delete config and cache -->
