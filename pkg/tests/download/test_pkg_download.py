@@ -76,13 +76,6 @@ def get_test_versions():
             "container_id": "debian_11",
         },
         {
-            "image": "ubuntu:18.04",
-            "os_type": "ubuntu",
-            "os_version": 18.04,
-            "os_codename": "bionic",
-            "container_id": "ubuntu_18_04",
-        },
-        {
             "image": "ubuntu:20.04",
             "os_type": "ubuntu",
             "os_version": 20.04,
@@ -190,7 +183,7 @@ def root_url():
         salt_repo_pass = os.environ.get("SALT_REPO_PASS")
         if not salt_repo_user or not salt_repo_pass:
             pytest.skip(
-                "Values for Repo User or Repo Password are unavailable. Skipping."
+                "Values for SALT_REPO_USER or SALT_REPO_PASS are unavailable. Skipping."
             )
         root_url = "https://{}:{}@{}/salt/py3".format(
             salt_repo_user, salt_repo_pass, root_url
