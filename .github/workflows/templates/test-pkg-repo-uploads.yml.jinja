@@ -323,3 +323,111 @@
         run: |
           <{ command }>
     <%- endfor %>
+
+  test-macos-repo:
+    <%- do test_repo_needs.append('test-macos-repo') %>
+    name: Test macOS Repository
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+        version:
+          - "12"
+    runs-on:
+      - macos-${{ matrix.version }}
+    environment: <{ gh_environment }>
+    needs:
+      - prepare-workflow
+      - publish-repositories
+
+    steps:
+
+      - name: Install Salt
+        run: |
+          curl -fsSL -o /tmp/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}.pkg \
+            ${{ env.REPO_BASE_URL }}/macos/minor/${{ needs.prepare-workflow.outputs.salt-version}}/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}.pkg || \
+            curl -fsSL -o /tmp/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}-unsigned.pkg \
+            ${{ env.REPO_BASE_URL }}/macos/minor/${{ needs.prepare-workflow.outputs.salt-version}}/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}-unsigned.pkg
+
+          if [ -f /tmp/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}.pkg ]; then
+              installer -pkg /tmp/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}.pkg -target /
+          elif [ -f /tmp/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}-unsigned.pkg ]; then
+              installer -pkg /tmp/salt-${{ needs.prepare-workflow.outputs.salt-version }}-py3-${{ matrix.arch }}-unsigned.pkg -target /
+          else
+            echo "No downloaded Package?"
+            exit 1
+          fi
+
+    <%- for command in ('salt-call --local test.versions',
+                        'salt-call --local grains.items',
+                        'salt --version',
+                        'salt-master --version',
+                        'salt-minion --version',
+                        'salt-ssh --version',
+                        'salt-syndic --version',
+                        'salt-api --version',
+                        'salt-cloud --version') %>
+
+      - name: Test `<{ command }>`
+        run: |
+          <{ command }>
+    <%- endfor %>
+
+  <%- for install_type in ("setup",) %>
+
+  test-windows-<{ install_type }>-repo:
+    <%- do test_repo_needs.append('test-windows-{}-repo'.format(install_type)) %>
+    name: Test Windows Repository(<{ install_type }>)
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86
+          - AMD64
+        version:
+          - "2019"
+    runs-on:
+      - windows-${{ matrix.version }}
+    environment: <{ gh_environment }>
+    needs:
+      - prepare-workflow
+      - publish-repositories
+
+    steps:
+
+      - name: Download Salt
+        shell: bash
+        run: |
+          <%- if install_type == "msi" %>
+          curl -fsSL -o Salt-Minion-${{ needs.prepare-workflow.outputs.salt-version }}-Py3-${{ matrix.arch }}.msi \
+            ${{ env.REPO_BASE_URL }}/windows/minor/${{ needs.prepare-workflow.outputs.salt-version}}/Salt-Minion-${{ needs.prepare-workflow.outputs.salt-version }}-Py3-${{ matrix.arch }}.msi
+          <%- elif install_type == "setup" %>
+          curl -fsSL -o Salt-Minion-${{ needs.prepare-workflow.outputs.salt-version }}-Py3-${{ matrix.arch }}-Setup.exe \
+            ${{ env.REPO_BASE_URL }}/windows/minor/${{ needs.prepare-workflow.outputs.salt-version}}/Salt-Minion-${{ needs.prepare-workflow.outputs.salt-version }}-Py3-${{ matrix.arch }}-Setup.exe
+          <%- endif %>
+
+      - name: Install Salt
+        shell: powershell
+        run: |
+          <%- if install_type == "msi" %>
+          Salt-Minion-${{ needs.prepare-workflow.outputs.salt-version }}-Py3-${{ matrix.arch }}.msi /start-minion=0 /S
+          <%- elif install_type == "setup" %>
+          Salt-Minion-${{ needs.prepare-workflow.outputs.salt-version }}-Py3-${{ matrix.arch }}.exe /start-minion=0 /S
+          <%- endif %>
+
+    <%- for command in ('salt-call --local test.versions',
+                        'salt-call --local grains.items',
+                        'salt --version',
+                        'salt-master --version',
+                        'salt-minion --version',
+                        'salt-ssh --version',
+                        'salt-syndic --version',
+                        'salt-api --version',
+                        'salt-cloud --version') %>
+
+      - name: Test `<{ command }>`
+        run: |
+          <{ command }>
+    <%- endfor %>
+  <%- endfor %>
