@@ -159,7 +159,9 @@ permissions:
         run: |
           tools pkg repo publish release --key-id=64CBBC8173D76B3F ${{ needs.prepare-workflow.outputs.salt-version }}
 
+  <%- if includes.get("test-pkg-uploads", True) %>
   <%- include "test-pkg-repo-uploads.yml.jinja" %>
+  <%- endif %>
 
   release:
     <%- do conclusion_needs.append('release') %>

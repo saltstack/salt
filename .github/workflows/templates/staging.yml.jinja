@@ -125,7 +125,9 @@ concurrency:
         run: |
           tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
 
+  <%- if includes.get("test-pkg-uploads", True) %>
   <%- include "test-pkg-repo-uploads.yml.jinja" %>
+  <%- endif %>
 
   publish-pypi:
     <%- do conclusion_needs.append('publish-pypi') %>
@@ -133,6 +135,9 @@ concurrency:
     needs:
       - prepare-workflow
       - upload-release-artifacts
+      <%- for need in test_salt_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
       <%- for need in test_repo_needs.iter(consume=True) %>
       - <{ need }>
       <%- endfor %>
