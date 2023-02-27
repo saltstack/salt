@@ -62,6 +62,9 @@ def generate_workflows(ctx: Context):
         "Stage Release": {
             "slug": "staging",
             "template": "staging.yml",
+            "includes": {
+                "test-pkg-uploads": False,
+            },
         },
         "Scheduled": {
             "template": "scheduled.yml",
@@ -75,6 +78,7 @@ def generate_workflows(ctx: Context):
                 "pre-commit": False,
                 "lint": False,
                 "salt-tests": False,
+                "test-pkg-uploads": False,
             },
         },
     }
