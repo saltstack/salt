@@ -108,6 +108,7 @@ def generate_workflows(ctx: Context):
             "includes": includes,
             "conclusion_needs": NeedsTracker(),
             "test_salt_needs": NeedsTracker(),
+            "test_repo_needs": NeedsTracker(),
             "prepare_workflow_needs": NeedsTracker(),
         }
         if workflow_name == "Check Workflow Run":
