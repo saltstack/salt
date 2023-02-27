@@ -1049,7 +1049,7 @@ class VM:
             # rsync sets very strict file permissions and disables inheritance
             # we only need to reset permissions so they inherit from the parent
             cmd = ["icacls", remote_path, "/T", "/reset"]
-            ret = self.run(cmd, capture=True, check=False)
+            ret = self.run(cmd, capture=True, check=False, utf8=False)
             if ret.returncode != 0:
                 self.ctx.exit(ret.returncode, ret.stderr.strip())
 
@@ -1082,12 +1082,13 @@ class VM:
         pseudo_terminal: bool = False,
         env: list[str] = None,
         log_command_level: int = logging.INFO,
+        utf8: bool = True,
     ):
         if not self.is_running:
             self.ctx.exit(1, message=f"{self!r} is not running")
         if env is None:
             env = []
-        if self.is_windows is False:
+        if utf8:
             env.append("PYTHONUTF8=1")
         self.write_ssh_config()
         try:
