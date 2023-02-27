@@ -127,7 +127,6 @@ jobs:
 
       - name: Get Pull Number
         id: get-pull-number
-        uses: actions/github-script@v6
         env:
           E: 44
         run:
