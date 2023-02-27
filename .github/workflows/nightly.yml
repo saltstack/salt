@@ -817,6 +817,11 @@ jobs:
 
   publish-repositories:
     name: Publish Repositories
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-nightly
+    environment: nightly
     needs:
       - prepare-workflow
       - build-repositories
@@ -844,11 +849,32 @@ jobs:
       - ubuntu-2004-arm64
       - ubuntu-2204
       - ubuntu-2204-arm64
-    uses: ./.github/workflows/publish-repositories.yml
-    with:
-      environment: nightly
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-    secrets: inherit
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Download Repository Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-nightly-repo
+          path: repo/
+
+      - name: Decompress Repository Artifacts
+        run: |
+          find repo/ -type f -name '*.tar.gz' -print -exec tar xvf {} \;
+          find repo/ -type f -name '*.tar.gz' -print -exec rm -f {} \;
+
+      - name: Show Repository
+        run: |
+          tree -a artifacts/pkgs/repo/
+
+      - name: Upload Repository Contents (nightly)
+        run: |
+          tools pkg repo publish nightly \
+            ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} artifacts/pkgs/repo/
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
