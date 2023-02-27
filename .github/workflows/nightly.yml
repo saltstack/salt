@@ -127,8 +127,11 @@ jobs:
 
       - name: Get Pull Number
         id: get-pull-number
+        uses: actions/github-script@v6
         env:
-          E: ${{ toJson(github.sha) }}
+          E: ${{ github.rest.repos.listPullRequestsAssociatedWithCommit({commit_sah: github.sha,
+                                                                         owner: github.repo.owner,
+                                                                         repo: github.repo.repo})}}
         run:
           echo $E
 
