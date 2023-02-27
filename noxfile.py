@@ -1768,8 +1768,13 @@ def _pkg_test(session, cmd_args, test_type):
     runtests_log_filename = f"runtests-{test_type}"
     # Install requirements
     if _upgrade_pip_setuptools_and_wheel(session):
+        if IS_WINDOWS:
+            file_name = "pkgtests-windows.txt"
+        else:
+            file_name = "pkgtests.txt"
+
         requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "pkgtests.txt"
+            "requirements", "static", "ci", pydir, file_name
         )
 
         install_command = ["--progress-bar=off", "-r", requirements_file]

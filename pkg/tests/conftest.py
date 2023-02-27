@@ -5,7 +5,7 @@ import shutil
 
 import pytest
 from pytestskipmarkers.utils import platform
-from saltfactories.utils import random_string
+from saltfactories.utils import cli_scripts, random_string
 from saltfactories.utils.tempfiles import SaltPillarTree, SaltStateTree
 
 from tests.support.helpers import (
@@ -14,6 +14,7 @@ from tests.support.helpers import (
     TESTS_DIR,
     ApiRequest,
     SaltMaster,
+    SaltMasterWindows,
     SaltPkgInstall,
     TestUser,
 )
@@ -22,25 +23,11 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
-def version():
+def version(install_salt):
     """
     get version number from artifact
     """
-    _version = ""
-    for artifact in ARTIFACTS_DIR.glob("**/*.*"):
-        _version = re.search(
-            r"([0-9].*)(\-[0-9].fc|\-[0-9].el|\+ds|\_all|\_any|\_amd64|\_arm64|\-[0-9].am|(\-[0-9]-[a-z]*-[a-z]*[0-9_]*.|\-[0-9]*.*)(tar.gz|tar.xz|zip|exe|pkg|rpm|deb))",
-            artifact.name,
-        )
-        if _version:
-            _version = _version.groups()[0].replace("_", "-").replace("~", "")
-            _version = _version.split("-")[0]
-            # TODO: Remove this clause.  This is to handle a versioning difficulty between pre-3006
-            # dev versions and older salt versions on deb-based distros
-            if _version.startswith("1:"):
-                _version = _version[2:]
-            break
-    return _version
+    return install_salt.get_version(version_only=True)
 
 
 def pytest_addoption(parser):
@@ -281,20 +268,48 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         # On windows, using single binary, it has to decompress it and run the command. Too slow.
         # So, just in this scenario, use open mode
         config_overrides["open_mode"] = True
-    factory = salt_factories.salt_master_daemon(
-        random_string("master-"),
-        defaults=config_defaults,
-        overrides=config_overrides,
-        factory_class=SaltMaster,
-        salt_pkg_install=install_salt,
-    )
+    master_script = False
+    if platform.is_windows():
+        if install_salt.classic:
+            master_script = True
+        # this check will need to be changed to install_salt.relenv
+        # once the package version returns 3006 and not 3005 on master
+        elif not install_salt.upgrade:
+            master_script = True
+
+    if master_script:
+        salt_factories.system_install = False
+        scripts_dir = salt_factories.root_dir / "Scripts"
+        scripts_dir.mkdir(exist_ok=True)
+        salt_factories.scripts_dir = scripts_dir
+        config_overrides["open_mode"] = True
+        python_executable = install_salt.bin_dir / "Scripts" / "python.exe"
+        if install_salt.classic:
+            python_executable = install_salt.bin_dir / "python.exe"
+        factory = salt_factories.salt_master_daemon(
+            random_string("master-"),
+            defaults=config_defaults,
+            overrides=config_overrides,
+            factory_class=SaltMasterWindows,
+            salt_pkg_install=install_salt,
+            python_executable=python_executable,
+        )
+        salt_factories.system_install = True
+    else:
+        factory = salt_factories.salt_master_daemon(
+            random_string("master-"),
+            defaults=config_defaults,
+            overrides=config_overrides,
+            factory_class=SaltMaster,
+            salt_pkg_install=install_salt,
+        )
     factory.after_terminate(pytest.helpers.remove_stale_master_key, factory)
     with factory.started(start_timeout=start_timeout):
         yield factory
 
 
 @pytest.fixture(scope="session")
-def salt_minion(salt_master, install_salt):
+def salt_minion(salt_factories, salt_master, install_salt):
     """
     Start up a minion
     """
@@ -316,6 +331,14 @@ def salt_minion(salt_master, install_salt):
         "file_roots": salt_master.config["file_roots"].copy(),
         "pillar_roots": salt_master.config["pillar_roots"].copy(),
     }
+    if platform.is_windows():
+        config_overrides[
+            "winrepo_dir"
+        ] = rf"{salt_factories.root_dir}\srv\salt\win\repo"
+        config_overrides[
+            "winrepo_dir_ng"
+        ] = rf"{salt_factories.root_dir}\srv\salt\win\repo_ng"
+        config_overrides["winrepo_source_dir"] = r"salt://win/repo_ng"
     factory = salt_master.salt_minion_daemon(
         minion_id,
         overrides=config_overrides,

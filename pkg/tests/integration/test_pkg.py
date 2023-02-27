@@ -2,10 +2,6 @@ import sys
 
 import pytest
 
-pytestmark = [
-    pytest.mark.skip_unless_on_linux,
-]
-
 
 @pytest.fixture(scope="module")
 def grains(salt_call_cli):
@@ -15,8 +11,12 @@ def grains(salt_call_cli):
 
 
 @pytest.fixture(scope="module")
-def pkgname(grains):
+def pkg_name(salt_call_cli, grains):
     if sys.platform.startswith("win"):
+        ret = salt_call_cli.run("--local", "winrepo.update_git_repos")
+        assert ret.returncode == 0
+        ret = salt_call_cli.run("--local", "pkg.refresh_db")
+        assert ret.returncode == 0
         return "putty"
     elif grains["os_family"] == "RedHat":
         if grains["os"] == "VMware Photon OS":
@@ -27,6 +27,6 @@ def pkgname(grains):
     return "figlet"
 
 
-def test_pkg_install(salt_call_cli, pkgname):
-    ret = salt_call_cli.run("--local", "state.single", "pkg.installed", pkgname)
+def test_pkg_install(salt_call_cli, pkg_name):
+    ret = salt_call_cli.run("--local", "state.single", "pkg.installed", pkg_name)
     assert ret.returncode == 0

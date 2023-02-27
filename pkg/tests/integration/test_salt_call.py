@@ -39,9 +39,9 @@ def test_salt_call_local_sys_doc_none(salt_call_cli):
     assert ret.returncode == 0
 
 
-def test_salt_call_local_sys_doc_aliasses(salt_call_cli):
+def test_salt_call_local_sys_doc_aliases(salt_call_cli):
     """
-    Test salt-call --local sys.doc aliasses
+    Test salt-call --local sys.doc aliases
     """
     ret = salt_call_cli.run("--local", "sys.doc", "aliases.list_aliases")
     assert "aliases.list_aliases" in ret.data

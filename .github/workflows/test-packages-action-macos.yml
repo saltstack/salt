@@ -64,7 +64,7 @@ jobs:
       - name: Generate Package Test Matrix
         id: generate-pkg-matrix
         run: |
-          PKG_MATRIX=$(tools ci pkg-matrix ${{ inputs.distro-slug }})
+          PKG_MATRIX=$(tools ci pkg-matrix ${{ inputs.distro-slug }} ${{ inputs.pkg-type }})
           echo "$PKG_MATRIX"
           echo "matrix=$PKG_MATRIX" >> "$GITHUB_OUTPUT"
 
