@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: python:3.10-slim-buster
+      image: ghcr.io/saltstack/salt-ci-containers/python:3.10
 
     steps:
 
