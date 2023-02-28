@@ -23,7 +23,7 @@ on:
         type: string
         required: true
         description: The Salt version of the packages to install and test
-      cache-seed:
+      cache-prefix:
         required: true
         type: string
         description: Seed used to invalidate caches
@@ -88,7 +88,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ matrix.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ matrix.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
       # Skip jobs if nox.*.tar.* is already cached
       - name: Download Onedir Tarball as an Artifact
@@ -211,7 +211,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-seed }}|testrun-deps|${{ inputs.distro-slug }}|${{ matrix.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ matrix.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts

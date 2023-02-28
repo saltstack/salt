@@ -77,6 +77,7 @@ def generate_workflows(ctx: Context):
             "includes": {
                 "pre-commit": False,
                 "lint": False,
+                "pkg-tests": False,
                 "salt-tests": False,
                 "test-pkg-uploads": False,
             },
