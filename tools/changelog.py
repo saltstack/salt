@@ -365,8 +365,10 @@ def generate_changelog_md(ctx: Context, salt_version: Version, draft: bool = Fal
         salt_version = _get_salt_version(ctx)
     cmd = ["towncrier", "build", f"--version={salt_version}"]
     if draft:
-        cmd += ["--draft"]
+        cmd.append("--draft")
+    elif salt_version.is_prerelease:
+        cmd.append("--keep")
     else:
-        cmd += ["--yes"]
+        cmd.append("--yes")
     ctx.run(*cmd, check=True)
     ctx.run("git", "restore", "--staged", "CHANGELOG.md", "changelog/", check=True)
