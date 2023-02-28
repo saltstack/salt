@@ -23,17 +23,17 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    container:
-      image: python:3.10-slim-buster
-
     steps:
 
       - name: Install System Deps
         run: |
-          echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
-          apt-get update
-          apt-get install -y wget curl enchant git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
-          apt-get install -y git/buster-backports
+          sudo apt-get update
+          sudo apt-get install -y wget curl enchant-2 git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
 
       - uses: actions/checkout@v3
       - uses: ./.github/actions/setup-actionlint
