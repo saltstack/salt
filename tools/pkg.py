@@ -171,8 +171,8 @@ def set_salt_version(
 
     ctx.info(f"Successfuly wrote {salt_version!r} to 'salt/_version.txt'")
 
-    if release:
-        version_instance = tools.utils.Version(salt_version)
+    version_instance = tools.utils.Version(salt_version)
+    if release and not version_instance.is_prerelease:
         with open(tools.utils.REPO_ROOT / "salt" / "version.py", "r+") as rwfh:
             contents = rwfh.read()
             match = f"info=({version_instance.major}, {version_instance.minor}))"
