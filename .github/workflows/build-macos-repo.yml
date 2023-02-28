@@ -42,7 +42,7 @@ jobs:
       - name: Download macOS x86_64 Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-x86_64-macos-pkgs
+          name: salt-${{ inputs.salt-version }}-x86_64-macos
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG
