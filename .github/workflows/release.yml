@@ -29,6 +29,7 @@ jobs:
   check-requirements:
     name: Check Requirements
     runs-on: ubuntu-latest
+    environment: release-check
     steps:
       - name: Check For Admin Permission
         uses: actions-cool/check-user-permission@v2

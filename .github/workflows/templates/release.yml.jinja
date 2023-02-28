@@ -42,6 +42,7 @@ permissions:
   <%- do prepare_workflow_needs.append(job_name) %>
     name: Check Requirements
     runs-on: ubuntu-latest
+    environment: <{ gh_environment }>-check
     steps:
       - name: Check For Admin Permission
         uses: actions-cool/check-user-permission@v2
