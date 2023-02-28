@@ -21,24 +21,9 @@ concurrency:
 <%- block jobs %>
   <{- super() }>
 
-  build-repositories:
-    <%- do conclusion_needs.append('build-repositories') %>
-    name: Build Repositories
-    needs:
-      - prepare-workflow
-      - build-pkgs
-    uses: ./.github/workflows/build-repos.yml
-    with:
-      environment: <{ gh_environment }>
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      <%- if gh_environment == "nightly" %>
-      nightly-build: true
-      <%- else %>
-      nightly-build: false
-      <%- endif %>
-      rc-build: ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') }}
-    secrets:
-      SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+  <%- if includes.get("build-repos", True) %>
+  <%- include "build-repos.yml.jinja" %>
+  <%- endif %>
 
   publish-repositories:
     <%- do conclusion_needs.append('publish-repositories') %>
@@ -50,7 +35,9 @@ concurrency:
     environment: <{ gh_environment }>
     needs:
       - prepare-workflow
-      - build-repositories
+      <%- for need in build_repo_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
       <%- if workflow_slug == "nightly" %>
       <%- for need in test_salt_needs.iter(consume=True) %>
       - <{ need }>

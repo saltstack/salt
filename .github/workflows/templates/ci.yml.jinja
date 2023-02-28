@@ -290,20 +290,7 @@ on:
 
   <%- set job_name = "build-pkgs" %>
   <%- if includes.get(job_name, True) %>
-
-  <{ job_name }>:
-    <%- do conclusion_needs.append(job_name) %>
-    name: Build Salt Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['<{ job_name }>'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir
-    uses: ./.github/workflows/build-packages.yml
-    with:
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-
+  <%- include "build-packages.yml.jinja" %>
   <%- endif %>
 
 

@@ -415,24 +415,52 @@ jobs:
       python-version-macos: "3.10.10"
       python-version-windows: "3.10.10"
 
-  build-pkgs:
-    name: Build Salt Packages
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] }}
+  build-rpm-pkgs:
+    name: Build RPM Packages
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - build-salt-onedir
-    uses: ./.github/workflows/build-packages.yml
+    uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+
+  build-deb-pkgs:
+    name: Build DEB Packages
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/build-deb-packages.yml
+    with:
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+  build-windows-pkgs:
+    name: Build Windows Packages
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/build-windows-packages.yml
+    with:
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+  build-macos-pkgs:
+    name: Build macOS Packages
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/build-macos-packages.yml
+    with:
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
   amazonlinux-2-pkg-tests:
     name: Amazon Linux 2 Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-rpm-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: amazonlinux-2
@@ -447,7 +475,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-rpm-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: centos-7
@@ -462,7 +490,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-rpm-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: centosstream-8
@@ -477,7 +505,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-rpm-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: centosstream-9
@@ -492,7 +520,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-deb-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: debian-10
@@ -507,7 +535,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-deb-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: debian-11
@@ -522,7 +550,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-deb-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: debian-11-arm64
@@ -537,7 +565,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-deb-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: ubuntu-20.04
@@ -552,7 +580,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-deb-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: ubuntu-20.04-arm64
@@ -567,7 +595,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-deb-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: ubuntu-22.04
@@ -582,7 +610,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-deb-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: ubuntu-22.04-arm64
@@ -597,7 +625,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-macos-pkgs
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: macos-12
@@ -612,7 +640,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-windows-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: windows-2016
@@ -627,7 +655,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-windows-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: windows-2016
@@ -642,7 +670,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-windows-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: windows-2019
@@ -657,7 +685,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-windows-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: windows-2019
@@ -672,7 +700,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-windows-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: windows-2022
@@ -687,7 +715,7 @@ jobs:
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-windows-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: windows-2022
@@ -1094,7 +1122,6 @@ jobs:
       - build-docs
       - build-deps-onedir
       - build-salt-onedir
-      - build-pkgs
       - windows-2016
       - windows-2019
       - windows-2022

@@ -1,0 +1,20 @@
+<%- for pkg_type, display_name, runner_type in (
+                                                  ("rpm", "RPM", "self-hosted"),
+                                                  ("deb", "DEB", "self-hosted"),
+                                                  ("windows", "Windows", "github-hosted"),
+                                                  ("macos", "macOS", "github-hosted"),
+                                                ) %>
+
+  <%- set job_name = "build-{}-pkgs".format(pkg_type) %>
+
+  <{ job_name }>:
+    name: Build <{ display_name }> Packages
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['<{ runner_type }>'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/build-<{ pkg_type }>-packages.yml
+    with:
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+<%- endfor %>
