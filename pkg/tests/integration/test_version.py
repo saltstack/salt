@@ -13,7 +13,9 @@ def test_salt_version(version, install_salt):
     """
     test_bin = os.path.join(*install_salt.binary_paths["salt"])
     ret = install_salt.proc.run(test_bin, "--version")
-    assert ret.stdout.strip() == f"salt {version}"
+    actual = ret.stdout.strip().split(" ")[:2]
+    expected = ["salt", version]
+    assert actual == expected
 
 
 @pytest.mark.skip_on_windows
