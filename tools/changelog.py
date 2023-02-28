@@ -202,17 +202,18 @@ def update_rpm(ctx: Context, salt_version: Version, draft: bool = False):
     if salt_version is None:
         salt_version = _get_salt_version(ctx)
     changes = _get_pkg_changelog_contents(ctx, salt_version)
-    ctx.info(f"Salt version is {salt_version}")
+    str_salt_version = str(salt_version).replace("rc", "~rc")
+    ctx.info(f"Salt version is {str_salt_version}")
     orig = ctx.run(
         "sed",
-        f"s/Version: .*/Version: {salt_version}/g",
+        f"s/Version: .*/Version: {str_salt_version}/g",
         "pkg/rpm/salt.spec",
         capture=True,
         check=True,
     ).stdout.decode()
     dt = datetime.datetime.utcnow()
     date = dt.strftime("%a %b %d %Y")
-    header = f"* {date} Salt Project Packaging <saltproject-packaging@vmware.com> - {salt_version}\n"
+    header = f"* {date} Salt Project Packaging <saltproject-packaging@vmware.com> - {str_salt_version}\n"
     parts = orig.split("%changelog")
     tmpspec = "pkg/rpm/salt.spec.1"
     with open(tmpspec, "w") as wfp:
