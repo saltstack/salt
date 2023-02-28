@@ -1,37 +1,4 @@
----
-name: Build DEB Apt Repository
 
-on:
-  workflow_call:
-    inputs:
-      salt-version:
-        type: string
-        required: true
-        description: The Salt version to set prior to building packages.
-      nightly-build:
-        type: boolean
-        default: false
-      rc-build:
-        type: boolean
-        default: false
-      environment:
-        type: string
-        description: On which GitHub Environment Context To Run
-    secrets:
-      SECRETS_KEY:
-        required: true
-
-env:
-  COLUMNS: 190
-
-jobs:
-  build-repo:
-    name: DEB
-    environment: ${{ inputs.environment }}
-    runs-on:
-      - self-hosted
-      - linux
-      - repo-${{ inputs.environment }}
     strategy:
       fail-fast: false
       matrix:
@@ -75,7 +42,7 @@ jobs:
       - name: Download DEB Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch }}-deb
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG
@@ -113,15 +80,15 @@ jobs:
 
       - name: Create Repository
         run: |
-          tools pkg repo create deb --key-id=64CBBC8173D76B3F --distro-arch=${{ matrix.arch }} \
-            ${{ inputs.nightly-build && '--nightly-build' || '' }} --salt-version=${{ inputs.salt-version }} \
-            ${{ inputs.rc-build && '--rc-build' || '' }} --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
+          tools pkg repo create deb --key-id=64CBBC8173D76B3F --distro-arch=${{ matrix.arch }} <% if gh_environment == 'nightly' -%> --nightly-build <%- endif %> \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} \
+            --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ inputs.salt-version }}-${{ inputs.environment }}-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
