@@ -28,7 +28,7 @@ jobs:
       - name: Install System Deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget curl enchant-2 git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
+          sudo apt-get install -y enchant-2
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
