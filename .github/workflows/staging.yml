@@ -130,12 +130,18 @@ jobs:
             golden_images:
               - added|modified:
                 - cicd/golden-images.json
+            pkg_tests:
+              - added|modified: &pkg_tests_added_modified
+                - pkg/**
+                - *pkg_requirements
+                - *salt_added_modified
             testrun:
               - added|modified:
                 - *pkg_requirements
                 - *test_requirements
                 - *salt_added_modified
                 - *tests_added_modified
+                - *pkg_tests_added_modified
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
@@ -285,11 +291,13 @@ jobs:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
           release: true
 
+      # TODO: Remove the --salt-version argument post 3006 release.  This was to handle versioning
+      # issues on pre-3006 development versions on deb-based distros.
       - name: Update Debian changelog
         shell: bash
         run: |
-          tools changelog update-deb --draft
-          tools changelog update-deb
+          tools changelog update-deb "1:${{ needs.prepare-workflow.outputs.salt-version }}" --draft
+          tools changelog update-deb "1:${{ needs.prepare-workflow.outputs.salt-version }}"
 
       - name: Update RPM changelog
         shell: bash
@@ -454,6 +462,281 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+
+  # <-------------------------------- PACKAGE TESTS -------------------------------->
+  # TODO: Extract these out later
+
+  amazonlinux-2-pkg-tests:
+    name: Amazon Linux 2 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: amazonlinux-2
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  centos-7-pkg-tests:
+    name: CentOS 7 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: centos-7
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+
+  centosstream-8-pkg-tests:
+    name: CentOS 8 Stream Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: centosstream-8
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  centosstream-9-pkg-tests:
+    name: CentOS 9 Stream Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: centosstream-9
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  debian-10-pkg-tests:
+    name: Debian 10 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: debian-10
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  debian-11-pkg-tests:
+    name: Debian 11 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: debian-11
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  debian-11-arm64-pkg-tests:
+    name: Debian 11 Arm64 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: debian-11-arm64
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  ubuntu-2004-pkg-tests:
+    name: Ubuntu 20.04 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: ubuntu-20.04
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  ubuntu-2004-arm64-pkg-tests:
+    name: Ubuntu 20.04 Arm64 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: ubuntu-20.04-arm64
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  ubuntu-2204-pkg-tests:
+    name: Ubuntu 22.04 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: ubuntu-22.04
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  ubuntu-2204-arm64-pkg-tests:
+    name: Ubuntu 22.04 Arm64 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: ubuntu-22.04-arm64
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  macos-12-pkg-tests:
+    name: macOS 12 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action-macos.yml
+    with:
+      distro-slug: macos-12
+      platform: darwin
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: macos
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  windows-2016-nsis-pkg-tests:
+    name: Windows 2016 NSIS Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2016
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: NSIS
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  windows-2016-msi-pkg-tests:
+    name: Windows 2016 MSI Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2016
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: MSI
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  windows-2019-nsis-pkg-tests:
+    name: Windows 2019 NSIS Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2019
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: NSIS
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  windows-2019-msi-pkg-tests:
+    name: Windows 2019 MSI Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2019
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: MSI
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  windows-2022-nsis-pkg-tests:
+    name: Windows 2022 NSIS Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2022
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: NSIS
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+  windows-2022-msi-pkg-tests:
+    name: Windows 2022 MSI Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2022
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: MSI
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+  # <-------------------------------- PACKAGE TESTS -------------------------------->
 
   windows-2016:
     name: Windows 2016
@@ -1030,6 +1313,24 @@ jobs:
       - publish-repositories
       - upload-release-artifacts
       - publish-pypi
+      - amazonlinux-2-pkg-tests
+      - centos-7-pkg-tests
+      - centosstream-8-pkg-tests
+      - centosstream-9-pkg-tests
+      - debian-10-pkg-tests
+      - debian-11-pkg-tests
+      - debian-11-arm64-pkg-tests
+      - ubuntu-2004-pkg-tests
+      - ubuntu-2004-arm64-pkg-tests
+      - ubuntu-2204-pkg-tests
+      - ubuntu-2204-arm64-pkg-tests
+      - macos-12-pkg-tests
+      - windows-2016-nsis-pkg-tests
+      - windows-2016-msi-pkg-tests
+      - windows-2019-nsis-pkg-tests
+      - windows-2019-msi-pkg-tests
+      - windows-2022-nsis-pkg-tests
+      - windows-2022-msi-pkg-tests
     steps:
       - name: Get workflow information
         id: get-workflow-info

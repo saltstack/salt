@@ -264,6 +264,9 @@ jobs:
       <%- for need in test_salt_needs.iter(consume=False) %>
       - <{ need }>
       <%- endfor %>
+      <%- for need in test_salt_pkg_needs.iter(consume=False) %>
+      - <{ need }>
+      <%- endfor %>
       <%- for need in test_repo_needs.iter(consume=True) %>
       - <{ need }>
       <%- endfor %>
