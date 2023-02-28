@@ -39,16 +39,28 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
-      - name: Download Windows x86 Packages
+      - name: Download Windows NSIS x86 Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-x86-windows-pkgs
+          name: salt-${{ inputs.salt-version }}-x86-windows-NSIS
           path: artifacts/pkgs/incoming
 
-      - name: Download Windows amd64 Packages
+      - name: Download Windows MSI x86 Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-amd64-windows-pkgs
+          name: salt-${{ inputs.salt-version }}-x86-windows-MSI
+          path: artifacts/pkgs/incoming
+
+      - name: Download Windows NSIS amd64 Packages
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ inputs.salt-version }}-amd64-windows-pkgs-NSIS
+          path: artifacts/pkgs/incoming
+
+      - name: Download Windows MSI amd64 Packages
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ inputs.salt-version }}-amd64-windows-pkgs-MSI
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG

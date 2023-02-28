@@ -75,7 +75,7 @@ jobs:
       - name: Download DEB Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb-pkgs
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG
