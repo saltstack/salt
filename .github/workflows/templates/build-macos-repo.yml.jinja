@@ -46,7 +46,7 @@
 
       - name: Create Repository
         run: |
-          tools pkg repo create macos --key-id=64CBBC8173D76B3F <% if gh_environment == 'nightly' -%> --nightly-build <%- endif %> \
+          tools pkg repo create macos --key-id=<{ gpg_key_id }> <% if gh_environment == 'nightly' -%> --nightly-build <%- endif %> \
             --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || ''  }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 

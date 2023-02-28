@@ -157,7 +157,7 @@ permissions:
 
       - name: Publish Release Repository
         run: |
-          tools pkg repo publish release --key-id=64CBBC8173D76B3F ${{ needs.prepare-workflow.outputs.salt-version }}
+          tools pkg repo publish release --key-id=<{ gpg_key_id }> ${{ needs.prepare-workflow.outputs.salt-version }}
 
   <%- if includes.get("test-pkg-uploads", True) %>
   <%- include "test-pkg-repo-uploads.yml.jinja" %>
@@ -220,7 +220,7 @@ permissions:
       - name: Prepare Release
         id: prepare-release
         run: |
-          tools pkg repo publish github --repository ${{ github.repository }} --key-id=64CBBC8173D76B3F ${{ needs.prepare-workflow.outputs.salt-version }}
+          tools pkg repo publish github --repository ${{ github.repository }} --key-id=<{ gpg_key_id }> ${{ needs.prepare-workflow.outputs.salt-version }}
 
       - name: Configure Git
         shell: bash
@@ -228,7 +228,7 @@ permissions:
           git config --global --add safe.directory "$(pwd)"
           git config --global user.name "Salt Project Packaging"
           git config --global user.email saltproject-packaging@vmware.com
-          git config --global user.signingkey 64CBBC8173D76B3F
+          git config --global user.signingkey <{ gpg_key_id }>
           git config --global commit.gpgsign true
 
       - name: Apply The Release Patch
