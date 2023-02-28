@@ -314,7 +314,7 @@ on:
   # TODO: Extract these out later
 
   amazonlinux-2-pkg-tests:
-    <%- do test_salt_needs.append('amazonlinux-2-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('amazonlinux-2-pkg-tests') %>
     name: Amazon Linux 2 Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -330,7 +330,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   centos-7-pkg-tests:
-    <%- do test_salt_needs.append('centos-7-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('centos-7-pkg-tests') %>
     name: CentOS 7 Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -347,7 +347,7 @@ on:
 
 
   centosstream-8-pkg-tests:
-    <%- do test_salt_needs.append('centosstream-8-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('centosstream-8-pkg-tests') %>
     name: CentOS 8 Stream Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -363,7 +363,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   centosstream-9-pkg-tests:
-    <%- do test_salt_needs.append('centosstream-9-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('centosstream-9-pkg-tests') %>
     name: CentOS 9 Stream Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -379,7 +379,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   debian-10-pkg-tests:
-    <%- do test_salt_needs.append('debian-10-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('debian-10-pkg-tests') %>
     name: Debian 10 Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -395,7 +395,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   debian-11-pkg-tests:
-    <%- do test_salt_needs.append('debian-11-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('debian-11-pkg-tests') %>
     name: Debian 11 Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -411,7 +411,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   debian-11-arm64-pkg-tests:
-    <%- do test_salt_needs.append('debian-11-arm64-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('debian-11-arm64-pkg-tests') %>
     name: Debian 11 Arm64 Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -427,7 +427,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2004-pkg-tests:
-    <%- do test_salt_needs.append('ubuntu-2004-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('ubuntu-2004-pkg-tests') %>
     name: Ubuntu 20.04 Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -443,7 +443,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2004-arm64-pkg-tests:
-    <%- do test_salt_needs.append('ubuntu-2004-arm64-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('ubuntu-2004-arm64-pkg-tests') %>
     name: Ubuntu 20.04 Arm64 Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -459,7 +459,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2204-pkg-tests:
-    <%- do test_salt_needs.append('ubuntu-2204-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('ubuntu-2204-pkg-tests') %>
     name: Ubuntu 22.04 Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -475,7 +475,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   ubuntu-2204-arm64-pkg-tests:
-    <%- do test_salt_needs.append('ubuntu-2204-arm64-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('ubuntu-2204-arm64-pkg-tests') %>
     name: Ubuntu 22.04 Arm64 Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -491,7 +491,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   macos-12-pkg-tests:
-    <%- do test_salt_needs.append('macos-12-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('macos-12-pkg-tests') %>
     name: macOS 12 Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
@@ -507,7 +507,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2016-nsis-pkg-tests:
-    <%- do test_salt_needs.append('windows-2016-nsis-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('windows-2016-nsis-pkg-tests') %>
     name: Windows 2016 NSIS Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -523,7 +523,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2016-msi-pkg-tests:
-    <%- do test_salt_needs.append('windows-2016-msi-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('windows-2016-msi-pkg-tests') %>
     name: Windows 2016 MSI Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -539,7 +539,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2019-nsis-pkg-tests:
-    <%- do test_salt_needs.append('windows-2019-nsis-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('windows-2019-nsis-pkg-tests') %>
     name: Windows 2019 NSIS Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -555,7 +555,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2019-msi-pkg-tests:
-    <%- do test_salt_needs.append('windows-2019-msi-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('windows-2019-msi-pkg-tests') %>
     name: Windows 2019 MSI Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -571,7 +571,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2022-nsis-pkg-tests:
-    <%- do test_salt_needs.append('windows-2022-nsis-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('windows-2022-nsis-pkg-tests') %>
     name: Windows 2022 NSIS Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
@@ -587,7 +587,7 @@ on:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
 
   windows-2022-msi-pkg-tests:
-    <%- do test_salt_needs.append('windows-2022-msi-pkg-tests') %>
+    <%- do test_salt_pkg_needs.append('windows-2022-msi-pkg-tests') %>
     name: Windows 2022 MSI Package Tests
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
