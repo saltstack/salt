@@ -12,6 +12,11 @@
 
   <{ job_name }>:
     name: Build <{ display_name }> Repository
+    environment: <{ gh_environment }>
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
     needs:
       - prepare-workflow
       <%- if needs_pkg %>
@@ -19,15 +24,6 @@
       <%- else %>
       - build-salt-onedir
       <%- endif %>
-    uses: ./.github/workflows/build-<{ type }>-repo.yml
-    with:
-      environment: <{ gh_environment }>
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      rc-build: ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') }}
-      <%- if gh_environment == "nightly" %>
-      nightly-build: true
-      <%- endif %>
-    secrets:
-      SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+    <%- include "build-{}-repo.yml.jinja".format(type) %>
 
 <%- endfor %>

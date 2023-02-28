@@ -1,37 +1,3 @@
----
-name: Build Windows Repository
-
-on:
-  workflow_call:
-    inputs:
-      salt-version:
-        type: string
-        required: true
-        description: The Salt version to set prior to building packages.
-      nightly-build:
-        type: boolean
-        default: false
-      rc-build:
-        type: boolean
-        default: false
-      environment:
-        type: string
-        description: On which GitHub Environment Context To Run
-    secrets:
-      SECRETS_KEY:
-        required: true
-
-env:
-  COLUMNS: 190
-
-jobs:
-  build-repo:
-    name: Windows
-    environment: ${{ inputs.environment }}
-    runs-on:
-      - self-hosted
-      - linux
-      - repo-${{ inputs.environment }}
 
     steps:
       - uses: actions/checkout@v3
@@ -39,28 +5,10 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
-      - name: Download Windows NSIS x86 Packages
+      - name: Download Source Tarball
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-x86-windows-NSIS
-          path: artifacts/pkgs/incoming
-
-      - name: Download Windows MSI x86 Packages
-        uses: actions/download-artifact@v3
-        with:
-          name: salt-${{ inputs.salt-version }}-x86-windows-MSI
-          path: artifacts/pkgs/incoming
-
-      - name: Download Windows NSIS amd64 Packages
-        uses: actions/download-artifact@v3
-        with:
-          name: salt-${{ inputs.salt-version }}-amd64-windows-pkgs-NSIS
-          path: artifacts/pkgs/incoming
-
-      - name: Download Windows MSI amd64 Packages
-        uses: actions/download-artifact@v3
-        with:
-          name: salt-${{ inputs.salt-version }}-amd64-windows-pkgs-MSI
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG
@@ -98,16 +46,26 @@ jobs:
 
       - name: Create Repository
         run: |
-          tools pkg repo create windows --key-id=64CBBC8173D76B3F \
-            ${{ inputs.nightly-build && '--nightly-build' || ''  }} --salt-version=${{ inputs.salt-version }} \
-            ${{ inputs.rc-build && '--rc-build' || ''  }} --incoming=artifacts/pkgs/incoming \
-            --repo-path=artifacts/pkgs/repo
+          tools pkg repo create src --key-id=64CBBC8173D76B3F <% if gh_environment == 'nightly' -%> --nightly-build <%- endif %> \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || ''  }} \
+            --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
+
+      - name: Upload Standalone Repository As An Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-src-repo
+          path: |
+            artifacts/pkgs/repo/salt/py3/src/${{ needs.prepare-workflow.outputs.salt-version }}/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+            artifacts/pkgs/repo/salt/py3/src/${{ needs.prepare-workflow.outputs.salt-version }}/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.*
+            artifacts/pkgs/repo/salt/py3/src/${{ needs.prepare-workflow.outputs.salt-version }}/*-GPG-*
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Upload Repository As An Artifact
         uses: ./.github/actions/upload-artifact
         with:
-          name: salt-${{ inputs.salt-version }}-${{ inputs.environment }}-repo
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo
           path: artifacts/pkgs/repo/*
           retention-days: 7
           if-no-files-found: error
-          archive-name: windows-repo
+          archive-name: src-repo
