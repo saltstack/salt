@@ -80,7 +80,7 @@ concurrency:
     needs:
       - prepare-workflow
       - build-docs
-      - build-repositories
+      - build-src-repo
     environment: <{ gh_environment }>
     runs-on:
       - self-hosted

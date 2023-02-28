@@ -116,6 +116,7 @@ def generate_workflows(ctx: Context):
             "test_salt_pkg_needs": NeedsTracker(),
             "test_repo_needs": NeedsTracker(),
             "prepare_workflow_needs": NeedsTracker(),
+            "build_repo_needs": NeedsTracker(),
         }
         if workflow_name == "Check Workflow Run":
             check_workflow_exclusions = {

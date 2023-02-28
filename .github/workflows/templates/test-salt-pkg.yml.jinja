@@ -41,7 +41,7 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-<{ pkg_type }>-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: <{ slug }>
@@ -64,7 +64,7 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-macos-pkgs
     uses: ./.github/workflows/test-packages-action-macos.yml
     with:
       distro-slug: <{ slug }>
@@ -89,7 +89,7 @@
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
-      - build-pkgs
+      - build-windows-pkgs
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: <{ slug }>
