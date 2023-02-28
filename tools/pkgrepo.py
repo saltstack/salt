@@ -1259,7 +1259,7 @@ def github(
             )
 
     for artifact in artifacts_path.iterdir():
-        if artifact.suffix == ".patch":
+        if artifact.suffix in (".patch", ".asc"):
             continue
         tools.utils.gpg_sign(ctx, key_id, artifact)
 
