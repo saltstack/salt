@@ -14,6 +14,10 @@ on:
         type: boolean
         default: false
         description: Skip running the Salt test suite.
+      skip-salt-pkg-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages test suite.
 
 env:
   COLUMNS: 190
@@ -197,7 +201,7 @@ jobs:
       - name: Define Jobs
         id: define-jobs
         run: |
-          tools ci define-jobs ${{ inputs.skip-salt-test-suite && '--skip-tests' || '' }} ${{ github.event_name }} changed-files.json
+          tools ci define-jobs${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }} ${{ github.event_name }} changed-files.json
 
       - name: Check Defined Jobs
         run: |

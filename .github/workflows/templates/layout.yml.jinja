@@ -1,6 +1,7 @@
 # Do not edit these workflows directly as the changes made will be overwritten.
 # Instead, edit the template '<{ template }>'
 <%- set prepare_workflow_skip_test_suite = prepare_workflow_skip_test_suite|default("") %>
+<%- set prepare_workflow_skip_pkg_test_suite = prepare_workflow_skip_pkg_test_suite|default("") %>
 <%- set prepare_workflow_salt_version_input = prepare_workflow_salt_version_input|default("") %>
 <%- set python_version_linux = "3.10.10" %>
 <%- set python_version_macos = "3.10.10" %>
@@ -212,7 +213,7 @@ jobs:
       - name: Define Jobs
         id: define-jobs
         run: |
-          tools ci define-jobs<{ prepare_workflow_skip_test_suite }> ${{ github.event_name }} changed-files.json
+          tools ci define-jobs<{ prepare_workflow_skip_test_suite }><{ prepare_workflow_skip_pkg_test_suite }> ${{ github.event_name }} changed-files.json
 
       - name: Check Defined Jobs
         run: |
