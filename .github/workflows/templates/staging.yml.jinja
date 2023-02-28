@@ -1,5 +1,6 @@
 <%- set prepare_workflow_salt_version_input = "${{ inputs.salt-version }}" %>
-<%- set prepare_workflow_skip_test_suite = " ${{ inputs.skip-salt-test-suite && '--skip-tests' || '' }}" %>
+<%- set prepare_workflow_skip_test_suite = "${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}" %>
+<%- set prepare_workflow_skip_pkg_test_suite = "${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}" %>
 <%- set gh_environment = "staging" %>
 <%- set prepare_actual_release = True %>
 <%- extends 'nightly.yml.jinja' %>
@@ -17,6 +18,10 @@ on:
         type: boolean
         default: false
         description: Skip running the Salt test suite.
+      skip-salt-pkg-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages test suite.
 
 <%- endblock on %>
 
