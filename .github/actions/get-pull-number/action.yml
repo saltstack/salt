@@ -3,11 +3,8 @@ name: get-pull-number
 description: Get Pull Number
 inputs:
   repo:
-    type: string
   owner:
-    type: string
   sha:
-    type: string
   pull_number:
     default: null
 
