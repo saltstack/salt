@@ -13,7 +13,4 @@ runs:
       id: get-pull-number
       shell: bash
       run:
-        echo $GITHUB_PULL_REQUEST_NUMBER
-        echo $REPOSITORY_OWNER
-        echo $REPOSITORY_NAME
         echo NUMBER=56 >> "$GITHUB_OUTPUT"
