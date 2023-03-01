@@ -773,13 +773,8 @@ def src(
         assert key_id is not None
 
     ctx.info("Creating repository directory structure ...")
-    create_repo_path = _create_repo_path(
-        repo_path,
-        salt_version,
-        "src",
-        rc_build=rc_build,
-        nightly_build=nightly_build,
-    )
+    create_repo_path = repo_path / salt_version
+    create_repo_path.mkdir(exist_ok=True, parents=True)
     hashes_base_path = create_repo_path / f"salt-{salt_version}"
     for fpath in incoming.iterdir():
         if fpath.suffix not in (".gz",):
@@ -1785,9 +1780,7 @@ def _create_repo_path(
     if distro_arch:
         create_repo_path = create_repo_path / distro_arch
     if nightly_build is False:
-        if distro != "src":
-            create_repo_path = create_repo_path / "minor"
-        create_repo_path = create_repo_path / salt_version
+        create_repo_path = create_repo_path / "minor" / salt_version
     else:
         create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
     create_repo_path.mkdir(exist_ok=True, parents=True)
