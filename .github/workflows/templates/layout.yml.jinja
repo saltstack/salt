@@ -175,9 +175,9 @@ jobs:
           salt-version: "<{ prepare_workflow_salt_version_input }>"
           validate-version: true
 
-      - name: Get Push Number
-        id: get-push-number
-        uses: ./.github/actions/get-push-number
+      - name: Get Pull Number
+        id: get-pull-number
+        uses: ./.github/actions/get-pull-number
         run:
           echo '???'
 
