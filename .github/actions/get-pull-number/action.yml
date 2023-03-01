@@ -38,3 +38,4 @@ runs:
         number=$GITHUB_PULL_NUMBER
         fi
         echo $number
+        echo "number=$number" >> "$GITHUB_OUTPUT"
