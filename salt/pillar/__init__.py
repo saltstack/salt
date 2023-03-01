@@ -540,6 +540,7 @@ class Pillar:
             if opts.get("pillarenv_from_saltenv", False):
                 opts["pillarenv"] = saltenv
         # use the local file client
+        self.raw_opts = opts
         self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, pillarenv=pillarenv)
         self.saltenv = saltenv
         self.client = salt.fileclient.get_file_client(self.opts, True)
@@ -550,16 +551,8 @@ class Pillar:
         ):
             opts["grains"] = grains
 
-        # if we didn't pass in functions, lets load them
-        if functions is None:
-            utils = salt.loader.utils(opts)
-            if opts.get("file_client", "") == "local":
-                self.functions = salt.loader.minion_mods(opts, utils=utils)
-            else:
-                self.functions = salt.loader.minion_mods(self.opts, utils=utils)
-        else:
-            self.functions = functions
-
+        self.utils = None
+        self.functions = self.__gen_functions(functions)
         self.opts["minion_id"] = minion_id
         self.matchers = salt.loader.matchers(self.opts)
         self.rend = salt.loader.render(self.opts, self.functions)
@@ -622,6 +615,29 @@ class Pillar:
         for saltenv in self._get_envs():
             avail[saltenv] = self.client.list_states(saltenv)
         return avail
+
+    def __gen_functions(self, context=None, functions=None, force=False):
+        """
+        Generates the minion_mods loader object using the correct opts, context
+        and pillar values in the correct scenarios
+        """
+        if not force and functions is not None:
+            return functions
+
+        # This is some historical cruft that I don't want to pretend to try to
+        # understand. Keeping compatible for the sake of compatibility.
+        # Origin: 340aed8049b885c0736681e925cf7210ede0f961
+        opts = self.opts
+        if self.raw_opts.get("file_client", "") == "local":
+            opts = self.raw_opts
+            # Ensure we keep the partially-rendered pillar regardless of which
+            # opts we're using. Copy pillar into the alternative opts.
+            if "pillar" in self.opts:
+                opts["pillar"] = self.opts["pillar"]
+
+        if self.utils is None:
+            self.utils = salt.loader.utils(self.raw_opts, context=context)
+        return salt.loader.minion_mods(opts, utils=self.utils, context=context)
 
     def __gen_opts(self, opts_in, grains, saltenv=None, ext=None, pillarenv=None):
         """
@@ -1220,6 +1236,8 @@ class Pillar:
         if ext:
             if self.opts.get("ext_pillar_first", False):
                 self.opts["pillar"], errors = self.ext_pillar(self.pillar_override)
+                # Reload minion_mods with ext_pillar as pillar dict
+                self.functions = self.__gen_functions(force=True)
                 self.rend = salt.loader.render(self.opts, self.functions)
                 matches = self.top_matches(top, reload=True)
                 pillar, errors = self.render_pillar(matches, errors=errors)
