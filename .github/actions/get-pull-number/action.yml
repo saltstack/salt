@@ -32,11 +32,9 @@ runs:
       run: |
         if [ -z "$GITHUB_PULL_NUMBER"]
         then
-        PULLS=$(gh api repos/$GITHUB_OWNER/$GITHUB_REPO/commits/$GITHUB_SHA/pulls)
-        NUMBER=$(jq '.[0].number' <<< $pulls )
+        pulls=$(gh api repos/$GITHUB_OWNER/$GITHUB_REPO/commits/$GITHUB_SHA/pulls)
+        number=$(jq '.[0].number' <<< $pulls )
         else
-        NUMBER=$GITHUB_PULL_NUMBER
+        number=$GITHUB_PULL_NUMBER
         fi
-        number=$NUMBER
         echo $number
-        echo "number=$NUMBER" >> "${GITHUB_OUTPUT}"
