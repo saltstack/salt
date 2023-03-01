@@ -136,7 +136,6 @@ jobs:
 
       - name: Get Pull Number
         id: get-pull-number
-        uses: ./.github/actions/setup-python-tools-scripts
         run:
             echo test
 
