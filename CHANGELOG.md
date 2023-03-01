@@ -7,11 +7,9 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3005.1 (2022-09-26)
-========================
+## Salt 3005.1 (2022-09-26)
 
-Fixed
------
+### Fixed
 
 - Fix arch parsing issue in apt source files (#62247)
 - Fixed parsing CDROM apt sources (#62474)
@@ -32,11 +30,9 @@ Fixed
 - The sub proxies controlled by Deltaproxy need to have their own req_channel otherwise there are timeout exceptions when the __master_req_channel_payload is fired and reacted on. (#62708)
 
 
-Salt 3005 (2022-08-22)
-======================
+## Salt 3005 (2022-08-22)
 
-Removed
--------
+### Removed
 
 - Deprecating and removing salt-unity. (#56055)
 - Removed support for macos mojave (#61130)
@@ -61,8 +57,7 @@ Removed
   Since it's currently not being used, it's removed. (#62432)
 
 
-Deprecated
-----------
+### Deprecated
 
 - In etcd_util, the recursive kwarg in the read and delete methods has been deprecated in favor of recurse for both client versions.
   In etcd_util, the index kwarg in the watch method has been deprecated in favor of start_revision for both client versions.
@@ -76,8 +71,7 @@ Deprecated
 - Deprecated the cassandra module in favor of the cassandra_cql module/returner. (#62327)
 
 
-Changed
--------
+### Changed
 
 - alternatives: Do not access /var/lib/dpkg/alternatives directly (#58745)
 - Enhance logging when there are errors at loading beacons (#60402)
@@ -89,8 +83,7 @@ Changed
 - "Sign before ending the testrun in x509.create_certificate" (#62100)
 
 
-Fixed
------
+### Fixed
 
 - Fix salt-ssh using sudo with a password (#8882)
 - Fix SSH password regex to not search for content after password:. (#25721)
@@ -348,11 +341,9 @@ Added
 - Add "<tiamat> python" subcommand to allow execution or arbitrary scripts via bundled Python runtime (#62381)
 
 
-Salt 3004.2 (2022-05-12)
-========================
+## Salt 3004.2 (2022-05-12)
 
-Fixed
------
+### Fixed
 
 - Expand environment variables in the root_dir registry key (#61445)
 - Update Markup and contextfunction imports for jinja versions >=3.1. (#61848)
@@ -360,17 +351,14 @@ Fixed
 - Make sure the correct key is being used when verifying or validating communication, eg. when a Salt syndic is involved use syndic_master.pub and when a Salt minion is involved use minion_master.pub. (#61868)
 
 
-Security
---------
+### Security
 
 - Fixed PAM auth to reject auth attempt if user account is locked. (cve-2022-22967)
 
 
-Salt 3004.1 (2022-02-16)
-========================
+## Salt 3004.1 (2022-02-16)
 
-Security
---------
+### Security
 
 - Sign authentication replies to prevent MiTM (cve-2022-22935)
 - Prevent job and fileserver replays (cve-2022-22936)
@@ -379,11 +367,9 @@ Security
 - Fix denial of service in junos ifconfig output parsing.
 
 
-Salt 3004 (2021-10-11)
-======================
+## Salt 3004 (2021-10-11)
 
-Removed
--------
+### Removed
 
 - Removed the deprecated glance state and execution module in favor of the glance_image
   state module and the glanceng execution module. (#59079)
@@ -392,8 +378,7 @@ Removed
 - Removed deprecated virt.migrate_non_shared, virt.migrate_non_shared_inc, ssh from virt.migrate, and python2/python3 args from salt.utils.thin.gen_min and .gen_thin (#60893)
 
 
-Deprecated
-----------
+### Deprecated
 
 - The _ext_nodes alias to the master_tops function was added back in 3004 to maintain backwards compatibility with older supported versions. This alias will now be removed in 3006. This change will break Master and Minion communication compatibility with Salt minions running versions 3003 and lower. (#60980)
 - utils/boto3_elasticsearch is no longer needed (#59882)
@@ -401,8 +386,7 @@ Deprecated
 - Deprecate `salt.payload.Serial` (#60953)
 
 
-Changed
--------
+### Changed
 
 - Changed nginx.version to return version without `nginx/` prefix. (#57111)
 - Updated Slack webhook returner to support event returns on salt-master (#57182)
@@ -411,8 +395,7 @@ Changed
 - Changed the default character set used by `utils.pycrypto.secure_password()` to include symbols and implemented arguments to control the used character set. (#59486)
 
 
-Fixed
------
+### Fixed
 
 - Set default 'bootstrap_delay' to 0 (#61005)
 - Fixed issue where multiple args to netapi were not preserved (#59182)
@@ -566,28 +549,23 @@ Added
 - Allow a user to use the aptpkg.py module without installing python-apt. (#60818)
 
 
-Salt 3003.5 (2022-07-05)
-========================
+## Salt 3003.5 (2022-07-05)
 
-Fixed
------
+### Fixed
 
 - Update Markup and contextfunction imports for jinja versions >=3.1. (#61848)
 - Fix bug in tcp transport (#61865)
 - Make sure the correct key is being used when verifying or validating communication, eg. when a Salt syndic is involved use syndic_master.pub and when a Salt minion is involved use minion_master.pub. (#61868)
 
 
-Security
---------
+### Security
 
 - Fixed PAM auth to reject auth attempt if user account is locked. (cve-2022-22967)
 
 
-Salt 3003.4 (2022-02-25)
-========================
+## Salt 3003.4 (2022-02-25)
 
-Security
---------
+### Security
 
 - Sign authentication replies to prevent MiTM (cve-2022-22935)
 - Prevent job and fileserver replays (cve-2022-22936)
@@ -596,27 +574,22 @@ Security
 - Fix denial of service in junos ifconfig output parsing.
 
 
-Salt 3003.3 (2021-08-20)
-========================
+## Salt 3003.3 (2021-08-20)
 
-Fixed
------
+### Fixed
 
 - Fix issue introduced in https://github.com/saltstack/salt/pull/59648 (#60046)
 
 
-Security
---------
+### Security
 
 - Verify the owner of an existing config before trusting it during install. If the owner cannot be verified, back it up and use defaults. (CVE-2021-22004)
 - Ensure that sourced file is cached using its hash name (cve-2021-21996)
 
 
-Salt 3003.2 (2021-07-29)
-========================
+## Salt 3003.2 (2021-07-29)
 
-Fixed
------
+### Fixed
 
 - Periodically restart the fileserver update process to avoid leaks (#50313)
 - Add ssh_timeout to kwargs in deploy_script (#59901)
@@ -627,17 +600,14 @@ Fixed
 - Ignore configuration for 'enable_fqdns_grains' for AIX, Solaris and Juniper, assume False (#60529)
 
 
-Salt 3003.1 (2021-06-08)
-========================
+## Salt 3003.1 (2021-06-08)
 
-Fixed
------
+### Fixed
 
 - Import salt.utils.azurearm instead of using __utils__ from loader in azure cloud.  This fixes an issue where __utils__ would become unavailable when we are using the ThreadPool in azurearm. (#59744)
 - Use contextvars library from site-packages if it is intalled. Fixes salt ssh for targets with python <=3.6 (#59942)
 
-Fixed
------
+### Fixed
 
 - Fixed race condition in batch logic. Added `listen` option to `LocalClient` to prevent event subscriber from purging cached events during batch iteration. (#56273)
 - Fixed dependencies for Amazon Linux 2 on https://repo.saltproject.io since Amazon Linux 2 now provides some of the python libraries in their repos. (#59982)
@@ -648,11 +618,9 @@ Fixed
 - Pass the value of the `__grains__` NamedContext to salt.pillar.get_pillar, instead of the NamedContext object itself. (#59975)
 - Fix pillar serialization in jinja templates (#60083)
 
-Salt 3003 (2021-03-05)
-======================
+## Salt 3003 (2021-03-05)
 
-Removed
--------
+### Removed
 
 - Removed the deprecated glance state and execution module in favor of the glance_image
   state module and the glanceng execution module. (#59079)
@@ -662,13 +630,11 @@ Removed
 - Removed support for Ubuntu 16.04 (#59913)
 
 
-Deprecated
-----------
+### Deprecated
 
 - Added deprecation warning for grains.get_or_set_hash (#59425)
 
-Changed
--------
+### Changed
 
 - Change `brew cask --list` to `brew list --cask` (#58381)
 - Store git sha in salt/_version.py when installing from a tag so it can be found if needed later. (#59137)
@@ -676,8 +642,7 @@ Changed
 - Updating the pkg beacon to fire the events when there are upgrades to packages, but also when watched packages are installed or removed. Breaking out the logic for listing pkgs from context into a separate function to aid in testing. Updating tests to ensure context is not used when use_context option to list_pkgs is False. (#59463)
 
 
-Fixed
------
+### Fixed
 
 - When instantiating the loader grab values of grains and pillars if
   they are NamedLoaderContext instances. (#59773)
@@ -817,28 +782,23 @@ Added
   binary ELF files in the package. (#59569)
 
 
-Salt 3002.9 (2022-05-25)
-========================
+## Salt 3002.9 (2022-05-25)
 
-Fixed
------
+### Fixed
 
 - Fixed an error when running on CentOS Stream 8. (#59161)
 - Fix bug in tcp transport (#61865)
 - Make sure the correct key is being used when verifying or validating communication, eg. when a Salt syndic is involved use syndic_master.pub and when a Salt minion is involved use minion_master.pub. (#61868)
 
 
-Security
---------
+### Security
 
 - Fixed PAM auth to reject auth attempt if user account is locked. (cve-2022-22967)
 
 
-Salt 3002.8 (2022-02-25)
-========================
+## Salt 3002.8 (2022-02-25)
 
-Security
---------
+### Security
 
 - Sign authentication replies to prevent MiTM (cve-2020-22935)
 - Sign pillar data to prevent MiTM attacks. (cve-2022-22934)
@@ -847,34 +807,28 @@ Security
 
 
 
-Salt 3002.7 (2021-08-20)
-========================
+## Salt 3002.7 (2021-08-20)
 
-Fixed
------
+### Fixed
 
 - Verify the owner of an existing config before trusting it during install. If the owner cannot be verified, back it up and use defaults. (CVE-2021-22004)
 
 
-Security
---------
+### Security
 
 - Fix the CVE-2021-31607 vulnerability
   Additionally, an audit and a tool was put in place, ``bandit``, to address similar issues througout the code base, and prevent them. (CVE-2021-31607)
 - Ensure that sourced file is cached using its hash name (cve-2021-21996)
 
 
-Salt 3002.6 (2021-03-10)
-========================
+## Salt 3002.6 (2021-03-10)
 
-Changed
--------
+### Changed
 
 - Store git sha in salt/_version.py when installing from a tag so it can be found if needed later. (#59137)
 
 
-Fixed
------
+### Fixed
 
 - Fix argument injection bug in restartcheck.restartcheck. This change hardens
   the fix for CVE-2020-28243. (#200)
@@ -883,29 +837,23 @@ Fixed
 - Allow all ssh kwargs as sanitized kwargs for SSH client. (#59748)
 
 
-Salt 3002.5 (2021-02-25)
-========================
+## Salt 3002.5 (2021-02-25)
 
-Fixed
------
+### Fixed
 
 - Tests and fix for CVE-2021-25283
 
 
-Salt 3002.4 (2021-02-05)
-========================
+## Salt 3002.4 (2021-02-05)
 
-Fixed
------
+### Fixed
 
 - Fix runners that broke when patching for CVE-2021-25281
 - Fix issue with runners in SSE
 
-Salt 3002.3 (2021-01-25)
-========================
+## Salt 3002.3 (2021-01-25)
 
-Fixed
------
+### Fixed
 
 - CVE-2020-28243 - Fix local privilege escalation in the restartcheck module. (CVE-2020-28243)
 - CVE-2020-28972 - Ensure authentication to vcenter, vsphere, and esxi server
@@ -928,11 +876,9 @@ Fixed
 - CVE-2021-3197 - Fix ssh client to remove ProxyCommand from arguments provided
   by cli and netapi. (CVE-2021-3197)
 
-Salt 3002.2 (2020-11-16)
-========================
+## Salt 3002.2 (2020-11-16)
 
-Fixed
------
+### Fixed
 - Fix server core grains issue when running inside a windows container (#59611)
 - Change dict check to isinstance instead of type() for key_values in file.keyvalue. (#57758)
 - Fail when func_ret is False when using the new module.run syntax. (#57768)
@@ -953,11 +899,9 @@ Fixed
 - Revert LazyLoader finalizer. Removed the weakref.finalizer code. On some occasions, the finalized would run when trying to load a new module, firing a race condition. (#58947)
 
 
-Salt 3002.1 (2020-10-26)
-========================
+## Salt 3002.1 (2020-10-26)
 
-Fixed
------
+### Fixed
 
 - Prevent shell injections in netapi ssh client (cve-2020-16846)
 - Prevent creating world readable private keys with the tls execution module. (cve-2020-17490)
@@ -966,11 +910,9 @@ Fixed
   Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
   to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)
 
-Salt 3002 (2020-10-19)
-======================
+## Salt 3002 (2020-10-19)
 
-Removed
--------
+### Removed
 
 - removed boto_vpc.describe_route_table please use boto_vpc.describe_route_tables (#58636)
 - removed show_ipv4 arg from all functions in from salt.runners.manage (#58638)
@@ -981,14 +923,12 @@ Removed
 - deprecated opts default argument of none and removed deprecation warnings (#58635)
 
 
-Deprecated
-----------
+### Deprecated
 
 - The `ssh` parameter of `virt.migrate` has been deprecated. Use a libvirt URI `target` value instead. Both `virt.migrate_non_shared` and `virt.migrate_non_shared_inc` have been deprecated. Use the `copy_storage` parameter with `virt.migrate` instead. (#57947)
 
 
-Changed
--------
+### Changed
 
 - Allow specifying a custom port for Proxmox connection (#50620)
 - Changed the lvm.lv_present state to accept a resizefs switch. So, when
@@ -1004,8 +944,7 @@ Changed
   arguments. ``formatter`` is still supported, but using both ``serializer`` and
   ``formatter`` will cause the state to fail. (#57858)
 
-Fixed
------
+### Fixed
 
 - `file.read` exec module function no longer fails on binary data. (#58033)
 - Remove py2 support from winrepo execution module and runner (#58596)
@@ -1194,30 +1133,25 @@ Added
   This flag will be deprecated in the Phosphorus release when this functionality
   becomes the default. (#58652)
 
-Salt 3001.8 (2021-08-20)
-========================
+## Salt 3001.8 (2021-08-20)
 
 Version 3001.8 is a bug fix release for :ref:`3001 <release-3001>`.
 
 
-Fixed
------
+### Fixed
 
 - Verify the owner of an existing config before trusting it during install. If the owner cannot be verified, back it up and use defaults. (CVE-2021-22004)
 
 
-Security
---------
+### Security
 
 - Fix the CVE-2021-31607 vulnerability
   Additionally, an audit and a tool was put in place, ``bandit``, to address similar issues througout the code base, and prevent them. (CVE-2021-31607)
 - Ensure that sourced file is cached using its hash name (cve-2021-21996)
 
-Salt 3001.7 (2021-03-10)
-========================
+## Salt 3001.7 (2021-03-10)
 
-Fixed
------
+### Fixed
 
 - Fix argument injection bug in restartcheck.restartcheck. This change hardens
   the fix for CVE-2020-28243. (#200)
@@ -1225,20 +1159,16 @@ Fixed
   Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
 - Allow all ssh kwargs as sanitized kwargs for SSH client. (#59748)
 
-Salt 3001.6 (2021-02-09)
-========================
+## Salt 3001.6 (2021-02-09)
 
-Fixed
------
+### Fixed
 
 - Fix runners that broke when patching for CVE-2021-25281
 - Fix issue with runners in SSE
 
-Salt 3001.5
-===========
+## Salt 3001.5
 
-Fixed
------
+### Fixed
 
 - CVE-2020-28243 - Fix local privilege escalation in the restartcheck module. (CVE-2020-28243)
 - CVE-2020-28972 - Ensure authentication to vcenter, vsphere, and esxi server
@@ -1262,39 +1192,31 @@ Fixed
   by cli and netapi. (CVE-2021-3197)
 
 
-Salt 3001.4
-===========
+## Salt 3001.4
 
-Fixed
------
+### Fixed
 
 - Fixes salt-ssh authentication when using tty (#58922)
 
-Salt 3001.3
-===========
+## Salt 3001.3
 
-Fixed
------
+### Fixed
 
 - Properly validate eauth credentials and tokens along with their ACLs.
   Prior to this change eauth was not properly validated when calling
   Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
   to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)
 
-Salt 3001.2
-===========
+## Salt 3001.2
 
-Fixed
------
+### Fixed
 
 - Prevent shell injections in netapi ssh client (cve-2020-16846)
 - Prevent creating world readable private keys with the tls execution module. (cve-2020-17490)
 
-Salt 3001.1 (2020-07-27)
-========================
+## Salt 3001.1 (2020-07-27)
 
-Changed
--------
+### Changed
 
 - Change the ``enable_fqdns_grains`` setting to default to ``False`` on Windows
   to address some issues with slowness. (#56296, #57529)
@@ -1306,8 +1228,7 @@ Changed
 - Updated requirement to PyYAML 5.3.1 due to vulnerability in PyYAML 5.2.1. (#58019)
 
 
-Fixed
------
+### Fixed
 
 - When running scheduled jobs from a proxy minion with multiprocessing turned off (default) a recursive error occurs as __pub_fun_args is repeated over and over again in the kwargs element in the data dictionary.  Now we make a copy of data['kwargs'] instead of using a reference. (#57941)
 - The `x509.certificate_managed` state no longer triggers a change because of sorting issues if the certificate being evaluated was previously generated under Python 2. (#56556)
@@ -1355,11 +1276,9 @@ Added
 - Added docs demonstrating how to apply an MSI patch with winrepo (#32780)
 
 
-Salt 3001 (2020-06-17)
-======================
+## Salt 3001 (2020-06-17)
 
-Removed
--------
+### Removed
 
 - Removed long-deprecated `repo` option from pip state. (#51060)
 - Removed noisy debug logging from config.get. (#54205)
@@ -1378,8 +1297,7 @@ Removed
 - Remove salt/utils/vt.py duplication from filename map. (#57004)
 
 
-Changed
--------
+### Changed
 
 - `file.rename` no longer returns False when `force:False`. (#49843)
 - Brought localclient command line args functionality into line with regular `salt` calls. (#56853)
@@ -1406,8 +1324,7 @@ Changed
 - Update `formulas.rst` with new IRC channel and links to IRC logs (#51628)
 
 
-Fixed
------
+### Fixed
 
 - `pkgrepo.managed` now checks for a changed `key_url`. (#4438)
 - Allow passing extra args to `file.rename`. (#29001)
@@ -1716,11 +1633,9 @@ Added
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
 - Clarify how to get the master fingerprint (#54699)
 
-Salt 3000.9 (2021-03-10)
-========================
+## Salt 3000.9 (2021-03-10)
 
-Fixed
------
+### Fixed
 
 - Allow "extra_filerefs" as sanitized kwargs for SSH client.
   Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
@@ -1728,20 +1643,16 @@ Fixed
 - Fix argument injection bug in restartcheck.restartcheck. This change hardens
   the fix for CVE-2020-28243.
 
-Salt 3000.8 (2021-02-09)
-========================
+## Salt 3000.8 (2021-02-09)
 
-Fixed
------
+### Fixed
 
 - Fix runners that broke when patching for CVE-2021-25281
 - Fix issue with runners in SSE
 
-Salt 3000.7
-===========
+## Salt 3000.7
 
-Fixed
------
+### Fixed
 
 - CVE-2020-28243 - Fix local privilege escalation in the restartcheck module. (CVE-2020-28243)
 - CVE-2020-28972 - Ensure authentication to vcenter, vsphere, and esxi server
@@ -1764,35 +1675,29 @@ Fixed
 - CVE-2021-3197 - Fix ssh client to remove ProxyCommand from arguments provided
   by cli and netapi. (CVE-2021-3197)
 
-Salt 3000.6
-===========
+## Salt 3000.6
 
-Fixed
------
+### Fixed
 
 - Fixes salt-ssh authentication when using tty (#58922)
 
-Salt 3000.5
-===========
+## Salt 3000.5
 
-Fixed
------
+### Fixed
 
 - Properly validate eauth credentials and tokens along with their ACLs.
   Prior to this change eauth was not properly validated when calling
   Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
   to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)
 
-Salt 3000.4
-===========
+## Salt 3000.4
 
-Fixed
------
+### Fixed
 
 - Prevent shell injections in netapi ssh client (cve-2020-16846)
 - Prevent creating world readable private keys with the tls execution module. (cve-2020-17490)
 
-### 3000.3
+## 3000.3
 
 ### Fixed
 - [#57100](https://github.com/saltstack/salt/pull/57100) - Address Issues in CVE Release
@@ -1820,13 +1725,13 @@ Fixed
 
 ### Changed
 - [#56730](https://github.com/saltstack/salt/pull/56730) - Backport #52992
-### 3000.2
+## 3000.2
 
 ### Fixed
 - [#56987](https://github.com/saltstack/salt/pull/56987) - CVE fix
 
 
-### 3000.1
+## 3000.1
 
 ### Fixed
 
@@ -1863,7 +1768,7 @@ Fixed
 
 ### Added
 
-### 3000 - Neon [2020-02-10]
+## 3000 - Neon [2020-02-10]
 
 ### Removed
 

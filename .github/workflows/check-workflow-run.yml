@@ -9,6 +9,7 @@ on:
       - CI
       - Nightly
       - Scheduled
+      - Stage Release
 
 permissions:
   actions: write

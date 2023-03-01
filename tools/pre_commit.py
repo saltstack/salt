@@ -5,17 +5,17 @@ These commands are used by pre-commit.
 from __future__ import annotations
 
 import logging
-import pathlib
 import shutil
 from typing import TYPE_CHECKING, cast
 
 from jinja2 import Environment, FileSystemLoader
 from ptscripts import Context, command_group
 
+import tools.utils
+
 log = logging.getLogger(__name__)
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-WORKFLOWS = REPO_ROOT / ".github" / "workflows"
+WORKFLOWS = tools.utils.REPO_ROOT / ".github" / "workflows"
 TEMPLATES = WORKFLOWS / "templates"
 
 # Define the command group
@@ -41,6 +41,9 @@ class NeedsTracker:
             need = self._needs.pop(0)
             yield need
 
+    def __bool__(self):
+        return bool(self._needs)
+
 
 @cgroup.command(
     name="generate-workflows",
@@ -56,11 +59,28 @@ def generate_workflows(ctx: Context):
         "Nightly": {
             "template": "nightly.yml",
         },
+        "Stage Release": {
+            "slug": "staging",
+            "template": "staging.yml",
+            "includes": {
+                "test-pkg-uploads": False,
+            },
+        },
         "Scheduled": {
             "template": "scheduled.yml",
         },
         "Check Workflow Run": {
             "template": "check-workflow-run.yml",
+        },
+        "Release": {
+            "template": "release.yml",
+            "includes": {
+                "pre-commit": False,
+                "lint": False,
+                "pkg-tests": False,
+                "salt-tests": False,
+                "test-pkg-uploads": False,
+            },
         },
     }
     env = Environment(
@@ -79,22 +99,35 @@ def generate_workflows(ctx: Context):
         template: str = cast(str, details["template"])
         includes: dict[str, bool] = cast(dict, details.get("includes") or {})
         workflow_path = WORKFLOWS / template
-        template_path = TEMPLATES / f"{template}.j2"
+        template_path = TEMPLATES / f"{template}.jinja"
         ctx.info(
-            f"Generating '{workflow_path.relative_to(REPO_ROOT)}' from "
-            f"template '{template_path.relative_to(REPO_ROOT)}' ..."
+            f"Generating '{workflow_path.relative_to(tools.utils.REPO_ROOT)}' from "
+            f"template '{template_path.relative_to(tools.utils.REPO_ROOT)}' ..."
         )
         context = {
-            "template": template_path.relative_to(REPO_ROOT),
+            "template": template_path.relative_to(tools.utils.REPO_ROOT),
             "workflow_name": workflow_name,
+            "workflow_slug": (
+                details.get("slug") or workflow_name.lower().replace(" ", "-")
+            ),
             "includes": includes,
             "conclusion_needs": NeedsTracker(),
             "test_salt_needs": NeedsTracker(),
+            "test_salt_pkg_needs": NeedsTracker(),
+            "test_repo_needs": NeedsTracker(),
+            "prepare_workflow_needs": NeedsTracker(),
+            "build_repo_needs": NeedsTracker(),
         }
         if workflow_name == "Check Workflow Run":
-            check_workflows = [wf for wf in sorted(workflows) if wf != workflow_name]
+            check_workflow_exclusions = {
+                "Release",
+                workflow_name,
+            }
+            check_workflows = [
+                wf for wf in sorted(workflows) if wf not in check_workflow_exclusions
+            ]
             context["check_workflows"] = check_workflows
-        loaded_template = env.get_template(f"{template}.j2")
+        loaded_template = env.get_template(template_path.name)
         rendered_template = loaded_template.render(**context)
         workflow_path.write_text(rendered_template.rstrip() + "\n")
 

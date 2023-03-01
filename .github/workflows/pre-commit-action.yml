@@ -17,9 +17,6 @@ on:
         type: string
         description: Seed used to invalidate caches
 
-env:
-  PRE_COMMIT_VERSION: "2.21.0"
-
 jobs:
   Pre-Commit:
     name: Run Pre-Commit Against Salt

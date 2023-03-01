@@ -170,12 +170,13 @@ mako==1.2.2
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
-markupsafe==2.0.1
+markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
     #   mako
     #   moto
+    #   werkzeug
 mock==3.0.5
     # via -r requirements/pytest.txt
 more-itertools==8.2.0
@@ -319,7 +320,7 @@ pyyaml==5.4.1
     #   clustershell
     #   kubernetes
     #   yamllint
-pyzmq==22.0.3 ; python_version < "3.9" and sys_platform == "win32"
+pyzmq==25.0.0 ; sys_platform == "win32"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -407,7 +408,7 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
-werkzeug==2.0.3
+werkzeug==2.2.3
     # via
     #   moto
     #   pytest-httpserver

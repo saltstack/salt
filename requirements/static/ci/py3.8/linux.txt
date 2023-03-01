@@ -14,7 +14,7 @@ aiosignal==1.2.0
     # via aiohttp
 ansible-core==2.11.7
     # via ansible
-ansible==4.4.0
+ansible==4.4.0 ; python_version < "3.9"
     # via -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
@@ -522,12 +522,13 @@ lxml==4.9.1
     #   ncclient
 mako==1.2.2
     # via -r requirements/static/ci/common.in
-markupsafe==2.0.1
+markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
     #   mako
     #   moto
+    #   werkzeug
 mercurial==6.0.1
     # via -r requirements/static/ci/linux.in
 mock==3.0.5
@@ -650,7 +651,7 @@ netmiko==3.2.0
     # via napalm
 ntc-templates==1.4.1
     # via junos-eznc
-oauthlib==3.2.1
+oauthlib==3.2.2
     # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
@@ -804,7 +805,7 @@ pyyaml==5.4.1
     #   napalm
     #   yamllint
     #   yamlordereddictloader
-pyzmq==19.0.0 ; python_version < "3.9"
+pyzmq==23.2.0
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -945,7 +946,7 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
-werkzeug==2.0.3
+werkzeug==2.2.3
     # via
     #   moto
     #   pytest-httpserver

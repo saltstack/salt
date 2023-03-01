@@ -19,9 +19,9 @@ import tempfile
 import yaml
 from ptscripts import Context, command_group
 
-log = logging.getLogger(__name__)
+import tools.utils
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+log = logging.getLogger(__name__)
 
 # Define the command group
 pkg = command_group(name="pkg", help="Packaging Related Commands", description=__doc__)
@@ -101,6 +101,9 @@ class Recompress:
         "validate_version": {
             "help": "Validate, and normalize, the passed Salt Version",
         },
+        "release": {
+            "help": "When true, also update salt/versions.py to set the version as released",
+        },
     },
 )
 def set_salt_version(
@@ -108,18 +111,19 @@ def set_salt_version(
     salt_version: str,
     overwrite: bool = False,
     validate_version: bool = False,
+    release: bool = False,
 ):
     """
     Write the Salt version to 'salt/_version.txt'
     """
-    salt_version_file = REPO_ROOT / "salt" / "_version.txt"
+    salt_version_file = tools.utils.REPO_ROOT / "salt" / "_version.txt"
     if salt_version_file.exists():
         if not overwrite:
             ctx.error("The 'salt/_version.txt' file already exists")
             ctx.exit(1)
         salt_version_file.unlink()
     if salt_version is None:
-        if not REPO_ROOT.joinpath(".git").exists():
+        if not tools.utils.REPO_ROOT.joinpath(".git").exists():
             ctx.error(
                 "Apparently not running from a Salt repository checkout. "
                 "Unable to discover the Salt version."
@@ -133,7 +137,7 @@ def set_salt_version(
         ctx.info(f"Validating and normalizing the salt version {salt_version!r}...")
         with ctx.virtualenv(
             name="set-salt-version",
-            requirements_files=[REPO_ROOT / "requirements" / "base.txt"],
+            requirements_files=[tools.utils.REPO_ROOT / "requirements" / "base.txt"],
         ) as venv:
             code = f"""
             import sys
@@ -153,19 +157,37 @@ def set_salt_version(
                 ctx.exit(ctx.returncode)
             salt_version = ret.stdout.strip().decode()
 
-    if not REPO_ROOT.joinpath("salt").is_dir():
+    if not tools.utils.REPO_ROOT.joinpath("salt").is_dir():
         ctx.error(
             "The path 'salt/' is not a directory. Unable to write 'salt/_version.txt'"
         )
         ctx.exit(1)
 
     try:
-        REPO_ROOT.joinpath("salt/_version.txt").write_text(salt_version)
+        tools.utils.REPO_ROOT.joinpath("salt/_version.txt").write_text(salt_version)
     except Exception as exc:
         ctx.error(f"Unable to write 'salt/_version.txt': {exc}")
         ctx.exit(1)
 
     ctx.info(f"Successfuly wrote {salt_version!r} to 'salt/_version.txt'")
+
+    version_instance = tools.utils.Version(salt_version)
+    if release and not version_instance.is_prerelease:
+        with open(tools.utils.REPO_ROOT / "salt" / "version.py", "r+") as rwfh:
+            contents = rwfh.read()
+            match = f"info=({version_instance.major}, {version_instance.minor}))"
+            if match in contents:
+                contents = contents.replace(
+                    match,
+                    f"info=({version_instance.major}, {version_instance.minor}),  released=True)",
+                )
+                rwfh.seek(0)
+                rwfh.write(contents)
+                rwfh.truncate()
+
+                ctx.info(
+                    f"Successfuly marked {salt_version!r} as released in 'salt/version.py'"
+                )
 
     gh_env_file = os.environ.get("GITHUB_ENV", None)
     if gh_env_file is not None:
@@ -211,7 +233,9 @@ def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
 
     When running on Windows and macOS, some additional cleanup is also done.
     """
-    with open(str(REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml")) as rfh:
+    with open(
+        str(tools.utils.REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml")
+    ) as rfh:
         patterns = yaml.safe_load(rfh.read())
 
     if pkg:
@@ -317,7 +341,7 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
     name="source-tarball",
     venv_config={
         "requirements_files": [
-            REPO_ROOT / "requirements" / "build.txt",
+            tools.utils.REPO_ROOT / "requirements" / "build.txt",
         ]
     },
 )
@@ -342,20 +366,66 @@ def source_tarball(ctx: Context):
         "-m",
         "build",
         "--sdist",
-        str(REPO_ROOT),
+        str(tools.utils.REPO_ROOT),
         env=env,
         check=True,
     )
     # Recreate sdist to be reproducible
     recompress = Recompress(timestamp)
-    for targz in REPO_ROOT.joinpath("dist").glob("*.tar.gz"):
-        ctx.info(f"Re-compressing {targz.relative_to(REPO_ROOT)} ...")
+    for targz in tools.utils.REPO_ROOT.joinpath("dist").glob("*.tar.gz"):
+        ctx.info(f"Re-compressing {targz.relative_to(tools.utils.REPO_ROOT)} ...")
         recompress.recompress(targz)
     sha256sum = shutil.which("sha256sum")
     if sha256sum:
         packages = [
-            str(pkg.relative_to(REPO_ROOT))
-            for pkg in REPO_ROOT.joinpath("dist").iterdir()
+            str(pkg.relative_to(tools.utils.REPO_ROOT))
+            for pkg in tools.utils.REPO_ROOT.joinpath("dist").iterdir()
         ]
         ctx.run("sha256sum", *packages)
     ctx.run("python3", "-m", "twine", "check", "dist/*", check=True)
+
+
+@pkg.command(
+    name="pypi-upload",
+    venv_config={
+        "requirements_files": [
+            tools.utils.REPO_ROOT / "requirements" / "build.txt",
+        ]
+    },
+    arguments={
+        "files": {
+            "help": "Files to upload to PyPi",
+            "nargs": "*",
+        },
+        "test": {
+            "help": "When true, upload to test.pypi.org instead",
+        },
+    },
+)
+def pypi_upload(ctx: Context, files: list[pathlib.Path], test: bool = False):
+    ctx.run(
+        "python3", "-m", "twine", "check", *[str(fpath) for fpath in files], check=True
+    )
+    if test is True:
+        repository_url = "https://test.pypi.org/legacy/"
+    else:
+        repository_url = "https://pypi.org/legacy/"
+    if "TWINE_USERNAME" not in os.environ:
+        os.environ["TWINE_USERNAME"] = "__token__"
+    if "TWINE_PASSWORD" not in os.environ:
+        ctx.error("The 'TWINE_PASSWORD' variable is not set. Cannot upload.")
+        ctx.exit(1)
+    cmdline = [
+        "twine",
+        "upload",
+        f"--repository-url={repository_url}",
+        "--username=__token__",
+    ]
+    if test is True:
+        cmdline.append("--skip-existing")
+    cmdline.extend([str(fpath) for fpath in files])
+    ctx.info(f"Running '{' '.join(cmdline)}' ...")
+    ret = ctx.run(*cmdline, check=False)
+    if ret.returncode:
+        ctx.error(ret.stderr.strip().decode())
+    ctx.exit(ret.returncode)

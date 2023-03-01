@@ -13,9 +13,9 @@ from typing import TYPE_CHECKING
 
 from ptscripts import Context, command_group
 
-log = logging.getLogger(__name__)
+import tools.utils
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+log = logging.getLogger(__name__)
 
 # Define the command group
 ci = command_group(name="ci", help="CI Related Commands", description=__doc__)
@@ -107,7 +107,11 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
                 if not entry:
                     loaded_data.remove(entry)
                 try:
-                    entry = REPO_ROOT.joinpath(entry).resolve().relative_to(REPO_ROOT)
+                    entry = (
+                        tools.utils.REPO_ROOT.joinpath(entry)
+                        .resolve()
+                        .relative_to(tools.utils.REPO_ROOT)
+                    )
                 except ValueError:
                     ctx.error(
                         f"While processing the changed files key {key!r}, the "
@@ -216,6 +220,12 @@ def runner_types(ctx: Context, event_name: str):
         "event_name": {
             "help": "The name of the GitHub event being processed.",
         },
+        "skip_tests": {
+            "help": "Skip running the Salt tests",
+        },
+        "skip_pkg_tests": {
+            "help": "Skip running the Salt Package tests",
+        },
         "changed_files": {
             "help": (
                 "Path to '.json' file containing the payload of changed files "
@@ -224,7 +234,13 @@ def runner_types(ctx: Context, event_name: str):
         },
     },
 )
-def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
+def define_jobs(
+    ctx: Context,
+    event_name: str,
+    changed_files: pathlib.Path,
+    skip_tests: bool = False,
+    skip_pkg_tests: bool = False,
+):
     """
     Set GH Actions 'jobs' output to know which jobs should run.
     """
@@ -247,12 +263,20 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
     jobs = {
         "lint": True,
         "test": True,
+        "test-pkg": True,
         "prepare-release": True,
+        "build-docs": True,
         "build-source-tarball": True,
         "build-deps-onedir": True,
         "build-salt-onedir": True,
         "build-pkgs": True,
     }
+
+    if skip_tests:
+        jobs["test"] = False
+    if skip_pkg_tests:
+        jobs["test-pkg"] = False
+
     if event_name != "pull_request":
         # In this case, all defined jobs should run
         ctx.info("Writing 'jobs' to the github outputs file")
@@ -261,7 +285,7 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
 
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(
-                f"All defined jobs will run due to event type of {event_name!r}.\n"
+                f"All defined jobs will run due to event type of `{event_name}`.\n"
             )
         return
 
@@ -290,16 +314,34 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
             wfh.write("De-selecting the 'lint' job.\n")
         jobs["lint"] = False
 
+    required_docs_changes: set[str] = {
+        changed_files_contents["salt"],
+        changed_files_contents["docs"],
+    }
+    if required_docs_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'build-docs' job.\n")
+        jobs["build-docs"] = False
+
     required_test_changes: set[str] = {
         changed_files_contents["testrun"],
+        changed_files_contents["workflows"],
         changed_files_contents["golden_images"],
     }
-    if required_test_changes == {"false"}:
+    if jobs["test"] and required_test_changes == {"false"}:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("De-selecting the 'test' jobs.\n")
+            wfh.write("De-selecting the 'test' job.\n")
         jobs["test"] = False
 
-    if not jobs["test"]:
+    required_pkg_test_changes: set[str] = {
+        changed_files_contents["pkg_tests"],
+    }
+    if jobs["test-pkg"] and required_pkg_test_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'test-pkg' job.\n")
+        jobs["test-pkg"] = False
+
+    if not jobs["test"] and not jobs["pkg-test"]:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             for job in (
                 "build-source-tarball",
@@ -368,7 +410,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             wfh.write(f"testrun={json.dumps(testrun)}\n")
 
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write(f"Full test run chosen due to event type of {event_name!r}.\n")
+            wfh.write(f"Full test run chosen due to event type of `{event_name}`.\n")
         return
 
     if not changed_files.exists():
@@ -417,10 +459,12 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             wfh.write("</pre>\n</details>\n")
         testrun = {"type": "full"}
     else:
-        testrun_changed_files_path = REPO_ROOT / "testrun-changed-files.txt"
+        testrun_changed_files_path = tools.utils.REPO_ROOT / "testrun-changed-files.txt"
         testrun = {
             "type": "changed",
-            "from-filenames": str(testrun_changed_files_path.relative_to(REPO_ROOT)),
+            "from-filenames": str(
+                testrun_changed_files_path.relative_to(tools.utils.REPO_ROOT)
+            ),
         }
         ctx.info(f"Writing {testrun_changed_files_path.name} ...")
         selected_changed_files = []
@@ -475,7 +519,11 @@ def matrix(ctx: Context, distro_slug: str):
     _matrix = []
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
-            if distro_slug not in ("centosstream-9", "ubuntu-22.04-arm64"):
+            if distro_slug not in (
+                "centosstream-9",
+                "ubuntu-22.04",
+                "ubuntu-22.04-arm64",
+            ):
                 # Only run TCP transport tests on these distributions
                 continue
         for chunk in ("unit", "functional", "integration", "scenarios"):
@@ -505,7 +553,11 @@ def transport_matrix(ctx: Context, distro_slug: str):
     _matrix = []
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
-            if distro_slug not in ("centosstream-9", "ubuntu-22.04-arm64"):
+            if distro_slug not in (
+                "centosstream-9",
+                "ubuntu-22.04",
+                "ubuntu-22.04-arm64",
+            ):
                 # Only run TCP transport tests on these distributions
                 continue
         _matrix.append({"transport": transport})
@@ -595,4 +647,51 @@ def rerun_workflow(ctx: Context):
         ctx.error("Failed to re-run workflow")
     else:
         ctx.info("Restarted workflow successfully")
+    ctx.exit(0)
+
+
+@ci.command(
+    name="pkg-matrix",
+    arguments={
+        "distro_slug": {
+            "help": "The distribution slug to generate the matrix for",
+        },
+        "pkg_type": {
+            "help": "The distribution slug to generate the matrix for",
+        },
+    },
+)
+def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
+    """
+    Generate the test matrix.
+    """
+    _matrix = []
+    sessions = [
+        "test-pkgs-3",
+    ]
+    if (
+        distro_slug
+        not in [
+            "debian-11-arm64",
+            "ubuntu-20.04-arm64",
+            "ubuntu-22.04-arm64",
+        ]
+        and "MSI" != pkg_type
+    ):
+        # These OS's never had arm64 packages built for them
+        # with the tiamate onedir packages.
+        # we will need to ensure when we release 3006.0
+        # we allow for 3006.0 jobs to run, because then
+        # we will have arm64 onedir packages to upgrade from
+        sessions.append("'test-upgrade-pkgs-3(classic=False)'")
+    if (
+        distro_slug not in ["centosstream-9", "ubuntu-22.04", "ubuntu-22.04-arm64"]
+        and "MSI" != pkg_type
+    ):
+        # Packages for these OSs where never built for classic previously
+        sessions.append("'test-upgrade-pkgs-3(classic=True)'")
+
+    for sess in sessions:
+        _matrix.append({"nox-session": sess})
+    print(json.dumps(_matrix))
     ctx.exit(0)

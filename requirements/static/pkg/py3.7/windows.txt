@@ -64,7 +64,7 @@ lxml==4.9.1
     # via -r requirements/windows.txt
 mako==1.2.2
     # via -r requirements/windows.txt
-markupsafe==2.0.1
+markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
@@ -112,7 +112,7 @@ pywin32==305
     #   wmi
 pyyaml==5.4.1
     # via -r requirements/base.txt
-pyzmq==22.0.3 ; python_version < "3.9" and sys_platform == "win32"
+pyzmq==25.0.0 ; sys_platform == "win32"
     # via -r requirements/zeromq.txt
 requests==2.25.1
     # via

@@ -1,0 +1,202 @@
+<%- set prepare_workflow_salt_version_input = "${{ inputs.salt-version }}" %>
+<%- set prepare_workflow_skip_test_suite = "${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}" %>
+<%- set prepare_workflow_skip_pkg_test_suite = "${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}" %>
+<%- set gh_environment = "staging" %>
+<%- set prepare_actual_release = True %>
+<%- extends 'nightly.yml.jinja' %>
+
+<%- block on %>
+
+on:
+  workflow_dispatch:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: >
+          The Salt version to set prior to building packages and staging the release.
+          (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+      skip-salt-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt test suite.
+      skip-salt-pkg-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages test suite.
+
+<%- endblock on %>
+
+<%- block env %>
+  <{- super() }>
+  REPO_BASE_URL: "https://${{ secrets.SALT_REPO_USER }}:${{ secrets.SALT_REPO_PASS }}@${{ secrets.SALT_REPO_DOMAIN }}"
+<%- endblock env %>
+
+<%- block concurrency %>
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}
+  cancel-in-progress: false
+
+<%- endblock concurrency %>
+
+
+<%- block pre_jobs %>
+
+  <%- set job_name = "check-requirements" %>
+
+  <{ job_name }>:
+  <%- do prepare_workflow_needs.append(job_name) %>
+    name: Check Requirements
+    runs-on: ubuntu-latest
+    environment: <{ gh_environment }>-check
+    steps:
+      - name: Check For Admin Permission
+        uses: actions-cool/check-user-permission@v2
+        with:
+          require: admin
+          username: ${{ github.triggering_actor }}
+
+      - name: Check Branch
+        run: |
+
+          {#-
+              Should we allow other branches?
+          #}
+          echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
+          if [ "${{ github.ref_name }}" != "master" ]; then
+              echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
+              exit 1
+          else
+              echo "Allowed"
+          fi
+
+<%- endblock pre_jobs %>
+
+
+<%- block jobs %>
+  <{- super() }>
+
+  upload-release-artifacts:
+    <%- do conclusion_needs.append('upload-release-artifacts') %>
+    name: Upload Release Artifacts
+    needs:
+      - prepare-workflow
+      - build-docs
+      - build-src-repo
+    environment: <{ gh_environment }>
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Download Release Patch
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          path: artifacts/release
+
+      - name: Download Source Repository
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-src-repo
+          path: artifacts/release
+
+      - name: Download Release Documentation (HTML)
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-html.tar.xz
+          path: artifacts/release
+
+      - name: Download Release Documentation (ePub)
+        uses: actions/download-artifact@v3
+        with:
+          name: Salt-${{ needs.prepare-workflow.outputs.salt-version }}.epub
+          path: artifacts/release
+
+      {#-
+
+      - name: Download Release Documentation (PDF)
+        uses: actions/download-artifact@v3
+        with:
+          name: Salt-${{ needs.prepare-workflow.outputs.salt-version }}.pdf
+          path: artifacts/release
+
+      #}
+
+      - name: Upload Release Artifacts
+        run: |
+          tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
+
+  <%- if includes.get("test-pkg-uploads", True) %>
+  <%- include "test-pkg-repo-uploads.yml.jinja" %>
+  <%- endif %>
+
+  publish-pypi:
+    <%- do conclusion_needs.append('publish-pypi') %>
+    name: Publish to PyPi(test)
+    needs:
+      - prepare-workflow
+      - upload-release-artifacts
+      <%- for need in test_salt_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+      <%- for need in test_salt_pkg_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+      <%- for need in test_repo_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+    environment: <{ gh_environment }>
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup GnuPG
+        run: |
+          sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
+          GNUPGHOME="$(mktemp -d -p /run/gpg)"
+          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
+          cat <<EOF > "${GNUPGHOME}/gpg.conf"
+          batch
+          no-tty
+          pinentry-mode loopback
+          EOF
+
+      - name: Get Secrets
+        id: get-secrets
+        env:
+          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+        run: |
+          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
+          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
+          TWINE_PASSWORD=$(aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/publishing/publish-test-pypi \
+            --query SecretString --output text | jq .default_passphrase -r | base64 -d \
+            | gpg --passphrase-file "$SECRETS_KEY_FILE" -d -)
+          echo "::add-mask::$TWINE_PASSWORD"
+          echo "twine-password=$TWINE_PASSWORD" >> "${GITHUB_OUTPUT}"
+
+      - name: Download Source Repository
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-src-repo
+          path: artifacts/release
+
+      - name: Publish to Test PyPi
+        env:
+          TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
+        run: |
+          tools pkg pypi-upload --test artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+
+<%- endblock jobs %>

@@ -1,0 +1,73 @@
+<%- set gh_environment = gh_environment|default("nightly") %>
+<%- extends 'ci.yml.jinja' %>
+
+<%- block on %>
+
+on:
+  schedule:
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
+    - cron: '0 3 * * *'  # Every day at 3AM
+
+<%- endblock on %>
+
+<%- block concurrency %>
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: false
+
+<%- endblock concurrency %>
+
+<%- block jobs %>
+  <{- super() }>
+
+  <%- if includes.get("build-repos", True) %>
+  <%- include "build-repos.yml.jinja" %>
+  <%- endif %>
+
+  publish-repositories:
+    <%- do conclusion_needs.append('publish-repositories') %>
+    name: Publish Repositories
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    environment: <{ gh_environment }>
+    needs:
+      - prepare-workflow
+      <%- for need in build_repo_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+      <%- if workflow_slug == "nightly" %>
+      <%- for need in test_salt_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+      <%- endif %>
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Download Repository Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-repo
+          path: repo/
+
+      - name: Decompress Repository Artifacts
+        run: |
+          find repo/ -type f -name '*.tar.gz' -print -exec tar xvf {} \;
+          find repo/ -type f -name '*.tar.gz' -print -exec rm -f {} \;
+
+      - name: Show Repository
+        run: |
+          tree -a artifacts/pkgs/repo/
+
+      - name: Upload Repository Contents (<{ gh_environment }>)
+        run: |
+          tools pkg repo publish <{ gh_environment }> \
+            ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} artifacts/pkgs/repo/
+
+<%- endblock jobs %>
