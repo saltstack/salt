@@ -55,9 +55,9 @@
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-src-repo
           path: |
-            artifacts/pkgs/repo/*/py3/src/${{ needs.prepare-workflow.outputs.salt-version }}/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
-            artifacts/pkgs/repo/*/py3/src/${{ needs.prepare-workflow.outputs.salt-version }}/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.*
-            artifacts/pkgs/repo/*/py3/src/${{ needs.prepare-workflow.outputs.salt-version }}/*-GPG-*
+            artifacts/pkgs/repo/**/py3/src/${{ needs.prepare-workflow.outputs.salt-version }}/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+            artifacts/pkgs/repo/**/py3/src/${{ needs.prepare-workflow.outputs.salt-version }}/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.*
+            artifacts/pkgs/repo/**/py3/src/${{ needs.prepare-workflow.outputs.salt-version }}/*-GPG-*
           retention-days: 7
           if-no-files-found: error
 
