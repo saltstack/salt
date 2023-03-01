@@ -1,0 +1,25 @@
+---
+name: get-pull-number
+description: Get Pull Number
+outputs:
+  number:
+    value: ${{ steps.get-pull-number.outputs.number }}
+
+
+runs:
+  using: composite
+  steps:
+    - name: Get Pull Number
+      id: get-pull-number
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        REPOSITORY_OWNER: ${{ github.repository_owner }}
+        REPOSITORY_NAME: ${{ github.event.repository.name }}
+        PUSH_SHA: ${{ github.sha }}
+      shell: bash
+      run:
+        echo $GITHUB_PULL_REQUEST_NUMBER
+        echo $REPOSITORY_OWNER
+        echo $REPOSITORY_NAME
+        echo NUMBER=$(gh api repos/$REPOSITORY_OWNER/$REPOSITORY_NAME/commits/$PUSH_SHA/pulls) >> "$GITHUB_OUTPUT"
