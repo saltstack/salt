@@ -101,6 +101,9 @@ class Recompress:
         "validate_version": {
             "help": "Validate, and normalize, the passed Salt Version",
         },
+        "release": {
+            "help": "When true, also update salt/versions.py to set the version as released",
+        },
     },
 )
 def set_salt_version(
@@ -108,6 +111,7 @@ def set_salt_version(
     salt_version: str,
     overwrite: bool = False,
     validate_version: bool = False,
+    release: bool = False,
 ):
     """
     Write the Salt version to 'salt/_version.txt'
@@ -166,6 +170,24 @@ def set_salt_version(
         ctx.exit(1)
 
     ctx.info(f"Successfuly wrote {salt_version!r} to 'salt/_version.txt'")
+
+    version_instance = tools.utils.Version(salt_version)
+    if release and not version_instance.is_prerelease:
+        with open(tools.utils.REPO_ROOT / "salt" / "version.py", "r+") as rwfh:
+            contents = rwfh.read()
+            match = f"info=({version_instance.major}, {version_instance.minor}))"
+            if match in contents:
+                contents = contents.replace(
+                    match,
+                    f"info=({version_instance.major}, {version_instance.minor}),  released=True)",
+                )
+                rwfh.seek(0)
+                rwfh.write(contents)
+                rwfh.truncate()
+
+                ctx.info(
+                    f"Successfuly marked {salt_version!r} as released in 'salt/version.py'"
+                )
 
     gh_env_file = os.environ.get("GITHUB_ENV", None)
     if gh_env_file is not None:
@@ -361,3 +383,49 @@ def source_tarball(ctx: Context):
         ]
         ctx.run("sha256sum", *packages)
     ctx.run("python3", "-m", "twine", "check", "dist/*", check=True)
+
+
+@pkg.command(
+    name="pypi-upload",
+    venv_config={
+        "requirements_files": [
+            tools.utils.REPO_ROOT / "requirements" / "build.txt",
+        ]
+    },
+    arguments={
+        "files": {
+            "help": "Files to upload to PyPi",
+            "nargs": "*",
+        },
+        "test": {
+            "help": "When true, upload to test.pypi.org instead",
+        },
+    },
+)
+def pypi_upload(ctx: Context, files: list[pathlib.Path], test: bool = False):
+    ctx.run(
+        "python3", "-m", "twine", "check", *[str(fpath) for fpath in files], check=True
+    )
+    if test is True:
+        repository_url = "https://test.pypi.org/legacy/"
+    else:
+        repository_url = "https://pypi.org/legacy/"
+    if "TWINE_USERNAME" not in os.environ:
+        os.environ["TWINE_USERNAME"] = "__token__"
+    if "TWINE_PASSWORD" not in os.environ:
+        ctx.error("The 'TWINE_PASSWORD' variable is not set. Cannot upload.")
+        ctx.exit(1)
+    cmdline = [
+        "twine",
+        "upload",
+        f"--repository-url={repository_url}",
+        "--username=__token__",
+    ]
+    if test is True:
+        cmdline.append("--skip-existing")
+    cmdline.extend([str(fpath) for fpath in files])
+    ctx.info(f"Running '{' '.join(cmdline)}' ...")
+    ret = ctx.run(*cmdline, check=False)
+    if ret.returncode:
+        ctx.error(ret.stderr.strip().decode())
+    ctx.exit(ret.returncode)

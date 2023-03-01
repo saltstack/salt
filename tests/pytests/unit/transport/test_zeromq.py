@@ -458,7 +458,7 @@ def test_serverside_exception(temp_salt_minion, temp_salt_master):
     with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
         with patch.object(minion_master.mock, "_handle_payload_hook") as _mock:
             _mock.side_effect = salt.ext.tornado.gen.Return(({}, {"fun": "madeup-fun"}))
-            ret = minion_master.channel.send({}, timeout=2, tries=1)
+            ret = minion_master.channel.send({}, timeout=5, tries=1)
             assert ret == "Server-side exception handling payload"
 
 

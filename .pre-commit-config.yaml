@@ -46,7 +46,7 @@ repos:
           )$
 
   - repo: https://github.com/s0undt3ch/python-tools-scripts
-    rev: "0.10.4"
+    rev: "0.11.1"
     hooks:
       - id: tools
         alias: check-changelog-entries
@@ -1067,6 +1067,139 @@ repos:
           - requirements/static/ci/invoke.in
   # <---- Invoke -----------------------------------------------------------------------------------------------------
 
+  # <---- PKG ci requirements-----------------------------------------------------------------------------------------
+      - id: pip-tools-compile
+        alias: compile-ci-pkg-3.6-requirements
+        name: PKG tests CI Py3.6 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests|common)\.in|py3\.6/pkgtests\.in)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/ci/pkgtests.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-pkg-3.7-requirements
+        name: PKG tests CI Py3.7 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests|common)\.in|py3\.7/pkgtests\.in)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/ci/pkgtests.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-pkg-3.8-requirements
+        name: PKG tests CI Py3.8 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests|common)\.in|py3\.8/pkgtests\.in)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/ci/pkgtests.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-pkg-3.9-requirements
+        name: PKG tests CI Py3.9 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests|common)\.in|py3\.9/pkgtests\.in)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/ci/pkgtests.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-pkg-3.10-requirements
+        name: PKG tests CI Py3.10 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests|common)\.in|py3\.10/pkgtests\.in)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/ci/pkgtests.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-windows-pkg-3.6-requirements
+        name: PKG tests Windows CI Py3.6 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests-windows|common)\.in|py3\.6/pkgtests-windows\.in)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=windows
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/ci/pkgtests-windows.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-windows-pkg-3.7-requirements
+        name: PKG tests Windows CI Py3.7 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests-windows|common)\.in|py3\.7/pkgtests-windows\.in)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=windows
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/ci/pkgtests-windows.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-windows-pkg-3.8-requirements
+        name: PKG tests Windows CI Py3.8 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests-windows|common)\.in|py3\.8/pkgtests-windows\.in)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/ci/pkgtests-windows.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-windows-pkg-3.9-requirements
+        name: PKG tests Windows CI Py3.9 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests-windows|common)\.in|py3\.9/pkgtests-windows\.in)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/ci/pkgtests-windows.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-windows-pkg-3.10-requirements
+        name: PKG tests Windows CI Py3.10 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests-windows|common)\.in|py3\.10/pkgtests-windows\.in)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --platform=windows
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/ci/pkgtests-windows.in
+  # <---- PKG ci requirements-----------------------------------------------------------------------------------------
+
+
   # ----- Tools ---------------------------------------------------------------------------------------------------->
       - id: pip-tools-compile
         alias: compile-ci-tools-3.9-requirements
@@ -1311,7 +1444,7 @@ repos:
           - looseversion
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.971
+    rev: v1.0.0
     hooks:
       - id: mypy
         alias: mypy-tools

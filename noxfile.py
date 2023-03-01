@@ -13,9 +13,12 @@ import os
 import pathlib
 import shutil
 import sqlite3
+import subprocess
 import sys
 import tarfile
 import tempfile
+
+import nox.command
 
 # fmt: off
 if __name__ == "__main__":
@@ -1757,3 +1760,66 @@ def build(session):
         ]
         session.run("sha256sum", *packages, external=True)
     session.run("python", "-m", "twine", "check", "dist/*")
+
+
+def _pkg_test(session, cmd_args, test_type):
+    pydir = _get_pydir(session)
+    junit_report_filename = f"test-results-{test_type}"
+    runtests_log_filename = f"runtests-{test_type}"
+    # Install requirements
+    if _upgrade_pip_setuptools_and_wheel(session):
+        if IS_WINDOWS:
+            file_name = "pkgtests-windows.txt"
+        else:
+            file_name = "pkgtests.txt"
+
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", pydir, file_name
+        )
+
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    pytest_args = (
+        cmd_args[:]
+        + [
+            f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
+            f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+        ]
+        + session.posargs
+    )
+    _pytest(session, False, pytest_args)
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="test-pkgs")
+def test_pkgs(session):
+    """
+    pytest pkg tests session
+    """
+    _pkg_test(session, ["pkg/tests/"], "pkg")
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="test-upgrade-pkgs")
+@nox.parametrize("classic", [False, True])
+def test_upgrade_pkgs(session, classic):
+    """
+    pytest pkg upgrade tests session
+    """
+    test_type = "pkg_upgrade"
+    cmd_args = [
+        "pkg/tests/upgrade/test_salt_upgrade.py::test_salt_upgrade",
+        "--upgrade",
+        "--no-uninstall",
+    ]
+    if classic:
+        cmd_args = cmd_args + ["--classic"]
+        # Workaround for installing and running classic packages from 3005.1
+        # They can only run with importlib-metadata<5.0.0.
+        subprocess.run(["pip3", "install", "importlib-metadata==4.13.0"], check=False)
+    try:
+        _pkg_test(session, cmd_args, test_type)
+    except nox.command.CommandFailed:
+        sys.exit(1)
+
+    cmd_args = ["pkg/tests/", "--no-install"] + session.posargs
+    _pkg_test(session, cmd_args, test_type)

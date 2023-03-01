@@ -12,6 +12,8 @@
 # Disable private libraries from showing in provides
 %global __provides_exclude_from ^.*\\.so.*$
 %global __requires_exclude_from ^.*\\.so.*$
+%define _source_payload w2.gzdio
+%define _binary_payload w2.gzdio
 
 # Disable python bytecompile for MANY reasons
 %global __os_install_post %(echo '%{__os_install_post}' | sed -e 's!/usr/lib[^[:space:]]*/brp-python-bytecompile[[:space:]].*$!!g')

@@ -154,7 +154,6 @@ extensions = [
     "myst_parser",
     "sphinxcontrib.spelling",
     #'saltautodoc', # Must be AFTER autodoc
-    #'shorturls',
 ]
 
 modindex_common_prefix = ["salt."]

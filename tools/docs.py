@@ -39,13 +39,30 @@ docs = command_group(
     arguments={
         "no_clean": {
             "help": "Don't cleanup prior to building",
-        }
+        },
+        "no_color": {
+            "help": "Disable colored output.",
+        },
     },
 )
-def man(ctx: Context, no_clean: bool = False):
+def man(ctx: Context, no_clean: bool = False, no_color: bool = False):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
-    ctx.run("make", "man", "SPHINXOPTS=-W", cwd="doc/", check=True)
+    opts = [
+        "-W",
+        "-j",
+        "auto",
+        "--keep-going",
+    ]
+    if no_color is False:
+        opts.append("--color")
+    ctx.run(
+        "make",
+        "man",
+        f"SPHINXOPTS={' '.join(opts)}",
+        cwd="doc/",
+        check=True,
+    )
     for root, dirs, files in os.walk("doc/_build/man"):
         for file in files:
             shutil.copy(os.path.join(root, file), os.path.join("doc/man", file))
@@ -57,6 +74,9 @@ def man(ctx: Context, no_clean: bool = False):
         "no_clean": {
             "help": "Don't cleanup prior to building",
         },
+        "no_color": {
+            "help": "Disable colored output.",
+        },
         "archive": {
             "help": "Compress the generated documentation into the provided archive.",
         },
@@ -65,11 +85,26 @@ def man(ctx: Context, no_clean: bool = False):
 def html(
     ctx: Context,
     no_clean: bool = False,
+    no_color: bool = False,
     archive: pathlib.Path = os.environ.get("ARCHIVE_FILENAME"),  # type: ignore[assignment]
 ):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
-    ctx.run("make", "html", "SPHINXOPTS=-W --keep-going", cwd="doc/", check=True)
+    opts = [
+        "-W",
+        "-j",
+        "auto",
+        "--keep-going",
+    ]
+    if no_color is False:
+        opts.append("--color")
+    ctx.run(
+        "make",
+        "html",
+        f"SPHINXOPTS={' '.join(opts)}",
+        cwd="doc/",
+        check=True,
+    )
     github_output = os.environ.get("GITHUB_OUTPUT")
     if archive is not None:
         ctx.info(f"Compressing the generated documentation to '{archive}'...")
@@ -102,12 +137,28 @@ def html(
         "no_clean": {
             "help": "Don't cleanup prior to building",
         },
+        "no_color": {
+            "help": "Disable colored output.",
+        },
     },
 )
-def epub(ctx: Context, no_clean: bool = False):
+def epub(ctx: Context, no_clean: bool = False, no_color: bool = False):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
-    ctx.run("make", "epub", cwd="doc/", check=True)
+    opts = [
+        "-j",
+        "auto",
+        "--keep-going",
+    ]
+    if no_color is False:
+        opts.append("--color")
+    ctx.run(
+        "make",
+        "epub",
+        f"SPHINXOPTS={' '.join(opts)}",
+        cwd="doc/",
+        check=True,
+    )
 
     artifact = tools.utils.REPO_ROOT / "doc" / "_build" / "epub" / "Salt.epub"
     if "LATEST_RELEASE" in os.environ:
@@ -130,16 +181,33 @@ def epub(ctx: Context, no_clean: bool = False):
     arguments={
         "no_clean": {
             "help": "Don't cleanup prior to building",
-        }
+        },
+        "no_color": {
+            "help": "Disable colored output.",
+        },
     },
 )
-def pdf(ctx: Context, no_clean: bool = False):
+def pdf(ctx: Context, no_clean: bool = False, no_color: bool = False):
     if not shutil.which("inkscape"):
         ctx.warn("No inkscape binary found")
         ctx.exit(1)
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
-    ctx.run("make", "pdf", "SPHINXOPTS=-W", cwd="doc/", check=True)
+    opts = [
+        "-W",
+        "-j",
+        "auto",
+        "--keep-going",
+    ]
+    if no_color is False:
+        opts.append("--color")
+    ctx.run(
+        "make",
+        "pdf",
+        f"SPHINXOPTS={' '.join(opts)}",
+        cwd="doc/",
+        check=True,
+    )
 
     artifact = tools.utils.REPO_ROOT / "doc" / "_build" / "latex" / "Salt.pdf"
     if "LATEST_RELEASE" in os.environ:
@@ -162,16 +230,27 @@ def pdf(ctx: Context, no_clean: bool = False):
     arguments={
         "no_clean": {
             "help": "Don't cleanup prior to building",
-        }
+        },
+        "no_color": {
+            "help": "Disable colored output.",
+        },
     },
 )
-def linkcheck(ctx: Context, no_clean: bool = False):
+def linkcheck(ctx: Context, no_clean: bool = False, no_color: bool = False):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
+    opts = [
+        "-W",
+        "-j",
+        "auto",
+        "--keep-going",
+    ]
+    if no_color is False:
+        opts.append("--color")
     ctx.run(
         "make",
         "linkcheck",
-        "SPHINXOPTS=-W -j auto --keep-going --color",
+        f"SPHINXOPTS={' '.join(opts)}",
         cwd="doc/",
         check=True,
     )
@@ -186,16 +265,27 @@ def linkcheck(ctx: Context, no_clean: bool = False):
     arguments={
         "no_clean": {
             "help": "Don't cleanup prior to building",
-        }
+        },
+        "no_color": {
+            "help": "Disable colored output.",
+        },
     },
 )
-def spellcheck(ctx: Context, no_clean: bool = False):
+def spellcheck(ctx: Context, no_clean: bool = False, no_color: bool = False):
     if no_clean is False:
         ctx.run("make", "clean", cwd="doc/", check=True)
+    opts = [
+        "-W",
+        "-j",
+        "auto",
+        "--keep-going",
+    ]
+    if no_color is False:
+        opts.append("--color")
     ctx.run(
         "make",
         "spelling",
-        "SPHINXOPTS=-W -j auto --keep-going --color",
+        f"SPHINXOPTS={' '.join(opts)}",
         cwd="doc/",
         check=True,
     )

@@ -19,7 +19,7 @@ Upcoming release
     :maxdepth: 1
     :glob:
 
-    3006.0*
+    3006.*
 
 See `Install a release candidate <https://docs.saltproject.io/salt/install-guide/en/latest/topics/release-candidate.html>`_
 for more information about installing an RC when one is available.

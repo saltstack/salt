@@ -1022,6 +1022,8 @@ class VM:
             "artifacts/",
             "--include",
             "artifacts/salt",
+            "--include",
+            "pkg/artifacts/*",
             # But we also want to exclude all other entries under artifacts/
             "--exclude",
             "artifacts/*",
@@ -1034,12 +1036,22 @@ class VM:
         source = f"{tools.utils.REPO_ROOT}{os.path.sep}"
         # Remote repo path
         remote_path = self.upload_path.as_posix()
+        rsync_remote_path = remote_path
         if self.is_windows:
             for drive in ("c:", "C:"):
-                remote_path = remote_path.replace(drive, "/cygdrive/c")
-        destination = f"{self.name}:{remote_path}"
+                source = source.replace(drive, "/cygdrive/c")
+                rsync_remote_path = rsync_remote_path.replace(drive, "/cygdrive/c")
+            source = source.replace("\\", "/")
+        destination = f"{self.name}:{rsync_remote_path}"
         description = "Rsync local checkout to VM..."
         self.rsync(source, destination, description, rsync_flags)
+        if self.is_windows:
+            # rsync sets very strict file permissions and disables inheritance
+            # we only need to reset permissions so they inherit from the parent
+            cmd = ["icacls", remote_path, "/T", "/reset"]
+            ret = self.run(cmd, capture=True, check=False, utf8=False)
+            if ret.returncode != 0:
+                self.ctx.exit(ret.returncode, ret.stderr.strip())
 
     def write_and_upload_dot_env(self, env: dict[str, str]):
         if not env:
@@ -1070,12 +1082,14 @@ class VM:
         pseudo_terminal: bool = False,
         env: list[str] = None,
         log_command_level: int = logging.INFO,
+        utf8: bool = True,
     ):
         if not self.is_running:
             self.ctx.exit(1, message=f"{self!r} is not running")
         if env is None:
             env = []
-        env.append("PYTHONUTF8=1")
+        if utf8:
+            env.append("PYTHONUTF8=1")
         self.write_ssh_config()
         try:
             ssh_command = self.ssh_command_args(
@@ -1112,7 +1126,7 @@ class VM:
             "-f",
             f"{self.upload_path.joinpath('noxfile.py').as_posix()}",
             "-e",
-            f"'{nox_session}'",
+            f'"{nox_session}"',
         ]
         if nox_args:
             cmd += nox_args

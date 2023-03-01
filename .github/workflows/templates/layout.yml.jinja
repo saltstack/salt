@@ -1,10 +1,14 @@
 # Do not edit these workflows directly as the changes made will be overwritten.
 # Instead, edit the template '<{ template }>'
+<%- set prepare_workflow_skip_test_suite = prepare_workflow_skip_test_suite|default("") %>
+<%- set prepare_workflow_skip_pkg_test_suite = prepare_workflow_skip_pkg_test_suite|default("") %>
 <%- set prepare_workflow_salt_version_input = prepare_workflow_salt_version_input|default("") %>
 <%- set python_version_linux = "3.10.10" %>
 <%- set python_version_macos = "3.10.10" %>
 <%- set python_version_windows = "3.10.10" %>
 <%- set relenv_version = "0.7.0" %>
+<%- set gpg_key_id = "64CBBC8173D76B3F" %>
+<%- set prepare_actual_release = prepare_actual_release | default(False) %>
 ---
 name: <{ workflow_name }>
 
@@ -49,11 +53,22 @@ concurrency:
 
 jobs:
 
+  <%- block pre_jobs %>
+  <%- endblock pre_jobs %>
+
+  <%- if includes.get("prepare-workflow", True) %>
   <%- block prepare_workflow_job %>
-  <%- do conclusion_needs.append('prepare-workflow') %>
+  <%- do conclusion_needs.append("prepare-workflow") %>
+
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on: ubuntu-latest
+    <%- if prepare_workflow_needs %>
+    needs:
+      <%- for need in prepare_workflow_needs.iter(consume=False) %>
+      - <{ need }>
+      <%- endfor %>
+    <%- endif %>
     outputs:
       jobs: ${{ steps.define-jobs.outputs.jobs }}
       runners: ${{ steps.runner-types.outputs.runners }}
@@ -128,12 +143,18 @@ jobs:
             golden_images:
               - added|modified:
                 - cicd/golden-images.json
+            pkg_tests:
+              - added|modified: &pkg_tests_added_modified
+                - pkg/**
+                - *pkg_requirements
+                - *salt_added_modified
             testrun:
               - added|modified:
                 - *pkg_requirements
                 - *test_requirements
                 - *salt_added_modified
                 - *tests_added_modified
+                - *pkg_tests_added_modified
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
@@ -153,24 +174,13 @@ jobs:
         with:
           salt-version: "<{ prepare_workflow_salt_version_input }>"
           validate-version: true
+      <%- if prepare_actual_release %>
 
-      - name: Get Pull Number
-        id: get-pull-number
-        uses: actions/github-script@v6
-        env:
-          E: 44
-        run:
-          echo $E
+      - name: Check Existing Releases
+        run: |
+          tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
 
-      - name: Get Pull Data
-        id: get-pull-data
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPOSITORY_OWNER: ${{ github.repository_owner }}
-          REPOSITORY_NAME: ${{ github.event.repository.name }}
-        run:
-          echo PULL_DATA=$(gh api repos/$REPOSITORY_OWNER/$REPOSITORY_NAME/pulls/10)
+      <%- endif %>
 
       - name: Write Changed Files To A Local File
         run:
@@ -183,44 +193,44 @@ jobs:
 
       - name: Process Changed Files
         id: process-changed-files
-        run:
+        run: |
           tools ci process-changed-files ${{ github.event_name }} changed-files.json
 
       - name: Check Collected Changed Files
         if: ${{ github.event_name == 'pull_request' }}
-        run:
+        run: |
           echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
 
       - name: Define Runner Types
         id: runner-types
-        run:
+        run: |
           tools ci runner-types ${{ github.event_name }}
 
       - name: Check Defined Runners
-        run:
+        run: |
           echo '${{ steps.runner-types.outputs.runners }}' | jq -C '.'
 
       - name: Define Jobs
         id: define-jobs
-        run:
-          tools ci define-jobs ${{ github.event_name }} changed-files.json
+        run: |
+          tools ci define-jobs<{ prepare_workflow_skip_test_suite }><{ prepare_workflow_skip_pkg_test_suite }> ${{ github.event_name }} changed-files.json
 
       - name: Check Defined Jobs
-        run:
+        run: |
           echo '${{ steps.define-jobs.outputs.jobs }}' | jq -C '.'
 
       - name: Define Testrun
         id: define-testrun
-        run:
+        run: |
           tools ci define-testrun ${{ github.event_name }} changed-files.json
 
       - name: Check Defined Test Run
-        run:
+        run: |
           echo '${{ steps.define-testrun.outputs.testrun }}' | jq -C '.'
 
       - name: Check Contents of generated testrun-changed-files.txt
         if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
-        run:
+        run: |
           cat testrun-changed-files.txt || true
 
       - name: Upload testrun-changed-files.txt
@@ -235,6 +245,7 @@ jobs:
         run: |
           echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
   <%- endblock prepare_workflow_job %>
+  <%- endif %>
 
 <%- endblock jobs %>
 
@@ -245,10 +256,19 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     needs:
+      <%- for need in prepare_workflow_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
       <%- for need in conclusion_needs.iter(consume=True) %>
       - <{ need }>
       <%- endfor %>
       <%- for need in test_salt_needs.iter(consume=False) %>
+      - <{ need }>
+      <%- endfor %>
+      <%- for need in test_salt_pkg_needs.iter(consume=False) %>
+      - <{ need }>
+      <%- endfor %>
+      <%- for need in test_repo_needs.iter(consume=True) %>
       - <{ need }>
       <%- endfor %>
     steps:
