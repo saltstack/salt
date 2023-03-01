@@ -132,24 +132,6 @@ jobs:
           salt-version: ""
           validate-version: true
 
-      - name: Get Pull Number
-        id: get-pull-number
-        uses: actions/github-script@v6
-        env:
-          E: 44
-        run:
-          echo $E
-
-      - name: Get Pull Data
-        id: get-pull-data
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPOSITORY_OWNER: ${{ github.repository_owner }}
-          REPOSITORY_NAME: ${{ github.event.repository.name }}
-        run:
-          echo PULL_DATA=$(gh api repos/$REPOSITORY_OWNER/$REPOSITORY_NAME/pulls/10)
-
       - name: Write Changed Files To A Local File
         run:
           echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
@@ -270,6 +252,11 @@ jobs:
         uses: ./.github/actions/setup-salt-version
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+      - name: Get Pull Number
+        id: get-pull-number
+        run:
+          echo test
 
       # TODO: Remove the --salt-version argument post 3006 release.  This was to handle versioning
       # issues on pre-3006 development versions on deb-based distros.
