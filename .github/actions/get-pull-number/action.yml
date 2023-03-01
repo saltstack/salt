@@ -30,5 +30,4 @@ runs:
         echo ${{ inputs.owner }}
         echo ${{ inputs.sha }}
         echo ${{ inputs.pull_number }}
-        echo repos/$GITHUB_REPO/$GITHUB_OWNER/commits/$GITHUB_SHA/pulls
-        echo NUMBER=$(gh api repos/$GITHUB_REPO/$GITHUB_OWNER/commits/$GITHUB_SHA/pulls)
+        echo NUMBER=$(gh api repos/$GITHUB_OWNER/$GITHUB_REPO/commits/$GITHUB_SHA/pulls)
