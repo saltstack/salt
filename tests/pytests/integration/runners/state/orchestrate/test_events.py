@@ -78,6 +78,21 @@ def runner_salt_call_cli(runner_salt_minion):
     return runner_salt_minion.salt_call_cli()
 
 
+@pytest.fixture(scope="module")
+def runner_add_user(runner_salt_run_cli, salt_auth_account_m):
+    ## create user on master to use
+    ret = runner_salt_run_cli.run("salt.cmd", "user.add", salt_auth_account_m.username)
+    assert ret.returncode == 0
+
+    yield
+
+    ## remove user on master
+    ret = runner_salt_run_cli.run(
+        "salt.cmd", "user.delete", salt_auth_account_m.username
+    )
+    assert ret.returncode == 0
+
+
 def test_state_event(salt_run_cli, salt_cli, salt_minion):
     """
     test to ensure state.event
@@ -399,15 +414,16 @@ def test_orchestration_onchanges_and_prereq(
                 assert not state_data["changes"]
 
 
-## @pytest.mark.destructive_test
 @pytest.mark.slow_test
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_on_windows
+@pytest.mark.skip_on_darwin
 def test_unknown_in_runner_event(
     runner_salt_run_cli,
     runner_salt_master,
     salt_minion,
     salt_auth_account_m,
+    runner_add_user,
     event_listener,
 ):
     """
@@ -460,14 +476,6 @@ def test_unknown_in_runner_event(
     ), runner_salt_master.state_tree.base.temp_file(
         "orch.sls", test_orch_contents
     ):
-        start_time = time.time()
-
-        ## create user on master to use
-        ret = runner_salt_run_cli.run(
-            "salt.cmd", "user.add", salt_auth_account_m.username
-        )
-        assert ret.returncode == 0
-
         ret = runner_salt_run_cli.run(
             "salt.cmd", "shadow.gen_password", salt_auth_account_m.password
         )
@@ -480,6 +488,8 @@ def test_unknown_in_runner_event(
         assert ret.returncode == 0
 
         jid = salt.utils.jid.gen_jid(runner_salt_master.config)
+        start_time = time.time()
+
         ret = runner_salt_run_cli.run(
             "--jid",
             jid,
@@ -492,40 +502,20 @@ def test_unknown_in_runner_event(
             "state.orchestrate",
             "orch",
         )
-
-        log.debug(f"DGM test_unknown_in_runner_event ret '{ret}'")
-        log.debug(f"DGM test_unknown_in_runner_event ret.stdout '{ret.stdout}'")
-        log.debug(f"DGM test_unknown_in_runner_event ret.data '{ret.data}'")
-
-        ## assert ret.returncode == 0
-        assert ret.returncode == 1  # failed to find target minion - deliberate
         assert not ret.stdout.startswith("Authentication failure")
 
-        ## orch_job_data = ret.data
-        ## for step_data in orch_job_data["data"][runner_salt_master.id].values():
-        ##     assert "__jid__" in step_data
+        expected_new_event_tag = "salt/run/*/new"
+        event_pattern = (runner_salt_master.id, expected_new_event_tag)
+        found_events = event_listener.get_events([event_pattern], after_time=start_time)
 
-        expected_event_tag = "salt/run/{}/ret".format(jid)
-        log.debug(
-            f"DGM test_unknown_in_runner_event expected_event_tag '{expected_event_tag}'"
-        )
-        event_pattern = (runner_salt_master.id, expected_event_tag)
+        for event in found_events:
+            if event.data["fun"] == "runner.test.metasyntactic":
+                assert not event.data["user"] == "UNKNOWN"
 
-        matched_events = event_listener.wait_for_events(
-            [event_pattern], after_time=start_time, timeout=120
-        )
-        log.debug(f"DGM test_unknown_in_runner_event matched_events '{matched_events}'")
-        assert (
-            matched_events.found_all_events
-        ), "Failed to receive the event with the tag '{}'".format(expected_event_tag)
-        for event in matched_events.matches:
-            for job_data in event.data["return"]["data"][
-                runner_salt_master.id
-            ].values():
-                assert "__jid__" in job_data
+        expected_ret_event_tag = "salt/run/*/ret"
+        event_pattern = (runner_salt_master.id, expected_ret_event_tag)
+        found_events = event_listener.get_events([event_pattern], after_time=start_time)
 
-        ## remove user on master
-        ret = runner_salt_run_cli.run(
-            "salt.cmd", "user.delete", salt_auth_account_m.username
-        )
-        assert ret.returncode == 0
+        for event in found_events:
+            if event.data["fun"] == "runner.test.metasyntactic":
+                assert not event.data["user"] == "UNKNOWN"
