@@ -173,7 +173,7 @@ jobs:
         id: get-push-number
         uses: ./.github/actions/get-push-number
         run:
-            echo test
+            echo ${{ steps.git-push-number.outputs }}
 
       - name: Check Existing Releases
         run: |
