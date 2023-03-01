@@ -182,6 +182,7 @@ jobs:
           repo: ${{ github.event.repository.name }}
           owner: ${{ github.repository_owner }}
           sha: ${{ github.sha }}
+          pull_number: ${{ github.event.pull_request.number }}
 
       <%- if prepare_actual_release %>
 

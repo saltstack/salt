@@ -17,8 +17,11 @@ runs:
     - name: Get Pull Number
       id: get-pull-number
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         echo ${{ inputs.repo }}
         echo ${{ inputs.owner }}
         echo ${{ inputs.sha }}
         echo ${{ inputs.pull_number }}
+        echo NUMBER=$(gh api repos/$repo/$owner/commits/$sha/pulls)
