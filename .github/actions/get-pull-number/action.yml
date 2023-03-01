@@ -9,4 +9,4 @@ runs:
       id: get-pull-number
       shell: bash
       run: |
-        echo '????'
+        echo action
