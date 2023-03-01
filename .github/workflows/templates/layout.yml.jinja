@@ -177,8 +177,10 @@ jobs:
 
       - name: Get Push Number
         id: get-push-number
+        uses: ./.github/actions/get-push-number
         run:
-            echo test
+          echo '???'
+          echo ${{ steps.git-push-number.outputs }}
 
       <%- if prepare_actual_release %>
 
