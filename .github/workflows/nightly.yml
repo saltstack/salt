@@ -134,8 +134,8 @@ jobs:
 
       - name: Get Pull Number
         id: get-pull-number
-        run:
-            echo test
+        run: |
+          echo test ug
 
       - name: Write Changed Files To A Local File
         run:

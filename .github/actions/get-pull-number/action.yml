@@ -8,5 +8,5 @@ runs:
     - name: Get Pull Number
       id: get-pull-number
       shell: bash
-      run:
+      run: |
         echo '????'
