@@ -169,10 +169,10 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
           validate-version: true
 
-      - name: Get Pull Number
-        id: get-pull-number
+      - name: Get Push Number
+        id: get-push-number
         run:
-          echo test
+            echo test
 
       - name: Check Existing Releases
         run: |
