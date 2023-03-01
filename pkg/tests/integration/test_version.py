@@ -99,6 +99,9 @@ def test_symlinks_created(version, symlink, install_salt):
 
 
 @pytest.mark.skip_on_windows()
+@pytest.mark.skipif(
+    True, reason="Skipping until images are updated with rpmdev-vercmp for RC2"
+)
 def test_compare_pkg_versions_redhat_rc(version, install_salt):
     """
     Test compare pkg versions for redhat RC packages. A tilde should be included
