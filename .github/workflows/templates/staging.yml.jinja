@@ -13,7 +13,9 @@ on:
       salt-version:
         type: string
         required: true
-        description: The Salt version to set prior to building packages and staging the release.
+        description: >
+          The Salt version to set prior to building packages and staging the release.
+          (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
       skip-salt-test-suite:
         type: boolean
         default: false
