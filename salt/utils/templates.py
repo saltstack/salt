@@ -423,22 +423,24 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     def parse_jinja_file_opts(tmplstr: str, env: str):
         # Same Jinja override prefix as Ansible
         JINJA2_OVERRIDE = "#jinja2:"
-        # Loop starting lines beginning with #
+
+        # Loop starting lines beginning with # or are empty
         for line in tmplstr.splitlines():
-            if not line.startswith(JINJA2_OVERRIDE):
+            if not (line.startswith("#") or line.strip() == ""):
+                break
+            elif not line.startswith(JINJA2_OVERRIDE):
                 continue
 
-            if line.startswith(JINJA2_OVERRIDE):
-                # Remove "#jinja2:" from line where we found it
-                jstring = line.replace(JINJA2_OVERRIDE, "")
-                try:
-                    # Hope it parses into JSON, if so use helper to get it
-                    # into JINJA options
-                    jdata = json.loads(jstring)
-                    opt_jinja_env_helper(jdata, env)
-                except:
-                    # Should we log more here?
-                    log.warning("Unable to parse Jinja2 options string")
+            # Remove "#jinja2:" from line where we found it
+            jstring = line.replace(JINJA2_OVERRIDE, "")
+            try:
+                # Hope it parses into JSON, if so use helper to get it
+                # into JINJA options
+                jdata = json.loads(jstring)
+                opt_jinja_env_helper(jdata, env)
+            except:
+                # Should we log more here?
+                log.warning("Unable to parse Jinja2 options string")
 
     if "sls" in context and context["sls"] != "":
         opt_jinja_env_helper(opt_jinja_sls_env, "jinja_sls_env")
