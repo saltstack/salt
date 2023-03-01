@@ -177,7 +177,10 @@ jobs:
 
       - name: Get Pull Number
         id: get-pull-number
-        uses: ./.github/actions/get-pull-number
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "<{ prepare_workflow_salt_version_input }>"
+          validate-version: true
         run: |
           echo test ug
 
