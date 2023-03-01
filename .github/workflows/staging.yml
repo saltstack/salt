@@ -183,7 +183,7 @@ jobs:
         id: get-pull-request
         shell: bash
         run: |
-          echo ${{ steps.get-pull-number.outputs }}
+          echo ${{ steps.get-pull-number.outputs.number }}
 
       - name: Check Existing Releases
         run: |

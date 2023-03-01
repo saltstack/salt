@@ -37,4 +37,6 @@ runs:
         else
         NUMBER=$GITHUB_PULL_NUMBER
         fi
+        number=$NUMBER
+        echo $number
         echo "number=$NUMBER" >> "${GITHUB_OUTPUT}"
