@@ -464,15 +464,15 @@ def rpm(
     def _create_repo_file(create_repo_path, url_suffix):
         ctx.info(f"Creating '{repo_file_path.relative_to(repo_path)}' file ...")
         if nightly_build:
-            base_url = "salt-dev/py3/"
+            base_url = "salt-dev/"
             repo_file_contents = "[salt-nightly-repo]"
         elif rc_build:
-            base_url = "salt_rc/py3/"
+            base_url = "salt_rc/"
             repo_file_contents = "[salt-rc-repo]"
         else:
-            base_url = "py3/"
+            base_url = ""
             repo_file_contents = "[salt-repo]"
-        base_url += f"{distro}/{url_suffix}"
+        base_url += f"salt/py3/{distro}/{url_suffix}"
         if distro == "amazon":
             distro_name = "Amazon Linux"
         elif distro == "redhat":
@@ -501,8 +501,6 @@ def rpm(
 
     if nightly_build:
         repo_file_path = create_repo_path.parent / "nightly.repo"
-    elif rc_build:
-        repo_file_path = create_repo_path.parent / "rc.repo"
     else:
         repo_file_path = create_repo_path.parent / f"{create_repo_path.name}.repo"
 
