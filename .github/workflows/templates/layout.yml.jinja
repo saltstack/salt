@@ -185,6 +185,12 @@ jobs:
           sha: ${{ github.sha }}
           pull_number: ${{ github.event.pull_request.number }}
 
+      - name: Get Pull Request
+        id: get-pull-request
+        shell: bash
+        run: |
+          echo ${{ steps.get-pull-number.outputs }}
+
       <%- if prepare_actual_release %>
 
       - name: Check Existing Releases

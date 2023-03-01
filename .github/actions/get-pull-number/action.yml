@@ -13,6 +13,10 @@ inputs:
   pull_number:
     default: null
 
+outputs:
+  number:
+    value: ${{ steps.get-pull-number.outputs.number }}
+
 runs:
   using: composite
   steps:
@@ -28,10 +32,9 @@ runs:
       run: |
         if [ -z "$GITHUB_PULL_NUMBER"]
         then
-        pulls=$(gh api repos/$GITHUB_OWNER/$GITHUB_REPO/commits/$GITHUB_SHA/pulls)
-        echo $pulls
-        pulls=$(jq '.[0].number' <<< $pulls )
-        echo $pulls
+        PULLS=$(gh api repos/$GITHUB_OWNER/$GITHUB_REPO/commits/$GITHUB_SHA/pulls)
+        NUMBER=$(jq '.[0].number' <<< $pulls )
         else
-        echo NUMBER=$GITHUB_PULL_NUMBER
+        NUMBER=$GITHUB_PULL_NUMBER
         fi
+        echo "number=$NUMBER" >> "${GITHUB_OUTPUT}"
