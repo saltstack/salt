@@ -21,10 +21,14 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
+        GITHUB_REPO: ${{ inputs.repo }}
+        GITHUB_OWNER: ${{ inputs.owner }}
+        GITHUB_SHA: ${{ inputs.sha }}
+        GITHUB_PULL_NUMBER: ${{ inputs.pull_number }}
       run: |
         echo ${{ inputs.repo }}
         echo ${{ inputs.owner }}
         echo ${{ inputs.sha }}
         echo ${{ inputs.pull_number }}
-        echo repos/$repo/$owner/commits/$sha/pulls
-        echo NUMBER=$(gh api repos/$repo/$owner/commits/$sha/pulls)
+        echo repos/$GITHUB_REPO/$oGITHUB_OWNER/commits/$GITHUB_SHA/pulls
+        echo NUMBER=$(gh api repos/$GITHUB_REPO/$oGITHUB_OWNER/commits/$GITHUB_SHA/pulls)
