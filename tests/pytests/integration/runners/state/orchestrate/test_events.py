@@ -20,18 +20,9 @@ log = logging.getLogger(__name__)
 
 @attr.s(kw_only=True, slots=True)
 class TestMasterAccount:
-    ## sminion = attr.ib(repr=False)
     username = attr.ib()
     password = attr.ib()
-    hashed_password = attr.ib(repr=False)
-    ## create_group = attr.ib(repr=False, default=False)
-    ## group_name = attr.ib()
-    ## _group = attr.ib(init=True, repr=False)
     _delete_account = attr.ib(init=False, repr=False, default=False)
-
-    ## @sminion.default
-    ## def _default_sminion(self):
-    ##     return create_sminion()
 
     @username.default
     def _default_username(self):
@@ -41,119 +32,11 @@ class TestMasterAccount:
     def _default_password(self):
         return random_string("pwd-", size=8)
 
-    @hashed_password.default
-    def _default_hashed_password(self):
-        if not salt.utils.platform.is_darwin() and not salt.utils.platform.is_windows():
-            return salt.utils.pycrypto.gen_hash(password=self.password)
-        return self.password
-
-    ## @group_name.default
-    ## def _default_group_name(self):
-    ##     if self.create_group:
-    ##         return "group-{}".format(self.username)
-    ##     return None
-
-    ## @_group.default
-    ## def _default__group(self):
-    ##     if self.group_name:
-    ##         return TestGroup(sminion=self.sminion, name=self.group_name)
-    ##     return None
-
-    ## @property
-    ## def info(self):
-    ##     return types.SimpleNamespace(**self.sminion.functions.user.info(self.username))
-
-    ## @property
-    ## def group(self):
-    ##     if self._group is None:
-    ##         raise RuntimeError(
-    ##             "Neither `create_group` nor `group_name` was passed when creating the "
-    ##             "account. There's no group attribute in this account instance."
-    ##         )
-    ##     return self._group
-
-    ## @group.setter
-    ## def _set_group(self, value):
-    ##     self._group = value
-
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
         pass
-
-    ## def __enter__(self):
-    ##     if not self.sminion.functions.user.info(self.username):
-    ##         log.debug("Creating system account: %s", self)
-    ##         ret = self.sminion.functions.user.add(self.username)
-    ##         assert ret
-    ##         self._delete_account = True
-    ##     if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
-    ##         password = self.password
-    ##     else:
-    ##         password = self.hashed_password
-    ##     ret = self.sminion.functions.shadow.set_password(self.username, password)
-    ##     assert ret
-    ##     assert self.username in self.sminion.functions.user.list_users()
-    ##     if self._group:
-    ##         self.group.__enter__()
-    ##         self.sminion.functions.group.adduser(self.group.name, self.username)
-    ##         if not salt.utils.platform.is_windows():
-    ##             # Make this group the primary_group for the user
-    ##             self.sminion.functions.user.chgid(self.username, self.group.info.gid)
-    ##             assert self.info.gid == self.group.info.gid
-    ##     if self._delete_account:
-    ##         log.debug("Created system account: %s", self)
-    ##     else:
-    ##         log.debug("Reusing exisintg system account: %s", self)
-    ##     # Run tests
-    ##     return self
-
-    ## def __exit__(self, *args):
-    ##     if self._group:
-    ##         try:
-    ##             self.sminion.functions.group.deluser(self.group.name, self.username)
-    ##             log.debug(
-    ##                 "Removed user %r from group %r", self.username, self.group.name
-    ##             )
-    ##         except Exception:  # pylint: disable=broad-except
-    ##             log.warning(
-    ##                 "Failed to remove user %r from group %r",
-    ##                 self.username,
-    ##                 self.group.name,
-    ##                 exc_info=True,
-    ##             )
-
-    ##         self.group.__exit__(*args)
-
-    ##     if self._delete_account:
-    ##         try:
-    ##             delete_kwargs = {"force": True}
-    ##             if salt.utils.platform.is_windows():
-    ##                 delete_kwargs["purge"] = True
-    ##             else:
-    ##                 delete_kwargs["remove"] = True
-    ##             self.sminion.functions.user.delete(self.username, **delete_kwargs)
-    ##             log.debug("Deleted system account: %s", self.username)
-    ##         except Exception:  # pylint: disable=broad-except
-    ##             log.warning(
-    ##                 "Failed to delete system account: %s", self.username, exc_info=True
-    ##             )
-
-    ##         if self.sminion.functions.group.info(self.username):
-    ##             # A group with the same name as the user name still exists.
-    ##             # Let's delete it
-    ##             try:
-    ##                 self.sminion.functions.group.delete(self.username)
-    ##                 log.debug(
-    ##                     "Deleted system group matching username: %s", self.username
-    ##                 )
-    ##             except Exception:  # pylint: disable=broad-except
-    ##                 log.warning(
-    ##                     "Failed to delete system group matching username: %s",
-    ##                     self.username,
-    ##                     exc_info=True,
-    ##                 )
 
 
 @pytest.fixture(scope="session")
@@ -178,12 +61,21 @@ def runner_master_config(salt_auth_account_m):
 
 @pytest.fixture(scope="module")
 def runner_salt_master(salt_factories, runner_master_config):
-    ## log.debug(f"DGM runner_salt_master config '{runner_master_config}'")
     factory = salt_factories.salt_master_daemon(
         "runner-master", defaults=runner_master_config
     )
     with factory.started():
         yield factory
+
+
+@pytest.fixture(scope="module")
+def runner_salt_run_cli(runner_salt_master):
+    return runner_salt_master.salt_run_cli()
+
+
+@pytest.fixture(scope="module")
+def runner_salt_call_cli(runner_salt_minion):
+    return runner_salt_minion.salt_call_cli()
 
 
 def test_state_event(salt_run_cli, salt_cli, salt_minion):
@@ -264,15 +156,11 @@ def test_jid_in_ret_event(salt_run_cli, salt_master, salt_minion, event_listener
             assert "__jid__" in step_data
 
         expected_event_tag = "salt/run/{}/ret".format(jid)
-        log.debug(
-            f"DGM test_jid_in_ret_event expected_event_tag '{expected_event_tag}'"
-        )
         event_pattern = (salt_master.id, expected_event_tag)
 
         matched_events = event_listener.wait_for_events(
             [event_pattern], after_time=start_time, timeout=120
         )
-        log.debug(f"DGM test_jid_in_ret_event matched_events '{matched_events}'")
         assert (
             matched_events.found_all_events
         ), "Failed to receive the event with the tag '{}'".format(expected_event_tag)
@@ -429,14 +317,7 @@ def test_orchestration_with_pillar_dot_items(salt_run_cli, salt_master):
 
         ret = salt_run_cli.run("--jid", jid, "state.orchestrate", "test-orch")
         assert ret.returncode == 0
-        log.debug(
-            f"DGM test_orchestration_with_pillar_dot_items ret.stdout '{ret.stdout}'"
-        )
-        log.debug(f"DGM test_orchestration_with_pillar_dot_items ret.data '{ret.data}'")
         for state_data in ret.data["data"][salt_master.id].values():
-            log.debug(
-                f"DGM test_orchestration_with_pillar_dot_items loop state_data '{state_data}'"
-            )
             # Each state should be successful
             assert state_data["result"] is True
 
@@ -523,12 +404,24 @@ def test_orchestration_onchanges_and_prereq(
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_on_windows
 def test_unknown_in_runner_event(
-    salt_run_cli, runner_salt_master, salt_minion, salt_auth_account_m, event_listener
+    runner_salt_run_cli,
+    runner_salt_master,
+    salt_minion,
+    salt_auth_account_m,
+    event_listener,
 ):
     """
     Test to confirm that the ret event for the orchestration contains the
     jid for the jobs spawned.
     """
+    file_roots_base_dir = runner_salt_master.config["file_roots"]["base"][0]
+    test_top_file_contents = """
+    base:
+      '{minion_id}':
+        - {file_roots}
+    """.format(
+        minion_id=salt_minion.id, file_roots=file_roots_base_dir
+    )
     test_init_state_contents = """
     always-passes-with-any-kwarg:
       test.nop:
@@ -561,83 +454,78 @@ def test_unknown_in_runner_event(
         minion_id=salt_minion.id
     )
     with runner_salt_master.state_tree.base.temp_file(
+        "top.sls", test_top_file_contents
+    ), runner_salt_master.state_tree.base.temp_file(
         "init.sls", test_init_state_contents
-    ), runner_salt_master.state_tree.base.temp_file("orch.sls", test_orch_contents):
+    ), runner_salt_master.state_tree.base.temp_file(
+        "orch.sls", test_orch_contents
+    ):
         start_time = time.time()
-        ## log.debug(f"DGM test_unknown_in_runner_event master config '{runner_salt_master.config}'")
 
         ## create user on master to use
-        ret = salt_run_cli.run("salt.cmd", "user.add", salt_auth_account_m.username)
-        ## log.debug(f"DGM test_unknown_in_runner_event user add result, returncode '{ret.returncode}'")
+        ret = runner_salt_run_cli.run(
+            "salt.cmd", "user.add", salt_auth_account_m.username
+        )
         assert ret.returncode == 0
 
-        log.debug(
-            f"DGM test_unknown_in_runner_event username '{salt_auth_account_m.username}', password '{salt_auth_account_m.password}', hashed password '{salt_auth_account_m.hashed_password}'"
-        )
-        ret = salt_run_cli.run(
+        ret = runner_salt_run_cli.run(
             "salt.cmd", "shadow.gen_password", salt_auth_account_m.password
         )
         assert ret.returncode == 0
 
         gen_pwd = ret.stdout
-        log.debug(f"DGM test_unknown_in_runner_event gen_pwd '{gen_pwd}'")
-
-        ## if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
-        ##     password = salt_auth_account_m.password
-        ## else:
-        ##     password = salt_auth_account_m.hashed_password
-        ## ## password = '$y$j9T$gAAhMr2XekarmUoZg1l2E0$ie8rGykDSaJAMTLN4vD1z4dPn3LJISeeJWZgG7BcE85'
-        ## ret = salt_run_cli.run("salt.cmd", "shadow.set_password", salt_auth_account_m.username, password)
-        ret = salt_run_cli.run(
+        ret = runner_salt_run_cli.run(
             "salt.cmd", "shadow.set_password", salt_auth_account_m.username, gen_pwd
         )
-
-        ## log.debug(f"DGM test_unknown_in_runner_event set password result, returncode '{ret.returncode}'")
         assert ret.returncode == 0
 
-        ## ret = salt_run_cli.run("salt.cmd", "cmd.run", 'cat /etc/passwd')
-        ## assert ret.returncode == 0
-        ## log.debug(f"DGM test_unknown_in_runner_event ret.stdout passwd '{ret.stdout}'")
-
-        ## ret = salt_run_cli.run("salt.cmd", "cmd.run", 'cat /etc/shadow')
-        ## assert ret.returncode == 0
-        ## log.debug(f"DGM test_unknown_in_runner_event ret.stdout shadow '{ret.stdout}'")
-
         jid = salt.utils.jid.gen_jid(runner_salt_master.config)
-        ## DGM for some reason salt_run_cli.run doesn't like the commands and gives auth failures with composed command
-        ## however if passed as a single string with a leading space (otherwise --jid rejected as an option), it works
-        ## debug salt pytest support later
-        ## ret = salt_run_cli.run("--jid", jid, "-a", "pam", "--username", salt_auth_account_m.username, "--password", salt_auth_account_m.password, "state.orch", "orch")
-        mycmd = f" --jid {jid} -a pam --username {salt_auth_account_m.username} --password {salt_auth_account_m.password} state.orch orch"
-        log.debug(f"DGM test_unknown_in_runner_event mycmd '{mycmd}'")
-        ret = salt_run_cli.run(mycmd)
+        ret = runner_salt_run_cli.run(
+            "--jid",
+            jid,
+            "-a",
+            "pam",
+            "--username",
+            salt_auth_account_m.username,
+            "--password",
+            salt_auth_account_m.password,
+            "state.orchestrate",
+            "orch",
+        )
 
         log.debug(f"DGM test_unknown_in_runner_event ret '{ret}'")
         log.debug(f"DGM test_unknown_in_runner_event ret.stdout '{ret.stdout}'")
         log.debug(f"DGM test_unknown_in_runner_event ret.data '{ret.data}'")
 
-        assert ret.returncode == 0
+        ## assert ret.returncode == 0
+        assert ret.returncode == 1  # failed to find target minion - deliberate
         assert not ret.stdout.startswith("Authentication failure")
 
         ## orch_job_data = ret.data
         ## for step_data in orch_job_data["data"][runner_salt_master.id].values():
         ##     assert "__jid__" in step_data
 
-        ## expected_event_tag = "salt/run/{}/ret".format(jid)
-        ## log.debug(f"DGM test_unknown_in_runner_event expected_event_tag '{expected_event_tag}'")
-        ## event_pattern = (runner_salt_master.id, expected_event_tag)
+        expected_event_tag = "salt/run/{}/ret".format(jid)
+        log.debug(
+            f"DGM test_unknown_in_runner_event expected_event_tag '{expected_event_tag}'"
+        )
+        event_pattern = (runner_salt_master.id, expected_event_tag)
 
-        ## matched_events = event_listener.wait_for_events(
-        ##     [event_pattern], after_time=start_time, timeout=120
-        ## )
-        ## log.debug(f"DGM test_unknown_in_runner_event matched_events '{matched_events}'")
-        ## assert (
-        ##     matched_events.found_all_events
-        ## ), "Failed to receive the event with the tag '{}'".format(expected_event_tag)
-        ## for event in matched_events.matches:
-        ##     for job_data in event.data["return"]["data"][runner_salt_master.id].values():
-        ##         assert "__jid__" in job_data
+        matched_events = event_listener.wait_for_events(
+            [event_pattern], after_time=start_time, timeout=120
+        )
+        log.debug(f"DGM test_unknown_in_runner_event matched_events '{matched_events}'")
+        assert (
+            matched_events.found_all_events
+        ), "Failed to receive the event with the tag '{}'".format(expected_event_tag)
+        for event in matched_events.matches:
+            for job_data in event.data["return"]["data"][
+                runner_salt_master.id
+            ].values():
+                assert "__jid__" in job_data
 
         ## remove user on master
-        ret = salt_run_cli.run("salt.cmd", "user.remove", salt_auth_account_m.username)
+        ret = runner_salt_run_cli.run(
+            "salt.cmd", "user.delete", salt_auth_account_m.username
+        )
         assert ret.returncode == 0
