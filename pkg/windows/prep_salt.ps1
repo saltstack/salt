@@ -153,7 +153,8 @@ if ( $PKG ) {
     }
 }
 
-if ( $PKG ) {
+# Make sure ssm.exe is present. This is needed for VMtools
+if ( ! (Test-Path -Path "$BUILD_DIR\ssm.exe") ) {
     Write-Host "Copying SSM to Root: " -NoNewline
     Invoke-WebRequest -Uri "$SALT_DEP_URL/ssm-2.24-103-gdee49fc.exe" -OutFile "$BUILD_DIR\ssm.exe"
     if ( Test-Path -Path "$BUILD_DIR\ssm.exe" ) {
