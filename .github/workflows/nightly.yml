@@ -253,11 +253,6 @@ jobs:
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
-      - name: Get Pull Number
-        id: get-pull-number
-        run:
-          echo test
-
       # TODO: Remove the --salt-version argument post 3006 release.  This was to handle versioning
       # issues on pre-3006 development versions on deb-based distros.
       - name: Update Debian changelog
