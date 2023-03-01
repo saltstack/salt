@@ -265,6 +265,10 @@ jobs:
 
       - name: Get Pull Number
         id: get-pull-number
+        env:
+          E: 44
+        run:
+          echo $E
 
       - name: Update Debian changelog
         shell: bash
