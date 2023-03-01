@@ -85,6 +85,10 @@ on:
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
+      - name: Get Pull Number
+        id: get-pull-number
+        uses: ./.github/actions/get-pull-number
+
       - name: Update Debian changelog
         shell: bash
         run: |
