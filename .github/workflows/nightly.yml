@@ -137,7 +137,6 @@ jobs:
         uses: ./.github/actions/get-push-number
         run:
           echo '???'
-          echo ${{ steps.git-push-number.outputs }}
 
       - name: Write Changed Files To A Local File
         run:

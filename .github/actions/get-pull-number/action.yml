@@ -1,10 +1,6 @@
 ---
 name: get-pull-number
 description: Get Pull Number
-outputs:
-  number:
-    value: ${{ steps.get-pull-number.outputs.number }}
-
 
 runs:
   using: composite
@@ -13,4 +9,4 @@ runs:
       id: get-pull-number
       shell: bash
       run:
-        echo NUMBER=56 >> "$GITHUB_OUTPUT"
+        echo '????'
