@@ -172,6 +172,11 @@ jobs:
       - name: Get Pull Number
         id: get-pull-number
         uses: ./.github/actions/get-pull-number
+        with:
+          repo: ${{ github.event.repository.name }}
+          owner: ${{ github.repository_owner }}
+          sha: ${{ github.sha }}
+          pull_number: ${{ github.event.pull_request.number }}
 
       - name: Check Existing Releases
         run: |
