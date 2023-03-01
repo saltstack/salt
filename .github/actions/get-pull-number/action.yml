@@ -26,8 +26,9 @@ runs:
         GITHUB_SHA: ${{ inputs.sha }}
         GITHUB_PULL_NUMBER: ${{ inputs.pull_number }}
       run: |
-        echo ${{ inputs.repo }}
-        echo ${{ inputs.owner }}
-        echo ${{ inputs.sha }}
-        echo ${{ inputs.pull_number }}
+        if [ -z "GITHUB_PULL_NUMBER"]
+        then
         echo NUMBER=$(gh api repos/$GITHUB_OWNER/$GITHUB_REPO/commits/$GITHUB_SHA/pulls)
+        else
+        echo NUMBER=$GITHUB_PULL_NUMBER
+        fi
