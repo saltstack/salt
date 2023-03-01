@@ -19,4 +19,7 @@ runs:
         PUSH_SHA: ${{ github.sha }}
       shell: bash
       run:
+        echo $GITHUB_PULL_REQUEST_NUMBER
+        echo $REPOSITORY_OWNER
+        echo $REPOSITORY_NAME
         echo NUMBER=$(gh api repos/$REPOSITORY_OWNER/$REPOSITORY_NAME/commits/$PUSH_SHA/pulls) >> "$GITHUB_OUTPUT"
