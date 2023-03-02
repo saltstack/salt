@@ -6,16 +6,17 @@ inputs:
     type: string
 
 outputs:
-  test-fast:
-    value: ${{ steps.get-pull-test-labels.outputs.fast }}
-  test-slow:
-    value: ${{ steps.get-pull-test-labels.outputs.slow }}
-  test-core:
-    value: ${{ steps.get-pull-test-labels.outputs.core }}
-  test-speed:
-    value: ${{ steps.get-pull-test-labels.outputs.speed }}
-  test-flaky-jail:
-    value: ${{ steps.get-pull-test-labels.outputs.flaky }}
+  labels:
+    test-fast:
+      value: ${{ steps.get-pull-test-labels.outputs.fast }}
+    test-slow:
+      value: ${{ steps.get-pull-test-labels.outputs.slow }}
+    test-core:
+      value: ${{ steps.get-pull-test-labels.outputs.core }}
+    test-speed:
+      value: ${{ steps.get-pull-test-labels.outputs.speed }}
+    test-flaky-jail:
+      value: ${{ steps.get-pull-test-labels.outputs.flaky }}
 
 runs:
   using: composite
