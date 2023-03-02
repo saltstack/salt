@@ -116,17 +116,24 @@ def download_test_image(request):
 def get_salt_test_commands():
 
     if platform.is_windows():
-        salt_test_commands = [
-            "salt-call.bat --local test.versions",
-            "salt-call.bat --local grains.items",
-            "salt.bat --version",
-            "salt-master.bat --version",
-            "salt-minion.bat --version",
-            "salt-ssh.bat --version",
-            "salt-syndic.bat --version",
-            "salt-api.bat --version",
-            "salt-cloud.bat --version",
-        ]
+        if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
+            salt_test_commands = [
+                "salt-call.exe --local test.versions",
+                "salt-call.exe --local grains.items",
+                "salt-minion.exe --version",
+            ]
+        else:
+            salt_test_commands = [
+                "salt-call.bat --local test.versions",
+                "salt-call.bat --local grains.items",
+                "salt.bat --version",
+                "salt-master.bat --version",
+                "salt-minion.bat --version",
+                "salt-ssh.bat --version",
+                "salt-syndic.bat --version",
+                "salt-api.bat --version",
+                "salt-cloud.bat --version",
+            ]
     else:
         salt_test_commands = [
             "salt-call --local test.versions",
@@ -178,18 +185,22 @@ def pkg_container(
 def root_url():
     repo_type = os.environ.get("SALT_REPO_TYPE", "staging")
     root_url = os.environ.get("SALT_REPO_ROOT_URL", "repo.saltproject.io")
-    if "staging" in root_url or repo_type == "staging":
+    if repo_type == "rc":
+        salt_path = "salt_rc/salt"
+    else:
+        salt_path = "salt"
+    if repo_type == "staging":
         salt_repo_user = os.environ.get("SALT_REPO_USER")
         salt_repo_pass = os.environ.get("SALT_REPO_PASS")
         if not salt_repo_user or not salt_repo_pass:
             pytest.skip(
                 "Values for SALT_REPO_USER or SALT_REPO_PASS are unavailable. Skipping."
             )
-        root_url = "https://{}:{}@{}/salt/py3".format(
-            salt_repo_user, salt_repo_pass, root_url
+        root_url = (
+            f"https://{salt_repo_user}:{salt_repo_pass}@{root_url}/{salt_path}/py3"
         )
     else:
-        root_url = "https://{}/salt/py3".format(root_url)
+        root_url = f"https://{root_url}/{salt_path}/py3"
     yield root_url
 
 
@@ -351,8 +362,18 @@ def setup_ubuntu(os_version, os_codename, root_url, minor_url, salt_release):
 
 @pytest.fixture(scope="module")
 def setup_macos(root_url, minor_url, salt_release):
-    mac_pkg = f"salt-{salt_release}-macos-x86_64.pkg"
-    mac_pkg_url = f"{root_url}/macos/{salt_release}/{mac_pkg}"
+
+    repo_type = os.environ.get("SALT_REPO_TYPE", "staging")
+    if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
+        if repo_type == "staging" or repo_type == "rc":
+            mac_pkg = f"salt-{salt_release}-macos-x86_64.pkg"
+        else:
+            f"salt-{salt_release}-py3-x86_64.pkg"
+        mac_pkg_url = f"{root_url}/macos/{minor_url}{salt_release}/{mac_pkg}"
+    else:
+        mac_pkg_url = f"{root_url}/macos/{salt_release}/{mac_pkg}"
+        mac_pkg = f"salt-{salt_release}-macos-x86_64.pkg"
+
     mac_pkg_path = f"/tmp/{mac_pkg}"
 
     # We should be able to issue a --help without being root
@@ -375,12 +396,19 @@ def setup_macos(root_url, minor_url, salt_release):
 
 @pytest.fixture(scope="module")
 def setup_windows(root_url, minor_url, salt_release):
-    win_pkg = f"salt-{salt_release}-windows-amd64.exe"
-    win_pkg_url = f"{root_url}/windows/{salt_release}/{win_pkg}"
+
+    if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
+        win_pkg = f"Salt-Minion-{salt_release}-Py3-AMD64-Setup.exe"
+        win_pkg_url = f"{root_url}/windows/{minor_url}{salt_release}/{win_pkg}"
+        ssm_bin = root_dir / "ssm.exe"
+    else:
+        win_pkg = f"salt-{salt_release}-windows-amd64.exe"
+        win_pkg_url = f"{root_url}/windows/{salt_release}/{win_pkg}"
+        ssm_bin = root_dir / "bin" / "ssm_bin"
+
     pkg_path = pathlib.Path(r"C:\TEMP", win_pkg)
     pkg_path.parent.mkdir(exist_ok=True)
     root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
-    ssm_bin = root_dir / "bin" / "ssm_bin"
 
     ret = requests.get(win_pkg_url)
     with open(pkg_path, "wb") as fp:
