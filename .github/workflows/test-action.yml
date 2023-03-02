@@ -39,6 +39,7 @@ on:
         default: salt
       pull-labels:
         required: false
+        default: l
 
 env:
   NOX_VERSION: "2022.8.7"
