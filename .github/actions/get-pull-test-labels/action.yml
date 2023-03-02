@@ -43,3 +43,6 @@ runs:
         echo "core=$test_core" >> "$GITHUB_OUTPUT"
         echo "speed=$test_speed" >> "$GITHUB_OUTPUT"
         echo "flaky=$test_flaky_jail" >> "$GITHUB_OUTPUT"
+        labels=$(jq -c '[.labels[].name]' <<< $PULL_REQUEST)
+        echo $labels
+        echo "labels=$labels" >> "$GITHUB_OUTPUT"
