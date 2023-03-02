@@ -1,0 +1,23 @@
+---
+name: get-pull-test-labels
+description: Get Pull Test Labels
+inputs:
+  pull-request:
+    type: string
+
+outputs:
+  test-core:
+    value: ${{ steps.get-pull-test-labels.outputs.labels }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get Pull Test Labels
+      id: get-pull-test-labels
+      shell: bash
+      env:
+        PULL_REQUEST: ${{ inputs.pull-test-request }}
+      run: |
+        labels=$(jq '.labels[0]' <<< $PULL_REQUEST)
+        echo $labels
+        echo "test-core=true" >> "$GITHUB_OUTPUT"
