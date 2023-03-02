@@ -200,6 +200,12 @@ jobs:
         with:
           pull-request: ${{ steps.get-pull-request.outputs.pull-request }}
 
+      - name: Echo L
+        id: echo-l
+        shell: bash
+        run: |
+          echo eeee
+
       <%- if prepare_actual_release %>
 
       - name: Check Existing Releases
