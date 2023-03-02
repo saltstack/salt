@@ -18,4 +18,6 @@ runs:
       env:
         PULL_REQUEST: ${{ inputs.pull-request }}
       run: |
-        echo "labels=44" >> "$GITHUB_OUTPUT"
+        $labels=$(jq '.labels.[].name' <<< $PULL_REQUEST)
+        echo $labels
+        echo "labels=$labels" >> "$GITHUB_OUTPUT"
