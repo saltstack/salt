@@ -83,6 +83,11 @@ jobs:
           echo "$TRANSPORT_MATRIX"
           echo "matrix=$TRANSPORT_MATRIX" >> "$GITHUB_OUTPUT"
 
+      - name: Echo L
+        shell: bash
+        run: |
+          echo ${{ inputs.pull-labels }}
+
   dependencies:
     name: Setup Test Dependencies
     needs:
