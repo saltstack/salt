@@ -20,4 +20,4 @@ runs:
       run: |
         labels=$(jq '.labels[0]' <<< $PULL_REQUEST)
         echo $labels
-        echo "labels=$labels" >> "$GITHUB_OUTPUT"
+        echo "labels=$PULL_REQUEST" >> "$GITHUB_OUTPUT"
