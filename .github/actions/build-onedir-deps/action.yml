@@ -50,7 +50,7 @@ runs:
         python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
         python3 -m relenv create --arch=${{ inputs.arch }} --python=${{ inputs.python-version }} artifacts/${{ inputs.package-name }}
 
-    - name: Get Ondir Python Version
+    - name: Get Onedir Python Version
       id: get-python-version
       if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
       uses: ./.github/actions/get-python-version
