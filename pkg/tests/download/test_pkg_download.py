@@ -366,9 +366,9 @@ def setup_macos(root_url, minor_url, salt_release):
     repo_type = os.environ.get("SALT_REPO_TYPE", "staging")
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
         if repo_type == "staging" or repo_type == "rc":
-            mac_pkg = f"salt-{salt_release}-macos-x86_64.pkg"
+            mac_pkg = f"salt-{salt_release}-py3-x86_64-unsigned.pkg"
         else:
-            f"salt-{salt_release}-py3-x86_64.pkg"
+            mac_pkg = f"salt-{salt_release}-py3-x86_64.pkg"
         mac_pkg_url = f"{root_url}/macos/{minor_url}{salt_release}/{mac_pkg}"
     else:
         mac_pkg_url = f"{root_url}/macos/{salt_release}/{mac_pkg}"
