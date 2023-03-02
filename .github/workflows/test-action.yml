@@ -39,6 +39,8 @@ on:
         default: salt
       pull-labels:
         required: false
+        type: string
+        description: s
         default: salt
 
 env:
