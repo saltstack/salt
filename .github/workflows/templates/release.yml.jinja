@@ -161,7 +161,7 @@ permissions:
       - name: Publish Release Repository
         run: |
           tools pkg repo publish release \
-            ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' } \
+            ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} \
             --key-id=<{ gpg_key_id }> ${{ needs.prepare-workflow.outputs.salt-version }}
 
   <%- if includes.get("test-pkg-uploads", True) %>
