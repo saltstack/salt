@@ -2,6 +2,8 @@
 name: get-pull-request
 description: Get Pull Request
 inputs:
+  token:
+    type: string
   owner:
     type: string
   repo:
@@ -27,4 +29,4 @@ runs:
       run: |
         pull=$(gh api repos/$GITHUB_OWNER/$GITHUB_REPO/pulls/$GITHUB_PULL_NUMBER)
         echo $pull
-        echo "pull-request=$pull" >> "$GITHUB_OUTPUT"
+        echo "request=$pull" >> "$GITHUB_OUTPUT"
