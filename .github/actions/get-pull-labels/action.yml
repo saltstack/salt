@@ -2,7 +2,7 @@
 name: get-pull-labels
 description: Get Pull Labels
 inputs:
-  pull_request:
+  pull-request:
     type: string
 
 outputs:
@@ -16,6 +16,6 @@ runs:
       id: get-pull-labels
       shell: bash
       env:
-        PULL_REQUEST: ${{ inputs.pull_request }}
+        PULL_REQUEST: ${{ inputs.pull-request }}
       run: |
         echo "labels=44" >> "$GITHUB_OUTPUT"
