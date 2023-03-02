@@ -195,6 +195,7 @@ jobs:
           pull-request: ${{ steps.get-pull-request.outputs.pull-request }}
 
       - name: Show labels:
+        id: show-labels
         shell: bash
         run: |
           echo: ${{ steps.get-pull-labels.outputs.pull-labels }}
