@@ -15,10 +15,6 @@ from saltfactories.utils import random_string
 
 log = logging.getLogger(__name__)
 
-pytestmark = [
-    pytest.mark.slow_test,
-]
-
 
 @attr.s(kw_only=True, slots=True)
 class PkgImage:
