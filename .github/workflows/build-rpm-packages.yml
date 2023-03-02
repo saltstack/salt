@@ -54,7 +54,7 @@ jobs:
 
       - name: Build RPM
         run: |
-          tools pkg build rpm --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }} --checkout-root ${{ github.workspace }}
+          tools pkg build rpm --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }} --checkout-root ${{ env.GITHUB_WORKSPACE }}
 
       - name: Upload RPMs
         uses: actions/upload-artifact@v3
