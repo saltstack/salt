@@ -188,6 +188,12 @@ jobs:
           repo: ${{ github.event.repository.name }}
           pull-number: ${{ steps.get-pull-number.outputs.number }}
 
+      - name: Get Pull Labels
+        id: get-pull-labels
+        shell: bash
+        run: |
+          echo pull-request: ${{ steps.get-pull-request.outputs.pull-request }}
+
       - name: Check Existing Releases
         run: |
           tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}

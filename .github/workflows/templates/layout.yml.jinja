@@ -194,6 +194,12 @@ jobs:
           repo: ${{ github.event.repository.name }}
           pull-number: ${{ steps.get-pull-number.outputs.number }}
 
+      - name: Get Pull Labels
+        id: get-pull-labels
+        shell: bash
+        run: |
+          echo pull-request: ${{ steps.get-pull-request.outputs.pull-request }}
+
       <%- if prepare_actual_release %>
 
       - name: Check Existing Releases
