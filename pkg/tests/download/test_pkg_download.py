@@ -111,7 +111,7 @@ def download_test_image(request):
 
 def get_salt_test_commands():
 
-    salt_release = os.environ.get("SALT_RELEASE", _DEFAULT_RELEASE)
+    salt_release = get_salt_release()
     if platform.is_windows():
         if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
             salt_test_commands = [
@@ -210,14 +210,17 @@ def minor_url(salt_release):
     yield minor_url
 
 
-@pytest.fixture(scope="module")
-def salt_release():
+def get_salt_release():
     if platform.is_darwin() or platform.is_windows():
         _DEFAULT_RELEASE = "3005-1"
     else:
         _DEFAULT_RELEASE = "3005.1"
-    salt_release = os.environ.get("SALT_RELEASE", _DEFAULT_RELEASE)
-    yield salt_release
+    return os.environ.get("SALT_RELEASE", _DEFAULT_RELEASE)
+
+
+@pytest.fixture(scope="module")
+def salt_release():
+    yield get_salt_release()
 
 
 def setup_amazon(os_version, os_codename, root_url, minor_url, salt_release):
@@ -394,6 +397,7 @@ def setup_macos(root_url, minor_url, salt_release):
 @pytest.fixture(scope="module")
 def setup_windows(root_url, minor_url, salt_release):
 
+    root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
         win_pkg = f"Salt-Minion-{salt_release}-Py3-AMD64-Setup.exe"
         win_pkg_url = f"{root_url}/windows/{minor_url}{salt_release}/{win_pkg}"
@@ -405,7 +409,6 @@ def setup_windows(root_url, minor_url, salt_release):
 
     pkg_path = pathlib.Path(r"C:\TEMP", win_pkg)
     pkg_path.parent.mkdir(exist_ok=True)
-    root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
 
     ret = requests.get(win_pkg_url)
     with open(pkg_path, "wb") as fp:
