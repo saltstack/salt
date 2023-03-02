@@ -111,6 +111,7 @@ def download_test_image(request):
 
 def get_salt_test_commands():
 
+    salt_release = os.environ.get("SALT_RELEASE", _DEFAULT_RELEASE)
     if platform.is_windows():
         if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
             salt_test_commands = [
