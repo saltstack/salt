@@ -46,6 +46,8 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          checkout-dir: pkgs/checkout/
 
       - name: Setup Salt Version
         id: setup-salt-version
