@@ -162,7 +162,11 @@ jobs:
         id: echo-l
         shell: bash
         run: |
+          echo ${{ steps.get-pull-test-labels.outputs.test-fast }}
+          echo ${{ steps.get-pull-test-labels.outputs.test-slow }}
           echo ${{ steps.get-pull-test-labels.outputs.test-core }}
+          echo ${{ steps.get-pull-test-labels.outputs.test-speed }}
+          echo ${{ steps.get-pull-test-labels.outputs.test-flaky-jail }}
 
       - name: Write Changed Files To A Local File
         run:

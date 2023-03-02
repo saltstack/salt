@@ -6,8 +6,16 @@ inputs:
     type: string
 
 outputs:
+  test-fast:
+    value: ${{ steps.get-pull-test-labels.outputs.fast }}
+  test-slow:
+    value: ${{ steps.get-pull-test-labels.outputs.slow }}
   test-core:
-    value: ${{ steps.get-pull-test-labels.outputs.labels }}
+    value: ${{ steps.get-pull-test-labels.outputs.core }}
+  test-speed:
+    value: ${{ steps.get-pull-test-labels.outputs.speed }}
+  test-flaky-jail:
+    value: ${{ steps.get-pull-test-labels.outputs.flaky }}
 
 runs:
   using: composite
@@ -18,6 +26,18 @@ runs:
       env:
         PULL_REQUEST: ${{ inputs.pull-request }}
       run: |
+        test_fast=$(jq 'any(.labels[].name; . == "test:fast")' <<< $PULL_REQUEST)
+        test_slow=$(jq 'any(.labels[].name; . == "test:slow")' <<< $PULL_REQUEST)
         test_core=$(jq 'any(.labels[].name; . == "test:core")' <<< $PULL_REQUEST)
-        echo $test_core
-        echo "labels=$test_core" >> "$GITHUB_OUTPUT"
+        test_speed=$(jq 'any(.labels[].name; . == "test:speed")' <<< $PULL_REQUEST)
+        test_flaky_jail=$(jq 'any(.labels[].name; . == "test:flaky_jail")' <<< $PULL_REQUEST)
+        echo test:fast=$test_fast
+        echo test:slow=$test_slow
+        echo test:core=$test_core
+        echo test:speed=$test_speed
+        echo test:flaky-jail=$test_flaky_jail
+        echo "fast=$test_fast" >> "$GITHUB_OUTPUT"
+        echo "slow=$test_slow" >> "$GITHUB_OUTPUT"
+        echo "core=$test_core" >> "$GITHUB_OUTPUT"
+        echo "speed=$test_speed" >> "$GITHUB_OUTPUT"
+        echo "flaky=$test_flaky_jail" >> "$GITHUB_OUTPUT"
