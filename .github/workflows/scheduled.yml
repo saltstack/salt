@@ -30,7 +30,7 @@ jobs:
       jobs: ${{ steps.define-jobs.outputs.jobs }}
       runners: ${{ steps.runner-types.outputs.runners }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
-      pull-lables: ${{ steps.get-pull-labels.outputs.pull-labels }}
+      pull-labels: ${{ steps.get-pull-labels.outputs.pull-labels }}
       testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
