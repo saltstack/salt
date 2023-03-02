@@ -8,7 +8,7 @@ inputs:
     type: string
   repo:
     type: string
-  pull_number:
+  pull-number:
     type: number
 
 outputs:
@@ -25,7 +25,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.token }}
         GITHUB_OWNER: ${{ inputs.owner }}
         GITHUB_REPO: ${{ inputs.repo }}
-        GITHUB_PULL_NUMBER: ${{ inputs.pull_number }}
+        GITHUB_PULL_NUMBER: ${{ inputs.pull-number }}
       run: |
         pull=$(gh api repos/$GITHUB_OWNER/$GITHUB_REPO/pulls/$GITHUB_PULL_NUMBER)
         echo $pull

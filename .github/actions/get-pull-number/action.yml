@@ -10,7 +10,7 @@ inputs:
     type: string
   sha:
     type: string
-  pull_number:
+  pull-number:
     default: null
 
 outputs:
@@ -28,7 +28,7 @@ runs:
         GITHUB_OWNER: ${{ inputs.owner }}
         GITHUB_REPO: ${{ inputs.repo }}
         GITHUB_SHA: ${{ inputs.sha }}
-        GITHUB_PULL_NUMBER: ${{ inputs.pull_number }}
+        GITHUB_PULL_NUMBER: ${{ inputs.pull-number }}
       run: |
         if [ -z "$GITHUB_PULL_NUMBER"]
         then

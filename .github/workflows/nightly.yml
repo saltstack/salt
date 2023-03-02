@@ -30,6 +30,7 @@ jobs:
       jobs: ${{ steps.define-jobs.outputs.jobs }}
       runners: ${{ steps.runner-types.outputs.runners }}
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
+      pull-labels: ${{ steps.get-pull-labels.outputs.pull-labels }}
       testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
@@ -140,7 +141,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repo: ${{ github.event.repository.name }}
           sha: ${{ github.sha }}
-          pull_number: ${{ github.event.pull_request.number }}
+          pull-number: ${{ github.event.pull_request.number }}
 
       - name: Get Pull Request
         id: get-pull-request
@@ -149,13 +150,19 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           owner: ${{ github.repository_owner }}
           repo: ${{ github.event.repository.name }}
-          pull_number: ${{ steps.get-pull-number.outputs.number }}
+          pull-number: ${{ steps.get-pull-number.outputs.number }}
 
       - name: Get Pull Labels
         id: get-pull-labels
+        uses: ./.github/actions/get-pull-labels
+        with
+          pull-request: ${{ steps.get-pull-request.outputs.pull-request }}
+
+      - name: Temp
+        id: temp
         shell: bash
         run: |
-          echo ${{ steps.get-pull-request.outputs.pull-request }}
+          echo ${{ steps.get-pull-labels.outputs.pull-labels }}
 
       - name: Write Changed Files To A Local File
         run:
