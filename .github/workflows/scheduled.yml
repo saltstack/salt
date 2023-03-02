@@ -157,12 +157,6 @@ jobs:
         with:
           pull-request: ${{ steps.get-pull-request.outputs.pull-request }}
 
-      - name: Show labels:
-        id: show-labels
-        shell: bash
-        run: |
-          echo: ${{ steps.get-pull-labels.outputs.pull-labels }}
-
       - name: Write Changed Files To A Local File
         run:
           echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
