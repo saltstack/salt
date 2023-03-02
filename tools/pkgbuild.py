@@ -214,7 +214,7 @@ def macos(
         },
         "arch": {
             "help": "The architecture to build the package for",
-            "choices": ("x86_64", "aarch64"),
+            "choices": ("x86", "amd64"),
             "required": True,
         },
         "checkout_root": {
