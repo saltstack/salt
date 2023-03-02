@@ -28,6 +28,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          path:
+            pkgs/checkout/
 
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
