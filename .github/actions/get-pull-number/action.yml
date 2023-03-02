@@ -33,7 +33,7 @@ runs:
         if [ -z "$GITHUB_PULL_NUMBER"]
         then
         pulls=$(gh api repos/$GITHUB_OWNER/$GITHUB_REPO/commits/$GITHUB_SHA/pulls)
-        number=$(jq '.[0].number' <<< $pulls )
+        number=$(jq -c '.[0].number' <<< $pulls )
         else
         number=$GITHUB_PULL_NUMBER
         fi

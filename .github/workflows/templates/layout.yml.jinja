@@ -205,11 +205,7 @@ jobs:
         id: echo-l
         shell: bash
         run: |
-          echo ${{ steps.get-pull-test-labels.outputs.test-fast }}
-          echo ${{ steps.get-pull-test-labels.outputs.test-slow }}
-          echo ${{ steps.get-pull-test-labels.outputs.test-core }}
-          echo ${{ steps.get-pull-test-labels.outputs.test-speed }}
-          echo ${{ steps.get-pull-test-labels.outputs.test-flaky-jail }}
+          echo ${{ steps.get-pull-test-labels.outputs.labels }}
 
       <%- if prepare_actual_release %>
 
