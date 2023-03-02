@@ -55,7 +55,7 @@ jobs:
 
       - name: Build Deb
         run: |
-          tools pkg build deb --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }} --checkout-root ${{ github.workspace }}/pkgs/checkout
+          tools pkg build deb --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }} --checkout-root ${{ env.GITHUB_WORKSPACE }}/pkgs/checkout
 
       - name: Cleanup
         run: |
