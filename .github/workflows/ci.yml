@@ -155,9 +155,9 @@ jobs:
 
       - name: Get Pull Labels
         id: get-pull-labels
-        shell: bash
-        run: |
-          echo pull-request: ${{ steps.get-pull-request.outputs.pull-request }}
+        uses: ./.github/actions/get-pull-labels
+        with:
+          pull-request: ${{ steps.get-pull-request.outputs.pull-request }}
 
       - name: Write Changed Files To A Local File
         run:
