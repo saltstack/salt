@@ -39,9 +39,6 @@ on:
         default: salt
       pull-labels:
         required: false
-        type: list
-        default: ["test:slow","test:core","test:speed"]
-
 
 env:
   NOX_VERSION: "2022.8.7"
@@ -82,11 +79,6 @@ jobs:
           TRANSPORT_MATRIX=$(tools ci transport-matrix ${{ inputs.distro-slug }})
           echo "$TRANSPORT_MATRIX"
           echo "matrix=$TRANSPORT_MATRIX" >> "$GITHUB_OUTPUT"
-
-      - name: Echo L
-        shell: bash
-        run: |
-          echo ${{ inputs.pull-labels }}
 
   dependencies:
     name: Setup Test Dependencies
