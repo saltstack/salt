@@ -18,6 +18,6 @@ runs:
       env:
         PULL_REQUEST: ${{ inputs.pull-test-request }}
       run: |
-        labels=$(jq '.labels[0]' <<< $PULL_REQUEST)
-        echo $labels
+        test_core=$(jq 'any(.labels[].name == "test:core")' <<< $PULL_REQUEST)
+        echo $test_core
         echo "test-core=true" >> "$GITHUB_OUTPUT"
