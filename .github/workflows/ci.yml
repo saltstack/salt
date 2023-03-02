@@ -163,7 +163,7 @@ jobs:
         id: echo-l
         shell: bash
         run: |
-          echo eeee
+          echo ${{ steps.get-pull-labels.outputs.pull-labels }}
 
       - name: Write Changed Files To A Local File
         run:

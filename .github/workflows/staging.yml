@@ -198,7 +198,7 @@ jobs:
         id: echo-l
         shell: bash
         run: |
-          echo eeee
+          echo ${{ steps.get-pull-labels.outputs.pull-labels }}
 
       - name: Check Existing Releases
         run: |
