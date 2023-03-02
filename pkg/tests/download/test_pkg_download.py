@@ -58,6 +58,24 @@ def get_test_versions():
             "container_id": "centosstream_9",
         },
         {
+            "image": "fedora:36",
+            "os_type": "fedora",
+            "os_version": 36,
+            "container_id": "fedora_36",
+        },
+        {
+            "image": "fedora:37",
+            "os_type": "fedora",
+            "os_version": 37,
+            "container_id": "fedora_37",
+        },
+        {
+            "image": "fedora:39",
+            "os_type": "fedora",
+            "os_version": 39,
+            "container_id": "fedora_39",
+        },
+        {
             "image": "debian:10",
             "os_type": "debian",
             "os_version": 10,
@@ -296,6 +314,56 @@ def setup_redhat(os_version, os_codename, root_url, minor_url, salt_release):
             "sh",
             "-c",
             "echo gpgkey={}/redhat/{}/x86_64/{}{}/{} >> /etc/yum.repos.d/salt.repo".format(
+                root_url, os_version, minor_url, salt_release, GPG_FILE
+            ),
+        ]
+    )
+    cmds.append("sudo yum clean expire-cache")
+    cmds.append(
+        "sudo yum install salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api -y"
+    )
+    return cmds
+
+
+def setup_fedora(os_version, os_codename, root_url, minor_url, salt_release):
+    if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
+        GPG_FILE = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
+    else:
+        GPG_FILE = "SALTSTACK-GPG-KEY2.pub"
+
+    cmds = []
+    if os_version >= 9:
+        cmds.append(
+            "sudo rpm --import {}/fedora/{}/x86_64/{}{}/{}".format(
+                root_url, os_version, minor_url, salt_release, GPG_FILE
+            )
+        )
+    else:
+        cmds.append(
+            "sudo rpm --import {}/fedora/{}/x86_64/{}{}/{}".format(
+                root_url, os_version, minor_url, salt_release, GPG_FILE
+            )
+        )
+
+    cmds.append(
+        "curl -fsSL -o /etc/yum.repos.d/salt.repo {}/fedora/{}/x86_64/{}{}.repo".format(
+            root_url, os_version, minor_url, salt_release
+        )
+    )
+    cmds.append(
+        [
+            "sh",
+            "-c",
+            "echo baseurl={}/fedora/{}/x86_64/{}{}  >> /etc/yum.repos.d/salt.repo".format(
+                root_url, os_version, minor_url, salt_release
+            ),
+        ]
+    )
+    cmds.append(
+        [
+            "sh",
+            "-c",
+            "echo gpgkey={}/fedora/{}/x86_64/{}{}/{} >> /etc/yum.repos.d/salt.repo".format(
                 root_url, os_version, minor_url, salt_release, GPG_FILE
             ),
         ]
