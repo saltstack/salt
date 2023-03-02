@@ -162,7 +162,7 @@ jobs:
         id: echo-l
         shell: bash
         run: |
-          echo ${{ steps.get-pull-test-labels.outputs }}
+          echo ${{ steps.get-pull-test-labels.outputs.test-core }}
 
       - name: Write Changed Files To A Local File
         run:

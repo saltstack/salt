@@ -199,7 +199,7 @@ jobs:
         id: echo-l
         shell: bash
         run: |
-          echo ${{ steps.get-pull-test-labels.outputs }}
+          echo ${{ steps.get-pull-test-labels.outputs.test-core }}
 
       - name: Check Existing Releases
         run: |

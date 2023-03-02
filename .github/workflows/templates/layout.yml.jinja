@@ -205,7 +205,7 @@ jobs:
         id: echo-l
         shell: bash
         run: |
-          echo ${{ steps.get-pull-test-labels.outputs }}
+          echo ${{ steps.get-pull-test-labels.outputs.test-core }}
 
       <%- if prepare_actual_release %>
 
