@@ -4,9 +4,9 @@ description: Get Pull Number
 inputs:
   token:
     type: string
-  repo:
-    type: string
   owner:
+    type: string
+  repo:
     type: string
   sha:
     type: string
@@ -25,8 +25,8 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
-        GITHUB_REPO: ${{ inputs.repo }}
         GITHUB_OWNER: ${{ inputs.owner }}
+        GITHUB_REPO: ${{ inputs.repo }}
         GITHUB_SHA: ${{ inputs.sha }}
         GITHUB_PULL_NUMBER: ${{ inputs.pull_number }}
       run: |

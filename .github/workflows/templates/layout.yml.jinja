@@ -180,16 +180,25 @@ jobs:
         uses: ./.github/actions/get-pull-number
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          repo: ${{ github.event.repository.name }}
           owner: ${{ github.repository_owner }}
+          repo: ${{ github.event.repository.name }}
           sha: ${{ github.sha }}
           pull_number: ${{ github.event.pull_request.number }}
 
       - name: Get Pull Request
         id: get-pull-request
+        uses: ./.github/actions/get-pull-request
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          owner: ${{ github.repository_owner }}
+          repo: ${{ github.event.repository.name }}
+          pull_number: ${{ steps.get-pull-number.outputs.number }}
+
+      - name: Get Pull Labels
+        id: get-pull-labels
         shell: bash
         run: |
-          echo ${{ steps.get-pull-number.outputs.number }}
+          echo ${{ steps.get-pull-request.outputs.pull-request }}
 
       <%- if prepare_actual_release %>
 
