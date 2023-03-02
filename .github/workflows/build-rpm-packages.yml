@@ -32,11 +32,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Download System Dependencies
-        run: |
-          yum -y update
-          yum -y install python3 python3-pip openssl git rpmdevtools rpmlint systemd-units libxcrypt-compat git
-
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
@@ -48,25 +43,18 @@ jobs:
         with:
           name: salt-${{ inputs.salt-version }}.patch
 
-      - name: Configure Git
-        shell: bash
-        run: |
-          git config --global user.name "Salt Project Packaging"
-          git config --global user.email saltproject-packaging@vmware.com
-          git config --global --add safe.directory "$(pwd)"
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
 
-      - name: Apply Release Patch
-        shell: bash
-        run: |
-          git am --committer-date-is-author-date salt-${{ inputs.salt-version }}.patch
-          rm salt-${{ inputs.salt-version }}.patch
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
 
       - name: Build RPM
-        env:
-          SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
         run: |
-          echo "${{ inputs.salt-version }}" > salt/_version.txt
-          rpmbuild -bb --define="_salt_src $(pwd)" "$(pwd)/pkg/rpm/salt.spec"
+          tools pkg build rpm --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }} --checkout-root ${{ github.workspace }}
 
       - name: Upload RPMs
         uses: actions/upload-artifact@v3
