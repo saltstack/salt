@@ -150,7 +150,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           owner: ${{ github.repository_owner }}
           repo: ${{ github.event.repository.name }}
-          pull-number: ${{ steps.get-pull-number.outputs.number }}
+          pull-number: 10
 
       - name: Get Pull Test Labels
         id: get-pull-test-labels
