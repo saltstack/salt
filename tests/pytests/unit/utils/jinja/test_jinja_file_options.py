@@ -64,7 +64,6 @@ def test_blocktrimming(minion_opts, local_salt):
     )
 
     assert rendered == """
-#jinja2: { "lstrip_blocks": true, "trim_blocks": true }
 #lets count
 0
 1337
@@ -121,7 +120,6 @@ def test_no_blocktrimming(minion_opts, local_salt):
     )
 
     assert rendered == """
-#jinja2: { "lstrip_blocks": false, "trim_blocks": false }
 #beware of the whitespace
 
   
