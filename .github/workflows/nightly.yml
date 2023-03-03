@@ -4,6 +4,7 @@
 name: Nightly
 
 on:
+  workflow_dispatch: {}
   schedule:
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
     - cron: '0 3 * * *'  # Every day at 3AM
@@ -16,12 +17,24 @@ env:
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
   pull-requests: read  # for dorny/paths-filter to read pull requests
+  actions: write  # to trigger branch nightly builds
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: false
 
 jobs:
+
+  trigger-branch-nightly-builds:
+    name: Trigger Branch Schedule Workflows
+    if: ${{ github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger 3006.x branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run nightly.yml --repo ${{ github.repository }} --ref 3006.x
 
   prepare-workflow:
     name: Prepare Workflow Run
@@ -1732,6 +1745,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     needs:
+      - trigger-branch-nightly-builds
       - prepare-workflow
       - pre-commit
       - lint
