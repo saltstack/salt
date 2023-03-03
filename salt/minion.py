@@ -339,6 +339,9 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
                     # list of positional arguments. This keyword argument is
                     # invalid.
                     invalid_kwargs.append("{}={}".format(key, val))
+            # Add __kwarg__ key-value again since delta proxy passes the 
+            # key-value as key-value argument to proxy minions.
+            arg.update({"__kwarg__": True})
             continue
 
         else:
