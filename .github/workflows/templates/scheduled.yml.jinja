@@ -1,3 +1,4 @@
+<%- set prepare_workflow_if_check = "${{ needs.workflow-requirements.outputs.requirements-met }}" %>
 <%- extends 'ci.yml.jinja' %>
 
 <%- block on %>
@@ -6,6 +7,7 @@ on:
   schedule:
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
     - cron: '0 */8 * * *'  # Run every 8 hours
+
 <%- endblock %>
 
 <%- block concurrency %>
@@ -13,4 +15,33 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: false
+
 <%- endblock %>
+
+
+<%- block pre_jobs %>
+
+  <%- set job_name = "workflow-requirements" %>
+
+  <{ job_name }>:
+  <%- do prepare_workflow_needs.append(job_name) %>
+    name: Check Workflow Requirements
+    runs-on: ubuntu-latest
+    outputs:
+      requirements-met: ${{ fromJSON(steps.check-requirements.outputs.requirements-met) }}
+    steps:
+      - name: Check Requirements
+        id: check-requirements
+        run: |
+          if [ "${RUN_SCHEDULED_BUILDS}" -eq 1 ]; then
+            echo "Running workflow because RUN_SCHEDULED_BUILDS=1"
+            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
+          elif [ "${{ github.event.repository.fork }}" = "true" ]; then
+            echo "Not running workflow because ${{ github.repository }} is a fork"
+            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "Running workflow because ${{ github.repository }} is not a fork"
+            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+<%- endblock pre_jobs %>

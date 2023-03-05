@@ -1,5 +1,6 @@
 # Do not edit these workflows directly as the changes made will be overwritten.
 # Instead, edit the template '<{ template }>'
+<%- set prepare_workflow_if_check = prepare_workflow_if_check|default(False) %>
 <%- set prepare_workflow_skip_test_suite = prepare_workflow_skip_test_suite|default("") %>
 <%- set prepare_workflow_skip_pkg_test_suite = prepare_workflow_skip_pkg_test_suite|default("") %>
 <%- set prepare_workflow_salt_version_input = prepare_workflow_salt_version_input|default("") %>
@@ -63,6 +64,9 @@ jobs:
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on: ubuntu-latest
+    <%- if prepare_workflow_if_check %>
+    if: <{ prepare_workflow_if_check }>
+    <%- endif %>
     <%- if prepare_workflow_needs %>
     needs:
       <%- for need in prepare_workflow_needs.iter(consume=False) %>
