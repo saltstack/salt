@@ -1,4 +1,5 @@
 <%- set gh_environment = gh_environment|default("nightly") %>
+<%- set prepare_workflow_if_check = prepare_workflow_if_check|default("${{ needs.workflow-requirements.outputs.requirements-met }}") %>
 <%- extends 'ci.yml.jinja' %>
 
 <%- block on %>
@@ -28,6 +29,29 @@ concurrency:
 
 <%- block pre_jobs %>
 
+  <%- set job_name = "workflow-requirements" %>
+
+  <{ job_name }>:
+  <%- do prepare_workflow_needs.append(job_name) %>
+    name: Check Workflow Requirements
+    runs-on: ubuntu-latest
+    outputs:
+      requirements-met: ${{ fromJSON(steps.check-requirements.outputs.requirements-met) }}
+    steps:
+      - name: Check Requirements
+        id: check-requirements
+        run: |
+          if [ "${RUN_SCHEDULED_BUILDS}" -eq 1 ]; then
+            echo "Running workflow because RUN_SCHEDULED_BUILDS=1"
+            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
+          elif [ "${{ github.event.repository.fork }}" = "true" ]; then
+            echo "Not running workflow because ${{ github.repository }} is a fork"
+            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "Running workflow because ${{ github.repository }} is not a fork"
+            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
+          fi
+
   <%- set job_name = "trigger-branch-nightly-builds" %>
   <%- set branches = ["3006.x"] %>
 
@@ -35,7 +59,10 @@ concurrency:
   <%- do conclusion_needs.append(job_name) %>
     name: Trigger Branch Schedule Workflows
     if: ${{ github.event_name == 'schedule' }}
-    runs-on: ubuntu-latest
+    runs-on:
+      - ubuntu-latest
+    needs:
+      - workflow-requirements
     steps:
     <%- for branch in branches %>
       - name: Trigger <{ branch }> branch
