@@ -168,8 +168,8 @@ def pytest_addoption(parser):
         ),
     )
     test_selection_group.addoption(
-        "--no-fast",
-        "--no-fast-tests",
+        "--fast",
+        "--fast-tests",
         dest="fast",
         action="store_false",
         default=True,
@@ -205,7 +205,7 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help=(
-            "Run salt-flaky jail tests. These tests are in jail for being flaky! "
+            "Run salt-flaky jail tests. These fast tests are in jail for being flaky! "
             "One day they will be made not flaky."
             "Default: False"
         ),
@@ -633,10 +633,10 @@ def pytest_runtest_setup(item):
         and not item.get_closest_marker("core_test")
         and not item.get_closest_marker("speed_test")
     ):
-        if not item.config.getoption("--no-fast-tests"):
+        if not item.config.getoption("--fast-tests"):
             item._skipped_by_mark = True
             raise pytest.skip.Exception(
-                "Fast tests are disabled, dont pass '--no-fast-tests' to enable them."
+                "Fast tests are disabled, dont pass '--fast-tests' to enable them."
             )
 
     requires_sshd_server_marker = item.get_closest_marker("requires_sshd_server")
