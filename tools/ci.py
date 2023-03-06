@@ -196,7 +196,12 @@ def runner_types(ctx: Context, event_name: str):
 
     # This is a push or a scheduled event
     ctx.info(f"Running from a {event_name!r} event")
-    if gh_event["repository"]["fork"] is True:
+    # HARD CODE CHANGE REMOVE ME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # BEFORE MERGE INTO SALT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    if (
+        gh_event["repository"]["fork"] is True
+        and gh_event["repository"]["full_name"] != "cmcmarrow/salt"
+    ):
         # This is running on a forked repository, don't run tests
         ctx.info("The push event is on a forked repository")
         runners["github-hosted"] = True
