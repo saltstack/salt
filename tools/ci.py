@@ -341,7 +341,7 @@ def define_jobs(
             wfh.write("De-selecting the 'test-pkg' job.\n")
         jobs["test-pkg"] = False
 
-    if not jobs["test"] and not jobs["pkg-test"]:
+    if not jobs["test"] and not jobs["test-pkg"]:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             for job in (
                 "build-source-tarball",
