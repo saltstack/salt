@@ -22,9 +22,11 @@ jobs:
       - macos-12
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
         with:
-          python-version: 3.9
+          python-version: "3.10"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -43,7 +45,7 @@ jobs:
 
       - name: Build MacOS Package
         run: |
-          tools pkg build macos --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }} --checkout-root ${{ github.workspace }}
+          tools pkg build macos --onedir salt-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch }}.tar.xz --salt-version ${{ inputs.salt-version }}
 
       - name: Upload ${{ matrix.arch }} Package
         uses: actions/upload-artifact@v3

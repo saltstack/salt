@@ -32,6 +32,11 @@ jobs:
           path:
             pkgs/checkout/
 
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
@@ -45,19 +50,21 @@ jobs:
           path: pkgs/checkout/
 
       - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
+        uses: ./pkgs/checkout/.github/actions/setup-python-tools-scripts
         with:
-          checkout-dir: pkgs/checkout/
+          cwd: pkgs/checkout/
 
       - name: Setup Salt Version
         id: setup-salt-version
-        uses: ./.github/actions/setup-salt-version
+        uses: ./pkgs/checkout/.github/actions/setup-salt-version
         with:
           salt-version: "${{ inputs.salt-version }}"
+          cwd: pkgs/checkout/
 
       - name: Build Deb
+        working-directory: pkgs/checkout/
         run: |
-          tools pkg build deb --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }} --checkout-root ${{ env.GITHUB_WORKSPACE }}/pkgs/checkout
+          tools pkg build deb --onedir salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz --patch salt-${{ inputs.salt-version }}.patch
 
       - name: Cleanup
         run: |
