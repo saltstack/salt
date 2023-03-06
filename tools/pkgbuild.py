@@ -44,8 +44,8 @@ build = command_group(
 )
 def debian(
     ctx: Context,
-    onedir: str | None = None,  # pylint: disable=bad-whitespace
-    patch: str | None = None,  # pylint: disable=bad-whitespace
+    onedir: str = None,  # pylint: disable=bad-whitespace
+    patch: str = None,  # pylint: disable=bad-whitespace
     use_existing_onedir: bool = True,
 ):
     """
@@ -60,10 +60,12 @@ def debian(
         _check_pkg_build_files_exist(
             ctx, patch_artifact=patch_artifact, onedir_artifact=onedir_artifact
         )
-
-    _configure_git(ctx, checkout)
-    _apply_release_patch(ctx, patch_artifact)
-    _set_onedir_location_in_environment(ctx, onedir_artifact, use_existing_onedir)
+        ctx.info(
+            f"Building the package using the onedir artifact {str(onedir_artifact)}"
+        )
+        os.environ["SALT_ONEDIR_ARCHIVE"] = str(onedir_artifact)
+    else:
+        ctx.info(f"Building the package from the source files")
 
     ctx.run("ln", "-sf", "pkg/debian/", ".")
     ctx.run("debuild", "-e", "SALT_ONEDIR_ARCHIVE", "-uc", "-us")
@@ -87,8 +89,8 @@ def debian(
 )
 def rpm(
     ctx: Context,
-    onedir: str | None = None,  # pylint: disable=bad-whitespace
-    patch: str | None = None,  # pylint: disable=bad-whitespace
+    onedir: str = None,  # pylint: disable=bad-whitespace
+    patch: str = None,  # pylint: disable=bad-whitespace
     use_existing_onedir: bool = True,
 ):
     """
@@ -103,10 +105,12 @@ def rpm(
         _check_pkg_build_files_exist(
             ctx, patch_artifact=patch_artifact, onedir_artifact=onedir_artifact
         )
-
-    _configure_git(ctx, checkout)
-    _apply_release_patch(ctx, patch_artifact)
-    _set_onedir_location_in_environment(ctx, onedir_artifact, use_existing_onedir)
+        ctx.info(
+            f"Building the package using the onedir artifact {str(onedir_artifact)}"
+        )
+        os.environ["SALT_ONEDIR_ARCHIVE"] = str(onedir_artifact)
+    else:
+        ctx.info(f"Building the package from the source files")
 
     spec_file = checkout / "pkg" / "rpm" / "salt.spec"
     ctx.run("rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file))
@@ -171,6 +175,11 @@ def macos(ctx: Context, onedir: str = None, salt_version: str = None):
             ),
             "required": True,
         },
+        "arch": {
+            "help": "The architecture to build the package for",
+            "choices": ("x86_64", "aarch64"),
+            "required": True,
+        },
     },
 )
 def windows(
@@ -224,30 +233,3 @@ def _check_pkg_build_files_exist(ctx: Context, **kwargs):
         if not path.exists():
             ctx.error(f"The path {path} does not exist, {name} is not valid... exiting")
             ctx.exit(1)
-
-
-def _set_onedir_location_in_environment(
-    ctx: Context, onedir_artifact: pathlib.Path, use_existing_onedir: bool
-):
-    if use_existing_onedir:
-        ctx.info(
-            f"Building the package using the onedir artifact {str(onedir_artifact)}"
-        )
-        os.environ["SALT_ONEDIR_ARCHIVE"] = str(onedir_artifact)
-    else:
-        ctx.info(f"Building the package from the source files")
-
-
-def _apply_release_patch(ctx: Context, patch: pathlib.Path):
-    ctx.info("Applying the release patch")
-    ctx.run("git", "am", "--committer-date-is-author-date", patch.name)
-    patch.unlink()
-
-
-def _configure_git(ctx: Context, checkout: pathlib.Path):
-    ctx.info("Setting name and email in git global config")
-    ctx.run("git", "config", "--global", "user.name", "'Salt Project Packaging'")
-    ctx.run(
-        "git", "config", "--global", "user.email", "saltproject-packaging@vmware.com"
-    )
-    ctx.run("git", "config", "--global", "--add", "safe.directory", str(checkout))
