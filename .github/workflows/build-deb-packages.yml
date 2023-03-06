@@ -61,6 +61,16 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
           cwd: pkgs/checkout/
 
+      - name: Configure Git
+        working-directory: pkgs/checkout/
+        run: |
+          tools pkg configure-git
+
+      - name: Apply release patch
+        working-directory: pkgs/checkout/
+        run: |
+          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+
       - name: Build Deb
         working-directory: pkgs/checkout/
         run: |
