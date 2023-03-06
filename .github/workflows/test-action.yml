@@ -41,7 +41,7 @@ on:
         required: false
         type: string
         description: List of all the pull labels
-        default: salt
+        default: null
 
 env:
   NOX_VERSION: "2022.8.7"
