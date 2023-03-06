@@ -429,3 +429,48 @@ def pypi_upload(ctx: Context, files: list[pathlib.Path], test: bool = False):
     if ret.returncode:
         ctx.error(ret.stderr.strip().decode())
     ctx.exit(ret.returncode)
+
+
+@pkg.command(
+    name="configure-git",
+    arguments={
+        "user": {
+            "help": "The git global username",
+            "required": False,
+        },
+        "email": {
+            "help": "The git global email",
+            "required": False,
+        },
+    },
+)
+def configure_git(
+    ctx: Context,
+    user: str = "Salt Project Packaging",
+    email: str = "saltproject-packaging@vmware.com",
+):
+    cwd = pathlib.Path.cwd()
+    ctx.info("Setting name and email in git global config")
+    ctx.run("git", "config", "--global", "user.name", f"'{user}'")
+    ctx.run("git", "config", "--global", "user.email", f"{email}")
+    ctx.info(f"Adding {str(cwd)} as a safe directory")
+    ctx.run("git", "config", "--global", "--add", "safe.directory", str(cwd))
+
+
+@pkg.command(
+    name="apply-release-patch",
+    arguments={
+        "patch": {"help": "The git global username"},
+        "delete": {
+            "help": "Whether to delete the patch after applying",
+            "required": False,
+        },
+    },
+)
+def apply_release_patch(ctx: Context, patch: pathlib.Path, delete: bool = False):
+    patch = patch.resolve()
+    ctx.info("Applying the release patch")
+    ctx.run("git", "am", "--committer-date-is-author-date", patch.name)
+    if delete:
+        ctx.info("Deleting the release patch because --delete was passed")
+        patch.unlink()

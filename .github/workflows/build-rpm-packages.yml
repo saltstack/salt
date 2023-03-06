@@ -57,6 +57,14 @@ jobs:
         with:
           salt-version: "${{ inputs.salt-version }}"
 
+      - name: Configure Git
+        run: |
+          tools pkg configure-git
+
+      - name: Apply release patch
+        run: |
+          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+
       - name: Build RPM
         run: |
           tools pkg build rpm --onedir salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz --patch salt-${{ inputs.salt-version }}.patch
