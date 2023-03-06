@@ -177,7 +177,7 @@ def macos(ctx: Context, onedir: str = None, salt_version: str = None):
         },
         "arch": {
             "help": "The architecture to build the package for",
-            "choices": ("x86_64", "aarch64"),
+            "choices": ("x86", "amd64"),
             "required": True,
         },
     },
