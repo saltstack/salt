@@ -40,7 +40,7 @@ on:
       pull-labels:
         required: false
         type: string
-        description: s
+        description: List of all the pull labels
         default: salt
 
 env:
