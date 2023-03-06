@@ -15,9 +15,14 @@ name: <{ workflow_name }>
 <%- block on %>
 
 on:
-  push: {}
+  push:
+    types:
+      - labeled
+      - unlabeled
   pull_request:
-    types: [labeled]
+    types:
+      - labeled
+      - unlabeled
 
 <%- endblock on %>
 
