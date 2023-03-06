@@ -39,6 +39,7 @@ on:
         default: salt
       pull-labels:
         required: false
+        type: list
         description: List of all the pull labels
         default: []
 
