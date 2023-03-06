@@ -16,3 +16,4 @@ hglib
 redis-py-cluster
 python-consul
 slack_bolt
+python-on-whales # added to force tests per https://github.com/saltstack/salt/pull/63051#pullrequestreview-1242907681

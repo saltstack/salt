@@ -391,7 +391,9 @@ cherrypy==18.6.1
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/linux.in
 click==7.1.1
-    # via geomet
+    # via
+    #   geomet
+    #   typer
 clustershell==1.8.3
     # via -r requirements/static/ci/common.in
 contextvars==2.4
@@ -674,6 +676,8 @@ pycparser==2.21 ; python_version >= "3.9"
     #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
+pydantic==1.10.4
+    # via python-on-whales
 pygit2==1.9.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/linux.in
 pyiface==0.0.11
@@ -755,6 +759,8 @@ python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
+python-on-whales==0.57.0
+    # via -r requirements/static/ci/linux.in
 python-telegram-bot==13.7 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
 pytz==2022.1
@@ -804,6 +810,7 @@ requests==2.25.1
     #   moto
     #   msrest
     #   python-consul
+    #   python-on-whales
     #   pyvmomi
     #   requests-oauthlib
     #   responses
@@ -877,14 +884,20 @@ tomli==2.0.1
     # via pytest
 tornado==6.1
     # via python-telegram-bot
+tqdm==4.64.1
+    # via python-on-whales
 transitions==0.8.1
     # via junos-eznc
 twilio==7.9.2
     # via -r requirements/static/ci/linux.in
+typer==0.7.0
+    # via python-on-whales
 typing-extensions==4.2.0
     # via
+    #   pydantic
     #   pytest-shell-utilities
     #   pytest-system-statistics
+    #   python-on-whales
 tzlocal==2.1
     # via apscheduler
 urllib3==1.26.6
