@@ -2,8 +2,8 @@
 
 runTestSuite(
     concurrent_builds: 0,  // Don't cancel builds still running. Wait until they end.
-    distro_name: 'centos',
-    distro_version: '7',
+    distro_name: 'centosstream',
+    distro_version: '9',
     distro_arch: 'x86-64',
     env: env,
     jenkins_slave_label: 'kitchen-slave',
