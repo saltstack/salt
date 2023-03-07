@@ -11,6 +11,12 @@ Starting in 3006, only onedir packaging will be available. The 3006 onedir packa
 are built with the `relenv <https://github.com/saltstack/relative-environment-for-python>`_ tool.
 
 
+Docker Containers
+=================
+We use docker containers to build our packages. If you are building your own packages you can use
+the same containers we build with in the Github piplines. These containers are documented `here <https://github.com/saltstack/salt-ci-containers/tree/main/custom/packaging>`_.
+
+
 How to build onedir only
 ========================
 
@@ -20,7 +26,7 @@ Install relenv:
 
    # pip install relenv
 
-Fetch toolchain
+Fetch toolchain (Only required for linux OSs)
 
 .. code-block:: bash
 
@@ -38,11 +44,11 @@ Create relenv environment:
 
    # relenv create --arch=x86_64 --python=3.10.10 <relenv name>
 
-Add Salt into onedir. Make sure you are running this in the checkout of Salt:
+Add Salt into onedir.
 
 .. code-block:: bash
 
-   # path/to/relenv name/bin/pip install .
+   # path/to/<relenv-name>/bin/pip install /path/to/salt
 
 
 How to build rpm packages
