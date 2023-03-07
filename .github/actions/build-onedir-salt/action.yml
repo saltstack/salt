@@ -53,30 +53,9 @@ runs:
         name: salt-${{ inputs.salt-version }}.tar.gz
 
     - name: Install Salt Into Onedir
-      if: ${{ inputs.platform != 'windows' }}
-      env:
-        USE_STATIC_REQUIREMENTS: "1"
-        RELENV_PIP_DIR: "1"
       shell: bash
       run: |
-        artifacts/${{ inputs.package-name }}/bin/python3 -m pip install salt-${{ inputs.salt-version }}.tar.gz
-        if [ ${{ inputs.platform }} == "darwin" ]; then
-          pkg/macos/prep_salt.sh --build-dir ./artifacts/${{ inputs.package-name }}
-          rm -rf ./artifacts/${{ inputs.package-name }}/opt
-          rm -rf ./artifacts/${{ inputs.package-name }}/etc
-          rm -rf ./artifacts/${{ inputs.package-name }}/Library
-        fi
-
-    - name: Install Salt Into Onedir (Windows)
-      if: ${{ inputs.platform == 'windows' }}
-      env:
-        USE_STATIC_REQUIREMENTS: "1"
-      shell: powershell
-      run: |
-        # install salt
-        pkg\windows\install_salt.cmd -BuildDir ".\artifacts\${{ inputs.package-name }}" -CICD -SourceTarball salt-${{ inputs.salt-version }}.tar.gz
-        # prep salt
-        pkg\windows\prep_salt.cmd -BuildDir ".\artifacts\${{ inputs.package-name }}" -CICD
+        tools pkg build salt-onedir salt-${{ inputs.salt-version }}.tar.gz --platform ${{ inputs.platform }} --package-name artifacts/${{ inputs.package-name }}
 
     - name: Cleanup Salt Onedir Directory
       shell: bash
