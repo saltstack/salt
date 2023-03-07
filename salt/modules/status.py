@@ -177,11 +177,19 @@ def custom():
     ret = {}
     conf = __salt__["config.dot_vals"]("status")
     for key, val in conf.items():
-        func = "{}()".format(key.split(".")[1])
-        vals = eval(func)  # pylint: disable=W0123
-
+        func = ".".join(key.split(".")[:-1])
+        vals = {}
+        if func != "status.custom":
+            try:
+                vals = __salt__[func]()
+            except KeyError:
+                log.warning(f"custom status {func} isn't loaded")
         for item in val:
-            ret[item] = vals[item]
+            try:
+                ret[item] = vals[item]
+            except KeyError:
+                log.warning(f"val {val} not in return of {func}")
+                ret[item] = "UNKNOWN"
 
     return ret
 
