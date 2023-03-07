@@ -43,7 +43,7 @@ repo = command_group(
     name="repo",
     help="Packaging Repository Related Commands",
     description=__doc__,
-    parent=tools.pkg.pkg,
+    parent="pkg",
 )
 
 create = command_group(
