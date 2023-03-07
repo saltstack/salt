@@ -172,7 +172,7 @@ def _timeout_decorator_cleankwargs(function):
         # Handle the timeout
         if "dev_timeout" in kwargs or "timeout" in kwargs:
             conn = __proxy__["junos.conn"]()
-            old_timeoute = conn.timeout
+            old_timeout = conn.timeout
             # Default timeout is 60
             # the int(x or 60) solves the problem where None is provided
             ldev_timeout = max(
