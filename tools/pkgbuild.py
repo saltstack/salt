@@ -34,9 +34,6 @@ build = command_group(
         "onedir": {
             "help": "The name of the onedir artifact, if given it should be under artifacts/",
         },
-        "patch": {
-            "help": "The name of the patch artifact, if given it should be under the root of the checkout",
-        },
         "use_existing_onedir": {
             "help": "Whether to build using the existing onedir or not",
         },
@@ -45,7 +42,6 @@ build = command_group(
 def debian(
     ctx: Context,
     onedir: str = None,  # pylint: disable=bad-whitespace
-    patch: str = None,  # pylint: disable=bad-whitespace
     use_existing_onedir: bool = True,
 ):
     """
@@ -54,12 +50,8 @@ def debian(
     checkout = pathlib.Path.cwd()
     if use_existing_onedir:
         assert onedir is not None
-        assert patch is not None
         onedir_artifact = checkout / "artifacts" / onedir
-        patch_artifact = checkout / patch
-        _check_pkg_build_files_exist(
-            ctx, patch_artifact=patch_artifact, onedir_artifact=onedir_artifact
-        )
+        _check_pkg_build_files_exist(ctx, onedir_artifact=onedir_artifact)
         ctx.info(
             f"Building the package using the onedir artifact {str(onedir_artifact)}"
         )
@@ -79,9 +71,6 @@ def debian(
         "onedir": {
             "help": "The name of the onedir artifact, if given it should be under artifacts/",
         },
-        "patch": {
-            "help": "The name of the patch artifact, if given it should be under the root of the checkout",
-        },
         "use_existing_onedir": {
             "help": "Whether to build using the existing onedir or not",
         },
@@ -90,7 +79,6 @@ def debian(
 def rpm(
     ctx: Context,
     onedir: str = None,  # pylint: disable=bad-whitespace
-    patch: str = None,  # pylint: disable=bad-whitespace
     use_existing_onedir: bool = True,
 ):
     """
@@ -99,12 +87,8 @@ def rpm(
     checkout = pathlib.Path.cwd()
     if use_existing_onedir:
         assert onedir is not None
-        assert patch is not None
         onedir_artifact = checkout / "artifacts" / onedir
-        patch_artifact = checkout / patch
-        _check_pkg_build_files_exist(
-            ctx, patch_artifact=patch_artifact, onedir_artifact=onedir_artifact
-        )
+        _check_pkg_build_files_exist(ctx, onedir_artifact=onedir_artifact)
         ctx.info(
             f"Building the package using the onedir artifact {str(onedir_artifact)}"
         )
@@ -259,6 +243,8 @@ def onedir_dependencies(
 ):
     """
     Create a relenv environment with the onedir dependencies installed.
+
+    NOTE: relenv needs to be installed into your environment and builds and toolchains (linux) fetched.
     """
     if TYPE_CHECKING:
         assert arch is not None
