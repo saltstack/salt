@@ -228,6 +228,81 @@ def windows(
     ctx.info("Done")
 
 
+@build.command(
+    name="onedir-dependencies",
+    arguments={
+        "arch": {
+            "help": "The architecture to build the package for",
+            "choices": ("x86_64", "aarch64"),
+            "required": True,
+        },
+        "python_version": {
+            "help": "The version of python to create an environment for using relenv",
+            "required": True,
+        },
+        "package_name": {
+            "help": "The name of the relenv environment to be created under artifacts/",
+            "required": True,
+        },
+        "platform": {
+            "help": "The platform the relenv environment is being created on",
+            "required": True,
+        },
+    },
+)
+def onedir_dependencies(
+    ctx: Context,
+    arch: str = None,
+    python_version: str = None,
+    package_name: str = None,
+    platform: str = None,
+):
+    """
+    Create a relenv environment with the onedir dependencies installed.
+    """
+    if TYPE_CHECKING:
+        assert arch is not None
+        assert python_version is not None
+        assert package_name is not None
+
+    # We import relenv here because it is not a hard requirement for the rest of the tools commands
+    try:
+        from relenv.create import create
+    except ImportError:
+        ctx.exit(1, "Relenv not installed in the current environment.")
+
+    artifacts_dir = pathlib.Path("artifacts").resolve()
+    artifacts_dir.mkdir(exist_ok=True)
+    dest = artifacts_dir / package_name
+
+    create(dest, arch=arch, version=python_version)
+
+    if platform == "windows":
+        python_bin = dest / "Scripts" / "python"
+        pip_bin = dest / "Scripts" / "pip"
+        no_binary = []
+    else:
+        python_bin = dest / "bin" / "python3"
+        pip_bin = dest / "bin" / "pip3"
+        no_binary = ["--no-binary=':all:'"]
+
+    version_info = ctx.run(
+        str(python_bin),
+        "-c",
+        "import sys; print('{}.{}'.format(*sys.version_info))",
+        capture=True,
+    )
+    requirements_version = version_info.stdout.strip().decode()
+    requirements_file = pathlib.Path(
+        "requirements", "static", "pkg", f"py{requirements_version}", f"{platform}.txt"
+    )
+
+    ctx.run(str(pip_bin), "install", "-U", "wheel")
+    ctx.run(str(pip_bin), "install", "-U", "pip>=22.3.1,<23.0")
+    ctx.run(str(pip_bin), "install", "-U", "setuptools>=65.6.3,<66")
+    ctx.run(str(pip_bin), "install", "-r", str(requirements_file), *no_binary)
+
+
 def _check_pkg_build_files_exist(ctx: Context, **kwargs):
     for name, path in kwargs.items():
         if not path.exists():
