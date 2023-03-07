@@ -14,9 +14,6 @@ from typing import TYPE_CHECKING
 
 from ptscripts import Context, command_group
 
-import tools.pkg
-import tools.utils
-
 log = logging.getLogger(__name__)
 
 # Define the command group
@@ -24,7 +21,7 @@ build = command_group(
     name="build",
     help="Package build related commands.",
     description=__doc__,
-    parent=tools.pkg.pkg,
+    parent="pkg",
 )
 
 
