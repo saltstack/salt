@@ -162,9 +162,12 @@ def _timeout_decorator_cleankwargs(function):
         timeout_changed = False
         old_kwargs = kwargs
         # Loop through the kwargs and remove all __pub
+        del_kwargs = []
         for key in kwargs:
             if key.startswith("__pub"):
-                kwargs.pop(key)
+                del_kwargs.append(key)
+        for del_kwarg in del_kwargs:
+            kwargs.pop(del_kwarg)
 
         # Handle the timeout
         if "dev_timeout" in kwargs or "timeout" in kwargs:
