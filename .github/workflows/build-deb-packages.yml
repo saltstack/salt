@@ -27,7 +27,12 @@ jobs:
       image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-11
 
     steps:
+      # Checkout here so we can easily use custom actions
       - uses: actions/checkout@v3
+
+      # Checkout here for the build process
+      - name: Checkout in build directory
+        uses: actions/checkout@v3
         with:
           path:
             pkgs/checkout/
@@ -45,13 +50,13 @@ jobs:
           path: pkgs/checkout/
 
       - name: Setup Python Tools Scripts
-        uses: ./pkgs/checkout/.github/actions/setup-python-tools-scripts
+        uses: ./.github/actions/setup-python-tools-scripts
         with:
           cwd: pkgs/checkout/
 
       - name: Setup Salt Version
         id: setup-salt-version
-        uses: ./pkgs/checkout/.github/actions/setup-salt-version
+        uses: ./.github/actions/setup-salt-version
         with:
           salt-version: "${{ inputs.salt-version }}"
           cwd: pkgs/checkout/
