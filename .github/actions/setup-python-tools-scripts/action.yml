@@ -25,7 +25,7 @@ runs:
 
     - name: Get Python Version
       id: get-python-version
-      uses: ./.github/actions/get-python-version
+      uses: ${{ inputs.cwd }}/.github/actions/get-python-version
       with:
         python-binary: python3
 
