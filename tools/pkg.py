@@ -409,7 +409,7 @@ def pypi_upload(ctx: Context, files: list[pathlib.Path], test: bool = False):
     if test is True:
         repository_url = "https://test.pypi.org/legacy/"
     else:
-        repository_url = "https://pypi.org/legacy/"
+        repository_url = "https://upload.pypi.org/legacy/"
     if "TWINE_USERNAME" not in os.environ:
         os.environ["TWINE_USERNAME"] = "__token__"
     if "TWINE_PASSWORD" not in os.environ:

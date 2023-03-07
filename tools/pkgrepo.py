@@ -771,7 +771,7 @@ def src(
         assert key_id is not None
 
     ctx.info("Creating repository directory structure ...")
-    create_repo_path = repo_path / "src" / salt_version
+    create_repo_path = repo_path / "salt" / "py3" / "src" / salt_version
     create_repo_path.mkdir(exist_ok=True, parents=True)
     hashes_base_path = create_repo_path / f"salt-{salt_version}"
     for fpath in incoming.iterdir():
@@ -904,7 +904,7 @@ def release(
         assert key_id is not None
 
     if rc_build:
-        bucket_folder = "salt_rc/py3"
+        bucket_folder = "salt_rc/salt/py3"
     else:
         bucket_folder = "salt/py3"
 
