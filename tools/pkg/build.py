@@ -286,6 +286,64 @@ def onedir_dependencies(
     ctx.run(str(pip_bin), "install", "-r", str(requirements_file), *no_binary)
 
 
+@build.command(
+    name="salt-onedir",
+    arguments={
+        "salt_archive": {
+            "help": "The name of the source tarball containing salt, stored under the repo root",
+        },
+        "platform": {
+            "help": "The platform that installed is being installed on",
+            "required": True,
+        },
+        "package_name": {
+            "help": "The name of the relenv environment to install salt into, stored under artifacts/",
+            "required": True,
+        },
+    },
+)
+def salt_onedir(
+    ctx: Context,
+    salt_archive: pathlib.Path,
+    platform: str = None,
+    package_name: str = None,
+):
+    """
+    Install salt into a relenv onedir environment.
+    """
+    if TYPE_CHECKING:
+        assert platform is not None
+        assert package_name is not None
+
+    onedir_env = pathlib.Path("artifacts", package_name)
+    _check_pkg_build_files_exist(ctx, onedir_env=onedir_env, salt_archive=salt_archive)
+
+    if platform == "windows":
+        ctx.run(
+            "powershell.exe",
+            r"pkg\windows\install_salt.cmd",
+            "-BuildDir",
+            str(onedir_env),
+            "-CICD",
+            "-SourceTarball",
+            str(salt_archive),
+        )
+        ctx.run(
+            "powershell.exe",
+            r"pkg\windows\prep_salt.cmd",
+            "-BuildDir",
+            str(onedir_env),
+            "-CICD",
+        )
+    else:
+        pip_bin = onedir_env / "bin" / "pip3"
+        ctx.run(str(pip_bin), "install", str(salt_archive))
+        if platform == "darwin":
+            shutil.rmtree(onedir_env / "opt")
+            shutil.rmtree(onedir_env / "etc")
+            shutil.rmtree(onedir_env / "Library")
+
+
 def _check_pkg_build_files_exist(ctx: Context, **kwargs):
     for name, path in kwargs.items():
         if not path.exists():
