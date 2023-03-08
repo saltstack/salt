@@ -1797,14 +1797,6 @@ def _pkg_test(session, cmd_args, test_type, onedir=False):
     _pytest(session, False, pytest_args, env=env)
 
 
-@nox.session(python=_PYTHON_VERSIONS, name="test-pkgs")
-def test_pkgs(session):
-    """
-    pytest pkg tests session
-    """
-    _pkg_test(session, ["pkg/tests/"], "pkg")
-
-
 @nox.session(
     python=str(ONEDIR_PYTHON_PATH),
     name="test-pkgs-onedir",
@@ -1818,32 +1810,6 @@ def test_pkgs_onedir(session):
             )
         )
     _pkg_test(session, ["pkg/tests/"], "pkg", onedir=True)
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="test-upgrade-pkgs")
-@nox.parametrize("classic", [False, True])
-def test_upgrade_pkgs(session, classic):
-    """
-    pytest pkg upgrade tests session
-    """
-    test_type = "pkg_upgrade"
-    cmd_args = [
-        "pkg/tests/upgrade/test_salt_upgrade.py::test_salt_upgrade",
-        "--upgrade",
-        "--no-uninstall",
-    ]
-    if classic:
-        cmd_args = cmd_args + ["--classic"]
-        # Workaround for installing and running classic packages from 3005.1
-        # They can only run with importlib-metadata<5.0.0.
-        subprocess.run(["pip3", "install", "importlib-metadata==4.13.0"], check=False)
-    try:
-        _pkg_test(session, cmd_args, test_type)
-    except nox.command.CommandFailed:
-        sys.exit(1)
-
-    cmd_args = ["pkg/tests/", "--no-install"] + session.posargs
-    _pkg_test(session, cmd_args, test_type)
 
 
 @nox.session(
