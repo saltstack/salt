@@ -90,7 +90,6 @@ jobs:
           path: nox.${{ inputs.distro-slug }}.tar.*
           key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ matrix.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
-      # Skip jobs if nox.*.tar.* is already cached
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: actions/download-artifact@v3
