@@ -3,8 +3,6 @@ import os.path
 import sys
 from collections import namedtuple
 
-
-import pkg_resources
 import pytest
 
 import salt.config
@@ -18,6 +16,7 @@ from tests.support.unit import TestCase
 # pylint: disable=import-error
 try:
     import boto
+    import pkg_resources
     from boto.route53.exception import DNSServerError
 
     import salt.modules.boto_route53 as boto_route53
