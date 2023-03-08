@@ -41,7 +41,7 @@ concurrency:
       - name: Check Requirements
         id: check-requirements
         run: |
-          if [ "${RUN_SCHEDULED_BUILDS}" -eq 1 ]; then
+          if [ "${RUN_SCHEDULED_BUILDS}" = "1" ]; then
             echo "Running workflow because RUN_SCHEDULED_BUILDS=1"
             echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
           elif [ "${{ github.event.repository.fork }}" = "true" ]; then
