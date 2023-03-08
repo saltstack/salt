@@ -263,11 +263,9 @@ def onedir_dependencies(
 
     if platform == "windows":
         python_bin = dest / "Scripts" / "python"
-        pip_bin = dest / "Scripts" / "pip"
         no_binary = []
     else:
         python_bin = dest / "bin" / "python3"
-        pip_bin = dest / "bin" / "pip3"
         no_binary = ["--no-binary=':all:'"]
 
     version_info = ctx.run(
@@ -282,10 +280,18 @@ def onedir_dependencies(
     ).resolve()
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
-    ctx.run(str(pip_bin), "install", "-U", "wheel")
-    ctx.run(str(pip_bin), "install", "-U", "pip>=22.3.1,<23.0")
-    ctx.run(str(pip_bin), "install", "-U", "setuptools>=65.6.3,<66")
-    ctx.run(str(pip_bin), "install", "-r", str(requirements_file), *no_binary)
+    ctx.run(str(python_bin), "-m", "pip", "install", "-U", "wheel")
+    ctx.run(str(python_bin), "-m", "pip", "install", "-U", "pip>=22.3.1,<23.0")
+    ctx.run(str(python_bin), "-m", "pip", "install", "-U", "setuptools>=65.6.3,<66")
+    ctx.run(
+        str(python_bin),
+        "-m",
+        "pip",
+        "install",
+        "-r",
+        str(requirements_file),
+        *no_binary,
+    )
 
 
 @build.command(
