@@ -182,14 +182,14 @@ def custom():
         if func != "status.custom":
             try:
                 vals = __salt__[func]()
+                for item in val:
+                    try:
+                        ret[item] = vals[item]
+                    except KeyError:
+                        log.warning(f"val {item} not in return of {func}")
+                        ret[item] = "UNKNOWN"
             except KeyError:
                 log.warning(f"custom status {func} isn't loaded")
-        for item in val:
-            try:
-                ret[item] = vals[item]
-            except KeyError:
-                log.warning(f"val {val} not in return of {func}")
-                ret[item] = "UNKNOWN"
 
     return ret
 
