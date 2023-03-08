@@ -137,11 +137,18 @@ jobs:
             echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> "$GITHUB_ENV"
           fi
 
+      - name: Get Salt Project GitHub Actions Bot Environment
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
       - name: Start VM
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         id: spin-up-vm
         run: |
-          tools --timestamps vm create --retries=2 ${{ inputs.distro-slug }}
+          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ inputs.distro-slug }}
 
       - name: List Free Space
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -241,12 +248,18 @@ jobs:
         with:
           name: testrun-changed-files.txt
 
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
       - name: Start VM
         id: spin-up-vm
         env:
           TESTS_CHUNK: ${{ matrix.tests-chunk }}
         run: |
-          tools --timestamps vm create --retries=2 ${{ inputs.distro-slug }}
+          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ inputs.distro-slug }}
 
       - name: List Free Space
         run: |
