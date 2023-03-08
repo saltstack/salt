@@ -279,7 +279,8 @@ def onedir_dependencies(
     requirements_version = version_info.stdout.strip().decode()
     requirements_file = pathlib.Path(
         "requirements", "static", "pkg", f"py{requirements_version}", f"{platform}.txt"
-    )
+    ).resolve()
+    _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
     ctx.run(str(pip_bin), "install", "-U", "wheel")
     ctx.run(str(pip_bin), "install", "-U", "pip>=22.3.1,<23.0")
