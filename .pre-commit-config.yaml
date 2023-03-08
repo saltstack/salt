@@ -1330,6 +1330,7 @@ repos:
           - rich
           - types-attrs
           - types-pyyaml
+          - types-requests
 
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2021.6.12
