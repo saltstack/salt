@@ -214,7 +214,7 @@ def windows(
     arguments={
         "arch": {
             "help": "The architecture to build the package for",
-            "choices": ("x86_64", "aarch64"),
+            "choices": ("x86_64", "aarch64", "x86", "aarch64"),
             "required": True,
         },
         "python_version": {
@@ -247,6 +247,7 @@ def onedir_dependencies(
         assert arch is not None
         assert python_version is not None
         assert package_name is not None
+        assert platform is not None
 
     # We import relenv here because it is not a hard requirement for the rest of the tools commands
     try:
