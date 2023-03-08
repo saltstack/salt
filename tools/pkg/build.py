@@ -319,6 +319,7 @@ def salt_onedir(
     onedir_env = pathlib.Path("artifacts", package_name)
     _check_pkg_build_files_exist(ctx, onedir_env=onedir_env, salt_archive=salt_archive)
 
+    os.environ["USE_STATIC_REQUIREMENTS"] = "1"
     if platform == "windows":
         ctx.run(
             "powershell.exe",
@@ -337,6 +338,7 @@ def salt_onedir(
             "-CICD",
         )
     else:
+        os.environ["RELENV_PIP_DIR"] = "1"
         pip_bin = onedir_env / "bin" / "pip3"
         ctx.run(str(pip_bin), "install", str(salt_archive))
         if platform == "darwin":
