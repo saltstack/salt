@@ -654,14 +654,10 @@ class SaltPkgInstall:
                 f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}/{gpg_key}",
             )
             self._check_retcode(ret)
-            ret = self.proc.run(
-                "curl",
-                "-fsSL",
+            download_file(
                 f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}.repo",
-                "-o",
                 f"/etc/yum.repos.d/salt-{distro_name}.repo",
             )
-            self._check_retcode(ret)
             ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
             self._check_retcode(ret)
             ret = self.proc.run(
@@ -685,14 +681,10 @@ class SaltPkgInstall:
             else:
                 arch = "amd64"
             pathlib.Path("/etc/apt/keyrings").mkdir(parents=True, exist_ok=True)
-            ret = self.proc.run(
-                "curl",
-                "-fsSL",
-                "-o",
-                "/etc/apt/keyrings/salt-archive-keyring.gpg",
+            download_file(
                 f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}/salt-archive-keyring.gpg",
+                "/etc/apt/keyrings/salt-archive-keyring.gpg",
             )
-            self._check_retcode(ret)
             with open(
                 pathlib.Path("/etc", "apt", "sources.list.d", "salt.list"), "w"
             ) as fp:
@@ -763,14 +755,10 @@ class SaltPkgInstall:
                 mac_pkg_url = f"https://repo.saltproject.io/salt/py3/macos/{major_ver}.{minor_ver}-1/{mac_pkg}"
             mac_pkg_path = f"/tmp/{mac_pkg}"
             if not os.path.exists(mac_pkg_path):
-                ret = self.proc.run(
-                    "curl",
-                    "-fsSL",
-                    "-o",
-                    f"/tmp/{mac_pkg}",
+                download_file(
                     f"{mac_pkg_url}",
+                    f"/tmp/{mac_pkg}",
                 )
-                self._check_retcode(ret)
 
             ret = self.proc.run("installer", "-pkg", mac_pkg_path, "-target", "/")
             self._check_retcode(ret)
@@ -1700,3 +1688,13 @@ def remove_stale_master_key(master):
             master.id,
             key_path,
         )
+
+
+def download_file(url, dest):
+    # NOTE the stream=True parameter below
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(dest, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
