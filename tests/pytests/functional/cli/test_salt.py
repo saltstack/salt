@@ -17,6 +17,7 @@ def test_versions_report(salt_cli):
                 section[key] = section[key].strip()
 
     ret = salt_cli.run("--versions-report")
+    assert ret.returncode == 0
     assert ret.stdout
     ret_lines = ret.stdout.split("\n")
 
