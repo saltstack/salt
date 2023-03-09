@@ -297,7 +297,7 @@ def onedir_dependencies(
 @build.command(
     name="salt-onedir",
     arguments={
-        "salt_archive": {
+        "salt_name": {
             "help": "The name of the source tarball containing salt, stored under the repo root",
         },
         "platform": {
@@ -312,7 +312,7 @@ def onedir_dependencies(
 )
 def salt_onedir(
     ctx: Context,
-    salt_archive: pathlib.Path,
+    salt_name: str,
     platform: str = None,
     package_name: str = None,
 ):
@@ -323,6 +323,7 @@ def salt_onedir(
         assert platform is not None
         assert package_name is not None
 
+    salt_archive = pathlib.Path(salt_name)
     onedir_env = pathlib.Path("artifacts", package_name)
     _check_pkg_build_files_exist(ctx, onedir_env=onedir_env, salt_archive=salt_archive)
 
