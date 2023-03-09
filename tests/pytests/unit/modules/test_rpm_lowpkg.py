@@ -281,6 +281,8 @@ def test_version_cmp_rpm_all_libraries(rpm_lib):
         assert 0 == rpm.version_cmp("3:2.9.1-6.el7.4", "3:2.9.1-6.el7.4")
         assert -1 == rpm.version_cmp("3:2.9.1-6.el7.4", "3:2.9.1-7.el7.4")
         assert 1 == rpm.version_cmp("3:2.9.1-8.el7.4", "3:2.9.1-7.el7.4")
+        assert 0 == rpm.version_cmp("3.23-6.el9", "3.23")
+        assert 0 == rpm.version_cmp("3.23", "3.23-6.el9")
 
 
 def test_version_cmp_rpm():
