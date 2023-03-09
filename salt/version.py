@@ -715,6 +715,7 @@ def dependency_information(include_salt_cloud=False):
         ("docker-py", "docker", "__version__"),
         ("packaging", "packaging", "__version__"),
         ("looseversion", "looseversion", None),
+        ("relenv", "relenv", "__version__"),
     ]
 
     if include_salt_cloud:
@@ -722,7 +723,10 @@ def dependency_information(include_salt_cloud=False):
             ("Apache Libcloud", "libcloud", "__version__"),
         )
 
-    for name, imp, attr in libs:
+    def _sort_by_lowercased_name(entry):
+        return entry[0].lower()
+
+    for name, imp, attr in sorted(libs, key=_sort_by_lowercased_name):
         if imp is None:
             yield name, attr
             continue
