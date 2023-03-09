@@ -55,7 +55,7 @@ runs:
     - name: Install Salt Into Onedir
       shell: bash
       run: |
-        tools pkg build salt-onedir salt-${{ inputs.salt-version }}.tar.gz --platform ${{ inputs.platform }} --package-name artifacts/${{ inputs.package-name }}
+        tools pkg build salt-onedir salt-${{ inputs.salt-version }}.tar.gz --platform ${{ inputs.platform }} --package-name ${{ inputs.package-name }}
 
     - name: Cleanup Salt Onedir Directory
       shell: bash
