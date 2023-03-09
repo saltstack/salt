@@ -13,119 +13,119 @@ are built with the `relenv <https://github.com/saltstack/relative-environment-fo
 
 Docker Containers
 =================
-We use docker containers to build our packages. If you are building your own packages you can use
+The Salt Project uses docker containers to build our packages. If you are building your own packages you can use
 the same containers we build with in the Github piplines. These containers are documented `here <https://github.com/saltstack/salt-ci-containers/tree/main/custom/packaging>`_.
 
 
 How to build onedir only
 ========================
 
-Install relenv:
+#. Install relenv:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-   # pip install relenv
+       # pip install relenv
 
-Fetch toolchain (Only required for linux OSs)
+#. Fetch toolchain (Only required for linux OSs)
 
-.. code-block:: bash
+    .. code-block:: bash
 
-   # relenv toolchain fetch --arch=<architecture>
+       # relenv toolchain fetch
 
-Fetch Native Python Build:
+#. Fetch Native Python Build:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-   # relenv fetch --arch=<architecture>  --python=<pythonversion>
+       # relenv fetch --python=<pythonversion>
 
-Create relenv environment:
+#. Create relenv environment:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-   # relenv create --arch=x86_64 --python=3.10.10 <relenv name>
+       # relenv create --python=3.10.10 <relenv name>
 
-Add Salt into onedir.
+#. Add Salt into onedir.
 
-.. code-block:: bash
+    .. code-block:: bash
 
-   # path/to/<relenv-name>/bin/pip install /path/to/salt
+       # path/to/<relenv-name>/bin/pip install /path/to/salt
 
 
 How to build rpm packages
 =========================
-Install the dependencies:
+#. Install the dependencies:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-   # yum -y install python3 python3-pip openssl git rpmdevtools rpmlint systemd-units libxcrypt-compat git
+       # yum -y install python3 python3-pip openssl git rpmdevtools rpmlint systemd-units libxcrypt-compat git
 
-If you want to build for a specific Salt version, you will need to install tools and changelog dependencies:
+#. (Optional) To build a specific Salt version, you will need to install tools and changelog dependencies:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-   # pip install -r requirements/static/ci/py{python_version}/tools.txt
+       # pip install -r requirements/static/ci/py{python_version}/tools.txt
 
-.. code-block:: bash
+    .. code-block:: bash
 
-   # pip install -r requirements/static/ci/py{python_version}/changelog.txt
+       # pip install -r requirements/static/ci/py{python_version}/changelog.txt
 
-Ensure you are in the current Salt cloned git repo.:
+#. Ensure you are in the current Salt cloned git repo:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-   # cd salt
+       # cd salt
 
-If you want to build for a specific Salt version, run tools and set Salt version:
+#. (Optional) To build a specific Salt version, run tools and set Salt version:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-   # tools changelog update-rpm <salt version>
+       # tools changelog update-rpm <salt version>
 
-Run rpmbuild in the Salt repo:
+#. Run rpmbuild in the Salt repo:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-    # rpmbuild -bb --define="_salt_src $(pwd)" $(pwd)/pkg/rpm/salt.spec
+        # rpmbuild -bb --define="_salt_src $(pwd)" $(pwd)/pkg/rpm/salt.spec
 
 
 How to build deb packages
 =========================
 
-Install the dependencies:
+#. Install the dependencies:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-   # apt install -y python3 python3-venv python3-pip build-essential devscripts debhelper bash-completion git
+       # apt install -y python3 python3-venv python3-pip build-essential devscripts debhelper bash-completion git
 
-If you want to build for a specific Salt version, you will need to install tools and changelog dependencies:
+#. (Optional) To build a specific Salt version, you will need to install tools and changelog dependencies:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-   # pip install -r requirements/static/ci/py{python_version}/tools.txt
+       # pip install -r requirements/static/ci/py{python_version}/tools.txt
 
-.. code-block:: bash
+    .. code-block:: bash
 
-   # pip install -r requirements/static/ci/py{python_version}/changelog.txt
+       # pip install -r requirements/static/ci/py{python_version}/changelog.txt
 
-Ensure you are in the current Salt cloned git repo.:
+#. Ensure you are in the current Salt cloned git repo.:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-   # cd salt
+       # cd salt
 
-If you want to build for a specific Salt version, run tools and set Salt version:
+#. (Optional) To build a specific Salt version, run tools and set Salt version:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-   # tools changelog update-deb <salt version>
+       # tools changelog update-deb <salt version>
 
 
-Add a symlink and run debuild in the Salt repo:
+#. Add a symlink and run debuild in the Salt repo:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-    # ln -sf pkg/debian/ .
-    # debuild -uc -us
+        # ln -sf pkg/debian/ .
+        # debuild -uc -us
 
 
 How to access python binary
