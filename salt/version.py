@@ -689,7 +689,6 @@ def dependency_information(include_salt_cloud=False):
     Report versions of library dependencies.
     """
     libs = [
-        ("Python", None, sys.version.rsplit("\n")[0].strip()),
         ("Jinja2", "jinja2", "__version__"),
         ("M2Crypto", "M2Crypto", "version"),
         ("msgpack", "msgpack", "version"),
@@ -857,12 +856,16 @@ def versions_information(include_salt_cloud=False, include_extensions=True):
     """
     Report the versions of dependent software.
     """
+    py_info = [
+        ("Python", sys.version.rsplit("\n")[0].strip()),
+    ]
     salt_info = list(salt_information())
     lib_info = list(dependency_information(include_salt_cloud))
     sys_info = list(system_information())
 
     info = {
         "Salt Version": dict(salt_info),
+        "Python Version": dict(py_info),
         "Dependency Versions": dict(lib_info),
         "System Versions": dict(sys_info),
     }
@@ -894,6 +897,7 @@ def versions_report(include_salt_cloud=False, include_extensions=True):
     info = []
     for ver_type in (
         "Salt Version",
+        "Python Version",
         "Dependency Versions",
         "Salt Extensions",
         "System Versions",
