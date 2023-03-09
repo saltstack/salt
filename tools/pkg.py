@@ -223,7 +223,7 @@ def set_salt_version(
 )
 def pre_archive_cleanup(ctx: Context, cleanup_path: str, pkg: bool = False):
     """
-    Clean the provided path of paths that shouyld not be included in the archive.
+    Clean the provided path of paths that should not be included in the archive.
 
     For example:
 
