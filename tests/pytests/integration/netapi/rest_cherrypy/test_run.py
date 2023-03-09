@@ -17,6 +17,23 @@ async def test_run_good_login(http_client, auth_creds):
     assert response.code == 200
 
 
+async def test_run_netapi_client_not_set(http_client, auth_creds):
+    """
+    Test the run URL with good auth credentials
+    """
+    low = {"client": "local", "tgt": "*", "fun": "test.ping", **auth_creds}
+    body = urllib.parse.urlencode(low)
+
+    response = await http_client.fetch(
+        "/run", method="POST", body=body, raise_error=False
+    )
+    assert response.code == 400
+    assert (
+        "Client disabled: 'local'. Add to 'netapi_enable_clients' master config option to enable"
+        in response.body
+    )
+
+
 @pytest.mark.netapi_client_data(["local"])
 async def test_run_bad_login(http_client):
     """
