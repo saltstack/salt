@@ -196,7 +196,10 @@ def runner_types(ctx: Context, event_name: str):
 
     # This is a push or a scheduled event
     ctx.info(f"Running from a {event_name!r} event")
-    if gh_event["repository"]["fork"] is True:
+    if (
+        gh_event["repository"]["fork"] is True
+        and os.environ.get("FORK_HAS_SELF_HOSTED_RUNNERS", "0") == "1"
+    ):
         # This is running on a forked repository, don't run tests
         ctx.info("The push event is on a forked repository")
         runners["github-hosted"] = True
@@ -205,7 +208,7 @@ def runner_types(ctx: Context, event_name: str):
             wfh.write(f"runners={json.dumps(runners)}\n")
         ctx.exit(0)
 
-    # Not running on a fork, run everything
+    # Not running on a fork, or the fork has self hosted runners, run everything
     ctx.info(f"The {event_name!r} event is from the main repository")
     runners["github-hosted"] = runners["self-hosted"] = True
     ctx.info("Writing 'runners' to the github outputs file")
@@ -667,7 +670,7 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
     """
     _matrix = []
     sessions = [
-        "test-pkgs-3",
+        "test-pkgs-onedir",
     ]
     if (
         distro_slug
@@ -683,13 +686,13 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
         # we will need to ensure when we release 3006.0
         # we allow for 3006.0 jobs to run, because then
         # we will have arm64 onedir packages to upgrade from
-        sessions.append("'test-upgrade-pkgs-3(classic=False)'")
+        sessions.append("'test-upgrade-pkgs-onedir(classic=False)'")
     if (
         distro_slug not in ["centosstream-9", "ubuntu-22.04", "ubuntu-22.04-arm64"]
         and "MSI" != pkg_type
     ):
         # Packages for these OSs where never built for classic previously
-        sessions.append("'test-upgrade-pkgs-3(classic=True)'")
+        sessions.append("'test-upgrade-pkgs-onedir(classic=True)'")
 
     for sess in sessions:
         _matrix.append({"nox-session": sess})
