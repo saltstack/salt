@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pathlib
 
+import packaging.version
 from ptscripts import Context
 from rich.progress import (
     BarColumn,
@@ -19,6 +20,7 @@ GPG_KEY_FILENAME = "SALT-PROJECT-GPG-PUBKEY-2023"
 NIGHTLY_BUCKET_NAME = "salt-project-prod-salt-artifacts-nightly"
 STAGING_BUCKET_NAME = "salt-project-prod-salt-artifacts-staging"
 RELEASE_BUCKET_NAME = "salt-project-prod-salt-artifacts-release"
+BACKUP_BUCKET_NAME = "salt-project-prod-salt-artifacts-backup"
 
 
 class UpdateProgress:
@@ -51,22 +53,16 @@ def create_progress_bar(file_progress: bool = False, **kwargs):
     )
 
 
-def export_gpg_key(
-    ctx: Context, key_id: str, repo_path: pathlib.Path, create_repo_path: pathlib.Path
-):
-    keyfile_gpg = create_repo_path.joinpath(GPG_KEY_FILENAME).with_suffix(".gpg")
+def export_gpg_key(ctx: Context, key_id: str, export_path: pathlib.Path):
+    keyfile_gpg = export_path.joinpath(GPG_KEY_FILENAME).with_suffix(".gpg")
     if keyfile_gpg.exists():
         keyfile_gpg.unlink()
-    ctx.info(
-        f"Exporting GnuPG Key '{key_id}' to {keyfile_gpg.relative_to(repo_path)} ..."
-    )
+    ctx.info(f"Exporting GnuPG Key '{key_id}' to {keyfile_gpg} ...")
     ctx.run("gpg", "--output", str(keyfile_gpg), "--export", key_id)
-    keyfile_pub = create_repo_path.joinpath(GPG_KEY_FILENAME).with_suffix(".pub")
+    keyfile_pub = export_path.joinpath(GPG_KEY_FILENAME).with_suffix(".pub")
     if keyfile_pub.exists():
         keyfile_pub.unlink()
-    ctx.info(
-        f"Exporting GnuPG Key '{key_id}' to {keyfile_pub.relative_to(repo_path)} ..."
-    )
+    ctx.info(f"Exporting GnuPG Key '{key_id}' to {keyfile_pub} ...")
     ctx.run("gpg", "--armor", "--output", str(keyfile_pub), "--export", key_id)
 
 
@@ -86,3 +82,38 @@ def gpg_sign(ctx: Context, key_id: str, path: pathlib.Path):
         "--sign",
         str(path),
     )
+
+
+class Version(packaging.version.Version):
+    def __lt__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__lt__(other)
+
+    def __le__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__le__(other)
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__eq__(other)
+
+    def __ge__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__ge__(other)
+
+    def __gt__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__gt__(other)
+
+    def __ne__(self, other):
+        if not isinstance(other, self.__class__):
+            other = self.__class__(other)
+        return super().__ne__(other)
+
+    def __hash__(self):
+        return hash(str(self))

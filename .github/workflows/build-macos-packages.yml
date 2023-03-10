@@ -58,7 +58,7 @@ jobs:
       - name: Upload ${{ matrix.arch }} Package
         uses: actions/upload-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos-pkgs
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos
           path: pkg/macos/*unsigned.pkg
           retention-days: 7
           if-no-files-found: error

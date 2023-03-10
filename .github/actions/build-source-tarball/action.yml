@@ -24,11 +24,6 @@ runs:
 
   steps:
 
-    - name: Install Nox
-      shell: bash
-      run: |
-        nox --version || python3 -m pip install nox==${{ inputs.nox-version }}
-
     - name: Download Release Patch
       uses: actions/download-artifact@v3
       with:
@@ -49,7 +44,7 @@ runs:
     - name: Create Source Tarball
       shell: bash
       run: |
-        nox -e build
+        tools pkg source-tarball
 
     - name: Create Hash Files
       shell: bash

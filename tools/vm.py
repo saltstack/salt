@@ -21,6 +21,7 @@ from functools import lru_cache
 from typing import TYPE_CHECKING, cast
 
 from ptscripts import Context, command_group
+from requests.exceptions import ConnectTimeout
 
 import tools.utils
 
@@ -94,6 +95,15 @@ vm.add_argument("--region", help="The AWS region.", default=AWS_REGION)
         "retries": {
             "help": "How many times to retry creating and connecting to a vm",
         },
+        "environment": {
+            "help": (
+                "The AWS environment to use. When the value is auto, an "
+                "attempt will be made to get the right environment from the "
+                "AWS instance metadata endpoint. This only works for bastion "
+                "VMs."
+            ),
+            "choices": ("prod", "test", "auto"),
+        },
     }
 )
 def create(
@@ -104,6 +114,7 @@ def create(
     no_delete: bool = False,
     no_destroy_on_failure: bool = False,
     retries: int = 0,
+    environment: str = None,
 ):
     """
     Create VM.
@@ -112,12 +123,37 @@ def create(
         ctx.exit(1, "We need a key name to spin a VM")
     if not retries:
         retries = 1
+    if environment == "auto":
+        # Lets get the environment from the instance profile if we're on a bastion VM
+        with ctx.web as web:
+            try:
+                ret = web.put(
+                    "http://169.254.169.254/latest/api/token",
+                    headers={"X-aws-ec2-metadata-token-ttl-seconds": "10"},
+                    timeout=1,
+                )
+                token = ret.text.strip()
+                ret = web.get(
+                    "http://169.254.169.254/latest/meta-data/tags/instance/spb:environment",
+                    headers={"X-aws-ec2-metadata-token": token},
+                )
+                spb_environment = ret.text.strip()
+                if spb_environment:
+                    ctx.info(f"Discovered VM environment: {spb_environment}")
+                    environment = spb_environment
+            except ConnectTimeout:
+                # We're apparently not in bastion VM
+                environment = None
+
     attempts = 0
     while True:
         attempts += 1
         vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
         created = vm.create(
-            key_name=key_name, instance_type=instance_type, no_delete=no_delete
+            key_name=key_name,
+            instance_type=instance_type,
+            no_delete=no_delete,
+            environment=environment,
         )
         if created is True:
             break
@@ -257,6 +293,8 @@ def test(
         "SKIP_INITIAL_ONEDIR_FAILURES": "1",
         "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
     }
+    if "LANG" in os.environ:
+        env["LANG"] = os.environ["LANG"]
     if rerun_failures:
         env["RERUN_FAILURES"] = "1"
     if print_tests_selection:
@@ -555,15 +593,21 @@ class VM:
                 {"Name": "tag:instance-client-id", "Values": [REPO_CHECKOUT_ID]},
             ]
             log.info(f"Checking existing instance of {self.name}({self.config.ami})...")
-            instances = list(
-                self.ec2.instances.filter(
-                    Filters=filters,
+            try:
+                instances = list(
+                    self.ec2.instances.filter(
+                        Filters=filters,
+                    )
                 )
-            )
-            for _instance in instances:
-                if _instance.state["Name"] == "running":
-                    instance = _instance
-                    break
+                for _instance in instances:
+                    if _instance.state["Name"] == "running":
+                        instance = _instance
+                        break
+            except ClientError as exc:
+                if "RequestExpired" not in str(exc):
+                    raise
+                self.ctx.error(str(exc))
+                self.ctx.exit(1)
         if instance:
             self.instance = instance
 
@@ -598,11 +642,20 @@ class VM:
         )
         self.ssh_config_file.write_text(ssh_config)
 
-    def create(self, key_name=None, instance_type=None, no_delete=False):
+    def create(
+        self,
+        key_name=None,
+        instance_type=None,
+        no_delete=False,
+        environment=None,
+    ):
         if self.is_running:
             log.info(f"{self!r} is already running...")
             return True
         self.get_ec2_resource.cache_clear()
+
+        if environment is None:
+            environment = "prod"
 
         create_timeout = self.config.create_timeout
         create_timeout_progress = 0
@@ -631,6 +684,10 @@ class VM:
                         "Values": ["salt-project"],
                     },
                     {
+                        "Name": "tag:spb:environment",
+                        "Values": [environment],
+                    },
+                    {
                         "Name": "tag:spb:image-id",
                         "Values": [self.config.ami],
                     },
@@ -641,7 +698,7 @@ class VM:
             )
             for details in response.get("LaunchTemplates"):
                 if launch_template_name is not None:
-                    log.info(
+                    log.warning(
                         "Multiple launch templates for the same AMI. This is not "
                         "supposed to happen. Picked the first one listed: %s",
                         response,
@@ -679,10 +736,12 @@ class VM:
                 for tag in subnet.tags:
                     if tag["Key"] != "Name":
                         continue
-                    if started_in_ci and "-private-" in tag["Value"]:
+                    private_value = f"-{environment}-vpc-private-"
+                    if started_in_ci and private_value in tag["Value"]:
                         subnets[subnet.id] = subnet.available_ip_address_count
                         break
-                    if started_in_ci is False and "-public-" in tag["Value"]:
+                    public_value = f"-{environment}-vpc-public-"
+                    if started_in_ci is False and public_value in tag["Value"]:
                         subnets[subnet.id] = subnet.available_ip_address_count
                         break
             if subnets:
@@ -991,6 +1050,8 @@ class VM:
             "artifacts/",
             "--include",
             "artifacts/salt",
+            "--include",
+            "pkg/artifacts/*",
             # But we also want to exclude all other entries under artifacts/
             "--exclude",
             "artifacts/*",
@@ -1003,12 +1064,22 @@ class VM:
         source = f"{tools.utils.REPO_ROOT}{os.path.sep}"
         # Remote repo path
         remote_path = self.upload_path.as_posix()
+        rsync_remote_path = remote_path
         if self.is_windows:
             for drive in ("c:", "C:"):
-                remote_path = remote_path.replace(drive, "/cygdrive/c")
-        destination = f"{self.name}:{remote_path}"
+                source = source.replace(drive, "/cygdrive/c")
+                rsync_remote_path = rsync_remote_path.replace(drive, "/cygdrive/c")
+            source = source.replace("\\", "/")
+        destination = f"{self.name}:{rsync_remote_path}"
         description = "Rsync local checkout to VM..."
         self.rsync(source, destination, description, rsync_flags)
+        if self.is_windows:
+            # rsync sets very strict file permissions and disables inheritance
+            # we only need to reset permissions so they inherit from the parent
+            cmd = ["icacls", remote_path, "/T", "/reset"]
+            ret = self.run(cmd, capture=True, check=False, utf8=False)
+            if ret.returncode != 0:
+                self.ctx.exit(ret.returncode, ret.stderr.strip())
 
     def write_and_upload_dot_env(self, env: dict[str, str]):
         if not env:
@@ -1039,12 +1110,14 @@ class VM:
         pseudo_terminal: bool = False,
         env: list[str] = None,
         log_command_level: int = logging.INFO,
+        utf8: bool = True,
     ):
         if not self.is_running:
             self.ctx.exit(1, message=f"{self!r} is not running")
         if env is None:
             env = []
-        env.append("PYTHONUTF8=1")
+        if utf8:
+            env.append("PYTHONUTF8=1")
         self.write_ssh_config()
         try:
             ssh_command = self.ssh_command_args(
@@ -1081,7 +1154,7 @@ class VM:
             "-f",
             f"{self.upload_path.joinpath('noxfile.py').as_posix()}",
             "-e",
-            f"'{nox_session}'",
+            f'"{nox_session}"',
         ]
         if nox_args:
             cmd += nox_args

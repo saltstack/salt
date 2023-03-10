@@ -196,7 +196,10 @@ def runner_types(ctx: Context, event_name: str):
 
     # This is a push or a scheduled event
     ctx.info(f"Running from a {event_name!r} event")
-    if gh_event["repository"]["fork"] is True:
+    if (
+        gh_event["repository"]["fork"] is True
+        and os.environ.get("FORK_HAS_SELF_HOSTED_RUNNERS", "0") == "1"
+    ):
         # This is running on a forked repository, don't run tests
         ctx.info("The push event is on a forked repository")
         runners["github-hosted"] = True
@@ -205,7 +208,7 @@ def runner_types(ctx: Context, event_name: str):
             wfh.write(f"runners={json.dumps(runners)}\n")
         ctx.exit(0)
 
-    # Not running on a fork, run everything
+    # Not running on a fork, or the fork has self hosted runners, run everything
     ctx.info(f"The {event_name!r} event is from the main repository")
     runners["github-hosted"] = runners["self-hosted"] = True
     ctx.info("Writing 'runners' to the github outputs file")
@@ -220,6 +223,12 @@ def runner_types(ctx: Context, event_name: str):
         "event_name": {
             "help": "The name of the GitHub event being processed.",
         },
+        "skip_tests": {
+            "help": "Skip running the Salt tests",
+        },
+        "skip_pkg_tests": {
+            "help": "Skip running the Salt Package tests",
+        },
         "changed_files": {
             "help": (
                 "Path to '.json' file containing the payload of changed files "
@@ -228,7 +237,13 @@ def runner_types(ctx: Context, event_name: str):
         },
     },
 )
-def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
+def define_jobs(
+    ctx: Context,
+    event_name: str,
+    changed_files: pathlib.Path,
+    skip_tests: bool = False,
+    skip_pkg_tests: bool = False,
+):
     """
     Set GH Actions 'jobs' output to know which jobs should run.
     """
@@ -251,12 +266,20 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
     jobs = {
         "lint": True,
         "test": True,
+        "test-pkg": True,
         "prepare-release": True,
+        "build-docs": True,
         "build-source-tarball": True,
         "build-deps-onedir": True,
         "build-salt-onedir": True,
         "build-pkgs": True,
     }
+
+    if skip_tests:
+        jobs["test"] = False
+    if skip_pkg_tests:
+        jobs["test-pkg"] = False
+
     if event_name != "pull_request":
         # In this case, all defined jobs should run
         ctx.info("Writing 'jobs' to the github outputs file")
@@ -294,25 +317,46 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
             wfh.write("De-selecting the 'lint' job.\n")
         jobs["lint"] = False
 
+    required_docs_changes: set[str] = {
+        changed_files_contents["salt"],
+        changed_files_contents["docs"],
+    }
+    if required_docs_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'build-docs' job.\n")
+        jobs["build-docs"] = False
+
     required_test_changes: set[str] = {
         changed_files_contents["testrun"],
+        changed_files_contents["workflows"],
         changed_files_contents["golden_images"],
     }
-    if required_test_changes == {"false"}:
+    if jobs["test"] and required_test_changes == {"false"}:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("De-selecting the 'test' jobs.\n")
+            wfh.write("De-selecting the 'test' job.\n")
         jobs["test"] = False
 
-    if not jobs["test"]:
+    required_pkg_test_changes: set[str] = {
+        changed_files_contents["pkg_tests"],
+    }
+    if jobs["test-pkg"] and required_pkg_test_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'test-pkg' job.\n")
+        jobs["test-pkg"] = False
+
+    if not jobs["test"] and not jobs["test-pkg"]:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             for job in (
-                "build-source-tarball",
                 "build-deps-onedir",
                 "build-salt-onedir",
                 "build-pkgs",
             ):
                 wfh.write(f"De-selecting the '{job}' job.\n")
                 jobs[job] = False
+            if not jobs["build-docs"]:
+                with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                    wfh.write("De-selecting the 'build-source-tarball' job.\n")
+                jobs["build-source-tarball"] = False
 
     with open(github_step_summary, "a", encoding="utf-8") as wfh:
         wfh.write("Selected Jobs:\n")
@@ -481,7 +525,11 @@ def matrix(ctx: Context, distro_slug: str):
     _matrix = []
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
-            if distro_slug not in ("centosstream-9", "ubuntu-22.04-arm64"):
+            if distro_slug not in (
+                "centosstream-9",
+                "ubuntu-22.04",
+                "ubuntu-22.04-arm64",
+            ):
                 # Only run TCP transport tests on these distributions
                 continue
         for chunk in ("unit", "functional", "integration", "scenarios"):
@@ -511,7 +559,11 @@ def transport_matrix(ctx: Context, distro_slug: str):
     _matrix = []
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
-            if distro_slug not in ("centosstream-9", "ubuntu-22.04-arm64"):
+            if distro_slug not in (
+                "centosstream-9",
+                "ubuntu-22.04",
+                "ubuntu-22.04-arm64",
+            ):
                 # Only run TCP transport tests on these distributions
                 continue
         _matrix.append({"transport": transport})
@@ -601,4 +653,51 @@ def rerun_workflow(ctx: Context):
         ctx.error("Failed to re-run workflow")
     else:
         ctx.info("Restarted workflow successfully")
+    ctx.exit(0)
+
+
+@ci.command(
+    name="pkg-matrix",
+    arguments={
+        "distro_slug": {
+            "help": "The distribution slug to generate the matrix for",
+        },
+        "pkg_type": {
+            "help": "The distribution slug to generate the matrix for",
+        },
+    },
+)
+def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
+    """
+    Generate the test matrix.
+    """
+    _matrix = []
+    sessions = [
+        "test-pkgs-onedir",
+    ]
+    if (
+        distro_slug
+        not in [
+            "debian-11-arm64",
+            "ubuntu-20.04-arm64",
+            "ubuntu-22.04-arm64",
+        ]
+        and "MSI" != pkg_type
+    ):
+        # These OS's never had arm64 packages built for them
+        # with the tiamate onedir packages.
+        # we will need to ensure when we release 3006.0
+        # we allow for 3006.0 jobs to run, because then
+        # we will have arm64 onedir packages to upgrade from
+        sessions.append("'test-upgrade-pkgs-onedir(classic=False)'")
+    if (
+        distro_slug not in ["centosstream-9", "ubuntu-22.04", "ubuntu-22.04-arm64"]
+        and "MSI" != pkg_type
+    ):
+        # Packages for these OSs where never built for classic previously
+        sessions.append("'test-upgrade-pkgs-onedir(classic=True)'")
+
+    for sess in sessions:
+        _matrix.append({"nox-session": sess})
+    print(json.dumps(_matrix))
     ctx.exit(0)

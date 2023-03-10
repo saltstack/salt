@@ -4,6 +4,7 @@ These commands are used to build the pacakge repository files.
 # pylint: disable=resource-leakage,broad-except
 from __future__ import annotations
 
+import fnmatch
 import hashlib
 import json
 import logging
@@ -11,6 +12,7 @@ import os
 import pathlib
 import shutil
 import sys
+import tempfile
 import textwrap
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
@@ -20,6 +22,7 @@ from ptscripts import Context, command_group
 
 import tools.pkg
 import tools.utils
+from tools.utils import Version
 
 try:
     import boto3
@@ -54,6 +57,32 @@ publish = command_group(
 )
 
 
+_deb_distro_info = {
+    "debian": {
+        "10": {
+            "label": "deb10ary",
+            "codename": "buster",
+            "suitename": "oldstable",
+        },
+        "11": {
+            "label": "deb11ary",
+            "codename": "bullseye",
+            "suitename": "stable",
+        },
+    },
+    "ubuntu": {
+        "20.04": {
+            "label": "salt_ubuntu2004",
+            "codename": "focal",
+        },
+        "22.04": {
+            "label": "salt_ubuntu2204",
+            "codename": "jammy",
+        },
+    },
+}
+
+
 @create.command(
     name="deb",
     arguments={
@@ -66,7 +95,7 @@ publish = command_group(
         },
         "distro": {
             "help": "The debian based distribution to build the repository for",
-            "choices": ("debian", "ubuntu"),
+            "choices": list(_deb_distro_info),
             "required": True,
         },
         "distro_version": {
@@ -122,32 +151,8 @@ def debian(
         assert incoming is not None
         assert repo_path is not None
         assert key_id is not None
-    distro_info = {
-        "debian": {
-            "10": {
-                "label": "deb10ary",
-                "codename": "buster",
-                "suitename": "oldstable",
-            },
-            "11": {
-                "label": "deb11ary",
-                "codename": "bullseye",
-                "suitename": "stable",
-            },
-        },
-        "ubuntu": {
-            "20.04": {
-                "label": "salt_ubuntu2004",
-                "codename": "focal",
-            },
-            "22.04": {
-                "label": "salt_ubuntu2204",
-                "codename": "jammy",
-            },
-        },
-    }
     display_name = f"{distro.capitalize()} {distro_version}"
-    if distro_version not in distro_info[distro]:
+    if distro_version not in _deb_distro_info[distro]:
         ctx.error(f"Support for {display_name} is missing.")
         ctx.exit(1)
 
@@ -159,7 +164,7 @@ def debian(
         ctx.info(f"The {distro_arch} arch is an alias for 'arm64'. Adjusting.")
         distro_arch = "arm64"
 
-    distro_details = distro_info[distro][distro_version]
+    distro_details = _deb_distro_info[distro][distro_version]
 
     ctx.info("Distribution Details:")
     ctx.info(distro_details)
@@ -210,7 +215,7 @@ def debian(
     ftp_archive_config_file.write_text(textwrap.dedent(ftp_archive_config))
 
     # Export the GPG key in use
-    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
 
     pool_path = create_repo_path / "pool"
     pool_path.mkdir(exist_ok=True)
@@ -317,6 +322,13 @@ def debian(
     ctx.info("Done")
 
 
+_rpm_distro_info = {
+    "amazon": ["2"],
+    "redhat": ["7", "8", "9"],
+    "fedora": ["36", "37", "38"],
+}
+
+
 @create.command(
     name="rpm",
     arguments={
@@ -329,7 +341,7 @@ def debian(
         },
         "distro": {
             "help": "The debian based distribution to build the repository for",
-            "choices": ("amazon", "redhat"),
+            "choices": list(_rpm_distro_info),
             "required": True,
         },
         "distro_version": {
@@ -385,12 +397,8 @@ def rpm(
         assert incoming is not None
         assert repo_path is not None
         assert key_id is not None
-    distro_info = {
-        "amazon": ["2"],
-        "redhat": ["7", "8", "9"],
-    }
     display_name = f"{distro.capitalize()} {distro_version}"
-    if distro_version not in distro_info[distro]:
+    if distro_version not in _rpm_distro_info[distro]:
         ctx.error(f"Support for {display_name} is missing.")
         ctx.exit(1)
 
@@ -410,7 +418,7 @@ def rpm(
     )
 
     # Export the GPG key in use
-    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
 
     for fpath in incoming.iterdir():
         if ".src" in fpath.suffixes:
@@ -456,40 +464,43 @@ def rpm(
     def _create_repo_file(create_repo_path, url_suffix):
         ctx.info(f"Creating '{repo_file_path.relative_to(repo_path)}' file ...")
         if nightly_build:
-            base_url = "salt-dev/py3/"
+            base_url = "salt-dev/"
             repo_file_contents = "[salt-nightly-repo]"
         elif rc_build:
-            base_url = "salt_rc/py3/"
+            base_url = "salt_rc/"
             repo_file_contents = "[salt-rc-repo]"
         else:
-            base_url = "py3/"
+            base_url = ""
             repo_file_contents = "[salt-repo]"
-        base_url += f"{distro}/{url_suffix}"
+        base_url += f"salt/py3/{distro}/{url_suffix}"
         if distro == "amazon":
             distro_name = "Amazon Linux"
-        else:
+        elif distro == "redhat":
             distro_name = "RHEL/CentOS"
+        else:
+            distro_name = distro.capitalize()
 
         if int(distro_version) < 8:
-            failovermethod = "\n        failovermethod=priority\n"
+            failovermethod = "\n            failovermethod=priority"
         else:
             failovermethod = ""
 
-        repo_file_contents += f"""
-        name=Salt repo for {distro_name} {distro_version} PY3
-        baseurl=https://repo.saltproject.io/{base_url}
-        skip_if_unavailable=True{failovermethod}
-        priority=10
-        enabled=1
-        enabled_metadata=1
-        gpgcheck=1
-        gpgkey={base_url}/{tools.utils.GPG_KEY_FILENAME}.pub
-        """
+        repo_file_contents += textwrap.dedent(
+            f"""
+            name=Salt repo for {distro_name} {distro_version} PY3
+            baseurl=https://repo.saltproject.io/{base_url}
+            skip_if_unavailable=True{failovermethod}
+            priority=10
+            enabled=1
+            enabled_metadata=1
+            gpgcheck=1
+            gpgkey={base_url}/{tools.utils.GPG_KEY_FILENAME}.pub
+            """
+        )
+        create_repo_path.write_text(repo_file_contents)
 
     if nightly_build:
         repo_file_path = create_repo_path.parent / "nightly.repo"
-    elif rc_build:
-        repo_file_path = create_repo_path.parent / "rc.repo"
     else:
         repo_file_path = create_repo_path.parent / f"{create_repo_path.name}.repo"
 
@@ -760,13 +771,8 @@ def src(
         assert key_id is not None
 
     ctx.info("Creating repository directory structure ...")
-    create_repo_path = _create_repo_path(
-        repo_path,
-        salt_version,
-        "src",
-        rc_build=rc_build,
-        nightly_build=nightly_build,
-    )
+    create_repo_path = repo_path / "salt" / "py3" / "src" / salt_version
+    create_repo_path.mkdir(exist_ok=True, parents=True)
     hashes_base_path = create_repo_path / f"salt-{salt_version}"
     for fpath in incoming.iterdir():
         if fpath.suffix not in (".gz",):
@@ -780,12 +786,14 @@ def src(
             hexdigest = _get_file_checksum(fpath, hash_name)
             with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
+            with open(f"{dpath}.{hash_name}", "a+") as wfh:
+                wfh.write(f"{hexdigest} {dpath.name}\n")
 
     for fpath in create_repo_path.iterdir():
         tools.utils.gpg_sign(ctx, key_id, fpath)
 
     # Export the GPG key in use
-    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
     ctx.info("Done")
 
 
@@ -820,20 +828,595 @@ def staging(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
     _publish_repo(ctx, repo_path=repo_path, rc_build=rc_build, stage=True)
 
 
+@repo.command(name="backup-previous-releases")
+def backup_previous_releases(ctx: Context):
+    """
+    Backup previous releases.
+    """
+    files_in_backup: dict[str, datetime] = {}
+    files_to_backup: list[tuple[str, datetime]] = []
+
+    ctx.info("Grabbing remote listing of files in backup ...")
+    for entry in _get_repo_detailed_file_list(
+        bucket_name=tools.utils.BACKUP_BUCKET_NAME,
+    ):
+        files_in_backup[entry["Key"]] = entry["LastModified"]
+
+    ctx.info("Grabbing remote listing of files to backup ...")
+    for entry in _get_repo_detailed_file_list(
+        bucket_name=tools.utils.RELEASE_BUCKET_NAME,
+    ):
+        files_to_backup.append((entry["Key"], entry["LastModified"]))
+
+    s3 = boto3.client("s3")
+    with tools.utils.create_progress_bar() as progress:
+        task = progress.add_task(
+            "Back up previous releases", total=len(files_to_backup)
+        )
+        for fpath, last_modified in files_to_backup:
+            try:
+                last_modified_backup = files_in_backup.get(fpath)
+                if last_modified_backup and last_modified_backup >= last_modified:
+                    ctx.info(f" * Skipping unmodified {fpath}")
+                    continue
+
+                ctx.info(f" * Backup {fpath}")
+                s3.copy_object(
+                    Bucket=tools.utils.BACKUP_BUCKET_NAME,
+                    Key=fpath,
+                    CopySource={
+                        "Bucket": tools.utils.RELEASE_BUCKET_NAME,
+                        "Key": fpath,
+                    },
+                    MetadataDirective="COPY",
+                    TaggingDirective="COPY",
+                    ServerSideEncryption="aws:kms",
+                )
+            except ClientError as exc:
+                if "PreconditionFailed" not in str(exc):
+                    log.exception(f"Failed to copy {fpath}")
+            finally:
+                progress.update(task, advance=1)
+    ctx.info("Done")
+
+
 @publish.command(
     arguments={
-        "repo_path": {
-            "help": "Local path for the repository that shall be published.",
+        "salt_version": {
+            "help": "The salt version to release.",
         },
         "rc_build": {
             "help": "Release Candidate repository target",
         },
+        "key_id": {
+            "help": "The GnuPG key ID used to sign.",
+            "required": True,
+        },
     }
 )
-def release(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
+def release(
+    ctx: Context, salt_version: str, key_id: str = None, rc_build: bool = False
+):
     """
     Publish to the release bucket.
     """
+    if TYPE_CHECKING:
+        assert key_id is not None
+
+    if rc_build:
+        bucket_folder = "salt_rc/salt/py3"
+    else:
+        bucket_folder = "salt/py3"
+
+    files_to_copy: list[str]
+    files_to_delete: list[str] = []
+    files_to_duplicate: list[tuple[str, str]] = []
+
+    ctx.info("Grabbing remote file listing of files to copy...")
+
+    glob_match = f"{bucket_folder}/**/minor/{salt_version}/**"
+    files_to_copy = _get_repo_file_list(
+        bucket_name=tools.utils.STAGING_BUCKET_NAME,
+        bucket_folder=bucket_folder,
+        glob_match=glob_match,
+    )
+    glob_match = f"{bucket_folder}/**/src/{salt_version}/**"
+    files_to_copy.extend(
+        _get_repo_file_list(
+            bucket_name=tools.utils.STAGING_BUCKET_NAME,
+            bucket_folder=bucket_folder,
+            glob_match=glob_match,
+        )
+    )
+
+    if not files_to_copy:
+        ctx.error(f"Could not find any files related to the '{salt_version}' release.")
+        ctx.exit(1)
+
+    onedir_listing: dict[str, list[str]] = {}
+    s3 = boto3.client("s3")
+    with tools.utils.create_progress_bar() as progress:
+        task = progress.add_task(
+            "Copying files between buckets", total=len(files_to_copy)
+        )
+        for fpath in files_to_copy:
+            if fpath.startswith(f"{bucket_folder}/windows/"):
+                if "windows" not in onedir_listing:
+                    onedir_listing["windows"] = []
+                onedir_listing["windows"].append(fpath)
+            elif fpath.startswith(f"{bucket_folder}/macos/"):
+                if "macos" not in onedir_listing:
+                    onedir_listing["macos"] = []
+                onedir_listing["macos"].append(fpath)
+            elif fpath.startswith(f"{bucket_folder}/onedir/"):
+                if "onedir" not in onedir_listing:
+                    onedir_listing["onedir"] = []
+                onedir_listing["onedir"].append(fpath)
+            else:
+                if "package" not in onedir_listing:
+                    onedir_listing["package"] = []
+                onedir_listing["package"].append(fpath)
+            ctx.info(f" * Copying {fpath}")
+            try:
+                s3.copy_object(
+                    Bucket=tools.utils.RELEASE_BUCKET_NAME,
+                    Key=fpath,
+                    CopySource={
+                        "Bucket": tools.utils.STAGING_BUCKET_NAME,
+                        "Key": fpath,
+                    },
+                    MetadataDirective="COPY",
+                    TaggingDirective="COPY",
+                    ServerSideEncryption="aws:kms",
+                )
+            except ClientError:
+                log.exception(f"Failed to copy {fpath}")
+            finally:
+                progress.update(task, advance=1)
+
+    # Now let's get the onedir based repositories where we need to update several repo.json
+    update_latest = False
+    update_minor = False
+    major_version = packaging.version.parse(salt_version).major
+    with tempfile.TemporaryDirectory(prefix=f"{salt_version}_release_") as tsd:
+        repo_path = pathlib.Path(tsd)
+        for distro in ("windows", "macos", "onedir"):
+
+            create_repo_path = _create_repo_path(
+                repo_path,
+                salt_version,
+                distro,
+                rc_build=rc_build,
+            )
+            repo_json_path = create_repo_path.parent.parent / "repo.json"
+
+            release_repo_json = _get_repo_json_file_contents(
+                ctx,
+                bucket_name=tools.utils.RELEASE_BUCKET_NAME,
+                repo_path=repo_path,
+                repo_json_path=repo_json_path,
+            )
+            minor_repo_json_path = create_repo_path.parent / "repo.json"
+
+            staging_minor_repo_json = _get_repo_json_file_contents(
+                ctx,
+                bucket_name=tools.utils.STAGING_BUCKET_NAME,
+                repo_path=repo_path,
+                repo_json_path=minor_repo_json_path,
+            )
+            release_minor_repo_json = _get_repo_json_file_contents(
+                ctx,
+                bucket_name=tools.utils.RELEASE_BUCKET_NAME,
+                repo_path=repo_path,
+                repo_json_path=minor_repo_json_path,
+            )
+
+            release_json = staging_minor_repo_json[salt_version]
+
+            major_version = Version(salt_version).major
+            versions = _parse_versions(*list(release_minor_repo_json))
+            ctx.info(
+                f"Collected versions from {minor_repo_json_path.relative_to(repo_path)}: "
+                f"{', '.join(str(vs) for vs in versions)}"
+            )
+            minor_versions = [v for v in versions if v.major == major_version]
+            ctx.info(
+                f"Collected versions(Matching major: {major_version}) from {minor_repo_json_path.relative_to(repo_path)}: "
+                f"{', '.join(str(vs) for vs in minor_versions)}"
+            )
+            if not versions:
+                latest_version = Version(salt_version)
+            else:
+                latest_version = versions[0]
+            if not minor_versions:
+                latest_minor_version = Version(salt_version)
+            else:
+                latest_minor_version = minor_versions[0]
+
+            ctx.info(f"Release Version: {salt_version}")
+            ctx.info(f"Latest Repo Version: {latest_version}")
+            ctx.info(f"Latest Release Minor Version: {latest_minor_version}")
+
+            # Add the minor version
+            release_minor_repo_json[salt_version] = release_json
+
+            if latest_version <= salt_version:
+                update_latest = True
+                release_repo_json["latest"] = release_json
+                glob_match = f"{bucket_folder}/{distro}/**/latest/**"
+                files_to_delete.extend(
+                    _get_repo_file_list(
+                        bucket_name=tools.utils.RELEASE_BUCKET_NAME,
+                        bucket_folder=bucket_folder,
+                        glob_match=glob_match,
+                    )
+                )
+                for fpath in onedir_listing[distro]:
+                    files_to_duplicate.append(
+                        (fpath, fpath.replace(f"minor/{salt_version}", "latest"))
+                    )
+
+            if latest_minor_version <= salt_version:
+                update_minor = True
+                release_minor_repo_json["latest"] = release_json
+                glob_match = f"{bucket_folder}/{distro}/**/{major_version}/**"
+                files_to_delete.extend(
+                    _get_repo_file_list(
+                        bucket_name=tools.utils.RELEASE_BUCKET_NAME,
+                        bucket_folder=bucket_folder,
+                        glob_match=glob_match,
+                    )
+                )
+                for fpath in onedir_listing[distro]:
+                    files_to_duplicate.append(
+                        (
+                            fpath,
+                            fpath.replace(f"minor/{salt_version}", str(major_version)),
+                        )
+                    )
+
+            ctx.info(f"Writing {minor_repo_json_path} ...")
+            minor_repo_json_path.write_text(
+                json.dumps(release_minor_repo_json, sort_keys=True)
+            )
+            ctx.info(f"Writing {repo_json_path} ...")
+            repo_json_path.write_text(json.dumps(release_repo_json, sort_keys=True))
+
+        # Now lets handle latest and minor updates for non one dir based repositories
+        onedir_based_paths = (
+            f"{bucket_folder}/windows/",
+            f"{bucket_folder}/macos/",
+            f"{bucket_folder}/onedir/",
+        )
+        if update_latest:
+            glob_match = f"{bucket_folder}/**/latest/**"
+            for fpath in _get_repo_file_list(
+                bucket_name=tools.utils.RELEASE_BUCKET_NAME,
+                bucket_folder=bucket_folder,
+                glob_match=glob_match,
+            ):
+                if fpath.startswith(onedir_based_paths):
+                    continue
+                files_to_delete.append(fpath)
+
+            for fpath in onedir_listing["package"]:
+                files_to_duplicate.append(
+                    (fpath, fpath.replace(f"minor/{salt_version}", "latest"))
+                )
+
+        if update_minor:
+            glob_match = f"{bucket_folder}/**/{major_version}/**"
+            for fpath in _get_repo_file_list(
+                bucket_name=tools.utils.RELEASE_BUCKET_NAME,
+                bucket_folder=bucket_folder,
+                glob_match=glob_match,
+            ):
+                if fpath.startswith(onedir_based_paths):
+                    continue
+                files_to_delete.append(fpath)
+
+            for fpath in onedir_listing["package"]:
+                files_to_duplicate.append(
+                    (fpath, fpath.replace(f"minor/{salt_version}", str(major_version)))
+                )
+
+        if files_to_delete:
+            with tools.utils.create_progress_bar() as progress:
+                task = progress.add_task(
+                    "Deleting directories to override.", total=len(files_to_delete)
+                )
+                try:
+                    s3.delete_objects(
+                        Bucket=tools.utils.RELEASE_BUCKET_NAME,
+                        Delete={
+                            "Objects": [
+                                {"Key": path for path in files_to_delete},
+                            ]
+                        },
+                    )
+                except ClientError:
+                    log.exception("Failed to delete remote files")
+                finally:
+                    progress.update(task, advance=1)
+
+        with tools.utils.create_progress_bar() as progress:
+            task = progress.add_task(
+                "Copying files between buckets", total=len(files_to_duplicate)
+            )
+            for src, dst in files_to_duplicate:
+                ctx.info(f" * Copying {src}\n        -> {dst}")
+                try:
+                    s3.copy_object(
+                        Bucket=tools.utils.RELEASE_BUCKET_NAME,
+                        Key=dst,
+                        CopySource={
+                            "Bucket": tools.utils.STAGING_BUCKET_NAME,
+                            "Key": src,
+                        },
+                        MetadataDirective="COPY",
+                        TaggingDirective="COPY",
+                        ServerSideEncryption="aws:kms",
+                    )
+                except ClientError:
+                    log.exception(f"Failed to copy {fpath}")
+                finally:
+                    progress.update(task, advance=1)
+
+        for dirpath, dirnames, filenames in os.walk(repo_path, followlinks=True):
+            for path in filenames:
+                upload_path = pathlib.Path(dirpath, path)
+                relpath = upload_path.relative_to(repo_path)
+                size = upload_path.stat().st_size
+                ctx.info(f"  {relpath}")
+                with tools.utils.create_progress_bar(file_progress=True) as progress:
+                    task = progress.add_task(description="Uploading...", total=size)
+                    s3.upload_file(
+                        str(upload_path),
+                        tools.utils.RELEASE_BUCKET_NAME,
+                        str(relpath),
+                        Callback=tools.utils.UpdateProgress(progress, task),
+                    )
+
+
+@publish.command(
+    arguments={
+        "salt_version": {
+            "help": "The salt version to release.",
+        },
+        "rc_build": {
+            "help": "Release Candidate repository target",
+        },
+        "key_id": {
+            "help": "The GnuPG key ID used to sign.",
+            "required": True,
+        },
+        "repository": {
+            "help": (
+                "The full repository name, ie, 'saltstack/salt' on GitHub "
+                "to run the checks against."
+            )
+        },
+    }
+)
+def github(
+    ctx: Context,
+    salt_version: str,
+    key_id: str = None,
+    rc_build: bool = False,
+    repository: str = "saltstack/salt",
+):
+    """
+    Publish the release on GitHub releases.
+    """
+    if TYPE_CHECKING:
+        assert key_id is not None
+
+    s3 = boto3.client("s3")
+
+    # Let's download the release artifacts stored in staging
+    artifacts_path = pathlib.Path.cwd() / "release-artifacts"
+    artifacts_path.mkdir(exist_ok=True)
+    release_artifacts_listing: dict[pathlib.Path, int] = {}
+    continuation_token = None
+    while True:
+        kwargs: dict[str, str] = {}
+        if continuation_token:
+            kwargs["ContinuationToken"] = continuation_token
+        ret = s3.list_objects_v2(
+            Bucket=tools.utils.STAGING_BUCKET_NAME,
+            Prefix=f"release-artifacts/{salt_version}",
+            FetchOwner=False,
+            **kwargs,
+        )
+        contents = ret.pop("Contents", None)
+        if contents is None:
+            break
+        for entry in contents:
+            entry_path = pathlib.Path(entry["Key"])
+            release_artifacts_listing[entry_path] = entry["Size"]
+        if not ret["IsTruncated"]:
+            break
+        continuation_token = ret["NextContinuationToken"]
+
+    for entry_path, size in release_artifacts_listing.items():
+        ctx.info(f" * {entry_path.name}")
+        local_path = artifacts_path / entry_path.name
+        with local_path.open("wb") as wfh:
+            with tools.utils.create_progress_bar(file_progress=True) as progress:
+                task = progress.add_task(description="Downloading...", total=size)
+            s3.download_fileobj(
+                Bucket=tools.utils.STAGING_BUCKET_NAME,
+                Key=str(entry_path),
+                Fileobj=wfh,
+                Callback=tools.utils.UpdateProgress(progress, task),
+            )
+
+    for artifact in artifacts_path.iterdir():
+        if artifact.suffix in (".patch", ".asc", ".gpg", ".pub"):
+            continue
+        tools.utils.gpg_sign(ctx, key_id, artifact)
+
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, artifacts_path)
+
+    release_message = f"""\
+    # Welcome to Salt v{salt_version}
+
+    | :exclamation: ATTENTION                                                                                                  |
+    |:-------------------------------------------------------------------------------------------------------------------------|
+    | The archives generated by GitHub(`Source code(zip)`, `Source code(tar.gz)`) will not report Salt's version properly.     |
+    | Please use the tarball generated by The Salt Project Team(`salt-{salt_version}.tar.gz`).
+    """
+    release_message_path = artifacts_path / "gh-release-body.md"
+    release_message_path.write_text(textwrap.dedent(release_message).strip())
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set. Stop processing.")
+        ctx.exit(0)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"release-messsage-file={release_message_path.resolve()}\n")
+
+    releases = _get_salt_releases(ctx, repository)
+    if Version(salt_version) >= releases[-1]:
+        make_latest = True
+    else:
+        make_latest = False
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"make-latest={json.dumps(make_latest)}\n")
+
+    artifacts_to_upload = []
+    for artifact in artifacts_path.iterdir():
+        if artifact.suffix == ".patch":
+            continue
+        if artifact.name == release_message_path.name:
+            continue
+        artifacts_to_upload.append(str(artifact.resolve()))
+
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"release-artifacts={','.join(artifacts_to_upload)}\n")
+    ctx.exit(0)
+
+
+@repo.command(
+    name="confirm-unreleased",
+    arguments={
+        "salt_version": {
+            "help": "The salt version to check",
+        },
+        "repository": {
+            "help": (
+                "The full repository name, ie, 'saltstack/salt' on GitHub "
+                "to run the checks against."
+            )
+        },
+    },
+)
+def confirm_unreleased(
+    ctx: Context, salt_version: str, repository: str = "saltstack/salt"
+):
+    """
+    Confirm that the passed version is not yet tagged and/or released.
+    """
+    releases = _get_salt_releases(ctx, repository)
+    if Version(salt_version) in releases:
+        ctx.error(f"There's already a '{salt_version}' tag or github release.")
+        ctx.exit(1)
+    ctx.info(f"Could not find a release for Salt Version '{salt_version}'")
+    ctx.exit(0)
+
+
+def _get_salt_releases(ctx: Context, repository: str) -> list[Version]:
+    """
+    Return a list of salt versions
+    """
+    versions = set()
+    with ctx.web as web:
+        web.headers.update({"Accept": "application/vnd.github+json"})
+        ret = web.get(f"https://api.github.com/repos/{repository}/tags")
+        if ret.status_code != 200:
+            ctx.error(
+                f"Failed to get the tags for repository {repository!r}: {ret.reason}"
+            )
+            ctx.exit(1)
+        for tag in ret.json():
+            name = tag["name"]
+            if name.startswith("v"):
+                name = name[1:]
+            if "-" in name:
+                # We're not going to parse dash tags
+                continue
+            if "docs" in name:
+                # We're not going to consider doc tags
+                continue
+            versions.add(Version(name))
+
+        # Now let's go through the github releases
+        ret = web.get(f"https://api.github.com/repos/{repository}/releases")
+        if ret.status_code != 200:
+            ctx.error(
+                f"Failed to get the releases for repository {repository!r}: {ret.reason}"
+            )
+            ctx.exit(1)
+        for release in ret.json():
+            name = release["name"]
+            if name.startswith("v"):
+                name = name[1:]
+            if not name:
+                print(123, release)
+            if name and "-" not in name and "docs" not in name:
+                # We're not going to parse dash or docs releases
+                versions.add(Version(name))
+            name = release["tag_name"]
+            if "-" not in name and "docs" not in name:
+                # We're not going to parse dash or docs releases
+                versions.add(Version(name))
+    return sorted(versions)
+
+
+def _get_repo_detailed_file_list(
+    bucket_name: str,
+    bucket_folder: str = "",
+    glob_match: str = "**",
+) -> list[dict[str, Any]]:
+    s3 = boto3.client("s3")
+    listing: list[dict[str, Any]] = []
+    continuation_token = None
+    while True:
+        kwargs: dict[str, str] = {}
+        if continuation_token:
+            kwargs["ContinuationToken"] = continuation_token
+        ret = s3.list_objects_v2(
+            Bucket=bucket_name,
+            Prefix=bucket_folder,
+            FetchOwner=False,
+            **kwargs,
+        )
+        contents = ret.pop("Contents", None)
+        if contents is None:
+            break
+        for entry in contents:
+            if fnmatch.fnmatch(entry["Key"], glob_match):
+                listing.append(entry)
+        if not ret["IsTruncated"]:
+            break
+        continuation_token = ret["NextContinuationToken"]
+    return listing
+
+
+def _get_repo_file_list(
+    bucket_name: str, bucket_folder: str, glob_match: str
+) -> list[str]:
+    return [
+        entry["Key"]
+        for entry in _get_repo_detailed_file_list(
+            bucket_name, bucket_folder, glob_match=glob_match
+        )
+    ]
 
 
 def _get_remote_versions(bucket_name: str, remote_path: str):
@@ -942,6 +1525,8 @@ def _create_onedir_based_repo(
             release_json[dpath.name][hash_name.upper()] = hexdigest
             with open(f"{hashes_base_path}_{hash_name.upper()}", "a+") as wfh:
                 wfh.write(f"{hexdigest} {dpath.name}\n")
+            with open(f"{dpath}.{hash_name}", "a+") as wfh:
+                wfh.write(f"{hexdigest} {dpath.name}\n")
 
     for fpath in create_repo_path.iterdir():
         if fpath.suffix in pkg_suffixes:
@@ -949,7 +1534,7 @@ def _create_onedir_based_repo(
         tools.utils.gpg_sign(ctx, key_id, fpath)
 
     # Export the GPG key in use
-    tools.utils.export_gpg_key(ctx, key_id, repo_path, create_repo_path)
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
 
     repo_json = _get_repo_json_file_contents(
         ctx, bucket_name=bucket_name, repo_path=repo_path, repo_json_path=repo_json_path
@@ -1043,7 +1628,9 @@ def _get_repo_json_file_contents(
         ret = s3.head_object(
             Bucket=bucket_name, Key=str(repo_json_path.relative_to(repo_path))
         )
-        ctx.info(f"Downloading existing '{repo_json_path.relative_to(repo_path)}' file")
+        ctx.info(
+            f"Downloading existing '{repo_json_path.relative_to(repo_path)}' file from bucket {bucket_name}"
+        )
         size = ret["ContentLength"]
         with repo_json_path.open("wb") as wfh:
             with tools.utils.create_progress_bar(file_progress=True) as progress:
@@ -1183,7 +1770,7 @@ def _create_repo_path(
     create_repo_path = repo_path
     if nightly_build:
         create_repo_path = create_repo_path / "salt-dev"
-    elif nightly_build:
+    elif rc_build:
         create_repo_path = create_repo_path / "salt_rc"
     create_repo_path = create_repo_path / "salt" / "py3" / distro
     if distro_version:
@@ -1191,9 +1778,7 @@ def _create_repo_path(
     if distro_arch:
         create_repo_path = create_repo_path / distro_arch
     if nightly_build is False:
-        if distro != "src":
-            create_repo_path = create_repo_path / "minor"
-        create_repo_path = create_repo_path / salt_version
+        create_repo_path = create_repo_path / "minor" / salt_version
     else:
         create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
     create_repo_path.mkdir(exist_ok=True, parents=True)
@@ -1209,35 +1794,3 @@ def _parse_versions(*versions: str) -> list[Version]:
     if _versions:
         _versions.sort(reverse=True)
     return _versions
-
-
-class Version(packaging.version.Version):
-    def __lt__(self, other):
-        if not isinstance(other, self.__class__):
-            other = self.__class__(other)
-        return super().__lt__(other)
-
-    def __le__(self, other):
-        if not isinstance(other, self.__class__):
-            other = self.__class__(other)
-        return super().__le__(other)
-
-    def __eq__(self, other):
-        if not isinstance(other, self.__class__):
-            other = self.__class__(other)
-        return super().__eq__(other)
-
-    def __ge__(self, other):
-        if not isinstance(other, self.__class__):
-            other = self.__class__(other)
-        return super().__ge__(other)
-
-    def __gt__(self, other):
-        if not isinstance(other, self.__class__):
-            other = self.__class__(other)
-        return super().__gt__(other)
-
-    def __ne__(self, other):
-        if not isinstance(other, self.__class__):
-            other = self.__class__(other)
-        return super().__ne__(other)

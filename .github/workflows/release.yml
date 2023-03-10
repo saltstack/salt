@@ -1,0 +1,261 @@
+# Do not edit these workflows directly as the changes made will be overwritten.
+# Instead, edit the template '.github/workflows/templates/release.yml.jinja'
+---
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: >
+          The Salt version to get from staging to publish the release.
+          (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+
+env:
+  COLUMNS: 190
+  CACHE_SEED: SEED-2  # Bump the number to invalidate all caches
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
+  REPO_BASE_URL: "https://${{ secrets.SALT_REPO_DOMAIN }}"
+
+permissions:
+  contents: write  # To be able to publish the release
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+
+  check-requirements:
+    name: Check Requirements
+    runs-on: ubuntu-latest
+    environment: release-check
+    steps:
+      - name: Check For Admin Permission
+        uses: actions-cool/check-user-permission@v2
+        with:
+          require: admin
+          username: ${{ github.triggering_actor }}
+
+      - name: Check Branch
+        run: |
+          echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
+          if [ "${{ github.ref_name }}" != "master" ]; then
+              echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
+              exit 1
+          else
+              echo "Allowed"
+          fi
+
+  prepare-workflow:
+    name: Prepare Workflow Run
+    runs-on: ubuntu-latest
+    needs:
+      - check-requirements
+    outputs:
+      salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full clone to also get the tags to get the right salt version
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Pretty Print The GH Actions Event
+        run:
+          tools ci print-gh-event
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+          validate-version: true
+
+      - name: Check Existing Releases
+        run: |
+          tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+
+  backup:
+    name: Backup
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-release
+    needs:
+      - prepare-workflow
+    environment: release
+
+    steps:
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Backup Previous Releases
+        run: |
+          tools pkg repo backup-previous-releases
+
+  publish-repositories:
+    name: Publish Repositories
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-release
+    needs:
+      - prepare-workflow
+      - backup
+    environment: release
+
+    steps:
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Publish Release Repository
+        run: |
+          tools pkg repo publish release \
+            ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} \
+            --key-id=64CBBC8173D76B3F ${{ needs.prepare-workflow.outputs.salt-version }}
+
+  release:
+    name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-release
+    needs:
+      - prepare-workflow
+      - backup
+      - publish-repositories
+    environment: release
+    steps:
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.GHA_SSH_KEY }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup GnuPG
+        run: |
+          sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
+          GNUPGHOME="$(mktemp -d -p /run/gpg)"
+          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
+          cat <<EOF > "${GNUPGHOME}/gpg.conf"
+          batch
+          no-tty
+          pinentry-mode loopback
+          EOF
+
+      - name: Get Secrets
+        id: get-secrets
+        env:
+          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+        run: |
+          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
+          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256-2023 \
+            --query SecretString --output text | jq .default_key -r | base64 -d \
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -d - \
+            | gpg --import -
+          sync
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256-2023 \
+            --query SecretString --output text| jq .default_passphrase -r | base64 -d \
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o "${GNUPGHOME}/passphrase" -d -
+          sync
+          rm "$SECRETS_KEY_FILE"
+          echo "passphrase-file ${GNUPGHOME}/passphrase" >> "${GNUPGHOME}/gpg.conf"
+
+      - name: Prepare Release
+        id: prepare-release
+        run: |
+          tools pkg repo publish github --repository ${{ github.repository }} --key-id=64CBBC8173D76B3F ${{ needs.prepare-workflow.outputs.salt-version }}
+
+      - name: Configure Git
+        shell: bash
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+          git config --global user.name "Salt Project Packaging"
+          git config --global user.email saltproject-packaging@vmware.com
+          git config --global user.signingkey 64CBBC8173D76B3F
+          git config --global commit.gpgsign true
+
+      - name: Apply The Release Patch
+        run: |
+          git am --committer-date-is-author-date release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          rm release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+
+      - name: Tag The v${{ needs.prepare-workflow.outputs.salt-version }} Release
+        run: |
+          git tag -m "Release v${{ needs.prepare-workflow.outputs.salt-version }}" -as v${{ needs.prepare-workflow.outputs.salt-version }}
+
+      - name: Push Changes
+        uses: ad-m/github-push-action@b87afee92c6e70ea888be6203a3e9426fda49839
+        with:
+          ssh: true
+          tags: true
+          atomic: true
+
+      - name: Create Github Release
+        uses: ncipollo/release-action@v1.12.0
+        with:
+          artifactErrorsFailBuild: true
+          artifacts: ${{ steps.prepare-release.outputs.release-artifacts }}
+          bodyFile: ${{ steps.prepare-release.outputs.release-messsage-file }}
+          draft: false
+          generateReleaseNotes: false
+          makeLatest: fromJSON(${{ steps.prepare-release.outputs.make-latest }})
+          name: v${{ needs.prepare-workflow.outputs.salt-version }}
+          prerelease: ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') }}
+          removeArtifacts: true
+          replacesArtifacts: true
+          tag: v${{ needs.prepare-workflow.outputs.salt-version }}
+
+      - name: Publish to PyPi
+        env:
+          TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
+        run: |
+          tools pkg pypi-upload release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+
+  set-pipeline-exit-status:
+    # This step is just so we can make github require this step, to pass checks
+    # on a pull request instead of requiring all
+    name: Set the ${{ github.workflow }} Pipeline Exit Status
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      - check-requirements
+      - prepare-workflow
+      - publish-repositories
+      - release
+    steps:
+      - name: Get workflow information
+        id: get-workflow-info
+        uses: technote-space/workflow-conclusion-action@v3
+
+      - name: Set Pipeline Exit Status
+        shell: bash
+        run: |
+          if [ "${{ steps.get-workflow-info.outputs.conclusion }}" != "success" ]; then
+            exit 1
+          else
+            exit 0
+          fi
+
+      - name: Done
+        if: always()
+        run:
+          echo "All worflows finished"

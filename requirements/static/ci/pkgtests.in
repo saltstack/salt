@@ -1,0 +1,2 @@
+cherrypy
+pytest-salt-factories==1.0.0rc17

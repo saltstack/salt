@@ -13,9 +13,12 @@ import os
 import pathlib
 import shutil
 import sqlite3
+import subprocess
 import sys
 import tarfile
 import tempfile
+
+import nox.command
 
 # fmt: off
 if __name__ == "__main__":
@@ -1757,3 +1760,83 @@ def build(session):
         ]
         session.run("sha256sum", *packages, external=True)
     session.run("python", "-m", "twine", "check", "dist/*")
+
+
+def _pkg_test(session, cmd_args, test_type, onedir=False):
+    pydir = _get_pydir(session)
+    junit_report_filename = f"test-results-{test_type}"
+    runtests_log_filename = f"runtests-{test_type}"
+    # Install requirements
+    if onedir and IS_LINUX:
+        session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
+    if _upgrade_pip_setuptools_and_wheel(session, onedir=onedir):
+        if IS_WINDOWS:
+            file_name = "pkgtests-windows.txt"
+        else:
+            file_name = "pkgtests.txt"
+
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", pydir, file_name
+        )
+
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    env = {}
+    if onedir:
+        env["ONEDIR_TESTRUN"] = "1"
+
+    pytest_args = (
+        cmd_args[:]
+        + [
+            f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
+            f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+        ]
+        + session.posargs
+    )
+    _pytest(session, False, pytest_args, env=env)
+
+
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="test-pkgs-onedir",
+    venv_params=["--system-site-packages"],
+)
+def test_pkgs_onedir(session):
+    if not ONEDIR_ARTIFACT_PATH.exists():
+        session.error(
+            "The salt onedir artifact, expected to be in '{}', was not found".format(
+                ONEDIR_ARTIFACT_PATH.relative_to(REPO_ROOT)
+            )
+        )
+    _pkg_test(session, ["pkg/tests/"], "pkg", onedir=True)
+
+
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="test-upgrade-pkgs-onedir",
+    venv_params=["--system-site-packages"],
+)
+@nox.parametrize("classic", [False, True])
+def test_upgrade_pkgs_onedir(session, classic):
+    """
+    pytest pkg upgrade tests session
+    """
+    test_type = "pkg_upgrade"
+    cmd_args = [
+        "pkg/tests/upgrade/test_salt_upgrade.py::test_salt_upgrade",
+        "--upgrade",
+        "--no-uninstall",
+    ]
+    if classic:
+        cmd_args = cmd_args + ["--classic"]
+        # Workaround for installing and running classic packages from 3005.1
+        # They can only run with importlib-metadata<5.0.0.
+        subprocess.run(["pip3", "install", "importlib-metadata==4.13.0"], check=False)
+    try:
+        _pkg_test(session, cmd_args, test_type, onedir=True)
+    except nox.command.CommandFailed:
+        sys.exit(1)
+
+    cmd_args = ["pkg/tests/", "--no-install"] + session.posargs
+    _pkg_test(session, cmd_args, test_type, onedir=True)
