@@ -350,9 +350,13 @@ def salt_onedir(
         pip_bin = onedir_env / "bin" / "pip3"
         ctx.run(str(pip_bin), "install", str(salt_archive))
         if platform == "darwin":
-            shutil.rmtree(onedir_env / "opt")
-            shutil.rmtree(onedir_env / "etc")
-            shutil.rmtree(onedir_env / "Library")
+
+            def errfn(fn, path, err):
+                ctx.info(f"Removing {path} failed: {err}")
+
+            shutil.rmtree(onedir_env / "opt", onerror=errfn)
+            shutil.rmtree(onedir_env / "etc", onerror=errfn)
+            shutil.rmtree(onedir_env / "Library", onerror=errfn)
 
 
 def _check_pkg_build_files_exist(ctx: Context, **kwargs):
