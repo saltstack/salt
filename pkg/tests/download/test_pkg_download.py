@@ -194,10 +194,10 @@ def pkg_container(salt_factories, download_test_image, root_url, salt_release):
 
 
 @pytest.fixture(scope="module")
-def root_url():
+def root_url(salt_release):
     repo_type = os.environ.get("SALT_REPO_TYPE", "staging")
     root_url = os.environ.get("SALT_REPO_ROOT_URL", "repo.saltproject.io")
-    if repo_type == "rc":
+    if "rc" in salt_release:
         salt_path = "salt_rc/salt"
     else:
         salt_path = "salt"
@@ -419,7 +419,7 @@ def setup_macos(root_url, salt_release):
 
     repo_type = os.environ.get("SALT_REPO_TYPE", "staging")
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
-        if repo_type == "staging" or repo_type == "rc":
+        if repo_type == "staging":
             mac_pkg = f"salt-{salt_release}-py3-x86_64-unsigned.pkg"
         else:
             mac_pkg = f"salt-{salt_release}-py3-x86_64.pkg"
