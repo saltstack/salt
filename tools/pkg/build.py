@@ -323,7 +323,7 @@ def salt_onedir(
         assert platform is not None
         assert package_name is not None
 
-    salt_archive = pathlib.Path(salt_name)
+    salt_archive = pathlib.Path(salt_name).resolve()
     onedir_env = pathlib.Path("artifacts", package_name)
     _check_pkg_build_files_exist(ctx, onedir_env=onedir_env, salt_archive=salt_archive)
 
