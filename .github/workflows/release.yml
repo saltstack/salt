@@ -44,11 +44,12 @@ jobs:
       - name: Check Branch
         run: |
           echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
-          if [ "${{ github.ref_name }}" != "master" ]; then
+          if [ "${{ contains(fromJSON('["master", "3006.x"]'), github.ref_name) }}" != "true" ]; then
               echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
+              echo "Allowed branches: master, 3006.x"
               exit 1
           else
-              echo "Allowed"
+              echo "Allowed to release from branch ${{ github.ref_name }}"
           fi
 
   prepare-workflow:

@@ -68,16 +68,13 @@ concurrency:
 
       - name: Check Branch
         run: |
-
-          {#-
-              Should we allow other branches?
-          #}
           echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
-          if [ "${{ github.ref_name }}" != "master" ]; then
+          if [ "${{ contains(fromJSON('<{ release_branches|tojson }>'), github.ref_name) }}" != "true" ]; then
               echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
+              echo "Allowed branches: <{ release_branches|join(', ') }>"
               exit 1
           else
-              echo "Allowed"
+              echo "Allowed to release from branch ${{ github.ref_name }}"
           fi
 
 <%- endblock pre_jobs %>
