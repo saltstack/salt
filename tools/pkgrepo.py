@@ -870,7 +870,7 @@ def backup_previous_releases(ctx: Context):
                     },
                     MetadataDirective="COPY",
                     TaggingDirective="COPY",
-                    ServerSideEncryption="aws:kms",
+                    ServerSideEncryption="AES256",
                 )
             except ClientError as exc:
                 if "PreconditionFailed" not in str(exc):
@@ -967,7 +967,7 @@ def release(
                     },
                     MetadataDirective="COPY",
                     TaggingDirective="COPY",
-                    ServerSideEncryption="aws:kms",
+                    ServerSideEncryption="AES256",
                 )
             except ClientError:
                 log.exception(f"Failed to copy {fpath}")
@@ -1155,7 +1155,7 @@ def release(
                         },
                         MetadataDirective="COPY",
                         TaggingDirective="COPY",
-                        ServerSideEncryption="aws:kms",
+                        ServerSideEncryption="AES256",
                     )
                 except ClientError:
                     log.exception(f"Failed to copy {fpath}")
