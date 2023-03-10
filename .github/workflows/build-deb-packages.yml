@@ -74,7 +74,7 @@ jobs:
       - name: Build Deb
         working-directory: pkgs/checkout/
         run: |
-          tools pkg build deb --onedir salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz --patch salt-${{ inputs.salt-version }}.patch
+          tools pkg build deb --onedir salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
 
       - name: Cleanup
         run: |

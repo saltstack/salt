@@ -62,7 +62,7 @@ jobs:
 
       - name: Build RPM
         run: |
-          tools pkg build rpm --onedir salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz --patch salt-${{ inputs.salt-version }}.patch
+          tools pkg build rpm --onedir salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
 
       - name: Upload RPMs
         uses: actions/upload-artifact@v3

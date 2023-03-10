@@ -31,22 +31,17 @@ build = command_group(
         "onedir": {
             "help": "The name of the onedir artifact, if given it should be under artifacts/",
         },
-        "use_existing_onedir": {
-            "help": "Whether to build using the existing onedir or not",
-        },
     },
 )
 def debian(
     ctx: Context,
     onedir: str = None,  # pylint: disable=bad-whitespace
-    use_existing_onedir: bool = True,
 ):
     """
     Build the deb package.
     """
     checkout = pathlib.Path.cwd()
-    if use_existing_onedir:
-        assert onedir is not None
+    if onedir:
         onedir_artifact = checkout / "artifacts" / onedir
         _check_pkg_build_files_exist(ctx, onedir_artifact=onedir_artifact)
         ctx.info(
@@ -68,22 +63,17 @@ def debian(
         "onedir": {
             "help": "The name of the onedir artifact, if given it should be under artifacts/",
         },
-        "use_existing_onedir": {
-            "help": "Whether to build using the existing onedir or not",
-        },
     },
 )
 def rpm(
     ctx: Context,
     onedir: str = None,  # pylint: disable=bad-whitespace
-    use_existing_onedir: bool = True,
 ):
     """
     Build the RPM package.
     """
     checkout = pathlib.Path.cwd()
-    if use_existing_onedir:
-        assert onedir is not None
+    if onedir:
         onedir_artifact = checkout / "artifacts" / onedir
         _check_pkg_build_files_exist(ctx, onedir_artifact=onedir_artifact)
         ctx.info(
