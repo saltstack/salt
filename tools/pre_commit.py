@@ -1,7 +1,7 @@
 """
 These commands are used by pre-commit.
 """
-# pylint: disable=resource-leakage,broad-except
+# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
 import logging
