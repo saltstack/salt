@@ -70,10 +70,10 @@ def get_test_versions():
             "container_id": "fedora_37",
         },
         {
-            "image": "fedora:39",
+            "image": "fedora:38",
             "os_type": "fedora",
-            "os_version": 39,
-            "container_id": "fedora_39",
+            "os_version": 38,
+            "container_id": "fedora_38",
         },
         {
             "image": "debian:10",
