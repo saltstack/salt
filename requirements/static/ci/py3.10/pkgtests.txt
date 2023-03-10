@@ -29,6 +29,8 @@ distro==1.8.0
     # via
     #   -r requirements/base.txt
     #   pytest-skip-markers
+docker==5.0.3
+    # via -r requirements/static/ci/pkgtests.in
 exceptiongroup==1.1.0
     # via pytest
 filelock==3.9.0
@@ -128,7 +130,9 @@ pyzmq==25.0.0
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
 requests==2.28.2
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   docker
 six==1.16.0
     # via cheroot
 tempora==5.2.0
@@ -144,6 +148,8 @@ urllib3==1.26.14
     # via requests
 virtualenv==20.17.1
     # via pytest-salt-factories
+websocket-client==1.5.1
+    # via docker
 zc.lockfile==2.0
     # via cherrypy
 
