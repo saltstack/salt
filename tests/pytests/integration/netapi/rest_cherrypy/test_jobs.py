@@ -4,6 +4,7 @@ import salt.utils.json
 
 
 @pytest.mark.slow_test
+@pytest.mark.netapi_client_data(["local", "runner"])
 async def test_all_jobs(http_client, auth_creds, content_type_map):
     """
     test query to /jobs returns job data
