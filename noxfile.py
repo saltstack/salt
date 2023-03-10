@@ -573,7 +573,7 @@ def test_parametrized(session, coverage, transport, crypto):
     cmd_args = [
         "--transport={}".format(transport),
     ] + session.posargs
-    _pytest(session, coverage, cmd_args)
+    _pytest(session, coverage=coverage, cmd_args=cmd_args)
 
 
 @nox.session(python=_PYTHON_VERSIONS)
@@ -934,7 +934,7 @@ def test_cloud(session, coverage):
         "-k",
         "cloud",
     ] + session.posargs
-    _pytest(session, coverage, cmd_args)
+    _pytest(session, coverage=coverage, cmd_args=cmd_args)
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="pytest-cloud")
@@ -971,7 +971,7 @@ def test_tornado(session, coverage):
         session.install(
             "--progress-bar=off", "pyzmq==17.0.0", silent=PIP_INSTALL_SILENT
         )
-    _pytest(session, coverage, session.posargs)
+    _pytest(session, coverage=coverage, cmd_args=session.posargs)
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="pytest-tornado")
@@ -1115,7 +1115,7 @@ def _ci_test(session, transport, onedir=False):
             ]
             + chunk_cmd
         )
-        _pytest(session, track_code_coverage, pytest_args, env=env)
+        _pytest(session, coverage=track_code_coverage, cmd_args=pytest_args, env=env)
     except CommandFailed:
         if rerun_failures is False:
             raise
@@ -1135,7 +1135,7 @@ def _ci_test(session, transport, onedir=False):
             ]
             + chunk_cmd
         )
-        _pytest(session, track_code_coverage, pytest_args, env=env)
+        _pytest(session, coverage=track_code_coverage, cmd_args=pytest_args, env=env)
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="ci-test")
@@ -1794,7 +1794,7 @@ def _pkg_test(session, cmd_args, test_type, onedir=False):
         ]
         + session.posargs
     )
-    _pytest(session, False, pytest_args, env=env)
+    _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
 
 
 @nox.session(

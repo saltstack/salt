@@ -37,6 +37,11 @@ on:
         type: string
         description: The onedir package name to use
         default: salt
+      skip-code-coverage:
+        required: false
+        type: boolean
+        description: Skip code coverage
+        default: false
 
 
 env:
@@ -283,28 +288,28 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --run-slow --suppress-no-test-exit-code \
-            --from-filenames=testrun-changed-files.txt
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.skip-code-coverage && '--skip-code-coverage' || '' }} \
+            ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- \
+            --run-slow --suppress-no-test-exit-code --from-filenames=testrun-changed-files.txt
 
       - name: Run Fast Tests
         id: run-fast-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }}
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.skip-code-coverage && '--skip-code-coverage' || '' }} \
+            ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
 
       - name: Run Full Tests
         id: run-full-tests
         if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --run-slow
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.skip-code-coverage && '--skip-code-coverage' || '' }} \
+            ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --run-slow
 
       - name: Combine Coverage Reports
-        if: always() && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
+        if: always() && inputs.skip-code-coverage == false && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
         run: |
           tools --timestamps vm combine-coverage ${{ inputs.distro-slug }}
 
@@ -317,8 +322,10 @@ jobs:
           # from it showing in the tree command below
           rm -rf artifacts/salt*
           tree -a artifacts
-          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
-          echo "COVERAGE_FILE=artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}" >> GITHUB_ENV
+          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
+            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
+            echo "COVERAGE_FILE=artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}" >> GITHUB_ENV
+          fi
 
       - name: Destroy VM
         if: always()
@@ -326,7 +333,7 @@ jobs:
           tools --timestamps vm destroy ${{ inputs.distro-slug }} || true
 
       - name: Upload Code Coverage Test Run Artifacts
-        if: always() && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         uses: actions/upload-artifact@v3
         with:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
@@ -379,6 +386,7 @@ jobs:
 
       - name: Download Code Coverage Test Run Artifacts
         uses: actions/download-artifact@v3
+        if: ${{ inputs.skip-code-coverage == false }}
         id: download-coverage-artifacts
         with:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
@@ -405,31 +413,32 @@ jobs:
           python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
 
       - name: Combine Code Coverage
+        if: ${{ inputs.skip-code-coverage == false }}
         continue-on-error: true
         run: |
           nox --force-color -e combine-coverage
 
       - name: Upload Code Coverage DB
-        if: always() && steps.download-coverage-artifacts.outcome == 'success'
+        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
         uses: actions/upload-artifact@v3
         with:
           name: code-coverage
           path: artifacts/coverage
 
       - name: Report Salt Code Coverage
-        if: always() && steps.download-coverage-artifacts.outcome == 'success'
+        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
         continue-on-error: true
         run: |
           nox --force-color -e report-coverage -- salt
 
       - name: Report Tests Code Coverage
-        if: always() && steps.download-coverage-artifacts.outcome == 'success'
+        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
         continue-on-error: true
         run: |
           nox --force-color -e report-coverage -- tests
 
       - name: Report Combined Code Coverage
-        if: always() && steps.download-coverage-artifacts.outcome == 'success'
+        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
         continue-on-error: true
         run: |
           nox --force-color -e report-coverage
