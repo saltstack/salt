@@ -249,7 +249,7 @@ def setup_amazon(os_version, os_codename, root_url, minor_url, salt_release):
 
     cmds = [
         "pwd",
-        "sudo rpm --import {}/amazon/2/x86_64/{}{}/{}".format(
+        "rpm --import {}/amazon/2/x86_64/{}{}/{}".format(
             root_url, minor_url, salt_release, GPG_FILE
         ),
         "curl -fsSL -o /etc/yum.repos.d/salt-amzn.repo {}/amazon/2/x86_64/{}{}.repo".format(
@@ -269,8 +269,8 @@ def setup_amazon(os_version, os_codename, root_url, minor_url, salt_release):
                 root_url, minor_url, salt_release
             ),
         ],
-        "sudo yum clean expire-cache",
-        "sudo yum install salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api -y",
+        "yum clean expire-cache",
+        "yum install salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api -y",
     ]
     return cmds
 
@@ -284,13 +284,13 @@ def setup_redhat(os_version, os_codename, root_url, minor_url, salt_release):
     cmds = []
     if os_version >= 9:
         cmds.append(
-            "sudo rpm --import {}/redhat/{}/x86_64/{}{}/{}".format(
+            "rpm --import {}/redhat/{}/x86_64/{}{}/{}".format(
                 root_url, os_version, minor_url, salt_release, GPG_FILE
             )
         )
     else:
         cmds.append(
-            "sudo rpm --import {}/redhat/{}/x86_64/{}{}/{}".format(
+            "rpm --import {}/redhat/{}/x86_64/{}{}/{}".format(
                 root_url, os_version, minor_url, salt_release, GPG_FILE
             )
         )
@@ -318,9 +318,9 @@ def setup_redhat(os_version, os_codename, root_url, minor_url, salt_release):
             ),
         ]
     )
-    cmds.append("sudo yum clean expire-cache")
+    cmds.append("yum clean expire-cache")
     cmds.append(
-        "sudo yum install salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api -y"
+        "yum install salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api -y"
     )
     return cmds
 
@@ -334,13 +334,13 @@ def setup_fedora(os_version, os_codename, root_url, minor_url, salt_release):
     cmds = []
     if os_version >= 9:
         cmds.append(
-            "sudo rpm --import {}/fedora/{}/x86_64/{}{}/{}".format(
+            "rpm --import {}/fedora/{}/x86_64/{}{}/{}".format(
                 root_url, os_version, minor_url, salt_release, GPG_FILE
             )
         )
     else:
         cmds.append(
-            "sudo rpm --import {}/fedora/{}/x86_64/{}{}/{}".format(
+            "rpm --import {}/fedora/{}/x86_64/{}{}/{}".format(
                 root_url, os_version, minor_url, salt_release, GPG_FILE
             )
         )
@@ -368,9 +368,9 @@ def setup_fedora(os_version, os_codename, root_url, minor_url, salt_release):
             ),
         ]
     )
-    cmds.append("sudo yum clean expire-cache")
+    cmds.append("yum clean expire-cache")
     cmds.append(
-        "sudo yum install salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api -y"
+        "yum install salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api -y"
     )
     return cmds
 
@@ -383,20 +383,19 @@ def setup_debian(os_version, os_codename, root_url, minor_url, salt_release):
 
     cmds = [
         "apt-get update -y",
-        "apt-get install sudo -y",
         "apt-get install curl -y",
-        "sudo curl -fsSL -o /usr/share/keyrings/{} {}/debian/{}/amd64/{}{}/{}".format(
+        "curl -fsSL -o /usr/share/keyrings/{} {}/debian/{}/amd64/{}{}/{}".format(
             GPG_FILE, root_url, os_version, minor_url, salt_release, GPG_FILE
         ),
         [
             "sh",
             "-c",
-            'echo "deb [signed-by=/usr/share/keyrings/{} arch=amd64] {}/debian/{}/amd64/{}{} {} main" | sudo tee /etc/apt/sources.list.d/salt.list'.format(
+            'echo "deb [signed-by=/usr/share/keyrings/{} arch=amd64] {}/debian/{}/amd64/{}{} {} main" > /etc/apt/sources.list.d/salt.list'.format(
                 GPG_FILE, root_url, os_version, minor_url, salt_release, os_codename
             ),
         ],
-        "sudo apt-get update",
-        "sudo apt-get install salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api -y",
+        "apt-get update",
+        "apt-get install salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api -y",
     ]
     return cmds
 
@@ -409,20 +408,19 @@ def setup_ubuntu(os_version, os_codename, root_url, minor_url, salt_release):
 
     cmds = [
         "apt-get update -y",
-        "apt-get install sudo -y",
         "apt-get install curl -y",
-        "sudo curl -fsSL -o /usr/share/keyrings/{} {}/ubuntu/{}/amd64/{}{}/{}".format(
+        "curl -fsSL -o /usr/share/keyrings/{} {}/ubuntu/{}/amd64/{}{}/{}".format(
             GPG_FILE, root_url, os_version, minor_url, salt_release, GPG_FILE
         ),
         [
             "sh",
             "-c",
-            'echo "deb [signed-by=/usr/share/keyrings/{} arch=amd64] {}/ubuntu/{}/amd64/{}{} {} main" | sudo tee /etc/apt/sources.list.d/salt.list'.format(
+            'echo "deb [signed-by=/usr/share/keyrings/{} arch=amd64] {}/ubuntu/{}/amd64/{}{} {} main" > /etc/apt/sources.list.d/salt.list'.format(
                 GPG_FILE, root_url, os_version, minor_url, salt_release, os_codename
             ),
         ],
-        "sudo apt-get update",
-        "sudo apt-get install salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api -y",
+        "apt-get update",
+        "apt-get install salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api -y",
     ]
 
     return cmds
