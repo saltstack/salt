@@ -501,6 +501,51 @@ def test_pkg_install_minion_error_salt_cache_dir():
         assert ret == expected
 
 
+def test_pkg_remove_log_message(caplog):
+    """
+    test pkg.remove pkg logging
+    """
+    ret__get_package_info = {
+        "3.03": {
+            "uninstaller": "%program.exe",
+            "reboot": False,
+            "msiexec": False,
+            "installer": "runme.exe",
+            "uninstall_flags": "/S",
+            "locale": "en_US",
+            "install_flags": "/s",
+            "full_name": "Firebox 3.03 (x86 en-US)",
+        }
+    }
+
+    mock_cmd_run_all = MagicMock(return_value={"retcode": 0})
+    se_list_pkgs = {"firebox": ["3.03"]}
+    with patch.object(win_pkg, "list_pkgs", return_value=se_list_pkgs), patch.object(
+        salt.utils.data, "is_true", MagicMock(return_value=True)
+    ), patch.object(
+        win_pkg, "_get_package_info", MagicMock(return_value=ret__get_package_info)
+    ), patch.dict(
+        win_pkg.__salt__,
+        {
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=[{"firebox": "3.03"}, None]
+            ),
+            "cp.is_cached": MagicMock(return_value="C:\\fake\\path.exe"),
+            "cmd.run_all": mock_cmd_run_all,
+        },
+    ), caplog.at_level(
+        logging.DEBUG
+    ):
+        win_pkg.remove(
+            pkgs=["firebox"],
+        )
+        assert (
+            'PKG : cmd: C:\\WINDOWS\\system32\\cmd.exe /s /c "%program.exe" /S'
+        ).lower() in [x.lower() for x in caplog.messages]
+        assert "PKG : pwd: ".lower() in [x.lower() for x in caplog.messages]
+        assert "PKG : retcode: 0" in caplog.messages
+
+
 def test_pkg_remove_minion_error_salt_cache_dir():
     """
     Test pkg.remove when cp.cache_dir encounters a minion error
