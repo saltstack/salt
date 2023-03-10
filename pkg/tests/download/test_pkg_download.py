@@ -165,9 +165,7 @@ def get_salt_test_commands():
 
 
 @pytest.fixture(scope="module")
-def pkg_container(
-    salt_factories, download_test_image, root_url, minor_url, salt_release
-):
+def pkg_container(salt_factories, download_test_image, root_url, salt_release):
     container = salt_factories.get_container(
         random_string("{}_".format(download_test_image.container_id)),
         download_test_image.name,
@@ -182,7 +180,6 @@ def pkg_container(
                 download_test_image.os_version,
                 download_test_image.os_codename,
                 root_url,
-                minor_url,
                 salt_release,
             )
         except KeyError:
@@ -219,15 +216,6 @@ def root_url():
     yield root_url
 
 
-@pytest.fixture(scope="module")
-def minor_url(salt_release):
-    if "." in salt_release:
-        minor_url = "minor/"
-    else:
-        minor_url = ""
-    yield minor_url
-
-
 def get_salt_release():
     if platform.is_darwin() or platform.is_windows():
         _DEFAULT_RELEASE = "3005-1"
@@ -241,7 +229,7 @@ def salt_release():
     yield get_salt_release()
 
 
-def setup_amazon(os_version, os_codename, root_url, minor_url, salt_release):
+def setup_amazon(os_version, os_codename, root_url, salt_release):
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
         GPG_FILE = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
     else:
@@ -249,24 +237,24 @@ def setup_amazon(os_version, os_codename, root_url, minor_url, salt_release):
 
     cmds = [
         "pwd",
-        "rpm --import {}/amazon/2/x86_64/{}{}/{}".format(
-            root_url, minor_url, salt_release, GPG_FILE
+        "rpm --import {}/amazon/2/x86_64/minor/{}/{}".format(
+            root_url, salt_release, GPG_FILE
         ),
-        "curl -fsSL -o /etc/yum.repos.d/salt-amzn.repo {}/amazon/2/x86_64/{}{}.repo".format(
-            root_url, minor_url, salt_release
+        "curl -fsSL -o /etc/yum.repos.d/salt-amzn.repo {}/amazon/2/x86_64/minor/{}.repo".format(
+            root_url, salt_release
         ),
         [
             "sh",
             "-c",
-            "echo baseurl={}/amazon/2/x86_64/{}{}  >> /etc/yum.repos.d/salt-amzn.repo".format(
-                root_url, minor_url, salt_release
+            "echo baseurl={}/amazon/2/x86_64/minor/{}  >> /etc/yum.repos.d/salt-amzn.repo".format(
+                root_url, salt_release
             ),
         ],
         [
             "sh",
             "-c",
-            "echo gpgkey={}/amazon/2/x86_64/{}{}/SALTSTACK-GPG-KEY.pub >> /etc/yum.repos.d/salt-amzn.repo".format(
-                root_url, minor_url, salt_release
+            "echo gpgkey={}/amazon/2/x86_64/minor/{}/SALTSTACK-GPG-KEY.pub >> /etc/yum.repos.d/salt-amzn.repo".format(
+                root_url, salt_release
             ),
         ],
         "yum clean expire-cache",
@@ -275,7 +263,7 @@ def setup_amazon(os_version, os_codename, root_url, minor_url, salt_release):
     return cmds
 
 
-def setup_redhat(os_version, os_codename, root_url, minor_url, salt_release):
+def setup_redhat(os_version, os_codename, root_url, salt_release):
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
         GPG_FILE = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
     else:
@@ -284,28 +272,28 @@ def setup_redhat(os_version, os_codename, root_url, minor_url, salt_release):
     cmds = []
     if os_version >= 9:
         cmds.append(
-            "rpm --import {}/redhat/{}/x86_64/{}{}/{}".format(
-                root_url, os_version, minor_url, salt_release, GPG_FILE
+            "rpm --import {}/redhat/{}/x86_64/minor/{}/{}".format(
+                root_url, os_version, salt_release, GPG_FILE
             )
         )
     else:
         cmds.append(
-            "rpm --import {}/redhat/{}/x86_64/{}{}/{}".format(
-                root_url, os_version, minor_url, salt_release, GPG_FILE
+            "rpm --import {}/redhat/{}/x86_64/minor/{}/{}".format(
+                root_url, os_version, salt_release, GPG_FILE
             )
         )
 
     cmds.append(
-        "curl -fsSL -o /etc/yum.repos.d/salt.repo {}/redhat/{}/x86_64/{}{}.repo".format(
-            root_url, os_version, minor_url, salt_release
+        "curl -fsSL -o /etc/yum.repos.d/salt.repo {}/redhat/{}/x86_64/minor/{}.repo".format(
+            root_url, os_version, salt_release
         )
     )
     cmds.append(
         [
             "sh",
             "-c",
-            "echo baseurl={}/redhat/{}/x86_64/{}{}  >> /etc/yum.repos.d/salt.repo".format(
-                root_url, os_version, minor_url, salt_release
+            "echo baseurl={}/redhat/{}/x86_64/minor/{}  >> /etc/yum.repos.d/salt.repo".format(
+                root_url, os_version, salt_release
             ),
         ]
     )
@@ -313,8 +301,8 @@ def setup_redhat(os_version, os_codename, root_url, minor_url, salt_release):
         [
             "sh",
             "-c",
-            "echo gpgkey={}/redhat/{}/x86_64/{}{}/{} >> /etc/yum.repos.d/salt.repo".format(
-                root_url, os_version, minor_url, salt_release, GPG_FILE
+            "echo gpgkey={}/redhat/{}/x86_64/minor/{}/{} >> /etc/yum.repos.d/salt.repo".format(
+                root_url, os_version, salt_release, GPG_FILE
             ),
         ]
     )
@@ -325,7 +313,7 @@ def setup_redhat(os_version, os_codename, root_url, minor_url, salt_release):
     return cmds
 
 
-def setup_fedora(os_version, os_codename, root_url, minor_url, salt_release):
+def setup_fedora(os_version, os_codename, root_url, salt_release):
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
         GPG_FILE = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
     else:
@@ -334,28 +322,28 @@ def setup_fedora(os_version, os_codename, root_url, minor_url, salt_release):
     cmds = []
     if os_version >= 9:
         cmds.append(
-            "rpm --import {}/fedora/{}/x86_64/{}{}/{}".format(
-                root_url, os_version, minor_url, salt_release, GPG_FILE
+            "rpm --import {}/fedora/{}/x86_64/minor/{}/{}".format(
+                root_url, os_version, salt_release, GPG_FILE
             )
         )
     else:
         cmds.append(
-            "rpm --import {}/fedora/{}/x86_64/{}{}/{}".format(
-                root_url, os_version, minor_url, salt_release, GPG_FILE
+            "rpm --import {}/fedora/{}/x86_64/minor/{}/{}".format(
+                root_url, os_version, salt_release, GPG_FILE
             )
         )
 
     cmds.append(
-        "curl -fsSL -o /etc/yum.repos.d/salt.repo {}/fedora/{}/x86_64/{}{}.repo".format(
-            root_url, os_version, minor_url, salt_release
+        "curl -fsSL -o /etc/yum.repos.d/salt.repo {}/fedora/{}/x86_64/minor/{}.repo".format(
+            root_url, os_version, salt_release
         )
     )
     cmds.append(
         [
             "sh",
             "-c",
-            "echo baseurl={}/fedora/{}/x86_64/{}{}  >> /etc/yum.repos.d/salt.repo".format(
-                root_url, os_version, minor_url, salt_release
+            "echo baseurl={}/fedora/{}/x86_64/minor/{}  >> /etc/yum.repos.d/salt.repo".format(
+                root_url, os_version, salt_release
             ),
         ]
     )
@@ -363,8 +351,8 @@ def setup_fedora(os_version, os_codename, root_url, minor_url, salt_release):
         [
             "sh",
             "-c",
-            "echo gpgkey={}/fedora/{}/x86_64/{}{}/{} >> /etc/yum.repos.d/salt.repo".format(
-                root_url, os_version, minor_url, salt_release, GPG_FILE
+            "echo gpgkey={}/fedora/{}/x86_64/minor/{}/{} >> /etc/yum.repos.d/salt.repo".format(
+                root_url, os_version, salt_release, GPG_FILE
             ),
         ]
     )
@@ -375,7 +363,7 @@ def setup_fedora(os_version, os_codename, root_url, minor_url, salt_release):
     return cmds
 
 
-def setup_debian(os_version, os_codename, root_url, minor_url, salt_release):
+def setup_debian(os_version, os_codename, root_url, salt_release):
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
         GPG_FILE = "SALT-PROJECT-GPG-PUBKEY-2023.gpg"
     else:
@@ -384,14 +372,14 @@ def setup_debian(os_version, os_codename, root_url, minor_url, salt_release):
     cmds = [
         "apt-get update -y",
         "apt-get install curl -y",
-        "curl -fsSL -o /usr/share/keyrings/{} {}/debian/{}/amd64/{}{}/{}".format(
-            GPG_FILE, root_url, os_version, minor_url, salt_release, GPG_FILE
+        "curl -fsSL -o /usr/share/keyrings/{} {}/debian/{}/amd64/minor/{}/{}".format(
+            GPG_FILE, root_url, os_version, salt_release, GPG_FILE
         ),
         [
             "sh",
             "-c",
-            'echo "deb [signed-by=/usr/share/keyrings/{} arch=amd64] {}/debian/{}/amd64/{}{} {} main" > /etc/apt/sources.list.d/salt.list'.format(
-                GPG_FILE, root_url, os_version, minor_url, salt_release, os_codename
+            'echo "deb [signed-by=/usr/share/keyrings/{} arch=amd64] {}/debian/{}/amd64/minor/{} {} main" > /etc/apt/sources.list.d/salt.list'.format(
+                GPG_FILE, root_url, os_version, salt_release, os_codename
             ),
         ],
         "apt-get update",
@@ -400,7 +388,7 @@ def setup_debian(os_version, os_codename, root_url, minor_url, salt_release):
     return cmds
 
 
-def setup_ubuntu(os_version, os_codename, root_url, minor_url, salt_release):
+def setup_ubuntu(os_version, os_codename, root_url, salt_release):
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
         GPG_FILE = "SALT-PROJECT-GPG-PUBKEY-2023.gpg"
     else:
@@ -409,14 +397,14 @@ def setup_ubuntu(os_version, os_codename, root_url, minor_url, salt_release):
     cmds = [
         "apt-get update -y",
         "apt-get install curl -y",
-        "curl -fsSL -o /usr/share/keyrings/{} {}/ubuntu/{}/amd64/{}{}/{}".format(
-            GPG_FILE, root_url, os_version, minor_url, salt_release, GPG_FILE
+        "curl -fsSL -o /usr/share/keyrings/{} {}/ubuntu/{}/amd64/minor/{}/{}".format(
+            GPG_FILE, root_url, os_version, salt_release, GPG_FILE
         ),
         [
             "sh",
             "-c",
-            'echo "deb [signed-by=/usr/share/keyrings/{} arch=amd64] {}/ubuntu/{}/amd64/{}{} {} main" > /etc/apt/sources.list.d/salt.list'.format(
-                GPG_FILE, root_url, os_version, minor_url, salt_release, os_codename
+            'echo "deb [signed-by=/usr/share/keyrings/{} arch=amd64] {}/ubuntu/{}/amd64/minor/{} {} main" > /etc/apt/sources.list.d/salt.list'.format(
+                GPG_FILE, root_url, os_version, salt_release, os_codename
             ),
         ],
         "apt-get update",
@@ -427,7 +415,7 @@ def setup_ubuntu(os_version, os_codename, root_url, minor_url, salt_release):
 
 
 @pytest.fixture(scope="module")
-def setup_macos(root_url, minor_url, salt_release):
+def setup_macos(root_url, salt_release):
 
     repo_type = os.environ.get("SALT_REPO_TYPE", "staging")
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
@@ -435,7 +423,7 @@ def setup_macos(root_url, minor_url, salt_release):
             mac_pkg = f"salt-{salt_release}-py3-x86_64-unsigned.pkg"
         else:
             mac_pkg = f"salt-{salt_release}-py3-x86_64.pkg"
-        mac_pkg_url = f"{root_url}/macos/{minor_url}{salt_release}/{mac_pkg}"
+        mac_pkg_url = f"{root_url}/macos/minor/{salt_release}/{mac_pkg}"
     else:
         mac_pkg_url = f"{root_url}/macos/{salt_release}/{mac_pkg}"
         mac_pkg = f"salt-{salt_release}-macos-x86_64.pkg"
@@ -461,12 +449,12 @@ def setup_macos(root_url, minor_url, salt_release):
 
 
 @pytest.fixture(scope="module")
-def setup_windows(root_url, minor_url, salt_release):
+def setup_windows(root_url, salt_release):
 
     root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
         win_pkg = f"Salt-Minion-{salt_release}-Py3-AMD64-Setup.exe"
-        win_pkg_url = f"{root_url}/windows/{minor_url}{salt_release}/{win_pkg}"
+        win_pkg_url = f"{root_url}/windows/minor/{salt_release}/{win_pkg}"
         ssm_bin = root_dir / "ssm.exe"
     else:
         win_pkg = f"salt-{salt_release}-windows-amd64.exe"
@@ -498,9 +486,7 @@ def setup_windows(root_url, minor_url, salt_release):
 @pytest.mark.parametrize("salt_test_command", get_salt_test_commands())
 @pytest.mark.skip_if_binaries_missing("dockerd")
 @pytest.mark.skip_unless_on_linux
-def test_download_linux(
-    salt_test_command, pkg_container, root_url, minor_url, salt_release
-):
+def test_download_linux(salt_test_command, pkg_container, root_url, salt_release):
     """
     Test downloading of Salt packages and running various commands on Linux hosts
     """
