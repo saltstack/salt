@@ -1,4 +1,5 @@
 <%- set prepare_workflow_if_check = "${{ needs.workflow-requirements.outputs.requirements-met }}" %>
+<%- set skip_test_coverage_check = "false" %>
 <%- extends 'ci.yml.jinja' %>
 
 <%- block on %>

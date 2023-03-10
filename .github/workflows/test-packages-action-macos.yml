@@ -37,6 +37,11 @@ on:
         type: string
         description: The onedir package name to use
         default: salt
+      skip-code-coverage:
+        required: false
+        type: boolean
+        description: Skip code coverage
+        default: false
 
 
 env:

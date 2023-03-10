@@ -1,4 +1,5 @@
 <%- set gh_environment = gh_environment|default("nightly") %>
+<%- set skip_test_coverage_check = skip_test_coverage_check|default("false") %>
 <%- set prepare_workflow_if_check = prepare_workflow_if_check|default("${{ needs.workflow-requirements.outputs.requirements-met }}") %>
 <%- extends 'ci.yml.jinja' %>
 
@@ -8,7 +9,7 @@ on:
   workflow_dispatch: {}
   schedule:
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
-    - cron: '0 3 * * *'  # Every day at 3AM
+    - cron: '0 1 * * *'  # Every day at 1AM
 
 <%- endblock on %>
 
