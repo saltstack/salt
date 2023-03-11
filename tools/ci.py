@@ -701,3 +701,49 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
         _matrix.append({"nox-session": sess})
     print(json.dumps(_matrix))
     ctx.exit(0)
+
+
+@ci.command(
+    name="pkg-download-matrix",
+    arguments={
+        "platform": {
+            "help": "The OS platform to generate the matrix for",
+        },
+    },
+)
+def pkg_download_matrix(ctx: Context, platform: str):
+    """
+    Generate the test matrix.
+    """
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    _matrix = []
+    if platform == "windows":
+        for arch in ("amd64", "x86"):
+            for install_type in ("msi", "nsis"):
+                _matrix.append(
+                    {
+                        "arch": arch,
+                        "install_type": install_type,
+                    },
+                )
+    else:
+        for arch in ("x86_64", "arm64"):
+            if platform == "macos" and arch == "arm64":
+                continue
+            _matrix.append(
+                {
+                    "arch": arch,
+                },
+            )
+    ctx.info("Generated test matrix:")
+    ctx.print(_matrix, soft_wrap=True)
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"matrix={json.dumps(_matrix)}\n")
+    ctx.exit(0)

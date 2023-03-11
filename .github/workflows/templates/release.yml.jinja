@@ -90,6 +90,7 @@ permissions:
     <%- endif %>
     outputs:
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
+      cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -117,6 +118,11 @@ permissions:
       - name: Check Existing Releases
         run: |
           tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+
+      - name: Set Cache Seed Output
+        id: set-cache-seed
+        run: |
+          echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
 
   <%- endblock prepare_workflow_job %>
   <%- endif %>
@@ -176,8 +182,8 @@ permissions:
             ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} \
             --key-id=<{ gpg_key_id }> ${{ needs.prepare-workflow.outputs.salt-version }}
 
-  <%- if includes.get("test-pkg-uploads", True) %>
-  <%- include "test-pkg-repo-uploads.yml.jinja" %>
+  <%- if includes.get("test-pkg-downloads", True) %>
+  <%- include "test-pkg-repo-downloads.yml.jinja" %>
   <%- endif %>
 
   release:
