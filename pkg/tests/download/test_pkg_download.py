@@ -196,7 +196,7 @@ def pkg_container(salt_factories, download_test_image, root_url, salt_release):
 @pytest.fixture(scope="module")
 def root_url(salt_release):
     repo_type = os.environ.get("SALT_REPO_TYPE", "staging")
-    root_url = os.environ.get("SALT_REPO_ROOT_URL", "repo.saltproject.io")
+    repo_domain = os.environ.get("SALT_REPO_DOMAIN", "repo.saltproject.io")
     if "rc" in salt_release:
         salt_path = "salt_rc/salt"
     else:
@@ -204,16 +204,9 @@ def root_url(salt_release):
     if repo_type == "staging":
         salt_repo_user = os.environ.get("SALT_REPO_USER")
         salt_repo_pass = os.environ.get("SALT_REPO_PASS")
-        if not salt_repo_user or not salt_repo_pass:
-            pytest.skip(
-                "Values for SALT_REPO_USER or SALT_REPO_PASS are unavailable. Skipping."
-            )
-        root_url = (
-            f"https://{salt_repo_user}:{salt_repo_pass}@{root_url}/{salt_path}/py3"
-        )
-    else:
-        root_url = f"https://{root_url}/{salt_path}/py3"
-    yield root_url
+        if salt_repo_user and salt_repo_pass:
+            repo_domain = f"{salt_repo_user}:{salt_repo_pass}@{repo_domain}"
+    return f"https://{repo_domain}/{salt_path}/py3"
 
 
 def get_salt_release():
