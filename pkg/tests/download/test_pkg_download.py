@@ -445,8 +445,17 @@ def setup_macos(root_url, salt_release):
 def setup_windows(root_url, salt_release):
 
     root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
+    install_arch = os.environ.get("INSTALL_ARCH") or "AMD64"
+    install_type = os.environ.get("INSTALL_TYPE") or "msi"
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
-        win_pkg = f"Salt-Minion-{salt_release}-Py3-AMD64-Setup.exe"
+        if install_type.lower() == "nsis":
+            if install_arch.lower() != "x86":
+                install_arch = install_arch.upper()
+            win_pkg = f"Salt-Minion-{salt_release}-Py3-{install_arch}-Setup.exe"
+        else:
+            if install_arch.lower() != "x86":
+                install_arch = install_arch.upper()
+            win_pkg = f"Salt-Minion-{salt_release}-Py3-{install_arch}.msi"
         win_pkg_url = f"{root_url}/windows/minor/{salt_release}/{win_pkg}"
         ssm_bin = root_dir / "ssm.exe"
     else:

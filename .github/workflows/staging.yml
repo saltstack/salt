@@ -1890,6 +1890,48 @@ jobs:
         run: |
           tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
 
+  test-linux-pkg-downloads:
+    name: Test Linux Package Downloads
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-latest
+      platform: linux
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: staging
+      skip-code-coverage: true
+
+  test-macos-pkg-downloads:
+    name: Test macOS Package Downloads
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-macos.yml
+    with:
+      distro-slug: macos-12
+      platform: macos
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: staging
+      skip-code-coverage: true
+
+  test-windows-pkg-downloads:
+    name: Test Windows Package Downloads
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-windows.yml
+    with:
+      distro-slug: windows-latest
+      platform: windows
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: staging
+      skip-code-coverage: true
+
   publish-pypi:
     name: Publish to PyPi(test)
     needs:
@@ -1937,6 +1979,9 @@ jobs:
       - windows-2019-msi-pkg-tests
       - windows-2022-nsis-pkg-tests
       - windows-2022-msi-pkg-tests
+      - test-linux-pkg-downloads
+      - test-macos-pkg-downloads
+      - test-windows-pkg-downloads
     environment: staging
     runs-on:
       - self-hosted
