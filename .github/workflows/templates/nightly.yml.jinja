@@ -1,6 +1,6 @@
 <%- set gh_environment = gh_environment|default("nightly") %>
 <%- set skip_test_coverage_check = skip_test_coverage_check|default("false") %>
-<%- set prepare_workflow_if_check = prepare_workflow_if_check|default("${{ needs.workflow-requirements.outputs.requirements-met }}") %>
+<%- set prepare_workflow_if_check = prepare_workflow_if_check|default("${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}") %>
 <%- extends 'ci.yml.jinja' %>
 
 <%- block name %>
@@ -44,7 +44,7 @@ concurrency:
     name: Check Workflow Requirements
     runs-on: ubuntu-latest
     outputs:
-      requirements-met: ${{ fromJSON(steps.check-requirements.outputs.requirements-met) }}
+      requirements-met: ${{ steps.check-requirements.outputs.requirements-met }}
     steps:
       - name: Check Requirements
         id: check-requirements

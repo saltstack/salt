@@ -31,7 +31,7 @@ jobs:
     name: Check Workflow Requirements
     runs-on: ubuntu-latest
     outputs:
-      requirements-met: ${{ fromJSON(steps.check-requirements.outputs.requirements-met) }}
+      requirements-met: ${{ steps.check-requirements.outputs.requirements-met }}
     steps:
       - name: Check Requirements
         id: check-requirements
@@ -64,7 +64,7 @@ jobs:
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on: ubuntu-latest
-    if: ${{ needs.workflow-requirements.outputs.requirements-met }}
+    if: ${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
     needs:
       - workflow-requirements
     outputs:
