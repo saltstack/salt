@@ -3,6 +3,13 @@
 <%- set prepare_workflow_if_check = prepare_workflow_if_check|default("${{ needs.workflow-requirements.outputs.requirements-met }}") %>
 <%- extends 'ci.yml.jinja' %>
 
+<%- block name %>
+
+name: <{ workflow_name }>
+run-name: "<{ workflow_name }> (${{ format('Branch: {0}', github.ref_name) }})"
+
+<%- endblock name %>
+
 <%- block on %>
 
 on:

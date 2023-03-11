@@ -7,6 +7,13 @@
 <%- set skip_test_coverage_check = "true" %>
 <%- extends 'nightly.yml.jinja' %>
 
+<%- block name %>
+
+name: <{ workflow_name }>
+run-name: "<{ workflow_name }> (${{ format('Branch: {0} // Version: {1}', github.ref_name, inputs.salt-version) }})"
+
+<%- endblock name %>
+
 <%- block on %>
 
 on:
