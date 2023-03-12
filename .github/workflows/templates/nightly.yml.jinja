@@ -97,7 +97,9 @@ concurrency:
 
       - name: Upload Repository Contents (<{ gh_environment }>)
         run: |
-          tools pkg repo publish <{ gh_environment }> \
-            ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} artifacts/pkgs/repo/
+          tools pkg repo publish <{ gh_environment }>
+          <%- if gh_environment in ("staging", "release") %> \
+            ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }}
+          <%- endif %> artifacts/pkgs/repo/
 
 <%- endblock jobs %>

@@ -1817,8 +1817,7 @@ jobs:
 
       - name: Upload Repository Contents (nightly)
         run: |
-          tools pkg repo publish nightly \
-            ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} artifacts/pkgs/repo/
+          tools pkg repo publish nightly artifacts/pkgs/repo/
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
