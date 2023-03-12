@@ -37,18 +37,24 @@ jobs:
         id: check-requirements
         run: |
           if [ "${RUN_SCHEDULED_BUILDS}" = "1" ]; then
-            echo "Running workflow because RUN_SCHEDULED_BUILDS=1"
+            MSG="Running workflow because RUN_SCHEDULED_BUILDS=1"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
             echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
           elif [ "${{ github.event.repository.fork }}" = "true" ]; then
-            echo "Not running workflow because ${{ github.repository }} is a fork"
+            MSG="Not running workflow because ${{ github.repository }} is a fork"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
             echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
           else
-            echo "Running workflow because ${{ github.repository }} is not a fork"
+            MSG="Running workflow because ${{ github.repository }} is not a fork"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
             echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
           fi
 
   trigger-branch-nightly-builds:
-    name: Trigger Branch Schedule Workflows
+    name: Trigger Branch Workflows
     if: ${{ github.event_name == 'schedule' }}
     runs-on:
       - ubuntu-latest
