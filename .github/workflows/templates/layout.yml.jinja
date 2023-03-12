@@ -5,6 +5,7 @@
 <%- set prepare_workflow_skip_pkg_test_suite = prepare_workflow_skip_pkg_test_suite|default("") %>
 <%- set prepare_workflow_salt_version_input = prepare_workflow_salt_version_input|default("") %>
 <%- set skip_test_coverage_check = skip_test_coverage_check|default("${{ github.event_name == 'pull_request' }}") %>
+<%- set skip_junit_reports_check = skip_junit_reports_check|default("${{ github.event_name == 'pull_request' }}") %>
 <%- set python_version_linux = "3.10.10" %>
 <%- set python_version_macos = "3.10.10" %>
 <%- set python_version_windows = "3.10.10" %>

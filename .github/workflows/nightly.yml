@@ -515,6 +515,7 @@ jobs:
       pkg-type: rpm
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   centos-7-pkg-tests:
     name: CentOS 7 Package Tests
@@ -531,6 +532,7 @@ jobs:
       pkg-type: rpm
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   centosstream-8-pkg-tests:
     name: CentOS Stream 8 Package Tests
@@ -547,6 +549,7 @@ jobs:
       pkg-type: rpm
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   centosstream-9-pkg-tests:
     name: CentOS Stream 9 Package Tests
@@ -563,6 +566,7 @@ jobs:
       pkg-type: rpm
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   debian-10-pkg-tests:
     name: Debian 10 Package Tests
@@ -579,6 +583,7 @@ jobs:
       pkg-type: deb
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   debian-11-pkg-tests:
     name: Debian 11 Package Tests
@@ -595,6 +600,7 @@ jobs:
       pkg-type: deb
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   debian-11-arm64-pkg-tests:
     name: Debian 11 Arm64 Package Tests
@@ -611,6 +617,7 @@ jobs:
       pkg-type: deb
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   ubuntu-2004-pkg-tests:
     name: Ubuntu 20.04 Package Tests
@@ -627,6 +634,7 @@ jobs:
       pkg-type: deb
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   ubuntu-2004-arm64-pkg-tests:
     name: Ubuntu 20.04 Arm64 Package Tests
@@ -643,6 +651,7 @@ jobs:
       pkg-type: deb
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   ubuntu-2204-pkg-tests:
     name: Ubuntu 22.04 Package Tests
@@ -659,6 +668,7 @@ jobs:
       pkg-type: deb
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   ubuntu-2204-arm64-pkg-tests:
     name: Ubuntu 22.04 Arm64 Package Tests
@@ -675,6 +685,7 @@ jobs:
       pkg-type: deb
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   macos-12-pkg-tests:
     name: macOS 12 Package Tests
@@ -691,6 +702,7 @@ jobs:
       pkg-type: macos
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   windows-2016-nsis-pkg-tests:
     name: Windows 2016 NSIS Package Tests
@@ -707,6 +719,7 @@ jobs:
       pkg-type: NSIS
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   windows-2016-msi-pkg-tests:
     name: Windows 2016 MSI Package Tests
@@ -723,6 +736,7 @@ jobs:
       pkg-type: MSI
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   windows-2019-nsis-pkg-tests:
     name: Windows 2019 NSIS Package Tests
@@ -739,6 +753,7 @@ jobs:
       pkg-type: NSIS
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   windows-2019-msi-pkg-tests:
     name: Windows 2019 MSI Package Tests
@@ -755,6 +770,7 @@ jobs:
       pkg-type: MSI
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   windows-2022-nsis-pkg-tests:
     name: Windows 2022 NSIS Package Tests
@@ -771,6 +787,7 @@ jobs:
       pkg-type: NSIS
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   windows-2022-msi-pkg-tests:
     name: Windows 2022 MSI Package Tests
@@ -787,6 +804,7 @@ jobs:
       pkg-type: MSI
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   windows-2016:
     name: Windows 2016
@@ -804,6 +822,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   windows-2019:
     name: Windows 2019
@@ -821,6 +840,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   windows-2022:
     name: Windows 2022
@@ -838,6 +858,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   macos-12:
     name: macOS 12
@@ -855,6 +876,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   almalinux-8:
     name: Alma Linux 8
@@ -872,6 +894,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   almalinux-9:
     name: Alma Linux 9
@@ -889,6 +912,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   amazonlinux-2:
     name: Amazon Linux 2
@@ -906,6 +930,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   archlinux-lts:
     name: Arch Linux LTS
@@ -923,6 +948,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   centos-7:
     name: CentOS 7
@@ -940,6 +966,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   centosstream-8:
     name: CentOS Stream 8
@@ -957,6 +984,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   centosstream-9:
     name: CentOS Stream 9
@@ -974,6 +1002,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   debian-10:
     name: Debian 10
@@ -991,6 +1020,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   debian-11:
     name: Debian 11
@@ -1008,6 +1038,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   debian-11-arm64:
     name: Debian 11 Arm64
@@ -1025,6 +1056,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   fedora-36:
     name: Fedora 36
@@ -1042,6 +1074,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   fedora-37:
     name: Fedora 37
@@ -1059,6 +1092,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   fedora-38:
     name: Fedora 38
@@ -1076,6 +1110,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   opensuse-15:
     name: Opensuse 15
@@ -1093,6 +1128,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   photonos-3:
     name: Photon OS 3
@@ -1110,6 +1146,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   photonos-4:
     name: Photon OS 4
@@ -1127,6 +1164,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   ubuntu-2004:
     name: Ubuntu 20.04
@@ -1144,6 +1182,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64
@@ -1161,6 +1200,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   ubuntu-2204:
     name: Ubuntu 22.04
@@ -1178,6 +1218,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64
@@ -1195,6 +1236,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       skip-code-coverage: false
+      skip-junit-reports: false
 
   build-src-repo:
     name: Build Source Repository
