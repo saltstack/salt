@@ -240,11 +240,8 @@ def install_ruby(ruby, runas=None):
     elif __salt__["config.option"]("rbenv.build_env"):
         env_list.append(__salt__["config.option"]("rbenv.build_env"))
 
-    if env_list:
-        env = " ".join(env_list)
-
     ret = {}
-    ret = _rbenv_exec(["install", ruby], env=env, runas=runas, ret=ret)
+    ret = _rbenv_exec(["install", ruby], env=env_list, runas=runas, ret=ret)
     if ret is not False and ret["retcode"] == 0:
         rehash(runas=runas)
         return ret["stderr"]
