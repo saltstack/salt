@@ -139,17 +139,17 @@ jobs:
           export LDFLAGS="-L/usr/local/opt/openssl@3/lib"
           export CPPFLAGS="-I/usr/local/opt/openssl@3/include"
           export PKG_CONFIG_PATH="/usr/local/opt/openssl@3/lib/pkgconfig"
-          nox --install-only -e ${{ inputs.nox-session }}
+          nox --force-color --install-only -e ${{ inputs.nox-session }}
 
       - name: Cleanup .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          nox -e "pre-archive-cleanup(pkg=False)"
+          nox --force-color -e "pre-archive-cleanup(pkg=False)"
 
       - name: Compress .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          nox -e compress-dependencies -- ${{ inputs.distro-slug }}
+          nox --force-color -e compress-dependencies -- ${{ inputs.distro-slug }}
 
   test:
     name: Test
@@ -211,7 +211,7 @@ jobs:
 
       - name: Decompress .nox Directory
         run: |
-          nox -e decompress-dependencies -- ${{ inputs.distro-slug }}
+          nox --force-color -e decompress-dependencies -- ${{ inputs.distro-slug }}
 
       - name: Show System Info & Test Plan
         env:
@@ -222,7 +222,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
         run: |
-          sudo -E nox -e ${{ inputs.nox-session }} -- ${{ matrix.test-chunk }}
+          sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.test-chunk }}
 
       - name: Run Package Tests
         env:
@@ -234,7 +234,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
         run: |
-          sudo -E nox -e ${{ inputs.nox-session }} -- ${{ matrix.test-chunk }}
+          sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.test-chunk }}
 
       - name: Fix file ownership
         run: |
