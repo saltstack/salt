@@ -671,9 +671,13 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
     """
     Generate the test matrix.
     """
-    _matrix = []
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+
+    matrix = []
     sessions = [
-        "test-pkgs-onedir",
+        "install",
     ]
     if (
         distro_slug
@@ -682,24 +686,33 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
             "ubuntu-20.04-arm64",
             "ubuntu-22.04-arm64",
         ]
-        and "MSI" != pkg_type
+        and pkg_type != "MSI"
     ):
         # These OS's never had arm64 packages built for them
         # with the tiamate onedir packages.
         # we will need to ensure when we release 3006.0
         # we allow for 3006.0 jobs to run, because then
         # we will have arm64 onedir packages to upgrade from
-        sessions.append("'test-upgrade-pkgs-onedir(classic=False)'")
+        sessions.append("upgrade")
     if (
         distro_slug not in ["centosstream-9", "ubuntu-22.04", "ubuntu-22.04-arm64"]
-        and "MSI" != pkg_type
+        and pkg_type != "MSI"
     ):
         # Packages for these OSs where never built for classic previously
-        sessions.append("'test-upgrade-pkgs-onedir(classic=True)'")
+        sessions.append("upgrade-classic")
 
-    for sess in sessions:
-        _matrix.append({"nox-session": sess})
-    print(json.dumps(_matrix))
+    for session in sessions:
+        matrix.append(
+            {
+                "test-chunk": session,
+            }
+        )
+    ctx.info("Generated matrix:")
+    ctx.print(matrix, soft_wrap=True)
+
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"matrix={json.dumps(matrix)}\n")
     ctx.exit(0)
 
 
@@ -718,10 +731,6 @@ def pkg_download_matrix(ctx: Context, platform: str):
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output is None:
         ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
-        ctx.exit(1)
-
-    if TYPE_CHECKING:
-        assert github_output is not None
 
     _matrix = []
     if platform == "windows":
@@ -744,6 +753,7 @@ def pkg_download_matrix(ctx: Context, platform: str):
             )
     ctx.info("Generated test matrix:")
     ctx.print(_matrix, soft_wrap=True)
-    with open(github_output, "a", encoding="utf-8") as wfh:
-        wfh.write(f"matrix={json.dumps(_matrix)}\n")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"matrix={json.dumps(_matrix)}\n")
     ctx.exit(0)
