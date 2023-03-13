@@ -27,7 +27,7 @@ on:
         required: false
         type: string
         description: The python version to run tests with
-        default: "3.9"
+        default: "3.10"
       package-name:
         required: false
         type: string
@@ -42,7 +42,7 @@ on:
         required: false
         type: string
         description: The nox session to run
-        default: test-download-pkgs
+        default: test-pkgs-onedir
 
 
 env:
@@ -190,7 +190,7 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
         run: |
-          nox -e ${{ inputs.nox-session }}
+          nox -e ${{ inputs.nox-session }} -- download-pkgs
 
       - name: Run Package Download Tests
         env:
@@ -206,7 +206,7 @@ jobs:
           SALT_REPO_TYPE: ${{ inputs.environment }}
           SALT_REPO_DOMAIN: ${{ env.SALT_REPO_DOMAIN || 'staging.repo.saltproject.io' }}
         run: |
-          nox -e ${{ inputs.nox-session }}
+          nox -e ${{ inputs.nox-session }} -- download-pkgs
 
       - name: Fix file ownership
         run: |
@@ -230,14 +230,14 @@ jobs:
         if: always() && job.status != 'cancelled'
         uses: actions/upload-artifact@v3
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.arch }}
           path: |
             artifacts
             !artifacts/salt/*
             !artifacts/salt-*.tar.*
 
   report:
-    name: Reports for ${{ inputs.distro-slug }}(${{ inputs.nox-session }})
+    name: Reports for ${{ inputs.distro-slug }}(${{ matrix.arch }})
     runs-on: ubuntu-latest
     if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     needs:
@@ -256,7 +256,7 @@ jobs:
         id: download-test-run-artifacts
         uses: actions/download-artifact@v3
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.arch }}
           path: artifacts
 
       - name: Show Test Run Artifacts
@@ -279,6 +279,6 @@ jobs:
         # always run even if the previous steps fails
         if: always() && github.event_name == 'push' && steps.download-test-run-artifacts.outcome == 'success'
         with:
-          check_name: Overall Test Results(${{ inputs.distro-slug }} ${{ inputs.nox-session }})
+          check_name: Overall Test Results(${{ inputs.distro-slug }} ${{ matrix.arch }})
           report_paths: 'artifacts/xml-unittests-output/*.xml'
           annotate_only: true
