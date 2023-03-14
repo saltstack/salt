@@ -1420,6 +1420,11 @@ def _get_repo_file_list(
 
 
 def _get_remote_versions(bucket_name: str, remote_path: str):
+    log.info(
+        "Getting remote versions from bucket %r under path: %s",
+        bucket_name,
+        remote_path,
+    )
     remote_path = str(remote_path)
     if not remote_path.endswith("/"):
         remote_path += "/"
@@ -1439,6 +1444,7 @@ def _get_remote_versions(bucket_name: str, remote_path: str):
             continue
         versions.append(Version(version))
     versions.sort(reverse=True)
+    log.info("Remove versions collected: %s", versions)
     return versions
 
 
