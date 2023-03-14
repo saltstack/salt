@@ -1021,7 +1021,8 @@ def release(
             )
             minor_versions = [v for v in versions if v.major == major_version]
             ctx.info(
-                f"Collected versions(Matching major: {major_version}) from {minor_repo_json_path.relative_to(repo_path)}: "
+                f"Collected versions(Matching major: {major_version}) from "
+                f"{minor_repo_json_path.relative_to(repo_path)}: "
                 f"{', '.join(str(vs) for vs in minor_versions)}"
             )
             if not versions:
@@ -1604,7 +1605,7 @@ def _create_onedir_based_repo(
         minor_repo_json["latest"] = release_json
         # This is the latest minor, update the major in the top level repo.json
         # to this version
-        repo_json[str(major_version)] = release_json
+        repo_json[str(salt_version)] = release_json
         ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
         if major_link.exists():
             major_link.unlink()
