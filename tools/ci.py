@@ -721,6 +721,7 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
     arguments={
         "platform": {
             "help": "The OS platform to generate the matrix for",
+            "choices": ("linux", "windows", "macos", "darwin"),
         },
     },
 )
@@ -732,28 +733,25 @@ def pkg_download_matrix(ctx: Context, platform: str):
     if github_output is None:
         ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
 
-    _matrix = []
+    tests = []
+    arches = []
     if platform == "windows":
         for arch in ("amd64", "x86"):
+            arches.append({"arch": arch})
             for install_type in ("msi", "nsis"):
-                _matrix.append(
-                    {
-                        "arch": arch,
-                        "install_type": install_type,
-                    },
-                )
+                tests.append({"arch": arch, "install_type": install_type})
     else:
-        for arch in ("x86_64", "arm64"):
-            if platform == "macos" and arch == "arm64":
+        for arch in ("x86_64", "aarch64"):
+            if platform in ("macos", "darwin") and arch == "aarch64":
                 continue
-            _matrix.append(
-                {
-                    "arch": arch,
-                },
-            )
+            arches.append({"arch": arch})
+            tests.append({"arch": arch})
+    ctx.info("Generated arch matrix:")
+    ctx.print(arches, soft_wrap=True)
     ctx.info("Generated test matrix:")
-    ctx.print(_matrix, soft_wrap=True)
+    ctx.print(tests, soft_wrap=True)
     if github_output is not None:
         with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"matrix={json.dumps(_matrix)}\n")
+            wfh.write(f"arch={json.dumps(arches)}\n")
+            wfh.write(f"tests={json.dumps(tests)}\n")
     ctx.exit(0)

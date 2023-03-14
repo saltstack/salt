@@ -27,7 +27,7 @@
     uses: ./.github/workflows/test-package-downloads-action-macos.yml
     with:
       distro-slug: macos-12
-      platform: macos
+      platform: darwin
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_macos }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>

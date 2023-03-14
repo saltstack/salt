@@ -1948,7 +1948,7 @@ jobs:
     uses: ./.github/workflows/test-package-downloads-action-macos.yml
     with:
       distro-slug: macos-12
-      platform: macos
+      platform: darwin
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
