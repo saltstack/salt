@@ -3,7 +3,7 @@
 ---
 
 name: Scheduled
-run-name: "Scheduled (${{ format('Branch: {0}', github.ref_name) }})"
+run-name: "Scheduled (branch: ${{ github.ref_name }})"
 
 on:
   schedule:

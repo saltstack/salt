@@ -2,7 +2,7 @@
 # Instead, edit the template '.github/workflows/templates/ci.yml.jinja'
 ---
 name: CI
-run-name: "CI (${{ github.event_name == 'pull_request' && format('PR: #{0}', github.event.number) || format('Branch: {0}', github.ref_name) }})"
+run-name: "CI (${{ github.event_name == 'pull_request' && format('pr: #{0}', github.event.number) || format('branch: {0}', github.ref_name) }})"
 on:
   push: {}
   pull_request: {}

@@ -3,7 +3,7 @@
 ---
 
 name: Nightly
-run-name: "Nightly (${{ format('Branch: {0}', github.ref_name) }})"
+run-name: "Nightly (branch: ${{ github.ref_name }})"
 
 on:
   workflow_dispatch: {}

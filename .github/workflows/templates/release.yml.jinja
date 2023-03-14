@@ -6,7 +6,7 @@
 <%- block name %>
 
 name: <{ workflow_name }>
-run-name: "<{ workflow_name }> (${{ format('Branch: {0} // Version: {1}', github.ref_name, inputs.salt-version) }})"
+run-name: "<{ workflow_name }> (branch: ${{ github.ref_name }}; version: ${{ inputs.salt-version }})"
 
 <%- endblock name %>
 
