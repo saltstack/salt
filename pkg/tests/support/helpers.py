@@ -591,6 +591,10 @@ class SaltPkgInstall:
         else:
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
             ret = self.proc.run(self.pkg_mngr, "install", "-y", *self.pkgs)
+        if not (platform.is_darwin() or platform.is_windows()):
+            # Make sure we don't have any trailing references to old package file locations
+            assert "No such file or directory" not in ret.stdout
+            assert "/saltstack/salt/run" not in ret.stdout
         log.info(ret)
         self._check_retcode(ret)
 

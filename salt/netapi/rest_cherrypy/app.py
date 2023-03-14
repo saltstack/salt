@@ -863,10 +863,10 @@ def hypermedia_handler(*args, **kwargs):
         salt.exceptions.AuthorizationError,
         salt.exceptions.EauthAuthenticationError,
         salt.exceptions.TokenAuthenticationError,
-    ):
-        raise cherrypy.HTTPError(401)
-    except salt.exceptions.SaltInvocationError:
-        raise cherrypy.HTTPError(400)
+    ) as e:
+        raise cherrypy.HTTPError(401, e.message)
+    except salt.exceptions.SaltInvocationError as e:
+        raise cherrypy.HTTPError(400, e.message)
     except (
         salt.exceptions.SaltDaemonNotRunning,
         salt.exceptions.SaltReqTimeoutError,

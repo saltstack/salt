@@ -271,16 +271,18 @@ def test_version_cmp_rpm_all_libraries(rpm_lib):
             pytest.skip("The Python RPM lib is not installed, skipping")
 
     with patch_rpm, patch_py_rpm, patch_cmd:
-        assert -1 == rpm.version_cmp("1", "2")
-        assert -1 == rpm.version_cmp("2.9.1-6.el7_2.3", "2.9.1-6.el7.4")
-        assert 1 == rpm.version_cmp("3.2", "3.0")
-        assert 0 == rpm.version_cmp("3.0", "3.0")
-        assert 1 == rpm.version_cmp("1:2.9.1-6.el7_2.3", "2.9.1-6.el7.4")
-        assert -1 == rpm.version_cmp("1:2.9.1-6.el7_2.3", "1:2.9.1-6.el7.4")
-        assert 1 == rpm.version_cmp("2:2.9.1-6.el7_2.3", "1:2.9.1-6.el7.4")
-        assert 0 == rpm.version_cmp("3:2.9.1-6.el7.4", "3:2.9.1-6.el7.4")
-        assert -1 == rpm.version_cmp("3:2.9.1-6.el7.4", "3:2.9.1-7.el7.4")
-        assert 1 == rpm.version_cmp("3:2.9.1-8.el7.4", "3:2.9.1-7.el7.4")
+        assert rpm.version_cmp("1", "2") == -1
+        assert rpm.version_cmp("2.9.1-6.el7_2.3", "2.9.1-6.el7.4") == -1
+        assert rpm.version_cmp("3.2", "3.0") == 1
+        assert rpm.version_cmp("3.0", "3.0") == 0
+        assert rpm.version_cmp("1:2.9.1-6.el7_2.3", "2.9.1-6.el7.4") == 1
+        assert rpm.version_cmp("1:2.9.1-6.el7_2.3", "1:2.9.1-6.el7.4") == -1
+        assert rpm.version_cmp("2:2.9.1-6.el7_2.3", "1:2.9.1-6.el7.4") == 1
+        assert rpm.version_cmp("3:2.9.1-6.el7.4", "3:2.9.1-6.el7.4") == 0
+        assert rpm.version_cmp("3:2.9.1-6.el7.4", "3:2.9.1-7.el7.4") == -1
+        assert rpm.version_cmp("3:2.9.1-8.el7.4", "3:2.9.1-7.el7.4") == 1
+        assert rpm.version_cmp("3.23-6.el9", "3.23") == 0
+        assert rpm.version_cmp("3.23", "3.23-6.el9") == 0
 
 
 def test_version_cmp_rpm():
