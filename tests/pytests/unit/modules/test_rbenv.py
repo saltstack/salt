@@ -71,6 +71,28 @@ def test_install_ruby():
                 with patch.object(rbenv, "uninstall_ruby", return_value=None):
                     assert not rbenv.install_ruby("ruby")
 
+def test_install_ruby_build_env():
+    """
+    Test for install a ruby implementation using rbenv:build_env.
+    """
+    with patch.dict(rbenv.__grains__, {'os': 'FreeBSD'}):
+        dict_config_ret = {'RUBY_CFLAGS': '-O3'}
+        with patch.dict(rbenv.__salt__, {'config.get': MagicMock(return_value=dict_config_ret)}):
+            with patch.object(
+                rbenv,
+                '_rbenv_exec',
+                return_value={'retcode': 0, 'stderr': 'stderr'},
+            ):
+                with patch.object(rbenv, 'rehash', return_value=None):
+                    assert rbenv.install_ruby("ruby") == "stderr"
+
+            with patch.object(
+                rbenv,
+                '_rbenv_exec',
+                return_value={'retcode': 1, 'stderr': 'stderr'},
+            ):
+                with patch.object(rbenv, 'uninstall_ruby', return_value=None):
+                    assert not rbenv.install_ruby("ruby")
 
 def test_uninstall_ruby():
     """
