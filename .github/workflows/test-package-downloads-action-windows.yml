@@ -59,7 +59,8 @@ jobs:
     name: Generate Package Test Matrix
     runs-on: ubuntu-latest
     outputs:
-      pkg-matrix-include: ${{ steps.generate-pkg-matrix.outputs.matrix }}
+      arch-matrix-include: ${{ steps.generate-pkg-matrix.outputs.arch }}
+      test-matrix-include: ${{ steps.generate-pkg-matrix.outputs.tests }}
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
@@ -81,7 +82,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.pkg-matrix-include) }}
+        include: ${{ fromJSON(needs.generate-matrix.outputs.arch-matrix-include) }}
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
@@ -148,7 +149,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.pkg-matrix-include) }}
+        include: ${{ fromJSON(needs.generate-matrix.outputs.test-matrix-include) }}
 
     steps:
       - name: Checkout Source Code
@@ -252,7 +253,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.pkg-matrix-include) }}
+        include: ${{ fromJSON(needs.generate-matrix.outputs.test-matrix-include) }}
 
     steps:
       - name: Checkout Source Code
