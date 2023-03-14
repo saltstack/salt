@@ -1,3 +1,4 @@
+<%- set prepare_workflow_if_check = False %>
 <%- set prepare_workflow_salt_version_input = "${{ inputs.salt-version }}" %>
 <%- set prepare_workflow_skip_test_suite = "${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}" %>
 <%- set prepare_workflow_skip_pkg_test_suite = "${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}" %>

@@ -904,7 +904,7 @@ def release(
         assert key_id is not None
 
     if rc_build:
-        bucket_folder = "salt_rc/py3"
+        bucket_folder = "salt_rc/salt/py3"
     else:
         bucket_folder = "salt/py3"
 
