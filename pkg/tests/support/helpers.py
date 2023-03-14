@@ -554,21 +554,15 @@ class SaltPkgInstall:
             elif pkg.endswith("msi"):
                 # Install the package
                 log.debug("Installing: %s", str(pkg))
-                # START_MINION="" does not work as documented. The service is
-                # still starting. We need to fix this for RC2
+                # Since this is running in powershell, we need to escape the
+                # quotes for START_MINION=""
                 ret = self.proc.run(
-                    "msiexec.exe", "/qn", "/i", str(pkg), 'START_MINION=""'
+                    "msiexec.exe", "/qn", "/i", str(pkg), 'START_MINION=`"`"'
                 )
                 self._check_retcode(ret)
             else:
                 log.error("Invalid package: %s", pkg)
                 return False
-
-            # Stop the service installed by the installer. We only need this
-            # until we fix the issue where the MSI installer is starting the
-            # salt-minion service when it shouldn't
-            log.debug("Removing installed salt-minion service")
-            self.proc.run(str(self.ssm_bin), "stop", "salt-minion")
 
             # Remove the service installed by the installer
             log.debug("Removing installed salt-minion service")
@@ -731,17 +725,15 @@ class SaltPkgInstall:
             with open(pkg_path, "wb") as fp:
                 fp.write(ret.content)
             if self.file_ext == "msi":
+                # Since this is running in powershell, we need to escape the
+                # quotes for START_MINION=""
                 ret = self.proc.run(
-                    "msiexec.exe", "/qn", "/i", str(pkg_path), 'START_MINION=""'
+                    "msiexec.exe", "/qn", "/i", str(pkg_path), 'START_MINION=`"`"'
                 )
                 self._check_retcode(ret)
             else:
                 ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
                 self._check_retcode(ret)
-
-            # Stop the service installed by the installer
-            log.debug("Removing installed salt-minion service")
-            self.proc.run(str(self.ssm_bin), "stop", "salt-minion")
 
             log.debug("Removing installed salt-minion service")
             ret = self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
