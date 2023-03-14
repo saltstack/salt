@@ -1718,6 +1718,7 @@ def test_pkgs_onedir(session):
             "--no-uninstall",
         ],
         "download-pkgs": [
+            "--download-pkgs",
             "pkg/tests/download/test_pkg_download.py",
         ],
     }
