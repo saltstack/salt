@@ -3,7 +3,7 @@
 ---
 
 name: Release
-run-name: "Release (${{ format('Branch: {0} // Version: {1}', github.ref_name, inputs.salt-version) }})"
+run-name: "Release (branch: ${{ github.ref_name }}; version: ${{ inputs.salt-version }})"
 
 on:
   workflow_dispatch:
