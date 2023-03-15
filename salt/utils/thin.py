@@ -906,7 +906,6 @@ def gen_min(
         "salt/client/__init__.py",
         "salt/ext",
         "salt/ext/__init__.py",
-        "salt/ext/six.py",
         "salt/ext/ipaddress.py",
         "salt/version.py",
         "salt/syspaths.py",

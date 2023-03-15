@@ -293,7 +293,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.skip-code-coverage && '--skip-code-coverage' || '' }} \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
             ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- \
             --run-slow --suppress-no-test-exit-code --from-filenames=testrun-changed-files.txt
 
@@ -302,7 +302,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.skip-code-coverage && '--skip-code-coverage' || '' }} \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
             ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
 
       - name: Run Full Tests
@@ -310,7 +310,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.skip-code-coverage && '--skip-code-coverage' || '' }} \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
             ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --run-slow
 
       - name: Combine Coverage Reports
