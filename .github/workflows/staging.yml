@@ -1454,24 +1454,45 @@ jobs:
           - distro: amazon
             version: "2"
             arch: x86_64
+          - distro: amazon
+            version: "2"
+            arch: aarch64
           - distro: redhat
             version: "7"
             arch: x86_64
           - distro: redhat
+            version: "7"
+            arch: aarch64
+          - distro: redhat
             version: "8"
             arch: x86_64
           - distro: redhat
+            version: "8"
+            arch: aarch64
+          - distro: redhat
             version: "9"
             arch: x86_64
+          - distro: redhat
+            version: "9"
+            arch: aarch64
           - distro: fedora
             version: "36"
             arch: x86_64
           - distro: fedora
+            version: "36"
+            arch: aarch64
+          - distro: fedora
             version: "37"
             arch: x86_64
           - distro: fedora
+            version: "37"
+            arch: aarch64
+          - distro: fedora
             version: "38"
             arch: x86_64
+          - distro: fedora
+            version: "38"
+            arch: aarch64
 
     steps:
       - uses: actions/checkout@v3
