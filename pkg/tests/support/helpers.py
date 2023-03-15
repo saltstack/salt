@@ -554,11 +554,16 @@ class SaltPkgInstall:
             elif pkg.endswith("msi"):
                 # Install the package
                 log.debug("Installing: %s", str(pkg))
-                # Since this is running in powershell, we need to escape the
-                # quotes for START_MINION=""
-                ret = self.proc.run(
-                    "msiexec.exe", "/qn", "/i", str(pkg), 'START_MINION=`"`"'
-                )
+                # Write a batch file to run the installer. It is impossible to
+                # perform escaping of the START_MINION property that the MSI
+                # expects unless we do it via a batch file
+                batch_file = pathlib.Path(pkg).parent / "install_msi.cmd"
+                batch_content = f"""msiexec /qn /i "{str(pkg)}" START_MINION=""
+                """
+                with open(batch_file, "w") as fp:
+                    fp.write(batch_content)
+                # Now run the batch file
+                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
             else:
                 log.error("Invalid package: %s", pkg)
@@ -725,11 +730,16 @@ class SaltPkgInstall:
             with open(pkg_path, "wb") as fp:
                 fp.write(ret.content)
             if self.file_ext == "msi":
-                # Since this is running in powershell, we need to escape the
-                # quotes for START_MINION=""
-                ret = self.proc.run(
-                    "msiexec.exe", "/qn", "/i", str(pkg_path), 'START_MINION=`"`"'
-                )
+                # Write a batch file to run the installer. It is impossible to
+                # perform escaping of the START_MINION property that the MSI
+                # expects unless we do it via a batch file
+                batch_file = pkg_path.parent / "install_msi.cmd"
+                batch_content = f"""msiexec /qn /i {str(pkg_path)} START_MINION=""
+                """
+                with open(batch_file, "w") as fp:
+                    fp.write(batch_content)
+                # Now run the batch file
+                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
             else:
                 ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
