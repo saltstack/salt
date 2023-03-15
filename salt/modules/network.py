@@ -20,7 +20,6 @@ import salt.utils.validate.net
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
 
-
 log = logging.getLogger(__name__)
 
 
