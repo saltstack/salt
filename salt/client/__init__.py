@@ -38,11 +38,11 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minions
+import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
-import salt.utils.zeromq
 from salt.exceptions import (
     AuthenticationError,
     AuthorizationError,
@@ -590,10 +590,9 @@ class LocalClient:
         # even though it has already been imported.
         # when cmd_batch is called via the NetAPI
         # the module is unavailable.
-        import salt.utils.args
-
         # Late import - not used anywhere else in this file
         import salt.cli.batch
+        import salt.utils.args
 
         arg = salt.utils.args.condition_input(arg, kwarg)
         opts = {
@@ -824,7 +823,6 @@ class LocalClient:
                 listen=True,
                 **kwargs
             )
-
             if not self.pub_data:
                 yield self.pub_data
             else:
@@ -1192,6 +1190,13 @@ class LocalClient:
                 # if we got None, then there were no events
                 if raw is None:
                     break
+                if "error" in raw.get("data", {}):
+                    yield {
+                        "error": {
+                            "name": "AuthorizationError",
+                            "message": "Authorization error occurred.",
+                        }
+                    }
                 if "minions" in raw.get("data", {}):
                     minions.update(raw["data"]["minions"])
                     if "missing" in raw.get("data", {}):
@@ -1708,6 +1713,8 @@ class LocalClient:
                                     "retcode": salt.defaults.exitcodes.EX_GENERIC,
                                 }
                             }
+                elif "error" in min_ret:
+                    raise AuthorizationError("Authorization error occurred")
                 else:
                     yield {id_: min_ret}
 
@@ -1826,11 +1833,7 @@ class LocalClient:
         if kwargs:
             payload_kwargs["kwargs"] = kwargs
 
-        # If we have a salt user, add it to the payload
-        if self.opts["syndic_master"] and "user" in kwargs:
-            payload_kwargs["user"] = kwargs["user"]
-        elif self.salt_user:
-            payload_kwargs["user"] = self.salt_user
+        payload_kwargs["user"] = self.salt_user
 
         # If we're a syndication master, pass the timeout
         if self.opts["order_masters"]:
@@ -1886,7 +1889,7 @@ class LocalClient:
         )
 
         master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(self.opts["interface"]),
+            salt.utils.network.ip_bracket(self.opts["interface"]),
             str(self.opts["ret_port"]),
         )
 
@@ -1989,7 +1992,7 @@ class LocalClient:
 
         master_uri = (
             "tcp://"
-            + salt.utils.zeromq.ip_bracket(self.opts["interface"])
+            + salt.utils.network.ip_bracket(self.opts["interface"])
             + ":"
             + str(self.opts["ret_port"])
         )

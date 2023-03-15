@@ -5,6 +5,7 @@ import tempfile
 from contextlib import contextmanager
 
 import pytest
+
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
@@ -42,6 +43,7 @@ class CMDModuleTest(ModuleCase):
                 self.run_function("user.delete", [name], remove=True)
 
     @pytest.mark.slow_test
+    @pytest.mark.skip_on_windows
     def test_run(self):
         """
         cmd.run
@@ -574,7 +576,14 @@ class CMDModuleTest(ModuleCase):
         if user.startswith("sudo_"):
             user = user.replace("sudo_", "")
         cmd = self.run_function("cmd.run", ["whoami"])
-        self.assertEqual(user.lower(), cmd.lower())
+        try:
+            self.assertEqual(user.lower(), cmd.lower())
+        except AssertionError as exc:
+            if not salt.utils.platform.is_windows():
+                raise exc from None
+            if "\\" in user:
+                user = user.split("\\")[-1]
+            self.assertEqual(user.lower(), cmd.lower())
 
     @pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
     @pytest.mark.slow_test

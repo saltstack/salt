@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.selinux as selinux
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch

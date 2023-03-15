@@ -7,6 +7,7 @@ import os.path
 import tempfile
 
 import pytest
+
 import salt.modules.qemu_nbd as qemu_nbd
 from tests.support.mock import MagicMock, patch
 

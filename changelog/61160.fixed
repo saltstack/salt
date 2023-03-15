@@ -1,1 +1,0 @@
-added exception catch to salt.utils.vt.terminal.isalive().

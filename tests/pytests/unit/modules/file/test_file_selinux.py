@@ -3,6 +3,7 @@ import os
 import shutil
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
@@ -111,7 +112,7 @@ def test_file_check_perms(tfile3):
             "name": tfile3,
             "result": True,
         },
-        {"luser": "root", "lmode": "0644", "lgroup": "root"},
+        {"cmode": "0664", "luser": "root", "lmode": "0644", "lgroup": "root"},
     )
 
     # Disable lsattr calls

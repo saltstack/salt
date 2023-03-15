@@ -103,9 +103,9 @@ if HAS_PIP is True:
 
         purge_pip.__pip_ver__ = pip.__version__
     if salt.utils.versions.compare(ver1=pip.__version__, oper=">=", ver2="10.0"):
-        from pip._internal.exceptions import (
+        from pip._internal.exceptions import (  # pylint: disable=E0611,E0401
             InstallationError,
-        )  # pylint: disable=E0611,E0401
+        )
     elif salt.utils.versions.compare(ver1=pip.__version__, oper=">=", ver2="1.0"):
         from pip.exceptions import InstallationError  # pylint: disable=E0611,E0401
     else:
@@ -565,11 +565,6 @@ def installed(
     process_dependency_links
         Enable the processing of dependency links
 
-    bin_env : None
-        Absolute path to a virtual environment directory or absolute path to
-        a pip executable. The example below assumes a virtual environment
-        has been created at ``/foo/.virtualenvs/bar``.
-
     env_vars
         Add or modify environment variables. Useful for tweaking build steps,
         such as specifying INCLUDE or LIBRARY paths in Makefiles, build scripts or
@@ -593,29 +588,34 @@ def installed(
         Mark this host as trusted, even though it does not have valid or any
         HTTPS.
 
-    Example:
+    bin_env : None
+        Absolute path to a virtual environment directory or absolute path to
+        a pip executable. The example below assumes a virtual environment
+        has been created at ``/foo/.virtualenvs/bar``.
 
-    .. code-block:: yaml
+        Example:
 
-        django:
-          pip.installed:
-            - name: django >= 1.6, <= 1.7
-            - bin_env: /foo/.virtualenvs/bar
-            - require:
-              - pkg: python-pip
+        .. code-block:: yaml
 
-    Or
+            django:
+            pip.installed:
+                - name: django >= 1.6, <= 1.7
+                - bin_env: /foo/.virtualenvs/bar
+                - require:
+                - pkg: python-pip
 
-    Example:
+        Or
 
-    .. code-block:: yaml
+        Example:
 
-        django:
-          pip.installed:
-            - name: django >= 1.6, <= 1.7
-            - bin_env: /foo/.virtualenvs/bar/bin/pip
-            - require:
-              - pkg: python-pip
+        .. code-block:: yaml
+
+            django:
+            pip.installed:
+                - name: django >= 1.6, <= 1.7
+                - bin_env: /foo/.virtualenvs/bar/bin/pip
+                - require:
+                - pkg: python-pip
 
     .. admonition:: Attention
 
@@ -699,6 +699,20 @@ def installed(
 
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
+
+    If you are using onedir packages and you need to install python packages into
+    the system python environment, you must provide the pip_bin or
+    bin_env to the pip state module.
+
+
+    .. code-block:: yaml
+
+        lib-foo:
+          pip.installed:
+            - pip_bin: /usr/bin/pip3
+        lib-bar:
+          pip.installed:
+            - bin_env: /usr/bin/python3
     """
     if pip_bin and not bin_env:
         bin_env = pip_bin
@@ -831,9 +845,11 @@ def installed(
     # No requirements case.
     # Check pre-existence of the requested packages.
     else:
-        # Attempt to pre-cache a the current pip list
+        # Attempt to pre-cache the current pip list
         try:
-            pip_list = __salt__["pip.list"](bin_env=bin_env, user=user, cwd=cwd)
+            pip_list = __salt__["pip.list"](
+                bin_env=bin_env, user=user, cwd=cwd, env_vars=env_vars
+            )
         # If we fail, then just send False, and we'll try again in the next function call
         except Exception as exc:  # pylint: disable=broad-except
             log.exception(exc)

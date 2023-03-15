@@ -99,6 +99,37 @@ def A(host, nameserver=None):
     return [x for x in cmd["stdout"].split("\n") if check_ip(x)]
 
 
+def PTR(host, nameserver=None):
+    """
+    .. versionadded:: 3006.0
+
+    Return the PTR record for ``host``.
+
+    Always returns a list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt ns1 dig.PTR 1.2.3.4
+    """
+    dig = ["dig", "+short", "-x", str(host)]
+
+    if nameserver is not None:
+        dig.append("@{}".format(nameserver))
+
+    cmd = __salt__["cmd.run_all"](dig, python_shell=False)
+    # In this case, 0 is not the same as False
+    if cmd["retcode"] != 0:
+        log.warning(
+            "dig returned exit code '%s'. Returning empty list as fallback.",
+            cmd["retcode"],
+        )
+        return []
+
+    return [i for i in cmd["stdout"].split("\n")]
+
+
 def AAAA(host, nameserver=None):
     """
     Return the AAAA record for ``host``.
@@ -319,6 +350,7 @@ def TXT(host, nameserver=None):
 
 # Let lowercase work, since that is the convention for Salt functions
 a = A
+ptr = PTR
 aaaa = AAAA
 cname = CNAME
 ns = NS

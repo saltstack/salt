@@ -57,12 +57,12 @@ instance.
 import logging
 import re
 
-from salt.utils.versions import StrictVersion as _StrictVersion
+from salt.utils.versions import Version
 
 try:
     import boto.ec2
-    import boto.utils
     import boto.exception
+    import boto.utils
 
     HAS_BOTO = True
 except ImportError:
@@ -82,8 +82,8 @@ def __virtual__():
     """
     if not HAS_BOTO:
         return False
-    boto_version = _StrictVersion(boto.__version__)
-    required_boto_version = _StrictVersion("2.8.0")
+    boto_version = Version(boto.__version__)
+    required_boto_version = Version("2.8.0")
     if boto_version < required_boto_version:
         log.error(
             "%s: installed boto version %s < %s, can't retrieve instance data",

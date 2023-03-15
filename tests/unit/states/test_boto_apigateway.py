@@ -5,15 +5,16 @@ import random
 import string
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.boto_apigateway as boto_apigateway
 import salt.utils.files
 import salt.utils.yaml
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=import-error,no-name-in-module
 from tests.unit.modules.test_boto_apigateway import BotoApiGatewayTestCaseMixin
@@ -373,7 +374,7 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
+    elif Version(boto3.__version__) < Version(required_boto3_version):
         return False
     else:
         return True
@@ -385,7 +386,7 @@ def _has_required_botocore():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(botocore.__version__) < LooseVersion(required_botocore_version):
+    elif Version(botocore.__version__) < Version(required_botocore_version):
         return False
     else:
         return True
@@ -539,10 +540,10 @@ class BotoApiGatewayStateTestCaseBase(TestCase, LoaderModuleMockMixin):
         session_instance.client.return_value = self.conn
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto3 module must be greater than or equal to version {}".format(
+    reason="The boto3 module must be greater than or equal to version {}".format(
         required_boto3_version
     ),
 )
@@ -1270,16 +1271,16 @@ class BotoApiGatewayTestCase(
         self.assertIsNot(result.get("abort"), True)
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto3 module must be greater than or equal to version {}".format(
+    reason="The boto3 module must be greater than or equal to version {}".format(
         required_boto3_version
     ),
 )
-@skipIf(
+@pytest.mark.skipif(
     _has_required_botocore() is False,
-    "The botocore module must be greater than or equal to version {}".format(
+    reason="The botocore module must be greater than or equal to version {}".format(
         required_botocore_version
     ),
 )
@@ -1816,16 +1817,16 @@ class BotoApiGatewayUsagePlanTestCase(
             self.assertEqual(result["comment"], repr(("error",)))
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto3 module must be greater than or equal to version {}".format(
+    reason="The boto3 module must be greater than or equal to version {}".format(
         required_boto3_version
     ),
 )
-@skipIf(
+@pytest.mark.skipif(
     _has_required_botocore() is False,
-    "The botocore module must be greater than or equal to version {}".format(
+    reason="The botocore module must be greater than or equal to version {}".format(
         required_botocore_version
     ),
 )

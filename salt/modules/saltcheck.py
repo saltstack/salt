@@ -319,7 +319,11 @@ from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
-global_scheck = None
+try:
+    __context__
+except NameError:
+    __context__ = {}
+__context__["global_scheck"] = None
 
 __virtualname__ = "saltcheck"
 
@@ -457,8 +461,7 @@ def run_state_tests(state, saltenv=None, check_all=False, only_fails=False):
             saltenv = "base"
 
     # Use global scheck variable for reuse in each multiprocess
-    global global_scheck
-    global_scheck = SaltCheck(saltenv)
+    __context__["global_scheck"] = SaltCheck(saltenv)
 
     parallel = __salt__["config.get"]("saltcheck_parallel")
     num_proc = __salt__["config.get"]("saltcheck_processes")
@@ -508,7 +511,7 @@ def run_state_tests(state, saltenv=None, check_all=False, only_fails=False):
                     results_dict[key] = value
         else:
             for key, value in stl.test_dict.items():
-                result = global_scheck.run_test(value)
+                result = __context__["global_scheck"].run_test(value)
                 results_dict[key] = result
 
         # If passed a duplicate state, don't overwrite with empty res
@@ -522,7 +525,7 @@ def parallel_scheck(data):
     key = data[0]
     value = data[1]
     results = {}
-    results[key] = global_scheck.run_test(value)
+    results[key] = __context__["global_scheck"].run_test(value)
     return results
 
 
@@ -620,7 +623,9 @@ def _render_file(file_path):
     call the salt utility to render a file
     """
     # salt-call slsutil.renderer /srv/salt/jinjatest/saltcheck-tests/test1.tst
-    rendered = __salt__["slsutil.renderer"](file_path, saltenv=global_scheck.saltenv)
+    rendered = __salt__["slsutil.renderer"](
+        file_path, saltenv=__context__["global_scheck"].saltenv
+    )
     log.info("rendered: %s", rendered)
     return rendered
 
@@ -651,7 +656,7 @@ def _get_top_states(saltenv="base"):
     Equivalent to a salt cli: salt web state.show_top
     """
     top_states = []
-    top_states = __salt__["state.show_top"]()[saltenv]
+    top_states = __salt__["state.show_top"](saltenv=saltenv)[saltenv]
     log.debug("saltcheck for saltenv: %s found top states: %s", saltenv, top_states)
     return top_states
 
@@ -747,12 +752,20 @@ class SaltCheck:
         """
         Generic call of salt Caller command
         """
+        # remote functions and modules won't work with local file client
+        # these aren't exhaustive lists, so add to them when a module or
+        # function can't operate without the remote file client
+        remote_functions = ["file.check_managed_changes"]
+        remote_modules = ["cp"]
+        mod = fun.split(".", maxsplit=1)[0]
+
         conf_file = __opts__["conf_file"]
         local_opts = salt.config.minion_config(conf_file)
         # Save orginal file_client to restore after salt.client.Caller run
         orig_file_client = local_opts["file_client"]
         mlocal_opts = copy.deepcopy(local_opts)
-        mlocal_opts["file_client"] = "local"
+        if fun not in remote_functions and mod not in remote_modules:
+            mlocal_opts["file_client"] = "local"
         value = False
         if args and kwargs:
             value = salt.client.Caller(mopts=mlocal_opts).cmd(fun, *args, **kwargs)

@@ -2,6 +2,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 import pytest
+
 import salt.modules.data as data
 from tests.support.mock import MagicMock, mock_open, patch
 

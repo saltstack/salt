@@ -10,9 +10,10 @@ import os
 import re
 import tempfile
 
+from requests.structures import CaseInsensitiveDict
+
 import salt.utils.data
 import salt.utils.platform
-from requests.structures import CaseInsensitiveDict
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -20,7 +21,7 @@ from salt.exceptions import (
     SaltInvocationError,
 )
 from salt.utils.data import CaseInsensitiveDict
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +68,7 @@ def _yes():
     """
     if "chocolatey._yes" in __context__:
         return __context__["chocolatey._yes"]
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.9.9"):
+    if Version(chocolatey_version()) >= Version("0.9.9"):
         answer = ["--yes"]
     else:
         answer = []
@@ -82,7 +83,7 @@ def _no_progress():
     """
     if "chocolatey._no_progress" in __context__:
         return __context__["chocolatey._no_progress"]
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.10.4"):
+    if Version(chocolatey_version()) >= Version("0.10.4"):
         answer = ["--no-progress"]
     else:
         log.warning("--no-progress unsupported in choco < 0.10.4")
@@ -777,7 +778,7 @@ def install_missing(name, version=None, source=None):
         salt '*' chocolatey.install_missing <package name>
         salt '*' chocolatey.install_missing <package name> version=<package version>
     """
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.9.8.24"):
+    if Version(chocolatey_version()) >= Version("0.9.8.24"):
         log.warning("installmissing is deprecated, using install")
         return install(name, version=version)
 
@@ -1048,7 +1049,7 @@ def update(name, source=None, pre_versions=False):
         salt "*" chocolatey.update <package name> pre_versions=True
     """
     # chocolatey helpfully only supports a single package argument
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.9.8.24"):
+    if Version(chocolatey_version()) >= Version("0.9.8.24"):
         log.warning("update is deprecated, using upgrade")
         return upgrade(name, source=source, pre_versions=pre_versions)
 
@@ -1125,7 +1126,7 @@ def version(name, check_remote=False, source=None, pre_versions=False):
     return packages
 
 
-def add_source(name, source_location, username=None, password=None):
+def add_source(name, source_location, username=None, password=None, priority=None):
     """
     Instructs Chocolatey to add a source.
 
@@ -1143,11 +1144,18 @@ def add_source(name, source_location, username=None, password=None):
         Provide password for chocolatey sources that need authentication
         credentials.
 
+    priority
+        The priority order of this source as compared to other sources,
+        lower is better. Defaults to 0 (no priority). All priorities
+        above 0 will be evaluated first, then zero-based values will be
+        evaluated in config file order.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' chocolatey.add_source <source name> <source_location>
+        salt '*' chocolatey.add_source <source name> <source_location> priority=100
         salt '*' chocolatey.add_source <source name> <source_location> user=<user> password=<password>
 
     """
@@ -1164,6 +1172,8 @@ def add_source(name, source_location, username=None, password=None):
         cmd.extend(["--user", username])
     if password:
         cmd.extend(["--password", password])
+    if priority:
+        cmd.extend(["--priority", priority])
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:

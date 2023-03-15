@@ -1,6 +1,7 @@
 import urllib.parse
 
 import pytest
+
 import salt.utils.json
 from salt.netapi.rest_tornado import saltnado
 from tests.support.mock import MagicMock, patch

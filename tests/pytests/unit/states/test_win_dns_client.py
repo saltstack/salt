@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.win_dns_client as win_dns_client
 from tests.support.mock import MagicMock, patch
 

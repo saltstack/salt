@@ -277,9 +277,6 @@ transaction.
 
 import logging
 
-# required by _check_queue invocation later
-import time  # pylint: disable=unused-import
-
 import salt.client.ssh.state
 import salt.client.ssh.wrapper.state
 import salt.exceptions

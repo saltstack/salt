@@ -100,6 +100,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "runas_password",
         "fire_event",
         "saltenv",
+        "umask",
         "use",
         "use_in",
         "__env__",
@@ -116,6 +117,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "__pub_tgt_type",
         "__prereq__",
         "__prerequired__",
+        "__umask__",
     ]
 )
 
@@ -384,7 +386,7 @@ class Compiler:
             self.opts["renderer"],
             self.opts["renderer_blacklist"],
             self.opts["renderer_whitelist"],
-            **kwargs
+            **kwargs,
         )
         if not high:
             return high
@@ -786,6 +788,44 @@ class State:
         self.instance_id = str(id(self))
         self.inject_globals = {}
         self.mocked = mocked
+        self.global_state_conditions = None
+
+    def _match_global_state_conditions(self, full, state, name):
+        """
+        Return ``None`` if global state conditions are met. Otherwise, pass a
+        return dictionary which effectively creates a no-op outcome.
+
+        This operation is "explicit allow", in that ANY state and condition
+        combination which matches will allow the state to be run.
+        """
+        matches = []
+        ret = None
+        ret_dict = {
+            "name": name,
+            "comment": "Failed to meet global state conditions. State not called.",
+            "changes": {},
+            "result": None,
+        }
+
+        if not isinstance(self.global_state_conditions, dict):
+            self.global_state_conditions = (
+                self.functions["config.option"]("global_state_conditions") or {}
+            )
+
+        for state_match, conditions in self.global_state_conditions.items():
+            if state_match in ["*", full, state]:
+                if isinstance(conditions, str):
+                    conditions = [conditions]
+                if isinstance(conditions, list):
+                    matches.extend(
+                        self.functions["match.compound"](condition)
+                        for condition in conditions
+                    )
+
+        if matches and not any(matches):
+            ret = ret_dict
+
+        return ret
 
     def _gather_pillar(self):
         """
@@ -858,13 +898,16 @@ class State:
         Aggregate the requisites
         """
         requisites = {}
-        low_state = low["state"]
         for chunk in chunks:
             # if the state function in the chunk matches
             # the state function in the low we're looking at
             # and __agg__ is True, add the requisites from the
             # chunk to those in the low.
-            if chunk["state"] == low["state"] and chunk.get("__agg__"):
+            if (
+                chunk["state"] == low["state"]
+                and chunk.get("__agg__")
+                and low["name"] != chunk["name"]
+            ):
                 for req in frozenset.union(
                     *[STATE_REQUISITE_KEYWORDS, STATE_REQUISITE_IN_KEYWORDS]
                 ):
@@ -889,13 +932,23 @@ class State:
             return low
         if low["state"] in agg_opt and not low.get("__agg__"):
             agg_fun = "{}.mod_aggregate".format(low["state"])
+            if "loader_cache" not in self.state_con:
+                self.state_con["loader_cache"] = {}
+            if (
+                agg_fun in self.state_con["loader_cache"]
+                and not self.state_con["loader_cache"][agg_fun]
+            ):
+                return low
             if agg_fun in self.states:
+                self.state_con["loader_cache"][agg_fun] = True
                 try:
-                    low = self.states[agg_fun](low, chunks, running)
-                    low = self._aggregate_requisites(low, chunks)
                     low["__agg__"] = True
+                    low = self._aggregate_requisites(low, chunks)
+                    low = self.states[agg_fun](low, chunks, running)
                 except TypeError:
                     log.error("Failed to execute aggregate for state %s", low["state"])
+            else:
+                self.state_con["loader_cache"][agg_fun] = False
         return low
 
     def _run_check(self, low_data):
@@ -903,6 +956,8 @@ class State:
         Check that unless doesn't return 0, and that onlyif returns a 0.
         """
         ret = {"result": False, "comment": []}
+        for key in ("__sls__", "__id__", "name"):
+            ret[key] = low_data.get(key)
         cmd_opts = {}
 
         # Set arguments from cmd.run state as appropriate
@@ -964,6 +1019,8 @@ class State:
         command returns False (non 0), the state will not run
         """
         ret = {"result": False}
+        for key in ("__sls__", "__id__", "name"):
+            ret[key] = low_data.get(key)
 
         if not isinstance(low_data["onlyif"], list):
             low_data_onlyif = [low_data["onlyif"]]
@@ -1039,6 +1096,8 @@ class State:
         state will run.
         """
         ret = {"result": False}
+        for key in ("__sls__", "__id__", "name"):
+            ret[key] = low_data.get(key)
 
         if not isinstance(low_data["unless"], list):
             low_data_unless = [low_data["unless"]]
@@ -1116,6 +1175,8 @@ class State:
         Alter the way a successful state run is determined
         """
         ret = {"result": False}
+        for key in ("__sls__", "__id__", "name"):
+            ret[key] = low_data.get(key)
         cmd_opts = {}
         if "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
@@ -1146,6 +1207,8 @@ class State:
         Check that listed files exist
         """
         ret = {"result": False}
+        for key in ("__sls__", "__id__", "name"):
+            ret[key] = low_data.get(key)
 
         if isinstance(low_data["creates"], str) and os.path.exists(low_data["creates"]):
             ret["comment"] = "{} exists".format(low_data["creates"])
@@ -1306,6 +1369,12 @@ class State:
                     type(data["name"]).__name__,
                 )
             )
+        if "umask" in data:
+            umask = data.pop("umask")
+            try:
+                data["__umask__"] = int(str(umask), 8)
+            except (TypeError, ValueError):
+                errors.append(f"Invalid umask: {umask}")
         if errors:
             return errors
         full = data["state"] + "." + data["fun"]
@@ -1672,6 +1741,25 @@ class State:
                     else:
                         name = ids[0][0]
 
+                sls_excludes = []
+                # excluded sls are plain list items or dicts with an "sls" key
+                for exclude in high.get("__exclude__", []):
+                    if isinstance(exclude, str):
+                        sls_excludes.append(exclude)
+                    elif exclude.get("sls"):
+                        sls_excludes.append(exclude["sls"])
+
+                if body.get("__sls__") in sls_excludes:
+                    log.debug(
+                        "Cannot extend ID '%s' in '%s:%s' because '%s:%s' is excluded.",
+                        name,
+                        body.get("__env__", "base"),
+                        body.get("__sls__", "base"),
+                        body.get("__env__", "base"),
+                        body.get("__sls__", "base"),
+                    )
+                    continue
+
                 for state, run in body.items():
                     if state.startswith("__"):
                         continue
@@ -1852,18 +1940,18 @@ class State:
                                     else:
                                         found = False
                                         for _id in iter(high):
-                                            for state in [
-                                                state
-                                                for state in iter(high[_id])
-                                                if not state.startswith("__")
+                                            for st8 in [
+                                                _st8
+                                                for _st8 in iter(high[_id])
+                                                if not _st8.startswith("__")
                                             ]:
-                                                for j in iter(high[_id][state]):
+                                                for j in iter(high[_id][st8]):
                                                     if (
                                                         isinstance(j, dict)
                                                         and "name" in j
                                                     ):
                                                         if j["name"] == ind:
-                                                            ind = {state: _id}
+                                                            ind = {st8: _id}
                                                             found = True
                                         if not found:
                                             continue
@@ -2268,14 +2356,23 @@ class State:
                     ret = mock_ret(cdata)
                 else:
                     # Execute the state function
-                    if not low.get("__prereq__") and low.get("parallel"):
+                    ret = self._match_global_state_conditions(
+                        cdata["full"], low["state"], low["name"]
+                    )
+                    if ret:
+                        log.info(
+                            "Failed to meet global state conditions. State '%s' not called.",
+                            low["name"],
+                        )
+                    elif not low.get("__prereq__") and low.get("parallel"):
                         # run the state call in parallel, but only if not in a prereq
                         ret = self.call_parallel(cdata, low)
                     else:
                         self.format_slots(cdata)
-                        ret = self.states[cdata["full"]](
-                            *cdata["args"], **cdata["kwargs"]
-                        )
+                        with salt.utils.files.set_umask(low.get("__umask__")):
+                            ret = self.states[cdata["full"]](
+                                *cdata["args"], **cdata["kwargs"]
+                            )
                 self.states.inject_globals = {}
             if (
                 "check_cmd" in low
@@ -2772,11 +2869,11 @@ class State:
                         req = {"id": req}
                     req = trim_req(req)
                     found = False
+                    req_key = next(iter(req))
+                    req_val = req[req_key]
+                    if req_val is None:
+                        continue
                     for chunk in chunks:
-                        req_key = next(iter(req))
-                        req_val = req[req_key]
-                        if req_val is None:
-                            continue
                         if req_key == "sls":
                             # Allow requisite tracking of entire sls files
                             if fnmatch.fnmatch(chunk["__sls__"], req_val):
@@ -3045,8 +3142,9 @@ class State:
                     "start_time": start_time,
                     "comment": comment,
                     "__run_num__": self.__run_num,
-                    "__sls__": low["__sls__"],
                 }
+                for key in ("__sls__", "__id__", "name"):
+                    run_dict[tag][key] = low.get(key)
                 self.__run_num += 1
                 self.event(run_dict[tag], len(chunks), fire_event=low.get("fire_event"))
                 return running
@@ -3071,8 +3169,9 @@ class State:
                                 "result": False,
                                 "comment": "Recursive requisite found",
                                 "__run_num__": self.__run_num,
-                                "__sls__": low["__sls__"],
                             }
+                            for key in ("__sls__", "__id__", "name"):
+                                running[tag][key] = low.get(key)
                         self.__run_num += 1
                         self.event(
                             running[tag], len(chunks), fire_event=low.get("fire_event")
@@ -3099,8 +3198,9 @@ class State:
                         "result": False,
                         "comment": "Recursive requisite found",
                         "__run_num__": self.__run_num,
-                        "__sls__": low["__sls__"],
                     }
+                    for key in ("__sls__", "__id__", "name"):
+                        running[tag][key] = low.get(key)
                 else:
                     running = self.call_chunk(low, running, chunks, depth)
             if self.check_failhard(chunk, running):
@@ -3115,9 +3215,17 @@ class State:
             # if the requisite that failed was due to a prereq on this low state
             # show the normal error
             if tag in self.pre:
+                # This is the previous run of the state with the prereq
+                # which was run with test=True, so it will include
+                # the proposed changes not actual changes.
+                # So we remove them from the final output
+                # since the prereq requisite failed.
+                if self.pre[tag].get("changes"):
+                    self.pre[tag]["changes"] = {}
                 running[tag] = self.pre[tag]
                 running[tag]["__run_num__"] = self.__run_num
-                running[tag]["__sls__"] = low["__sls__"]
+                for key in ("__sls__", "__id__", "name"):
+                    running[tag][key] = low.get(key)
             # otherwise the failure was due to a requisite down the chain
             else:
                 # determine what the requisite failures where, and return
@@ -3151,8 +3259,9 @@ class State:
                     "start_time": start_time,
                     "comment": _cmt,
                     "__run_num__": self.__run_num,
-                    "__sls__": low["__sls__"],
                 }
+                for key in ("__sls__", "__id__", "name"):
+                    running[tag][key] = low.get(key)
                 self.pre[tag] = running[tag]
             self.__run_num += 1
         elif status == "change" and not low.get("__prereq__"):
@@ -3173,8 +3282,9 @@ class State:
                 "start_time": start_time,
                 "comment": "No changes detected",
                 "__run_num__": self.__run_num,
-                "__sls__": low["__sls__"],
             }
+            for key in ("__sls__", "__id__", "name"):
+                pre_ret[key] = low.get(key)
             running[tag] = pre_ret
             self.pre[tag] = pre_ret
             self.__run_num += 1
@@ -3188,8 +3298,9 @@ class State:
                 "comment": "State was not run because onfail req did not change",
                 "__state_ran__": False,
                 "__run_num__": self.__run_num,
-                "__sls__": low["__sls__"],
             }
+            for key in ("__sls__", "__id__", "name"):
+                running[tag][key] = low.get(key)
             self.__run_num += 1
         elif status == "onchanges":
             start_time, duration = _calculate_fake_duration()
@@ -3203,8 +3314,9 @@ class State:
                 ),
                 "__state_ran__": False,
                 "__run_num__": self.__run_num,
-                "__sls__": low["__sls__"],
             }
+            for key in ("__sls__", "__id__", "name"):
+                running[tag][key] = low.get(key)
             self.__run_num += 1
         else:
             if low.get("__prereq__"):
@@ -3227,8 +3339,9 @@ class State:
                     "comment": sub_state_data.get("comment", ""),
                     "__state_ran__": True,
                     "__run_num__": self.__run_num,
-                    "__sls__": low["__sls__"],
                 }
+                for key in ("__sls__", "__id__", "name"):
+                    running[sub_tag][key] = low.get(key)
 
         return running
 
@@ -3236,8 +3349,6 @@ class State:
         """
         Find all of the beacon routines and call the associated mod_beacon runs
         """
-        listeners = []
-        crefs = {}
         beacons = []
         for chunk in chunks:
             if "beacon" in chunk:
@@ -3631,7 +3742,9 @@ class BaseHighState:
             )
             opts["env_order"] = mopts.get("env_order", opts.get("env_order", []))
             opts["default_top"] = mopts.get("default_top", opts.get("default_top"))
-            opts["state_events"] = mopts.get("state_events")
+            opts["state_events"] = (
+                opts.get("state_events") or mopts.get("state_events") or False
+            )
             opts["state_aggregate"] = (
                 opts.get("state_aggregate") or mopts.get("state_aggregate") or False
             )
@@ -3664,7 +3777,7 @@ class BaseHighState:
             envs.extend([env for env in client_envs if env not in envs])
             return envs
 
-    def get_tops(self):
+    def get_tops(self, context=None):
         """
         Gather the top files
         """
@@ -3695,6 +3808,7 @@ class BaseHighState:
                         self.state.opts["renderer_blacklist"],
                         self.state.opts["renderer_whitelist"],
                         saltenv=self.opts["saltenv"],
+                        context=context,
                     )
                 ]
             else:
@@ -3720,6 +3834,7 @@ class BaseHighState:
                             self.state.opts["renderer_blacklist"],
                             self.state.opts["renderer_whitelist"],
                             saltenv=saltenv,
+                            context=context,
                         )
                     )
                 else:
@@ -3776,6 +3891,7 @@ class BaseHighState:
                                 self.state.opts["renderer_blacklist"],
                                 self.state.opts["renderer_whitelist"],
                                 saltenv,
+                                context=context,
                             )
                         )
                         done[saltenv].append(sls)
@@ -4026,12 +4142,12 @@ class BaseHighState:
 
         return errors
 
-    def get_top(self):
+    def get_top(self, context=None):
         """
         Returns the high data derived from the top file
         """
         try:
-            tops = self.get_tops()
+            tops = self.get_tops(context=context)
         except SaltRenderError as err:
             log.error("Unable to render top file: %s", err.error)
             return {}
@@ -4268,7 +4384,11 @@ class BaseHighState:
                             mod_tgt = "{}:{}".format(r_env, sls_target)
                             if mod_tgt not in mods:
                                 nstate, err = self.render_state(
-                                    sls_target, r_env, mods, matches
+                                    sls_target,
+                                    r_env,
+                                    mods,
+                                    matches,
+                                    context=context,
                                 )
                                 if nstate:
                                     self.merge_included_states(state, nstate, errors)
@@ -4650,15 +4770,15 @@ class BaseHighState:
 
         return self.state.call_high(high, orchestration_jid)
 
-    def compile_highstate(self):
+    def compile_highstate(self, context=None):
         """
         Return just the highstate or the errors
         """
         err = []
-        top = self.get_top()
+        top = self.get_top(context=context)
         err += self.verify_tops(top)
         matches = self.top_matches(top)
-        high, errors = self.render_highstate(matches)
+        high, errors = self.render_highstate(matches, context=context)
         err += errors
 
         if err:
@@ -4666,14 +4786,14 @@ class BaseHighState:
 
         return high
 
-    def compile_low_chunks(self):
+    def compile_low_chunks(self, context=None):
         """
         Compile the highstate but don't run it, return the low chunks to
         see exactly what the highstate will execute
         """
-        top = self.get_top()
+        top = self.get_top(context=context)
         matches = self.top_matches(top)
-        high, errors = self.render_highstate(matches)
+        high, errors = self.render_highstate(matches, context=context)
 
         # If there is extension data reconcile it
         high, ext_errors = self.state.reconcile_extend(high)

@@ -1,1 +1,0 @@
-Removed `salt.utils.MultiprocessingProcess` and `salt.utils.SignalHandlingMultiprocessingProcess`. Please use `salt.utils.Process` and `salt.utils.SignalHandlingProcess` instead.

@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.win_certutil as certutil
 from tests.support.mock import MagicMock, patch
 

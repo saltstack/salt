@@ -1,4 +1,5 @@
 import pytest
+
 import salt.ext.tornado.wsgi
 import salt.netapi.rest_cherrypy.app
 import tests.support.netapi as netapi
@@ -10,6 +11,7 @@ cherrypy = pytest.importorskip("cherrypy")
 @pytest.fixture
 def client_config(client_config, netapi_port):
     client_config["rest_cherrypy"] = {"port": netapi_port, "debug": True}
+    client_config["netapi_enable_clients"] = ["local"]
     return client_config
 
 

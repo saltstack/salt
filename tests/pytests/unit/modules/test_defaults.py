@@ -7,6 +7,7 @@ Test cases for salt.modules.defaults
 import inspect
 
 import pytest
+
 import salt.modules.defaults as defaults
 from tests.support.mock import MagicMock, patch
 

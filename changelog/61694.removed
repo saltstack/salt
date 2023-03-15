@@ -1,2 +1,0 @@
-Remove remove_lock in zypperpkg.py in favor of unhold.
-Remove add_lock in zypperpkg.py in favor of hold.

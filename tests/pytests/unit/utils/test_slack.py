@@ -5,6 +5,7 @@ Test case for the slack utils module
 import logging
 
 import pytest
+
 import salt.utils.slack as slack
 from tests.support.mock import MagicMock, patch
 

@@ -43,8 +43,8 @@ Creating a client request and its signed certificate
 .. code-block:: bash
 
     # salt-call tls.create_csr my_little CN=DBReplica_No.1 cert_type=client
-    Created Private Key: "/etc/pki/my_little/certs//DBReplica_No.1.key."
-    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1.csr."
+    Created Private Key: "/etc/pki/my_little/certs//DBReplica_No.1.key"
+    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1.csr"
 
     # salt-call tls.create_ca_signed_cert my_little CN=DBReplica_No.1
     Created Certificate for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1.crt"
@@ -56,8 +56,8 @@ Creating both a server and client req + cert for the same CN
 
     # salt-call tls.create_csr my_little CN=MasterDBReplica_No.2  \
         cert_type=client
-    Created Private Key: "/etc/pki/my_little/certs/MasterDBReplica_No.2.key."
-    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/MasterDBReplica_No.2.csr."
+    Created Private Key: "/etc/pki/my_little/certs/MasterDBReplica_No.2.key"
+    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/MasterDBReplica_No.2.csr"
 
     # salt-call tls.create_ca_signed_cert my_little CN=MasterDBReplica_No.2
     Created Certificate for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1.crt"
@@ -70,8 +70,8 @@ Creating both a server and client req + cert for the same CN
 
     # salt-call tls.create_csr my_little CN=MasterDBReplica_No.2 \
         cert_type=server type_ext=True
-    Created Private Key: "/etc/pki/my_little/certs/DBReplica_No.1_client.key."
-    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1_client.csr."
+    Created Private Key: "/etc/pki/my_little/certs/DBReplica_No.1_client.key"
+    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1_client.csr"
 
     # salt-call tls.create_ca_signed_cert my_little CN=MasterDBReplica_No.2
     Certificate "MasterDBReplica_No.2" already exists
@@ -90,8 +90,8 @@ Create a server req + cert with non-CN filename for the cert
 
     # salt-call tls.create_csr my_little CN=www.anothersometh.ing \
         cert_type=server type_ext=True
-    Created Private Key: "/etc/pki/my_little/certs/www.anothersometh.ing_server.key."
-    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/www.anothersometh.ing_server.csr."
+    Created Private Key: "/etc/pki/my_little/certs/www.anothersometh.ing_server.key"
+    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/www.anothersometh.ing_server.csr"
 
     # salt-call tls_create_ca_signed_cert my_little CN=www.anothersometh.ing \
         cert_type=server cert_filename="something_completely_different"
@@ -111,7 +111,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 # pylint: disable=C0103
 
@@ -122,7 +122,7 @@ try:
     import OpenSSL
 
     HAS_SSL = True
-    OpenSSL_version = _LooseVersion(OpenSSL.__dict__.get("__version__", "0.0"))
+    OpenSSL_version = Version(OpenSSL.__dict__.get("__version__", "0.0"))
 except ImportError:
     pass
 
@@ -138,14 +138,14 @@ def __virtual__():
     Only load this module if the ca config options are set
     """
     global X509_EXT_ENABLED
-    if HAS_SSL and OpenSSL_version >= _LooseVersion("0.10"):
-        if OpenSSL_version < _LooseVersion("0.14"):
+    if HAS_SSL and OpenSSL_version >= Version("0.10"):
+        if OpenSSL_version < Version("0.14"):
             X509_EXT_ENABLED = False
             log.debug(
                 "You should upgrade pyOpenSSL to at least 0.14.1 to "
                 "enable the use of X509 extensions in the tls module"
             )
-        elif OpenSSL_version <= _LooseVersion("0.15"):
+        elif OpenSSL_version <= Version("0.15"):
             log.debug(
                 "You should upgrade pyOpenSSL to at least 0.15.1 to "
                 "enable the full use of X509 extensions in the tls module"
@@ -172,6 +172,14 @@ def _microtime():
     return "{:f}{}".format(val1, val2)
 
 
+def _context_or_config(key):
+    """
+    Return the value corresponding to the key in __context__ or if not present,
+    fallback to config.option.
+    """
+    return __context__.get(key, __salt__["config.option"](key))
+
+
 def cert_base_path(cacert_path=None):
     """
     Return the base path for certs from CLI or from options
@@ -185,16 +193,11 @@ def cert_base_path(cacert_path=None):
 
         salt '*' tls.cert_base_path
     """
-    if not cacert_path:
-        cacert_path = __context__.get(
-            "ca.contextual_cert_base_path",
-            __salt__["config.option"]("ca.contextual_cert_base_path"),
-        )
-    if not cacert_path:
-        cacert_path = __context__.get(
-            "ca.cert_base_path", __salt__["config.option"]("ca.cert_base_path")
-        )
-    return cacert_path
+    return (
+        cacert_path
+        or _context_or_config("ca.contextual_cert_base_path")
+        or _context_or_config("ca.cert_base_path")
+    )
 
 
 def _cert_base_path(cacert_path=None):
@@ -842,10 +845,10 @@ def create_ca(
 
     _write_cert_to_database(ca_name, ca)
 
-    ret = 'Created Private Key: "{}/{}/{}.key." '.format(
+    ret = 'Created Private Key: "{}/{}/{}.key" '.format(
         cert_base_path(), ca_name, ca_filename
     )
-    ret += 'Created CA "{0}": "{1}/{0}/{2}.crt."'.format(
+    ret += 'Created CA "{0}": "{1}/{0}/{2}.crt"'.format(
         ca_name, cert_base_path(), ca_filename
     )
 
@@ -1168,8 +1171,8 @@ def create_csr(
             )
         )
 
-    ret = 'Created Private Key: "{}{}.key." '.format(csr_path, csr_filename)
-    ret += 'Created CSR for "{}": "{}{}.csr."'.format(CN, csr_path, csr_filename)
+    ret = 'Created Private Key: "{}{}.key" '.format(csr_path, csr_filename)
+    ret += 'Created CSR for "{}": "{}{}.csr"'.format(CN, csr_path, csr_filename)
 
     return ret
 
@@ -1310,10 +1313,10 @@ def create_self_signed_cert(
 
     _write_cert_to_database(tls_dir, cert)
 
-    ret = 'Created Private Key: "{}/{}/certs/{}.key." '.format(
+    ret = 'Created Private Key: "{}/{}/certs/{}.key" '.format(
         cert_base_path(), tls_dir, cert_filename
     )
-    ret += 'Created Certificate: "{}/{}/certs/{}.crt."'.format(
+    ret += 'Created Certificate: "{}/{}/certs/{}.crt"'.format(
         cert_base_path(), tls_dir, cert_filename
     )
 

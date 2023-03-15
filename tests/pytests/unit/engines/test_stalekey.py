@@ -5,6 +5,7 @@ unit tests for the stalekey engine
 import logging
 
 import pytest
+
 import salt.engines.stalekey as stalekey
 from tests.support.mock import MagicMock, mock_open, patch
 

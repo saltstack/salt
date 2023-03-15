@@ -1,1 +1,0 @@
-Fixed failing dcs.compile_config where a successful compile errored with `AttributeError: 'list' object has no attribute 'get'`.

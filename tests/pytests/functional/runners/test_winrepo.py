@@ -1,9 +1,11 @@
 import pytest
-import salt.utils.gitfs
+
 from salt.runners import winrepo
 from tests.support.mock import patch
 
-pytestmark = [pytest.mark.windows_whitelisted]
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+]
 
 
 @pytest.fixture
@@ -48,12 +50,11 @@ def test_legacy_update_git_repos(winrepo_remotes):
     """
     Ensure update git repos works as intended with legacy (non-gitfs) code.
     """
-    with patch.object(salt.utils.gitfs, "GITPYTHON_VERSION", False):
-        with patch.object(salt.utils.gitfs, "PYGIT2_VERSION", False):
-            res = winrepo.update_git_repos()
+    with patch.object(winrepo, "_legacy_git", return_value=True):
+        res = winrepo.update_git_repos()
 
-            assert res
+        assert res
 
-            for remote in winrepo_remotes:
-                assert remote in res
-                assert res[remote]
+        for remote in winrepo_remotes:
+            assert remote in res
+            assert res[remote]

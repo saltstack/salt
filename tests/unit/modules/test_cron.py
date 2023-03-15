@@ -40,6 +40,11 @@ STUB_AT_SIGN = """
 @daily echo "cron with @ sign"
 @daily
 """
+STUB_NO_AT_SIGN = """
+# Lines below here are managed by Salt, do not edit
+# SALT_CRON_IDENTIFIER:echo "cron without @ sign"
+1 2 3 4 5 echo "cron without @ sign"
+"""
 
 L = "# Lines below here are managed by Salt, do not edit\n"
 
@@ -1259,6 +1264,31 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                 (expected_write_call,), any_order=True
             )
 
+    def test_set_special_from_job(self):
+        """Use set_special to turn a non-special entry into a special one"""
+        with patch.dict(cron.__grains__, {"os": None}), patch(
+            "salt.modules.cron._write_cron_lines",
+            new=MagicMock(return_value={"retcode": False}),
+        ), patch(
+            "salt.modules.cron.raw_cron",
+            new=MagicMock(side_effect=[STUB_NO_AT_SIGN, STUB_NO_AT_SIGN, L]),
+        ):
+            expected_call = call(
+                "DUMMY_USER",
+                [
+                    "# Lines below here are managed by Salt, do not edit\n",
+                    '# SALT_CRON_IDENTIFIER:echo "cron without @ sign"\n',
+                    '@daily echo "cron without @ sign"\n',
+                ],
+            )
+            ret = cron.set_special(
+                "DUMMY_USER",
+                "@daily",
+                'echo "cron without @ sign"',
+                identifier='echo "cron without @ sign"',
+            )
+            cron._write_cron_lines.assert_has_calls((expected_call,), any_order=True)
+
     def test__get_cron_date_time(self):
         ret = cron._get_cron_date_time(
             minute=STUB_CRON_TIMESTAMP["minute"],
@@ -1299,7 +1329,7 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                 4,
                 5,
                 "/bin/echo NOT A DROID",
-                "WERE YOU LOOKING FOR ME?",
+                comment="WERE YOU LOOKING FOR ME?",
             )
             expected_call = call(
                 "DUMMY_USER",
@@ -1310,7 +1340,36 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                     "1 2 3 4 5 /bin/echo NOT A DROID\n",
                 ],
             )
-            cron._write_cron_lines.call_args.assert_called_with(expected_call)
+            cron._write_cron_lines.assert_has_calls((expected_call,), any_order=True)
+
+    def test_set_job_from_special(self):
+        """Use set_job to turn a special entry into a non-special one"""
+        with patch.dict(cron.__grains__, {"os": None}), patch(
+            "salt.modules.cron._write_cron_lines",
+            new=MagicMock(return_value={"retcode": False}),
+        ), patch(
+            "salt.modules.cron.raw_cron",
+            new=MagicMock(side_effect=[STUB_AT_SIGN, STUB_AT_SIGN, L]),
+        ):
+            cron.set_job(
+                "DUMMY_USER",
+                1,
+                2,
+                3,
+                4,
+                5,
+                'echo "cron with @ sign"',
+                identifier='echo "cron with @ sign"',
+            )
+            expected_call = call(
+                "DUMMY_USER",
+                [
+                    "# Lines below here are managed by Salt, do not edit\n",
+                    '# SALT_CRON_IDENTIFIER:echo "cron with @ sign"\n',
+                    '1 2 3 4 5 echo "cron with @ sign"\n',
+                ],
+            )
+            cron._write_cron_lines.assert_has_calls((expected_call,), any_order=True)
 
     def test_rm_special(self):
         with patch.dict(cron.__grains__, {"os": None}), patch(
@@ -1362,10 +1421,11 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
             ret = cron.rm_job("DUMMY_USER", "/bin/echo NOT A DROID", 1, 2, 3, 4, 5)
             self.assertEqual("absent", ret)
 
-    def test_write_cron_lines_root_rh(self):
+    def test_write_cron_lines_euid_match_user_rh(self):
         """
         Assert that _write_cron_lines() is called with the correct cron command and user
-        OS: RedHat. User: root. Expected to run with runas argument.
+        OS: RedHat. EUID match User (either root, root or user, user).
+        Expected to run without runas argument.
         """
         temp_path = "some_temp_path"
         crontab_cmd = "crontab {}".format(temp_path)
@@ -1377,8 +1437,6 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
             new=MagicMock(return_value=True),
         ), patch(
             "salt.utils.files.fpopen", mock_open()
-        ), patch.dict(
-            cron.__salt__, {"file.user_to_uid": MagicMock(return_value=1)}
         ), patch(
             "salt.utils.files.mkstemp", MagicMock(return_value=temp_path)
         ), patch(
@@ -1386,26 +1444,25 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             cron._write_cron_lines("root", "test 123")
             cron.__salt__["cmd.run_all"].assert_called_with(
-                crontab_cmd, python_shell=False, runas="root"
+                crontab_cmd, python_shell=False
             )
 
-    def test_write_cron_lines_non_root_rh(self):
+    def test_write_cron_lines_root_non_root_rh(self):
         """
         Assert that _write_cron_lines() is called with the correct cron command and user
-        OS: RedHat. User: non-root. Expected to run without runas argument.
+        OS: RedHat. EUID: root. User: non-root.
+        Expected to run without runas argument and with -u non-root argument.
         """
         temp_path = "some_temp_path"
-        crontab_cmd = "crontab {}".format(temp_path)
+        crontab_cmd = "crontab -u {} {}".format("non-root", temp_path)
 
         with patch.dict(cron.__grains__, {"os_family": "RedHat"}), patch.dict(
             cron.__salt__, {"cmd.run_all": MagicMock()}
         ), patch(
             "salt.modules.cron._check_instance_uid_match",
-            new=MagicMock(return_value=False),
+            new=MagicMock(side_effect=[False, True]),
         ), patch(
             "salt.utils.files.fpopen", mock_open()
-        ), patch.dict(
-            cron.__salt__, {"file.user_to_uid": MagicMock(return_value=1)}
         ), patch(
             "salt.utils.files.mkstemp", MagicMock(return_value=temp_path)
         ), patch(
@@ -1416,15 +1473,16 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                 crontab_cmd, python_shell=False
             )
 
-    def test_write_cron_lines_non_root_aix(self):
+    def test_write_cron_lines_non_root_euid_doesnt_match_user_rh(self):
         """
         Assert that _write_cron_lines() is called with the correct cron command and user
-        OS: AIX. User: non-root. Expected to run with runas argument.
+        OS: RedHat. EUID: non-root. EUID doesn't match User.
+        Expected to run with runas argument.
         """
         temp_path = "some_temp_path"
         crontab_cmd = "crontab {}".format(temp_path)
 
-        with patch.dict(cron.__grains__, {"os_family": "AIX"}), patch.dict(
+        with patch.dict(cron.__grains__, {"os_family": "RedHat"}), patch.dict(
             cron.__salt__, {"cmd.run_all": MagicMock()}
         ), patch(
             "salt.modules.cron._check_instance_uid_match",
@@ -1443,22 +1501,41 @@ class PsTestCase(TestCase, LoaderModuleMockMixin):
                 crontab_cmd, python_shell=False, runas="non-root"
             )
 
-    def test_write_cron_lines_non_root_solaris(self):
+    def test_write_cron_lines_non_root_aix(self):
         """
         Assert that _write_cron_lines() is called with the correct cron command and user
-        OS: Solaris. User: non-root. Expected to run with runas argument.
+        OS: AIX. User: non-root.
+        Expected to run with runas argument.
         """
         temp_path = "some_temp_path"
         crontab_cmd = "crontab {}".format(temp_path)
 
         with patch.dict(cron.__grains__, {"os_family": "AIX"}), patch.dict(
             cron.__salt__, {"cmd.run_all": MagicMock()}
+        ), patch("salt.utils.files.fpopen", mock_open()), patch.dict(
+            cron.__salt__, {"file.user_to_uid": MagicMock(return_value=1)}
         ), patch(
-            "salt.modules.cron._check_instance_uid_match",
-            new=MagicMock(return_value=False),
+            "salt.utils.files.mkstemp", MagicMock(return_value=temp_path)
         ), patch(
-            "salt.utils.files.fpopen", mock_open()
-        ), patch.dict(
+            "os.remove", MagicMock()
+        ):
+            cron._write_cron_lines("non-root", "test 123")
+            cron.__salt__["cmd.run_all"].assert_called_with(
+                crontab_cmd, python_shell=False, runas="non-root"
+            )
+
+    def test_write_cron_lines_non_root_solaris(self):
+        """
+        Assert that _write_cron_lines() is called with the correct cron command and user
+        OS: Solaris. User: non-root.
+        Expected to run with runas argument.
+        """
+        temp_path = "some_temp_path"
+        crontab_cmd = "crontab {}".format(temp_path)
+
+        with patch.dict(cron.__grains__, {"os_family": "Solaris"}), patch.dict(
+            cron.__salt__, {"cmd.run_all": MagicMock()}
+        ), patch("salt.utils.files.fpopen", mock_open()), patch.dict(
             cron.__salt__, {"file.user_to_uid": MagicMock(return_value=1)}
         ), patch(
             "salt.utils.files.mkstemp", MagicMock(return_value=temp_path)

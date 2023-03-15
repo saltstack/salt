@@ -1,4 +1,5 @@
 import pytest
+
 import salt.loader.context
 import salt.modules.state as statemod
 import salt.modules.transactional_update as tu

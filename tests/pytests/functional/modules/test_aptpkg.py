@@ -3,6 +3,7 @@ import pathlib
 import shutil
 
 import pytest
+
 import salt.exceptions
 import salt.modules.aptpkg as aptpkg
 import salt.modules.cmdmod as cmd
@@ -18,6 +19,11 @@ pytestmark = [
     pytest.mark.skip_if_binaries_missing("apt-cache", "grep"),
 ]
 
+KEY_FILES = (
+    "salt-archive-keyring.gpg",
+    "SALTSTACK-GPG-KEY.pub",
+)
+
 
 class Key:
     def __init__(self, aptkey=True):
@@ -25,6 +31,9 @@ class Key:
         self.keyname = "salt-archive-keyring.gpg"
 
     def add_key(self):
+        keydir = pathlib.Path("/etc", "apt", "keyrings")
+        if not keydir.is_dir():
+            keydir.mkdir()
         aptpkg.add_repo_key("salt://{}".format(self.keyname), aptkey=self.aptkey)
 
     def del_key(self):
@@ -32,13 +41,13 @@ class Key:
 
 
 @pytest.fixture
-def get_key_file(state_tree, functional_files_dir):
+def get_key_file(request, state_tree, functional_files_dir):
     """
-    Create the key file used for the repo
+    Create the key file used for the repo by file name passed to the test
     """
-    key = Key()
-    shutil.copy(str(functional_files_dir / key.keyname), str(state_tree))
-    yield key.keyname
+    keyname = request.param
+    shutil.copy(str(functional_files_dir / keyname), str(state_tree))
+    yield keyname
 
 
 @pytest.fixture
@@ -96,18 +105,24 @@ def get_current_repo(multiple_comps=False):
         Search for a repo that contains multiple comps.
         For example: main, restricted
     """
-    with salt.utils.files.fopen("/etc/apt/sources.list") as fp:
-        for line in fp:
-            if line.startswith("#"):
-                continue
-            if "ubuntu.com" in line or "debian.org" in line:
-                test_repo = line.strip()
-                comps = test_repo.split()[3:]
-                if multiple_comps:
-                    if len(comps) > 1:
+    test_repo = None
+    try:
+        with salt.utils.files.fopen("/etc/apt/sources.list") as fp:
+            for line in fp:
+                if line.startswith("#"):
+                    continue
+                if "ubuntu.com" in line or "debian.org" in line:
+                    test_repo = line.strip()
+                    comps = test_repo.split()[3:]
+                    if multiple_comps:
+                        if len(comps) > 1:
+                            break
+                    else:
                         break
-                else:
-                    break
+    except FileNotFoundError as error:
+        pytest.skip("Missing {}".format(error.filename))
+    if not test_repo:
+        pytest.skip("Did not detect an APT repo")
     return test_repo, comps
 
 
@@ -137,16 +152,11 @@ def test_list_repos():
             assert check_repo["comps"] in check_repo["line"]
 
 
-@pytest.mark.skipif(
-    not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
-)
 def test_get_repos():
     """
     Test aptpkg.get_repos
     """
     test_repo, comps = get_current_repo()
-    if not test_repo:
-        pytest.skip("Did not detect an apt repo")
     exp_ret = test_repo.split()
     ret = aptpkg.get_repo(repo=test_repo)
     assert ret["type"] == exp_ret[0]
@@ -156,17 +166,12 @@ def test_get_repos():
     assert ret["file"] == "/etc/apt/sources.list"
 
 
-@pytest.mark.skipif(
-    not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
-)
 def test_get_repos_multiple_comps():
     """
     Test aptpkg.get_repos when multiple comps
     exist in repo.
     """
     test_repo, comps = get_current_repo(multiple_comps=True)
-    if not test_repo:
-        pytest.skip("Did not detect an ubuntu repo")
     exp_ret = test_repo.split()
     ret = aptpkg.get_repo(repo=test_repo)
     assert ret["type"] == exp_ret[0]
@@ -206,12 +211,16 @@ def test_del_repo(revert_repo_file):
 @pytest.mark.skipif(
     not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
 )
-def test_expand_repo_def():
+def test__expand_repo_def(grains):
     """
-    Test aptpkg.expand_repo_def when the repo exists.
+    Test aptpkg._expand_repo_def when the repo exists.
     """
     test_repo, comps = get_current_repo()
-    ret = aptpkg.expand_repo_def(repo=test_repo)
+    ret = aptpkg._expand_repo_def(
+        os_name=grains["os"],
+        os_codename=grains.get("oscodename"),
+        repo=test_repo,
+    )
     for key in [
         "comps",
         "dist",
@@ -271,9 +280,10 @@ def add_key(request, get_key_file):
     key.del_key()
 
 
+@pytest.mark.parametrize("get_key_file", KEY_FILES, indirect=True)
 @pytest.mark.parametrize("add_key", [False, True], indirect=True)
 @pytest.mark.destructive_test
-def test_get_repo_keys(add_key):
+def test_get_repo_keys(get_key_file, add_key):
     """
     Test aptpkg.get_repo_keys when aptkey is False and True
     """
@@ -284,17 +294,35 @@ def test_get_repo_keys(add_key):
     )
 
 
+@pytest.mark.parametrize("key", [False, True])
+@pytest.mark.destructive_test
+def test_get_repo_keys_keydir_not_exist(key):
+    """
+    Test aptpkg.get_repo_keys when aptkey is False and True
+    and keydir does not exist
+    """
+    ret = aptpkg.get_repo_keys(aptkey=key, keydir="/doesnotexist/")
+    if not key:
+        assert not ret
+    else:
+        assert ret
+
+
+@pytest.mark.parametrize("get_key_file", KEY_FILES, indirect=True)
 @pytest.mark.parametrize("aptkey", [False, True])
 def test_add_del_repo_key(get_key_file, aptkey):
     """
     Test both add_repo_key and del_repo_key when
     aptkey is both False and True
+    and using both binary and armored gpg keys
     """
     try:
         assert aptpkg.add_repo_key("salt://{}".format(get_key_file), aptkey=aptkey)
-        keyfile = pathlib.Path("/usr", "share", "keyrings", get_key_file)
+        keyfile = pathlib.Path("/etc", "apt", "keyrings", get_key_file)
         if not aptkey:
             assert keyfile.is_file()
+            assert oct(keyfile.stat().st_mode)[-3:] == "644"
+            assert keyfile.read_bytes()
         query_key = aptpkg.get_repo_keys(aptkey=aptkey)
         assert (
             query_key["0E08A149DE57BFBE"]["uid"]

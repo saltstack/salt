@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo_module
 import salt.states.win_lgpo as win_lgpo_state
@@ -86,7 +87,7 @@ def clean_adv_audit():
     yield
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def clear_policy():
     # Ensure the policy is not set
     test_setting = "No auditing"
@@ -101,7 +102,7 @@ def clear_policy():
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def set_policy():
     # Ensure the policy is set
     test_setting = "Success"

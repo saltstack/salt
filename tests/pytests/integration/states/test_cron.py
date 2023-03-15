@@ -6,6 +6,7 @@ import logging
 import subprocess
 
 import pytest
+
 import salt.utils.platform
 
 log = logging.getLogger(__name__)

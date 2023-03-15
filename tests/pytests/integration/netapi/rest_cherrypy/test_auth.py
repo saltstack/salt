@@ -1,6 +1,7 @@
 import urllib.parse
 
 import pytest
+
 import salt.utils.json
 from salt.ext.tornado.httpclient import HTTPError
 

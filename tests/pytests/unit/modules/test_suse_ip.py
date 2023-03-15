@@ -3,6 +3,7 @@ import os
 
 import jinja2.exceptions
 import pytest
+
 import salt.modules.suse_ip as suse_ip
 from tests.support.mock import MagicMock, patch
 

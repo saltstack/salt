@@ -87,7 +87,7 @@ apt-key deprecated
 ------------------
 ``apt-key`` is deprecated and will be last available in Debian 11 and
 Ubuntu 22.04. The recommended way to manage repo keys going forward
-is to download the keys into /usr/share/keyrings and use ``signed-by``
+is to download the keys into /etc/apt/keyrings and use ``signed-by``
 in your repo file pointing to the key. This module was updated
 in version 3005 to implement the recommended approach. You need to add
 ``- aptkey: False`` to your state and set ``signed-by`` in your repo
@@ -99,7 +99,7 @@ Using ``aptkey: False`` with ``key_url`` example:
 
 .. code-block:: yaml
 
-    deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
       pkgrepo.managed:
         - file: /etc/apt/sources.list.d/salt.list
         - key_url: https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest/salt-archive-keyring.gpg
@@ -109,39 +109,9 @@ Using ``aptkey: False`` with ``keyserver`` and ``keyid``:
 
 .. code-block:: yaml
 
-    deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
       pkgrepo.managed:
         - file: /etc/apt/sources.list.d/salt.list
-        - keyserver: keyserver.ubuntu.com
-        - keyid: 0E08A149DE57BFBE
-        - aptkey: False
-
-You can also use the ``signedby`` option as an argument to the state.
-This option is only supported if you do NOT have python3-apt installed.
-Python3-apt does not currently support the ``signed-by`` option in repo
-definitions. You can set ``signed-by`` in the name of the repo, but
-NOT in the ``signedby`` argument of the state if python3-apt is installed.
-
-.. code-block:: yaml
-
-    deb [arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
-      pkgrepo.managed:
-        - file: /etc/apt/sources.list.d/salt.list
-        - signedby: /usr/share/keyrings/salt-archive-keyring.gpg
-        - keyserver: keyserver.ubuntu.com
-        - keyid: 0E08A149DE57BFBE
-        - aptkey: False
-
-If you have the ``signed-by`` option set in your pkgrepo.managed name
-and the ``signedby`` arg set in the state, the ``signedby`` arg
-will override what is set in the name.
-
-.. code-block:: yaml
-
-    deb [arch=amd64 signed-by=/usr/share/keyrings/salt-archive-keyring.gpg] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
-      pkgrepo.managed:
-        - file: /etc/apt/sources.list.d/salt.list
-        - signedby: /usr/share/keyrings/salt-archive-keyring-override.gpg
         - keyserver: keyserver.ubuntu.com
         - keyid: 0E08A149DE57BFBE
         - aptkey: False
@@ -170,7 +140,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     """
     This state manages software package repositories. Currently, :mod:`yum
     <salt.modules.yumpkg>`, :mod:`apt <salt.modules.aptpkg>`, and :mod:`zypper
-    <salt.modules.zypper>` repositories are supported.
+    <salt.modules.zypperpkg>` repositories are supported.
 
     **YUM/DNF/ZYPPER-BASED SYSTEMS**
 
@@ -312,78 +282,82 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         purposes of this, ``comps`` should be a comma-separated list.
 
     file
-       The filename for the ``*.list`` that the repository is configured in.
-       It is important to include the full-path AND make sure it is in
-       a directory that APT will look in when handling packages
+        The filename for the ``*.list`` that the repository is configured in.
+        It is important to include the full-path AND make sure it is in
+        a directory that APT will look in when handling packages
 
     dist
-       This dictates the release of the distro the packages should be built
-       for.  (e.g. ``unstable``). This option is rarely needed.
+        This dictates the release of the distro the packages should be built
+        for.  (e.g. ``unstable``). This option is rarely needed.
 
     keyid
-       The KeyID or a list of KeyIDs of the GPG key to install.
-       This option also requires the ``keyserver`` option to be set.
+        The KeyID or a list of KeyIDs of the GPG key to install.
+        This option also requires the ``keyserver`` option to be set.
 
     keyserver
-       This is the name of the keyserver to retrieve GPG keys from. The
-       ``keyid`` option must also be set for this option to work.
+        This is the name of the keyserver to retrieve GPG keys from. The
+        ``keyid`` option must also be set for this option to work.
 
     key_url
-       URL to retrieve a GPG key from. Allows the usage of ``http://``,
-       ``https://`` as well as ``salt://``.
+        URL to retrieve a GPG key from. Allows the usage of
+        ``https://`` as well as ``salt://``.  If ``allow_insecure_key`` is True,
+        this also allows ``http://``.
 
-       .. note::
+        .. note::
 
-           Use either ``keyid``/``keyserver`` or ``key_url``, but not both.
+            Use either ``keyid``/``keyserver`` or ``key_url``, but not both.
 
     key_text
-       The string representation of the GPG key to install.
+        The string representation of the GPG key to install.
 
-       .. versionadded:: 2018.3.0
+        .. versionadded:: 2018.3.0
 
-       .. note::
+        .. note::
 
-           Use either ``keyid``/``keyserver``, ``key_url``, or ``key_text`` but
-           not more than one method.
+            Use either ``keyid``/``keyserver``, ``key_url``, or ``key_text`` but
+            not more than one method.
 
     consolidate : False
-       If set to ``True``, this will consolidate all sources definitions to the
-       ``sources.list`` file, cleanup the now unused files, consolidate components
-       (e.g. ``main``) for the same URI, type, and architecture to a single line,
-       and finally remove comments from the ``sources.list`` file.  The consolidation
-       will run every time the state is processed. The option only needs to be
-       set on one repo managed by Salt to take effect.
+        If set to ``True``, this will consolidate all sources definitions to the
+        ``sources.list`` file, cleanup the now unused files, consolidate components
+        (e.g. ``main``) for the same URI, type, and architecture to a single line,
+        and finally remove comments from the ``sources.list`` file.  The consolidation
+        will run every time the state is processed. The option only needs to be
+        set on one repo managed by Salt to take effect.
 
     clean_file : False
-       If set to ``True``, empty the file before configuring the defined repository
+        If set to ``True``, empty the file before configuring the defined repository
 
-       .. note::
-           Use with care. This can be dangerous if multiple sources are
-           configured in the same file.
+        .. note::
+            Use with care. This can be dangerous if multiple sources are
+            configured in the same file.
 
-       .. versionadded:: 2015.8.0
+        .. versionadded:: 2015.8.0
 
     refresh : True
-       If set to ``False`` this will skip refreshing the apt package database
-       on Debian based systems.
+        If set to ``False`` this will skip refreshing the apt package database
+        on Debian based systems.
 
     refresh_db : True
-       .. deprecated:: 2018.3.0
-           Use ``refresh`` instead.
+        .. deprecated:: 2018.3.0
+            Use ``refresh`` instead.
 
     require_in
-       Set this to a list of :mod:`pkg.installed <salt.states.pkg.installed>` or
-       :mod:`pkg.latest <salt.states.pkg.latest>` to trigger the
-       running of ``apt-get update`` prior to attempting to install these
-       packages. Setting a require in the pkg state will not work for this.
+        Set this to a list of :mod:`pkg.installed <salt.states.pkg.installed>` or
+        :mod:`pkg.latest <salt.states.pkg.latest>` to trigger the
+        running of ``apt-get update`` prior to attempting to install these
+        packages. Setting a require in the pkg state will not work for this.
 
-    aptkey: Use the binary apt-key. If the command ``apt-key`` is not found
-       in the path, aptkey will be False, regardless of what is passed into
-       this argument.
+    aptkey:
+        Use the binary apt-key. If the command ``apt-key`` is not found
+        in the path, aptkey will be False, regardless of what is passed into
+        this argument.
 
-    signedby:
-        On apt-based systems, ``signedby`` is the the path to the key file
-        the repository will use. This is required if apt-key is False.
+
+    allow_insecure_key : True
+        Whether to allow an insecure (e.g. http vs. https) key_url.
+
+        .. versionadded:: 3006.0
     """
     if not salt.utils.path.which("apt-key"):
         aptkey = False
@@ -430,6 +404,22 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         # If neither argument was passed we assume the repo will be enabled
         enabled = True
 
+    # To be changed in version 3008: default to False and still log a warning
+    allow_insecure_key = kwargs.pop("allow_insecure_key", True)
+    key_is_insecure = kwargs.get("key_url", "").strip().startswith("http:")
+    if key_is_insecure:
+        if allow_insecure_key:
+            salt.utils.versions.warn_until(
+                3008,
+                "allow_insecure_key will default to False starting in salt 3008.",
+            )
+        else:
+            ret["result"] = False
+            ret[
+                "comment"
+            ] = "Cannot have 'key_url' using http with 'allow_insecure_key' set to True"
+            return ret
+
     repo = name
     if __grains__["os"] in ("Ubuntu", "Mint"):
         if ppa is not None:
@@ -472,9 +462,6 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
             else salt.utils.data.is_true(enabled)
         )
 
-    if __grains__["os_family"] == "Debian":
-        repo = salt.utils.pkg.deb.strip_uri(repo)
-
     for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)
 
@@ -489,8 +476,15 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     # out of the state itself and into a module that it makes more sense
     # to use. Most package providers will simply return the data provided
     # it doesn't require any "specialized" data massaging.
-    if "pkg.expand_repo_def" in __salt__:
-        sanitizedkwargs = __salt__["pkg.expand_repo_def"](repo=repo, **kwargs)
+    if __grains__.get("os_family") == "Debian":
+        from salt.modules.aptpkg import _expand_repo_def
+
+        os_name = __grains__["os"]
+        os_codename = __grains__["oscodename"]
+
+        sanitizedkwargs = _expand_repo_def(
+            os_name=os_name, os_codename=os_codename, repo=repo, **kwargs
+        )
     else:
         sanitizedkwargs = kwargs
 
@@ -516,22 +510,23 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break
             elif kwarg == "line" and __grains__["os_family"] == "Debian":
-                # split the line and sort everything after the URL
-                sanitizedsplit = sanitizedkwargs[kwarg].split()
-                sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
-                reposplit, _, pre_comments = (
-                    x.strip() for x in pre[kwarg].partition("#")
-                )
-                reposplit = reposplit.split()
-                reposplit[3:] = sorted(reposplit[3:])
-                if sanitizedsplit != reposplit:
-                    break
-                if "comments" in kwargs:
-                    post_comments = salt.utils.pkg.deb.combine_comments(
-                        kwargs["comments"]
+                if not sanitizedkwargs["disabled"]:
+                    # split the line and sort everything after the URL
+                    sanitizedsplit = sanitizedkwargs[kwarg].split()
+                    sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
+                    reposplit, _, pre_comments = (
+                        x.strip() for x in pre[kwarg].partition("#")
                     )
-                    if pre_comments != post_comments:
+                    reposplit = reposplit.split()
+                    reposplit[3:] = sorted(reposplit[3:])
+                    if sanitizedsplit != reposplit:
                         break
+                    if "comments" in kwargs:
+                        post_comments = salt.utils.pkg.deb.combine_comments(
+                            kwargs["comments"]
+                        )
+                        if pre_comments != post_comments:
+                            break
             elif kwarg == "comments" and __grains__["os_family"] == "RedHat":
                 precomments = salt.utils.pkg.rpm.combine_comments(pre[kwarg])
                 kwargcomments = salt.utils.pkg.rpm.combine_comments(

@@ -2,9 +2,14 @@
 Manage Local Policy on Windows
 
 This module allows configuring local group policy (i.e. ``gpedit.msc``) on a
-Windows server.
+Windows machine.
 
 .. versionadded:: 2016.11.0
+
+.. warning::
+    Local Group Policy will always be superseded by Domain Group policy. If
+    policies are configured with Local Group Policy that are also configured
+    with Domain Group policy, the Domain Group policy will take precedence.
 
 Administrative Templates
 ========================
@@ -57,6 +62,13 @@ import salt.utils.stringutils
 import salt.utils.win_lgpo_netsh
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.serializers.configparser import deserialize
+from salt.utils.win_lgpo_reg import (
+    CLASS_INFO,
+    REG_POL_HEADER,
+    read_reg_pol_file,
+    search_reg_pol,
+    write_reg_pol_data,
+)
 
 log = logging.getLogger(__name__)
 
@@ -486,6 +498,13 @@ class _policy_info:
             0: "This policy is disabled",
             1: "Users can't add Microsoft accounts",
             3: "Users can't add or log on with Microsoft accounts",
+            None: "Not Defined",
+            "(value not set)": "Not Defined",
+        }
+        self.ldap_server_binding_token_requirements = {
+            0: "Never",
+            1: "When supported",
+            2: "Always",
             None: "Not Defined",
             "(value not set)": "Not Defined",
         }
@@ -1807,6 +1826,18 @@ class _policy_info:
                         },
                         "Transform": self.enabled_one_disabled_zero_no_not_defined_transform,
                     },
+                    "RelaxMinimumPasswordLengthLimits": {
+                        "Policy": "Relax minimum password length limits",
+                        "lgpo_section": self.password_policy_gpedit_path,
+                        "Settings": self.enabled_one_disabled_zero.keys(),
+                        "Registry": {
+                            "Hive": "HKEY_LOCAL_MACHINE",
+                            "Path": "SYSTEM\\CurrentControlSet\\Control\\SAM",
+                            "Value": "RelaxMinimumPasswordLengthLimits",
+                            "Type": "REG_DWORD",
+                        },
+                        "Transform": self.enabled_one_disabled_zero_transform,
+                    },
                     "AdminAccountStatus": {
                         "Policy": "Accounts: Administrator account status",
                         "Settings": self.enabled_one_disabled_zero_no_not_defined.keys(),
@@ -2690,6 +2721,48 @@ class _policy_info:
                             "Type": "REG_DWORD",
                         },
                         "Transform": self.enabled_one_disabled_zero_strings_transform,
+                    },
+                    "VulnerableChannelAllowList": {
+                        "Policy": (
+                            "Domain controller: Allow vulnerable Netlogon "
+                            "secure channel connections"
+                        ),
+                        "lgpo_section": self.security_options_gpedit_path,
+                        "Registry": {
+                            "Hive": "HKEY_LOCAL_MACHINE",
+                            "Path": (
+                                "SYSTEM\\CurrentControlSet\\Services\\"
+                                "Netlogon\\Parameters"
+                            ),
+                            "Value": "VulnerableChannelAllowList",
+                            "Type": "REG_SZ",
+                        },
+                        "Transform": {"Put": "_string_put_transform"},
+                    },
+                    "LdapEnforceChannelBinding": {
+                        "Policy": "Domain controller: LDAP server channel binding token requirements",
+                        "Settings": self.ldap_server_binding_token_requirements.keys(),
+                        "lgpo_section": self.security_options_gpedit_path,
+                        "Registry": {
+                            "Hive": "HKEY_LOCAL_MACHINE",
+                            "Path": (
+                                "System\\CurrentControlSet\\Services\\NTDS\\Parameters"
+                            ),
+                            "Value": "LdapEnforceChannelBinding",
+                            "Type": "REG_DWORD",
+                        },
+                        "Transform": {
+                            "Get": "_dict_lookup",
+                            "Put": "_dict_lookup",
+                            "GetArgs": {
+                                "lookup": self.ldap_server_binding_token_requirements,
+                                "value_lookup": False,
+                            },
+                            "PutArgs": {
+                                "lookup": self.ldap_server_binding_token_requirements,
+                                "value_lookup": True,
+                            },
+                        },
                     },
                     "LDAPServerIntegrity": {
                         "Policy": "Domain controller: LDAP server signing requirements",
@@ -4502,38 +4575,6 @@ class _policy_info:
             },
             "User": {"lgpo_section": "User Configuration", "policies": {}},
         }
-        self.admx_registry_classes = {
-            "User": {
-                "policy_path": os.path.join(
-                    os.getenv("WINDIR"),
-                    "System32",
-                    "GroupPolicy",
-                    "User",
-                    "Registry.pol",
-                ),
-                "hive": "HKEY_USERS",
-                "lgpo_section": "User Configuration",
-                "gpt_extension_location": "gPCUserExtensionNames",
-                "gpt_extension_guid": "[{35378EAC-683F-11D2-A89A-00C04FBBCFA2}{D02B1F73-3407-48AE-BA88-E8213C6761F1}]",
-            },
-            "Machine": {
-                "policy_path": os.path.join(
-                    os.getenv("WINDIR"),
-                    "System32",
-                    "GroupPolicy",
-                    "Machine",
-                    "Registry.pol",
-                ),
-                "hive": "HKEY_LOCAL_MACHINE",
-                "lgpo_section": "Computer Configuration",
-                "gpt_extension_location": "gPCMachineExtensionNames",
-                "gpt_extension_guid": "[{35378EAC-683F-11D2-A89A-00C04FBBCFA2}{D02B1F72-3407-48AE-BA88-E8213C6761F1}]",
-            },
-        }
-        self.reg_pol_header = "\u5250\u6765\x01\x00"
-        self.gpt_ini_path = os.path.join(
-            os.getenv("WINDIR"), "System32", "GroupPolicy", "gpt.ini"
-        )
 
     @classmethod
     def _notEmpty(cls, val, **kwargs):
@@ -5956,9 +5997,9 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
                 "multiTextBox",
             ]:
                 if result.text:
-                    return result.text.rstrip().rstrip(":")
+                    return result.text.rstrip().rstrip(":").strip()
                 else:
-                    return alternate_label.rstrip(":")
+                    return alternate_label.rstrip(":").strip()
     return None
 
 
@@ -5985,30 +6026,6 @@ def _getFullPolicyName(
             policy_name = fullPolicyName
     policy_name = policy_name.rstrip(":").rstrip()
     return policy_name
-
-
-def _regexSearchRegPolData(search_string, policy_data):
-    """
-    Helper function to do a regex search of a string value in policy_data.
-    This is used to search the policy data from a registry.pol file or from
-    gpt.ini
-
-    Args:
-
-        search_string (str): The string to search for
-
-        policy_data (str): The data to be searched
-
-    Returns:
-
-        bool: ``True`` if the regex search_string is found, otherwise ``False``
-    """
-    if policy_data:
-        if search_string:
-            match = re.search(search_string, policy_data, re.IGNORECASE)
-            if match:
-                return True
-    return False
 
 
 def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
@@ -6127,9 +6144,7 @@ def _checkListItem(
                     value_item, item_key, item_valuename, policy_element, item
                 )
                 if test_items:
-                    if _regexSearchRegPolData(
-                        re.escape(search_string), policy_file_data
-                    ):
+                    if search_reg_pol(re.escape(search_string), policy_file_data):
                         configured_items = configured_items + 1
                         log.trace(
                             "found the search string in the pol file,"
@@ -6186,7 +6201,7 @@ def _checkValueItemParent(
             )
             if not test_item:
                 return search_string
-            if _regexSearchRegPolData(re.escape(search_string), policy_file_data):
+            if search_reg_pol(re.escape(search_string), policy_file_data):
                 log.trace(
                     "found the search string in the pol file, %s is configured",
                     policy_name,
@@ -6216,7 +6231,6 @@ def _buildKnownDataSearchString(
     """
     registry = Registry()
     this_element_value = None
-    expected_string = b""
     encoded_semicolon = ";".encode("utf-16-le")
     encoded_null = chr(0).encode("utf-16-le")
     if reg_key:
@@ -6620,10 +6634,7 @@ def _checkAllAdmxPolicies(
     enabled/disabled/not configured
     """
     log.trace("POLICY CLASS == %s", policy_class)
-    module_policy_data = _policy_info()
-    policy_file_data = _read_regpol_file(
-        module_policy_data.admx_registry_classes[policy_class]["policy_path"]
-    )
+    policy_file_data = read_reg_pol_file(CLASS_INFO[policy_class]["policy_path"])
     admx_policies = []
     policy_vals = {}
     hierarchy = {}
@@ -6639,7 +6650,7 @@ def _checkAllAdmxPolicies(
                 salt.utils.stringutils.to_bytes(r"^\[{}".format(chr(0))),
                 b"",
                 re.sub(
-                    re.escape(module_policy_data.reg_pol_header.encode("utf-16-le")),
+                    re.escape(REG_POL_HEADER.encode("utf-16-le")),
                     b"",
                     policy_file_data,
                 ),
@@ -6853,7 +6864,7 @@ def _checkAllAdmxPolicies(
                 # the policy has a key/valuename but no explicit enabled/Disabled
                 # Value or List
                 # these seem to default to a REG_DWORD 1 = "Enabled" **del. = "Disabled"
-                if _regexSearchRegPolData(
+                if search_reg_pol(
                     re.escape(
                         _buildKnownDataSearchString(
                             this_key, this_valuename, "REG_DWORD", "1"
@@ -6871,7 +6882,7 @@ def _checkAllAdmxPolicies(
                     policy_vals[this_policynamespace][
                         this_policyname
                     ] = this_policy_setting
-                elif _regexSearchRegPolData(
+                elif search_reg_pol(
                     re.escape(
                         _buildKnownDataSearchString(
                             this_key,
@@ -7002,7 +7013,7 @@ def _checkAllAdmxPolicies(
                                                 child_item.attrib["id"],
                                             )
                                 else:
-                                    if _regexSearchRegPolData(
+                                    if search_reg_pol(
                                         re.escape(
                                             _processValueItem(
                                                 child_item,
@@ -7023,7 +7034,7 @@ def _checkAllAdmxPolicies(
                                             "element %s is configured false",
                                             child_item.attrib["id"],
                                         )
-                                    elif _regexSearchRegPolData(
+                                    elif search_reg_pol(
                                         re.escape(
                                             _processValueItem(
                                                 child_item,
@@ -7048,7 +7059,7 @@ def _checkAllAdmxPolicies(
                                 or etree.QName(child_item).localname == "multiText"
                             ):
                                 # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
-                                if _regexSearchRegPolData(
+                                if search_reg_pol(
                                     re.escape(
                                         _processValueItem(
                                             child_item,
@@ -7069,7 +7080,7 @@ def _checkAllAdmxPolicies(
                                         "element %s is disabled",
                                         child_item.attrib["id"],
                                     )
-                                elif _regexSearchRegPolData(
+                                elif search_reg_pol(
                                     re.escape(
                                         _processValueItem(
                                             child_item,
@@ -7102,7 +7113,7 @@ def _checkAllAdmxPolicies(
                                         configured_value,
                                     )
                             elif etree.QName(child_item).localname == "enum":
-                                if _regexSearchRegPolData(
+                                if search_reg_pol(
                                     re.escape(
                                         _processValueItem(
                                             child_item,
@@ -7189,7 +7200,7 @@ def _checkAllAdmxPolicies(
                                 delvals_regex = salt.utils.stringutils.to_bytes(
                                     delvals_regex
                                 )
-                                if _regexSearchRegPolData(
+                                if search_reg_pol(
                                     re.escape(
                                         _processValueItem(
                                             child_item,
@@ -7223,7 +7234,7 @@ def _checkAllAdmxPolicies(
                                         child_item.attrib["id"],
                                         configured_value,
                                     )
-                                elif _regexSearchRegPolData(
+                                elif search_reg_pol(
                                     re.escape(
                                         _processValueItem(
                                             child_item,
@@ -7398,7 +7409,7 @@ def _checkAllAdmxPolicies(
                     policy_vals.pop(policy_namespace)
             log.trace("Compilation complete: %s seconds", time.time() - start_time)
         policy_vals = {
-            module_policy_data.admx_registry_classes[policy_class]["lgpo_section"]: {
+            CLASS_INFO[policy_class]["lgpo_section"]: {
                 "Administrative Templates": policy_vals
             }
         }
@@ -7501,17 +7512,6 @@ def _admx_policy_parent_walk(
     return path
 
 
-def _read_regpol_file(reg_pol_path):
-    """
-    helper function to read a reg policy file and return decoded data
-    """
-    returndata = None
-    if os.path.exists(reg_pol_path):
-        with salt.utils.files.fopen(reg_pol_path, "rb") as pol_file:
-            returndata = pol_file.read()
-    return returndata
-
-
 def _regexSearchKeyValueCombo(policy_data, policy_regpath, policy_regkey):
     """
     helper function to do a search of Policy data from a registry.pol file
@@ -7560,137 +7560,6 @@ def _regexSearchKeyValueCombo(policy_data, policy_regpath, policy_regkey):
     return None
 
 
-def _write_regpol_data(
-    data_to_write, policy_file_path, gpt_ini_path, gpt_extension, gpt_extension_guid
-):
-    """
-    helper function to actually write the data to a Registry.pol file
-
-    also updates/edits the gpt.ini file to include the ADM policy extensions
-    to let the computer know user and/or machine registry policy files need
-    to be processed
-
-    data_to_write: data to write into the user/machine registry.pol file
-    policy_file_path: path to the registry.pol file
-    gpt_ini_path: path to gpt.ini file
-    gpt_extension: gpt extension list name from _policy_info class for this registry class gpt_extension_location
-    gpt_extension_guid: admx registry extension guid for the class
-    """
-    # Write Registry.pol file
-    if not os.path.exists(policy_file_path):
-        __salt__["file.makedirs"](policy_file_path)
-    try:
-        with salt.utils.files.fopen(policy_file_path, "wb") as pol_file:
-            reg_pol_header = "\u5250\u6765\x01\x00".encode("utf-16-le")
-            if not data_to_write.startswith(reg_pol_header):
-                pol_file.write(reg_pol_header)
-            pol_file.write(data_to_write)
-    # TODO: This needs to be more specific
-    except Exception as e:  # pylint: disable=broad-except
-        msg = (
-            "An error occurred attempting to write to {}, the exception was: {}".format(
-                policy_file_path, e
-            )
-        )
-        log.exception(msg)
-        raise CommandExecutionError(msg)
-
-    # Write the gpt.ini file
-    gpt_ini_data = ""
-    if os.path.exists(gpt_ini_path):
-        with salt.utils.files.fopen(gpt_ini_path, "r") as gpt_file:
-            gpt_ini_data = gpt_file.read()
-        # Make sure it has Windows Style line endings
-        gpt_ini_data = (
-            gpt_ini_data.replace("\r\n", "_|-")
-            .replace("\n", "_|-")
-            .replace("_|-", "\r\n")
-        )
-    if not _regexSearchRegPolData(r"\[General\]\r\n", gpt_ini_data):
-        gpt_ini_data = "[General]\r\n" + gpt_ini_data
-    if _regexSearchRegPolData(r"{}=".format(re.escape(gpt_extension)), gpt_ini_data):
-        # ensure the line contains the ADM guid
-        gpt_ext_loc = re.search(
-            r"^{}=.*\r\n".format(re.escape(gpt_extension)),
-            gpt_ini_data,
-            re.IGNORECASE | re.MULTILINE,
-        )
-        gpt_ext_str = gpt_ini_data[gpt_ext_loc.start() : gpt_ext_loc.end()]
-        if not _regexSearchRegPolData(
-            r"{}".format(re.escape(gpt_extension_guid)), gpt_ext_str
-        ):
-            gpt_ext_str = gpt_ext_str.split("=")
-            gpt_ext_str[1] = gpt_extension_guid + gpt_ext_str[1]
-            gpt_ext_str = "=".join(gpt_ext_str)
-            gpt_ini_data = (
-                gpt_ini_data[0 : gpt_ext_loc.start()]
-                + gpt_ext_str
-                + gpt_ini_data[gpt_ext_loc.end() :]
-            )
-    else:
-        general_location = re.search(
-            r"^\[General\]\r\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
-        )
-        gpt_ini_data = "{}{}={}\r\n{}".format(
-            gpt_ini_data[general_location.start() : general_location.end()],
-            gpt_extension,
-            gpt_extension_guid,
-            gpt_ini_data[general_location.end() :],
-        )
-    # https://technet.microsoft.com/en-us/library/cc978247.aspx
-    if _regexSearchRegPolData(r"Version=", gpt_ini_data):
-        version_loc = re.search(
-            r"^Version=.*\r\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
-        )
-        version_str = gpt_ini_data[version_loc.start() : version_loc.end()]
-        version_str = version_str.split("=")
-        version_nums = struct.unpack(b">2H", struct.pack(b">I", int(version_str[1])))
-        if gpt_extension.lower() == "gPCMachineExtensionNames".lower():
-            version_nums = (version_nums[0], version_nums[1] + 1)
-        elif gpt_extension.lower() == "gPCUserExtensionNames".lower():
-            version_nums = (version_nums[0] + 1, version_nums[1])
-        version_num = struct.unpack(b">I", struct.pack(b">2H", *version_nums))[0]
-        gpt_ini_data = "{}{}={}\r\n{}".format(
-            gpt_ini_data[0 : version_loc.start()],
-            "Version",
-            version_num,
-            gpt_ini_data[version_loc.end() :],
-        )
-    else:
-        general_location = re.search(
-            r"^\[General\]\r\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
-        )
-        if gpt_extension.lower() == "gPCMachineExtensionNames".lower():
-            version_nums = (0, 1)
-        elif gpt_extension.lower() == "gPCUserExtensionNames".lower():
-            version_nums = (1, 0)
-        gpt_ini_data = "{}{}={}\r\n{}".format(
-            gpt_ini_data[general_location.start() : general_location.end()],
-            "Version",
-            int(
-                "{}{}".format(
-                    str(version_nums[0]).zfill(4),
-                    str(version_nums[1]).zfill(4),
-                ),
-                16,
-            ),
-            gpt_ini_data[general_location.end() :],
-        )
-    if gpt_ini_data:
-        try:
-            with salt.utils.files.fopen(gpt_ini_path, "w") as gpt_file:
-                gpt_file.write(gpt_ini_data)
-        # TODO: This needs to be more specific
-        except Exception as e:  # pylint: disable=broad-except
-            msg = (
-                "An error occurred attempting to write the gpg.ini file.\n"
-                "path: {}\n"
-                "exception: {}".format(gpt_ini_path, e)
-            )
-            log.exception(msg)
-            raise CommandExecutionError(msg)
-
-
 def _policyFileReplaceOrAppendList(string_list, policy_data):
     """
     helper function to take a list of strings for registry.pol file data and
@@ -7731,8 +7600,6 @@ def _policyFileReplaceOrAppend(this_string, policy_data, append_only=False):
     specialValueRegex = salt.utils.stringutils.to_bytes(
         r"(\*\*Del\.|\*\*DelVals\.){0,1}"
     )
-    item_key = None
-    item_value_name = None
     data_to_replace = None
     if not append_only:
         item_key = this_string.split(b"\00;")[0].lstrip(b"[")
@@ -7767,7 +7634,6 @@ def _writeAdminTemplateRegPolFile(
     [Registry Path<NULL>;Reg Value<NULL>;Reg Type;SizeInBytes;Data<NULL>]
     """
     existing_data = b""
-    policy_data = _policy_info()
     policySearchXpath = '//ns1:*[@id = "{0}" or @name = "{0}"]'
     admx_policy_definitions = _get_policy_definitions(language=adml_language)
     adml_policy_resources = _get_policy_resources(language=adml_language)
@@ -8270,12 +8136,11 @@ def _writeAdminTemplateRegPolFile(
                                                     )
                                                 )
     try:
-        _write_regpol_data(
-            existing_data,
-            policy_data.admx_registry_classes[registry_class]["policy_path"],
-            policy_data.gpt_ini_path,
-            policy_data.admx_registry_classes[registry_class]["gpt_extension_location"],
-            policy_data.admx_registry_classes[registry_class]["gpt_extension_guid"],
+        write_reg_pol_data(
+            data_to_write=existing_data,
+            policy_file_path=CLASS_INFO[registry_class]["policy_path"],
+            gpt_extension=CLASS_INFO[registry_class]["gpt_extension_location"],
+            gpt_extension_guid=CLASS_INFO[registry_class]["gpt_extension_guid"],
         )
     # TODO: This needs to be more specific or removed
     except CommandExecutionError as exc:  # pylint: disable=broad-except
@@ -8427,7 +8292,27 @@ def _lookup_admin_template(policy_name, policy_class, adml_language="en-US"):
             policy_aliases.append("\\".join(full_path_list))
             return True, the_policy, policy_aliases, None
         else:
-            msg = 'ADMX policy name/id "{}" is used in multiple ADMX files'
+            policy_aliases = []
+            for the_policy in admx_search_results:
+                policy_display_name = _getFullPolicyName(
+                    policy_item=the_policy,
+                    policy_name=the_policy.attrib["name"],
+                    return_full_policy_names=True,
+                    adml_language=adml_language,
+                )
+                full_path_list = _build_parent_list(
+                    policy_definition=the_policy,
+                    return_full_policy_names=True,
+                    adml_language=adml_language,
+                )
+                full_path_list.append(policy_display_name)
+                policy_aliases.append("\\".join(full_path_list))
+            policies = "\n - ".join(policy_aliases)
+            msg = (
+                'ADMX policy name/id "{}" is used in multiple ADMX files.\n'
+                "Try one of the following names:\n"
+                " - {}".format(policy_name, policies)
+            )
             return False, None, [], msg
     else:
         adml_search_results = ADML_SEARCH_XPATH(
@@ -9159,10 +9044,7 @@ def _get_policy_adm_setting(
     explicit_enable_disable_value_setting = False
 
     # Load additional data
-    policy_data = _policy_info()
-    policy_file_data = _read_regpol_file(
-        policy_data.admx_registry_classes[policy_class]["policy_path"]
-    )
+    policy_file_data = read_reg_pol_file(CLASS_INFO[policy_class]["policy_path"])
     adml_policy_resources = _get_policy_resources(language=adml_language)
 
     policy_vals = {}
@@ -9250,7 +9132,7 @@ def _get_policy_adm_setting(
         # the policy has a key/valuename but no explicit Enabled/Disabled
         # Value or List
         # these seem to default to a REG_DWORD 1 = "Enabled" **del. = "Disabled"
-        if _regexSearchRegPolData(
+        if search_reg_pol(
             re.escape(
                 _buildKnownDataSearchString(
                     reg_key=this_key,
@@ -9269,7 +9151,7 @@ def _get_policy_adm_setting(
             policy_vals.setdefault(this_policy_namespace, {})[
                 this_policy_name
             ] = this_policy_setting
-        elif _regexSearchRegPolData(
+        elif search_reg_pol(
             re.escape(
                 _buildKnownDataSearchString(
                     reg_key=this_key,
@@ -9391,7 +9273,7 @@ def _get_policy_adm_setting(
                                         child_item.attrib["id"],
                                     )
                         else:
-                            if _regexSearchRegPolData(
+                            if search_reg_pol(
                                 re.escape(
                                     _processValueItem(
                                         element=child_item,
@@ -9410,7 +9292,7 @@ def _get_policy_adm_setting(
                                     "element %s is configured false",
                                     child_item.attrib["id"],
                                 )
-                            elif _regexSearchRegPolData(
+                            elif search_reg_pol(
                                 re.escape(
                                     _processValueItem(
                                         element=child_item,
@@ -9435,7 +9317,7 @@ def _get_policy_adm_setting(
                         "multiText",
                     ]:
                         # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
-                        if _regexSearchRegPolData(
+                        if search_reg_pol(
                             re.escape(
                                 _processValueItem(
                                     element=child_item,
@@ -9451,7 +9333,7 @@ def _get_policy_adm_setting(
                             configured_elements[this_element_name] = "Disabled"
                             policy_disabled_elements = policy_disabled_elements + 1
                             log.trace("element %s is disabled", child_item.attrib["id"])
-                        elif _regexSearchRegPolData(
+                        elif search_reg_pol(
                             re.escape(
                                 _processValueItem(
                                     element=child_item,
@@ -9482,7 +9364,7 @@ def _get_policy_adm_setting(
                                 configured_value,
                             )
                     elif etree.QName(child_item).localname == "enum":
-                        if _regexSearchRegPolData(
+                        if search_reg_pol(
                             re.escape(
                                 _processValueItem(
                                     element=child_item,
@@ -9564,7 +9446,7 @@ def _get_policy_adm_setting(
                         ]
                         delvals_regex = "\x00".join(regex_str)
                         delvals_regex = salt.utils.stringutils.to_bytes(delvals_regex)
-                        if _regexSearchRegPolData(
+                        if search_reg_pol(
                             re.escape(
                                 _processValueItem(
                                     element=child_item,
@@ -9596,7 +9478,7 @@ def _get_policy_adm_setting(
                                 child_item.attrib["id"],
                                 configured_value,
                             )
-                        elif _regexSearchRegPolData(
+                        elif search_reg_pol(
                             re.escape(
                                 _processValueItem(
                                     element=child_item,
@@ -9705,7 +9587,7 @@ def _get_policy_adm_setting(
                         full_name
                     ] = policy_item
             # go back and remove any "unpathed" policies that need a full path
-            for path_needed in unpathed_dict[policy_namespace]:
+            for path_needed in unpathed_dict.get(policy_namespace, {}):
                 # remove the item with the same full name and re-add it w/a path'd version
                 full_path_list = hierarchy[policy_namespace][
                     unpathed_dict[policy_namespace][path_needed]
@@ -9760,7 +9642,7 @@ def _get_policy_adm_setting(
                 ):
                     policy_vals.pop(policy_namespace)
         policy_vals = {
-            policy_data.admx_registry_classes[policy_class]["lgpo_section"]: {
+            CLASS_INFO[policy_class]["lgpo_section"]: {
                 "Administrative Templates": policy_vals
             }
         }
@@ -9933,10 +9815,8 @@ def set_computer_policy(
 
         salt '*' lgpo.set_computer_policy LockoutDuration 1440
     """
-    pol = {}
-    pol[name] = setting
     ret = set_(
-        computer_policy=pol,
+        computer_policy={name: setting},
         user_policy=None,
         cumulative_rights_assignments=cumulative_rights_assignments,
         adml_language=adml_language,
@@ -9970,10 +9850,8 @@ def set_user_policy(name, setting, adml_language="en-US"):
 
         salt '*' lgpo.set_user_policy "Control Panel\\Display\\Disable the Display Control Panel" Enabled
     """
-    pol = {}
-    pol[name] = setting
     ret = set_(
-        user_policy=pol,
+        user_policy={name: setting},
         computer_policy=None,
         cumulative_rights_assignments=True,
         adml_language=adml_language,
@@ -10066,9 +9944,7 @@ def set_(
         raise SaltInvocationError("computer_policy must be specified as a dict")
     if user_policy and not isinstance(user_policy, dict):
         raise SaltInvocationError("user_policy must be specified as a dict")
-    policies = {}
-    policies["User"] = user_policy
-    policies["Machine"] = computer_policy
+    policies = {"User": user_policy, "Machine": computer_policy}
     if policies:
         adml_policy_resources = _get_policy_resources(language=adml_language)
         for p_class in policies:

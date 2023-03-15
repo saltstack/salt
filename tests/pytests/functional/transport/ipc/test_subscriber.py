@@ -1,8 +1,8 @@
 import pathlib
-import sys
 
 import attr
 import pytest
+
 import salt.channel.server
 import salt.ext.tornado.gen
 import salt.transport.ipc
@@ -12,9 +12,6 @@ from salt.ext.tornado import locks
 pytestmark = [
     # Windows does not support POSIX IPC
     pytest.mark.skip_on_windows,
-    pytest.mark.skipif(
-        sys.version_info < (3, 6), reason="The IOLoop blocks under Py3.5 on these tests"
-    ),
 ]
 
 

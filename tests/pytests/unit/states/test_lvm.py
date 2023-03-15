@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.lvm as lvm
 from salt.exceptions import ArgumentValueError
 from tests.support.mock import MagicMock, patch

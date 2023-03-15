@@ -7,6 +7,9 @@ import shutil
 import time
 
 import pytest
+from pytestshellutils.utils import ports
+from saltfactories.utils import random_string
+
 import salt.channel.client
 import salt.channel.server
 import salt.config
@@ -16,8 +19,6 @@ import salt.master
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
-from pytestshellutils.utils import ports
-from saltfactories.utils import random_string
 
 log = logging.getLogger(__name__)
 

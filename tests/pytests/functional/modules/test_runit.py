@@ -1,6 +1,7 @@
 import pathlib
 
 import pytest
+
 import salt.modules.runit as runit
 from tests.support.mock import patch
 

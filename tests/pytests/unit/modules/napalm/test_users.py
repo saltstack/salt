@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.modules.napalm_network as napalm_network
 import salt.modules.napalm_users as napalm_users
 import tests.support.napalm as napalm_test_support

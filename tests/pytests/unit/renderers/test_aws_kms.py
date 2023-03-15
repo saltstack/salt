@@ -2,6 +2,7 @@
 Unit tests for AWS KMS Decryption Renderer.
 """
 import pytest
+
 import salt.exceptions
 import salt.renderers.aws_kms as aws_kms
 from tests.support.mock import MagicMock, patch

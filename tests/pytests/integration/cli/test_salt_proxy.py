@@ -5,9 +5,10 @@
 import logging
 
 import pytest
-import salt.defaults.exitcodes
 from pytestshellutils.exceptions import FactoryNotStarted
 from saltfactories.utils import random_string
+
+import salt.defaults.exitcodes
 from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 
 log = logging.getLogger(__name__)
@@ -82,7 +83,7 @@ def test_exit_status_correct_usage(salt_master, proxy_minion_id, salt_cli):
     """
     factory = salt_master.salt_proxy_minion_daemon(
         proxy_minion_id,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         defaults={"transport": salt_master.config["transport"]},
     )
     factory.start()

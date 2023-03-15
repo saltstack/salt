@@ -297,7 +297,7 @@ def __get_certificates(
 
     if http_dc_validation:
         validation_tag = sslresult.getElementsByTagName("HttpDCValidation")
-        if validation_tag is not None and len(validation_tag) > 0:
+        if validation_tag:
             validation_tag = validation_tag[0]
 
             if validation_tag.getAttribute("ValueAvailable").lower() == "true":

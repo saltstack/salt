@@ -4,6 +4,7 @@ import random
 import time
 
 import pytest
+
 import salt.utils.platform
 import salt.utils.schedule
 from tests.support.mock import MagicMock, patch
@@ -67,7 +68,8 @@ def _check_last_run(schedule, job_name, runtime=None):
 
 
 @pytest.mark.slow_test
-def test_eval(schedule):
+@pytest.mark.parametrize("master", [False, True])
+def test_eval(schedule, master):
     """
     verify that scheduled job runs
     """
@@ -81,6 +83,10 @@ def test_eval(schedule):
 
     # Add the job to the scheduler
     schedule.opts.update(job)
+
+    # The master does not have grains
+    if master:
+        schedule.opts.pop("grains", None)
 
     # Evaluate 1 second before the run time
     schedule.eval(now=run_time1)
@@ -494,6 +500,146 @@ def test_eval_disabled(schedule):
 
     # Ensure job data still matches
     assert ret == job["schedule"][job_name]
+
+
+def test_eval_disabled_seconds(schedule):
+    """
+    verify that scheduled job does not run
+    """
+
+    job_name = "test_eval_disabled_seconds"
+    job = {
+        "schedule": {
+            "enabled": True,
+            job_name: {"function": "test.ping", "seconds": "30"},
+        }
+    }
+
+    # Add the job to the scheduler
+    schedule.opts.update(job)
+
+    eval_time1 = dateutil.parser.parse("11/29/2017 4:00pm")
+    schedule.eval(now=eval_time1)
+    ret = schedule.job_status(job_name)
+    assert "_next_fire_time" in ret
+    assert ret["_next_fire_time"] == datetime.datetime(2017, 11, 29, 16, 0, 30)
+
+    # Disable the job
+    schedule.opts["schedule"]["enabled"] = False
+
+    # Evaluate 1 second for 29 seconds
+    # Assert that the _next_fire_time does not change
+    # until the _next_fire_time is reached
+    for i in range(1, 30):
+        eval_time = eval_time1 + datetime.timedelta(seconds=i)
+        schedule.eval(now=eval_time)
+        ret = schedule.job_status(job_name)
+        assert "_next_fire_time" in ret
+        assert ret["_next_fire_time"] == datetime.datetime(2017, 11, 29, 16, 0, 30)
+
+    eval_time = eval_time1 + datetime.timedelta(seconds=30)
+    schedule.eval(now=eval_time)
+    ret = schedule.job_status(job_name)
+    assert "_next_fire_time" in ret
+    assert ret["_next_fire_time"] == datetime.datetime(2017, 11, 29, 16, 1, 0)
+
+
+def test_eval_disabled_minutes(schedule):
+    """
+    verify that scheduled job does not run
+    """
+
+    job_name = "test_eval_disabled_minutes"
+    job = {
+        "schedule": {
+            "enabled": True,
+            job_name: {"function": "test.ping", "minutes": "55"},
+        }
+    }
+
+    # Add the job to the scheduler
+    schedule.opts.update(job)
+
+    eval_time1 = dateutil.parser.parse("11/29/2017 4:00pm")
+    schedule.eval(now=eval_time1)
+    ret = schedule.job_status(job_name)
+    assert "_next_fire_time" in ret
+    assert ret["_next_fire_time"] == datetime.datetime(2017, 11, 29, 16, 55, 0)
+
+    # Evaluate 1 minute for 50 minutes
+    # Assert that the _next_fire_time does not change
+    # until the _next_fire_time is reached
+    for i in range(1, 50):
+        eval_time = eval_time1 + datetime.timedelta(minutes=i)
+        schedule.eval(now=eval_time)
+        ret = schedule.job_status(job_name)
+        assert "_next_fire_time" in ret
+        assert ret["_next_fire_time"] == datetime.datetime(2017, 11, 29, 16, 55, 0)
+
+    # Disable the job
+    schedule.opts["schedule"]["enabled"] = False
+
+    for i in range(1, 10):
+        eval_time = eval_time1 + datetime.timedelta(seconds=i)
+        schedule.eval(now=eval_time)
+        ret = schedule.job_status(job_name)
+        assert "_next_fire_time" in ret
+        assert ret["_next_fire_time"] == datetime.datetime(2017, 11, 29, 16, 55, 0)
+
+    eval_time = dateutil.parser.parse("11/29/2017 4:55pm")
+    schedule.eval(now=eval_time)
+    ret = schedule.job_status(job_name)
+    assert "_next_fire_time" in ret
+    assert ret["_next_fire_time"] == datetime.datetime(2017, 11, 29, 17, 50, 0)
+
+
+def test_eval_disabled_hours(schedule):
+    """
+    verify that scheduled job does not run
+    """
+
+    job_name = "test_eval_disabled_hours"
+    job = {
+        "schedule": {
+            "enabled": True,
+            job_name: {"function": "test.ping", "hours": "6"},
+        }
+    }
+
+    # Add the job to the scheduler
+    schedule.opts.update(job)
+
+    eval_time1 = dateutil.parser.parse("11/29/2017 4:00pm")
+    schedule.eval(now=eval_time1)
+    ret = schedule.job_status(job_name)
+    assert "_next_fire_time" in ret
+    assert ret["_next_fire_time"] == datetime.datetime(2017, 11, 29, 22, 0, 0)
+
+    # Evaluate 1 hour for 5 hours
+    # Assert that the _next_fire_time does not change
+    # until the _next_fire_time is reached
+    for i in range(1, 5):
+        eval_time = eval_time1 + datetime.timedelta(hours=i)
+        schedule.eval(now=eval_time)
+        ret = schedule.job_status(job_name)
+        assert "_next_fire_time" in ret
+        assert ret["_next_fire_time"] == datetime.datetime(2017, 11, 29, 22, 0, 0)
+
+    # Disable the job
+    schedule.opts["schedule"]["enabled"] = False
+
+    for i in range(1, 50):
+        eval_time = eval_time1 + datetime.timedelta(minutes=i)
+        schedule.eval(now=eval_time)
+        ret = schedule.job_status(job_name)
+        assert "_next_fire_time" in ret
+        assert ret["_next_fire_time"] == datetime.datetime(2017, 11, 29, 22, 0, 0)
+
+    eval_time = dateutil.parser.parse("11/29/2017 10:00pm")
+    schedule.eval(now=eval_time)
+    ret = schedule.job_status(job_name)
+    assert "_next_fire_time" in ret
+    assert ret["_next_fire_time"] == datetime.datetime(2017, 11, 30, 4, 0, 0)
 
 
 def test_eval_global_disabled_job_enabled(schedule):

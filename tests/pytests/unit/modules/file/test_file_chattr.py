@@ -2,6 +2,7 @@ import logging
 import textwrap
 
 import pytest
+
 import salt.modules.cmdmod as cmdmod
 import salt.modules.file as filemod
 from tests.support.mock import MagicMock, Mock, patch
@@ -14,7 +15,15 @@ pytestmark = pytest.mark.skip_on_windows(
 
 
 @pytest.fixture
-def configure_loader_modules():
+def _common_patches():
+    with patch("salt.utils.platform.is_aix", Mock(return_value=False)), patch(
+        "os.path.exists", Mock(return_value=True)
+    ), patch("salt.utils.path.which", Mock(return_value="some/tune2fs")):
+        yield
+
+
+@pytest.fixture
+def configure_loader_modules(_common_patches):
     return {
         filemod: {
             "__salt__": {"cmd.run": cmdmod.run},
@@ -23,22 +32,12 @@ def configure_loader_modules():
     }
 
 
-@patch("salt.utils.platform.is_aix", Mock(return_value=False))
-@patch("os.path.exists", Mock(return_value=True))
-@patch("salt.utils.path.which", Mock(return_value="some/tune2fs"))
 def test_chattr_version_returns_None_if_no_tune2fs_exists():
-    patch_which = patch(
-        "salt.utils.path.which",
-        Mock(return_value=""),
-    )
-    with patch_which:
+    with patch("salt.utils.path.which", Mock(return_value="")):
         actual = filemod._chattr_version()
         assert actual is None
 
 
-@patch("salt.utils.platform.is_aix", Mock(return_value=False))
-@patch("os.path.exists", Mock(return_value=True))
-@patch("salt.utils.path.which", Mock(return_value="some/tune2fs"))
 def test_on_aix_chattr_version_should_be_None_even_if_tune2fs_exists():
     patch_which = patch(
         "salt.utils.path.which",
@@ -56,9 +55,6 @@ def test_on_aix_chattr_version_should_be_None_even_if_tune2fs_exists():
         mock_run.assert_not_called()
 
 
-@patch("salt.utils.platform.is_aix", Mock(return_value=False))
-@patch("os.path.exists", Mock(return_value=True))
-@patch("salt.utils.path.which", Mock(return_value="some/tune2fs"))
 def test_chattr_version_should_return_version_from_tune2fs():
     expected = "1.43.4"
     sample_output = textwrap.dedent(
@@ -87,9 +83,6 @@ def test_chattr_version_should_return_version_from_tune2fs():
         assert actual == expected
 
 
-@patch("salt.utils.platform.is_aix", Mock(return_value=False))
-@patch("os.path.exists", Mock(return_value=True))
-@patch("salt.utils.path.which", Mock(return_value="some/tune2fs"))
 def test_if_tune2fs_has_no_version_version_should_be_None():
     patch_which = patch(
         "salt.utils.path.which",
@@ -104,9 +97,6 @@ def test_if_tune2fs_has_no_version_version_should_be_None():
         assert actual is None
 
 
-@patch("salt.utils.platform.is_aix", Mock(return_value=False))
-@patch("os.path.exists", Mock(return_value=True))
-@patch("salt.utils.path.which", Mock(return_value="some/tune2fs"))
 def test_chattr_has_extended_attrs_should_return_False_if_chattr_version_is_None():
     patch_chattr = patch(
         "salt.modules.file._chattr_version",
@@ -117,9 +107,6 @@ def test_chattr_has_extended_attrs_should_return_False_if_chattr_version_is_None
         assert not actual, actual
 
 
-@patch("salt.utils.platform.is_aix", Mock(return_value=False))
-@patch("os.path.exists", Mock(return_value=True))
-@patch("salt.utils.path.which", Mock(return_value="some/tune2fs"))
 def test_chattr_has_extended_attrs_should_return_False_if_version_is_too_low():
     below_expected = "0.1.1"
     patch_chattr = patch(
@@ -131,9 +118,6 @@ def test_chattr_has_extended_attrs_should_return_False_if_version_is_too_low():
         assert not actual, actual
 
 
-@patch("salt.utils.platform.is_aix", Mock(return_value=False))
-@patch("os.path.exists", Mock(return_value=True))
-@patch("salt.utils.path.which", Mock(return_value="some/tune2fs"))
 def test_chattr_has_extended_attrs_should_return_False_if_version_is_equal_threshold():
     threshold = "1.41.12"
     patch_chattr = patch(
@@ -145,9 +129,6 @@ def test_chattr_has_extended_attrs_should_return_False_if_version_is_equal_thres
         assert not actual, actual
 
 
-@patch("salt.utils.platform.is_aix", Mock(return_value=False))
-@patch("os.path.exists", Mock(return_value=True))
-@patch("salt.utils.path.which", Mock(return_value="some/tune2fs"))
 def test_chattr_has_extended_attrs_should_return_True_if_version_is_above_threshold():
     higher_than = "1.41.13"
     patch_chattr = patch(
@@ -159,9 +140,6 @@ def test_chattr_has_extended_attrs_should_return_True_if_version_is_above_thresh
         assert actual, actual
 
 
-@patch("salt.utils.platform.is_aix", Mock(return_value=False))
-@patch("os.path.exists", Mock(return_value=True))
-@patch("salt.utils.path.which", Mock(return_value="some/tune2fs"))
 def test_check_perms_should_report_no_attr_changes_if_there_are_none():
     filename = "/path/to/fnord"
     attrs = "aAcCdDeijPsStTu"
@@ -196,9 +174,6 @@ def test_check_perms_should_report_no_attr_changes_if_there_are_none():
         assert actual_ret.get("changes", {}).get("attrs") is None, actual_ret
 
 
-@patch("salt.utils.platform.is_aix", Mock(return_value=False))
-@patch("os.path.exists", Mock(return_value=True))
-@patch("salt.utils.path.which", Mock(return_value="some/tune2fs"))
 def test_check_perms_should_report_attrs_new_and_old_if_they_changed():
     filename = "/path/to/fnord"
     attrs = "aAcCdDeijPsStTu"

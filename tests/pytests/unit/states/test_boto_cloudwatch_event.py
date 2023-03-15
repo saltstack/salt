@@ -3,7 +3,7 @@ import random
 import string
 
 import pytest
-import salt.config
+
 import salt.loader
 import salt.states.boto_cloudwatch_event as boto_cloudwatch_event
 from tests.support.mock import MagicMock, patch
@@ -45,27 +45,35 @@ class GlobalConfig:
 
 
 @pytest.fixture
+def session_instance():
+    with patch("boto3.session.Session") as patched_session:
+        yield patched_session()
+
+
+@pytest.fixture
 def global_config():
+    GlobalConfig.conn_parameters["key"] = "".join(
+        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
+    )
     params = GlobalConfig()
     return params
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    opts["grains"] = salt.loader.grains(opts)
+def configure_loader_modules(minion_opts):
+    minion_opts["grains"] = salt.loader.grains(minion_opts)
     ctx = {}
     utils = salt.loader.utils(
-        opts,
+        minion_opts,
         whitelist=["boto3", "args", "systemd", "path", "platform"],
         context=ctx,
     )
-    serializers = salt.loader.serializers(opts)
+    serializers = salt.loader.serializers(minion_opts)
     funcs = funcs = salt.loader.minion_mods(
-        opts, context=ctx, utils=utils, whitelist=["boto_cloudwatch_event"]
+        minion_opts, context=ctx, utils=utils, whitelist=["boto_cloudwatch_event"]
     )
     salt_states = salt.loader.states(
-        opts=opts,
+        opts=minion_opts,
         functions=funcs,
         utils=utils,
         whitelist=["boto_cloudwatch_event"],
@@ -73,7 +81,7 @@ def configure_loader_modules():
     )
     return {
         boto_cloudwatch_event: {
-            "__opts__": opts,
+            "__opts__": minion_opts,
             "__salt__": funcs,
             "__utils__": utils,
             "__states__": salt_states,
@@ -82,16 +90,10 @@ def configure_loader_modules():
     }
 
 
-def test_present_when_failing_to_describe_rule(global_config):
+def test_present_when_failing_to_describe_rule(global_config, session_instance):
     """
     Tests exceptions when checking rule existence
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.side_effect = botocore.exceptions.ClientError(
@@ -109,17 +111,11 @@ def test_present_when_failing_to_describe_rule(global_config):
     assert "error on list rules" in result.get("comment", {})
 
 
-def test_present_when_failing_to_create_a_new_rule(global_config):
+def test_present_when_failing_to_create_a_new_rule(global_config, session_instance):
     """
     Tests present on a rule name that doesn't exist and
     an error is thrown on creation.
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.return_value = {"Rules": []}
@@ -138,17 +134,11 @@ def test_present_when_failing_to_create_a_new_rule(global_config):
     assert "put_rule" in result.get("comment", "")
 
 
-def test_present_when_failing_to_describe_the_new_rule(global_config):
+def test_present_when_failing_to_describe_the_new_rule(global_config, session_instance):
     """
     Tests present on a rule name that doesn't exist and
     an error is thrown when adding targets.
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.return_value = {"Rules": []}
@@ -168,17 +158,13 @@ def test_present_when_failing_to_describe_the_new_rule(global_config):
     assert "describe_rule" in result.get("comment", "")
 
 
-def test_present_when_failing_to_create_a_new_rules_targets(global_config):
+def test_present_when_failing_to_create_a_new_rules_targets(
+    global_config, session_instance
+):
     """
     Tests present on a rule name that doesn't exist and
     an error is thrown when adding targets.
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.return_value = {"Rules": []}
@@ -199,17 +185,11 @@ def test_present_when_failing_to_create_a_new_rules_targets(global_config):
     assert "put_targets" in result.get("comment", "")
 
 
-def test_present_when_rule_does_not_exist(global_config):
+def test_present_when_rule_does_not_exist(global_config, session_instance):
     """
     Tests the successful case of creating a new rule, and updating its
     targets
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.return_value = {"Rules": []}
@@ -227,16 +207,12 @@ def test_present_when_rule_does_not_exist(global_config):
     assert result.get("result") is True
 
 
-def test_present_when_failing_to_update_an_existing_rule(global_config):
+def test_present_when_failing_to_update_an_existing_rule(
+    global_config, session_instance
+):
     """
     Tests present on an existing rule where an error is thrown on updating the pool properties.
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.return_value = {"Rules": [global_config.rule_ret]}
@@ -255,17 +231,11 @@ def test_present_when_failing_to_update_an_existing_rule(global_config):
     assert "describe_rule" in result.get("comment", "")
 
 
-def test_present_when_failing_to_get_targets(global_config):
+def test_present_when_failing_to_get_targets(global_config, session_instance):
     """
     Tests present on an existing rule where put_rule succeeded, but an error
     is thrown on getting targets
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.return_value = {"Rules": [global_config.rule_ret]}
@@ -286,17 +256,11 @@ def test_present_when_failing_to_get_targets(global_config):
     assert "list_targets" in result.get("comment", "")
 
 
-def test_present_when_failing_to_put_targets(global_config):
+def test_present_when_failing_to_put_targets(global_config, session_instance):
     """
     Tests present on an existing rule where put_rule succeeded, but an error
     is thrown on putting targets
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.return_value = {"Rules": []}
@@ -318,17 +282,11 @@ def test_present_when_failing_to_put_targets(global_config):
     assert "put_targets" in result.get("comment", "")
 
 
-def test_present_when_putting_targets(global_config):
+def test_present_when_putting_targets(global_config, session_instance):
     """
     Tests present on an existing rule where put_rule succeeded, and targets
     must be added
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.return_value = {"Rules": []}
@@ -347,17 +305,11 @@ def test_present_when_putting_targets(global_config):
     assert result.get("result") is True
 
 
-def test_present_when_removing_targets(global_config):
+def test_present_when_removing_targets(global_config, session_instance):
     """
     Tests present on an existing rule where put_rule succeeded, and targets
     must be removed
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.return_value = {"Rules": []}
@@ -376,16 +328,10 @@ def test_present_when_removing_targets(global_config):
     assert result.get("result") is True
 
 
-def test_absent_when_failing_to_describe_rule(global_config):
+def test_absent_when_failing_to_describe_rule(global_config, session_instance):
     """
     Tests exceptions when checking rule existence
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.side_effect = botocore.exceptions.ClientError(
@@ -400,16 +346,10 @@ def test_absent_when_failing_to_describe_rule(global_config):
     assert "error on list rules" in result.get("comment", {})
 
 
-def test_absent_when_rule_does_not_exist(global_config):
+def test_absent_when_rule_does_not_exist(global_config, session_instance):
     """
     Tests absent on an non-existing rule
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.return_value = {"Rules": []}
@@ -422,16 +362,10 @@ def test_absent_when_rule_does_not_exist(global_config):
     assert result["changes"] == {}
 
 
-def test_absent_when_failing_to_list_targets(global_config):
+def test_absent_when_failing_to_list_targets(global_config, session_instance):
     """
     Tests absent on an rule when the list_targets call fails
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.return_value = {"Rules": [global_config.rule_ret]}
@@ -447,16 +381,12 @@ def test_absent_when_failing_to_list_targets(global_config):
     assert "list_targets" in result.get("comment", "")
 
 
-def test_absent_when_failing_to_remove_targets_exception(global_config):
+def test_absent_when_failing_to_remove_targets_exception(
+    global_config, session_instance
+):
     """
     Tests absent on an rule when the remove_targets call fails
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.return_value = {"Rules": [global_config.rule_ret]}
@@ -473,16 +403,12 @@ def test_absent_when_failing_to_remove_targets_exception(global_config):
     assert "remove_targets" in result.get("comment", "")
 
 
-def test_absent_when_failing_to_remove_targets_nonexception(global_config):
+def test_absent_when_failing_to_remove_targets_nonexception(
+    global_config, session_instance
+):
     """
     Tests absent on an rule when the remove_targets call fails
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.return_value = {"Rules": [global_config.rule_ret]}
@@ -496,16 +422,10 @@ def test_absent_when_failing_to_remove_targets_nonexception(global_config):
     assert result.get("result") is False
 
 
-def test_absent_when_failing_to_delete_rule(global_config):
+def test_absent_when_failing_to_delete_rule(global_config, session_instance):
     """
     Tests absent on an rule when the delete_rule call fails
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.return_value = {"Rules": [global_config.rule_ret]}
@@ -523,16 +443,10 @@ def test_absent_when_failing_to_delete_rule(global_config):
     assert "delete_rule" in result.get("comment", "")
 
 
-def test_absent(global_config):
+def test_absent(global_config, session_instance):
     """
     Tests absent on an rule
     """
-    global_config.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_rules.return_value = {"Rules": [global_config.rule_ret]}

@@ -1,1 +1,0 @@
-Fixed bytes vs. text issue when using sqlite for sdb backend.

@@ -44,9 +44,9 @@ optional. The following ssl options are simply for illustration purposes:
     alternative.mysql.ssl_key: '/etc/pki/mysql/certs/localhost.key'
 
 Should you wish the returner data to be cleaned out every so often, set
-`keep_jobs` to the number of hours for the jobs to live in the tables.
-Setting it to `0` will cause the data to stay in the tables. The default
-setting for `keep_jobs` is set to `24`.
+`keep_jobs_seconds` to the number of hours for the jobs to live in the
+tables.  Setting it to `0` will cause the data to stay in the tables. The
+default setting for `keep_jobs_seconds` is set to `86400`.
 
 Should you wish to archive jobs in a different table for later processing,
 set `archive_jobs` to True.  Salt will create 3 archive tables
@@ -56,7 +56,7 @@ set `archive_jobs` to True.  Salt will create 3 archive tables
 - `salt_events_archive`
 
 and move the contents of `jids`, `salt_returns`, and `salt_events` that are
-more than `keep_jobs` hours old to these tables.
+more than `keep_jobs_seconds` seconds old to these tables.
 
 Use the following mysql database schema:
 
@@ -144,7 +144,8 @@ from contextlib import contextmanager
 
 import salt.exceptions
 import salt.returners
-import salt.utils.jid
+import salt.utils.data
+import salt.utils.job
 import salt.utils.json
 
 # Let's not allow PyLint complain about string substitution
@@ -154,8 +155,8 @@ import salt.utils.json
 try:
     # Trying to import MySQLdb
     import MySQLdb
-    import MySQLdb.cursors
     import MySQLdb.converters
+    import MySQLdb.cursors
     from MySQLdb.connections import OperationalError
 except ImportError:
     try:
@@ -164,8 +165,8 @@ except ImportError:
 
         pymysql.install_as_MySQLdb()
         import MySQLdb
-        import MySQLdb.cursors
         import MySQLdb.converters
+        import MySQLdb.cursors
         from MySQLdb.err import OperationalError
     except ImportError:
         MySQLdb = None
@@ -307,15 +308,16 @@ def returner(ret):
                      (`fun`, `jid`, `return`, `id`, `success`, `full_ret`)
                      VALUES (%s, %s, %s, %s, %s, %s)"""
 
+            cleaned_return = salt.utils.data.decode(ret)
             cur.execute(
                 sql,
                 (
                     ret["fun"],
                     ret["jid"],
-                    salt.utils.json.dumps(ret["return"]),
+                    salt.utils.json.dumps(cleaned_return["return"]),
                     ret["id"],
                     ret.get("success", False),
-                    salt.utils.json.dumps(ret),
+                    salt.utils.json.dumps(cleaned_return),
                 ),
             )
     except salt.exceptions.SaltMasterError as exc:
@@ -349,8 +351,9 @@ def save_load(jid, load, minions=None):
 
         sql = """INSERT INTO `jids` (`jid`, `load`) VALUES (%s, %s)"""
 
+        json_data = salt.utils.json.dumps(salt.utils.data.decode(load))
         try:
-            cur.execute(sql, (jid, salt.utils.json.dumps(load)))
+            cur.execute(sql, (jid, json_data))
         except MySQLdb.IntegrityError:
             # https://github.com/saltstack/salt/issues/22171
             # Without this try/except we get tons of duplicate entry errors
@@ -621,11 +624,12 @@ def clean_old_jobs():
     deletes the events and job details from the database.
     :return:
     """
-    if __opts__.get("keep_jobs", False) and int(__opts__.get("keep_jobs", 0)) > 0:
+    keep_jobs_seconds = int(salt.utils.job.get_keep_jobs_seconds(__opts__))
+    if keep_jobs_seconds > 0:
         try:
             with _get_serv() as cur:
-                sql = "select date_sub(now(), interval {} hour) as stamp;".format(
-                    __opts__["keep_jobs"]
+                sql = "select date_sub(now(), interval {} second) as stamp;".format(
+                    keep_jobs_seconds
                 )
                 cur.execute(sql)
                 rows = cur.fetchall()

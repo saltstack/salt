@@ -4,6 +4,7 @@ import threading
 import time
 
 import pytest
+
 from salt.utils.etcd_util import EtcdClient, EtcdClientV3, get_conn
 from tests.support.pytest.etcd import *  # pylint: disable=wildcard-import,unused-wildcard-import
 
@@ -13,7 +14,6 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.slow_test,
-    pytest.mark.windows_whitelisted,
     pytest.mark.skip_if_binaries_missing("docker", "dockerd", check_all=False),
 ]
 

@@ -69,8 +69,8 @@ import salt.utils.stringio
 from salt.exceptions import SaltConfigurationError
 
 try:
-    import botocore.exceptions
     import boto3
+    import botocore.exceptions
 
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
 except ImportError:

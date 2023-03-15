@@ -11,9 +11,10 @@ import tempfile
 import time
 
 import pytest
+from pytestshellutils.utils.processes import ProcessResult, terminate_process
+
 import salt.defaults.exitcodes
 import salt.utils.path
-from pytestshellutils.utils.processes import ProcessResult, terminate_process
 
 log = logging.getLogger(__name__)
 
@@ -133,6 +134,7 @@ def test_exit_status_correct_usage(salt_cli, salt_minion):
 
 @pytest.mark.slow_test
 @pytest.mark.skip_on_windows(reason="Windows does not support SIGINT")
+@pytest.mark.skip_initial_onedir_failure
 def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
     """
     Ensure that a call to ``salt`` that is taking too long, when a user
@@ -207,26 +209,16 @@ def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
 
     terminal_stdout.flush()
     terminal_stdout.seek(0)
-    if sys.version_info < (3, 6):  # pragma: no cover
-        stdout = proc._translate_newlines(
-            terminal_stdout.read(), __salt_system_encoding__
-        )
-    else:
-        stdout = proc._translate_newlines(
-            terminal_stdout.read(), __salt_system_encoding__, sys.stdout.errors
-        )
+    stdout = proc._translate_newlines(
+        terminal_stdout.read(), __salt_system_encoding__, sys.stdout.errors
+    )
     terminal_stdout.close()
 
     terminal_stderr.flush()
     terminal_stderr.seek(0)
-    if sys.version_info < (3, 6):  # pragma: no cover
-        stderr = proc._translate_newlines(
-            terminal_stderr.read(), __salt_system_encoding__
-        )
-    else:
-        stderr = proc._translate_newlines(
-            terminal_stderr.read(), __salt_system_encoding__, sys.stderr.errors
-        )
+    stderr = proc._translate_newlines(
+        terminal_stderr.read(), __salt_system_encoding__, sys.stderr.errors
+    )
     terminal_stderr.close()
     ret = ProcessResult(
         returncode=proc.returncode, stdout=stdout, stderr=stderr, cmdline=proc.args

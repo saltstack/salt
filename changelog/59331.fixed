@@ -1,1 +1,0 @@
-Swap ret["retcode"] for ret.get("retcode") in the event that there is no retcode, eg. when a function is not passed with a module.

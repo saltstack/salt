@@ -1,4 +1,10 @@
 """
+
+.. warning::
+
+    The `cassandra` module is deprecated in favor of the `cassandra_cql`
+    module.
+
 Cassandra NoSQL Database Module
 
 :depends:   - pycassa Cassandra Python adapter
@@ -14,6 +20,7 @@ Cassandra NoSQL Database Module
 import logging
 
 import salt.utils.path
+from salt.utils.versions import warn_until_date
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +43,12 @@ def __virtual__():
             False,
             "The cassandra execution module cannot be loaded: pycassa not installed.",
         )
+
+    warn_until_date(
+        "20240101",
+        "The cassandra returner is broken and deprecated, and will be removed"
+        " after {date}. Use the cassandra_cql returner instead",
+    )
 
     if HAS_PYCASSA and salt.utils.path.which("nodetool"):
         return "cassandra"

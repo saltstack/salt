@@ -39,7 +39,7 @@ from datetime import datetime
 import salt.utils.decorators.path
 import salt.utils.files
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 try:
     import pylxd
@@ -82,7 +82,7 @@ _connection_pool = {}
 
 def __virtual__():
     if HAS_PYLXD:
-        if LooseVersion(pylxd_version()) < LooseVersion(_pylxd_minimal_version):
+        if Version(pylxd_version()) < Version(_pylxd_minimal_version):
             return (
                 False,
                 'The lxd execution module cannot be loaded: pylxd "{}" is '
@@ -3628,22 +3628,21 @@ if HAS_PYLXD:
     except ImportError:
         from pylxd.models.container import Container
 
-    class FilesManager(Container.FilesManager):
-        def put(self, filepath, data, mode=None, uid=None, gid=None):
-            headers = {}
-            if mode is not None:
-                if isinstance(mode, int):
-                    mode = oct(mode)
-                elif not mode.startswith("0"):
-                    mode = "0{}".format(mode)
-                headers["X-LXD-mode"] = mode
-            if uid is not None:
-                headers["X-LXD-uid"] = str(uid)
-            if gid is not None:
-                headers["X-LXD-gid"] = str(gid)
-            response = self._client.api.containers[self._container.name].files.post(
-                params={"path": filepath}, data=data, headers=headers
-            )
-            return response.status_code == 200
+    def put(self, filepath, data, mode=None, uid=None, gid=None):
+        headers = {}
+        if mode is not None:
+            if isinstance(mode, int):
+                mode = oct(mode)
+            elif not mode.startswith("0"):
+                mode = "0{}".format(mode)
+            headers["X-LXD-mode"] = mode
+        if uid is not None:
+            headers["X-LXD-uid"] = str(uid)
+        if gid is not None:
+            headers["X-LXD-gid"] = str(gid)
+        response = self._client.api.containers[self._container.name].files.post(
+            params={"path": filepath}, data=data, headers=headers
+        )
+        return response.status_code == 200
 
-    Container.FilesManager = FilesManager
+    Container.FilesManager.put = put

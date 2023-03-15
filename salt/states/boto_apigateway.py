@@ -1576,12 +1576,13 @@ class _Swagger:
                     ret["result"] = False
                     ret["abort"] = True
                     if "error" in update_model_schema_response:
-                        ret[
-                            "comment"
-                        ] = "Failed to update existing model {} with schema {}, " "error: {}".format(
-                            model,
-                            _dict_to_json_pretty(schema),
-                            update_model_schema_response["error"]["message"],
+                        ret["comment"] = (
+                            "Failed to update existing model {} with schema {}, "
+                            "error: {}".format(
+                                model,
+                                _dict_to_json_pretty(schema),
+                                update_model_schema_response["error"]["message"],
+                            )
                         )
                     return ret
 

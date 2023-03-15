@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.returners.etcd_return as etcd_return
 import salt.utils.json
 from salt.utils.etcd_util import get_conn
@@ -11,7 +12,6 @@ docker = pytest.importorskip("docker")
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.windows_whitelisted,
     pytest.mark.skip_if_binaries_missing("docker", "dockerd", check_all=False),
 ]
 

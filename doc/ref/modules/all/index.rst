@@ -510,12 +510,14 @@ execution modules
     win_dism
     win_dns_client
     win_dsc
+    win_event
     win_file
     win_firewall
     win_groupadd
     win_iis
     win_ip
     win_lgpo
+    win_lgpo_reg
     win_license
     win_network
     win_ntp
@@ -540,6 +542,7 @@ execution modules
     winrepo
     wordpress
     x509
+    x509_v2
     xapi_virt
     xbpspkg
     xfs

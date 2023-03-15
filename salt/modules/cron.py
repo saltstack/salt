@@ -266,11 +266,8 @@ def _write_cron_lines(user, lines):
     """
     lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
     path = salt.utils.files.mkstemp()
-    if _check_instance_uid_match("root") or __grains__.get("os_family") in (
-        "Solaris",
-        "AIX",
-    ):
-        # In some cases crontab command should be executed as user rather than root
+    # Some OS' do not support specifying user via the `crontab` command
+    if __grains__.get("os_family") in ("Solaris", "AIX"):
         with salt.utils.files.fpopen(
             path, "w+", uid=__salt__["file.user_to_uid"](user), mode=0o600
         ) as fp_:
@@ -278,10 +275,25 @@ def _write_cron_lines(user, lines):
         ret = __salt__["cmd.run_all"](
             _get_cron_cmdstr(path), runas=user, python_shell=False
         )
-    else:
+    # If Salt is running from same user as requested in cron module we don't need any user switch
+    elif _check_instance_uid_match(user):
         with salt.utils.files.fpopen(path, "w+", mode=0o600) as fp_:
             fp_.writelines(lines)
         ret = __salt__["cmd.run_all"](_get_cron_cmdstr(path), python_shell=False)
+    # If Salt is running from root user it could modify any user's crontab
+    elif _check_instance_uid_match("root"):
+        with salt.utils.files.fpopen(path, "w+", mode=0o600) as fp_:
+            fp_.writelines(lines)
+        ret = __salt__["cmd.run_all"](_get_cron_cmdstr(path, user), python_shell=False)
+    # Edge cases here, let's try do a runas
+    else:
+        with salt.utils.files.fpopen(
+            path, "w+", uid=__salt__["file.user_to_uid"](user), mode=0o600
+        ) as fp_:
+            fp_.writelines(lines)
+        ret = __salt__["cmd.run_all"](
+            _get_cron_cmdstr(path), runas=user, python_shell=False
+        )
     os.remove(path)
     return ret
 
@@ -498,7 +510,7 @@ def set_special(user, special, cmd, commented=False, comment=None, identifier=No
         salt '*' cron.set_special root @hourly 'echo foobar'
     """
     lst = list_tab(user)
-    for cron in lst["special"]:
+    for cron in lst["crons"] + lst["special"]:
         cid = _cron_id(cron)
         if _cron_matched(cron, cmd, identifier):
             test_setted_id = (
@@ -510,21 +522,29 @@ def set_special(user, special, cmd, commented=False, comment=None, identifier=No
                 (cron["comment"], comment),
                 (cron["commented"], commented),
                 (identifier, test_setted_id),
-                (cron["spec"], special),
+                (cron.get("minute"), None),
+                (cron.get("hour"), None),
+                (cron.get("daymonth"), None),
+                (cron.get("month"), None),
+                (cron.get("dayweek"), None),
+                (cron.get("spec"), special),
             ]
             if cid or identifier:
                 tests.append((cron["cmd"], cmd))
             if any([_needs_change(x, y) for x, y in tests]):
-                rm_special(user, cmd, identifier=cid)
+                if "spec" in cron:
+                    rm_special(user, cmd, identifier=cid)
+                else:
+                    rm_job(user, cmd, identifier=cid)
 
                 # Use old values when setting the new job if there was no
                 # change needed for a given parameter
-                if not _needs_change(cron["spec"], special):
-                    special = cron["spec"]
-                if not _needs_change(cron["commented"], commented):
-                    commented = cron["commented"]
-                if not _needs_change(cron["comment"], comment):
-                    comment = cron["comment"]
+                if not _needs_change(cron.get("spec"), special):
+                    special = cron.get("spec")
+                if not _needs_change(cron.get("commented"), commented):
+                    commented = cron.get("commented")
+                if not _needs_change(cron.get("comment"), comment):
+                    comment = cron.get("comment")
                 if not _needs_change(cron["cmd"], cmd):
                     cmd = cron["cmd"]
                     if cid == SALT_CRON_NO_IDENTIFIER:
@@ -638,7 +658,7 @@ def set_job(
     month = str(month).lower()
     dayweek = str(dayweek).lower()
     lst = list_tab(user)
-    for cron in lst["crons"]:
+    for cron in lst["crons"] + lst["special"]:
         cid = _cron_id(cron)
         if _cron_matched(cron, cmd, identifier):
             test_setted_id = (
@@ -650,29 +670,33 @@ def set_job(
                 (cron["comment"], comment),
                 (cron["commented"], commented),
                 (identifier, test_setted_id),
-                (cron["minute"], minute),
-                (cron["hour"], hour),
-                (cron["daymonth"], daymonth),
-                (cron["month"], month),
-                (cron["dayweek"], dayweek),
+                (cron.get("minute"), minute),
+                (cron.get("hour"), hour),
+                (cron.get("daymonth"), daymonth),
+                (cron.get("month"), month),
+                (cron.get("dayweek"), dayweek),
+                (cron.get("spec"), None),
             ]
             if cid or identifier:
                 tests.append((cron["cmd"], cmd))
             if any([_needs_change(x, y) for x, y in tests]):
-                rm_job(user, cmd, identifier=cid)
+                if "spec" in cron:
+                    rm_special(user, cmd, identifier=cid)
+                else:
+                    rm_job(user, cmd, identifier=cid)
 
                 # Use old values when setting the new job if there was no
                 # change needed for a given parameter
-                if not _needs_change(cron["minute"], minute):
-                    minute = cron["minute"]
-                if not _needs_change(cron["hour"], hour):
-                    hour = cron["hour"]
-                if not _needs_change(cron["daymonth"], daymonth):
-                    daymonth = cron["daymonth"]
-                if not _needs_change(cron["month"], month):
-                    month = cron["month"]
-                if not _needs_change(cron["dayweek"], dayweek):
-                    dayweek = cron["dayweek"]
+                if not _needs_change(cron.get("minute"), minute):
+                    minute = cron.get("minute")
+                if not _needs_change(cron.get("hour"), hour):
+                    hour = cron.get("hour")
+                if not _needs_change(cron.get("daymonth"), daymonth):
+                    daymonth = cron.get("daymonth")
+                if not _needs_change(cron.get("month"), month):
+                    month = cron.get("month")
+                if not _needs_change(cron.get("dayweek"), dayweek):
+                    dayweek = cron.get("dayweek")
                 if not _needs_change(cron["commented"], commented):
                     commented = cron["commented"]
                 if not _needs_change(cron["comment"], comment):

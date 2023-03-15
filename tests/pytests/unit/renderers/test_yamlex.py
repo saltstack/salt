@@ -1,4 +1,5 @@
 import pytest
+
 import salt.serializers.yamlex as yamlex
 import salt.state
 from salt.config import minion_config

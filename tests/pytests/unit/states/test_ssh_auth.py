@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.ssh_auth as ssh_auth
 from tests.support.mock import MagicMock, patch
 

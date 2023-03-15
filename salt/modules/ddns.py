@@ -32,8 +32,8 @@ log = logging.getLogger(__name__)
 
 try:
     import dns.query
-    import dns.update
-    import dns.tsigkeyring
+    import dns.tsigkeyring  # pylint: disable=no-name-in-module
+    import dns.update  # pylint: disable=no-name-in-module
 
     dns_support = True
 except ImportError as e:

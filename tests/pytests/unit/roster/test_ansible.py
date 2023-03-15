@@ -1,6 +1,7 @@
 import shutil
 
 import pytest
+
 import salt.loader
 import salt.roster.ansible as ansible
 from tests.support.mock import patch
@@ -18,7 +19,7 @@ def roster_opts():
 @pytest.fixture
 def configure_loader_modules(temp_salt_master, roster_opts):
     opts = temp_salt_master.config.copy()
-    utils = salt.loader.utils(opts, whitelist=["json", "stringutils"])
+    utils = salt.loader.utils(opts, whitelist=["json", "stringutils", "ansible"])
     runner = salt.loader.runner(opts, utils=utils, whitelist=["salt"])
     return {
         ansible: {"__utils__": utils, "__opts__": roster_opts, "__runner__": runner}

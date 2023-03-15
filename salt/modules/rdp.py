@@ -9,8 +9,8 @@ import salt.utils.platform
 from salt.utils.decorators import depends
 
 try:
-    from pywintypes import error as PyWinError
     import win32ts
+    from pywintypes import error as PyWinError
 
     _HAS_WIN32TS_DEPENDENCIES = True
 except ImportError:

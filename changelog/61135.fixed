@@ -1,1 +1,0 @@
-Adding missing import for salt.utils.beacons into beacons that were updated to use it.

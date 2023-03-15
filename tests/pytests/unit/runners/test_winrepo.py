@@ -6,6 +6,7 @@ Test the winrepo runner
 import textwrap
 
 import pytest
+
 import salt.runners.winrepo as winrepo
 import salt.utils.files
 import salt.utils.stringutils

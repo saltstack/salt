@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.mysql_grants as mysql_grants
 from tests.support.mock import MagicMock, patch
 

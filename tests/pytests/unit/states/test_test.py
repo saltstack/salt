@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.test as test
 from salt.exceptions import SaltInvocationError
 from salt.utils.odict import OrderedDict

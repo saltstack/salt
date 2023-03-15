@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.mac_pkgutil as mac_pkgutil
 from tests.support.mock import patch
 

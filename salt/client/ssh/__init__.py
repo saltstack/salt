@@ -146,7 +146,7 @@ if [ "$SUDO" ] && [ "$SUDO_USER" ]
 then SUDO="$SUDO -u $SUDO_USER"
 fi
 EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
-PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
+PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python /usr/libexec/platform-python"
 for py_cmd in $PYTHON_CMDS
 do
     if command -v "$py_cmd" >/dev/null 2>&1 && "$py_cmd" -c "import sys; sys.exit(not (sys.version_info >= (2, 6)));"
@@ -1205,6 +1205,13 @@ class Single:
                 opts["grains"][grain] = self.target["grains"][grain]
 
         opts["pillar"] = data.get("pillar")
+
+        # Restore --wipe. Note: Since it is also a CLI option, it should not
+        # be read from cache, hence it is restored here. This is currently only
+        # of semantic distinction since data_cache has been disabled, so refresh
+        # above always evaluates to True. TODO: cleanup?
+        opts["ssh_wipe"] = self.opts.get("ssh_wipe", False)
+
         wrapper = salt.client.ssh.wrapper.FunctionWrapper(
             opts,
             self.id,

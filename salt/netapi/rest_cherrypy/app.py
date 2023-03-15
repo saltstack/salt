@@ -597,6 +597,7 @@ from multiprocessing import Pipe, Process
 from urllib.parse import parse_qsl
 
 import cherrypy  # pylint: disable=import-error,3rd-party-module-not-gated
+
 import salt
 import salt.auth
 import salt.exceptions
@@ -627,8 +628,8 @@ except ImportError:
 
 try:
     # Imports related to websocket
-    from .tools import websockets
     from . import event_processor
+    from .tools import websockets
 
     HAS_WEBSOCKETS = True
 except ImportError:
@@ -862,10 +863,10 @@ def hypermedia_handler(*args, **kwargs):
         salt.exceptions.AuthorizationError,
         salt.exceptions.EauthAuthenticationError,
         salt.exceptions.TokenAuthenticationError,
-    ):
-        raise cherrypy.HTTPError(401)
-    except salt.exceptions.SaltInvocationError:
-        raise cherrypy.HTTPError(400)
+    ) as e:
+        raise cherrypy.HTTPError(401, e.message)
+    except salt.exceptions.SaltInvocationError as e:
+        raise cherrypy.HTTPError(400, e.message)
     except (
         salt.exceptions.SaltDaemonNotRunning,
         salt.exceptions.SaltReqTimeoutError,
@@ -984,8 +985,13 @@ def urlencoded_processor(entity):
             unserialized_data["kwarg"]
         )
     if "arg" in unserialized_data:
-        for idx, value in enumerate(unserialized_data["arg"]):
-            unserialized_data["arg"][idx] = salt.utils.args.yamlify_arg(value)
+        if isinstance(unserialized_data["arg"], list):
+            for idx, value in enumerate(unserialized_data["arg"]):
+                unserialized_data["arg"][idx] = salt.utils.args.yamlify_arg(value)
+        else:
+            unserialized_data["arg"] = [
+                salt.utils.args.yamlify_arg(unserialized_data["arg"])
+            ]
     cherrypy.serving.request.unserialized_data = unserialized_data
 
 
@@ -1898,19 +1904,11 @@ class Login(LowDataAdapter):
 
             if token["eauth"] == "django" and "^model" in eauth:
                 perms = token["auth_list"]
+            elif token["eauth"] == "rest" and "auth_list" in token:
+                perms = token["auth_list"]
             else:
-                # Get sum of '*' perms, user-specific perms, and group-specific perms
-                perms = eauth.get(token["name"], []).copy()
-                perms.extend(eauth.get("*", []))
-
-                if "groups" in token and token["groups"]:
-                    user_groups = set(token["groups"])
-                    eauth_groups = {
-                        i.rstrip("%") for i in eauth.keys() if i.endswith("%")
-                    }
-
-                    for group in user_groups & eauth_groups:
-                        perms.extend(eauth["{}%".format(group)])
+                perms = salt.netapi.sum_permissions(token, eauth)
+                perms = salt.netapi.sorted_permissions(perms)
 
             if not perms:
                 logger.debug("Eauth permission list not found.")

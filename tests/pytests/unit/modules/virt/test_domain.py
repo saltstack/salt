@@ -2,6 +2,7 @@ import os.path
 import xml.etree.ElementTree as ET
 
 import pytest
+
 import salt.modules.virt as virt
 import salt.syspaths
 import salt.utils.xmlutil as xmlutil
@@ -25,7 +26,7 @@ def configure_loader_modules():
         None,
     ],
 )
-def test_gen_xml_for_xen_default_profile(loader):
+def test_gen_xml_for_xen_default_profile(loader, minion_opts):
     """
     Test virt._gen_xml(), XEN PV default profile case
     """
@@ -67,7 +68,7 @@ def test_gen_xml_for_xen_default_profile(loader):
                 disks = root.findall(".//disk")
                 assert len(disks) == 1
                 disk = disks[0]
-                root_dir = salt.config.DEFAULT_MINION_OPTS.get("root_dir")
+                root_dir = salt.syspaths.ROOT_DIR
                 assert disk.find("source").attrib["file"].startswith(root_dir)
                 assert "hello_system" in disk.find("source").attrib["file"]
                 assert disk.find("target").attrib["dev"] == "xvda"
@@ -1270,6 +1271,15 @@ def test_update_cpu_simple(make_mock_vm):
     assert domain_mock.setVcpusFlags.call_args[0][0] == 2
 
 
+def test_update_autostart(make_mock_vm):
+    """
+    Test virt.update(), simple autostart update
+    """
+    domain_mock = make_mock_vm()
+    virt.update("my_vm", autostart=True)
+    domain_mock.setAutostart.assert_called_with(1)
+
+
 def test_update_add_cpu_topology(make_mock_vm):
     """
     Test virt.update(), add cpu topology settings
@@ -1353,7 +1363,7 @@ def test_update_add_cpu_topology(make_mock_vm):
     assert setxml.find("./cpu/feature[@name='lahf']").get("policy") == "optional"
 
     assert setxml.find("./cpu/numa/cell/[@id='0']").get("cpus") == "0,1,2,3"
-    assert setxml.find("./cpu/numa/cell/[@id='0']").get("memory") == str(1024 ** 3)
+    assert setxml.find("./cpu/numa/cell/[@id='0']").get("memory") == str(1024**3)
     assert setxml.find("./cpu/numa/cell/[@id='0']").get("unit") == "bytes"
     assert setxml.find("./cpu/numa/cell/[@id='0']").get("discard") == "yes"
     assert (
@@ -1382,7 +1392,7 @@ def test_update_add_cpu_topology(make_mock_vm):
     )
     assert setxml.find("./cpu/numa/cell/[@id='1']").get("cpus") == "4,5,6"
     assert setxml.find("./cpu/numa/cell/[@id='1']").get("memory") == str(
-        int(1024 ** 3 / 2)
+        int(1024**3 / 2)
     )
     assert setxml.find("./cpu/numa/cell/[@id='1']").get("unit") == "bytes"
     assert setxml.find("./cpu/numa/cell/[@id='1']").get("discard") == "no"
@@ -1570,10 +1580,10 @@ def test_update_add_memtune(make_mock_vm):
 
     assert ret["definition"]
     setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
-    assert_equal_unit(setxml.find("memtune/soft_limit"), int(0.5 * 1024 ** 3), "bytes")
-    assert_equal_unit(setxml.find("memtune/hard_limit"), 1024 * 1024 ** 2, "bytes")
-    assert_equal_unit(setxml.find("memtune/swap_hard_limit"), 2048 * 1024 ** 2, "bytes")
-    assert_equal_unit(setxml.find("memtune/min_guarantee"), 1 * 1024 ** 3, "bytes")
+    assert_equal_unit(setxml.find("memtune/soft_limit"), int(0.5 * 1024**3), "bytes")
+    assert_equal_unit(setxml.find("memtune/hard_limit"), 1024 * 1024**2, "bytes")
+    assert_equal_unit(setxml.find("memtune/swap_hard_limit"), 2048 * 1024**2, "bytes")
+    assert_equal_unit(setxml.find("memtune/min_guarantee"), 1 * 1024**3, "bytes")
 
 
 def test_update_add_memtune_invalid_unit(make_mock_vm):
@@ -1624,7 +1634,7 @@ def test_update_mem_simple(make_mock_vm):
     assert ret["definition"]
     assert ret["mem"]
     setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
-    assert setxml.find("memory").text == str(2048 * 1024 ** 2)
+    assert setxml.find("memory").text == str(2048 * 1024**2)
     assert setxml.find("memory").get("unit") == "bytes"
     assert domain_mock.setMemoryFlags.call_args[0][0] == 2048 * 1024
 
@@ -1643,9 +1653,9 @@ def test_update_mem(make_mock_vm):
     assert ret["mem"]
     setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
     assert setxml.find("memory").get("unit") == "bytes"
-    assert setxml.find("memory").text == str(int(0.5 * 1024 ** 3))
-    assert setxml.find("maxMemory").text == str(1 * 1024 ** 3)
-    assert setxml.find("currentMemory").text == str(2 * 1024 ** 3)
+    assert setxml.find("memory").text == str(int(0.5 * 1024**3))
+    assert setxml.find("maxMemory").text == str(1 * 1024**3)
+    assert setxml.find("currentMemory").text == str(2 * 1024**3)
 
 
 def test_update_add_mem_backing(make_mock_vm):
@@ -1675,8 +1685,8 @@ def test_update_add_mem_backing(make_mock_vm):
         p.get("nodeset"): {"size": p.get("size"), "unit": p.get("unit")}
         for p in setxml.findall("memoryBacking/hugepages/page")
     } == {
-        "1,2,3,5": {"size": str(1024 ** 3), "unit": "bytes"},
-        "4": {"size": str(2 * 1024 ** 3), "unit": "bytes"},
+        "1,2,3,5": {"size": str(1024**3), "unit": "bytes"},
+        "4": {"size": str(2 * 1024**3), "unit": "bytes"},
     }
     assert setxml.find("./memoryBacking/nosharepages") is not None
     assert setxml.find("./memoryBacking/nosharepages").text is None

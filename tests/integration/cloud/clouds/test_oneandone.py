@@ -1,10 +1,9 @@
 """
     :codeauthor: :email:`Amel Ajdinovic <amel@stackpointcloud.com>`
 """
-
+import pytest
 
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
-from tests.support.unit import skipIf
 
 try:
     from oneandone.client import OneAndOneService  # pylint: disable=unused-import
@@ -14,7 +13,7 @@ except ImportError:
     HAS_ONEANDONE = False
 
 
-@skipIf(HAS_ONEANDONE is False, "salt-cloud requires >= 1and1 1.2.0")
+@pytest.mark.skipif(HAS_ONEANDONE is False, reason="salt-cloud requires >= 1and1 1.2.0")
 class OneAndOneTest(CloudTest):
     """
     Integration tests for the 1and1 cloud provider

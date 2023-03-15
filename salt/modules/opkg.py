@@ -33,6 +33,7 @@ import salt.utils.pkg
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
+from salt.utils.versions import Version
 
 REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
 OPKG_CONFDIR = "/etc/opkg"
@@ -209,7 +210,7 @@ def latest_version(*names, **kwargs):
     """
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", True))
 
-    if len(names) == 0:
+    if not names:
         return ""
 
     ret = {}
@@ -504,7 +505,7 @@ def install(
     to_downgrade = []
 
     _append_noaction_if_testmode(cmd_prefix, **kwargs)
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
     elif pkg_type == "file":
         if reinstall:
@@ -1229,9 +1230,7 @@ def version_cmp(
         ["opkg", "--version"], output_loglevel="trace", python_shell=False
     )
     opkg_version = output.split(" ")[2].strip()
-    if salt.utils.versions.LooseVersion(
-        opkg_version
-    ) >= salt.utils.versions.LooseVersion("0.3.4"):
+    if Version(opkg_version) >= Version("0.3.4"):
         cmd_compare = ["opkg", "compare-versions"]
     elif salt.utils.path.which("opkg-compare-versions"):
         cmd_compare = ["opkg-compare-versions"]

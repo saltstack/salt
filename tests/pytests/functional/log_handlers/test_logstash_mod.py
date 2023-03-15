@@ -4,9 +4,10 @@ import socket
 import time
 
 import pytest
-import salt.utils.stringutils
 import zmq
 from pytestshellutils.utils import ports
+
+import salt.utils.stringutils
 from salt.log_handlers.logstash_mod import DatagramLogstashHandler, ZMQLogstashHander
 
 log = logging.getLogger(__name__)

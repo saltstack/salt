@@ -70,6 +70,7 @@ def mounted(
     extra_mount_ignore_fs_keys=None,
     extra_mount_translate_options=None,
     hidden_opts=None,
+    bind_mount_copy_active_opts=True,
     **kwargs
 ):
     """
@@ -186,6 +187,12 @@ def mounted(
         as part of the state application
 
         .. versionadded:: 2015.8.2
+
+    bind_mount_copy_active_opts
+        If set to ``False``, this option disables the default behavior of
+        copying the options from the bind mount if it was found to be active.
+
+        .. versionadded:: 3006.0
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
@@ -222,8 +229,6 @@ def mounted(
     # string
     if isinstance(opts, str):
         opts = opts.split(",")
-    if opts:
-        opts.sort()
 
     if isinstance(hidden_opts, str):
         hidden_opts = hidden_opts.split(",")
@@ -236,37 +241,41 @@ def mounted(
     # Get the active data
     active = __salt__["mount.active"](extended=True)
     real_name = os.path.realpath(name)
+    # real_name for comparisons to the active mount list
+    comp_real_name = real_name.replace(" ", "\\040")
     if device.startswith("/"):
-        if "bind" in opts and real_name in active:
-            _device = device
-            if active[real_name]["device"].startswith("/"):
+        if "bind" in opts and comp_real_name in active:
+            _device = device.replace(" ", "\\040")
+            if active[comp_real_name]["device"].startswith("/"):
                 # Find the device that the bind really points at.
                 while True:
                     if _device in active:
                         _real_device = active[_device]["device"]
-                        opts = list(
+                        if bind_mount_copy_active_opts:
+                            opts = sorted(
+                                set(
+                                    opts
+                                    + active[_device]["opts"]
+                                    + active[_device]["superopts"]
+                                )
+                            )
+                        active[comp_real_name]["opts"].append("bind")
+                        break
+                    _device = os.path.dirname(_device.replace("\\040", " "))
+                real_device = _real_device
+            else:
+                # Remote file systems act differently.
+                if _device in active:
+                    if bind_mount_copy_active_opts:
+                        opts = sorted(
                             set(
                                 opts
                                 + active[_device]["opts"]
                                 + active[_device]["superopts"]
                             )
                         )
-                        active[real_name]["opts"].append("bind")
-                        break
-                    _device = os.path.dirname(_device)
-                real_device = _real_device
-            else:
-                # Remote file systems act differently.
-                if _device in active:
-                    opts = list(
-                        set(
-                            opts
-                            + active[_device]["opts"]
-                            + active[_device]["superopts"]
-                        )
-                    )
-                    active[real_name]["opts"].append("bind")
-                real_device = active[real_name]["device"]
+                    active[comp_real_name]["opts"].append("bind")
+                real_device = active[comp_real_name]["device"]
         else:
             real_device = os.path.realpath(device)
     elif device.upper().startswith("UUID="):
@@ -317,25 +326,25 @@ def mounted(
         if "device_name" in fuse_match.groupdict():
             real_device = fuse_match.group("device_name")
 
-    if real_name in active:
-        if "superopts" not in active[real_name]:
-            active[real_name]["superopts"] = []
+    if comp_real_name in active:
+        if "superopts" not in active[comp_real_name]:
+            active[comp_real_name]["superopts"] = []
         if mount:
-            device_list.append(active[real_name]["device"])
+            device_list.append(active[comp_real_name]["device"])
             device_list.append(os.path.realpath(device_list[0]))
             alt_device = (
-                active[real_name]["alt_device"]
-                if "alt_device" in active[real_name]
+                active[comp_real_name]["alt_device"]
+                if "alt_device" in active[comp_real_name]
                 else None
             )
             uuid_device = (
-                active[real_name]["device_uuid"]
-                if "device_uuid" in active[real_name]
+                active[comp_real_name]["device_uuid"]
+                if "device_uuid" in active[comp_real_name]
                 else None
             )
             label_device = (
-                active[real_name]["device_label"]
-                if "device_label" in active[real_name]
+                active[comp_real_name]["device_label"]
+                if "device_label" in active[comp_real_name]
                 else None
             )
             if alt_device and alt_device not in device_list:
@@ -345,8 +354,6 @@ def mounted(
             if label_device and label_device not in device_list:
                 device_list.append(label_device)
             if opts:
-                opts.sort()
-
                 mount_invisible_options = [
                     "_netdev",
                     "actimeo",
@@ -411,6 +418,7 @@ def mounted(
                 if extra_mount_translate_options:
                     mount_translate_options.update(extra_mount_translate_options)
 
+                trigger_remount = []
                 for opt in opts:
                     if opt in mount_translate_options:
                         opt = mount_translate_options[opt]
@@ -444,7 +452,7 @@ def mounted(
                                 _id = _info[_param]
                         opt = _param + "=" + str(_id)
 
-                    _active_superopts = active[real_name].get("superopts", [])
+                    _active_superopts = active[comp_real_name].get("superopts", [])
                     for _active_opt in _active_superopts:
                         size_match = re.match(
                             r"size=(?P<size_value>[0-9]+)(?P<size_unit>k|m|g)",
@@ -458,64 +466,71 @@ def mounted(
                             _active_superopts.append(_active_opt)
 
                     if (
-                        opt not in active[real_name]["opts"]
+                        opt not in active[comp_real_name]["opts"]
                         and opt not in _active_superopts
                         and opt not in mount_invisible_options
                         and opt not in mount_ignore_fs_keys.get(fstype, [])
                         and opt not in mount_invisible_keys
                     ):
-                        if __opts__["test"]:
-                            ret["result"] = None
-                            ret[
-                                "comment"
-                            ] = "Remount would be forced because options ({}) changed".format(
-                                opt
+                        trigger_remount.append(opt)
+
+                if trigger_remount:
+                    if __opts__["test"]:
+                        ret["result"] = None
+                        ret[
+                            "comment"
+                        ] = "Remount would be forced because options ({}) changed".format(
+                            ",".join(sorted(trigger_remount))
+                        )
+                        return ret
+                    else:
+                        # Some file systems require umounting and mounting if options change
+                        # add others to list that require similiar functionality
+                        if fstype in ["nfs", "cvfs"] or fstype.startswith("fuse"):
+                            ret["changes"]["umount"] = (
+                                "Forced unmount and mount because "
+                                + "options ({}) changed".format(
+                                    ",".join(sorted(trigger_remount))
+                                )
                             )
-                            return ret
-                        else:
-                            # Some file systems require umounting and mounting if options change
-                            # add others to list that require similiar functionality
-                            if fstype in ["nfs", "cvfs"] or fstype.startswith("fuse"):
-                                ret["changes"]["umount"] = (
-                                    "Forced unmount and mount because "
-                                    + "options ({}) changed".format(opt)
-                                )
-                                unmount_result = __salt__["mount.umount"](real_name)
-                                if unmount_result is True:
-                                    mount_result = __salt__["mount.mount"](
-                                        real_name,
-                                        device,
-                                        mkmnt=mkmnt,
-                                        fstype=fstype,
-                                        opts=opts,
-                                    )
-                                    ret["result"] = mount_result
-                                else:
-                                    ret["result"] = False
-                                    ret["comment"] = "Unable to unmount {}: {}.".format(
-                                        real_name, unmount_result
-                                    )
-                                    return ret
-                            else:
-                                ret["changes"]["umount"] = (
-                                    "Forced remount because "
-                                    + "options ({}) changed".format(opt)
-                                )
-                                remount_result = __salt__["mount.remount"](
+                            unmount_result = __salt__["mount.umount"](real_name)
+                            if unmount_result is True:
+                                mount_result = __salt__["mount.mount"](
                                     real_name,
                                     device,
                                     mkmnt=mkmnt,
                                     fstype=fstype,
                                     opts=opts,
                                 )
-                                ret["result"] = remount_result
-                                # Cleanup after the remount, so we
-                                # don't write remount into fstab
-                                if "remount" in opts:
-                                    opts.remove("remount")
+                                ret["result"] = mount_result
+                            else:
+                                ret["result"] = False
+                                ret["comment"] = "Unable to unmount {}: {}.".format(
+                                    real_name, unmount_result
+                                )
+                                return ret
+                        else:
+                            ret["changes"]["umount"] = (
+                                "Forced remount because "
+                                + "options ({}) changed".format(
+                                    ",".join(sorted(trigger_remount))
+                                )
+                            )
+                            remount_result = __salt__["mount.remount"](
+                                real_name,
+                                device,
+                                mkmnt=mkmnt,
+                                fstype=fstype,
+                                opts=opts,
+                            )
+                            ret["result"] = remount_result
+                            # Cleanup after the remount, so we
+                            # don't write remount into fstab
+                            if "remount" in opts:
+                                opts.remove("remount")
 
-                            # Update the cache
-                            update_mount_cache = True
+                        # Update the cache
+                        update_mount_cache = True
 
                 mount_cache = __salt__["mount.read_mount_cache"](real_name)
                 if "opts" in mount_cache:
@@ -609,7 +624,7 @@ def mounted(
                     ret["changes"]["umount"] += ", current: " + ", ".join(device_list)
                     out = __salt__["mount.umount"](real_name, user=user)
                     active = __salt__["mount.active"](extended=True)
-                    if real_name in active:
+                    if comp_real_name in active:
                         ret["comment"] = "Unable to unmount"
                         ret["result"] = None
                         return ret
@@ -617,7 +632,7 @@ def mounted(
             else:
                 ret["comment"] = "Target was already mounted"
     # using a duplicate check so I can catch the results of a umount
-    if real_name not in active:
+    if comp_real_name not in active:
         if mount:
             # The mount is not present! Mount it
             if __opts__["test"]:
@@ -645,7 +660,7 @@ def mounted(
                 ret["comment"] = out
                 ret["result"] = False
                 return ret
-            elif real_name in active:
+            elif comp_real_name in active:
                 # (Re)mount worked!
                 ret["comment"] = "Target was successfully mounted"
                 ret["changes"]["mount"] = True
@@ -667,7 +682,6 @@ def mounted(
                 ret["comment"] = "{} not present and not mounted".format(name)
         else:
             if __opts__["test"]:
-                ret["result"] = None
                 ret["comment"] = "{} would not be mounted".format(name)
             else:
                 ret["comment"] = "{} not mounted".format(name)
@@ -927,10 +941,11 @@ def unmounted(
 
     # Get the active data
     active = __salt__["mount.active"](extended=True)
-    if name not in active:
+    comp_name = name.replace(" ", "\\040")
+    if comp_name not in active:
         # Nothing to unmount
         ret["comment"] = "Target was already unmounted"
-    if name in active:
+    if comp_name in active:
         # The mount is present! Unmount it
         if __opts__["test"]:
             ret["result"] = None

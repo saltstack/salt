@@ -1,18 +1,17 @@
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-
-
 import os
+
+import pytest
+import yaml
 
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.yaml
-import yaml
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest
 from tests.support import win_installer
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
 # THis test needs a longer timeout than other cloud tests
@@ -163,7 +162,9 @@ class EC2Test(CloudTest):
         )
         self._test_instance("ec2-win2012r2-test", debug=True)
 
-    @skipIf(not HAS_WINRM, "Skip when winrm dependencies are missing")
+    @pytest.mark.skipif(
+        not HAS_WINRM, reason="Skip when winrm dependencies are missing"
+    )
     def test_win2012r2_winrm(self):
         """
         Tests creating and deleting a Windows 2012r2 instance on EC2 using
@@ -197,7 +198,9 @@ class EC2Test(CloudTest):
         )
         self._test_instance("ec2-win2016-test", debug=True)
 
-    @skipIf(not HAS_WINRM, "Skip when winrm dependencies are missing")
+    @pytest.mark.skipif(
+        not HAS_WINRM, reason="Skip when winrm dependencies are missing"
+    )
     def test_win2016_winrm(self):
         """
         Tests creating and deleting a Windows 2016 instance on EC2 using winrm

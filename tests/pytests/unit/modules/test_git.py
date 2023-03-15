@@ -9,8 +9,9 @@ import os
 import subprocess
 
 import pytest
+
 import salt.modules.git as git_mod  # Don't potentially shadow GitPython
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mock import MagicMock, Mock, patch
 
 log = logging.getLogger(__name__)
@@ -67,7 +68,7 @@ def _git_version():
         log.error("Git not installed")
         return False
     log.debug("Detected git version %s", git_version)
-    return LooseVersion(git_version.split()[-1])
+    return Version(git_version.split()[-1])
 
 
 @pytest.fixture

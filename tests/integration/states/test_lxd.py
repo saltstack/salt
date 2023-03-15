@@ -3,6 +3,7 @@ Integration tests for the lxd states
 """
 
 import pytest
+
 import salt.modules.lxd
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin

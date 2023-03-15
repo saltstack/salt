@@ -23,15 +23,16 @@ from salt.exceptions import SaltCloudSystemExit
 
 try:
     import vboxapi  # pylint: disable=unused-import
+
     from salt.utils.virtualbox import (
-        vb_list_machines,
+        treat_machine_dict,
         vb_clone_vm,
-        vb_machine_exists,
         vb_destroy_machine,
         vb_get_machine,
-        vb_stop_vm,
-        treat_machine_dict,
+        vb_list_machines,
+        vb_machine_exists,
         vb_start_vm,
+        vb_stop_vm,
         vb_wait_for_network_address,
     )
 

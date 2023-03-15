@@ -784,6 +784,14 @@ def enabled(name, **kwargs):
     __context__["service.state"] = "enabled"
 
     ret.update(_enable(name, None, **kwargs))
+    if __opts__.get("test") and ret.get(
+        "comment"
+    ) == "The named service {} is not available".format(name):
+        ret["result"] = None
+        ret["comment"] = (
+            "Service {} not present; if created in this state run, "
+            "it would have been enabled".format(name)
+        )
     return ret
 
 

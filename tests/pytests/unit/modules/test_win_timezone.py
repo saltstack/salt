@@ -2,6 +2,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 import pytest
+
 import salt.modules.win_timezone as win_timezone
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch

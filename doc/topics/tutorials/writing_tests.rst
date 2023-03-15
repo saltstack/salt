@@ -97,7 +97,7 @@ Once all of the :ref:`requirements <getting_set_up_for_tests>` are installed, th
 
 .. code-block:: bash
 
-    nox -e 'pytest-zeromq-3(coverage=False)'
+    nox -e 'test-3(coverage=False)'
 
 The command above, if executed without any options, will run the entire suite of
 integration and unit tests. Some tests require certain flags to run, such as
@@ -111,10 +111,10 @@ You can pass any pytest options after the nox command like so:
 
 .. code-block:: bash
 
-    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/modules/test_ps.py
+    nox -e 'test-3(coverage=False)' -- tests/unit/modules/test_ps.py
 
 The above command will run the ``test_ps.py`` test with the zeromq transport, python3,
-and pytest. The option after ``--`` can include any pytest options.
+and pytest. Pass any pytest options after `--`
 
 Running Integration Tests
 -------------------------
@@ -160,7 +160,7 @@ integration module tests:
 
 .. code-block:: bash
 
-    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/modules/
+    nox -e 'test-3(coverage=False)' -- tests/integration/modules/
 
 Running Unit Tests
 ------------------
@@ -173,7 +173,7 @@ do and execute very quickly compared to the integration tests.
 
 .. code-block:: bash
 
-    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/
+    nox -e 'test-3(coverage=False)' -- tests/unit/
 
 
 .. _running-specific-tests:
@@ -190,7 +190,7 @@ integration test directory, you must provide the file path.
 
 .. code-block:: bash
 
-    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/modules/test_pillar.py
+    nox -e 'test-3(coverage=False)' -- tests/pytests/integration/modules/test_pillar.py
 
 Some test files contain only one test class while other test files contain multiple
 test classes. To run a specific test class within the file, append the name of
@@ -198,14 +198,14 @@ the test class to the end of the file path:
 
 .. code-block:: bash
 
-    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/modules/test_pillar.py::PillarModuleTest
+    nox -e 'test-3(coverage=False)' -- tests/pytests/integration/modules/test_pillar.py::PillarModuleTest
 
 To run a single test within a file, append both the name of the test class the
 individual test belongs to, as well as the name of the test itself:
 
 .. code-block:: bash
 
-    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/modules/test_pillar.py::PillarModuleTest::test_data
+    nox -e 'test-3(coverage=False)' -- tests/pytests/integration/modules/test_pillar.py::PillarModuleTest::test_data
 
 
 The following command is an example of how to execute a single test found in
@@ -213,7 +213,7 @@ the ``tests/unit/modules/test_cp.py`` file:
 
 .. code-block:: bash
 
-    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/modules/test_cp.py::CpTestCase::test_get_file_not_found
+    nox -e 'test-3(coverage=False)' -- tests/pytests/unit/modules/test_cp.py::CpTestCase::test_get_file_not_found
 
 Writing Tests for Salt
 ======================
@@ -322,22 +322,15 @@ Tests can be written to alter the system they are running on. This capability
 is what fills in the gap needed to properly test aspects of system management
 like package installation.
 
-To write a destructive test, import and use the ``destructiveTest`` decorator for
-the test method:
+To write a destructive test, decorate the test function with the
+``destructive_test``:
 
 .. code-block:: python
 
-    import integration
-    from tests.support.helpers import destructiveTest
-
-
-    class PkgTest(integration.ModuleCase):
-        @destructiveTest
-        def test_pkg_install(self):
-            ret = self.run_function("pkg.install", name="finch")
-            self.assertSaltTrueReturn(ret)
-            ret = self.run_function("pkg.purge", name="finch")
-            self.assertSaltTrueReturn(ret)
+    @pytest.mark.destructive_test
+    def test_pkg_install(salt_cli):
+        ret = salt_cli.run("pkg.install", "finch")
+        assert ret
 
 
 Writing Unit Tests
@@ -359,7 +352,7 @@ Salt's unit tests utilize Python's mock class as well as `MagicMock`_. The
 ``@patch`` decorator is also heavily used when "blocking all the exits".
 
 A simple example of a unit test currently in use in Salt is the
-``test_get_file_not_found`` test in the ``tests/unit/modules/test_cp.py`` file.
+``test_get_file_not_found`` test in the ``tests/pytests/unit/modules/test_cp.py`` file.
 This test uses the ``@patch`` decorator and ``MagicMock`` to mock the return
 of the call to Salt's ``cp.hash_file`` execution module function. This ensures
 that we're testing the ``cp.get_file`` function directly, instead of inadvertently
@@ -412,10 +405,10 @@ in the following docs:
 Add a python module dependency to the test run
 ----------------------------------------------
 
-The test dependencies for python modules are managed under the ``requirements/static``
-directory. You will need to add your module to the appropriate file under ``requirements/static``.
+The test dependencies for python modules are managed under the ``requirements/static/ci``
+directory. You will need to add your module to the appropriate file under ``requirements/static/ci``.
 When ``pre-commit`` is run it will create all of the needed requirement files
-under ``requirements/static/py3{5,6,7}``. Nox will then use these files to install
+under ``requirements/static/ci/py3{6,7,8,9}``. Nox will then use these files to install
 the requirements for the tests.
 
 Add a system dependency to the test run
@@ -436,16 +429,28 @@ can be used
 
 .. code-block:: python
 
-    # Import logging handler
-    from tests.support.helpers import TstSuiteLoggingHandler
+   def test_issue_58763_a(tmp_path, modules, state_tree, caplog):
 
-    # .. inside test
-    with TstSuiteLoggingHandler() as handler:
-        for message in handler.messages:
-            if message.startswith("ERROR: This is the error message we seek"):
-                break
-            else:
-                raise AssertionError("Did not find error message")
+       venv_dir = tmp_path / "issue-2028-pip-installed"
+
+       sls_contents = """
+       test.random_hash:
+         module.run:
+           - size: 10
+           - hash_type: md5
+       """
+       with pytest.helpers.temp_file("issue-58763.sls", sls_contents, state_tree):
+           with caplog.at_level(logging.DEBUG):
+               ret = modules.state.sls(
+                   mods="issue-58763",
+               )
+               assert len(ret.raw) == 1
+               for k in ret.raw:
+                   assert ret.raw[k]["result"] is True
+               assert (
+                   "Detected legacy module.run syntax: test.random_hash" in caplog.messages
+               )
+
 
 
 Automated Test Runs

@@ -2,6 +2,7 @@ import copy
 import os
 
 import pytest
+
 import salt.modules.grains as grainsmod
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltException

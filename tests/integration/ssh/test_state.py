@@ -7,6 +7,7 @@ import time
 
 import pytest
 from saltfactories.utils.tempfiles import temp_file
+
 from tests.support.case import SSHCase
 from tests.support.runtests import RUNTIME_VARS
 

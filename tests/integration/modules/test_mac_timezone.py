@@ -12,8 +12,8 @@ Time sync do the following:
 import datetime
 
 import pytest
+
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 
 @pytest.mark.flaky(max_runs=4)
@@ -55,9 +55,8 @@ class MacTimezoneModuleTest(ModuleCase):
             self.run_function("timezone.set_date", [self.CURRENT_DATE])
             self.run_function("timezone.set_time", [self.CURRENT_TIME])
 
-    @skipIf(
-        True,
-        "Skip until we can figure out why modifying the system clock causes ZMQ errors",
+    @pytest.mark.skip(
+        reason="Skip until we can figure out why modifying the system clock causes ZMQ errors",
     )
     @pytest.mark.destructive_test
     def test_get_set_date(self):
@@ -85,9 +84,8 @@ class MacTimezoneModuleTest(ModuleCase):
         obj_date = datetime.datetime.strptime(text_time, "%H:%M:%S")
         self.assertIsInstance(obj_date, datetime.date)
 
-    @skipIf(
-        True,
-        "Skip until we can figure out why modifying the system clock causes ZMQ errors",
+    @pytest.mark.skip(
+        reason="Skip until we can figure out why modifying the system clock causes ZMQ errors",
     )
     @pytest.mark.destructive_test
     def test_set_time(self):
@@ -103,9 +101,8 @@ class MacTimezoneModuleTest(ModuleCase):
             "ERROR executing 'timezone.set_time': Invalid Date/Time Format: 3:71",
         )
 
-    @skipIf(
-        True,
-        "Skip until we can figure out why modifying the system clock causes ZMQ errors",
+    @pytest.mark.skip(
+        reason="Skip until we can figure out why modifying the system clock causes ZMQ errors",
     )
     @pytest.mark.destructive_test
     def test_get_set_zone(self):
@@ -123,9 +120,8 @@ class MacTimezoneModuleTest(ModuleCase):
             "ERROR executing 'timezone.set_zone': Invalid Timezone: spongebob",
         )
 
-    @skipIf(
-        True,
-        "Skip until we can figure out why modifying the system clock causes ZMQ errors",
+    @pytest.mark.skip(
+        reason="Skip until we can figure out why modifying the system clock causes ZMQ errors",
     )
     @pytest.mark.destructive_test
     def test_get_offset(self):
@@ -140,9 +136,8 @@ class MacTimezoneModuleTest(ModuleCase):
         self.assertIsInstance(self.run_function("timezone.get_offset"), (str,))
         self.assertEqual(self.run_function("timezone.get_offset"), "-0700")
 
-    @skipIf(
-        True,
-        "Skip until we can figure out why modifying the system clock causes ZMQ errors",
+    @pytest.mark.skip(
+        reason="Skip until we can figure out why modifying the system clock causes ZMQ errors",
     )
     @pytest.mark.destructive_test
     def test_get_set_zonecode(self):
@@ -168,9 +163,8 @@ class MacTimezoneModuleTest(ModuleCase):
         self.assertIn("America/Denver", self.run_function("timezone.list_zones"))
         self.assertIn("America/Los_Angeles", self.run_function("timezone.list_zones"))
 
-    @skipIf(
-        True,
-        "Skip until we can figure out why modifying the system clock causes ZMQ errors",
+    @pytest.mark.skip(
+        reason="Skip until we can figure out why modifying the system clock causes ZMQ errors",
     )
     @pytest.mark.destructive_test
     def test_zone_compare(self):
@@ -181,9 +175,8 @@ class MacTimezoneModuleTest(ModuleCase):
         self.assertTrue(self.run_function("timezone.zone_compare", ["America/Denver"]))
         self.assertFalse(self.run_function("timezone.zone_compare", ["Pacific/Wake"]))
 
-    @skipIf(
-        True,
-        "Skip until we can figure out why modifying the system clock causes ZMQ errors",
+    @pytest.mark.skip(
+        reason="Skip until we can figure out why modifying the system clock causes ZMQ errors",
     )
     @pytest.mark.destructive_test
     def test_get_set_using_network_time(self):
@@ -197,9 +190,8 @@ class MacTimezoneModuleTest(ModuleCase):
         self.assertTrue(self.run_function("timezone.set_using_network_time", [False]))
         self.assertFalse(self.run_function("timezone.get_using_network_time"))
 
-    @skipIf(
-        True,
-        "Skip until we can figure out why modifying the system clock causes ZMQ errors",
+    @pytest.mark.skip(
+        reason="Skip until we can figure out why modifying the system clock causes ZMQ errors",
     )
     @pytest.mark.destructive_test
     def test_get_set_time_server(self):

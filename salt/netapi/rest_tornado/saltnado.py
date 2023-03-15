@@ -332,13 +332,6 @@ class EventListener:
         """
         Get an event (asynchronous of course) return a future that will get it later
         """
-        # if the request finished, no reason to allow event fetching, since we
-        # can't send back to the client
-        if request._finished:
-            future = Future()
-            future.set_exception(TimeoutException())
-            return future
-
         future = Future()
         if callback is not None:
 
@@ -368,6 +361,9 @@ class EventListener:
             return
         if not future.done():
             future.set_exception(TimeoutException())
+        # We need to remove it from the map even if we didn't explicitly time it out
+        # Otherwise, we get a memory leak in the tag_map
+        if future in self.tag_map[(tag, matcher)] and future.done():
             self.tag_map[(tag, matcher)].remove(future)
         if len(self.tag_map[(tag, matcher)]) == 0:
             del self.tag_map[(tag, matcher)]
@@ -756,18 +752,8 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         # Grab eauth config for the current backend for the current user
         try:
             eauth = self.application.opts["external_auth"][token["eauth"]]
-            # Get sum of '*' perms, user-specific perms, and group-specific perms
-            perms = eauth.get(token["name"], [])
-            perms.extend(eauth.get("*", []))
-
-            if "groups" in token and token["groups"]:
-                user_groups = set(token["groups"])
-                eauth_groups = {i.rstrip("%") for i in eauth.keys() if i.endswith("%")}
-
-                for group in user_groups & eauth_groups:
-                    perms.extend(eauth["{}%".format(group)])
-
-            perms = sorted(list(set(perms)))
+            perms = salt.netapi.sum_permissions(token, eauth)
+            perms = salt.netapi.sorted_permissions(perms)
         # If we can't find the creds, then they aren't authorized
         except KeyError:
             self.send_error(401)

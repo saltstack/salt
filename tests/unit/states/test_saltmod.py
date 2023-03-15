@@ -2,10 +2,12 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+import copy
 import os
 import tempfile
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.saltmod as saltmod
@@ -309,6 +311,76 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
                         saltmod.wait_for_event(name, tgt, timeout=-1.0), ret
                     )
 
+    # 'wait_for_event' function tests: 2
+
+    def test_wait_for_event_list_single_event(self):
+        """
+        Test to watch Salt's event bus and block until a condition is met
+        """
+        name = "presence"
+        event_id = "lost"
+        tgt = ["minion_1", "minion_2", "minion_3"]
+
+        comt = "Timeout value reached."
+
+        ret = {"name": name, "changes": {}, "result": False, "comment": comt}
+
+        class Mockevent:
+            """
+            Mock event class
+            """
+
+            flag = None
+
+            def __init__(self):
+                self.full = None
+
+            def get_event(self, full):
+                """
+                Mock get_event method
+                """
+                self.full = full
+                if self.flag:
+                    return {"tag": name, "data": {"lost": tgt}}
+                return None
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                pass
+
+        with patch.object(
+            salt.utils.event, "get_event", MagicMock(return_value=Mockevent())
+        ):
+            with patch.dict(saltmod.__opts__, {"sock_dir": True, "transport": True}):
+                with patch(
+                    "salt.states.saltmod.time.time", MagicMock(return_value=1.0)
+                ):
+                    ret.update({"comment": "Timeout value reached.", "result": False})
+                    self.assertDictEqual(
+                        saltmod.wait_for_event(
+                            name, tgt, event_id=event_id, timeout=-1.0
+                        ),
+                        ret,
+                    )
+
+                    Mockevent.flag = True
+                    ret.update(
+                        {
+                            "name": name,
+                            "changes": {"minions_seen": tgt},
+                            "result": True,
+                            "comment": "All events seen in 0.0 seconds.",
+                        }
+                    )
+                    self.assertDictEqual(
+                        saltmod.wait_for_event(
+                            name, copy.deepcopy(tgt), event_id="lost", timeout=1.0
+                        ),
+                        ret,
+                    )
+
     # 'runner' function tests: 1
 
     def test_runner(self):
@@ -322,7 +394,6 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             "name": "state",
             "result": True,
             "comment": "Runner function 'state' executed.",
-            "__orchestration__": True,
         }
         runner_mock = MagicMock(return_value={"return": True})
 
@@ -342,7 +413,6 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             "name": "state",
             "result": True,
             "comment": "Wheel function 'state' executed.",
-            "__orchestration__": True,
         }
         wheel_mock = MagicMock(return_value={"return": True})
 

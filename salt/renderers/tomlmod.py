@@ -1,7 +1,7 @@
 import logging
 import warnings
 
-import salt.serializers.toml
+import salt.serializers.tomlmod
 import salt.utils.url
 
 log = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ __virtualname__ = "toml"
 
 
 def __virtual__():
-    if salt.serializers.toml.HAS_TOML is False:
+    if salt.serializers.tomlmod.HAS_TOML is False:
         return (False, "The 'toml' library is missing")
     return __virtualname__
 
@@ -24,7 +24,7 @@ def render(sls_data, saltenv="base", sls="", **kws):
     :rtype: A Python data structure
     """
     with warnings.catch_warnings(record=True) as warn_list:
-        data = salt.serializers.toml.deserialize(sls_data) or {}
+        data = salt.serializers.tomlmod.deserialize(sls_data) or {}
 
         for item in warn_list:
             log.warning(

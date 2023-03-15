@@ -38,8 +38,11 @@ Every call can override the config defaults:
 def __virtual__():
     IMPORT_ERR = None
     try:
-        from pyghmi.ipmi import command  # pylint: disable=unused-import
-    except Exception as exc:  # pylint: disable=broad-except
+        # pylint: disable=unused-import
+        from pyghmi.ipmi import command  # nosec
+
+        # pylint: enable=unused-import
+    except ImportError as exc:
         IMPORT_ERR = str(exc)
     return (IMPORT_ERR is None, IMPORT_ERR)
 

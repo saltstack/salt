@@ -5,6 +5,7 @@
 import logging
 
 import pytest
+
 import salt.states.host as host
 from tests.support.mock import MagicMock, call, patch
 

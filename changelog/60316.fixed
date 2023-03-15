@@ -1,1 +1,0 @@
-fix docker_network.present when com.docker.network.bridge.name is being used as the unixes can not have a bridge of the same name

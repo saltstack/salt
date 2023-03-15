@@ -2,20 +2,22 @@ import logging
 import random
 import string
 
+import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.boto_iot as boto_iot
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=import-error,no-name-in-module,unused-import
 try:
     import boto
     import boto3
-    from botocore.exceptions import ClientError
     from botocore import __version__ as found_botocore_version
+    from botocore.exceptions import ClientError
 
     HAS_BOTO = True
 except ImportError:
@@ -39,9 +41,9 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
+    elif Version(boto3.__version__) < Version(required_boto3_version):
         return False
-    elif LooseVersion(found_botocore_version) < LooseVersion(required_botocore_version):
+    elif Version(found_botocore_version) < Version(required_botocore_version):
         return False
     else:
         return True
@@ -112,10 +114,10 @@ if _has_required_boto():
     )
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto3 module must be greater than or equal to version {}".format(
+    reason="The boto3 module must be greater than or equal to version {}".format(
         required_boto3_version
     ),
 )
@@ -823,10 +825,10 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         )
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto3 module must be greater than"
+    reason="The boto3 module must be greater than"
     " or equal to version {}.  The botocore"
     " module must be greater than or equal to"
     " version {}.".format(required_boto3_version, required_botocore_version),

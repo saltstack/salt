@@ -230,6 +230,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         virtual_funcs=None,
         extra_module_dirs=None,
         pack_self=None,
+        # Once we get rid of __utils__, the keyword argument bellow should be removed
+        _only_pack_properly_namespaced_functions=True,
     ):  # pylint: disable=W0231
         """
         In pack, if any of the values are None they will be replaced with an
@@ -258,11 +260,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.module_dirs = module_dirs
         self.tag = tag
         self._gc_finalizer = None
-        if loaded_base_name and loaded_base_name != LOADED_BASE_NAME:
-            self.loaded_base_name = loaded_base_name
-        else:
-            self.loaded_base_name = LOADED_BASE_NAME
+        self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
+        self._only_pack_properly_namespaced_functions = (
+            _only_pack_properly_namespaced_functions
+        )
 
         if "__context__" not in self.pack:
             self.pack["__context__"] = None
@@ -588,6 +590,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if key == "logger":
                 continue
             mod_opts[key] = val
+
+        if "__opts__" not in self.pack:
+            self.pack["__opts__"] = mod_opts
+
         return mod_opts
 
     def _iter_files(self, mod_name):
@@ -938,18 +944,34 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     self.missing_modules[name] = err_string
                     return False
 
-        if getattr(mod, "__load__", False) is not False:
-            log.info(
+        try:
+            funcs_to_load = mod.__load__
+            log.debug(
                 "The functions from module '%s' are being loaded from the "
                 "provided __load__ attribute",
                 module_name,
             )
+        except AttributeError:
+            try:
+                funcs_to_load = mod.__all__
+                log.debug(
+                    "The functions from module '%s' are being loaded from the "
+                    "provided __all__ attribute",
+                    module_name,
+                )
+            except AttributeError:
+                funcs_to_load = dir(mod)
+                log.debug(
+                    "The functions from module '%s' are being loaded by "
+                    "dir() on the loaded module",
+                    module_name,
+                )
 
         # If we had another module by the same virtual name, we should put any
         # new functions under the existing dictionary.
         mod_names = [module_name] + list(virtual_aliases)
 
-        for attr in getattr(mod, "__load__", dir(mod)):
+        for attr in funcs_to_load:
             if attr.startswith("_"):
                 # private functions are skipped
                 continue
@@ -957,6 +979,15 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if not inspect.isfunction(func) and not isinstance(func, functools.partial):
                 # Not a function!? Skip it!!!
                 continue
+
+            if (
+                self._only_pack_properly_namespaced_functions
+                and not func.__module__.startswith(self.loaded_base_name)
+            ):
+                # We're not interested in imported functions, only
+                # functions defined(or namespaced) on the loaded module.
+                continue
+
             # Let's get the function name.
             # If the module has the __func_alias__ attribute, it must be a
             # dictionary mapping in the form of(key -> value):

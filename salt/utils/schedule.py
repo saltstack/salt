@@ -217,11 +217,12 @@ class Schedule:
 
         if remove_hidden:
             _schedule = copy.deepcopy(schedule)
-            for job in _schedule:
-                if isinstance(_schedule[job], dict):
-                    for item in _schedule[job]:
+            for job in schedule:
+                if isinstance(schedule[job], dict):
+                    for item in schedule[job]:
                         if item.startswith("_"):
-                            del schedule[job][item]
+                            del _schedule[job][item]
+            return _schedule
         return schedule
 
     def _check_max_running(self, func, data, opts, now):
@@ -1064,7 +1065,9 @@ class Schedule:
                         return
                     when_ = self.opts["pillar"]["whens"][i]
                 elif (
-                    "whens" in self.opts["grains"] and i in self.opts["grains"]["whens"]
+                    "grains" in self.opts
+                    and "whens" in self.opts["grains"]
+                    and i in self.opts["grains"]["whens"]
                 ):
                     if not isinstance(self.opts["grains"]["whens"], dict):
                         data[
@@ -1767,9 +1770,10 @@ class Schedule:
                             seconds=data["_seconds"]
                         )
                     elif "_skipped" in data and data["_skipped"]:
-                        data["_next_fire_time"] = now + datetime.timedelta(
-                            seconds=data["_seconds"]
-                        )
+                        if data["_next_fire_time"] <= now:
+                            data["_next_fire_time"] = now + datetime.timedelta(
+                                seconds=data["_seconds"]
+                            )
                     elif run:
                         data["_next_fire_time"] = now + datetime.timedelta(
                             seconds=data["_seconds"]

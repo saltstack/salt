@@ -1,10 +1,11 @@
 # This code assumes vboxapi.py from VirtualBox distribution
 # being in PYTHONPATH, or installed system-wide
 
-
 import logging
 import os
 import socket
+
+import pytest
 
 from salt.config import cloud_providers_config, vm_profiles_config
 from salt.utils.virtualbox import (
@@ -34,7 +35,7 @@ from tests.integration.cloud.helpers.virtualbox import (
     VirtualboxTestCase,
 )
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -205,9 +206,11 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
             vb_destroy_machine(INSTANCE_NAME)
 
 
-@skipIf(
+@pytest.mark.skipif(
     HAS_LIBS and vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
-    "Bootable VM '{}' not found. Cannot run tests.".format(BOOTABLE_BASE_BOX_NAME),
+    reason="Bootable VM '{}' not found. Cannot run tests.".format(
+        BOOTABLE_BASE_BOX_NAME
+    ),
 )
 class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
     """
@@ -341,7 +344,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
             self.assertIsIpAddress(ip_address)
 
 
-@skipIf(HAS_LIBS is False, "The 'vboxapi' library is not available")
+@pytest.mark.skipif(HAS_LIBS is False, reason="The 'vboxapi' library is not available")
 class BaseVirtualboxTests(TestCase):
     def test_get_manager(self):
         self.assertIsNotNone(vb_get_box())
@@ -379,9 +382,11 @@ class CloneVirtualboxTests(VirtualboxTestCase):
         self.assertMachineDoesNotExist(vb_name)
 
 
-@skipIf(
+@pytest.mark.skipif(
     HAS_LIBS and vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
-    "Bootable VM '{}' not found. Cannot run tests.".format(BOOTABLE_BASE_BOX_NAME),
+    reason="Bootable VM '{}' not found. Cannot run tests.".format(
+        BOOTABLE_BASE_BOX_NAME
+    ),
 )
 class BootVirtualboxTests(VirtualboxTestCase):
     def test_start_stop(self):

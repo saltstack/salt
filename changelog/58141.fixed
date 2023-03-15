@@ -1,1 +1,0 @@
-Fixed thread leak during FQDN lookup when DNS entries had malformed PTR records, or other similar issues.

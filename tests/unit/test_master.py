@@ -1,6 +1,7 @@
 import time
 
 import pytest
+
 import salt.config
 import salt.master
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin

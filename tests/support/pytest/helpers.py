@@ -16,19 +16,16 @@ import types
 import warnings
 from contextlib import contextmanager
 
-import _pytest._version
 import attr
 import pytest
-import salt.utils.platform
-import salt.utils.pycrypto
 from saltfactories.utils import random_string
 from saltfactories.utils.tempfiles import temp_file
+
+import salt.utils.platform
+import salt.utils.pycrypto
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
-
-PYTEST_GE_7 = getattr(_pytest._version, "version_tuple", (-1, -1)) >= (7, 0)
-
 
 log = logging.getLogger(__name__)
 
@@ -189,15 +186,19 @@ def remove_stale_proxy_minion_cache_file(proxy_minion, minion_id=None):
 
 @attr.s(kw_only=True, slots=True)
 class TestGroup:
-    sminion = attr.ib(default=None, repr=False)
-    name = attr.ib(default=None)
+    sminion = attr.ib(repr=False)
+    name = attr.ib()
+    gid = attr.ib(default=None)
+    members = attr.ib(default=None)
     _delete_group = attr.ib(init=False, repr=False, default=False)
 
-    def __attrs_post_init__(self):
-        if self.sminion is None:
-            self.sminion = create_sminion()
-        if self.name is None:
-            self.name = random_string("group-", uppercase=False)
+    @sminion.default
+    def _default_sminion(self):
+        return create_sminion()
+
+    @name.default
+    def _default_name(self):
+        return random_string("group-", uppercase=False)
 
     @property
     def info(self):
@@ -206,12 +207,19 @@ class TestGroup:
     def __enter__(self):
         group = self.sminion.functions.group.info(self.name)
         if not group:
-            ret = self.sminion.functions.group.add(self.name)
+            ret = self.sminion.functions.group.add(
+                self.name, gid=self.gid, non_unique=True
+            )
             assert ret
             self._delete_group = True
             log.debug("Created system group: %s", self)
         else:
             log.debug("Reusing exising system group: %s", self)
+        if self.members:
+            ret = self.sminion.functions.group.members(
+                self.name, members_list=self.members
+            )
+            assert ret
         # Run tests
         return self
 
@@ -228,39 +236,51 @@ class TestGroup:
 
 @pytest.helpers.register
 @contextmanager
-def create_group(name=None, sminion=None):
-    with TestGroup(sminion=sminion, name=name) as group:
+def create_group(name=attr.NOTHING, sminion=attr.NOTHING, gid=None, members=None):
+    with TestGroup(sminion=sminion, name=name, gid=gid, members=members) as group:
         yield group
 
 
 @attr.s(kw_only=True, slots=True)
 class TestAccount:
-    sminion = attr.ib(default=None, repr=False)
-    username = attr.ib(default=None)
-    password = attr.ib(default=None)
-    hashed_password = attr.ib(default=None, repr=False)
-    group_name = attr.ib(default=None)
+    sminion = attr.ib(repr=False)
+    username = attr.ib()
+    password = attr.ib()
+    hashed_password = attr.ib(repr=False)
     create_group = attr.ib(repr=False, default=False)
-    _group = attr.ib(init=False, repr=False, default=None)
+    group_name = attr.ib()
+    _group = attr.ib(init=True, repr=False)
     _delete_account = attr.ib(init=False, repr=False, default=False)
 
-    def __attrs_post_init__(self):
-        if self.sminion is None:
-            self.sminion = create_sminion()
-        if self.username is None:
-            self.username = random_string("account-", uppercase=False)
-        if self.password is None:
-            self.password = random_string("pwd-", size=8)
-        if (
-            self.hashed_password is None
-            and not salt.utils.platform.is_darwin()
-            and not salt.utils.platform.is_windows()
-        ):
-            self.hashed_password = salt.utils.pycrypto.gen_hash(password=self.password)
-        if self.create_group is True and self.group_name is None:
-            self.group_name = "group-{}".format(self.username)
-        if self.group_name is not None:
-            self._group = TestGroup(sminion=self.sminion, name=self.group_name)
+    @sminion.default
+    def _default_sminion(self):
+        return create_sminion()
+
+    @username.default
+    def _default_username(self):
+        return random_string("account-", uppercase=False)
+
+    @password.default
+    def _default_password(self):
+        return random_string("pwd-", size=8)
+
+    @hashed_password.default
+    def _default_hashed_password(self):
+        if not salt.utils.platform.is_darwin() and not salt.utils.platform.is_windows():
+            return salt.utils.pycrypto.gen_hash(password=self.password)
+        return self.password
+
+    @group_name.default
+    def _default_group_name(self):
+        if self.create_group:
+            return "group-{}".format(self.username)
+        return None
+
+    @_group.default
+    def _default__group(self):
+        if self.group_name:
+            return TestGroup(sminion=self.sminion, name=self.group_name)
+        return None
 
     @property
     def info(self):
@@ -274,6 +294,10 @@ class TestAccount:
                 "account. There's no group attribute in this account instance."
             )
         return self._group
+
+    @group.setter
+    def _set_group(self, value):
+        self._group = value
 
     def __enter__(self):
         if not self.sminion.functions.user.info(self.username):
@@ -333,16 +357,32 @@ class TestAccount:
                     "Failed to delete system account: %s", self.username, exc_info=True
                 )
 
+            if self.sminion.functions.group.info(self.username):
+                # A group with the same name as the user name still exists.
+                # Let's delete it
+                try:
+                    self.sminion.functions.group.delete(self.username)
+                    log.debug(
+                        "Deleted system group matching username: %s", self.username
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    log.warning(
+                        "Failed to delete system group matching username: %s",
+                        self.username,
+                        exc_info=True,
+                    )
+
 
 @pytest.helpers.register
 @contextmanager
 def create_account(
-    username=None,
-    password=None,
-    hashed_password=None,
-    group_name=None,
+    username=attr.NOTHING,
+    password=attr.NOTHING,
+    hashed_password=attr.NOTHING,
+    group_name=attr.NOTHING,
     create_group=False,
-    sminion=None,
+    group=attr.NOTHING,
+    sminion=attr.NOTHING,
 ):
     with TestAccount(
         sminion=sminion,
@@ -351,6 +391,7 @@ def create_account(
         hashed_password=hashed_password,
         group_name=group_name,
         create_group=create_group,
+        group=group,
     ) as account:
         yield account
 
@@ -635,18 +676,25 @@ class EntropyGenerator:
     def generate_entropy(self):
         max_time = self.max_minutes * 60
         kernel_entropy_file = pathlib.Path("/proc/sys/kernel/random/entropy_avail")
+        kernel_poolsize_file = pathlib.Path("/proc/sys/kernel/random/poolsize")
         if not kernel_entropy_file.exists():
             log.info("The '%s' file is not avilable", kernel_entropy_file)
             return
 
         self.current_entropy = int(kernel_entropy_file.read_text().strip())
         log.info("Available Entropy: %s", self.current_entropy)
+
+        if not kernel_poolsize_file.exists():
+            log.info("The '%s' file is not avilable", kernel_poolsize_file)
+        else:
+            self.current_poolsize = int(kernel_poolsize_file.read_text().strip())
+            log.info("Entropy Poolsize: %s", self.current_poolsize)
+            # Account for smaller poolsizes using BLAKE2s
+            if self.current_poolsize == 256:
+                self.minimum_entropy = 192
+
         if self.current_entropy >= self.minimum_entropy:
             return
-
-        exc_kwargs = {}
-        if PYTEST_GE_7:
-            exc_kwargs["_use_item_location"] = True
 
         rngd = shutil.which("rngd")
         openssl = shutil.which("openssl")
@@ -662,7 +710,7 @@ class EntropyGenerator:
                         )
                     )
                     if self.skip:
-                        raise pytest.skip.Exception(message, **exc_kwargs)
+                        raise pytest.skip.Exception(message, _use_item_location=True)
                     raise pytest.fail(message)
                 subprocess.run([rngd, "-r", "/dev/urandom"], shell=False, check=True)
                 self.current_entropy = int(kernel_entropy_file.read_text().strip())
@@ -680,7 +728,7 @@ class EntropyGenerator:
                         )
                     )
                     if self.skip:
-                        raise pytest.skip.Exception(message, **exc_kwargs)
+                        raise pytest.skip.Exception(message, _use_item_location=True)
                     raise pytest.fail(message)
 
                 target_file = tempfile.NamedTemporaryFile(
@@ -694,7 +742,7 @@ class EntropyGenerator:
                         "-out",
                         target_file.name,
                         "-base64",
-                        str(int(2 ** 30 * 3 / 4)),  # 1GB
+                        str(int(2**30 * 3 / 4)),  # 1GB
                     ],
                     shell=False,
                     check=True,
@@ -712,7 +760,7 @@ class EntropyGenerator:
                 )
             )
             if self.skip:
-                raise pytest.skip.Exception(message, **exc_kwargs)
+                raise pytest.skip.Exception(message, _use_item_location=True)
             raise pytest.fail(message)
 
     def __enter__(self):
@@ -721,6 +769,23 @@ class EntropyGenerator:
 
     def __exit__(self, *_):
         pass
+
+
+@pytest.helpers.register
+@contextmanager
+def change_cwd(path):
+    """
+    Context manager helper to change CWD for a with code block and restore
+    it at the end
+    """
+    old_cwd = os.getcwd()
+    try:
+        os.chdir(path)
+        # Do stuff
+        yield
+    finally:
+        # Restore Old CWD
+        os.chdir(old_cwd)
 
 
 # Only allow star importing the functions defined in this module

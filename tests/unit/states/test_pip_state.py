@@ -9,6 +9,7 @@ import subprocess
 import sys
 
 import pytest
+
 import salt.states.pip_state as pip_state
 import salt.utils.path
 import salt.version
@@ -17,7 +18,7 @@ from tests.support.helpers import VirtualEnv, dedent
 from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import pip
@@ -30,7 +31,9 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-@skipIf(not HAS_PIP, "The 'pip' library is not importable(installed system-wide)")
+@pytest.mark.skipif(
+    not HAS_PIP, reason="The 'pip' library is not importable(installed system-wide)"
+)
 class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
@@ -403,16 +406,14 @@ class PipStateUtilsTest(TestCase):
             pip_state.purge_pip()
 
 
-@skipIf(
-    salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
-)
+@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
 @pytest.mark.requires_network
 class PipStateInstallationErrorTest(TestCase):
     @pytest.mark.slow_test
     def test_importable_installation_error(self):
         extra_requirements = []
         for name, version in salt.version.dependency_information():
-            if name in ["PyYAML"]:
+            if name in ["PyYAML", "packaging", "looseversion"]:
                 extra_requirements.append("{}=={}".format(name, version))
         failures = {}
         pip_version_requirements = [

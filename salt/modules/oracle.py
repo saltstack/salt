@@ -59,7 +59,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The oracle execution module not loaded: python oracle library not found.",
+        "oracle execution module not loaded: python oracle library not found.",
     )
 
 

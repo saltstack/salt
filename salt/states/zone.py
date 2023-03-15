@@ -734,11 +734,12 @@ def export(name, path, replace=False):
                             if __salt__["file.file_exists"](cfg_tmp):
                                 __salt__["file.remove"](cfg_tmp)
                             ret["result"] = False
-                            ret[
-                                "comment"
-                            ] = "Unable to be re-export zone configuration for {}" " to {}!".format(
-                                name,
-                                path,
+                            ret["comment"] = (
+                                "Unable to be re-export zone configuration for {}"
+                                " to {}!".format(
+                                    name,
+                                    path,
+                                )
                             )
                         else:
                             ret["result"] = True

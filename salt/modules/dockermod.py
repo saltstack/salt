@@ -344,7 +344,12 @@ def _get_docker_py_versioninfo():
     try:
         return docker.version_info
     except AttributeError:
-        pass
+        # docker 6.0.0+ exposes version from __version__ attribute
+        try:
+            docker_version = docker.__version__.split(".")
+            return tuple(int(n) for n in docker_version)
+        except AttributeError:
+            pass
 
 
 def _get_client(timeout=NOTSET, **kwargs):

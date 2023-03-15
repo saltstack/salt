@@ -19,8 +19,8 @@ log = logging.getLogger(__name__)
 
 
 try:
-    import xmlrunner.runner
     import xmlrunner.result
+    import xmlrunner.runner
 
     HAS_XMLRUNNER = True
 
@@ -88,7 +88,6 @@ try:
             result = xmlrunner.runner.XMLTestRunner.run(self, test)
             self.stream.writeln("Finished generating XML reports")
             return result
-
 
 except ImportError:
     HAS_XMLRUNNER = False

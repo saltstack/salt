@@ -1,3 +1,0 @@
-Fixed errors on calling `zabbix_user.admin_password_present` state, due to changed error message in Zabbix 6.0
-Fixed `zabbix.host_update` not mapping group ids list to list of dicts in format `[{"groupid": groupid}, ...]`
-Fixed `zabbix.user_update` not mapping usergroup id list to list of dicts in format `[{"usrgrpid": usrgrpid}, ...]`

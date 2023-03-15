@@ -1,20 +1,17 @@
 import os
 
 import pytest
+
 import salt.modules.cmdmod as cmd
 import salt.modules.virtualenv_mod
 import salt.modules.zcbuildout as modbuildout
 import salt.states.zcbuildout as buildout
 import salt.utils.path
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 from tests.unit.modules.test_zcbuildout import KNOWN_VIRTUALENV_BINARY_NAMES, Base
 
 
-@skipIf(
-    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-    "The 'virtualenv' packaged needs to be installed",
-)
+@pytest.mark.skip_if_binaries_missing(*KNOWN_VIRTUALENV_BINARY_NAMES, check_all=False)
 @pytest.mark.requires_network
 class BuildoutTestCase(Base):
     def setup_loader_modules(self):
@@ -33,7 +30,7 @@ class BuildoutTestCase(Base):
     # I don't have the time to invest in learning more about buildout,
     # and given we don't have support yet, and there are other priorities
     # I'm going to punt on this for now - WW
-    @skipIf(True, "Buildout is still in beta. Test needs fixing.")
+    @pytest.mark.skip(reason="Buildout is still in beta. Test needs fixing.")
     def test_quiet(self):
         c_dir = os.path.join(self.tdir, "c")
         assert False, os.listdir(self.rdir)

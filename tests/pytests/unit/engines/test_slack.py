@@ -2,7 +2,7 @@
 unit tests for the slack engine
 """
 import pytest
-import salt.config
+
 import salt.engines.slack as slack
 from tests.support.mock import MagicMock, patch
 
@@ -19,11 +19,10 @@ def configure_loader_modules():
 
 
 @pytest.fixture
-def slack_client():
-    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+def slack_client(minion_opts):
     token = "xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx"
 
-    with patch.dict(slack.__opts__, mock_opts):
+    with patch.dict(slack.__opts__, minion_opts):
         with patch("slackclient.SlackClient.rtm_connect", MagicMock(return_value=True)):
             slack_client = slack.SlackClient(token)
             yield slack_client

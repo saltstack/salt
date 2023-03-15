@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.win_license as win_license
 from tests.support.mock import MagicMock, patch
 

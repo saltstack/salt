@@ -129,7 +129,7 @@ def salt_master(salt_factories, pillar_state_tree):
     factory = salt_factories.salt_master_daemon(
         "blackout-master",
         defaults=config_defaults,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     with factory.started():
         yield factory

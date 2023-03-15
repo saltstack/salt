@@ -51,17 +51,17 @@ import logging
 import salt.utils.platform
 
 try:
-    from nsnitro.nsnitro import NSNitro
     from nsnitro.nsexceptions import NSNitroError
+    from nsnitro.nsnitro import NSNitro
+    from nsnitro.nsresources.nslbvserver import NSLBVServer
+    from nsnitro.nsresources.nslbvserverservicegroupbinding import (
+        NSLBVServerServiceGroupBinding,
+    )
     from nsnitro.nsresources.nsserver import NSServer
     from nsnitro.nsresources.nsservice import NSService
     from nsnitro.nsresources.nsservicegroup import NSServiceGroup
     from nsnitro.nsresources.nsservicegroupserverbinding import (
         NSServiceGroupServerBinding,
-    )
-    from nsnitro.nsresources.nslbvserver import NSLBVServer
-    from nsnitro.nsresources.nslbvserverservicegroupbinding import (
-        NSLBVServerServiceGroupBinding,
     )
     from nsnitro.nsresources.nssslvserversslcertkeybinding import (
         NSSSLVServerSSLCertKeyBinding,

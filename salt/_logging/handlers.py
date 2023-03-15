@@ -275,7 +275,6 @@ if sys.version_info < (3, 7):
             record.exc_text = None
             return record
 
-
 else:
 
     class QueueHandler(

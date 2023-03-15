@@ -1,18 +1,12 @@
-import sys
 import textwrap
 
 import pytest
+
 import salt.modules.state as state
 import salt.state
 import salt.utils.files
 import salt.utils.json
 from tests.support.mock import MagicMock, patch
-
-pytestmark = [
-    pytest.mark.skipif(
-        sys.version_info < (3, 6), reason="Dictionaries are not ordered under Py3.5"
-    ),
-]
 
 
 @pytest.fixture
@@ -20,7 +14,10 @@ def configure_loader_modules(salt_minion_factory):
     return {
         state: {
             "__opts__": salt_minion_factory.config.copy(),
-            "__salt__": {"saltutil.is_running": MagicMock(return_value=[])},
+            "__salt__": {
+                "config.option": MagicMock(return_value=None),
+                "saltutil.is_running": MagicMock(return_value=[]),
+            },
         },
     }
 

@@ -12,9 +12,17 @@ Set the following Salt config to setup http json result as external pillar sourc
   ext_pillar:
     - http_json:
         url: http://example.com/api/minion_id
-        ::TODO::
+        namespace: 'subkey'
         username: username
         password: password
+        header_dict: None
+        auth: None
+
+You can pass additional parameters, they will be added to the http.query call
+:py:func:`utils.http.query function <salt.utils.http.query>`:
+
+.. versionchanged:: 3006.0
+    If namespace is defined, the data will be added under the specified subkeys in the Pillar structure.
 
 If the with_grains parameter is set, grain keys wrapped in can be provided (wrapped
 in <> brackets) in the url in order to populate pillar data based on the grain value.
@@ -52,17 +60,32 @@ def __virtual__():
     return True
 
 
-def ext_pillar(minion_id, pillar, url, with_grains=False):  # pylint: disable=W0613
+def ext_pillar(
+    minion_id,
+    pillar,
+    url,
+    with_grains=False,
+    header_dict=None,
+    auth=None,
+    username=None,
+    password=None,
+    namespace=None,
+):  # pylint: disable=W0613
     """
     Read pillar data from HTTP response.
 
     :param str url: Url to request.
     :param bool with_grains: Whether to substitute strings in the url with their grain values.
+    :param dict header_dict: Extra headers to send
+    :param auth: special auth if needed
+    :param str username: username for auth
+    :param str pasword: password for auth
+    :param str namespace: (Optional) A pillar key to namespace the values under.
+        .. versionadded:: 3006.0
 
     :return: A dictionary of the pillar data to add.
     :rtype: dict
     """
-
     url = url.replace("%s", urllib.parse.quote(minion_id))
 
     grain_pattern = r"<(?P<grain_name>.*?)>"
@@ -82,10 +105,21 @@ def ext_pillar(minion_id, pillar, url, with_grains=False):  # pylint: disable=W0
             url = re.sub("<{}>".format(grain_name), grain_value, url)
 
     log.debug("Getting url: %s", url)
-    data = __salt__["http.query"](url=url, decode=True, decode_type="json")
+    data = __salt__["http.query"](
+        url=url,
+        decode=True,
+        decode_type="json",
+        header_dict=header_dict,
+        auth=auth,
+        username=username,
+        password=password,
+    )
 
     if "dict" in data:
-        return data["dict"]
+        if namespace:
+            return {namespace: data["dict"]}
+        else:
+            return data["dict"]
 
     log.error("Error on minion '%s' http query: %s\nMore Info:\n", minion_id, url)
 

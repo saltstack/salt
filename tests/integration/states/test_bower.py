@@ -3,14 +3,14 @@
 """
 
 import pytest
+
 import salt.utils.json
 import salt.utils.path
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
 
 
-@skipIf(salt.utils.path.which("bower") is None, "bower not installed")
+@pytest.mark.skip_if_binaries_missing("bower")
 class BowerStateTest(ModuleCase, SaltReturnAssertsMixin):
     @pytest.mark.destructive_test
     @pytest.mark.slow_test

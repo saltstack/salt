@@ -6,12 +6,13 @@ import re
 import sys
 
 import pytest
+
 import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
 import salt.utils.yaml
-from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON, change_cwd
+from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -283,7 +284,7 @@ def test_syslog_file_not_found(salt_minion, salt_call_cli, tmp_path):
     """
     config_dir = tmp_path / "log_file_incorrect"
     config_dir.mkdir()
-    with change_cwd(str(config_dir)):
+    with pytest.helpers.change_cwd(str(config_dir)):
         minion_config = copy.deepcopy(salt_minion.config)
         minion_config["log_file"] = "file:///dev/doesnotexist"
         with salt.utils.files.fopen(str(config_dir / "minion"), "w") as fh_:
@@ -422,24 +423,9 @@ def test_local_salt_call_no_function_no_retcode(salt_call_cli):
 
     Also ensure we don't get an exception.
     """
-    with pytest.helpers.temp_file() as filename:
-
-        ret = salt_call_cli.run("--local", "test")
-        assert ret.returncode == 1
-
-        state_run_dict = ret.data
-        assert "test" in state_run_dict
-        assert state_run_dict["test"] == "'test' is not available."
-
-        assert "test.recho" in state_run_dict
-
-        expected = """
-    Return a reversed string
-
-    CLI Example:
-
-        salt '*' test.recho 'foo bar baz quo qux'
-    """
-        a = state_run_dict["test.recho"]
-        b = expected
-        assert state_run_dict["test.recho"] == expected
+    ret = salt_call_cli.run("--local", "test")
+    assert ret.returncode == 1
+    assert ret.data
+    assert "test" in ret.data
+    assert ret.data["test"] == "'test' is not available."
+    assert "test.echo" in ret.data

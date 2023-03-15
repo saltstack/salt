@@ -3,7 +3,8 @@ import os.path
 import sys
 from collections import namedtuple
 
-import pkg_resources  # pylint: disable=3rd-party-module-not-gated
+import pkg_resources
+import pytest
 
 import salt.config
 import salt.loader
@@ -11,13 +12,14 @@ import salt.utils.versions
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=import-error
 try:
-    import salt.modules.boto_route53 as boto_route53
-    from boto.route53.exception import DNSServerError
     import boto
+    from boto.route53.exception import DNSServerError
+
+    import salt.modules.boto_route53 as boto_route53
 
     boto.ENDPOINTS_PATH = os.path.join(
         RUNTIME_VARS.TESTS_DIR, "unit/files/endpoints.json"
@@ -57,18 +59,18 @@ def _has_required_moto():
     if not HAS_MOTO:
         return False
     else:
-        moto_version = salt.utils.versions.LooseVersion(
+        moto_version = salt.utils.versions.Version(
             pkg_resources.get_distribution("moto").version
         )
-        if moto_version < salt.utils.versions.LooseVersion(required_moto):
+        if moto_version < salt.utils.versions.Version(required_moto):
             return False
     return True
 
 
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_moto() is False,
-    "The moto module must be >= to {}".format(required_moto),
+    reason="The moto module must be >= to {}".format(required_moto),
 )
 class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -100,7 +102,7 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         del self.opts
 
-    @skipIf(sys.version_info >= (3, 10), "Fail with python 3.10")
+    @pytest.mark.skipif(sys.version_info >= (3, 10), reason="Fail with python 3.10")
     @mock_route53_deprecated
     def test_create_healthcheck(self):
         """

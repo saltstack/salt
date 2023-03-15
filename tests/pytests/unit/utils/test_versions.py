@@ -3,32 +3,34 @@ import sys
 import warnings
 
 import pytest
+from packaging.version import InvalidVersion
+
 import salt.modules.cmdmod
 import salt.utils.versions
 import salt.version
-from salt.utils.versions import LooseVersion, StrictVersion
+from salt.utils.versions import LooseVersion, Version
 from tests.support.mock import patch
 
 
 def test_prerelease():
-    version = StrictVersion("1.2.3a1")
-    assert version.version == (1, 2, 3)
-    assert version.prerelease == ("a", 1)
+    version = Version("1.2.3a1")
+    assert version.release == (1, 2, 3)
+    assert version.pre == ("a", 1)
     assert str(version) == "1.2.3a1"
 
-    version = StrictVersion("1.2.0")
-    assert str(version) == "1.2"
+    version = Version("1.2.0")
+    assert str(version) == "1.2.0"
 
 
 @pytest.mark.parametrize(
     "v1,v2,wanted",
     (
         ("1.5.1", "1.5.2b2", -1),
-        ("161", "3.10a", ValueError),
+        ("161", "3.10a", 1),
         ("8.02", "8.02", 0),
-        ("3.4j", "1996.07.12", ValueError),
-        ("3.2.pl0", "3.1.1.6", ValueError),
-        ("2g6", "11g", ValueError),
+        ("3.4j", "1996.07.12", InvalidVersion),
+        ("3.2.pl0", "3.1.1.6", InvalidVersion),
+        ("2g6", "11g", InvalidVersion),
         ("0.9", "2.2", -1),
         ("1.2.1", "1.2", 1),
         ("1.1", "1.2.2", -1),
@@ -37,21 +39,27 @@ def test_prerelease():
         ("1.2.2", "1.2", 1),
         ("1.2", "1.2.2", -1),
         ("0.4.0", "0.4", 0),
-        ("1.13++", "5.5.kw", ValueError),
-        # Added by us
+        ("1.13++", "5.5.kw", InvalidVersion),
         ("1.1.1a1", "1.1.1", -1),
     ),
 )
 def test_cmp_strict(v1, v2, wanted):
     try:
-        res = StrictVersion(v1)._cmp(StrictVersion(v2))
+        v1i = Version(v1)
+        v2i = Version(v2)
+        if v1i == v2i:
+            res = 0
+        elif v1i < v2i:
+            res = -1
+        elif v1i > v2i:
+            res = 1
         assert res == wanted, "cmp({}, {}) should be {}, got {}".format(
             v1, v2, wanted, res
         )
-    except ValueError:
-        if wanted is not ValueError:
+    except InvalidVersion:
+        if wanted is not InvalidVersion:
             raise AssertionError(
-                "cmp({}, {}) shouldn't raise ValueError".format(v1, v2)
+                "cmp({}, {}) shouldn't raise InvalidVersion".format(v1, v2)
             )
 
 
@@ -105,7 +113,7 @@ def test_warn_until_good_version_argument(version):
         match=(
             r"The warning triggered on filename \'(.*)test_versions.py\', "
             r"line number ([\d]+), is supposed to be shown until version "
-            r"3007 is released. Current version is now 3009. "
+            r"3007.0 \(Chlorine\) is released. Current version is now 3009.0 \(Potassium\). "
             r"Please remove the warning."
         ),
     ):

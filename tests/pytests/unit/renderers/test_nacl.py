@@ -1,4 +1,5 @@
 import pytest
+
 import salt.renderers.nacl as nacl
 from tests.support.mock import MagicMock, patch
 

@@ -10,9 +10,10 @@ import shutil
 import sys
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.utils.files
 import salt.utils.platform
-from saltfactories.utils import random_string
 
 try:
     import grp
@@ -51,10 +52,14 @@ def user_home(username, tmp_path):
 
 
 @pytest.fixture
-def group_1(username):
+def group_1(username, grains):
     groupname = username
     if salt.utils.platform.is_darwin():
         groupname = "staff"
+    elif salt.utils.platform.is_photonos():
+        groupname = "users"
+    elif grains["os_family"] in ("Suse",):
+        groupname = "users"
     with pytest.helpers.create_group(name=groupname) as group:
         yield group
 
@@ -109,7 +114,9 @@ def test_user_present_when_home_dir_does_not_18843(states, existing_account):
     """
     shutil.rmtree(existing_account.info.home)
     ret = states.user.present(
-        name=existing_account.username, home=existing_account.info.home
+        name=existing_account.username,
+        home=existing_account.info.home,
+        remove_groups=False,
     )
     assert ret.result is True
     assert pathlib.Path(existing_account.info.home).is_dir()
@@ -183,13 +190,21 @@ def test_user_present_usergroup_true(modules, states, username, user_home, group
     assert group_name == group_1.name
 
 
+def _check_skip(grains):
+    if grains["os"] == "MacOS":
+        return True
+    return False
+
+
 @pytest.mark.skipif(
     ANSI_FILESYSTEM_ENCODING,
     reason=(
-        "A system encoding which supports Unicode characters must be set. Current setting is: {}. "
-        "Try setting $LANG='en_US.UTF-8'".format(ANSI_FILESYSTEM_ENCODING)
+        "A system encoding which supports Unicode characters must be set. "
+        f"Current setting is: {sys.getfilesystemencoding()}. "
+        "Try setting $LANG='en_US.UTF-8'"
     ),
 )
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_user_present_unicode(states, username, subtests):
     """
     It ensures that unicode GECOS data will be properly handled, without
@@ -212,6 +227,7 @@ def test_user_present_unicode(states, username, subtests):
             roomnumber="①②③",
             workphone="١٢٣٤",
             homephone="६७८",
+            remove_groups=False,
         )
         assert ret.result is True
 
@@ -362,3 +378,53 @@ def test_user_present_existing(states, username):
     assert ret.changes["profile"] == win_profile
     assert "description" in ret.changes
     assert ret.changes["description"] == win_description
+
+
+@pytest.mark.skip_unless_on_linux(reason="underlying functionality only runs on Linux")
+def test_user_present_change_groups(modules, states, username, group_1, group_2):
+    ret = states.user.present(
+        name=username,
+        groups=[group_1.name, group_2.name],
+    )
+    assert ret.result is True
+
+    user_info = modules.user.info(username)
+    assert user_info
+    assert user_info["groups"] == [group_2.name, group_1.name]
+
+    # run again and remove group_2
+    ret = states.user.present(
+        name=username,
+        groups=[group_1.name],
+    )
+    assert ret.result is True
+
+    user_info = modules.user.info(username)
+    assert user_info
+    assert user_info["groups"] == [group_1.name]
+
+
+@pytest.mark.skip_unless_on_linux(reason="underlying functionality only runs on Linux")
+def test_user_present_change_optional_groups(
+    modules, states, username, group_1, group_2
+):
+    ret = states.user.present(
+        name=username,
+        optional_groups=[group_1.name, group_2.name],
+    )
+    assert ret.result is True
+
+    user_info = modules.user.info(username)
+    assert user_info
+    assert user_info["groups"] == [group_2.name, group_1.name]
+
+    # run again and remove group_2
+    ret = states.user.present(
+        name=username,
+        optional_groups=[group_1.name],
+    )
+    assert ret.result is True
+
+    user_info = modules.user.info(username)
+    assert user_info
+    assert user_info["groups"] == [group_1.name]

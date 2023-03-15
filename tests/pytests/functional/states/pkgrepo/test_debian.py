@@ -4,16 +4,14 @@ import os
 import pathlib
 import shutil
 import sys
+from sysconfig import get_path
 
 import _pytest._version
+import attr
 import pytest
+
 import salt.utils.files
 from tests.conftest import CODE_DIR
-
-try:
-    from sysconfig import get_python_lib  # pylint: disable=no-name-in-module
-except ImportError:
-    from distutils.sysconfig import get_python_lib
 
 PYTEST_GE_7 = getattr(_pytest._version, "version_tuple", (-1, -1)) >= (7, 0)
 
@@ -52,7 +50,7 @@ def test_adding_repo_file(pkgrepo, tmp_path):
 
 
 @pytest.mark.requires_salt_states("pkgrepo.managed")
-def test_adding_repo_file_arch(pkgrepo, tmp_path):
+def test_adding_repo_file_arch(pkgrepo, tmp_path, subtests):
     """
     test adding a repo file using pkgrepo.managed
     and setting architecture
@@ -65,6 +63,35 @@ def test_adding_repo_file_arch(pkgrepo, tmp_path):
         assert (
             file_content.strip()
             == "deb [arch=amd64] http://www.deb-multimedia.org stable main"
+        )
+    with subtests.test("With multiple archs"):
+        repo_content = (
+            "deb [arch=amd64,i386  ] http://www.deb-multimedia.org stable main"
+        )
+        pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
+        with salt.utils.files.fopen(repo_file, "r") as fp:
+            file_content = fp.read()
+            assert (
+                file_content.strip()
+                == "deb [arch=amd64,i386] http://www.deb-multimedia.org stable main"
+            )
+
+
+@pytest.mark.requires_salt_states("pkgrepo.managed")
+def test_adding_repo_file_cdrom(pkgrepo, tmp_path):
+    """
+    test adding a repo file using pkgrepo.managed
+    The issue is that CDROM installs often have [] in the line, and we
+    should still add the repo even though it's not setting arch(for example)
+    """
+    repo_file = str(tmp_path / "cdrom.list")
+    repo_content = "deb cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ stable main"
+    pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
+    with salt.utils.files.fopen(repo_file, "r") as fp:
+        file_content = fp.read()
+        assert (
+            file_content.strip()
+            == "deb cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ stable main"
         )
 
 
@@ -108,7 +135,9 @@ def system_aptsources(request, grains):
                     "{}".format(*sys.version_info),
                     "{}.{}".format(*sys.version_info),
                 ]
-                session_site_packages_dir = get_python_lib()
+                session_site_packages_dir = get_path(
+                    "purelib"
+                )  # note: platlib and purelib could differ
                 session_site_packages_dir = os.path.relpath(
                     session_site_packages_dir, str(CODE_DIR)
                 )
@@ -490,7 +519,33 @@ def test_repo_present_absent_trailing_slash_uri(pkgrepo, trailing_slash_repo_fil
     """
     test adding a repo with a trailing slash in the uri
     """
+    # with the trailing slash
     repo_content = "deb http://www.deb-multimedia.org/ stable main"
+    # initial creation
+    ret = pkgrepo.managed(
+        name=repo_content, file=trailing_slash_repo_file, refresh=False, clean_file=True
+    )
+    with salt.utils.files.fopen(trailing_slash_repo_file, "r") as fp:
+        file_content = fp.read()
+    assert file_content.strip() == "deb http://www.deb-multimedia.org/ stable main"
+    assert ret.changes
+    # no changes
+    ret = pkgrepo.managed(
+        name=repo_content, file=trailing_slash_repo_file, refresh=False
+    )
+    assert not ret.changes
+    # absent
+    ret = pkgrepo.absent(name=repo_content)
+    assert ret.result
+
+
+@pytest.mark.requires_salt_states("pkgrepo.managed", "pkgrepo.absent")
+def test_repo_present_absent_no_trailing_slash_uri(pkgrepo, trailing_slash_repo_file):
+    """
+    test adding a repo with a trailing slash in the uri
+    """
+    # without the trailing slash
+    repo_content = "deb http://www.deb-multimedia.org stable main"
     # initial creation
     ret = pkgrepo.managed(
         name=repo_content, file=trailing_slash_repo_file, refresh=False, clean_file=True
@@ -509,71 +564,227 @@ def test_repo_present_absent_trailing_slash_uri(pkgrepo, trailing_slash_repo_fil
     assert ret.result
 
 
+@pytest.mark.requires_salt_states("pkgrepo.managed", "pkgrepo.absent")
+def test_repo_present_absent_no_trailing_slash_uri_add_slash(
+    pkgrepo, trailing_slash_repo_file
+):
+    """
+    test adding a repo without a trailing slash, and then running it
+    again with a trailing slash.
+    """
+    # without the trailing slash
+    repo_content = "deb http://www.deb-multimedia.org stable main"
+    # initial creation
+    ret = pkgrepo.managed(
+        name=repo_content, file=trailing_slash_repo_file, refresh=False, clean_file=True
+    )
+    with salt.utils.files.fopen(trailing_slash_repo_file, "r") as fp:
+        file_content = fp.read()
+    assert file_content.strip() == "deb http://www.deb-multimedia.org stable main"
+    assert ret.changes
+    # now add a trailing slash in the name
+    repo_content = "deb http://www.deb-multimedia.org/ stable main"
+    ret = pkgrepo.managed(
+        name=repo_content, file=trailing_slash_repo_file, refresh=False
+    )
+    with salt.utils.files.fopen(trailing_slash_repo_file, "r") as fp:
+        file_content = fp.read()
+    assert file_content.strip() == "deb http://www.deb-multimedia.org/ stable main"
+    # absent
+    ret = pkgrepo.absent(name=repo_content)
+    assert ret.result
+
+
+@attr.s(kw_only=True)
+class Repo:
+    key_root = attr.ib(default=pathlib.Path("/usr", "share", "keyrings"))
+    signedby = attr.ib(default=False)
+    grains = attr.ib()
+    fullname = attr.ib()
+    alt_repo = attr.ib(init=False)
+    key_file = attr.ib()
+    sources_list_file = attr.ib()
+    repo_file = attr.ib()
+    repo_content = attr.ib()
+    key_url = attr.ib()
+
+    @fullname.default
+    def _default_fullname(self):
+        return self.grains["osfullname"].lower().split()[0]
+
+    @alt_repo.default
+    def _default_alt_repo(self):
+        """
+        Use an alternative repo, packages do not
+        exist for the OS on repo.saltproject.io
+        """
+        if (
+            self.grains["osfullname"] == "Ubuntu"
+            and self.grains["osrelease"] == "22.04"
+        ):
+            return True
+        return False
+
+    @key_file.default
+    def _default_key_file(self):
+        key_file = self.key_root / "salt-archive-keyring.gpg"
+        if self.alt_repo:
+            key_file = self.key_root / "elasticsearch-keyring.gpg"
+        key_file.parent.mkdir(exist_ok=True)
+        assert not key_file.is_file()
+        return key_file
+
+    @repo_file.default
+    def _default_repo_file(self):
+        return self.sources_list_file
+
+    @repo_content.default
+    def _default_repo_content(self):
+        if self.alt_repo:
+            opts = " "
+            if self.signedby:
+                opts = " [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] "
+            repo_content = (
+                "deb{}https://artifacts.elastic.co/packages/8.x/apt stable main".format(
+                    opts
+                )
+            )
+        else:
+            opts = "[arch={arch}]".format(arch=self.grains["osarch"])
+            if self.signedby:
+                opts = "[arch={arch} signed-by=/usr/share/keyrings/salt-archive-keyring.gpg]".format(
+                    arch=self.grains["osarch"]
+                )
+            repo_content = "deb {opts} https://repo.saltproject.io/py3/{}/{}/{arch}/latest {} main".format(
+                self.fullname,
+                self.grains["osrelease"],
+                self.grains["oscodename"],
+                arch=self.grains["osarch"],
+                opts=opts,
+            )
+        return repo_content
+
+    @key_url.default
+    def _default_key_url(self):
+        key_url = "https://repo.saltproject.io/py3/{}/{}/{}/latest/salt-archive-keyring.gpg".format(
+            self.fullname, self.grains["osrelease"], self.grains["osarch"]
+        )
+
+        if self.alt_repo:
+            key_url = "https://artifacts.elastic.co/GPG-KEY-elasticsearch"
+        return key_url
+
+
 @pytest.fixture
-def key_path():
-    key_file = pathlib.Path("/usr", "share", "keyrings", "salt-archive-keyring.gpg")
-    assert not key_file.is_file()
-    yield key_file
-    key_file.unlink()
+def repo(request, grains, sources_list_file):
+    signedby = False
+    if "signedby" in request.node.name:
+        signedby = True
+    repo = Repo(grains=grains, sources_list_file=sources_list_file, signedby=signedby)
+    yield repo
+    for key in [repo.key_file, repo.key_file.parent / "salt-alt-key.gpg"]:
+        if key.is_file():
+            key.unlink()
 
 
-def test_adding_repo_file_signedby(pkgrepo, grains, states, tmp_path, key_path):
+def test_adding_repo_file_signedby(pkgrepo, states, repo, subtests):
     """
     Test adding a repo file using pkgrepo.managed
     and setting signedby
     """
-    repo_file = str(tmp_path / "stable-binary.list")
-    fullname = grains["osfullname"].lower().split()[0]
-    arch = grains["osarch"]
-    lsb_release = grains["lsb_distrib_release"]
-    key_file = "https://repo.saltproject.io/py3/{}/{}/{}/latest/salt-archive-keyring.gpg".format(
-        fullname, lsb_release, arch
-    )
-    repo_content = "deb [arch={arch} signed-by=/usr/share/keyrings/salt-archive-keyring.gpg] https://repo.saltproject.io/py3/{}/{}/{arch}/latest {} main".format(
-        fullname, lsb_release, grains["oscodename"], arch=arch
-    )
-    ret = states.pkgrepo.managed(
-        name=repo_content,
-        file=repo_file,
-        clean_file=True,
-        signedby=str(key_path),
-        key_url=key_file,
-        aptkey=False,
-    )
-    with salt.utils.files.fopen(repo_file, "r") as fp:
+
+    def _run(test=False):
+        return states.pkgrepo.managed(
+            name=repo.repo_content,
+            file=str(repo.repo_file),
+            clean_file=True,
+            signedby=str(repo.key_file),
+            key_url=repo.key_url,
+            aptkey=False,
+            test=test,
+        )
+
+    ret = _run()
+    with salt.utils.files.fopen(str(repo.repo_file), "r") as fp:
         file_content = fp.read()
-        assert file_content.strip() == repo_content
-    assert key_path.is_file()
+        assert file_content.strip() == repo.repo_content
+    assert repo.key_file.is_file()
+    assert repo.repo_content in ret.comment
+    with subtests.test("test=True"):
+        ret = _run(test=True)
+        assert ret.changes == {}
 
 
-def test_adding_repo_file_signedby_keyserver(
-    pkgrepo, grains, states, tmp_path, key_path
-):
+def test_adding_repo_file_signedby_keyserver(pkgrepo, states, repo):
     """
     Test adding a repo file using pkgrepo.managed
     and setting signedby with a keyserver
     """
-    repo_file = str(tmp_path / "stable-binary.list")
-    fullname = grains["osfullname"].lower().split()[0]
-    arch = grains["osarch"]
-    lsb_release = grains["lsb_distrib_release"]
-    key_file = "https://repo.saltproject.io/py3/{}/{}/{}/latest/salt-archive-keyring.gpg".format(
-        fullname, lsb_release, arch
-    )
-    repo_content = "deb [arch={arch} signed-by=/usr/share/keyrings/salt-archive-keyring.gpg] https://repo.saltproject.io/py3/{}/{}/{arch}/latest {} main".format(
-        fullname, lsb_release, grains["oscodename"], arch=arch
-    )
-
     ret = states.pkgrepo.managed(
-        name=repo_content,
-        file=repo_file,
+        name=repo.repo_content,
+        file=str(repo.repo_file),
         clean_file=True,
-        signedby=str(key_path),
+        signedby=str(repo.key_file),
         keyserver="keyserver.ubuntu.com",
         keyid="0E08A149DE57BFBE",
         aptkey=False,
     )
-    with salt.utils.files.fopen(repo_file, "r") as fp:
+    with salt.utils.files.fopen(str(repo.repo_file), "r") as fp:
+        file_content = fp.read()
+        assert file_content.strip() == repo.repo_content
+    assert repo.key_file.is_file()
+
+
+def test_adding_repo_file_keyserver_key_url(pkgrepo, states, repo):
+    """
+    Test adding a repo file using pkgrepo.managed
+    and a key_url.
+    """
+    ret = states.pkgrepo.managed(
+        name=repo.repo_content,
+        file=str(repo.repo_file),
+        clean_file=True,
+        keyserver="keyserver.ubuntu.com",
+        key_url=repo.key_url,
+    )
+    with salt.utils.files.fopen(str(repo.repo_file), "r") as fp:
+        file_content = fp.read()
+        assert file_content.strip() == repo.repo_content
+
+
+def test_adding_repo_file_signedby_alt_file(pkgrepo, states, repo):
+    """
+    Test adding a repo file using pkgrepo.managed
+    and setting signedby and then running again with
+    different key path.
+    """
+    ret = states.pkgrepo.managed(
+        name=repo.repo_content,
+        file=str(repo.repo_file),
+        clean_file=True,
+        key_url=repo.key_url,
+        aptkey=False,
+    )
+    with salt.utils.files.fopen(str(repo.repo_file), "r") as fp:
+        file_content = fp.read()
+        assert file_content.strip() == repo.repo_content
+    assert repo.key_file.is_file()
+    assert repo.repo_content in ret.comment
+
+    key_file = repo.key_file.parent / "salt-alt-key.gpg"
+    repo_content = "deb [arch=amd64 signed-by={}] https://repo.saltproject.io/py3/debian/10/amd64/latest buster main".format(
+        str(key_file)
+    )
+    ret = states.pkgrepo.managed(
+        name=repo_content,
+        file=str(repo.repo_file),
+        clean_file=True,
+        key_url=repo.key_url,
+        aptkey=False,
+    )
+    with salt.utils.files.fopen(str(repo.repo_file), "r") as fp:
         file_content = fp.read()
         assert file_content.strip() == repo_content
-    assert key_path.is_file()
+        assert file_content.endswith("\n")
+    assert key_file.is_file()
+    assert repo_content in ret.comment

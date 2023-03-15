@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.mac_user as mac_user
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, patch
@@ -67,9 +68,7 @@ def mock_info_ret():
     }
 
 
-@pytest.mark.skipif(
-    True, reason="Waiting on some clarifications from bug report #10594"
-)
+@pytest.mark.skip(reason="Waiting on some clarifications from bug report #10594")
 def _test_flush_dscl_cache():
     # TODO: Implement tests after clarifications come in
     pass

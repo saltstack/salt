@@ -11,6 +11,7 @@ import time
 import types
 
 import pytest
+
 import salt.utils.event
 import salt.utils.reactor
 from salt.serializers import yaml

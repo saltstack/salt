@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 from tests.support.mock import MagicMock, patch
 
 try:

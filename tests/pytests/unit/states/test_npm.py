@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.npm as npmmod
 import salt.states.npm as npm
 from salt.exceptions import CommandExecutionError

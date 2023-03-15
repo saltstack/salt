@@ -1,6 +1,7 @@
 # pylint: disable=import-error
 try:
     import pyrax
+
     from salt.utils.openstack.pyrax.authenticate import Authenticate
     from salt.utils.openstack.pyrax.queues import RackspaceQueues
 

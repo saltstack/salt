@@ -302,7 +302,6 @@ def new_set(name=None, set_type=None, family="ipv4", comment=False, **kwargs):
         IPv6:
         salt '*' ipset.new_set custom_set list:set family=ipv6
     """
-
     ipset_family = _IPSET_FAMILIES[family]
     if not name:
         return "Error: Set Name needs to be specified"
@@ -483,7 +482,7 @@ def add(name=None, entry=None, family="ipv4", **kwargs):
 
     settype = setinfo["Type"]
 
-    cmd = [_ipset_cmd(), "add", "-exist", name, entry]
+    cmd = [_ipset_cmd(), "add", "-exist", name] + entry.split()
 
     if "timeout" in kwargs:
         if "timeout" not in setinfo["Header"]:
@@ -497,7 +496,7 @@ def add(name=None, entry=None, family="ipv4", **kwargs):
         if "comment" not in setinfo["Header"]:
             return "Error: Set {} not created with comment support".format(name)
         if "comment" not in entry:
-            cmd = '{} comment "{}"'.format(cmd, kwargs["comment"])
+            cmd = cmd + ["comment", f"{kwargs['comment']}"]
 
     if {"skbmark", "skbprio", "skbqueue"} & set(kwargs.keys()):
         if "skbinfo" not in setinfo["Header"]:

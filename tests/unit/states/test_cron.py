@@ -24,6 +24,8 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "cron.list_tab": cronmod.list_tab,
                 "cron.rm_job": cronmod.rm_job,
                 "cron.set_job": cronmod.set_job,
+                "cron.rm_special": cronmod.rm_special,
+                "cron.set_special": cronmod.set_special,
             },
         }
         return {cron: loader_gloabals, cronmod: loader_gloabals}
@@ -131,6 +133,37 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             "# SALT_CRON_IDENTIFIER:2\n"
             "* 2 * * * foo\n"
             "* 2 * * * foo",
+        )
+
+    def test_present_special(self):
+        cron.present(name="foo", special="@hourly", identifier="1", user="root")
+        self.assertMultiLineEqual(
+            self.get_crontab(),
+            "# Lines below here are managed by Salt, do not edit\n"
+            "# SALT_CRON_IDENTIFIER:1\n"
+            "@hourly foo",
+        )
+
+    def test_present_special_after_unspecial(self):
+        """cron.present should remove an unspecial entry with the same identifier"""
+        cron.present(name="foo", hour="1", identifier="1", user="root")
+        cron.present(name="foo", special="@hourly", identifier="1", user="root")
+        self.assertMultiLineEqual(
+            self.get_crontab(),
+            "# Lines below here are managed by Salt, do not edit\n"
+            "# SALT_CRON_IDENTIFIER:1\n"
+            "@hourly foo",
+        )
+
+    def test_present_unspecial_after_special(self):
+        """cron.present should remove an special entry with the same identifier"""
+        cron.present(name="foo", special="@hourly", identifier="1", user="root")
+        cron.present(name="foo", hour="1", identifier="1", user="root")
+        self.assertMultiLineEqual(
+            self.get_crontab(),
+            "# Lines below here are managed by Salt, do not edit\n"
+            "# SALT_CRON_IDENTIFIER:1\n"
+            "* 1 * * * foo",
         )
 
     def test_remove(self):

@@ -38,11 +38,10 @@ from salt.exceptions import SaltInvocationError
 # pylint: disable=import-error
 try:
     # pylint: disable=import-error
-    import boto
     import boto3
-    import boto.exception
     import boto3.session
     import botocore  # pylint: disable=W0611
+    import botocore.exceptions
 
     # pylint: enable=import-error
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
@@ -202,7 +201,7 @@ def get_connection(
         conn = session.client(module)
         if conn is None:
             raise SaltInvocationError('Region "{}" is not valid.'.format(region))
-    except boto.exception.NoAuthHandlerFound:
+    except botocore.exceptions.NoCredentialsError:
         raise SaltInvocationError(
             "No authentication credentials found when "
             "attempting to make boto {} connection to "

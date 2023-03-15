@@ -1,1 +1,0 @@
-Fix SSH password regex to not search for content after password:.

@@ -4,6 +4,7 @@
 import textwrap
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.boto_sqs as boto_sqs
@@ -11,10 +12,9 @@ from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+def configure_loader_modules(minion_opts):
     utils = salt.loader.utils(
-        opts,
+        minion_opts,
         whitelist=["boto3", "yaml", "args", "systemd", "path", "platform"],
         context={},
     )

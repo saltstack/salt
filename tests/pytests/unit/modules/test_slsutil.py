@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.exceptions
 import salt.modules.slsutil as slsutil
 from tests.support.mock import MagicMock

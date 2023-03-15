@@ -1,21 +1,92 @@
 import copy
 import logging
-import sys
 
 import pytest
-import salt.config
+
 import salt.output.highstate as highstate
+import salt.utils.stringutils
 from tests.support.mock import patch
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def configure_loader_modules():
-    minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+def configure_loader_modules(minion_opts):
     minion_opts.update({"color": False, "state_output_pct": True})
     return {highstate: {"__opts__": minion_opts}}
+
+
+@pytest.fixture
+def json_data():
+    return {
+        "data": {
+            "master": {
+                "salt_|-call_sleep_state_|-call_sleep_state_|-state": {
+                    "__id__": "call_sleep_state",
+                    "__jid__": "20170418153529810135",
+                    "__run_num__": 0,
+                    "__sls__": "orch.simple",
+                    "changes": {
+                        "out": "highstate",
+                        "ret": {
+                            "minion": {
+                                "module_|-simple-ping_|-test.ping_|-run": {
+                                    "__id__": "simple-ping",
+                                    "__run_num__": 0,
+                                    "__sls__": "simple-ping",
+                                    "changes": {"ret": True},
+                                    "comment": "Module function test.ping executed",
+                                    "duration": 56.179,
+                                    "name": "test.ping",
+                                    "result": True,
+                                    "start_time": "15:35:31.282099",
+                                }
+                            },
+                            "sub_minion": {
+                                "module_|-simple-ping_|-test.ping_|-run": {
+                                    "__id__": "simple-ping",
+                                    "__run_num__": 0,
+                                    "__sls__": "simple-ping",
+                                    "changes": {"ret": True},
+                                    "comment": "Module function test.ping executed",
+                                    "duration": 54.103,
+                                    "name": "test.ping",
+                                    "result": True,
+                                    "start_time": "15:35:31.005606",
+                                }
+                            },
+                        },
+                    },
+                    "comment": (
+                        "States ran successfully. Updating sub_minion, minion."
+                    ),
+                    "duration": 1638.047,
+                    "name": "call_sleep_state",
+                    "result": True,
+                    "start_time": "15:35:29.762657",
+                },
+                "salt_|-cmd_run_example_|-cmd.run_|-function": {
+                    "__id__": "cmd_run_example",
+                    "__jid__": "20200411195112288850",
+                    "__run_num__": 1,
+                    "__sls__": "orch.simple",
+                    "changes": {
+                        "out": "highstate",
+                        "ret": {"minion": "file1\nfile2\nfile3"},
+                    },
+                    "comment": (
+                        "Function ran successfully. Function cmd.run ran on minion."
+                    ),
+                    "duration": 412.397,
+                    "name": "cmd.run",
+                    "result": True,
+                    "start_time": "21:51:12.185868",
+                },
+            }
+        },
+        "outputter": "highstate",
+        "retcode": 0,
+    }
 
 
 @pytest.mark.parametrize("data", [None, {"return": None}, {"return": {"data": None}}])
@@ -174,7 +245,6 @@ def test_pct_summary_output():
     assert "                  file2" in actual_output
 
 
-@skipIf(sys.version_info < (3, 6), "RIP Python 3.5")
 def test__compress_ids():
     """
     Tests for expected data return for _compress_ids
@@ -743,3 +813,107 @@ def test_summary_output():
     # The three main states were not run in parallel and slept for
     # 10 seconds each so the total run time should around 30 seconds
     assert "Total run time:  30.025 s" in actual_output
+
+
+def test_default_output(json_data):
+    ret = highstate.output(json_data)
+    assert "Succeeded: 1 (changed=1)" in ret
+    assert "Failed:    0" in ret
+    assert "Total states run:     1" in ret
+    assert "                  file2" in ret
+
+
+def test_output_comment_is_not_unicode(json_data):
+    entry = None
+    for key in (
+        "data",
+        "master",
+        "salt_|-call_sleep_state_|-call_sleep_state_|-state",
+        "changes",
+        "ret",
+        "minion",
+        "module_|-simple-ping_|-test.ping_|-run",
+    ):
+        if entry is None:
+            entry = json_data[key]
+            continue
+        entry = entry[key]
+    entry["comment"] = salt.utils.stringutils.to_bytes(entry["comment"])
+    ret = highstate.output(json_data)
+    assert "Succeeded: 1 (changed=1)" in ret
+    assert "Failed:    0" in ret
+    assert "Total states run:     1" in ret
+    assert "                  file2" in ret
+
+
+def test_nested_output():
+    nested_data = {
+        "outputter": "highstate",
+        "data": {
+            "local_master": {
+                "salt_|-nested_|-state.orchestrate_|-runner": {
+                    "comment": "Runner function 'state.orchestrate' executed.",
+                    "name": "state.orchestrate",
+                    "start_time": "09:22:53.158742",
+                    "result": True,
+                    "duration": 980.694,
+                    "__run_num__": 0,
+                    "__jid__": "20180326092253538853",
+                    "__sls__": "orch.test.nested",
+                    "changes": {
+                        "return": {
+                            "outputter": "highstate",
+                            "data": {
+                                "local_master": {
+                                    "test_|-always-passes-with-changes_|-oinaosf_|-succeed_with_changes": {
+                                        "comment": "Success!",
+                                        "name": "oinaosf",
+                                        "start_time": "09:22:54.128415",
+                                        "result": True,
+                                        "duration": 0.437,
+                                        "__run_num__": 0,
+                                        "__sls__": "orch.test.changes",
+                                        "changes": {
+                                            "testing": {
+                                                "new": (
+                                                    "Something pretended to change"
+                                                ),
+                                                "old": "Unchanged",
+                                            }
+                                        },
+                                        "__id__": "always-passes-with-changes",
+                                    },
+                                    "test_|-always-passes_|-fasdfasddfasdfoo_|-succeed_without_changes": {
+                                        "comment": "Success!",
+                                        "name": "fasdfasddfasdfoo",
+                                        "start_time": "09:22:54.128986",
+                                        "result": True,
+                                        "duration": 0.25,
+                                        "__run_num__": 1,
+                                        "__sls__": "orch.test.changes",
+                                        "changes": {},
+                                        "__id__": "always-passes",
+                                    },
+                                }
+                            },
+                            "retcode": 0,
+                        }
+                    },
+                    "__id__": "nested",
+                }
+            }
+        },
+        "retcode": 0,
+    }
+
+    ret = highstate.output(nested_data)
+    assert "Succeeded: 1 (changed=1)" in ret
+    assert "Failed:    0" in ret
+    assert "Total states run:     1" in ret
+
+    # the whitespace is relevant in this case, it is testing that it is nested
+    assert "                        ID: always-passes-with-changes" in ret
+    assert "                   Started: 09:22:54.128415" in ret
+    assert "              Succeeded: 2 (changed=1)" in ret
+    assert "              Failed:    0" in ret
+    assert "              Total states run:     2" in ret

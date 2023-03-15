@@ -6,6 +6,7 @@
 """
 
 import pytest
+
 import salt.states.win_pki as win_pki
 from tests.support.mock import MagicMock, patch
 

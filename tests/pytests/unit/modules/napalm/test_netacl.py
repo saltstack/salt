@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.napalm_netacl as napalm_acl
 import tests.support.napalm as napalm_test_support
 from tests.support.mock import MagicMock, patch

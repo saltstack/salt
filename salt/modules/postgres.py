@@ -16,6 +16,14 @@ Module to provide Postgres compatibility to salt.
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar
 
+To prevent Postgres commands from running arbitrarily long, a timeout (in seconds) can be set
+
+    .. code-block:: yaml
+
+        postgres.timeout: 60
+
+    .. versionadded:: 3006.0
+
 :note: This module uses MD5 hashing which may not be compliant with certain
     security audits.
 
@@ -49,7 +57,7 @@ import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.saslprep import saslprep
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import LooseVersion
 
 try:
     import csv
@@ -68,6 +76,7 @@ log = logging.getLogger(__name__)
 
 
 _DEFAULT_PASSWORDS_ENCRYPTION = "md5"
+_DEFAULT_COMMAND_TIMEOUT_SECS = 0
 _EXTENSION_NOT_INSTALLED = "EXTENSION NOT INSTALLED"
 _EXTENSION_INSTALLED = "EXTENSION INSTALLED"
 _EXTENSION_TO_UPGRADE = "EXTENSION TO UPGRADE"
@@ -154,6 +163,9 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
     kwargs = {
         "reset_system_locale": False,
         "clean_env": True,
+        "timeout": __salt__["config.option"](
+            "postgres.timeout", default=_DEFAULT_COMMAND_TIMEOUT_SECS
+        ),
     }
     if runas is None:
         if not host:
@@ -254,7 +266,13 @@ def _run_initdb(
             __salt__["file.chown"](pgpassfile, runas, "")
         cmd.extend(["--pwfile={}".format(pgpassfile)])
 
-    kwargs = dict(runas=runas, clean_env=True)
+    kwargs = dict(
+        runas=runas,
+        clean_env=True,
+        timeout=__salt__["config.option"](
+            "postgres.timeout", default=_DEFAULT_COMMAND_TIMEOUT_SECS
+        ),
+    )
     cmdstr = " ".join([pipes.quote(c) for c in cmd])
     ret = __salt__["cmd.run_all"](cmdstr, python_shell=False, **kwargs)
 
@@ -318,7 +336,7 @@ def _parsed_version(
     )
 
     if psql_version:
-        return _LooseVersion(psql_version)
+        return LooseVersion(psql_version)
     else:
         log.warning(
             "Attempt to parse version of Postgres server failed. "
@@ -980,11 +998,11 @@ def user_list(
         runas=runas,
     )
     if ver:
-        if ver >= _LooseVersion("9.1"):
+        if ver >= LooseVersion("9.1"):
             replication_column = "pg_roles.rolreplication"
         else:
             replication_column = "NULL"
-        if ver >= _LooseVersion("9.5"):
+        if ver >= LooseVersion("9.5"):
             rolcatupdate_column = "NULL"
         else:
             rolcatupdate_column = "pg_roles.rolcatupdate"
@@ -1205,7 +1223,7 @@ def _verify_password(role, password, verifier, method):
 
 def _md5_password(role, password):
     return "md5{}".format(
-        hashlib.md5(
+        hashlib.md5(  # nosec
             salt.utils.stringutils.to_bytes("{}{}".format(password, role))
         ).hexdigest()
     )
@@ -1772,11 +1790,11 @@ def is_available_extension(
 
 def _pg_is_older_ext_ver(a, b):
     """
-    Compare versions of extensions using salt.utils.versions.LooseVersion.
+    Compare versions of extensions using `looseversion.LooseVersion`.
 
     Returns ``True`` if version a is lesser than b.
     """
-    return _LooseVersion(a) < _LooseVersion(b)
+    return LooseVersion(a) < LooseVersion(b)
 
 
 def is_installed_extension(
@@ -2787,7 +2805,7 @@ def _make_privileges_list_query(name, object_type, prepend):
                     "ON n.oid = c.relnamespace",
                     "WHERE nspname = '{0}'",
                     "AND relname = '{1}'",
-                    "AND relkind = 'r'",
+                    "AND relkind in ('r', 'v')",
                     "ORDER BY relname",
                 ]
             )
@@ -2946,6 +2964,8 @@ def _get_object_owner(
                     "FROM pg_catalog.pg_proc p",
                     "JOIN pg_catalog.pg_namespace n",
                     "ON n.oid = p.pronamespace",
+                    "JOIN pg_catalog.pg_roles r",
+                    "ON p.proowner = r.oid",
                     "WHERE nspname = '{0}'",
                     "AND p.oid::regprocedure::text = '{1}'",
                     "ORDER BY proname, proargtypes",

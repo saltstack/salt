@@ -380,8 +380,8 @@ import os
 import salt.utils.yaml
 
 try:
-    from mako.lookup import TemplateLookup
     from mako import exceptions
+    from mako.lookup import TemplateLookup
 
     HAS_MAKO = True
 except ImportError:

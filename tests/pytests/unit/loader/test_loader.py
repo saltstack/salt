@@ -9,6 +9,7 @@ import shutil
 import textwrap
 
 import pytest
+
 import salt.loader
 import salt.loader.lazy
 
@@ -35,22 +36,20 @@ def grains_dir(tmp_path):
         shutil.rmtree(tmp_path)
 
 
-def test_grains():
+def test_grains(minion_opts):
     """
     Load grains.
     """
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    grains = salt.loader.grains(opts, force_refresh=True)
+    grains = salt.loader.grains(minion_opts, force_refresh=True)
     assert "saltversion" in grains
 
 
-def test_custom_grain_with_annotations(grains_dir):
+def test_custom_grain_with_annotations(minion_opts, grains_dir):
     """
     Load custom grain with annotations.
     """
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    opts["grains_dirs"] = [grains_dir]
-    grains = salt.loader.grains(opts, force_refresh=True)
+    minion_opts["grains_dirs"] = [grains_dir]
+    grains = salt.loader.grains(minion_opts, force_refresh=True)
     assert grains.get("example") == "42"
 
 

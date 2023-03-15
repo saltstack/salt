@@ -8,13 +8,11 @@
 import logging
 
 import salt.utils.json
+import salt.utils.vt_helper
 from salt.utils.vt import TerminalException
-from salt.utils.vt_helper import SSHConnection
 
 # This must be present or the Salt loader won't load this module
 __proxyenabled__ = ["ssh_sample"]
-
-DETAILS = {}
 
 log = logging.getLogger(__file__)
 
@@ -36,13 +34,13 @@ def init(opts):
     Can be used to initialize the server connection.
     """
     try:
-        DETAILS["server"] = SSHConnection(
+        __context__["server"] = salt.utils.vt_helper.SSHConnection(
             host=__opts__["proxy"]["host"],
             username=__opts__["proxy"]["username"],
             password=__opts__["proxy"]["password"],
         )
-        out, err = DETAILS["server"].sendline("help")
-        DETAILS["initialized"] = True
+        out, err = __context__["server"].sendline("help")
+        __context__["initialized"] = True
 
     except TerminalException as e:
         log.error(e)
@@ -55,7 +53,7 @@ def initialized():
     places occur before the proxy can be initialized, return whether
     our init() function has been called
     """
-    return DETAILS.get("initialized", False)
+    return __context__.get("initialized", False)
 
 
 def grains():
@@ -63,23 +61,23 @@ def grains():
     Get the grains from the proxied device
     """
 
-    if not DETAILS.get("grains_cache", {}):
+    if not __context__.get("grains_cache", {}):
         cmd = "info"
 
         # Send the command to execute
-        out, err = DETAILS["server"].sendline(cmd)
+        out, err = __context__["server"].sendline(cmd)
 
         # "scrape" the output and return the right fields as a dict
-        DETAILS["grains_cache"] = parse(out)
+        __context__["grains_cache"] = parse(out)
 
-    return DETAILS["grains_cache"]
+    return __context__["grains_cache"]
 
 
 def grains_refresh():
     """
     Refresh the grains from the proxied device
     """
-    DETAILS["grains_cache"] = None
+    __context__["grains_cache"] = None
     return grains()
 
 
@@ -101,7 +99,7 @@ def ping():
     Ping the device on the other end of the connection
     """
     try:
-        out, err = DETAILS["server"].sendline("help")
+        out, err = __context__["server"].sendline("help")
         return True
     except TerminalException as e:
         log.error(e)
@@ -112,7 +110,7 @@ def shutdown(opts):
     """
     Disconnect
     """
-    DETAILS["server"].close_connection()
+    __context__["server"].close_connection()
 
 
 def parse(out):
@@ -146,7 +144,7 @@ def package_list():
 
     """
     # Send the command to execute
-    out, err = DETAILS["server"].sendline("pkg_list\n")
+    out, err = __context__["server"].sendline("pkg_list\n")
 
     # "scrape" the output and return the right fields as a dict
     return parse(out)
@@ -161,7 +159,7 @@ def package_install(name, **kwargs):
         cmd += " " + kwargs["version"]
 
     # Send the command to execute
-    out, err = DETAILS["server"].sendline(cmd)
+    out, err = __context__["server"].sendline(cmd)
 
     # "scrape" the output and return the right fields as a dict
     return parse(out)
@@ -174,7 +172,7 @@ def package_remove(name):
     cmd = "pkg_remove " + name
 
     # Send the command to execute
-    out, err = DETAILS["server"].sendline(cmd)
+    out, err = __context__["server"].sendline(cmd)
 
     # "scrape" the output and return the right fields as a dict
     return parse(out)
@@ -189,7 +187,7 @@ def service_list():
     cmd = "ps"
 
     # Send the command to execute
-    out, err = DETAILS["server"].sendline(cmd)
+    out, err = __context__["server"].sendline(cmd)
 
     # "scrape" the output and return the right fields as a dict
     return parse(out)
@@ -204,7 +202,7 @@ def service_start(name):
     cmd = "start " + name
 
     # Send the command to execute
-    out, err = DETAILS["server"].sendline(cmd)
+    out, err = __context__["server"].sendline(cmd)
 
     # "scrape" the output and return the right fields as a dict
     return parse(out)
@@ -219,7 +217,7 @@ def service_stop(name):
     cmd = "stop " + name
 
     # Send the command to execute
-    out, err = DETAILS["server"].sendline(cmd)
+    out, err = __context__["server"].sendline(cmd)
 
     # "scrape" the output and return the right fields as a dict
     return parse(out)
@@ -234,7 +232,7 @@ def service_restart(name):
     cmd = "restart " + name
 
     # Send the command to execute
-    out, err = DETAILS["server"].sendline(cmd)
+    out, err = __context__["server"].sendline(cmd)
 
     # "scrape" the output and return the right fields as a dict
     return parse(out)

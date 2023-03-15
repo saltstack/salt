@@ -60,8 +60,8 @@ from salt.exceptions import SaltCacheError
 try:
     # Trying to import MySQLdb
     import MySQLdb
-    import MySQLdb.cursors
     import MySQLdb.converters
+    import MySQLdb.cursors
     from MySQLdb.connections import OperationalError
 except ImportError:
     try:
@@ -70,8 +70,8 @@ except ImportError:
 
         pymysql.install_as_MySQLdb()
         import MySQLdb
-        import MySQLdb.cursors
         import MySQLdb.converters
+        import MySQLdb.cursors
         from MySQLdb.err import OperationalError
     except ImportError:
         MySQLdb = None

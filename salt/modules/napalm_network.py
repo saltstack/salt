@@ -219,7 +219,7 @@ def _config_logic(
         # will discard the config
         if loaded_result["comment"]:
             loaded_result["comment"] += "\n"
-        if not len(loaded_result.get("diff", "")) > 0:
+        if not loaded_result.get("diff", ""):
             loaded_result["already_configured"] = True
         discarded = _safe_dicard_config(loaded_result, napalm_device)
         if not discarded["result"]:
@@ -239,7 +239,7 @@ def _config_logic(
             removed = cancel_commit(commit_jid)
             log.debug("Cleaned up the commit from the schedule")
             log.debug(removed["comment"])
-        if len(loaded_result.get("diff", "")) > 0:
+        if loaded_result.get("diff", ""):
             # if not testing mode
             # and also the user wants to commit (default)
             # and there are changes to commit

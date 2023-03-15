@@ -1,25 +1,37 @@
 =============
-Release Notes
+Release notes
 =============
 
-See the :ref:`version numbers<version-numbers>` page for more
-information about the version numbering scheme.
+This page links to the release notes for Salt, including the current, upcoming,
+and past releases.
 
-Latest Branch Release
-=====================
+* New releases and security updates are announced on the
+  `Salt Project blog <https://saltproject.io/blog/>`_. You can subscribe to an
+  `RSS feed <https://saltproject.io/rss-feeds/>`_ for announcements.
+* See the :ref:`version numbers<version-numbers>` page for more information
+  about the version numbering scheme.
 
-.. after carbon releases, replace :ref:`Release Candidate` with the following:
-   |current_release_doc|
 
-:ref:`Release Candidate <release-candidate>`
+Upcoming release
+================
 
-Previous Releases
+.. releasestree::
+    :maxdepth: 1
+    :glob:
+
+    3006.*
+
+See `Install a release candidate <https://docs.saltproject.io/salt/install-guide/en/latest/topics/release-candidate.html>`_
+for more information about installing an RC when one is available.
+
+Previous releases
 =================
 
 .. releasestree::
     :maxdepth: 1
     :glob:
 
+    3005*
     3004*
     3003*
     3002*
@@ -36,14 +48,6 @@ Previous Releases
     2014.1.*
     0.*
 
-Upcoming Release
-================
-
-.. releasestree::
-    :maxdepth: 1
-    :glob:
-
-    3005*
 
 .. seealso:: :ref:`Legacy salt-cloud release docs <legacy-salt-cloud-release-notes>`
 

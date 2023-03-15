@@ -539,7 +539,7 @@ def create_task(
 
     .. code-block:: bash
 
-        salt 'minion-id' task.create_task <task_name> user_name=System force=True action_type=Execute cmd='del /Q /S C:\\Temp' trigger_type=Once start_date=2016-12-1 start_time=01:00
+        salt 'minion-id' task.create_task <task_name> user_name=System force=True action_type=Execute cmd='del /Q /S C:\\Temp' trigger_type=Once start_date=2016-12-1 start_time='"01:00"'
     """
     # Check for existing task
     if name in list_tasks(location) and not force:
@@ -676,7 +676,7 @@ def create_task_from_xml(
 
         except pythoncom.com_error as error:
             hr, msg, exc, arg = error.args  # pylint: disable=W0633
-            error_code = hex(exc[5] + 2 ** 32)
+            error_code = hex(exc[5] + 2**32)
             fc = {
                 0x80041319: "Required element or attribute missing",
                 0x80041318: "Value incorrectly formatted or out of range",

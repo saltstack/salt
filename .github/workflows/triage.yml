@@ -1,19 +1,34 @@
+---
 name: New Issues Triage Assignment
 concurrency: 1
 on:
   issues:
     types: [opened]
 
+
+env:
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+
+
+permissions:
+  contents: read
+
 jobs:
   label-and-assign:
+    permissions:
+      actions: read  # for dawidd6/action-download-artifact to query and download artifacts
+      contents: read  # for actions/checkout to fetch code
+      issues: write
+      pull-requests: read  # for dawidd6/action-download-artifact to query commit hash
     name: Triage New Issue
     runs-on: ubuntu-latest
     steps:
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.8
 
@@ -42,7 +57,7 @@ jobs:
             --issue ${{ github.event.issue.number }}
 
       - name: Upload last assignment cache
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: last-assignment
           path: .cache

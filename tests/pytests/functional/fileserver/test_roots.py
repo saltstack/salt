@@ -1,5 +1,5 @@
 import pytest
-import salt.config
+
 import salt.fileserver.roots as roots
 from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
@@ -10,21 +10,14 @@ pytestmark = [
 
 
 @pytest.fixture(scope="function")
-def configure_loader_modules(base_env_state_tree_root_dir, tmp_path):
-    cachedir = tmp_path / "__salt_test_fileserver_roots_cache_dir"
-    cachedir.mkdir(parents=True, exist_ok=True)
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    opts["cachedir"] = str(cachedir)
-    opts["file_roots"]["base"] = [str(base_env_state_tree_root_dir)]
-    return {roots: {"__opts__": opts}}
+def configure_loader_modules(minion_opts):
+    return {roots: {"__opts__": minion_opts}}
 
 
 # nox -e pytest-zeromq-3.8(coverage=False) -- -vvv --run-slow --run-destructive tests\pytests\functional\fileserver\test_roots.py
-def test_symlink_list(base_env_state_tree_root_dir):
-    with pytest.helpers.temp_file(
-        "target", "data", base_env_state_tree_root_dir
-    ) as target:
-        link = base_env_state_tree_root_dir / "link"
+def test_symlink_list(state_tree):
+    with pytest.helpers.temp_file("target", "data", state_tree) as target:
+        link = state_tree / "link"
         link.symlink_to(str(target))
         ret = roots.symlink_list({"saltenv": "base"})
         assert ret == {"link": str(target)}
@@ -34,15 +27,11 @@ def test_symlink_list(base_env_state_tree_root_dir):
     "env",
     ("base", "something-else", "cool_path_123", "__env__"),
 )
-def test_fileserver_roots_find_file_envs_path_substitution(
-    env, temp_salt_minion, tmp_path
-):
+def test_fileserver_roots_find_file_envs_path_substitution(env, minion_opts, tmp_path):
     """
     Test fileserver access to a dynamic path using __env__
     """
     fn = "test.txt"
-    opts = temp_salt_minion.config.copy()
-
     if env == "__env__":
         # __env__ saltenv will pass "dynamic" as saltenv and
         # expect to be routed to the "dynamic" directory
@@ -65,10 +54,10 @@ def test_fileserver_roots_find_file_envs_path_substitution(
     expected["path"] = str(filepath)
 
     # Stop using OrderedDict once we drop Py3.5 support
-    opts["file_roots"] = OrderedDict()
-    opts["file_roots"][env] = [str(tmp_path / leaf_dir)]
+    minion_opts["file_roots"] = OrderedDict()
+    minion_opts["file_roots"][env] = [str(tmp_path / leaf_dir)]
 
-    with patch("salt.fileserver.roots.__opts__", opts, create=True):
+    with patch("salt.fileserver.roots.__opts__", minion_opts, create=True):
         ret = roots.find_file(fn, saltenv=actual_env)
     ret.pop("stat")
     assert ret == expected
@@ -78,7 +67,7 @@ def test_fileserver_roots_find_file_envs_path_substitution(
     "saltenv", ("base", "something-else", "cool_path_123", "__env__")
 )
 def test_fileserver_roots__file_lists_envs_path_substitution(
-    saltenv, temp_salt_minion, tmp_path
+    saltenv, tmp_path, minion_opts
 ):
     """
     Test fileserver access to a dynamic path using __env__
@@ -88,7 +77,6 @@ def test_fileserver_roots__file_lists_envs_path_substitution(
     # It doesn't really matter what it is - expected saltenv and not expected
     # saltenv
     # The filenames should be different, because cache lists the filenames.
-    opts = temp_salt_minion.config.copy()
     other_env = "something_completely_different"
     other_filename = "different.txt"
     expected_filename = "test.txt"
@@ -113,10 +101,10 @@ def test_fileserver_roots__file_lists_envs_path_substitution(
     (otherpath / other_filename).touch()
 
     # Stop using OrderedDict once we drop Py3.5 support
-    opts["file_roots"] = OrderedDict()
-    opts["file_roots"]["__env__"] = [str(file_roots)]
+    minion_opts["file_roots"] = OrderedDict()
+    minion_opts["file_roots"]["__env__"] = [str(file_roots)]
 
-    with patch("salt.fileserver.roots.__opts__", opts, create=True):
+    with patch("salt.fileserver.roots.__opts__", minion_opts, create=True):
         # actual_env is our target. The other env doesn't really matter, but
         # it should be different than our expected one and also contain its
         # own file(s)

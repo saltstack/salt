@@ -1,7 +1,8 @@
 import pytest
+from saltfactories.utils import random_string
+
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_reg as win_reg
-from saltfactories.utils import random_string
 from tests.support.mock import patch
 
 pytestmark = [

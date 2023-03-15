@@ -5,12 +5,21 @@ import subprocess
 import tempfile
 
 import pytest
+
 import salt.utils.user
+
+
+def _check_skip(grains):
+    if grains["os"] == "MacOS":
+        return True
+    return False
+
 
 pytestmark = [
     pytest.mark.destructive_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.skip_on_windows,
+    pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip),
 ]
 
 

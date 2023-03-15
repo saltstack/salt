@@ -38,7 +38,7 @@ This says that Salt's pillar should load some values for the proxy ``p8000``
 from the file ``/srv/pillar/p8000.sls`` (if you have not changed your default pillar_roots)
 
 3. In the pillar root for your base environment, create the ``p8000.sls`` file with the
-   following contents: 
+   following contents:
 
 
 .. code-block:: yaml
@@ -76,6 +76,6 @@ from the file ``/srv/pillar/p8000.sls`` (if you have not changed your default pi
 
 8. The SSH shell implements a degenerately simple pkg.
    To "install" a package, use a standard
-   ``pkg.install``.  If you pass '==' and a verrsion number after the package
+   ``pkg.install``.  If you pass '==' and a version number after the package
    name then the service will parse that and accept that as the package's
    version.

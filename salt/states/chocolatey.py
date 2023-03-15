@@ -456,7 +456,9 @@ def upgraded(
     return ret
 
 
-def source_present(name, source_location, username=None, password=None, force=False):
+def source_present(
+    name, source_location, username=None, password=None, force=False, priority=None
+):
     """
     Instructs Chocolatey to add a source if not already present.
 
@@ -478,6 +480,12 @@ def source_present(name, source_location, username=None, password=None, force=Fa
         Salt will not modify a existing repository with the same name. Set this
         option to true to update an existing repository.
 
+    priority
+        The priority order of this source as compared to other sources,
+        lower is better. Defaults to 0 (no priority). All priorities
+        above 0 will be evaluated first, then zero-based values will be
+        evaluated in config file order.
+
     CLI Example:
 
     .. code-block:: yaml
@@ -488,6 +496,7 @@ def source_present(name, source_location, username=None, password=None, force=Fa
             - source: https://repo.exemple.com
             - username: myuser
             - password: mypassword
+            - priority: 100
     """
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
@@ -516,7 +525,11 @@ def source_present(name, source_location, username=None, password=None, force=Fa
 
     # Add the source
     result = __salt__["chocolatey.add_source"](
-        name=name, source_location=source_location, username=username, password=password
+        name=name,
+        source_location=source_location,
+        username=username,
+        password=password,
+        priority=priority,
     )
 
     if "Running chocolatey failed" not in result:

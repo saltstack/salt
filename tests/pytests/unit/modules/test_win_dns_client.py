@@ -6,6 +6,7 @@
 import types
 
 import pytest
+
 import salt.modules.win_dns_client as win_dns_client
 import salt.utils.stringutils
 from tests.support.mock import MagicMock, Mock, patch
@@ -55,9 +56,8 @@ class Mockwinapi:
 @pytest.fixture
 def configure_loader_modules():
     mock_pythoncom = types.ModuleType(salt.utils.stringutils.to_str("pythoncom"))
-    sys_modules_patcher = patch.dict("sys.modules", {"pythoncom": mock_pythoncom})
-    sys_modules_patcher.start()
-    return {win_dns_client: {"wmi": wmi}}
+    with patch.dict("sys.modules", {"pythoncom": mock_pythoncom}):
+        yield {win_dns_client: {"wmi": wmi}}
 
 
 def test_get_dns_servers():

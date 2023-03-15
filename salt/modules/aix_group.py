@@ -33,7 +33,7 @@ def __virtual__():
     )
 
 
-def add(name, gid=None, system=False, root=None):
+def add(name, gid=None, system=False, root=None, **kwargs):
     """
     Add the specified group
 

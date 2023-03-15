@@ -7,6 +7,7 @@ import urllib.error
 import urllib.request
 
 import pytest
+
 import salt.modules.cmdmod as cmd
 import salt.modules.virtualenv_mod
 import salt.modules.zcbuildout as buildout
@@ -16,7 +17,7 @@ import salt.utils.platform
 from tests.support.helpers import patched_environ
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 KNOWN_VIRTUALENV_BINARY_NAMES = (
     "virtualenv",
@@ -126,10 +127,7 @@ class Base(TestCase, LoaderModuleMockMixin):
             shutil.rmtree(self.tdir)
 
 
-@skipIf(
-    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-    "The 'virtualenv' packaged needs to be installed",
-)
+@pytest.mark.skip_if_binaries_missing(*KNOWN_VIRTUALENV_BINARY_NAMES, check_all=False)
 @pytest.mark.requires_network
 class BuildoutTestCase(Base):
     @pytest.mark.slow_test
@@ -199,7 +197,6 @@ class BuildoutTestCase(Base):
     def test_get_bootstrap_url(self):
         for path in [
             os.path.join(self.tdir, "var/ver/1/dumppicked"),
-            os.path.join(self.tdir, "var/ver/1/bootstrap"),
             os.path.join(self.tdir, "var/ver/1/versions"),
         ]:
             self.assertEqual(
@@ -210,7 +207,6 @@ class BuildoutTestCase(Base):
         for path in [
             os.path.join(self.tdir, "/non/existing"),
             os.path.join(self.tdir, "var/ver/2/versions"),
-            os.path.join(self.tdir, "var/ver/2/bootstrap"),
             os.path.join(self.tdir, "var/ver/2/default"),
         ]:
             self.assertEqual(
@@ -223,7 +219,6 @@ class BuildoutTestCase(Base):
     def test_get_buildout_ver(self):
         for path in [
             os.path.join(self.tdir, "var/ver/1/dumppicked"),
-            os.path.join(self.tdir, "var/ver/1/bootstrap"),
             os.path.join(self.tdir, "var/ver/1/versions"),
         ]:
             self.assertEqual(
@@ -232,7 +227,6 @@ class BuildoutTestCase(Base):
         for path in [
             os.path.join(self.tdir, "/non/existing"),
             os.path.join(self.tdir, "var/ver/2/versions"),
-            os.path.join(self.tdir, "var/ver/2/bootstrap"),
             os.path.join(self.tdir, "var/ver/2/default"),
         ]:
             self.assertEqual(
@@ -249,8 +243,16 @@ class BuildoutTestCase(Base):
             "",
             buildout._get_bootstrap_content(os.path.join(self.tdir, "var", "tb", "1")),
         )
+
+        if (
+            salt.utils.platform.is_windows()
+            and os.environ.get("GITHUB_ACTIONS_PIPELINE", "0") == "0"
+        ):
+            line_break = "\r\n"
+        else:
+            line_break = "\n"
         self.assertEqual(
-            "foo{}".format(os.linesep),
+            f"foo{line_break}",
             buildout._get_bootstrap_content(os.path.join(self.tdir, "var", "tb", "2")),
         )
 
@@ -326,10 +328,7 @@ class BuildoutTestCase(Base):
         self.assertEqual(time2, time3)
 
 
-@skipIf(
-    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-    "The 'virtualenv' packaged needs to be installed",
-)
+@pytest.mark.skip_if_binaries_missing(*KNOWN_VIRTUALENV_BINARY_NAMES, check_all=False)
 @pytest.mark.requires_network
 class BuildoutOnlineTestCase(Base):
     @classmethod

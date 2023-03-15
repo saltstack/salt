@@ -2,6 +2,7 @@ import ctypes
 import multiprocessing
 
 import pytest
+
 import salt.crypt
 import salt.master
 import salt.utils.stringutils

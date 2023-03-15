@@ -15,6 +15,7 @@ import time
 
 import jinja2
 import jinja2.exceptions
+
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.odict

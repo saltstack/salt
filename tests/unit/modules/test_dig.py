@@ -1,12 +1,12 @@
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-
+import pytest
 
 import salt.modules.dig as dig
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 _SPF_VALUES = {
     "dig +short xmission.com TXT": {
@@ -42,7 +42,7 @@ def _spf_side_effect(key, python_shell=False):
     )
 
 
-@skipIf(dig.__virtual__() is False, "Dig must be installed")
+@pytest.mark.skipif(dig.__virtual__() is False, reason="Dig must be installed")
 class DigTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {dig: {}}
@@ -93,6 +93,23 @@ class DigTestCase(TestCase, LoaderModuleMockMixin):
                     "74.125.193.106",
                     "74.125.193.103",
                     "74.125.193.147",
+                ],
+            )
+
+    def test_ptr(self):
+        dig_mock = MagicMock(
+            return_value={
+                "pid": 3657,
+                "retcode": 0,
+                "stderr": "",
+                "stdout": ("dns.google."),
+            }
+        )
+        with patch.dict(dig.__salt__, {"cmd.run_all": dig_mock}):
+            self.assertEqual(
+                dig.ptr("8.8.8.8"),
+                [
+                    "dns.google.",
                 ],
             )
 

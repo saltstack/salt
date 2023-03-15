@@ -9,8 +9,8 @@
 
 # Salt testing libs
 try:
-    from tests.support.mock import MagicMock, patch
     from salt.exceptions import CommandExecutionError
+    from tests.support.mock import MagicMock, patch
 except ImportError:
     pass
 

@@ -231,23 +231,22 @@ import pprint
 import socket
 
 import salt.config as config
-import salt.utils.versions
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout,
     SaltCloudSystemExit,
 )
+from salt.utils.versions import Version
 
 try:
-    import shade
-    import shade.openstackcloud
-    import shade.exc
     import os_client_config
+    import shade
+    import shade.exc
+    import shade.openstackcloud
 
     HAS_SHADE = (
-        salt.utils.versions._LooseVersion(shade.__version__)
-        >= salt.utils.versions._LooseVersion("1.19.0"),
+        Version(shade.__version__) >= Version("1.19.0"),
         "Please install newer version of shade: >= 1.19.0",
     )
 except ImportError:

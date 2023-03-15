@@ -24,12 +24,13 @@ import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 
 try:
+    from ctypes import windll
+
     import pywintypes
     import win32api
     import win32con
     import win32net
     import wmi
-    from ctypes import windll
 
     HAS_WIN32NET_MODS = True
 except ImportError:
@@ -507,16 +508,16 @@ def get_system_info():
 
     def byte_calc(val):
         val = float(val)
-        if val < 2 ** 10:
+        if val < 2**10:
             return "{:.3f}B".format(val)
-        elif val < 2 ** 20:
-            return "{:.3f}KB".format(val / 2 ** 10)
-        elif val < 2 ** 30:
-            return "{:.3f}MB".format(val / 2 ** 20)
-        elif val < 2 ** 40:
-            return "{:.3f}GB".format(val / 2 ** 30)
+        elif val < 2**20:
+            return "{:.3f}KB".format(val / 2**10)
+        elif val < 2**30:
+            return "{:.3f}MB".format(val / 2**20)
+        elif val < 2**40:
+            return "{:.3f}GB".format(val / 2**30)
         else:
-            return "{:.3f}TB".format(val / 2 ** 40)
+            return "{:.3f}TB".format(val / 2**40)
 
     # Lookup dicts for Win32_OperatingSystem
     os_type = {1: "Work Station", 2: "Domain Controller", 3: "Server"}

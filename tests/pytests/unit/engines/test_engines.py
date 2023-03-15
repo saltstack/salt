@@ -1,4 +1,5 @@
 import pytest
+
 import salt.engines
 from tests.support.mock import MagicMock, patch
 

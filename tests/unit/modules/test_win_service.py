@@ -3,16 +3,18 @@
 """
 
 import pytest
+
 import salt.modules.win_service as win_service
 import salt.utils.path
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
-    WINAPI = True
-    import win32serviceutil
     import pywintypes
+    import win32serviceutil
+
+    WINAPI = True
 except ImportError:
     WINAPI = False
 
@@ -130,7 +132,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                 {"Patrick the Starfish": "patrick"},
             )
 
-    @skipIf(not WINAPI, "win32serviceutil not available")
+    @pytest.mark.skipif(not WINAPI, reason="win32serviceutil not available")
     @pytest.mark.slow_test
     def test_start(self):
         """
@@ -160,7 +162,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(win_service.start("spongebob"))
 
-    @skipIf(not WINAPI, "pywintypes not available")
+    @pytest.mark.skipif(not WINAPI, reason="pywintypes not available")
     def test_start_already_running(self):
         """
         Test starting a service that is already running
@@ -175,7 +177,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(win_service, "_status_wait", mock_info):
             self.assertTrue(win_service.start("spongebob"))
 
-    @skipIf(not WINAPI, "win32serviceutil not available")
+    @pytest.mark.skipif(not WINAPI, reason="win32serviceutil not available")
     @pytest.mark.slow_test
     def test_stop(self):
         """
@@ -203,7 +205,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(win_service, "status", mock_false):
             self.assertTrue(win_service.stop("spongebob"))
 
-    @skipIf(not WINAPI, "pywintypes not available")
+    @pytest.mark.skipif(not WINAPI, reason="pywintypes not available")
     def test_stop_not_running(self):
         """
         Test stopping a service that is already stopped
@@ -262,7 +264,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_service.__salt__, {"task.run": mock_true}):
             self.assertTrue(win_service.execute_salt_restart_task())
 
-    @skipIf(not WINAPI, "win32serviceutil not available")
+    @pytest.mark.skipif(not WINAPI, reason="win32serviceutil not available")
     def test_status(self):
         """
         Test to return the status for a service

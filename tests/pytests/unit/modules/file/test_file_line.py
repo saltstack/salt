@@ -7,6 +7,7 @@ import os
 import shutil
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
@@ -111,20 +112,23 @@ def test_set_line_should_raise_command_execution_error_with_unknown_mode():
     assert str(err.value) == "Unknown mode: fnord"
 
 
-def test_if_content_is_none_and_mode_is_valid_but_not_delete_it_should_raise_command_execution_error():
-    valid_modes = ("insert", "ensure", "replace")
-    for mode in valid_modes:
-        with pytest.raises(CommandExecutionError) as err:
-            filemod._set_line(lines=[], mode=mode)
-        assert str(err.value) == "Content can only be empty if mode is delete"
+@pytest.mark.parametrize("mode", ("insert", "ensure", "replace"))
+def test_if_content_is_none_and_mode_is_valid_but_not_delete_it_should_raise_command_execution_error(
+    mode,
+):
+    with pytest.raises(CommandExecutionError) as err:
+        filemod._set_line(lines=[], mode=mode)
+    assert str(err.value) == "Content can only be empty if mode is delete"
 
 
-def test_if_delete_or_replace_is_called_with_empty_lines_it_should_warn_and_return_empty_body():
-    for mode in ("delete", "replace"):
-        with patch("salt.modules.file.log.warning", MagicMock()) as fake_warn:
-            actual_lines = filemod._set_line(mode=mode, lines=[], content="roscivs")
-            assert actual_lines == []
-            fake_warn.assert_called_with("Cannot find text to %s. File is empty.", mode)
+@pytest.mark.parametrize("mode", ("delete", "replace"))
+def test_if_delete_or_replace_is_called_with_empty_lines_it_should_warn_and_return_empty_body(
+    mode,
+):
+    with patch("salt.modules.file.log.warning", MagicMock()) as fake_warn:
+        actual_lines = filemod._set_line(mode=mode, lines=[], content="roscivs")
+        assert actual_lines == []
+        fake_warn.assert_called_with("Cannot find text to %s. File is empty.", mode)
 
 
 def test_if_mode_is_delete_and_not_before_after_or_match_then_content_should_be_used_to_delete_line():
@@ -296,64 +300,68 @@ def test_if_location_is_end_of_file_and_indent_is_True_then_line_should_match_pr
     assert actual_lines == expected_lines
 
 
-def test_if_location_is_not_set_but_before_and_after_are_then_line_should_appear_as_the_line_before_before():
-    for indent in ("", " \t \t\t\t      "):
-        content = "roscivs"
-        after = "after"
-        before = "before"
-        original_lines = ["foo", "bar", indent + after, "belowme", indent + before]
-        expected_lines = [
-            "foo",
-            "bar",
-            indent + after,
-            "belowme",
-            indent + content,
-            indent + before,
-        ]
+@pytest.mark.parametrize("indent", ("", " \t \t\t\t      "))
+def test_if_location_is_not_set_but_before_and_after_are_then_line_should_appear_as_the_line_before_before(
+    indent,
+):
+    content = "roscivs"
+    after = "after"
+    before = "before"
+    original_lines = ["foo", "bar", indent + after, "belowme", indent + before]
+    expected_lines = [
+        "foo",
+        "bar",
+        indent + after,
+        "belowme",
+        indent + content,
+        indent + before,
+    ]
 
-        actual_lines = filemod._set_line(
-            lines=original_lines,
-            content=content,
-            mode="insert",
-            location=None,
-            before=before,
-            after=after,
-        )
+    actual_lines = filemod._set_line(
+        lines=original_lines,
+        content=content,
+        mode="insert",
+        location=None,
+        before=before,
+        after=after,
+    )
 
-        assert actual_lines == expected_lines
+    assert actual_lines == expected_lines
 
 
-def test_insert_with_after_and_before_with_no_location_should_indent_to_match_before_indent():
-    for indent in ("", " \t \t\t\t      "):
-        content = "roscivs"
-        after = "after"
-        before = "before"
-        original_lines = [
-            "foo",
-            "bar",
-            indent + after,
-            "belowme",
-            (indent * 2) + before,
-        ]
-        expected_lines = [
-            "foo",
-            "bar",
-            indent + after,
-            "belowme",
-            (indent * 2) + content,
-            (indent * 2) + before,
-        ]
+@pytest.mark.parametrize("indent", ("", " \t \t\t\t      "))
+def test_insert_with_after_and_before_with_no_location_should_indent_to_match_before_indent(
+    indent,
+):
+    content = "roscivs"
+    after = "after"
+    before = "before"
+    original_lines = [
+        "foo",
+        "bar",
+        indent + after,
+        "belowme",
+        (indent * 2) + before,
+    ]
+    expected_lines = [
+        "foo",
+        "bar",
+        indent + after,
+        "belowme",
+        (indent * 2) + content,
+        (indent * 2) + before,
+    ]
 
-        actual_lines = filemod._set_line(
-            lines=original_lines,
-            content=content,
-            mode="insert",
-            location=None,
-            before=before,
-            after=after,
-        )
+    actual_lines = filemod._set_line(
+        lines=original_lines,
+        content=content,
+        mode="insert",
+        location=None,
+        before=before,
+        after=after,
+    )
 
-        assert actual_lines == expected_lines
+    assert actual_lines == expected_lines
 
 
 def test_if_not_location_but_before_and_after_and_more_than_one_after_it_should_CommandExecutionError():
@@ -778,83 +786,83 @@ def test_ensure_with_too_many_lines_between_before_and_after_should_CommandExecu
     )
 
 
-def test_ensure_with_no_lines_between_before_and_after_should_insert_a_line():
-    for indent in ("", " \t \t\t\t      "):
-        before = "before"
-        after = "after"
-        content = "roscivs"
-        original_lines = [indent + after, before]
-        expected_lines = [indent + after, indent + content, before]
+@pytest.mark.parametrize("indent", ("", " \t \t\t\t      "))
+def test_ensure_with_no_lines_between_before_and_after_should_insert_a_line(indent):
+    before = "before"
+    after = "after"
+    content = "roscivs"
+    original_lines = [indent + after, before]
+    expected_lines = [indent + after, indent + content, before]
 
-        actual_lines = filemod._set_line(
-            lines=original_lines,
-            content=content,
-            before=before,
-            after=after,
-            mode="ensure",
-            indent=True,
-        )
+    actual_lines = filemod._set_line(
+        lines=original_lines,
+        content=content,
+        before=before,
+        after=after,
+        mode="ensure",
+        indent=True,
+    )
 
-        assert actual_lines == expected_lines
-
-
-def test_ensure_with_existing_but_different_line_should_set_the_line():
-    for indent in ("", " \t \t\t\t      "):
-        before = "before"
-        after = "after"
-        content = "roscivs"
-        original_lines = [indent + after, "fnord", before]
-        expected_lines = [indent + after, indent + content, before]
-
-        actual_lines = filemod._set_line(
-            lines=original_lines,
-            content=content,
-            before=before,
-            after=after,
-            mode="ensure",
-            indent=True,
-        )
-
-        assert actual_lines == expected_lines
+    assert actual_lines == expected_lines
 
 
-def test_ensure_with_after_and_existing_content_should_return_same_lines():
-    for indent in ("", " \t \t\t\t      "):
-        before = None
-        after = "after"
-        content = "roscivs"
-        original_lines = [indent + after, indent + content, "fnord"]
+@pytest.mark.parametrize("indent", ("", " \t \t\t\t      "))
+def test_ensure_with_existing_but_different_line_should_set_the_line(indent):
+    before = "before"
+    after = "after"
+    content = "roscivs"
+    original_lines = [indent + after, "fnord", before]
+    expected_lines = [indent + after, indent + content, before]
 
-        actual_lines = filemod._set_line(
-            lines=original_lines,
-            content=content,
-            before=before,
-            after=after,
-            mode="ensure",
-            indent=True,
-        )
+    actual_lines = filemod._set_line(
+        lines=original_lines,
+        content=content,
+        before=before,
+        after=after,
+        mode="ensure",
+        indent=True,
+    )
 
-        assert actual_lines == original_lines
+    assert actual_lines == expected_lines
 
 
-def test_ensure_with_after_and_missing_content_should_add_it():
-    for indent in ("", " \t \t\t\t      "):
-        before = None
-        after = "after"
-        content = "roscivs"
-        original_lines = [indent + after, "more fnord", "fnord"]
-        expected_lines = [indent + after, indent + content, "more fnord", "fnord"]
+@pytest.mark.parametrize("indent", ("", " \t \t\t\t      "))
+def test_ensure_with_after_and_existing_content_should_return_same_lines(indent):
+    before = None
+    after = "after"
+    content = "roscivs"
+    original_lines = [indent + after, indent + content, "fnord"]
 
-        actual_lines = filemod._set_line(
-            lines=original_lines,
-            content=content,
-            before=before,
-            after=after,
-            mode="ensure",
-            indent=True,
-        )
+    actual_lines = filemod._set_line(
+        lines=original_lines,
+        content=content,
+        before=before,
+        after=after,
+        mode="ensure",
+        indent=True,
+    )
 
-        assert actual_lines == expected_lines
+    assert actual_lines == original_lines
+
+
+@pytest.mark.parametrize("indent", ("", " \t \t\t\t      "))
+def test_ensure_with_after_and_missing_content_should_add_it(indent):
+    before = None
+    after = "after"
+    content = "roscivs"
+    original_lines = [indent + after, "more fnord", "fnord"]
+    expected_lines = [indent + after, indent + content, "more fnord", "fnord"]
+
+    actual_lines = filemod._set_line(
+        lines=original_lines,
+        content=content,
+        before=before,
+        after=after,
+        mode="ensure",
+        indent=True,
+    )
+
+    assert actual_lines == expected_lines
 
 
 def test_ensure_with_after_and_content_at_the_end_should_not_add_duplicate():
@@ -872,48 +880,48 @@ def test_ensure_with_after_and_content_at_the_end_should_not_add_duplicate():
     assert actual_lines == original_lines
 
 
-def test_ensure_with_before_and_missing_content_should_add_it():
-    for indent in ("", " \t \t\t\t      "):
-        before = "before"
-        after = None
-        content = "roscivs"
-        original_lines = [indent + "fnord", indent + "fnord", before]
-        expected_lines = [
-            indent + "fnord",
-            indent + "fnord",
-            indent + content,
-            before,
-        ]
+@pytest.mark.parametrize("indent", ("", " \t \t\t\t      "))
+def test_ensure_with_before_and_missing_content_should_add_it(indent):
+    before = "before"
+    after = None
+    content = "roscivs"
+    original_lines = [indent + "fnord", indent + "fnord", before]
+    expected_lines = [
+        indent + "fnord",
+        indent + "fnord",
+        indent + content,
+        before,
+    ]
 
-        actual_lines = filemod._set_line(
-            lines=original_lines,
-            content=content,
-            before=before,
-            after=after,
-            mode="ensure",
-            indent=True,
-        )
+    actual_lines = filemod._set_line(
+        lines=original_lines,
+        content=content,
+        before=before,
+        after=after,
+        mode="ensure",
+        indent=True,
+    )
 
-        assert actual_lines == expected_lines
+    assert actual_lines == expected_lines
 
 
-def test_ensure_with_before_and_existing_content_should_return_same_lines():
-    for indent in ("", " \t \t\t\t      "):
-        before = "before"
-        after = None
-        content = "roscivs"
-        original_lines = [indent + "fnord", indent + content, before]
+@pytest.mark.parametrize("indent", ("", " \t \t\t\t      "))
+def test_ensure_with_before_and_existing_content_should_return_same_lines(indent):
+    before = "before"
+    after = None
+    content = "roscivs"
+    original_lines = [indent + "fnord", indent + content, before]
 
-        actual_lines = filemod._set_line(
-            lines=original_lines,
-            content=content,
-            before=before,
-            after=after,
-            mode="ensure",
-            indent=True,
-        )
+    actual_lines = filemod._set_line(
+        lines=original_lines,
+        content=content,
+        before=before,
+        after=after,
+        mode="ensure",
+        indent=True,
+    )
 
-        assert actual_lines == original_lines
+    assert actual_lines == original_lines
 
 
 def test_ensure_without_before_and_after_should_CommandExecutionError():
@@ -936,9 +944,8 @@ def test_ensure_without_before_and_after_should_CommandExecutionError():
     )
 
 
-@patch("os.path.realpath", MagicMock(wraps=lambda x: x))
-@patch("os.path.isfile", MagicMock(return_value=True))
-def test_delete_line_in_empty_file(anyattr):
+@pytest.mark.parametrize("mode", ["delete", "replace"])
+def test_delete_line_in_empty_file(anyattr, mode):
     """
     Tests that when calling file.line with ``mode=delete``,
     the function doesn't stack trace if the file is empty.
@@ -946,7 +953,9 @@ def test_delete_line_in_empty_file(anyattr):
 
     See Issue #38438.
     """
-    for mode in ["delete", "replace"]:
+    with patch("os.path.realpath", MagicMock(wraps=lambda x: x)), patch(
+        "os.path.isfile", MagicMock(return_value=True)
+    ):
         _log = MagicMock()
         with patch("salt.utils.files.fopen", mock_open(read_data="")), patch(
             "os.stat", anyattr
@@ -959,10 +968,8 @@ def test_delete_line_in_empty_file(anyattr):
         assert "Cannot find text to {}".format(mode) in warning_log_msg
 
 
-@patch("os.path.realpath", MagicMock())
-@patch("os.path.isfile", MagicMock(return_value=True))
-@patch("os.stat", MagicMock())
-def test_line_delete_no_match():
+@pytest.mark.parametrize("mode", ["delete", "replace"])
+def test_line_delete_no_match(mode):
     """
     Tests that when calling file.line with ``mode=delete``,
     with not matching pattern to delete returns False
@@ -972,7 +979,9 @@ def test_line_delete_no_match():
         ["file_roots:", "  base:", "    - /srv/salt", "    - /srv/custom"]
     )
     match = "not matching"
-    for mode in ["delete", "replace"]:
+    with patch("os.path.realpath", MagicMock()), patch(
+        "os.path.isfile", MagicMock(return_value=True)
+    ), patch("os.stat", MagicMock()):
         files_fopen = mock_open(read_data=file_content)
         with patch("salt.utils.files.fopen", files_fopen):
             atomic_opener = mock_open()
@@ -980,46 +989,51 @@ def test_line_delete_no_match():
                 assert not filemod.line("foo", content="foo", match=match, mode=mode)
 
 
-@patch("os.path.realpath", MagicMock(wraps=lambda x: x))
-@patch("os.path.isfile", MagicMock(return_value=True))
-def test_line_modecheck_failure():
+@pytest.mark.parametrize(
+    "mode,err_msg",
+    [
+        (None, "How to process the file"),
+        ("nonsense", "Unknown mode"),
+    ],
+)
+def test_line_modecheck_failure(mode, err_msg):
     """
     Test for file.line for empty or wrong mode.
     Calls unknown or empty mode and expects failure.
     :return:
     """
-    for mode, err_msg in [
-        (None, "How to process the file"),
-        ("nonsense", "Unknown mode"),
-    ]:
+    with patch("os.path.realpath", MagicMock(wraps=lambda x: x)), patch(
+        "os.path.isfile", MagicMock(return_value=True)
+    ):
         with pytest.raises(CommandExecutionError) as exc_info:
             filemod.line("foo", mode=mode)
         assert err_msg in str(exc_info.value)
 
 
-@patch("os.path.realpath", MagicMock(wraps=lambda x: x))
-@patch("os.path.isfile", MagicMock(return_value=True))
-def test_line_no_content():
+@pytest.mark.parametrize("mode", ["insert", "ensure", "replace"])
+def test_line_no_content(mode):
     """
     Test for file.line for an empty content when not deleting anything.
     :return:
     """
-    for mode in ["insert", "ensure", "replace"]:
+    with patch("os.path.realpath", MagicMock(wraps=lambda x: x)), patch(
+        "os.path.isfile", MagicMock(return_value=True)
+    ):
         with pytest.raises(CommandExecutionError) as exc_info:
             filemod.line("foo", mode=mode)
         assert 'Content can only be empty if mode is "delete"' in str(exc_info.value)
 
 
-@patch("os.path.realpath", MagicMock(wraps=lambda x: x))
-@patch("os.path.isfile", MagicMock(return_value=True))
-@patch("os.stat", MagicMock())
 def test_line_insert_no_location_no_before_no_after():
     """
     Test for file.line for insertion but define no location/before/after.
     :return:
     """
-    files_fopen = mock_open(read_data="test data")
-    with patch("salt.utils.files.fopen", files_fopen):
+    with patch("os.path.realpath", MagicMock(wraps=lambda x: x)), patch(
+        "os.path.isfile", MagicMock(return_value=True)
+    ), patch("os.stat", MagicMock()), patch(
+        "salt.utils.files.fopen", mock_open(read_data="test data")
+    ):
         with pytest.raises(CommandExecutionError) as exc_info:
             filemod.line("foo", content="test content", mode="insert")
         assert '"location" or "before/after"' in str(exc_info.value)
@@ -1062,7 +1076,8 @@ def test_line_insert_after_no_pattern(tempfile_name, get_body):
         assert writelines_content[0] == expected, (writelines_content[0], expected)
 
 
-def test_line_insert_after_pattern(tempfile_name, get_body):
+@pytest.mark.parametrize("after_line", ["file_r.*", ".*roots"])
+def test_line_insert_after_pattern(tempfile_name, get_body, after_line):
     """
     Test for file.line for insertion after specific line, using pattern.
 
@@ -1095,37 +1110,36 @@ def test_line_insert_after_pattern(tempfile_name, get_body):
     isfile_mock = MagicMock(
         side_effect=lambda x: True if x == tempfile_name else DEFAULT
     )
-    for after_line in ["file_r.*", ".*roots"]:
-        with patch("os.path.isfile", isfile_mock), patch(
-            "os.stat", MagicMock(return_value=DummyStat())
-        ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
-            "salt.utils.atomicfile.atomic_open", mock_open()
-        ) as atomic_open_mock:
-            filemod.line(
-                tempfile_name,
-                content=cfg_content,
-                after=after_line,
-                mode="insert",
-                indent=False,
-            )
-            handles = atomic_open_mock.filehandles[tempfile_name]
-            # We should only have opened the file once
-            open_count = len(handles)
-            assert open_count == 1, open_count
-            # We should only have invoked .writelines() once...
-            writelines_content = handles[0].writelines_calls
-            writelines_count = len(writelines_content)
-            assert writelines_count == 1, writelines_count
-            # ... with the updated content
-            expected = get_body(file_modified)
-            # We passed cfg_content with a newline in the middle, so it
-            # will be written as two lines in the same element of the list
-            # passed to .writelines()
-            expected[3] = expected[3] + expected.pop(4)
-            assert writelines_content[0] == expected, (
-                writelines_content[0],
-                expected,
-            )
+    with patch("os.path.isfile", isfile_mock), patch(
+        "os.stat", MagicMock(return_value=DummyStat())
+    ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
+        "salt.utils.atomicfile.atomic_open", mock_open()
+    ) as atomic_open_mock:
+        filemod.line(
+            tempfile_name,
+            content=cfg_content,
+            after=after_line,
+            mode="insert",
+            indent=False,
+        )
+        handles = atomic_open_mock.filehandles[tempfile_name]
+        # We should only have opened the file once
+        open_count = len(handles)
+        assert open_count == 1, open_count
+        # We should only have invoked .writelines() once...
+        writelines_content = handles[0].writelines_calls
+        writelines_count = len(writelines_content)
+        assert writelines_count == 1, writelines_count
+        # ... with the updated content
+        expected = get_body(file_modified)
+        # We passed cfg_content with a newline in the middle, so it
+        # will be written as two lines in the same element of the list
+        # passed to .writelines()
+        expected[3] = expected[3] + expected.pop(4)
+        assert writelines_content[0] == expected, (
+            writelines_content[0],
+            expected,
+        )
 
 
 def test_line_insert_multi_line_content_after_unicode(tempfile_name, get_body):
@@ -1145,36 +1159,37 @@ def test_line_insert_multi_line_content_after_unicode(tempfile_name, get_body):
     isfile_mock = MagicMock(
         side_effect=lambda x: True if x == tempfile_name else DEFAULT
     )
-    for after_line in ["This is another line"]:
-        with patch("os.path.isfile", isfile_mock), patch(
-            "os.stat", MagicMock(return_value=DummyStat())
-        ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
-            "salt.utils.atomicfile.atomic_open", mock_open()
-        ) as atomic_open_mock:
-            filemod.line(
-                tempfile_name,
-                content=cfg_content,
-                after=after_line,
-                mode="insert",
-                indent=False,
-            )
-            handles = atomic_open_mock.filehandles[tempfile_name]
-            # We should only have opened the file once
-            open_count = len(handles)
-            assert open_count == 1, open_count
-            # We should only have invoked .writelines() once...
-            writelines_content = handles[0].writelines_calls
-            writelines_count = len(writelines_content)
-            assert writelines_count == 1, writelines_count
-            # ... with the updated content
-            expected = get_body(file_modified)
-            assert writelines_content[0] == expected, (
-                writelines_content[0],
-                expected,
-            )
+    after_line = "This is another line"
+    with patch("os.path.isfile", isfile_mock), patch(
+        "os.stat", MagicMock(return_value=DummyStat())
+    ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
+        "salt.utils.atomicfile.atomic_open", mock_open()
+    ) as atomic_open_mock:
+        filemod.line(
+            tempfile_name,
+            content=cfg_content,
+            after=after_line,
+            mode="insert",
+            indent=False,
+        )
+        handles = atomic_open_mock.filehandles[tempfile_name]
+        # We should only have opened the file once
+        open_count = len(handles)
+        assert open_count == 1, open_count
+        # We should only have invoked .writelines() once...
+        writelines_content = handles[0].writelines_calls
+        writelines_count = len(writelines_content)
+        assert writelines_count == 1, writelines_count
+        # ... with the updated content
+        expected = get_body(file_modified)
+        assert writelines_content[0] == expected, (
+            writelines_content[0],
+            expected,
+        )
 
 
-def test_line_insert_before(tempfile_name, get_body):
+@pytest.mark.parametrize("before_line", ["/srv/salt", "/srv/sa.*t"])
+def test_line_insert_before(tempfile_name, get_body, before_line):
     """
     Test for file.line for insertion before specific line, using pattern and no patterns.
 
@@ -1198,32 +1213,28 @@ def test_line_insert_before(tempfile_name, get_body):
     isfile_mock = MagicMock(
         side_effect=lambda x: True if x == tempfile_name else DEFAULT
     )
-    for before_line in ["/srv/salt", "/srv/sa.*t"]:
-        with patch("os.path.isfile", isfile_mock), patch(
-            "os.stat", MagicMock(return_value=DummyStat())
-        ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
-            "salt.utils.atomicfile.atomic_open", mock_open()
-        ) as atomic_open_mock:
-            filemod.line(
-                tempfile_name, content=cfg_content, before=before_line, mode="insert"
-            )
-            handles = atomic_open_mock.filehandles[tempfile_name]
-            # We should only have opened the file once
-            open_count = len(handles)
-            assert open_count == 1, open_count
-            # We should only have invoked .writelines() once...
-            writelines_content = handles[0].writelines_calls
-            writelines_count = len(writelines_content)
-            assert writelines_count == 1, writelines_count
-            # ... with the updated content
-            expected = get_body(file_modified)
-            # assert writelines_content[0] == expected, (writelines_content[0], expected)
-            assert writelines_content[0] == expected
+    with patch("os.path.isfile", isfile_mock), patch(
+        "os.stat", MagicMock(return_value=DummyStat())
+    ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
+        "salt.utils.atomicfile.atomic_open", mock_open()
+    ) as atomic_open_mock:
+        filemod.line(
+            tempfile_name, content=cfg_content, before=before_line, mode="insert"
+        )
+        handles = atomic_open_mock.filehandles[tempfile_name]
+        # We should only have opened the file once
+        open_count = len(handles)
+        assert open_count == 1, open_count
+        # We should only have invoked .writelines() once...
+        writelines_content = handles[0].writelines_calls
+        writelines_count = len(writelines_content)
+        assert writelines_count == 1, writelines_count
+        # ... with the updated content
+        expected = get_body(file_modified)
+        # assert writelines_content[0] == expected, (writelines_content[0], expected)
+        assert writelines_content[0] == expected
 
 
-@patch("os.path.realpath", MagicMock(wraps=lambda x: x))
-@patch("os.path.isfile", MagicMock(return_value=True))
-@patch("os.stat", MagicMock())
 def test_line_assert_exception_pattern():
     """
     Test for file.line for exception on insert with too general pattern.
@@ -1234,22 +1245,25 @@ def test_line_assert_exception_pattern():
         ["file_roots:", "  base:", "    - /srv/salt", "    - /srv/sugar"]
     )
     cfg_content = "- /srv/custom"
-    for before_line in ["/sr.*"]:
-        files_fopen = mock_open(read_data=file_content)
-        with patch("salt.utils.files.fopen", files_fopen):
-            atomic_opener = mock_open()
-            with patch("salt.utils.atomicfile.atomic_open", atomic_opener):
-                with pytest.raises(CommandExecutionError) as cm:
-                    filemod.line(
-                        "foo",
-                        content=cfg_content,
-                        before=before_line,
-                        mode="insert",
-                    )
-                assert (
-                    str(cm.value)
-                    == 'Found more than expected occurrences in "before" expression'
-                )
+    before_line = "/sr.*"
+    with patch("os.path.realpath", MagicMock(wraps=lambda x: x)), patch(
+        "os.path.isfile", MagicMock(return_value=True)
+    ), patch("os.stat", MagicMock()), patch(
+        "salt.utils.files.fopen", mock_open(read_data=file_content)
+    ), patch(
+        "salt.utils.atomicfile.atomic_open", mock_open()
+    ):
+        with pytest.raises(CommandExecutionError) as cm:
+            filemod.line(
+                "foo",
+                content=cfg_content,
+                before=before_line,
+                mode="insert",
+            )
+        assert (
+            str(cm.value)
+            == 'Found more than expected occurrences in "before" expression'
+        )
 
 
 def test_line_insert_before_after(tempfile_name, get_body):
@@ -1283,30 +1297,31 @@ def test_line_insert_before_after(tempfile_name, get_body):
     isfile_mock = MagicMock(
         side_effect=lambda x: True if x == tempfile_name else DEFAULT
     )
-    for b_line, a_line in [("/srv/sugar", "/srv/salt")]:
-        with patch("os.path.isfile", isfile_mock), patch(
-            "os.stat", MagicMock(return_value=DummyStat())
-        ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
-            "salt.utils.atomicfile.atomic_open", mock_open()
-        ) as atomic_open_mock:
-            filemod.line(
-                tempfile_name,
-                content=cfg_content,
-                before=b_line,
-                after=a_line,
-                mode="insert",
-            )
-            handles = atomic_open_mock.filehandles[tempfile_name]
-            # We should only have opened the file once
-            open_count = len(handles)
-            assert open_count == 1, open_count
-            # We should only have invoked .writelines() once...
-            writelines_content = handles[0].writelines_calls
-            writelines_count = len(writelines_content)
-            assert writelines_count == 1, writelines_count
-            # ... with the updated content
-            expected = get_body(file_modified)
-            assert writelines_content[0] == expected
+    b_line = "/srv/sugar"
+    a_line = "/srv/salt"
+    with patch("os.path.isfile", isfile_mock), patch(
+        "os.stat", MagicMock(return_value=DummyStat())
+    ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
+        "salt.utils.atomicfile.atomic_open", mock_open()
+    ) as atomic_open_mock:
+        filemod.line(
+            tempfile_name,
+            content=cfg_content,
+            before=b_line,
+            after=a_line,
+            mode="insert",
+        )
+        handles = atomic_open_mock.filehandles[tempfile_name]
+        # We should only have opened the file once
+        open_count = len(handles)
+        assert open_count == 1, open_count
+        # We should only have invoked .writelines() once...
+        writelines_content = handles[0].writelines_calls
+        writelines_count = len(writelines_content)
+        assert writelines_count == 1, writelines_count
+        # ... with the updated content
+        expected = get_body(file_modified)
+        assert writelines_content[0] == expected
 
 
 def test_line_insert_start(tempfile_name, get_body):
@@ -1644,9 +1659,6 @@ def test_line_insert_ensure_beforeafter_twolines_exists(tempfile_name):
             assert result is False
 
 
-@patch("os.path.realpath", MagicMock(wraps=lambda x: x))
-@patch("os.path.isfile", MagicMock(return_value=True))
-@patch("os.stat", MagicMock())
 def test_line_insert_ensure_beforeafter_rangelines():
     """
     Test for file.line for insertion ensuring the line is between two lines
@@ -1666,25 +1678,31 @@ def test_line_insert_ensure_beforeafter_rangelines():
         file_content.split(os.linesep)[-1],
     )
     for (_after, _before) in [(after, before), ("NAME_.*", "SKEL_.*")]:
-        files_fopen = mock_open(read_data=file_content)
-        with patch("salt.utils.files.fopen", files_fopen):
-            atomic_opener = mock_open()
-            with patch("salt.utils.atomicfile.atomic_open", atomic_opener):
-                with pytest.raises(CommandExecutionError) as exc_info:
-                    filemod.line(
-                        "foo",
-                        content=cfg_content,
-                        after=_after,
-                        before=_before,
-                        mode="ensure",
-                    )
-                assert (
-                    'Found more than one line between boundaries "before" and "after"'
-                    in str(exc_info.value)
+        with patch("os.path.realpath", MagicMock(wraps=lambda x: x)), patch(
+            "os.path.isfile", MagicMock(return_value=True)
+        ), patch("os.stat", MagicMock()), patch(
+            "salt.utils.files.fopen", mock_open(read_data=file_content)
+        ), patch(
+            "salt.utils.atomicfile.atomic_open", mock_open()
+        ):
+            with pytest.raises(CommandExecutionError) as exc_info:
+                filemod.line(
+                    "foo",
+                    content=cfg_content,
+                    after=_after,
+                    before=_before,
+                    mode="ensure",
                 )
+            assert (
+                'Found more than one line between boundaries "before" and "after"'
+                in str(exc_info.value)
+            )
 
 
-def test_line_delete(tempfile_name, get_body):
+@pytest.mark.parametrize(
+    "content", ["/srv/pepper", "/srv/pepp*", "/srv/p.*", "/sr.*pe.*"]
+)
+def test_line_delete(tempfile_name, get_body, content):
     """
     Test for file.line for deletion of specific line
     :return:
@@ -1705,31 +1723,33 @@ def test_line_delete(tempfile_name, get_body):
     isfile_mock = MagicMock(
         side_effect=lambda x: True if x == tempfile_name else DEFAULT
     )
-    for content in ["/srv/pepper", "/srv/pepp*", "/srv/p.*", "/sr.*pe.*"]:
-        files_fopen = mock_open(read_data=file_content)
-        with patch("os.path.isfile", isfile_mock), patch(
-            "os.stat", MagicMock(return_value=DummyStat())
-        ), patch("salt.utils.files.fopen", files_fopen), patch(
-            "salt.utils.atomicfile.atomic_open", mock_open()
-        ) as atomic_open_mock:
-            filemod.line(tempfile_name, content=content, mode="delete")
-            handles = atomic_open_mock.filehandles[tempfile_name]
-            # We should only have opened the file once
-            open_count = len(handles)
-            assert open_count == 1, open_count
-            # We should only have invoked .writelines() once...
-            writelines_content = handles[0].writelines_calls
-            writelines_count = len(writelines_content)
-            assert writelines_count == 1, writelines_count
-            # ... with the updated content
-            expected = get_body(file_modified)
-            assert writelines_content[0] == expected, (
-                writelines_content[0],
-                expected,
-            )
+    files_fopen = mock_open(read_data=file_content)
+    with patch("os.path.isfile", isfile_mock), patch(
+        "os.stat", MagicMock(return_value=DummyStat())
+    ), patch("salt.utils.files.fopen", files_fopen), patch(
+        "salt.utils.atomicfile.atomic_open", mock_open()
+    ) as atomic_open_mock:
+        filemod.line(tempfile_name, content=content, mode="delete")
+        handles = atomic_open_mock.filehandles[tempfile_name]
+        # We should only have opened the file once
+        open_count = len(handles)
+        assert open_count == 1, open_count
+        # We should only have invoked .writelines() once...
+        writelines_content = handles[0].writelines_calls
+        writelines_count = len(writelines_content)
+        assert writelines_count == 1, writelines_count
+        # ... with the updated content
+        expected = get_body(file_modified)
+        assert writelines_content[0] == expected, (
+            writelines_content[0],
+            expected,
+        )
 
 
-def test_line_replace(tempfile_name, get_body):
+@pytest.mark.parametrize(
+    "match", ["/srv/pepper", "/srv/pepp*", "/srv/p.*", "/sr.*pe.*"]
+)
+def test_line_replace(tempfile_name, get_body, match):
     """
     Test for file.line for replacement of specific line
     :return:
@@ -1756,30 +1776,29 @@ def test_line_replace(tempfile_name, get_body):
     isfile_mock = MagicMock(
         side_effect=lambda x: True if x == tempfile_name else DEFAULT
     )
-    for match in ["/srv/pepper", "/srv/pepp*", "/srv/p.*", "/sr.*pe.*"]:
-        files_fopen = mock_open(read_data=file_content)
-        with patch("os.path.isfile", isfile_mock), patch(
-            "os.stat", MagicMock(return_value=DummyStat())
-        ), patch("salt.utils.files.fopen", files_fopen), patch(
-            "salt.utils.atomicfile.atomic_open", mock_open()
-        ) as atomic_open_mock:
-            filemod.line(
-                tempfile_name,
-                content="- /srv/natrium-chloride",
-                match=match,
-                mode="replace",
-            )
-            handles = atomic_open_mock.filehandles[tempfile_name]
-            # We should only have opened the file once
-            open_count = len(handles)
-            assert open_count == 1, open_count
-            # We should only have invoked .writelines() once...
-            writelines_content = handles[0].writelines_calls
-            writelines_count = len(writelines_content)
-            assert writelines_count == 1, writelines_count
-            # ... with the updated content
-            expected = get_body(file_modified)
-            assert writelines_content[0] == expected, (
-                writelines_content[0],
-                expected,
-            )
+    files_fopen = mock_open(read_data=file_content)
+    with patch("os.path.isfile", isfile_mock), patch(
+        "os.stat", MagicMock(return_value=DummyStat())
+    ), patch("salt.utils.files.fopen", files_fopen), patch(
+        "salt.utils.atomicfile.atomic_open", mock_open()
+    ) as atomic_open_mock:
+        filemod.line(
+            tempfile_name,
+            content="- /srv/natrium-chloride",
+            match=match,
+            mode="replace",
+        )
+        handles = atomic_open_mock.filehandles[tempfile_name]
+        # We should only have opened the file once
+        open_count = len(handles)
+        assert open_count == 1, open_count
+        # We should only have invoked .writelines() once...
+        writelines_content = handles[0].writelines_calls
+        writelines_count = len(writelines_content)
+        assert writelines_count == 1, writelines_count
+        # ... with the updated content
+        expected = get_body(file_modified)
+        assert writelines_content[0] == expected, (
+            writelines_content[0],
+            expected,
+        )

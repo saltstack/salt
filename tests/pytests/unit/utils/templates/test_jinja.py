@@ -5,15 +5,13 @@ import os
 import re
 
 import pytest
-import salt.config
 from salt.exceptions import SaltRenderError
 from salt.utils.templates import render_jinja_tmpl
 
 
 @pytest.fixture
-def minion_opts(tmp_path):
-    _opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    _opts.update(
+def minion_opts(tmp_path, minion_opts):
+    minion_opts.update(
         {
             "cachedir": str(tmp_path / "jinja-template-cache"),
             "file_buffer_size": 1048576,
@@ -29,7 +27,7 @@ def minion_opts(tmp_path):
             ),
         }
     )
-    return _opts
+    return minion_opts
 
 
 @pytest.fixture
@@ -60,7 +58,7 @@ def test_jinja_undefined_error_context(minion_opts, local_salt):
     # exception was raised is to match on the initial wording of the exception
     # message.
     match_regex = re.compile(
-        fr"^Jinja variable .*; line .*{marker}$", re.DOTALL | re.MULTILINE
+        rf"^Jinja variable .*; line .*{marker}$", re.DOTALL | re.MULTILINE
     )
     with pytest.raises(SaltRenderError, match=match_regex):
         render_jinja_tmpl(

@@ -6,12 +6,12 @@ import pprint
 import textwrap
 
 import pytest
+
 import salt.utils.files
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 try:
     import M2Crypto  # pylint: disable=W0611
@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.usefixtures("salt_sub_minion")
-@skipIf(not HAS_M2CRYPTO, "Skip when no M2Crypto found")
+@pytest.mark.skipif(not HAS_M2CRYPTO, reason="Skip when no M2Crypto found")
 class x509Test(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def setUpClass(cls):

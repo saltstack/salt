@@ -7,6 +7,7 @@ import uuid
 
 import jinja2
 import pytest
+
 import salt.config
 import salt.state
 import salt.utils.files

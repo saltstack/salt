@@ -1,4 +1,5 @@
 import pytest
+
 from salt.ext.tornado.httpclient import HTTPError
 
 

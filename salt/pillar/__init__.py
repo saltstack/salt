@@ -81,6 +81,7 @@ def get_pillar(
             pillar_override=pillar_override,
             pillarenv=pillarenv,
             clean_cache=clean_cache,
+            extra_minion_data=extra_minion_data,
         )
     return ptype(
         opts,
@@ -419,6 +420,7 @@ class PillarCache:
         self.pillar_override = pillar_override
         self.pillarenv = pillarenv
         self.clean_cache = clean_cache
+        self.extra_minion_data = extra_minion_data
 
         if saltenv is None:
             self.saltenv = "base"
@@ -455,6 +457,7 @@ class PillarCache:
             functions=self.functions,
             pillar_override=self.pillar_override,
             pillarenv=self.pillarenv,
+            extra_minion_data=self.extra_minion_data,
         )
         return fresh_pillar.compile_pillar()
 
@@ -1140,8 +1143,8 @@ class Pillar:
             # the git ext_pillar() func is run, but only for masterless.
             if self.ext and "git" in self.ext and self.opts.get("__role") != "minion":
                 # Avoid circular import
-                import salt.utils.gitfs
                 import salt.pillar.git_pillar
+                import salt.utils.gitfs
 
                 git_pillar = salt.utils.gitfs.GitPillar(
                     self.opts,

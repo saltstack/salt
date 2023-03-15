@@ -22,7 +22,7 @@ Step 1 - Install Docker
 =======================
 
 Since setting up Docker is well covered in the Docker documentation we will
-make no such effort to describe it here. Please see the Docker Installation 
+make no such effort to describe it here. Please see the Docker Installation
 Documentation for installing and setting up Docker:
 https://docs.docker.com/engine/installation/
 
@@ -37,8 +37,8 @@ Step 2 - Install Salt
 =====================
 
 For this tutorial we will be using Salt Call, which is available in the
-`salt-minion` package, please follow the Salt Installation docs found here:
-https://repo.saltproject.io/
+`salt-minion` package, please follow the
+`Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`_.
 
 Step 3 - Create With Salt States
 ================================

@@ -1,1 +1,0 @@
-Fixed events stream from /events endpoint not halting when auth token has expired.

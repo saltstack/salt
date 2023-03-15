@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.modules.postfix as postfix
 from tests.support.mock import MagicMock, patch
 

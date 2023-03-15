@@ -4,9 +4,7 @@ Genshi Renderer for Salt
 
 
 try:
-    from genshi.template import MarkupTemplate
-    from genshi.template import NewTextTemplate
-    from genshi.template import OldTextTemplate
+    from genshi.template import MarkupTemplate, NewTextTemplate, OldTextTemplate
 
     HAS_LIBS = True
 except ImportError:

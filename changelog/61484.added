@@ -1,1 +1,0 @@
-Do not load a private copy of `__grains__` and `__salt__` for the sentry log handler if it is disabled.

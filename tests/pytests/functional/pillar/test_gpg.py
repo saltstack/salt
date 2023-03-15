@@ -6,9 +6,10 @@ import subprocess
 import textwrap
 
 import pytest
+from pytestshellutils.utils.processes import ProcessResult
+
 import salt.pillar
 import salt.utils.stringutils
-from pytestshellutils.utils.processes import ProcessResult
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("gpg"),

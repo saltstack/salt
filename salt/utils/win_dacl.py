@@ -146,10 +146,10 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 HAS_WIN32 = False
 try:
-    import win32security
-    import win32con
-    import win32api
     import pywintypes
+    import win32api
+    import win32con
+    import win32security
 
     HAS_WIN32 = True
 except ImportError:

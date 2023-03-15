@@ -8,9 +8,10 @@
 import collections
 
 import pytest
+
 from salt.cloud.clouds import gce
 from salt.exceptions import SaltCloudSystemExit
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mock import MagicMock
 from tests.support.mock import __version__ as mock_version
 from tests.support.mock import call, patch
@@ -48,26 +49,153 @@ def configure_loader_modules():
     }
 
 
-@pytest.fixture(scope="module")
-def location():
-    return collections.namedtuple("Location", "name")("chicago")
+@pytest.fixture(
+    params=[
+        {"expected": "", "image": ""},
+        {"expected": None, "image": None},
+        {"expected": "debian-10", "image": "debian-10"},
+    ]
+)
+def config_image(request):
+    return request.param["expected"], request.param["image"]
+
+
+@pytest.fixture(
+    params=[
+        {"expected": None, "label": "{}"},
+        {"expected": {"mylabel": "myvalue"}, "label": "{'mylabel': 'myvalue'}"},
+    ]
+)
+def config_labels(request):
+    return request.param["expected"], request.param["label"]
+
+
+@pytest.fixture(
+    params=[
+        {
+            "expected": collections.namedtuple("Location", "name")("chicago"),
+            "location": collections.namedtuple("Location", "name")("chicago"),
+        },
+    ]
+)
+def config_location(request):
+    return request.param["expected"], request.param["location"]
+
+
+@pytest.fixture(
+    params=[
+        {
+            "expected": {"items": [{"key": "salt-cloud-profile", "value": None}]},
+            "metadata": {},
+        },
+        {
+            "expected": {
+                "items": [
+                    {"key": "mykey", "value": "myvalue"},
+                    {"key": "salt-cloud-profile", "value": None},
+                ]
+            },
+            "metadata": "{'mykey': 'myvalue'}",
+        },
+    ]
+)
+def config_metadata(request):
+    return request.param["expected"], request.param["metadata"]
+
+
+@pytest.fixture(
+    params=[
+        {"expected": "mynetwork", "network": "mynetwork"},
+    ]
+)
+def config_network(request):
+    return request.param["expected"], request.param["network"]
+
+
+@pytest.fixture(
+    params=[
+        {"expected": "e2-standard-2", "size": "e2-standard-2"},
+    ]
+)
+def config_size(request):
+    return request.param["expected"], request.param["size"]
+
+
+@pytest.fixture(
+    params=[
+        {"expected": "mysubnetwork", "subnetwork": "mysubnetwork"},
+    ]
+)
+def config_subnetwork(request):
+    return request.param["expected"], request.param["subnetwork"]
+
+
+@pytest.fixture(
+    params=[
+        {"expected": None, "tag": "{}"},
+        {"expected": ["mytag", "myvalue"], "tag": "['mytag', 'myvalue']"},
+    ]
+)
+def config_tags(request):
+    return request.param["expected"], request.param["tag"]
 
 
 @pytest.fixture
-def config(location):
-
-    return {
+def config(
+    config_image,
+    config_labels,
+    config_location,
+    config_metadata,
+    config_network,
+    config_size,
+    config_subnetwork,
+    config_tags,
+):
+    expected_image, image = config_image
+    expected_labels, labels = config_labels
+    expected_location, location = config_location
+    expected_metadata, metadata = config_metadata
+    expected_network, network = config_network
+    expected_size, size = config_size
+    expected_subnetwork, subnetwork = config_subnetwork
+    expected_tags, tags = config_tags
+    expected_call_kwargs = {
+        "ex_disk_type": "pd-standard",
+        "ex_metadata": expected_metadata,
+        "ex_accelerator_count": 42,
+        "name": "new",
+        "ex_service_accounts": None,
+        "external_ip": "ephemeral",
+        "ex_accelerator_type": "foo",
+        "ex_tags": expected_tags,
+        "ex_labels": expected_labels,
+        "ex_disk_auto_delete": True,
+        "ex_network": expected_network,
+        "ex_disks_gce_struct": None,
+        "ex_preemptible": False,
+        "ex_can_ip_forward": False,
+        "ex_on_host_maintenance": "TERMINATE",
+        "location": expected_location,
+        "ex_subnetwork": expected_subnetwork,
+        "image": expected_image,
+        "size": expected_size,
+    }
+    config = {
         "name": "new",
         "driver": "gce",
         "profile": None,
-        "size": 1234,
-        "image": "myimage",
+        "size": size,
+        "image": image,
         "location": location,
-        "ex_network": "mynetwork",
-        "ex_subnetwork": "mysubnetwork",
-        "ex_tags": "mytags",
-        "ex_metadata": "metadata",
+        "ex_accelerator_type": "foo",
+        "ex_accelerator_count": 42,
+        "network": network,
+        "subnetwork": subnetwork,
+        "ex_labels": labels,
+        "tags": tags,
+        "metadata": metadata,
     }
+    return expected_call_kwargs, config
 
 
 @pytest.fixture
@@ -153,7 +281,7 @@ def test_import():
     with patch("salt.config.check_driver_dependencies", return_value=True) as p:
         get_deps = gce.get_dependencies()
         assert get_deps is True
-        if LooseVersion(mock_version) >= LooseVersion("2.0.0"):
+        if Version(mock_version) >= Version("2.0.0"):
             p.assert_called_once()
 
 
@@ -194,36 +322,13 @@ def test_get_configured_provider_should_return_expected_result(fake_conf_provide
     assert actual_result is expected_result
 
 
-def test_request_instance_with_accelerator(config, location, conn, fake_libcloud_2_5_0):
+def test_request_instance_with_accelerator(config, conn):
     """
     Test requesting an instance with GCE accelerators
     """
-
-    config.update({"ex_accelerator_type": "foo", "ex_accelerator_count": 42})
-    call_kwargs = {
-        "ex_disk_type": "pd-standard",
-        "ex_metadata": {"items": [{"value": None, "key": "salt-cloud-profile"}]},
-        "ex_accelerator_count": 42,
-        "name": "new",
-        "ex_service_accounts": None,
-        "external_ip": "ephemeral",
-        "ex_accelerator_type": "foo",
-        "ex_tags": None,
-        "ex_disk_auto_delete": True,
-        "ex_network": "default",
-        "ex_disks_gce_struct": None,
-        "ex_preemptible": False,
-        "ex_can_ip_forward": False,
-        "ex_on_host_maintenance": "TERMINATE",
-        "location": location,
-        "ex_subnetwork": None,
-        "image": "myimage",
-        "size": 1234,
-    }
-
-    gce.request_instance(config)
-
-    conn.create_node.assert_called_once_with(**call_kwargs)
+    expected_call_kwargs, vm_config = config
+    gce.request_instance(vm_config)
+    conn.create_node.assert_called_once_with(**expected_call_kwargs)
 
 
 def test_create_address_should_fire_creating_and_created_events_with_expected_args(

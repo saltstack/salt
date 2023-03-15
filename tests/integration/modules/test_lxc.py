@@ -3,13 +3,12 @@ Test the lxc module
 """
 
 import pytest
+
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 
-@skipIf(
-    True,
-    "Needs rewrite to be more distro agnostic. Also, the tearDown "
+@pytest.mark.skip(
+    reason="Needs rewrite to be more distro agnostic. Also, the tearDown "
     "function destroys ALL containers on the box, which is BAD.",
 )
 @pytest.mark.windows_whitelisted

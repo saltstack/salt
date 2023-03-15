@@ -319,7 +319,14 @@ def present(
                     continue
 
                 # compare current and wanted value
-                if properties_current[prop] != properties[prop]:
+                # Enabled "feature@" properties may report either "enabled" or
+                # "active", depending on whether they're currently in-use.
+                if prop.startswith("feature@") and properties_current[prop] == "active":
+                    effective_property = "enabled"
+                else:
+                    effective_property = properties_current[prop]
+
+                if effective_property != properties[prop]:
                     properties_update.append(prop)
 
         # update pool properties

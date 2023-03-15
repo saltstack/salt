@@ -3,10 +3,11 @@
 """
 
 import pytest
+
 import salt.modules.random_org as random_org
 from salt.ext.tornado.httpclient import HTTPClient
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 def check_status():
@@ -19,7 +20,9 @@ def check_status():
         return False
 
 
-@skipIf(True, "WAR ROOM 7/31/2019, test needs to allow for quotas of random website")
+@pytest.mark.skip(
+    reason="WAR ROOM 7/31/2019, test needs to allow for quotas of random website"
+)
 class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.random_org

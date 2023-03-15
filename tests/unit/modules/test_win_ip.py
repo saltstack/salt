@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.win_ip as win_ip
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mixins import LoaderModuleMockMixin

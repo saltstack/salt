@@ -1,9 +1,15 @@
 import urllib.parse
 
 import pytest
+
 import salt.utils.json
 import salt.utils.yaml
 from tests.support.mock import patch
+
+pytestmark = [
+    pytest.mark.destructive_test,
+    pytest.mark.skip_if_not_root,
+]
 
 
 @pytest.fixture

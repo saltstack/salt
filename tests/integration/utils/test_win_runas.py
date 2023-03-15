@@ -9,21 +9,22 @@ import threading
 import time
 import traceback
 
+import pytest
+import yaml
+
 import salt.utils.files
 import salt.utils.win_runas
-import yaml
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_system_user
 from tests.support.mock import Mock
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 try:
-    import win32service
-    import win32serviceutil
-    import win32event
     import servicemanager
     import win32api
+    import win32event
+    import win32service
+    import win32serviceutil
 
     CODE_DIR = win32api.GetLongPathName(RUNTIME_VARS.CODE_DIR)
     HAS_WIN32 = True
@@ -270,7 +271,7 @@ def wait_for_service(name, timeout=200):
         time.sleep(0.3)
 
 
-@skipIf(not HAS_WIN32, "This test runs only on windows.")
+@pytest.mark.skipif(not HAS_WIN32, reason="This test runs only on windows.")
 class RunAsTest(ModuleCase):
     @classmethod
     def setUpClass(cls):

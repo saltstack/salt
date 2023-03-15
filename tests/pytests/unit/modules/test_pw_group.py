@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.pw_group as pw_group
 from tests.support.mock import MagicMock, patch
 

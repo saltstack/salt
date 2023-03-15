@@ -1,14 +1,13 @@
 import os
 
 import pytest
+
 import salt.utils.verify
 from tests.support.mock import patch
 
 
 @pytest.mark.skip_on_windows(reason="Not applicable for Windows.")
-@patch("os.chown")
-@patch("os.stat")
-def test_verify_env_race_condition(mock_stat, mock_chown):
+def test_verify_env_race_condition():
     def _stat(path):
         """
         Helper function for mock_stat, we want to raise errors for specific paths, but not until we get into the proper path.
@@ -36,12 +35,15 @@ def test_verify_env_race_condition(mock_stat, mock_chown):
 
         return
 
-    mock_stat.side_effect = _stat
-    mock_chown.side_effect = _chown
-
-    with patch("salt.utils.verify._get_pwnam", return_value=(None, None, 0, 0)), patch(
+    with patch("os.chown", side_effect=_chown) as mock_chown, patch(
+        "os.stat", side_effect=_stat
+    ) as mock_stat, patch(
+        "salt.utils.verify._get_pwnam", return_value=(None, None, 0, 0)
+    ), patch(
         "os.getuid", return_value=0
-    ), patch("os.listdir", return_value=["subdir"]), patch(
+    ), patch(
+        "os.listdir", return_value=["subdir"]
+    ), patch(
         "os.path.isdir", return_value=True
     ), patch(
         "salt.utils.path.os_walk",

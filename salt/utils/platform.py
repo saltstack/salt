@@ -9,6 +9,7 @@ import subprocess
 import sys
 
 from distro import linux_distribution
+
 from salt.utils.decorators import memoize as real_memoize
 
 

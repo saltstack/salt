@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.purefb as purefb
 from tests.support.mock import patch
 

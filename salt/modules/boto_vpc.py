@@ -147,8 +147,8 @@ log = logging.getLogger(__name__)
 try:
     # pylint: disable=unused-import
     import boto
-    import botocore
     import boto.vpc
+    import botocore
 
     # pylint: enable=unused-import
     from boto.exception import BotoServerError
@@ -1822,7 +1822,7 @@ def delete_nat_gateway(
     nat_gateway_id
         Id of the NAT Gateway
 
-    releaes_eips
+    release_eips
         whether to release the elastic IPs associated with the given NAT Gateway Id
 
     region

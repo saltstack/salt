@@ -280,7 +280,7 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
     _current = get(consul_url=consul_url, token=token, key=key)
 
     if "flags" in kwargs:
-        if kwargs["flags"] >= 0 and kwargs["flags"] <= 2 ** 64:
+        if kwargs["flags"] >= 0 and kwargs["flags"] <= 2**64:
             query_params["flags"] = kwargs["flags"]
 
     if "cas" in kwargs:

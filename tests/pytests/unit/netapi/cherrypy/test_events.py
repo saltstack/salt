@@ -1,6 +1,7 @@
 import time
 
 import pytest
+
 import salt.netapi.rest_cherrypy.app as cherrypy_app
 from tests.support.mock import MagicMock, patch
 

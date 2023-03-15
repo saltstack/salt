@@ -2,6 +2,7 @@ import os
 import sys
 
 import pytest
+
 from salt._logging import get_log_record_factory, set_log_record_factory
 from salt.cli.api import SaltAPI
 

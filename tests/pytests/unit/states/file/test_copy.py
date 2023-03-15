@@ -3,6 +3,7 @@ import os
 import shutil
 
 import pytest
+
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
 import salt.serializers.plist as plistserializer
@@ -205,3 +206,38 @@ def test_copy(tmp_path):
                     )
                     res = filestate.copy_(name, source, group=group, preserve=False)
                     assert res == ret
+
+
+def test_copy_test_mode_user_group_not_present():
+    """
+    Test file copy in test mode with no user or group existing
+    """
+    source = "/tmp/src_copy_no_user_group_test_mode"
+    filename = "/tmp/copy_no_user_group_test_mode"
+    with patch.dict(
+        filestate.__salt__,
+        {
+            "file.group_to_gid": MagicMock(side_effect=["1234", "", ""]),
+            "file.user_to_uid": MagicMock(side_effect=["", "4321", ""]),
+            "file.get_mode": MagicMock(return_value="0644"),
+        },
+    ), patch.dict(filestate.__opts__, {"test": True}), patch.object(
+        os.path, "exists", return_value=True
+    ):
+        ret = filestate.copy_(
+            source, filename, group="nonexistinggroup", user="nonexistinguser"
+        )
+        assert ret["result"] is not False
+        assert "is not available" not in ret["comment"]
+
+        ret = filestate.copy_(
+            source, filename, group="nonexistinggroup", user="nonexistinguser"
+        )
+        assert ret["result"] is not False
+        assert "is not available" not in ret["comment"]
+
+        ret = filestate.copy_(
+            source, filename, group="nonexistinggroup", user="nonexistinguser"
+        )
+        assert ret["result"] is not False
+        assert "is not available" not in ret["comment"]

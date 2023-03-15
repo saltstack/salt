@@ -1,0 +1,2 @@
+properties CONFIG_TYPE=Default START_MINION="" MINION_ID=cli.minion
+dormant

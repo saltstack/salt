@@ -6,12 +6,13 @@ import socket
 from contextlib import closing
 
 import pytest
-import salt.utils.http as http
 from saltfactories.utils.tempfiles import temp_file
+
+import salt.utils.http as http
 from tests.support.helpers import MirrorPostHandler, Webserver
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import salt.ext.tornado.curl_httpclient  # pylint: disable=unused-import
@@ -203,8 +204,9 @@ class HTTPPostTestCase(TestCase):
         boundary = body[: body.find("\r")]
         self.assertEqual(body, match_this.format(boundary))
 
-    @skipIf(
-        HAS_CURL is False, "Missing prerequisites for tornado.curl_httpclient library"
+    @pytest.mark.skipif(
+        HAS_CURL is False,
+        reason="Missing prerequisites for tornado.curl_httpclient library",
     )
     def test_query_proxy(self):
         """

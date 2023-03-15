@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.saltutil as saltutil
 import salt.states.saltmod as saltmod
 from tests.support.mock import create_autospec, patch

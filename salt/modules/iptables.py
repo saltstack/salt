@@ -744,7 +744,8 @@ def check(table="filter", chain=None, rule=None, family="ipv4"):
 
     if _has_option("--check", family):
         cmd = "{} -t {} -C {} {}".format(ipt_cmd, table, chain, rule)
-        out = __salt__["cmd.run_stderr"](cmd, output_loglevel="quiet")
+        __salt__["cmd.run_stderr"](cmd, output_loglevel="quiet")
+        return not __context__["retcode"]
     else:
         _chain_name = hex(uuid.getnode())
 

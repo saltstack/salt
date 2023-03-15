@@ -6,6 +6,7 @@ import base64
 from contextlib import contextmanager
 
 import pytest
+
 import salt.modules.kubernetesmod as kubernetesmod
 import salt.states.kubernetes as kubernetes
 import salt.utils.stringutils

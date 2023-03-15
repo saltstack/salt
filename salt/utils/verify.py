@@ -24,6 +24,7 @@ from salt.exceptions import CommandExecutionError, SaltClientError, SaltSystemEx
 
 try:
     import win32file
+
     import salt.utils.win_reg
 except ImportError:
     import resource
@@ -488,6 +489,11 @@ def _realpath_windows(path):
                 base = os.path.abspath(os.path.sep.join([base, part]))
         else:
             base = part
+    # Python 3.8 added support for directory junctions which prefixes the
+    # return with `\\?\`. We need to strip that off.
+    # https://docs.python.org/3/library/os.html#os.readlink
+    if base.startswith("\\\\?\\"):
+        base = base[4:]
     return base
 
 
@@ -568,13 +574,12 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
     Verify that the named directories are in place and that the environment
     can shake the salt
     """
-    import salt.utils.win_functions
-    import salt.utils.win_dacl
     import salt.utils.path
+    import salt.utils.win_dacl
+    import salt.utils.win_functions
 
     # Make sure the file_roots is not set to something unsafe since permissions
     # on that directory are reset
-
     # `salt.utils.path.safe_path` will consider anything inside `C:\Windows` to
     # be unsafe. In some instances the test suite uses
     # `C:\Windows\Temp\salt-tests-tmpdir\rootdir` as the file_roots. So, we need

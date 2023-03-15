@@ -7,6 +7,7 @@
 from collections import namedtuple
 
 import pytest
+
 import salt.beacons.memusage as memusage
 from tests.support.mock import MagicMock, patch
 

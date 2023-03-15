@@ -64,7 +64,7 @@ def parse_ssh_config(lines):
             for field in _ROSTER_FIELDS:
                 match = re.match(field.pattern, line)
                 if match:
-                    target[field.target_field] = match.group(1)
+                    target[field.target_field] = match.group(1).strip()
         for hostname in hostnames:
             targets[hostname] = target
 

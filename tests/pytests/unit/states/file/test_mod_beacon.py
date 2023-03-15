@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.beacons as beaconmod
 import salt.states.beacon as beaconstate
 import salt.states.file as filestate

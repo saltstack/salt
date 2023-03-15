@@ -112,6 +112,7 @@ import re
 import sys
 
 import salt.utils.jid
+import salt.utils.job
 import salt.utils.json
 
 try:
@@ -398,12 +399,13 @@ def get_jids():
         """jid, tgt_type, cmd, tgt, kwargs, ret, username, arg, fun """
         """FROM jids"""
     )
-    if __opts__["keep_jobs"] != 0:
+    keep_jobs_seconds = int(salt.utils.job.get_keep_jobs_seconds(__opts__))
+    if keep_jobs_seconds != 0:
         sql = (
             sql
             + " WHERE started > NOW() - INTERVAL '"
-            + str(__opts__["keep_jobs"])
-            + "' HOUR"
+            + str(keep_jobs_seconds)
+            + "' SECOND"
         )
 
     cur.execute(sql)

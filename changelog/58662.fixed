@@ -1,1 +1,0 @@
-Allowe use of `roster` in salt.function state when using the SSH client.

@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 import salt.config
 import salt.version
 from tests.support.case import ModuleCase

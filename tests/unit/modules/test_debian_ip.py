@@ -6,12 +6,13 @@ import tempfile
 
 import jinja2.exceptions
 import pytest
+
 import salt.modules.debian_ip as debian_ip
 import salt.utils.files
 import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     from salt.utils.odict import OrderedDict as odict
@@ -845,7 +846,7 @@ test_interfaces = [
 # fmt: on
 
 
-@skipIf(salt.utils.platform.is_windows(), "Do not run these tests on Windows")
+@pytest.mark.skip_on_windows(reason="Do not run these tests on Windows")
 class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.debian_ip

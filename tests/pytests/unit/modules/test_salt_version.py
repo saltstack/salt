@@ -15,11 +15,13 @@ def test_mocked_objects():
     salt.version.SaltStackVersion.LNAMES dict using upper-case indexes
     """
     assert isinstance(salt.version.SaltStackVersion.LNAMES, dict)
-    sv = salt.version.SaltStackVersion(*salt.version.__version_info__)
+    sv = salt.version.SaltStackVersion(  # pylint: disable=no-value-for-parameter
+        *salt.version.__version_info__
+    )
     for k, v in salt.version.SaltStackVersion.LNAMES.items():
         assert k == k.lower()
         assert isinstance(v, tuple)
-        if sv.new_version(major=v[0]):
+        if sv.new_version(major=v[0]) and not sv.can_have_dot_zero(major=v[0]):
             assert len(v) == 1
         else:
             assert len(v) == 2

@@ -2,6 +2,7 @@ import io
 from textwrap import dedent
 
 import pytest
+
 import salt.modules.solaris_shadow as solaris_shadow
 from tests.support.mock import MagicMock, patch
 

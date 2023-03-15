@@ -203,7 +203,7 @@ def create(login, password, password_hashed=False, machine_account=False):
         password_hash = password.upper()
         password = ""  # wipe password
     else:
-        password_hash = generate_nt_hash(password)
+        password_hash = generate_nt_hash(password).decode("ascii")
 
     # create user
     if login not in list_users(False):

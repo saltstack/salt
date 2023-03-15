@@ -4,8 +4,9 @@ import subprocess
 import sys
 
 import pytest
-import salt
 import six  # pylint: disable=blacklisted-external-import,3rd-party-module-not-gated
+
+import salt
 
 log = logging.getLogger(__name__)
 

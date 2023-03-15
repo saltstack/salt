@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.rebootmgr as rebootmgr
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch

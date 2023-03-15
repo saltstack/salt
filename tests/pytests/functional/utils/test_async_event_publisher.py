@@ -1,9 +1,10 @@
 import pytest
+import zmq
+
 import salt.config
 import salt.ext.tornado.ioloop
 import salt.utils.event
 import salt.utils.stringutils
-import zmq
 
 NO_LONG_IPC = False
 if getattr(zmq, "IPC_PATH_MAX_LEN", 103) <= 103:

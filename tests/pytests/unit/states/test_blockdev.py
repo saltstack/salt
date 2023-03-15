@@ -5,6 +5,7 @@
 import os
 
 import pytest
+
 import salt.states.blockdev as blockdev
 import salt.utils.path
 from tests.support.mock import MagicMock, Mock, patch

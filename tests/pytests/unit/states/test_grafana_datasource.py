@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.grafana_datasource as grafana_datasource
 from tests.support.mock import MagicMock, Mock, patch
 

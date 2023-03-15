@@ -7,11 +7,12 @@ import shutil
 import textwrap
 
 import pytest
-import salt.utils.files
-import salt.utils.path
 import yaml
 from pytestshellutils.exceptions import FactoryTimeout
 from saltfactories.utils.functional import StateResult
+
+import salt.utils.files
+import salt.utils.path
 from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [

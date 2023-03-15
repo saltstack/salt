@@ -5,11 +5,11 @@ Tests for the MySQL states
 import logging
 
 import pytest
+
 import salt.utils.path
 from salt.modules import mysql as mysqlmod
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -23,9 +23,9 @@ if not salt.utils.path.which("mysqladmin"):
     NO_MYSQL = True
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
-    "Please install MySQL bindings and a MySQL Server before running"
+    reason="Please install MySQL bindings and a MySQL Server before running "
     "MySQL integration tests.",
 )
 class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):

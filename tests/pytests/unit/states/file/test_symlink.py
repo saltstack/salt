@@ -2,6 +2,7 @@ import logging
 import os
 
 import pytest
+
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
 import salt.serializers.plist as plistserializer
@@ -391,9 +392,40 @@ def test_symlink():
     ), patch(
         "salt.states.file._check_symlink_ownership", return_value=True
     ):
-        group = None
-
         comt = "Created new symlink {} -> {}".format(name, target)
         ret = return_val({"comment": comt, "result": True, "changes": {"new": name}})
         res = filestate.symlink(name, target, user=user, group=user)
+        assert res == ret
+
+    with patch.dict(
+        filestate.__salt__,
+        {
+            "file.is_link": mock_t,
+            "file.get_user": mock_user,
+            "file.get_group": mock_grp,
+            "file.user_to_uid": mock_uid,
+            "file.group_to_gid": mock_gid,
+            "file.gid_to_group": MagicMock(return_value=group),
+            "file.readlink": mock_target,
+            "user.info": mock_t,
+        },
+    ), patch.dict(filestate.__opts__, {"test": False}), patch.object(
+        os.path, "isdir", MagicMock(side_effect=[True, False])
+    ), patch.object(
+        os.path, "isfile", mock_f
+    ), patch(
+        "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
+    ), patch(
+        "salt.states.file._set_symlink_ownership", return_value=True
+    ), patch(
+        "salt.states.file._check_symlink_ownership", return_value=True
+    ), patch(
+        "salt.states.file._get_symlink_ownership", return_value=(user, group)
+    ):
+        if salt.utils.platform.is_windows():
+            comt = "Symlink {} is present and owned by {}".format(name, user)
+        else:
+            comt = "Symlink {} is present and owned by {}:{}".format(name, user, group)
+        ret = return_val({"comment": comt, "result": True, "changes": {}})
+        res = filestate.symlink(name, target, inherit_user_and_group=True)
         assert res == ret

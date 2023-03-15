@@ -7,6 +7,7 @@ import json
 import time
 
 import pytest
+
 import salt.utils.jid
 import salt.utils.platform
 

@@ -4,6 +4,7 @@ import re
 import string
 
 import pytest
+
 import salt.utils.platform
 import salt.utils.pycrypto
 from salt.exceptions import SaltInvocationError

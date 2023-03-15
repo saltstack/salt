@@ -1,4 +1,5 @@
 import pytest
+
 from salt.modules import boto_elbv2
 from tests.support.mock import MagicMock, patch
 

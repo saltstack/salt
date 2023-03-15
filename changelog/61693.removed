@@ -1,1 +1,0 @@
-Removed the `telnet_port`, `serial_type` and `console` parameters in salt/modules/virt.py. Use the `serials` and `consoles` parameters instead. Use the `serials` parameter with a value like ``{{{{'type': 'tcp', 'protocol': 'telnet', 'port': {}}}}}`` instead and a similar `consoles` parameter.

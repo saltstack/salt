@@ -2,6 +2,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 import pytest
+
 import salt.states.boto_lc as boto_lc
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch

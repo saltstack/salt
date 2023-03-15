@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.event as event
 from tests.support.mock import MagicMock, patch
 

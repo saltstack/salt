@@ -31,8 +31,8 @@ if salt.utils.path.which("initctl"):
         # Don't re-invent the wheel, import the helper functions from the
         # upstart module.
         from salt.modules.upstart_service import (
-            _upstart_enable,
             _upstart_disable,
+            _upstart_enable,
             _upstart_is_enabled,
         )
     except Exception as exc:  # pylint: disable=broad-except

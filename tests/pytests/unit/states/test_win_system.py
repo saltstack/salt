@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.win_system as win_system
 from tests.support.mock import MagicMock, patch
 

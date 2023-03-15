@@ -1,1 +1,0 @@
-Deprecated netmiko_conn and pyeapi_conn in napalm_mod.py as these function should not be called from the CLI

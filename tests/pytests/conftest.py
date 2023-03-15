@@ -8,19 +8,22 @@ import logging
 import os
 import pathlib
 import shutil
+import ssl
 import stat
 import sys
 import tempfile
+import types
 
 import attr
 import pytest
+from pytestshellutils.utils import ports
+from saltfactories.utils import random_string
+
 import salt.ext.tornado.ioloop
 import salt.utils.files
 import salt.utils.platform
-from pytestshellutils.utils import ports
 from salt.serializers import yaml
-from saltfactories.utils import random_string
-from tests.support.helpers import get_virtualenv_binary_path
+from tests.support.helpers import Webserver, get_virtualenv_binary_path
 from tests.support.pytest.helpers import TestAccount
 from tests.support.runtests import RUNTIME_VARS
 
@@ -286,7 +289,7 @@ def salt_master_factory(
         master_id,
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     return factory
 
@@ -321,7 +324,7 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vaul
         salt_minion_id,
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
@@ -351,7 +354,7 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
         salt_sub_minion_id,
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
@@ -371,7 +374,7 @@ def salt_proxy_factory(salt_master_factory):
     factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         start_timeout=240,
     )
     factory.before_start(pytest.helpers.remove_stale_proxy_minion_cache_file, factory)
@@ -407,7 +410,7 @@ def salt_delta_proxy_factory(salt_factories, salt_master_factory):
     factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
         defaults=config_defaults,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         start_timeout=240,
     )
 
@@ -436,7 +439,7 @@ def temp_salt_master(
     factory = salt_factories.salt_master_daemon(
         random_string("temp-master-"),
         defaults=config_defaults,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     return factory
 
@@ -450,7 +453,7 @@ def temp_salt_minion(temp_salt_master):
     factory = temp_salt_master.salt_minion_daemon(
         random_string("temp-minion-"),
         defaults=config_defaults,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, temp_salt_master, factory.id
@@ -518,6 +521,32 @@ def bridge_pytest_and_runtests():
     """
 
 
+@pytest.fixture(scope="session")
+def this_txt_file(integration_files_dir):
+    contents = "test"
+    with pytest.helpers.temp_file("this.txt", contents, integration_files_dir) as path:
+        sha256sum = salt.utils.hashutils.get_hash(str(path), form="sha256")
+        with pytest.helpers.temp_file(
+            "this.txt.sha256", sha256sum, integration_files_dir
+        ):
+            yield types.SimpleNamespace(name="this.txt", path=path, sha256=sha256sum)
+
+
+@pytest.fixture(scope="module")
+def ssl_webserver(integration_files_dir, this_txt_file):
+    """
+    spins up an https webserver.
+    """
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(
+        str(integration_files_dir / "https" / "cert.pem"),
+        str(integration_files_dir / "https" / "key.pem"),
+    )
+
+    with Webserver(root=str(integration_files_dir), ssl_opts=context) as webserver:
+        yield webserver
+
+
 # ----- Async Test Fixtures ----------------------------------------------------------------------------------------->
 # This is based on https://github.com/eukaryote/pytest-tornasync
 # The reason why we don't use that pytest plugin instead is because it has
@@ -537,7 +566,7 @@ def get_test_timeout(pyfuncitem):
     return default_timeout
 
 
-@pytest.mark.tryfirst
+@pytest.hookimpl(tryfirst=True)
 def pytest_pycollect_makeitem(collector, name, obj):
     if collector.funcnamefilter(name) and inspect.iscoroutinefunction(obj):
         return list(collector._genfunctions(name, obj))
@@ -562,7 +591,7 @@ class CoroTestFunction:
         return ret
 
 
-@pytest.mark.tryfirst
+@pytest.hookimpl(tryfirst=True)
 def pytest_pyfunc_call(pyfuncitem):
     if not inspect.iscoroutinefunction(pyfuncitem.obj):
         return
@@ -605,6 +634,8 @@ def delta_proxy_minion_ids():
     return [
         "dummy_proxy_one",
         "dummy_proxy_two",
+        "dummy_proxy_three",
+        "dummy_proxy_four",
     ]
 
 

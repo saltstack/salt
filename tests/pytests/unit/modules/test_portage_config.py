@@ -5,6 +5,7 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 import pytest
+
 import salt.modules.portage_config as portage_config
 import salt.utils.files
 from tests.support.mock import patch

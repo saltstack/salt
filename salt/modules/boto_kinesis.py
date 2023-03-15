@@ -643,4 +643,4 @@ def _jittered_backoff(attempt, max_retry_delay):
 
         salt myminion boto_kinesis._jittered_backoff current_attempt_number max_delay_in_seconds
     """
-    return min(random.random() * (2 ** attempt), max_retry_delay)
+    return min(random.random() * (2**attempt), max_retry_delay)

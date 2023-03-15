@@ -6,6 +6,7 @@ import os
 import textwrap
 
 import pytest
+
 import salt.config
 import salt.minion
 import salt.syspaths
@@ -23,7 +24,7 @@ from tests.support.helpers import patched_environ, with_tempdir, with_tempfile
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -303,9 +304,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         config = salt.config.master_config(fpath)
         self.assertEqual(config["log_file"], fpath)
 
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "You can't set an environment dynamically in Windows",
+    @pytest.mark.skip_on_windows(
+        reason="You can't set an environment dynamically in Windows"
     )
     @with_tempdir()
     def test_load_master_config_from_environ_var(self, tempdir):
@@ -333,9 +333,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             config = salt.config.master_config(fpath)
             self.assertEqual(config["log_file"], fpath)
 
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "You can't set an environment dynamically in Windows",
+    @pytest.mark.skip_on_windows(
+        reason="You can't set an environment dynamically in Windows"
     )
     @with_tempdir()
     def test_load_minion_config_from_environ_var(self, tempdir):
@@ -364,9 +363,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             config = salt.config.minion_config(fpath)
             self.assertEqual(config["log_file"], fpath)
 
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "You can't set an environment dynamically in Windows",
+    @pytest.mark.skip_on_windows(
+        reason="You can't set an environment dynamically in Windows"
     )
     @with_tempdir()
     def test_load_client_config_from_environ_var(self, tempdir):
@@ -1667,9 +1665,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     # other cloud configuration tests
 
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "You can't set an environment dynamically in Windows",
+    @pytest.mark.skip_on_windows(
+        reason="You can't set an environment dynamically in Windows"
     )
     @with_tempdir()
     def test_load_cloud_config_from_environ_var(self, tempdir):
@@ -1848,6 +1845,12 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             ret = salt.config.apply_master_config(defaults=defaults)
             self.assertNotIn("environment", ret)
             self.assertEqual(ret["saltenv"], "foo")
+
+            # Test config to verify that `keep_acl_in_token` is forced to True
+            # when `rest` is present as driver in the `external_auth` config.
+            overrides = {"external_auth": {"rest": {"^url": "http://test_url/rest"}}}
+            ret = salt.config.apply_master_config(overrides=overrides)
+            self.assertTrue(ret["keep_acl_in_token"])
 
             # MINION CONFIG
 

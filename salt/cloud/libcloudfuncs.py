@@ -16,9 +16,9 @@ from salt.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 # pylint: disable=W0611
 try:
     import libcloud
-    from libcloud.compute.types import Provider, NodeState
-    from libcloud.compute.providers import get_driver
     from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment
+    from libcloud.compute.providers import get_driver
+    from libcloud.compute.types import NodeState, Provider
 
     HAS_LIBCLOUD = True
     LIBCLOUD_VERSION_INFO = tuple(

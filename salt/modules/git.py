@@ -20,7 +20,7 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ def _check_worktree_support(failhard=True):
     Ensure that we don't try to operate on worktrees in git < 2.5.0.
     """
     git_version = version(versioninfo=False)
-    if _LooseVersion(git_version) < _LooseVersion("2.5.0"):
+    if LooseVersion(git_version) < LooseVersion("2.5.0"):
         if failhard:
             raise CommandExecutionError(
                 "Worktrees are only supported in git 2.5.0 and newer "
@@ -175,7 +175,7 @@ def _format_git_opts(opts):
     """
     if opts:
         version_ = version(versioninfo=False)
-        if _LooseVersion(version_) < _LooseVersion("1.7.2"):
+        if LooseVersion(version_) < LooseVersion("1.7.2"):
             raise SaltInvocationError(
                 "git_opts is only supported for git versions >= 1.7.2 "
                 "(detected: {})".format(version_)
@@ -450,8 +450,8 @@ def _which_git_config(global_, cwd, user, password, output_encoding=None):
     """
     if global_:
         return ["--global"]
-    version_ = _LooseVersion(version(versioninfo=False))
-    if version_ >= _LooseVersion("1.7.10.2"):
+    version_ = LooseVersion(version(versioninfo=False))
+    if version_ >= LooseVersion("1.7.10.2"):
         # --local added in 1.7.10.2
         return ["--local"]
     else:
@@ -1825,7 +1825,7 @@ def describe(
     """
     cwd = _expand_path(cwd, user)
     command = ["git", "describe"]
-    if _LooseVersion(version(versioninfo=False)) >= _LooseVersion("1.5.6"):
+    if LooseVersion(version(versioninfo=False)) >= LooseVersion("1.5.6"):
         command.append("--always")
     command.append(rev)
     return _git_run(
@@ -1970,7 +1970,7 @@ def diff(
     failhard = True
 
     if no_index:
-        if _LooseVersion(version(versioninfo=False)) < _LooseVersion("1.5.1"):
+        if LooseVersion(version(versioninfo=False)) < LooseVersion("1.5.1"):
             raise CommandExecutionError(
                 "The 'no_index' option is only supported in Git 1.5.1 and newer"
             )
@@ -2701,8 +2701,8 @@ def list_worktrees(
 
     tracked_data_points = ("worktree", "HEAD", "branch")
     ret = {}
-    git_version = _LooseVersion(version(versioninfo=False))
-    has_native_list_subcommand = git_version >= _LooseVersion("2.7.0")
+    git_version = LooseVersion(version(versioninfo=False))
+    has_native_list_subcommand = git_version >= LooseVersion("2.7.0")
     if has_native_list_subcommand:
         out = _git_run(
             ["git", "worktree", "list", "--porcelain"],
@@ -3356,7 +3356,7 @@ def merge_base(
             refs = ["HEAD"]
 
     if is_ancestor:
-        if _LooseVersion(version(versioninfo=False)) < _LooseVersion("1.8.0"):
+        if LooseVersion(version(versioninfo=False)) < LooseVersion("1.8.0"):
             # Pre 1.8.0 git doesn't have --is-ancestor, so the logic here is a
             # little different. First we need to resolve the first ref to a
             # full SHA1, and then if running git merge-base on both commits
@@ -5229,8 +5229,7 @@ def version(versioninfo=False):
     Returns the version of Git installed on the minion
 
     versioninfo : False
-        If ``True``, return the version in a versioninfo list (e.g. ``[2, 5,
-        0]``)
+        If ``True``, return the version in a versioninfo list (e.g. ``[2, 5, 0]``)
 
     CLI Example:
 
@@ -5249,9 +5248,15 @@ def version(versioninfo=False):
         try:
             # On macOS, the git version is displayed in a different format
             #  git version 2.21.1 (Apple Git-122.3)
+            # On Windows:
+            # git version 2.21.1.windows.1
             # As opposed to:
             #  git version 2.21.1
-            __context__[contextkey] = version_.split("(")[0].strip().split()[-1]
+            if "(" in version_:
+                version_ = version_.split("(")[0].strip()
+            if ".windows" in version_:
+                version_ = version_.split(".windows")[0].strip()
+            __context__[contextkey] = version_.strip().split()[-1].strip()
         except IndexError:
             # Somehow git --version returned no stdout while not raising an
             # error. Should never happen but we should still account for this
@@ -5540,7 +5545,7 @@ def worktree_prune(
         output_encoding=output_encoding,
     )
     git_version = version(versioninfo=False)
-    if _LooseVersion(git_version) > _LooseVersion("2.35.0"):
+    if LooseVersion(git_version) > LooseVersion("2.35.0"):
         return result["stderr"]
     return result["stdout"]
 

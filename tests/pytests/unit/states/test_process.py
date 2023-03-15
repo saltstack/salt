@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.process as process
 from tests.support.mock import MagicMock, patch
 

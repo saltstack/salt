@@ -1,14 +1,12 @@
 import pytest
-import salt.utils.platform
+
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 
-@skipIf(salt.utils.platform.is_windows(), "minion is windows")
-@skipIf(salt.utils.platform.is_darwin(), "locale method is not supported on mac")
-@skipIf(
-    salt.utils.platform.is_freebsd(),
-    "locale method is supported only within login classes or environment variables",
+@pytest.mark.skip_on_windows(reason="minion is windows")
+@pytest.mark.skip_on_darwin(reason="locale method is not supported on mac")
+@pytest.mark.skip_on_freebsd(
+    reason="locale method is supported only within login classes or environment variables"
 )
 @pytest.mark.requires_salt_modules("locale")
 @pytest.mark.windows_whitelisted

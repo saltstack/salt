@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.lxc as lxc
 import salt.utils.versions
 from tests.support.mock import MagicMock, patch

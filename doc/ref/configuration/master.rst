@@ -180,9 +180,14 @@ The path to the master's configuration file.
 ``pki_dir``
 -----------
 
-Default: ``/etc/salt/pki/master``
+Default: ``<LIB_STATE_DIR>/pki/master``
 
 The directory to store the pki authentication keys.
+
+``<LIB_STATE_DIR>`` is the pre-configured variable state directory set during
+installation via ``--salt-lib-state-dir``. It defaults to ``/etc/salt``. Systems
+following the Filesystem Hierarchy Standard (FHS) might set it to
+``/var/lib/salt``.
 
 .. code-block:: yaml
 
@@ -310,9 +315,26 @@ Default: ``24``
 Set the number of hours to keep old job information. Note that setting this option
 to ``0`` disables the cache cleaner.
 
+.. deprecated:: 3006
+    Replaced by :conf_master:`keep_jobs_seconds`
+
 .. code-block:: yaml
 
     keep_jobs: 24
+
+.. conf_master:: keep_jobs_seconds
+
+``keep_jobs_seconds``
+---------------------
+
+Default: ``86400``
+
+Set the number of seconds to keep old job information. Note that setting this option
+to ``0`` disables the cache cleaner.
+
+.. code-block:: yaml
+
+    keep_jobs_seconds: 86400
 
 .. conf_master:: gather_job_timeout
 
@@ -527,9 +549,9 @@ jobs dir.
     directory, which is ``/var/cache/salt/master/jobs/`` by default, will be
     smaller, but the JID directories will still be present.
 
-    Note that the :conf_master:`keep_jobs` option can be set to a lower value,
-    such as ``1``, to limit the number of hours jobs are stored in the job
-    cache. (The default is 24 hours.)
+    Note that the :conf_master:`keep_jobs_seconds` option can be set to a lower
+    value, such as ``3600``, to limit the number of seconds jobs are stored in
+    the job cache. (The default is 86400 seconds.)
 
     Please see the :ref:`Managing the Job Cache <managing_the_job_cache>`
     documentation for more information.
@@ -1002,6 +1024,23 @@ is set to ``tcp`` by default on Windows.
 .. code-block:: yaml
 
     ipc_mode: ipc
+
+.. conf_master:: ipc_write_buffer
+
+``ipc_write_buffer``
+-----------------------
+
+Default: ``0``
+
+The maximum size of a message sent via the IPC transport module can be limited
+dynamically or by sharing an integer value lower than the total memory size. When
+the value ``dynamic`` is set, salt will use 2.5% of the total memory as
+``ipc_write_buffer`` value (rounded to an integer). A value of ``0`` disables
+this option.
+
+.. code-block:: yaml
+
+    ipc_write_buffer: 10485760
 
 .. conf_master:: tcp_master_pub_port
 
@@ -1829,6 +1868,11 @@ Set to True to enable keeping the calculated user's auth list in the token
 file. This is disabled by default and the auth list is calculated or requested
 from the eauth driver each time.
 
+Note: `keep_acl_in_token` will be forced to True when using external authentication
+for REST API (`rest` is present under `external_auth`). This is because the REST API
+does not store the password, and can therefore not retroactively fetch the ACL, so
+the ACL must be stored in the token.
+
 .. code-block:: yaml
 
     keep_acl_in_token: False
@@ -2089,6 +2133,11 @@ worker_threads value.
 
 Worker threads should not be put below 3 when using the peer system, but can
 drop down to 1 worker otherwise.
+
+Standards for busy environments:
+
+* Use one worker thread per 200 minions.
+* The value of worker_threads should not exceed 1½ times the available CPU cores.
 
 .. note::
     When the master daemon starts, it is expected behaviour to see
@@ -2646,14 +2695,14 @@ Enable extra routines for YAML renderer used states containing UTF characters.
 ``runner_returns``
 ------------------
 
-Default: ``False``
+Default: ``True``
 
-If set to ``True``, runner jobs will be saved to job cache (defined by
+If set to ``False``, runner jobs will not be saved to job cache (defined by
 :conf_master:`master_job_cache`).
 
 .. code-block:: yaml
 
-    runner_returns: True
+    runner_returns: False
 
 
 .. _master-file-server-settings:
@@ -5077,6 +5126,41 @@ Used by ``salt-api`` for the master requests timeout.
 
     rest_timeout: 300
 
+.. conf_master:: netapi_disable_clients
+
+``netapi_enable_clients``
+--------------------------
+
+.. versionadded:: 3006.0
+
+Default: ``[]``
+
+Used by ``salt-api`` to enable access to the listed clients. Unless a
+client is addded to this list, requests will be rejected before
+authentication is attempted or processing of the low state occurs.
+
+This can be used to only expose the required functionality via
+``salt-api``.
+
+Configuration with all possible clients enabled:
+
+.. code-block:: yaml
+
+    netapi_enable_clients:
+      - local
+      - local_async
+      - local_batch
+      - local_subset
+      - runner
+      - runner_async
+      - ssh
+      - wheel
+      - wheel_async
+
+.. note::
+
+    Enabling all clients is not recommended - only enable the
+    clients that provide the functionality required.
 
 .. _syndic-server-settings:
 

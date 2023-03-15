@@ -35,7 +35,7 @@ import salt.utils.odict
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -116,8 +116,8 @@ def version():
     if not __context__.get(k, None):
         cversion = __salt__["cmd.run_all"]("lxc-info --version")
         if not cversion["retcode"]:
-            ver = _LooseVersion(cversion["stdout"])
-            if ver < _LooseVersion("1.0"):
+            ver = Version(cversion["stdout"])
+            if ver < Version("1.0"):
                 raise CommandExecutionError("LXC should be at least 1.0")
             __context__[k] = "{}".format(ver)
     return __context__.get(k, None)
@@ -878,7 +878,7 @@ def _network_conf(conf_tuples=None, **kwargs):
     # if we didn't explicitly say no to
     # (lxc.network.ipv4.gateway: auto)
     if (
-        _LooseVersion(version()) <= _LooseVersion("1.0.7")
+        Version(version()) <= Version("1.0.7")
         and True not in ["lxc.network.ipv4.gateway" in a for a in ret]
         and True in ["lxc.network.ipv4" in a for a in ret]
     ):
@@ -1631,20 +1631,17 @@ def init(
         run(name, "rm -f '{}'".format(SEED_MARKER), path=path, python_shell=False)
     gid = "/.lxc.initial_seed"
     gids = [gid, "/lxc.initial_seed"]
-    if (
-        any(
-            retcode(
-                name,
-                "test -e {}".format(x),
-                path=path,
-                chroot_fallback=True,
-                ignore_retcode=True,
-            )
-            == 0
-            for x in gids
+    if any(
+        retcode(
+            name,
+            "test -e {}".format(x),
+            path=path,
+            chroot_fallback=True,
+            ignore_retcode=True,
         )
-        or not ret.get("result", True)
-    ):
+        == 0
+        for x in gids
+    ) or not ret.get("result", True):
         pass
     elif seed or seed_cmd:
         if seed:
@@ -2132,7 +2129,7 @@ def clone(name, orig, profile=None, network_profile=None, nic_opts=None, **kwarg
     if backing in ("dir", "overlayfs", "btrfs"):
         size = None
     # LXC commands and options changed in 2.0 - CF issue #34086 for details
-    if _LooseVersion(version()) >= _LooseVersion("2.0"):
+    if Version(version()) >= Version("2.0"):
         # https://linuxcontainers.org/lxc/manpages//man1/lxc-copy.1.html
         cmd = "lxc-copy"
         cmd += " {} -n {} -N {}".format(snapshot, orig, name)

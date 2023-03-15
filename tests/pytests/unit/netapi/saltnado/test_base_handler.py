@@ -1,6 +1,7 @@
 import time
 
 import pytest
+
 import salt.netapi.rest_tornado.saltnado as saltnado_app
 from tests.support.mock import MagicMock, patch
 

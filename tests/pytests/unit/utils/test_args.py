@@ -2,6 +2,7 @@ import logging
 from collections import namedtuple
 
 import pytest
+
 import salt.utils.args
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import DEFAULT, patch

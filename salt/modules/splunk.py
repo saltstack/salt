@@ -28,8 +28,8 @@ import subprocess
 HAS_LIBS = False
 try:
     import splunklib.client
-    from splunklib.client import AuthenticationError
     from splunklib.binding import HTTPError
+    from splunklib.client import AuthenticationError
 
     HAS_LIBS = True
 except ImportError:
@@ -300,7 +300,7 @@ def update_user(email, profile="splunk", **kwargs):
             elif resource_value != v:
                 kwargs[k] = v
 
-    if len(kwargs) > 0:
+    if kwargs:
         user.update(**kwargs).refresh()
 
         fields_modified = {}

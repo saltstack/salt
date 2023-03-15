@@ -5,6 +5,7 @@ Test case for the etcd SDB module
 import logging
 
 import pytest
+
 import salt.sdb.etcd_db as etcd_db
 import salt.utils.etcd_util as etcd_util
 from tests.support.mock import MagicMock, create_autospec, patch

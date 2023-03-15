@@ -5,6 +5,17 @@ Manage X509 certificates
 
 :depends: M2Crypto
 
+.. deprecated:: 3006.0
+
+.. warning::
+    This module has been deprecated and will be removed
+    in Salt 3009 (Potassium). Please migrate to the replacement
+    modules. For breaking changes between both versions,
+    you can refer to the :ref:`x509_v2 execution module docs <x509-setup>`.
+
+    They will become the default ``x509`` modules in Salt 3008 (Argon).
+    You can explicitly switch to the new modules before that release
+    by setting ``features: {x509_v2: true}`` in your minion configuration.
 """
 
 import ast
@@ -25,6 +36,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.versions
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.utils.odict import OrderedDict
 
@@ -79,7 +91,15 @@ def __virtual__():
     """
     only load this module if m2crypto is available
     """
+    # salt.features appears to not be setup when invoked via peer publishing
+    if __opts__.get("features", {}).get("x509_v2"):
+        return (False, "Superseded, using x509_v2")
     if HAS_M2:
+        salt.utils.versions.warn_until(
+            "Potassium",
+            "The x509 modules are deprecated. Please migrate to the replacement "
+            "modules (x509_v2). They are the default from Salt 3008 (Argon) onwards.",
+        )
         return __virtualname__
     else:
         return (False, "Could not load x509 module, m2crypto unavailable")
@@ -470,7 +490,7 @@ def get_pem_entry(text, pem_type=None):
         # mine.get returns the PEM on a single line, we fix this
         pem_fixed = []
         pem_temp = text
-        while len(pem_temp) > 0:
+        while pem_temp:
             if pem_temp.startswith("-----"):
                 # Grab ----(.*)---- blocks
                 pem_fixed.append(pem_temp[: pem_temp.index("-----", 5) + 5])
@@ -1635,13 +1655,6 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
 
     if "signing_private_key_passphrase" not in kwargs:
         kwargs["signing_private_key_passphrase"] = None
-    if "testrun" in kwargs and kwargs["testrun"] is True:
-        cert_props = read_certificate(cert)
-        cert_props["Issuer Public Key"] = get_public_key(
-            kwargs["signing_private_key"],
-            passphrase=kwargs["signing_private_key_passphrase"],
-        )
-        return cert_props
 
     if not verify_private_key(
         private_key=kwargs["signing_private_key"],
@@ -1666,6 +1679,14 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         raise salt.exceptions.SaltInvocationError(
             "failed to verify certificate signature"
         )
+
+    if "testrun" in kwargs and kwargs["testrun"] is True:
+        cert_props = read_certificate(cert)
+        cert_props["Issuer Public Key"] = get_public_key(
+            kwargs["signing_private_key"],
+            passphrase=kwargs["signing_private_key_passphrase"],
+        )
+        return cert_props
 
     if "copypath" in kwargs:
         if "prepend_cn" in kwargs and kwargs["prepend_cn"] is True:
@@ -1911,10 +1932,7 @@ def verify_crl(crl, cert):
     crltempfile.close()
     certtempfile.close()
 
-    if "verify OK" in output:
-        return True
-    else:
-        return False
+    return "verify OK" in output
 
 
 def expired(certificate):

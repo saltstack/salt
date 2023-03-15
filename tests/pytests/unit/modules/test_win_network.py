@@ -5,6 +5,7 @@
 import socket
 
 import pytest
+
 import salt.modules.win_network as win_network
 import salt.utils.network
 from tests.support.mock import MagicMock, Mock, patch

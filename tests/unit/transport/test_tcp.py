@@ -6,6 +6,8 @@ import logging
 import threading
 
 import pytest
+from pytestshellutils.utils import ports
+
 import salt.channel.client
 import salt.channel.server
 import salt.config
@@ -15,10 +17,8 @@ import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.utils.platform
 import salt.utils.process
-from pytestshellutils.utils import ports
 from salt.ext.tornado.testing import AsyncTestCase
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.unit import skipIf
 from tests.unit.transport.mixins import run_loop_in_thread
 
 pytestmark = [
@@ -29,7 +29,7 @@ pytestmark = [
 log = logging.getLogger(__name__)
 
 
-@skipIf(True, "Skip until we can devote time to fix this test")
+@pytest.mark.skip(reason="Skip until we can devote time to fix this test")
 class AsyncPubServerTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
     """
     Tests around the publish system

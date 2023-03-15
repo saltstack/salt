@@ -6,6 +6,7 @@ import copy
 import os
 
 import jinja2.exceptions
+
 import salt.modules.rh_ip as rh_ip
 import salt.modules.systemd_service as service_mod
 from tests.support.mixins import LoaderModuleMockMixin

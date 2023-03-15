@@ -152,7 +152,7 @@ def profile_add(user, profile):
     )
 
     ## update user profiles
-    if len(valid_profiles) > 0:
+    if valid_profiles:
         res = __salt__["cmd.run_all"](
             'usermod -P "{profiles}" {login}'.format(
                 login=user,
@@ -209,7 +209,7 @@ def profile_rm(user, profile):
     )
 
     ## update user profiles
-    if len(valid_profiles) > 0:
+    if valid_profiles:
         res = __salt__["cmd.run_all"](
             'usermod -P "{profiles}" {login}'.format(
                 login=user,
@@ -351,7 +351,7 @@ def role_add(user, role):
     )
 
     ## update user roles
-    if len(valid_roles) > 0:
+    if valid_roles:
         res = __salt__["cmd.run_all"](
             'usermod -R "{roles}" {login}'.format(
                 login=user,
@@ -408,7 +408,7 @@ def role_rm(user, role):
     )
 
     ## update user roles
-    if len(valid_roles) > 0:
+    if valid_roles:
         res = __salt__["cmd.run_all"](
             'usermod -R "{roles}" {login}'.format(
                 login=user,
@@ -550,7 +550,7 @@ def auth_add(user, auth):
     )
 
     ## update user auths
-    if len(valid_auths) > 0:
+    if valid_auths:
         res = __salt__["cmd.run_all"](
             'usermod -A "{auths}" {login}'.format(
                 login=user,
@@ -607,7 +607,7 @@ def auth_rm(user, auth):
     )
 
     ## update user auths
-    if len(valid_auths) > 0:
+    if valid_auths:
         res = __salt__["cmd.run_all"](
             'usermod -A "{auths}" {login}'.format(
                 login=user,

@@ -538,7 +538,7 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
 
     # Return one or more IDs having snap_name or raise an error upon
     # non-singular names
-    if len(named_ids) == 0:
+    if not named_ids:
         raise SaltInvocationError(
             'No snapshots for VM "{}" have name "{}"'.format(name, snap_name)
         )

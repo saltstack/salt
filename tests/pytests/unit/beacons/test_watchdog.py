@@ -2,6 +2,7 @@ import os
 import time
 
 import pytest
+
 import salt.utils.files
 import salt.utils.platform
 from salt.beacons import watchdog
@@ -55,8 +56,7 @@ def test_empty_config():
     assert ret == []
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_freebsd(),
+@pytest.mark.skip_on_freebsd(
     reason="Skip on FreeBSD - does not yet have full inotify/watchdog support",
 )
 def test_file_create(tmp_path):
@@ -121,8 +121,7 @@ def test_file_deleted(tmp_path):
     assert ret[0]["change"] == "deleted"
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_freebsd(),
+@pytest.mark.skip_on_freebsd(
     reason="Skip on FreeBSD - does not yet have full inotify/watchdog support",
 )
 def test_file_moved(tmp_path):
@@ -141,8 +140,7 @@ def test_file_moved(tmp_path):
     assert ret[0]["change"] == "moved"
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_freebsd(),
+@pytest.mark.skip_on_freebsd(
     reason="Skip on FreeBSD - does not yet have full inotify/watchdog support",
 )
 def test_file_create_in_directory(tmp_path):
@@ -159,8 +157,7 @@ def test_file_create_in_directory(tmp_path):
     assert ret[0]["change"] == "created"
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_freebsd(),
+@pytest.mark.skip_on_freebsd(
     reason="Skip on FreeBSD - does not yet have full inotify/watchdog support",
 )
 @pytest.mark.slow_test

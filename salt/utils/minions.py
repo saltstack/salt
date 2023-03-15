@@ -748,16 +748,15 @@ class CkMinions:
         """
 
         v_minions = set(self.check_minions(valid, "compound").get("minions", []))
-        if not v_minions:
-            # There are no valid minions, so it doesn't matter what we are
-            # targeting - this is a fail.
-            return False
         if minions is None:
             _res = self.check_minions(expr, tgt_type)
             minions = set(_res["minions"])
         else:
             minions = set(minions)
-        return minions.issubset(v_minions)
+        d_bool = not bool(minions.difference(v_minions))
+        if len(v_minions) == len(minions) and d_bool:
+            return True
+        return d_bool
 
     def match_check(self, regex, fun):
         """

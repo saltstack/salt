@@ -39,8 +39,8 @@ HAS_LIBS = False
 try:
     # pylint: disable=no-name-in-module
     import github
-    import github.PaginatedList
     import github.NamedUser
+    import github.PaginatedList
     from github.GithubException import UnknownObjectException
 
     # pylint: enable=no-name-in-module

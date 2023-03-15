@@ -4,9 +4,10 @@ import threading
 import time
 
 import pytest
+import zmq
+
 import salt.exceptions
 import salt.payload
-import zmq
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ class EchoServer:
                         msg_deserialized["load"]["sleep"],
                     )
                     time.sleep(msg_deserialized["load"]["sleep"])
-                socket.send(message)
+                socket.send(message)  # pylint: disable=missing-kwoa
             except zmq.ZMQError as exc:
                 if exc.errno == errno.EAGAIN:
                     continue

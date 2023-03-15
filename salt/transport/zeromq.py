@@ -10,6 +10,9 @@ import sys
 import threading
 from random import randint
 
+import zmq.error
+import zmq.eventloop.zmqstream
+
 import salt.ext.tornado
 import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
@@ -20,8 +23,6 @@ import salt.utils.files
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.zeromq
-import zmq.error
-import zmq.eventloop.zmqstream
 from salt._compat import ipaddress
 from salt.exceptions import SaltException, SaltReqTimeoutError
 from salt.utils.zeromq import LIBZMQ_VERSION_INFO, ZMQ_VERSION_INFO, zmq
@@ -45,7 +46,7 @@ def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
     rc = zmq_connect(socket, "tcp://192.168.1.17:5555;192.168.1.1:5555"); assert (rc == 0);
     Source: http://api.zeromq.org/4-1:zmq-tcp
     """
-    from salt.utils.zeromq import ip_bracket
+    from salt.utils.network import ip_bracket
 
     master_uri = "tcp://{master_ip}:{master_port}".format(
         master_ip=ip_bracket(master_ip), master_port=master_port
@@ -325,9 +326,9 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             )
 
         log.info("Setting up the master communication server")
-        log.error("ReqServer clients %s", self.uri)
+        log.info("ReqServer clients %s", self.uri)
         self.clients.bind(self.uri)
-        log.error("ReqServer workers %s", self.w_uri)
+        log.info("ReqServer workers %s", self.w_uri)
         self.workers.bind(self.w_uri)
 
         while True:
