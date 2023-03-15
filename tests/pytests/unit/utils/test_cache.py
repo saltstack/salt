@@ -47,6 +47,28 @@ def test_ttl():
         cd["foo"]  # pylint: disable=pointless-statement
 
 
+def test_cache_regex_sweep_with_equal_usage_counts():
+    """
+    CacheRegex must be able to sweep and remove the outdated or least frequently
+    """
+    regex_cache = cache.CacheRegex(size=2, keep_fraction=0.5)
+
+    # Populate the cache and make two patterns share the same frequency
+    regex_cache.get("pattern1")
+    regex_cache.get("pattern2")
+    regex_cache.get("pattern1")
+    regex_cache.get("pattern2")
+
+    # Add a third pattern without triggering a sweep yet
+    regex_cache.get("pattern3")
+
+    # Adding a fourth pattern triggers a sweep internally
+    compiled = regex_cache.get("pattern4")
+
+    assert compiled is not None
+    assert "pattern4" in regex_cache.cache
+
+
 @pytest.fixture
 def cache_dir(minion_opts):
     return pathlib.Path(minion_opts["cachedir"])
