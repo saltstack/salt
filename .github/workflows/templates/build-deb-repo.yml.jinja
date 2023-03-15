@@ -3,30 +3,20 @@
       fail-fast: false
       matrix:
         include:
-          - distro: debian
-            version: "10"
-            arch: x86_64
-          - distro: debian
-            version: "10"
-            arch: aarch64
-          - distro: debian
-            version: "11"
-            arch: x86_64
-          - distro: debian
-            version: "11"
-            arch: aarch64
-          - distro: ubuntu
-            version: "20.04"
-            arch: x86_64
-          - distro: ubuntu
-            version: "20.04"
-            arch: aarch64
-          - distro: ubuntu
-            version: "22.04"
-            arch: x86_64
-          - distro: ubuntu
-            version: "22.04"
-            arch: aarch64
+        <%- for distro, version, arch in (
+                                            ("debian", "10", "x86_64"),
+                                            ("debian", "10", "aarch64"),
+                                            ("debian", "11", "x86_64"),
+                                            ("debian", "11", "aarch64"),
+                                            ("ubuntu", "20.04", "x86_64"),
+                                            ("ubuntu", "20.04", "aarch64"),
+                                            ("ubuntu", "22.04", "x86_64"),
+                                            ("ubuntu", "22.04", "aarch64"),
+                                        ) %>
+          - distro: <{ distro }>
+            version: "<{ version }>"
+            arch: <{ arch }>
+        <%- endfor %>
 
     steps:
       - uses: actions/checkout@v3

@@ -3,27 +3,26 @@
       fail-fast: false
       matrix:
         include:
-          - distro: amazon
-            version: "2"
-            arch: x86_64
-          - distro: redhat
-            version: "7"
-            arch: x86_64
-          - distro: redhat
-            version: "8"
-            arch: x86_64
-          - distro: redhat
-            version: "9"
-            arch: x86_64
-          - distro: fedora
-            version: "36"
-            arch: x86_64
-          - distro: fedora
-            version: "37"
-            arch: x86_64
-          - distro: fedora
-            version: "38"
-            arch: x86_64
+        <%- for distro, version, arch in (
+                                            ("amazon", "2", "x86_64"),
+                                            ("amazon", "2", "aarch64"),
+                                            ("redhat", "7", "x86_64"),
+                                            ("redhat", "7", "aarch64"),
+                                            ("redhat", "8", "x86_64"),
+                                            ("redhat", "8", "aarch64"),
+                                            ("redhat", "9", "x86_64"),
+                                            ("redhat", "9", "aarch64"),
+                                            ("fedora", "36", "x86_64"),
+                                            ("fedora", "36", "aarch64"),
+                                            ("fedora", "37", "x86_64"),
+                                            ("fedora", "37", "aarch64"),
+                                            ("fedora", "38", "x86_64"),
+                                            ("fedora", "38", "aarch64"),
+                                        ) %>
+          - distro: <{ distro }>
+            version: "<{ version }>"
+            arch: <{ arch }>
+        <%- endfor %>
 
     steps:
       - uses: actions/checkout@v3
