@@ -157,6 +157,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      salt-repo-domain: ${{ vars.SALT_REPO_DOMAIN || 'repo.saltproject.io' }}
 
   test-macos-pkg-downloads:
     name: Test macOS Package Downloads
@@ -171,6 +172,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      salt-repo-domain: ${{ vars.SALT_REPO_DOMAIN || 'repo.saltproject.io' }}
 
   test-windows-pkg-downloads:
     name: Test Windows Package Downloads
@@ -185,6 +187,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      salt-repo-domain: ${{ vars.SALT_REPO_DOMAIN || 'repo.saltproject.io' }}
 
   release:
     name: Release v${{ needs.prepare-workflow.outputs.salt-version }}

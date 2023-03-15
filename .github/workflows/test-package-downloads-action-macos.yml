@@ -43,6 +43,17 @@ on:
         type: string
         description: The nox session to run
         default: test-pkgs-onedir
+      salt-repo-domain:
+        required: false
+        type: string
+        description: The domain of the package repository
+    secrets:
+      salt-repo-username:
+        required: false
+        description: Username to access the package repository
+      salt-repo-password:
+        required: false
+        description: Password to access the package repository
 
 
 env:
@@ -148,6 +159,12 @@ jobs:
         run: |
           nox --force-color -e compress-dependencies -- ${{ inputs.distro-slug }}
 
+      - name: Upload Nox Requirements Tarball
+        uses: actions/upload-artifact@v3
+        with:
+          name: nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          path: nox.${{ inputs.distro-slug }}.tar.*
+
   test:
     name: Test
     runs-on: ${{ inputs.distro-slug }}
@@ -225,7 +242,9 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           SALT_RELEASE: "${{ inputs.salt-version }}"
           SALT_REPO_TYPE: ${{ inputs.environment }}
-          SALT_REPO_DOMAIN: ${{ env.SALT_REPO_DOMAIN || 'staging.repo.saltproject.io' }}
+          SALT_REPO_USER: ${{ secrets.salt-repo-username }}
+          SALT_REPO_PASS: ${{ secrets.salt-repo-password }}
+          SALT_REPO_DOMAIN: ${{ inputs.salt-repo-domain }}}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- download-pkgs
 
@@ -260,6 +279,7 @@ jobs:
   report:
     name: Reports for ${{ inputs.distro-slug }}(${{ matrix.arch }})
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     needs:
       - test
