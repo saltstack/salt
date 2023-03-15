@@ -222,6 +222,7 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           SALT_RELEASE: "${{ inputs.salt-version }}"
+          SALT_REPO_ARCH: ${{ matrix.arch }}
           SALT_REPO_TYPE: ${{ inputs.environment }}
           SALT_REPO_USER: ${{ secrets.salt-repo-username }}
           SALT_REPO_PASS: ${{ secrets.salt-repo-password }}

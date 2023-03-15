@@ -228,9 +228,9 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
-          INSTALL_ARCH: ${{ matrix.install_arch }}
           INSTALL_TYPE: ${{ matrix.install_type }}
           SALT_RELEASE: "${{ inputs.salt-version }}"
+          SALT_REPO_ARCH: ${{ matrix.install_arch }}
           SALT_REPO_TYPE: ${{ inputs.environment }}
           SALT_REPO_USER: ${{ secrets.salt-repo-username }}
           SALT_REPO_PASS: ${{ secrets.salt-repo-password }}
