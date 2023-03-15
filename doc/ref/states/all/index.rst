@@ -77,6 +77,7 @@ state modules
     cloud
     cmd
     composer
+    consul
     cron
     cryptdev
     csf
@@ -228,6 +229,7 @@ state modules
     nxos_upgrade
     openstack_config
     openvswitch_bridge
+    openvswitch_db
     openvswitch_port
     opsgenie
     pagerduty
@@ -276,6 +278,7 @@ state modules
     rdp
     redismod
     reg
+    restconf
     rsync
     rvm
     salt_proxy
@@ -301,6 +304,7 @@ state modules
     supervisord
     svn
     sysctl
+    sysfs
     syslog_ng
     sysrc
     telemetry_alert
@@ -327,12 +331,14 @@ state modules
     win_firewall
     win_iis
     win_lgpo
+    win_lgpo_reg
     win_license
     win_network
     win_path
     win_pki
     win_powercfg
     win_servermanager
+    win_shortcut
     win_smtp_server
     win_snmp
     win_system
@@ -341,6 +347,7 @@ state modules
     winrepo
     wordpress
     x509
+    x509_v2
     xml
     xmpp
     zabbix_action

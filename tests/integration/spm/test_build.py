@@ -6,10 +6,10 @@ import os
 import shutil
 
 import pytest
+
 import salt.utils.files
 import salt.utils.path
 from tests.support.case import ModuleCase, SPMCase
-from tests.support.unit import skipIf
 
 
 @pytest.mark.windows_whitelisted
@@ -34,7 +34,7 @@ class SPMBuildTest(SPMCase, ModuleCase):
         # Make sure formula path dir is created
         self.assertTrue(os.path.isdir(self.config["formula_path"]))
 
-    @skipIf(salt.utils.path.which("fallocate") is None, "fallocate not installed")
+    @pytest.mark.skip_if_binaries_missing("fallocate")
     @pytest.mark.slow_test
     def test_spm_build_big_file(self):
         """

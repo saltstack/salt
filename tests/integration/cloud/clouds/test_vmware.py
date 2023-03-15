@@ -2,9 +2,11 @@
     :codeauthor: Megan Wilhite <mwilhite@saltstack.com>
 """
 
+import logging
 import socket
 
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
+from tests.support.helpers import TstSuiteLoggingHandler
 
 
 class VMWareTest(CloudTest):
@@ -92,4 +94,29 @@ class VMWareTest(CloudTest):
         )
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
+        self.assertDestroyInstance()
+
+    def test_instant_clone(self):
+        """
+        Tests creating Instant Clone VM
+        """
+        # salt-cloud -p my-instant-clone IC3
+        profile_name = "vmware-test-instant-clone"
+        self.run_cloud(f"-a remove_all_snapshots cloud-tests-template-base")
+
+        # create the instance
+        log_format = "%(message)s"
+        handler = TstSuiteLoggingHandler(format=log_format, level=logging.INFO)
+        with handler:
+            ret_val = self.run_cloud(
+                "-p {} {}".format(profile_name, self.instance_name), timeout=TIMEOUT
+            )
+            # This sometimes times out before it get's an IP, so we check the logs
+            if ret_val == []:
+                check_log = "Successfully completed Instantclone task"
+                self.assertTrue(any(check_log in s for s in handler.messages))
+            else:
+                i_clone_str = "Instant Clone created successfully"
+                self.assertIn(i_clone_str, str(ret_val))
+
         self.assertDestroyInstance()

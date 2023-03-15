@@ -3,13 +3,15 @@ import logging
 import random
 import string
 
+import pytest
+
 import salt.loader
-import salt.loader_context
+import salt.loader.context
 import salt.modules.boto_apigateway as boto_apigateway
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=import-error,no-name-in-module
 try:
@@ -136,7 +138,7 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
+    elif Version(boto3.__version__) < Version(required_boto3_version):
         return False
     else:
         return True
@@ -148,7 +150,7 @@ def _has_required_botocore():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(botocore.__version__) < LooseVersion(required_botocore_version):
+    elif Version(botocore.__version__) < Version(required_botocore_version):
         return False
     else:
         return True
@@ -207,17 +209,18 @@ class BotoApiGatewayTestCaseMixin:
         return False
 
 
-# @skipIf(True, 'Skip these tests while investigating failures')
-@skipIf(HAS_BOTO is False, "The boto3 module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto3 module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto3 module must be greater than"
-    " or equal to version {}".format(required_boto3_version),
+    reason="The boto3 module must be greater than or equal to version {}".format(
+        required_boto3_version
+    ),
 )
-@skipIf(
+@pytest.mark.skipif(
     _has_required_botocore() is False,
-    "The botocore module must be greater than"
-    " or equal to version {}".format(required_botocore_version),
+    reason="The botocore module must be greater than or equal to version {}".format(
+        required_botocore_version
+    ),
 )
 class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseMixin):
     """
@@ -278,7 +281,10 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.get_rest_apis.return_value = {
             "items": [
                 {
-                    "description": "A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification",
+                    "description": (
+                        "A sample API that uses a petstore as an example to demonstrate"
+                        " features in the swagger-2.0 specification"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 16, 33, 50),
                     "id": "2ut6i4vyle",
                     "name": "Swagger Petstore",
@@ -302,7 +308,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                     "name": "LambdaMicroservice",
                 },
                 {
-                    "description": "cloud tap service with combination of API GW and Lambda",
+                    "description": (
+                        "cloud tap service with combination of API GW and Lambda"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 22, 3, 18),
                     "id": "rm06h9oac4",
                     "name": "API Gateway Cloudtap Service",
@@ -339,7 +347,10 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.get_rest_apis.return_value = {
             "items": [
                 {
-                    "description": "A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification",
+                    "description": (
+                        "A sample API that uses a petstore as an example to demonstrate"
+                        " features in the swagger-2.0 specification"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 16, 33, 50),
                     "id": "2ut6i4vyle",
                     "name": "Swagger Petstore",
@@ -363,7 +374,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                     "name": "LambdaMicroservice",
                 },
                 {
-                    "description": "cloud tap service with combination of API GW and Lambda",
+                    "description": (
+                        "cloud tap service with combination of API GW and Lambda"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 22, 3, 18),
                     "id": "rm06h9oac4",
                     "name": "API Gateway Cloudtap Service",
@@ -416,7 +429,10 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.get_rest_apis.return_value = {
             "items": [
                 {
-                    "description": "A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification",
+                    "description": (
+                        "A sample API that uses a petstore as an example to demonstrate"
+                        " features in the swagger-2.0 specification"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 16, 33, 50),
                     "id": "2ut6i4vyle",
                     "name": "Swagger Petstore",
@@ -434,7 +450,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                     "name": "LambdaMicroservice",
                 },
                 {
-                    "description": "cloud tap service with combination of API GW and Lambda",
+                    "description": (
+                        "cloud tap service with combination of API GW and Lambda"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 22, 3, 18),
                     "id": "rm06h9oac4",
                     "name": "API Gateway Cloudtap Service",
@@ -508,7 +526,10 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.get_rest_apis.return_value = {
             "items": [
                 {
-                    "description": "A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification",
+                    "description": (
+                        "A sample API that uses a petstore as an example to demonstrate"
+                        " features in the swagger-2.0 specification"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 16, 33, 50),
                     "id": "2ut6i4vyle",
                     "name": "Swagger Petstore",
@@ -532,7 +553,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                     "name": "LambdaMicroservice",
                 },
                 {
-                    "description": "cloud tap service with combination of API GW and Lambda",
+                    "description": (
+                        "cloud tap service with combination of API GW and Lambda"
+                    ),
                     "createdDate": datetime.datetime(2015, 11, 17, 22, 3, 18),
                     "id": "rm06h9oac4",
                     "name": "API Gateway Cloudtap Service",
@@ -711,7 +734,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         """
         tests that we properly handle errors when create an api key fails.
         """
-        with salt.loader_context.loader_context(self.utils):
+        with salt.loader.context.loader_context(self.utils):
             self.conn.create_api_key.side_effect = ClientError(
                 error_content, "create_api_key"
             )
@@ -1416,7 +1439,12 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                     "name": "User",
                     "description": "User Model",
                     "id": "iltqcc",
-                    "schema": '{"properties":{"username":{"type":"string","description":"A unique username for the user"},"password":{"type":"string","description":"A password for the new user"}},"definitions":{}}',
+                    "schema": (
+                        '{"properties":{"username":{"type":"string","description":"A'
+                        " unique username for the"
+                        ' user"},"password":{"type":"string","description":"A password'
+                        ' for the new user"}},"definitions":{}}'
+                    ),
                 },
             ],
             "ResponseMetadata": {

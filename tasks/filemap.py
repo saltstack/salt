@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tasks.filemap
     ~~~~~~~~~~~~~
@@ -10,6 +9,7 @@ import re
 
 import yaml
 from invoke import task  # pylint: disable=3rd-party-module-not-gated
+
 from tasks import utils
 
 CODE_DIR = pathlib.Path(__file__).resolve().parent.parent
@@ -29,7 +29,8 @@ def _check_matches(rule, matches):
         filematch = _match_to_test_file(match)
         if not filematch.exists():
             utils.error(
-                "The match '{}' for rule '{}' points to a non existing test module path: {}",
+                "The match '{}' for rule '{}' points to a non existing test module"
+                " path: {}",
                 match,
                 rule,
                 filematch,

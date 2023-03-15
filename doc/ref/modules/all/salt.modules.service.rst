@@ -32,4 +32,3 @@ Execution Module                          Used for
 :py:mod:`~salt.modules.upstart_service`   Ubuntu-based distros using upstart
 :py:mod:`~salt.modules.win_service`       Windows
 ========================================= ========================================
-

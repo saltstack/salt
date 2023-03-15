@@ -6,9 +6,6 @@ contact_links:
   - name: Salt-Users Forum
     url: https://groups.google.com/forum/#!forum/salt-users
     about: Please ask and answer questions here.
-  - name: Salt on Freenode
-    url: http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
+  - name: Salt on LiberaChat
+    url: https://web.libera.chat/#salt
     about: Please ask and answer questions here.
-  - name: Security vulnerabilities
-    email: security@saltstack.com
-    about: Please report security vulnerabilities here.

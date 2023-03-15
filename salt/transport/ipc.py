@@ -136,7 +136,8 @@ class IPCServer:
 
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             salt.ext.tornado.netutil.add_accept_handler(
-                self.sock, self.handle_connection,
+                self.sock,
+                self.handle_connection,
             )
         self._started = True
 
@@ -161,7 +162,9 @@ class IPCServer:
                 @salt.ext.tornado.gen.coroutine
                 def return_message(msg):
                     pack = salt.transport.frame.frame_msg_ipc(
-                        msg, header={"mid": header["mid"]}, raw_body=True,
+                        msg,
+                        header={"mid": header["mid"]},
+                        raw_body=True,
                     )
                     yield stream.write(pack)
 
@@ -200,15 +203,20 @@ class IPCServer:
                         exc,
                     )
                 else:
-                    log.error("Exception occurred while " "handling stream: %s", exc)
+                    log.error("Exception occurred while handling stream: %s", exc)
             except Exception as exc:  # pylint: disable=broad-except
-                log.error("Exception occurred while " "handling stream: %s", exc)
+                log.error("Exception occurred while handling stream: %s", exc)
 
     def handle_connection(self, connection, address):
-        log.trace("IPCServer: Handling connection " "to address: %s", address)
+        log.trace(
+            "IPCServer: Handling connection to address: %s",
+            address if address else connection,
+        )
         try:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                stream = IOStream(connection,)
+                stream = IOStream(
+                    connection,
+                )
             self.io_loop.spawn_callback(self.handle_stream, stream)
         except Exception as exc:  # pylint: disable=broad-except
             log.error("IPC streaming error: %s", exc)
@@ -532,7 +540,8 @@ class IPCMessagePublisher:
 
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             salt.ext.tornado.netutil.add_accept_handler(
-                self.sock, self.handle_connection,
+                self.sock,
+                self.handle_connection,
             )
         self._started = True
 
@@ -639,6 +648,7 @@ class IPCMessageSubscriber(IPCClient):
 
     async_methods = [
         "read",
+        "connect",
     ]
     close_methods = [
         "close",
@@ -653,62 +663,68 @@ class IPCMessageSubscriber(IPCClient):
     @salt.ext.tornado.gen.coroutine
     def _read(self, timeout, callback=None):
         try:
-            yield self._read_in_progress.acquire(timeout=0.00000001)
-        except salt.ext.tornado.gen.TimeoutError:
-            raise salt.ext.tornado.gen.Return(None)
+            try:
+                yield self._read_in_progress.acquire(timeout=0.00000001)
+            except salt.ext.tornado.gen.TimeoutError:
+                raise salt.ext.tornado.gen.Return(None)
 
-        exc_to_raise = None
-        ret = None
-        try:
-            while True:
-                if self._read_stream_future is None:
-                    self._read_stream_future = self.stream.read_bytes(
-                        4096, partial=True
-                    )
-
-                if timeout is None:
-                    wire_bytes = yield self._read_stream_future
-                else:
-                    wire_bytes = yield FutureWithTimeout(
-                        self.io_loop, self._read_stream_future, timeout
-                    )
-                self._read_stream_future = None
-
-                # Remove the timeout once we get some data or an exception
-                # occurs. We will assume that the rest of the data is already
-                # there or is coming soon if an exception doesn't occur.
-                timeout = None
-
-                self.unpacker.feed(wire_bytes)
-                first_sync_msg = True
-                for framed_msg in self.unpacker:
-                    if callback:
-                        self.io_loop.spawn_callback(callback, framed_msg["body"])
-                    elif first_sync_msg:
-                        ret = framed_msg["body"]
-                        first_sync_msg = False
-                    else:
-                        self._saved_data.append(framed_msg["body"])
-                if not first_sync_msg:
-                    # We read at least one piece of data and we're on sync run
-                    break
-        except TornadoTimeoutError:
-            # In the timeout case, just return None.
-            # Keep 'self._read_stream_future' alive.
+            exc_to_raise = None
             ret = None
-        except StreamClosedError as exc:
-            log.trace("Subscriber disconnected from IPC %s", self.socket_path)
-            self._read_stream_future = None
-        except Exception as exc:  # pylint: disable=broad-except
-            log.error("Exception occurred in Subscriber while handling stream: %s", exc)
-            self._read_stream_future = None
-            exc_to_raise = exc
+            try:
+                while True:
+                    if self._read_stream_future is None:
+                        self._read_stream_future = self.stream.read_bytes(
+                            4096, partial=True
+                        )
 
-        self._read_in_progress.release()
+                    if timeout is None:
+                        wire_bytes = yield self._read_stream_future
+                    else:
+                        wire_bytes = yield FutureWithTimeout(
+                            self.io_loop, self._read_stream_future, timeout
+                        )
+                    self._read_stream_future = None
 
-        if exc_to_raise is not None:
-            raise exc_to_raise  # pylint: disable=E0702
-        raise salt.ext.tornado.gen.Return(ret)
+                    # Remove the timeout once we get some data or an exception
+                    # occurs. We will assume that the rest of the data is already
+                    # there or is coming soon if an exception doesn't occur.
+                    timeout = None
+
+                    self.unpacker.feed(wire_bytes)
+                    first_sync_msg = True
+                    for framed_msg in self.unpacker:
+                        if callback:
+                            self.io_loop.spawn_callback(callback, framed_msg["body"])
+                        elif first_sync_msg:
+                            ret = framed_msg["body"]
+                            first_sync_msg = False
+                        else:
+                            self._saved_data.append(framed_msg["body"])
+                    if not first_sync_msg:
+                        # We read at least one piece of data and we're on sync run
+                        break
+            except TornadoTimeoutError:
+                # In the timeout case, just return None.
+                # Keep 'self._read_stream_future' alive.
+                ret = None
+            except StreamClosedError as exc:
+                log.trace("Subscriber disconnected from IPC %s", self.socket_path)
+                self._read_stream_future = None
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Exception occurred in Subscriber while handling stream: %s", exc
+                )
+                self._read_stream_future = None
+                exc_to_raise = exc
+
+            self._read_in_progress.release()
+
+            if exc_to_raise is not None:
+                raise exc_to_raise  # pylint: disable=E0702
+            raise salt.ext.tornado.gen.Return(ret)
+        # Handle ctrl+c gracefully
+        except TypeError:
+            pass
 
     @salt.ext.tornado.gen.coroutine
     def read(self, timeout):

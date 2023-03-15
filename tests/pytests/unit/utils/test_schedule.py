@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.schedule
 from tests.support.mock import MagicMock
 

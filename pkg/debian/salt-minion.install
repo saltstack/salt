@@ -1,0 +1,2 @@
+conf/minion /etc/salt
+pkg/common/salt-minion.service /lib/systemd/system

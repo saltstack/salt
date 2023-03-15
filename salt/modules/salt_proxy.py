@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     Salt proxy module
 
@@ -7,17 +6,12 @@
     Module to deploy and manage salt-proxy processes
     on a minion.
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
+import shlex
 
-# Import 3rd-party libs
-import salt.ext.six.moves
 import salt.syspaths
-
-# Import Salt libs
 import salt.utils.files
 
 log = logging.getLogger(__name__)
@@ -27,7 +21,7 @@ def _write_proxy_conf(proxyfile):
     """
     write to file
     """
-    msg = "Invalid value for proxy file provided!, Supplied value = {0}".format(
+    msg = "Invalid value for proxy file provided!, Supplied value = {}".format(
         proxyfile
     )
 
@@ -37,11 +31,9 @@ def _write_proxy_conf(proxyfile):
         log.debug("Writing proxy conf file")
         with salt.utils.files.fopen(proxyfile, "w") as proxy_conf:
             proxy_conf.write(
-                salt.utils.stringutils.to_str(
-                    "master: {0}".format(__grains__["master"])
-                )
+                salt.utils.stringutils.to_str("master: {}".format(__grains__["master"]))
             )
-        msg = "Wrote proxy file {0}".format(proxyfile)
+        msg = "Wrote proxy file {}".format(proxyfile)
         log.debug(msg)
 
     return msg
@@ -58,18 +50,18 @@ def _proxy_conf_file(proxyfile, test):
         try:
             if not test:
                 changes_new.append(_write_proxy_conf(proxyfile))
-                msg = "Salt Proxy: Wrote proxy conf {0}".format(proxyfile)
+                msg = "Salt Proxy: Wrote proxy conf {}".format(proxyfile)
             else:
-                msg = "Salt Proxy: Update required to proxy conf {0}".format(proxyfile)
-        except (OSError, IOError) as err:
+                msg = "Salt Proxy: Update required to proxy conf {}".format(proxyfile)
+        except OSError as err:
             success = False
-            msg = "Salt Proxy: Error writing proxy file {0}".format(err)
+            msg = "Salt Proxy: Error writing proxy file {}".format(err)
             log.error(msg)
             changes_new.append(msg)
         changes_new.append(msg)
         log.debug(msg)
     else:
-        msg = "Salt Proxy: {0} already exists, skipping".format(proxyfile)
+        msg = "Salt Proxy: {} already exists, skipping".format(proxyfile)
         changes_old.append(msg)
         log.debug(msg)
     return success, changes_new, changes_old
@@ -79,8 +71,8 @@ def _is_proxy_running(proxyname):
     """
     Check if proxy for this name is running
     """
-    cmd = 'ps ax | grep "salt-proxy --proxyid={0}" | grep -v grep'.format(
-        salt.ext.six.moves.shlex_quote(proxyname)
+    cmd = 'ps ax | grep "salt-proxy --proxyid={}" | grep -v grep'.format(
+        shlex.quote(proxyname)
     )
     cmdout = __salt__["cmd.run_all"](cmd, timeout=5, python_shell=True)
     if not cmdout["stdout"]:
@@ -98,20 +90,18 @@ def _proxy_process(proxyname, test):
     if not _is_proxy_running(proxyname):
         if not test:
             __salt__["cmd.run_all"](
-                "salt-proxy --proxyid={0} -l info -d".format(
-                    salt.ext.six.moves.shlex_quote(proxyname)
-                ),
+                "salt-proxy --proxyid={} -l info -d".format(shlex.quote(proxyname)),
                 timeout=5,
             )
             changes_new.append(
-                "Salt Proxy: Started proxy process for {0}".format(proxyname)
+                "Salt Proxy: Started proxy process for {}".format(proxyname)
             )
         else:
             changes_new.append(
-                "Salt Proxy: process {0} will be started".format(proxyname)
+                "Salt Proxy: process {} will be started".format(proxyname)
             )
     else:
-        changes_old.append("Salt Proxy: already running for {0}".format(proxyname))
+        changes_old.append("Salt Proxy: already running for {}".format(proxyname))
     return True, changes_new, changes_old
 
 

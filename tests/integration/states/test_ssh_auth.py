@@ -5,6 +5,7 @@ Test the ssh_auth states
 import os
 
 import pytest
+
 import salt.utils.files
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_system_user

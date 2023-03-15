@@ -1,25 +1,26 @@
-# pylint: disable=function-redefined
 import copy
+
+import pytest
 
 import salt.utils.json
 import salt.utils.schema as schema
 import salt.utils.stringutils
 import salt.utils.yaml
-from salt.utils.versions import LooseVersion as _LooseVersion
-from tests.support.unit import TestCase, skipIf
+from salt.utils.versions import Version
+from tests.support.unit import TestCase
 
 try:
     import jsonschema
     import jsonschema.exceptions
 
     HAS_JSONSCHEMA = True
-    JSONSCHEMA_VERSION = _LooseVersion(jsonschema.__version__)
+    JSONSCHEMA_VERSION = Version(jsonschema.__version__)
 except ImportError:
     HAS_JSONSCHEMA = False
-    JSONSCHEMA_VERSION = _LooseVersion("0")
+    JSONSCHEMA_VERSION = Version("0")
 
 
-# pylint: disable=unused-import
+# pylint: disable=unused-import,function-redefined
 try:
     import rfc3987
 
@@ -120,16 +121,20 @@ class ConfigTestCase(TestCase):
         class SSHKeyFileSchema(schema.Schema):
             ssh_key_file = schema.StringItem(
                 title="SSH Private Key",
-                description="The path to an SSH private key which will be used "
-                "to authenticate on the deployed VMs",
+                description=(
+                    "The path to an SSH private key which will be used "
+                    "to authenticate on the deployed VMs"
+                ),
             )
 
         class SSHKeyNamesSchema(schema.Schema):
             ssh_key_names = schema.StringItem(
                 title="SSH Key Names",
-                description="The names of an SSH key being managed on "
-                "DigitalOcean account which will be used to "
-                "authenticate on the deployed VMs",
+                description=(
+                    "The names of an SSH key being managed on "
+                    "DigitalOcean account which will be used to "
+                    "authenticate on the deployed VMs"
+                ),
             )
 
         class Requirements(BaseRequirements):
@@ -138,8 +143,10 @@ class ConfigTestCase(TestCase):
 
             personal_access_token = schema.StringItem(
                 title="Personal Access Token",
-                description="This is the API access token which can be generated "
-                "under the API/Application on your account",
+                description=(
+                    "This is the API access token which can be generated "
+                    "under the API/Application on your account"
+                ),
                 required=True,
             )
 
@@ -166,20 +173,26 @@ class ConfigTestCase(TestCase):
                 },
                 "personal_access_token": {
                     "type": "string",
-                    "description": "This is the API access token which can be "
-                    "generated under the API/Application on your account",
+                    "description": (
+                        "This is the API access token which can be "
+                        "generated under the API/Application on your account"
+                    ),
                     "title": "Personal Access Token",
                 },
                 "ssh_key_file": {
                     "type": "string",
-                    "description": "The path to an SSH private key which will "
-                    "be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The path to an SSH private key which will "
+                        "be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Private Key",
                 },
                 "ssh_key_names": {
                     "type": "string",
-                    "description": "The names of an SSH key being managed on DigitalOcean "
-                    "account which will be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The names of an SSH key being managed on DigitalOcean "
+                        "account which will be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Key Names",
                 },
             },
@@ -201,22 +214,28 @@ class ConfigTestCase(TestCase):
 
             personal_access_token = schema.StringItem(
                 title="Personal Access Token",
-                description="This is the API access token which can be generated "
-                "under the API/Application on your account",
+                description=(
+                    "This is the API access token which can be generated "
+                    "under the API/Application on your account"
+                ),
                 required=True,
             )
 
             ssh_key_file = schema.StringItem(
                 title="SSH Private Key",
-                description="The path to an SSH private key which will be used "
-                "to authenticate on the deployed VMs",
+                description=(
+                    "The path to an SSH private key which will be used "
+                    "to authenticate on the deployed VMs"
+                ),
             )
 
             ssh_key_names = schema.StringItem(
                 title="SSH Key Names",
-                description="The names of an SSH key being managed on "
-                "DigitalOcean account which will be used to "
-                "authenticate on the deployed VMs",
+                description=(
+                    "The names of an SSH key being managed on "
+                    "DigitalOcean account which will be used to "
+                    "authenticate on the deployed VMs"
+                ),
             )
 
             requirements_definition = schema.AnyOfItem(
@@ -240,20 +259,26 @@ class ConfigTestCase(TestCase):
                 },
                 "personal_access_token": {
                     "type": "string",
-                    "description": "This is the API access token which can be "
-                    "generated under the API/Application on your account",
+                    "description": (
+                        "This is the API access token which can be "
+                        "generated under the API/Application on your account"
+                    ),
                     "title": "Personal Access Token",
                 },
                 "ssh_key_file": {
                     "type": "string",
-                    "description": "The path to an SSH private key which will "
-                    "be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The path to an SSH private key which will "
+                        "be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Private Key",
                 },
                 "ssh_key_names": {
                     "type": "string",
-                    "description": "The names of an SSH key being managed on DigitalOcean "
-                    "account which will be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The names of an SSH key being managed on DigitalOcean "
+                        "account which will be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Key Names",
                 },
             },
@@ -289,20 +314,26 @@ class ConfigTestCase(TestCase):
                 },
                 "personal_access_token": {
                     "type": "string",
-                    "description": "This is the API access token which can be "
-                    "generated under the API/Application on your account",
+                    "description": (
+                        "This is the API access token which can be "
+                        "generated under the API/Application on your account"
+                    ),
                     "title": "Personal Access Token",
                 },
                 "ssh_key_file": {
                     "type": "string",
-                    "description": "The path to an SSH private key which will "
-                    "be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The path to an SSH private key which will "
+                        "be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Private Key",
                 },
                 "ssh_key_names": {
                     "type": "string",
-                    "description": "The names of an SSH key being managed on DigitalOcean "
-                    "account which will be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The names of an SSH key being managed on DigitalOcean "
+                        "account which will be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Key Names",
                 },
             },
@@ -326,15 +357,19 @@ class ConfigTestCase(TestCase):
 
             ssh_key_file_2 = schema.StringItem(
                 title="SSH Private Key",
-                description="The path to an SSH private key which will be used "
-                "to authenticate on the deployed VMs",
+                description=(
+                    "The path to an SSH private key which will be used "
+                    "to authenticate on the deployed VMs"
+                ),
             )
 
             ssh_key_names_2 = schema.StringItem(
                 title="SSH Key Names",
-                description="The names of an SSH key being managed on "
-                "DigitalOcean account which will be used to "
-                "authenticate on the deployed VMs",
+                description=(
+                    "The names of an SSH key being managed on "
+                    "DigitalOcean account which will be used to "
+                    "authenticate on the deployed VMs"
+                ),
             )
 
             requirements_definition_2 = schema.AnyOfItem(
@@ -358,32 +393,42 @@ class ConfigTestCase(TestCase):
                 },
                 "personal_access_token": {
                     "type": "string",
-                    "description": "This is the API access token which can be "
-                    "generated under the API/Application on your account",
+                    "description": (
+                        "This is the API access token which can be "
+                        "generated under the API/Application on your account"
+                    ),
                     "title": "Personal Access Token",
                 },
                 "ssh_key_file": {
                     "type": "string",
-                    "description": "The path to an SSH private key which will "
-                    "be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The path to an SSH private key which will "
+                        "be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Private Key",
                 },
                 "ssh_key_names": {
                     "type": "string",
-                    "description": "The names of an SSH key being managed on DigitalOcean "
-                    "account which will be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The names of an SSH key being managed on DigitalOcean "
+                        "account which will be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Key Names",
                 },
                 "ssh_key_file_2": {
                     "type": "string",
-                    "description": "The path to an SSH private key which will "
-                    "be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The path to an SSH private key which will "
+                        "be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Private Key",
                 },
                 "ssh_key_names_2": {
                     "type": "string",
-                    "description": "The names of an SSH key being managed on DigitalOcean "
-                    "account which will be used to authenticate on the deployed VMs",
+                    "description": (
+                        "The names of an SSH key being managed on DigitalOcean "
+                        "account which will be used to authenticate on the deployed VMs"
+                    ),
                     "title": "SSH Key Names",
                 },
             },
@@ -406,7 +451,9 @@ class ConfigTestCase(TestCase):
         }
         self.assertDictContainsSubset(expected, Requirements4.serialize())
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_optional_requirements_config_validation(self):
         class BaseRequirements(schema.Schema):
             driver = schema.StringItem(default="digitalocean", format="hidden")
@@ -414,16 +461,20 @@ class ConfigTestCase(TestCase):
         class SSHKeyFileSchema(schema.Schema):
             ssh_key_file = schema.StringItem(
                 title="SSH Private Key",
-                description="The path to an SSH private key which will be used "
-                "to authenticate on the deployed VMs",
+                description=(
+                    "The path to an SSH private key which will be used "
+                    "to authenticate on the deployed VMs"
+                ),
             )
 
         class SSHKeyNamesSchema(schema.Schema):
             ssh_key_names = schema.StringItem(
                 title="SSH Key Names",
-                description="The names of an SSH key being managed on  "
-                "Digial Ocean account which will be used to "
-                "authenticate on the deployed VMs",
+                description=(
+                    "The names of an SSH key being managed on  "
+                    "Digial Ocean account which will be used to "
+                    "authenticate on the deployed VMs"
+                ),
             )
 
         class Requirements(BaseRequirements):
@@ -432,8 +483,10 @@ class ConfigTestCase(TestCase):
 
             personal_access_token = schema.StringItem(
                 title="Personal Access Token",
-                description="This is the API access token which can be generated "
-                "under the API/Application on your account",
+                description=(
+                    "This is the API access token which can be generated "
+                    "under the API/Application on your account"
+                ),
                 required=True,
             )
 
@@ -478,7 +531,7 @@ class ConfigTestCase(TestCase):
             jsonschema.validate(
                 {"personal_access_token": "foo"}, Requirements.serialize()
             )
-        if JSONSCHEMA_VERSION >= _LooseVersion("3.0.0"):
+        if JSONSCHEMA_VERSION >= Version("3.0.0"):
             self.assertIn(
                 "'ssh_key_file' is a required property", excinfo.exception.message
             )
@@ -520,7 +573,9 @@ class ConfigTestCase(TestCase):
             },
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_boolean_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.BooleanItem(title="Hungry", description="Are you hungry?")
@@ -627,7 +682,9 @@ class ConfigTestCase(TestCase):
             },
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_string_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.StringItem(title="Foo", description="Foo Item")
@@ -717,7 +774,9 @@ class ConfigTestCase(TestCase):
             },
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_email_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.EMailItem(title="Item", description="Item description")
@@ -751,9 +810,9 @@ class ConfigTestCase(TestCase):
             },
         )
 
-    @skipIf(
-        JSONSCHEMA_VERSION <= _LooseVersion("2.5.0"),
-        "Requires jsonschema 2.5.0 or greater",
+    @pytest.mark.skipif(
+        JSONSCHEMA_VERSION <= Version("2.5.0"),
+        reason="Requires jsonschema 2.5.0 or greater",
     )
     def test_ipv4_config_validation(self):
         class TestConf(schema.Schema):
@@ -788,7 +847,9 @@ class ConfigTestCase(TestCase):
             },
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_ipv6_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.IPv6Item(title="Item", description="Item description")
@@ -822,7 +883,9 @@ class ConfigTestCase(TestCase):
             },
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_hostname_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.HostnameItem(title="Item", description="Item description")
@@ -856,8 +919,12 @@ class ConfigTestCase(TestCase):
             },
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
-    @skipIf(not HAS_STRICT_RFC3339, "The 'strict_rfc3339' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
+    @pytest.mark.skipif(
+        not HAS_STRICT_RFC3339, reason="The 'strict_rfc3339' library is missing"
+    )
     def test_datetime_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.DateTimeItem(title="Item", description="Item description")
@@ -903,8 +970,10 @@ class ConfigTestCase(TestCase):
             },
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
-    @skipIf(HAS_RFC3987 is False, "The 'rfc3987' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
+    @pytest.mark.skipif(HAS_RFC3987 is False, reason="The 'rfc3987' library is missing")
     def test_uri_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.UriItem(title="Item", description="Item description")
@@ -1021,7 +1090,9 @@ class ConfigTestCase(TestCase):
             },
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_number_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.NumberItem(title="How many dogs", description="Question")
@@ -1208,7 +1279,9 @@ class ConfigTestCase(TestCase):
             },
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_integer_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.IntegerItem(title="How many dogs", description="Question")
@@ -1406,7 +1479,9 @@ class ConfigTestCase(TestCase):
             },
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_array_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -1708,7 +1783,9 @@ class ConfigTestCase(TestCase):
             },
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_dict_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.DictItem(
@@ -1769,7 +1846,7 @@ class ConfigTestCase(TestCase):
                 {"item": {"color": "green", "sides": 4, "surfaces": 4}},
                 TestConf.serialize(),
             )
-        if JSONSCHEMA_VERSION < _LooseVersion("2.6.0"):
+        if JSONSCHEMA_VERSION < Version("2.6.0"):
             self.assertIn(
                 "Additional properties are not allowed", excinfo.exception.message
             )
@@ -1801,7 +1878,7 @@ class ConfigTestCase(TestCase):
             jsonschema.validate(
                 {"item": {"sides": "4", "color": "blue"}}, TestConf.serialize()
             )
-        if JSONSCHEMA_VERSION >= _LooseVersion("3.0.0"):
+        if JSONSCHEMA_VERSION >= Version("3.0.0"):
             self.assertIn("'4'", excinfo.exception.message)
             self.assertIn("is not of type", excinfo.exception.message)
             self.assertIn("'boolean'", excinfo.exception.message)
@@ -1903,7 +1980,9 @@ class ConfigTestCase(TestCase):
             item.serialize(), {"oneOf": [i.serialize() for i in item.items]}
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_oneof_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -1924,7 +2003,7 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": ["maybe"]}, TestConf.serialize())
-        if JSONSCHEMA_VERSION >= _LooseVersion("3.0.0"):
+        if JSONSCHEMA_VERSION >= Version("3.0.0"):
             self.assertIn("'maybe'", excinfo.exception.message)
             self.assertIn("is not one of", excinfo.exception.message)
             self.assertIn("'yes'", excinfo.exception.message)
@@ -1949,7 +2028,9 @@ class ConfigTestCase(TestCase):
             {"anyOf": [i.serialize() for i in item.items]},  # pylint: disable=E1133
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_anyof_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -1986,7 +2067,7 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": ["maybe"]}, TestConf.serialize())
-        if JSONSCHEMA_VERSION >= _LooseVersion("3.0.0"):
+        if JSONSCHEMA_VERSION >= Version("3.0.0"):
             self.assertIn("'maybe'", excinfo.exception.message)
             self.assertIn("is not one of", excinfo.exception.message)
             self.assertIn("'yes'", excinfo.exception.message)
@@ -2008,7 +2089,9 @@ class ConfigTestCase(TestCase):
             {"allOf": [i.serialize() for i in item.items]},  # pylint: disable=E1133
         )
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_allof_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -2048,7 +2131,9 @@ class ConfigTestCase(TestCase):
         item = schema.NotItem(item=schema.BooleanItem())
         self.assertEqual(item.serialize(), {"not": item.item.serialize()})
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_not_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -2108,7 +2193,9 @@ class ConfigTestCase(TestCase):
             "type": "object",
             "properties": {
                 "another_name": {
-                    "id": "https://non-existing.saltstack.com/schemas/another_name.json#",
+                    "id": (
+                        "https://non-existing.saltstack.com/schemas/another_name.json#"
+                    ),
                     "type": "object",
                     "properties": {
                         "item": {
@@ -2170,7 +2257,7 @@ class TestComplexComplexDefinitionsSchema(schema.DefinitionsSchema):
 
 
 class ComplexSchemaTestCase(TestCase):
-    """ Test cases with definition schemas containing complex items"""
+    """Test cases with definition schemas containing complex items"""
 
     obj = ComplexSchemaItem()
     complex_obj = ComplexComplexSchemaItem()
@@ -2398,7 +2485,9 @@ class ComplexSchemaTestCase(TestCase):
         }
         self.assertDictEqual(serialized, expected)
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_complex_schema_item_thirsty_valid(self):
         serialized = self.schema.serialize()
 
@@ -2407,7 +2496,9 @@ class ComplexSchemaTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail("ValidationError raised: {}".format(exc))
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_complex_schema_item_thirsty_invalid(self):
         serialized = self.schema.serialize()
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
@@ -2415,7 +2506,9 @@ class ComplexSchemaTestCase(TestCase):
         expected = "'Foo' is not of type 'boolean'"
         self.assertIn(expected, excinfo.exception.message)
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_complex_complex_schema_item_hungry_valid(self):
         serialized = self.complex_schema.serialize()
 
@@ -2424,7 +2517,9 @@ class ComplexSchemaTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail("ValidationError raised: {}".format(exc))
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_both_complex_complex_schema_all_items_valid(self):
         serialized = self.complex_schema.serialize()
         try:
@@ -2440,7 +2535,9 @@ class ComplexSchemaTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail("ValidationError raised: {}".format(exc))
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_complex_complex_schema_item_hungry_invalid(self):
         serialized = self.complex_schema.serialize()
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
@@ -2448,7 +2545,9 @@ class ComplexSchemaTestCase(TestCase):
         expected = "'Foo' is not of type 'boolean'"
         self.assertIn(expected, excinfo.exception.message)
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_complex_complex_schema_item_inner_thirsty_invalid(self):
         serialized = self.complex_schema.serialize()
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
@@ -2465,7 +2564,9 @@ class ComplexSchemaTestCase(TestCase):
         expected = "'Bar' is not of type 'boolean'"
         self.assertIn(expected, excinfo.exception.message)
 
-    @skipIf(HAS_JSONSCHEMA is False, "The 'jsonschema' library is missing")
+    @pytest.mark.skipif(
+        HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
+    )
     def test_complex_complex_schema_item_missing_required_hungry(self):
         serialized = self.complex_schema.serialize()
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:

@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 
 import pytest
+
 import salt.modules.config as config
 import salt.modules.virt as virt
 from tests.support.mock import MagicMock

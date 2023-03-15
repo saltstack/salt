@@ -1,20 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Manage RDP Service on Windows servers
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import re
 
-# Import Salt libs
 import salt.utils.platform
 from salt.utils.decorators import depends
 
 try:
-    from pywintypes import error as PyWinError
     import win32ts
+    from pywintypes import error as PyWinError
 
     _HAS_WIN32TS_DEPENDENCIES = True
 except ImportError:
@@ -55,7 +51,7 @@ def _psrdp(cmd):
         "-Authentication 6 -ErrorAction Stop"
     )
     return __salt__["cmd.run"](
-        "{0} ; {1}".format(rdp, cmd), shell="powershell", python_shell=True
+        "{} ; {}".format(rdp, cmd), shell="powershell", python_shell=True
     )
 
 

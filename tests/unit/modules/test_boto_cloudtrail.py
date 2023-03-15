@@ -1,25 +1,17 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import random
 import string
 
-# Import Salt libs
+import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.boto_cloudtrail as boto_cloudtrail
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,unused-import
 try:
     import boto
@@ -47,7 +39,7 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
+    elif Version(boto3.__version__) < Version(required_boto3_version):
         return False
     else:
         return True
@@ -94,11 +86,12 @@ if _has_required_boto():
     )
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    reason="The boto3 module must be greater than or equal to version {}".format(
+        required_boto3_version
+    ),
 )
 class BotoCloudTrailTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
@@ -111,7 +104,7 @@ class BotoCloudTrailTestCaseBase(TestCase, LoaderModuleMockMixin):
         return {boto_cloudtrail: {"__utils__": utils}}
 
     def setUp(self):
-        super(BotoCloudTrailTestCaseBase, self).setUp()
+        super().setUp()
         boto_cloudtrail.__init__(self.opts)
         del self.opts
 
@@ -134,7 +127,7 @@ class BotoCloudTrailTestCaseBase(TestCase, LoaderModuleMockMixin):
         session_instance.client.return_value = self.conn
 
 
-class BotoCloudTrailTestCaseMixin(object):
+class BotoCloudTrailTestCaseMixin:
     pass
 
 

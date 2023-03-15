@@ -33,23 +33,23 @@ def salt_master(salt_factories, pillar_state_tree, extension_modules):
         "decrypt_pillar_delimiter": ":",
         "decrypt_pillar_renderers": ["gpg"],
     }
-    factory = salt_factories.get_salt_master_daemon(
-        "pillar-functional-master", config_defaults=config_defaults
+    factory = salt_factories.salt_master_daemon(
+        "pillar-functional-master", defaults=config_defaults
     )
     return factory
 
 
 @pytest.fixture(scope="package")
 def salt_minion_1(salt_master):
-    factory = salt_master.get_salt_minion_daemon(
-        "pillar-functional-minion-1", config_defaults={"open_mode": True}
+    factory = salt_master.salt_minion_daemon(
+        "pillar-functional-minion-1", defaults={"open_mode": True}
     )
     return factory
 
 
 @pytest.fixture(scope="package")
 def salt_minion_2(salt_master):
-    factory = salt_master.get_salt_minion_daemon(
-        "pillar-functional-minion-2", config_defaults={"open_mode": True}
+    factory = salt_master.salt_minion_daemon(
+        "pillar-functional-minion-2", defaults={"open_mode": True}
     )
     return factory

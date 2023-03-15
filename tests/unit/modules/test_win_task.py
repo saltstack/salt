@@ -1,10 +1,10 @@
 import pytest
+
 import salt.modules.win_task as win_task
-import salt.utils.platform
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
-@skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.destructive_test
 class WinTaskTestCase(TestCase):
     """

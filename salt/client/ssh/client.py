@@ -3,6 +3,7 @@ import logging
 import os
 import random
 
+import salt.client.ssh
 import salt.config
 import salt.syspaths
 import salt.utils.args
@@ -75,8 +76,6 @@ class SSHClient:
             ("ssh_wipe", bool),
             ("rand_thin_dir", bool),
             ("regen_thin", bool),
-            ("python2_bin", str),
-            ("python3_bin", str),
             ("ssh_run_pre_flight", bool),
             ("no_host_keys", bool),
             ("saltfile", str),

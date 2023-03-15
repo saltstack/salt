@@ -14,7 +14,13 @@ Statistics
 - Total Issue References: **73**
 - Total PR References: **162**
 
-- Contributors: **46** (`AndrewPashkin`_, `Ch3LL`_, `DmitryKuzmenko`_, `TheNullByte`_, `UtahDave`_, `abednarik`_, `amontalban`_, `anlutro`_, `attiasr`_, `basepi`_, `borgstrom`_, `brejoc`_, `bstevenson`_, `cachedout`_, `carlwgeorge`_, `efficks`_, `gerhardqux`_, `gtmanfred`_, `heyfife`_, `jacobhammons`_, `jfindlay`_, `justinta`_, `lomeroe`_, `lorengordon`_, `mtorromeo`_, `nmadhok`_, `notpeter`_, `paclat`_, `pcn`_, `phistrom`_, `rallytime`_, `robgott`_, `sacren`_, `sastorsl`_, `serge-p`_, `sjmh`_, `sjorge`_, `techhat`_, `terminalmage`_, `thatch45`_, `thegoodduke`_, `toanju`_, `tomwalsh`_, `twangboy`_, `whiteinge`_, `yannis666`_)
+- Contributors: **46** (`AndrewPashkin`_, `Ch3LL`_, `DmitryKuzmenko`_, `TheNullByte`_, `UtahDave`_,
+  `abednarik`_, `amontalban`_, `anlutro`_, `attiasr`_, `basepi`_, `borgstrom`_, `brejoc`_,
+  `bstevenson`_, `cachedout`_, `carlwgeorge`_, `efficks`_, `gerhardqux`_, `gtmanfred`_, `heyfife`_,
+  `jacobhammons`_, `jfindlay`_, `justinta`_, `lomeroe`_, `lorengordon`_, `mtorromeo`_, `nmadhok`_,
+  `notpeter`_, `paclat`_, `pcn`_, `phistrom`_, `rallytime`_, `robgott`_, `sacren`_, `sastorsl`_,
+  `serge-p`_, `sjmh`_, `sjorge`_, `techhat`_, `terminalmage`_, `thatch45`_, `thegoodduke`_,
+  `toanju`_, `tomwalsh`_, `twangboy`_, `whiteinge`_, `yannis666`_)
 
 
 Changelog for v2015.5.10..v2015.5.11
@@ -259,7 +265,7 @@ Changelog for v2015.5.10..v2015.5.11
 
   * **PR** `#32421`_: (`terminalmage`_) Ignore Raspbian in service.py __virtual__
 
-* **ISSUE** `#1409`_: (`twinshadow`_) module/network.py: Interfaces do not list multiple addesses
+* **ISSUE** `#1409`_: (`twinshadow`_) module/network.py: Interfaces do not list multiple addresses
 
 * **ISSUE** `saltstack/salt#28262`_: (`palica`_) FreeBSD pkgng provider raising error for minion (refs: `#32376`_)
 
@@ -434,9 +440,9 @@ Changelog for v2015.5.10..v2015.5.11
 
   * d18b4be80b remove whitespace end of line 186:q
 
-  * d2b89c85ad fix formating
+  * d2b89c85ad fix formatting
 
-  * 103cee9e29 cleaned up formating
+  * 103cee9e29 cleaned up formatting
 
   * 7a4d7f0bff added whitespace
 
@@ -1057,7 +1063,7 @@ Changelog for v2015.5.10..v2015.5.11
 
   * 8e56be7f4c Merge pull request `#30548`_ from jacobhammons/doc-fixes
 
-  * 03c51bb54d Added placeholder release notes for 2015.5.10 Changed old doc links from docs.saltstack.org to docs.saltstack.com
+  * 03c51bb54d Added placeholder release notes for 2015.5.10 Changed old doc links from docs.saltstack.org to docs.saltproject.io
 
 * **PR** `#30530`_: (`terminalmage`_) 2015.5 tweaks from `#30529`_
   @ *2016-01-22 16:26:21 UTC*

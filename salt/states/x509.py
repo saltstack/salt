@@ -5,6 +5,19 @@ Manage X509 Certificates
 
 :depends: M2Crypto
 
+.. deprecated:: 3006.0
+
+.. warning::
+    This module has been deprecated and will be removed
+    in Salt 3009 (Potassium). Please migrate to the replacement
+    modules. For breaking changes between both versions,
+    you can refer to the :ref:`x509_v2 execution module docs <x509-setup>`.
+
+    They will become the default ``x509`` modules in Salt 3008 (Argon).
+    You can explicitly switch to the new modules before that release
+    by setting ``features: {x509_v2: true}`` in your minion configuration.
+
+
 This module can enable managing a complete PKI infrastructure including creating private keys, CAs,
 certificates and CRLs. It includes the ability to generate a private key on a server, and have the
 corresponding public key sent to a remote CA to create a CA signed certificate. This can be done in
@@ -177,6 +190,8 @@ import os
 import re
 
 import salt.exceptions
+import salt.utils.versions
+from salt.features import features
 
 try:
     from M2Crypto.RSA import RSAError
@@ -190,7 +205,14 @@ def __virtual__():
     """
     only load this module if the corresponding execution module is loaded
     """
+    if features.get("x509_v2"):
+        return (False, "Superseded, using x509_v2")
     if "x509.get_pem_entry" in __salt__:
+        salt.utils.versions.warn_until(
+            "Potassium",
+            "The x509 modules are deprecated. Please migrate to the replacement "
+            "modules (x509_v2). They are the default from Salt 3008 (Argon) onwards.",
+        )
         return "x509"
     else:
         return (False, "Could not load x509 state: m2crypto unavailable")
@@ -541,9 +563,8 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
         if days_remaining != 0 and actual_days_remaining < days_remaining:
             return (
                 False,
-                "Certificate needs renewal: {} days remaining but it needs to be at least {}".format(
-                    actual_days_remaining, days_remaining
-                ),
+                "Certificate needs renewal: {} days remaining but it needs to be at"
+                " least {}".format(actual_days_remaining, days_remaining),
                 cert_info,
             )
 
@@ -691,10 +712,9 @@ def certificate_managed(name, days_remaining=90, append_certs=None, **kwargs):
         __salt__["x509.read_certificate"](contents)
     except salt.exceptions.SaltInvocationError as e:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "An error occurred creating the certificate {}. The result returned from x509.create_certificate is not a valid PEM file:\n{}".format(
-            name, str(e)
+        ret["comment"] = (
+            "An error occurred creating the certificate {}. The result returned from"
+            " x509.create_certificate is not a valid PEM file:\n{}".format(name, str(e))
         )
         return ret
 
@@ -708,10 +728,11 @@ def certificate_managed(name, days_remaining=90, append_certs=None, **kwargs):
             contents += append_file_contents
         except salt.exceptions.SaltInvocationError as e:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "{} is not a valid certificate file, cannot append it to the certificate {}.\nThe error returned by the x509 module was:\n{}".format(
-                append_file, name, str(e)
+            ret["comment"] = (
+                "{} is not a valid certificate file, cannot append it to the"
+                " certificate {}.\nThe error returned by the x509 module was:\n{}".format(
+                    append_file, name, str(e)
+                )
             )
             return ret
 

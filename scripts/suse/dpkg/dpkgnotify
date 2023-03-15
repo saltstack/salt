@@ -1,0 +1,56 @@
+#!/usr/bin/python3
+
+import os
+import hashlib
+import sys
+
+CK_PATH = "/var/cache/salt/minion/dpkg.cookie"
+DPKG_PATH = "/var/lib/dpkg/status"
+
+
+def _get_mtime():
+    """
+    Get the modified time of the Package Database.
+    Returns:
+        Unix ticks
+    """
+    return os.path.exists(DPKG_PATH) and int(os.path.getmtime(DPKG_PATH)) or 0
+
+
+def _get_checksum():
+    """
+    Get the checksum of the Package Database.
+    Returns:
+        hexdigest
+    """
+    digest = hashlib.sha256()
+    with open(DPKG_PATH, "rb") as pkg_db_fh:
+        while True:
+            buff = pkg_db_fh.read(0x1000)
+            if not buff:
+                break
+            digest.update(buff)
+    return digest.hexdigest()
+
+
+def dpkg_post_invoke():
+    """
+    Hook after the package installation transaction.
+    """
+    if "SALT_RUNNING" not in os.environ:
+        try:
+            ck_dir = os.path.dirname(CK_PATH)
+            if not os.path.exists(ck_dir):
+                os.makedirs(ck_dir)
+            with open(CK_PATH, "w") as ck_fh:
+                ck_fh.write(
+                    "{chksum} {mtime}\n".format(
+                        chksum=_get_checksum(), mtime=_get_mtime()
+                    )
+                )
+        except OSError as e:
+            print("Unable to save the cookie file: %s" % (e), file=sys.stderr)
+
+
+if __name__ == "__main__":
+    dpkg_post_invoke()

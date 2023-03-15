@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.states.xmpp as xmpp
 from tests.support.mock import MagicMock, patch
 

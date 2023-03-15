@@ -31,7 +31,7 @@ import salt.utils.event
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import SaltCloudSystemExit
 from salt.utils.functools import namespaced_function
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 # CloudStackNetwork will be needed during creation of a new node
 # pylint: disable=import-error
@@ -43,7 +43,7 @@ try:
     # this work-around. This work-around can be removed when the required
     # minimum version of libcloud is 2.0.0 (See PR #40837 - which is
     # implemented in Salt 2018.3.0).
-    if _LooseVersion(libcloud.__version__) < _LooseVersion("1.4.0"):
+    if Version(libcloud.__version__) < Version("1.4.0"):
         # See https://github.com/saltstack/salt/issues/32743
         import libcloud.security
 
@@ -131,7 +131,7 @@ def get_conn():
             libcloud.security.VERIFY_SSL_CERT = False
         except (ImportError, AttributeError):
             raise SaltCloudSystemExit(
-                "Could not disable SSL certificate verification. " "Not loading module."
+                "Could not disable SSL certificate verification. Not loading module."
             )
 
     return driver(
@@ -172,7 +172,7 @@ def get_location(conn, vm_):
     # Default to Dallas if not otherwise set
     loc = config.get_cloud_config_value("location", vm_, __opts__, default=2)
     for location in locations:
-        if str(loc) in (str(location.id), str(location.name),):
+        if str(loc) in (str(location.id), str(location.name)):
             return location
 
 
@@ -270,7 +270,7 @@ def get_project(conn, vm_):
         return False
 
     for project in projects:
-        if str(projid) in (str(project.id), str(project.name),):
+        if str(projid) in (str(project.id), str(project.name)):
             return project
 
     log.warning("Couldn't find project %s in projects", projid)
@@ -467,7 +467,7 @@ def destroy(name, conn=None, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](

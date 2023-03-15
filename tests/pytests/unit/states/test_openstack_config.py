@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.openstack_config as openstack_config
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch

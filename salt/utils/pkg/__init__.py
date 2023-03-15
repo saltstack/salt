@@ -1,16 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Common functions for managing package refreshes during states
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
 import os
 import re
+import sys
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.versions
@@ -96,3 +93,12 @@ def match_version(desired, available, cmp_func=None, ignore_epoch=False):
         ):
             return candidate
     return None
+
+
+def check_bundled():
+    """
+    Gather run-time information to indicate if we are running from source or bundled.
+    """
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return True
+    return False

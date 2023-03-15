@@ -12,7 +12,13 @@ Statistics
 - Total Issue References: **39**
 - Total PR References: **135**
 
-- Contributors: **40** (`DmitryKuzmenko`_, `The-Loeki`_, `TheBigBear`_, `basepi`_, `bechtoldt`_, `bernieke`_, `blueyed`_, `cachedout`_, `cedwards`_, `clinta`_, `cro`_, `deuscapturus`_, `dmurphy18`_, `dsumsky`_, `eliasp`_, `flowhamster`_, `isbm`_, `jacksontj`_, `jacobhammons`_, `jfindlay`_, `justinta`_, `l2ol33rt`_, `macgyver13`_, `meggiebot`_, `msteed`_, `multani`_, `nasenbaer13`_, `perfinion`_, `pprkut`_, `rallytime`_, `rhealitycheck`_, `ruzarowski`_, `ryan-lane`_, `s0undt3ch`_, `systembell`_, `techhat`_, `terminalmage`_, `ticosax`_, `twangboy`_, `whiteinge`_)
+- Contributors: **40** (`DmitryKuzmenko`_, `The-Loeki`_, `TheBigBear`_, `basepi`_, `bechtoldt`_,
+  `bernieke`_, `blueyed`_, `cachedout`_, `cedwards`_, `clinta`_, `cro`_, `deuscapturus`_,
+  `dmurphy18`_, `dsumsky`_, `eliasp`_, `flowhamster`_, `isbm`_, `jacksontj`_, `jacobhammons`_,
+  `jfindlay`_, `justinta`_, `l2ol33rt`_, `macgyver13`_, `meggiebot`_, `msteed`_, `multani`_,
+  `nasenbaer13`_, `perfinion`_, `pprkut`_, `rallytime`_, `rhealitycheck`_, `ruzarowski`_,
+  `ryan-lane`_, `s0undt3ch`_, `systembell`_, `techhat`_, `terminalmage`_, `ticosax`_, `twangboy`_,
+  `whiteinge`_)
 
 
 Security Fixes
@@ -199,7 +205,7 @@ Changelog for v2015.8.0..v2015.8.1
 
     * 68d784c3dd Merge pull request `#27472`_ from cachedout/fix_27447
 
-      * 5e745ad6da Change recommeded schema for data field in mysql event table
+      * 5e745ad6da Change recommended schema for data field in mysql event table
 
     * ee6e0ed057 Merge pull request `#27468`_ from cachedout/fix_27351
 
@@ -235,7 +241,7 @@ Changelog for v2015.8.0..v2015.8.1
 
     * ed6207a438 Merge pull request `#27419`_ from rallytime/fix-9856
 
-      * 551396564a Ammend error log to include multiple tips for troubleshooting.
+      * 551396564a Amend error log to include multiple tips for troubleshooting.
 
     * 73fa89edf7 Merge pull request `#27426`_ from rallytime/fix-16753
 
@@ -245,7 +251,7 @@ Changelog for v2015.8.0..v2015.8.1
 
       * 39a4ae5a6c Remove hdd: 19 refs from SL docs - no longer available from SoftLayer.
 
-      * de2f9234d3 Use correct default for bandwith
+      * de2f9234d3 Use correct default for bandwidth
 
       * 42d8127f79 Don't set the optional_products default to a boolean, and then try to loop.
 
@@ -669,7 +675,7 @@ Changelog for v2015.8.0..v2015.8.1
 
   * ed18384108 Merge pull request `#7`_ from jtand/cloud-logging-eight
 
-    * a6c1d0b408 Fixed a bug where logging_command wasnt set as a key in a couple spots
+    * a6c1d0b408 Fixed a bug where logging_command wasn't set as a key in a couple spots
 
   * 8bb7cb7ff4 Use correct indexes
 
@@ -1556,12 +1562,12 @@ Changelog for v2015.8.0..v2015.8.1
 
   * 7e35b13022 Turned multiprocessing on
 
-* **PR** `#27086`_: (`techhat`_) Document develoment of SPM loader modules
+* **PR** `#27086`_: (`techhat`_) Document development of SPM loader modules
   @ *2015-09-13 04:52:55 UTC*
 
   * c78d833540 Merge pull request `#27086`_ from techhat/spmdevdocs
 
-  * ee0c8955dd Document develoment of SPM loader modules
+  * ee0c8955dd Document development of SPM loader modules
 
 * **ISSUE** `#23125`_: (`bemeyert`_) Elasticsearch as master_job_cache throws critical (refs: `#26941`_)
 

@@ -1,20 +1,19 @@
 """
     Tests for salt.modules.boto3_elasticsearch
 """
-
-
 import datetime
 import random
 import string
 import textwrap
 
+import pytest
+
 import salt.loader
 import salt.modules.boto3_elasticsearch as boto3_elasticsearch
-from salt.ext.six.moves import range
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import boto3
@@ -37,12 +36,11 @@ def __virtual__():
     """
     if not HAS_BOTO3:
         return False
-    if LooseVersion(boto3.__version__) < LooseVersion(REQUIRED_BOTO3_VERSION):
+    if Version(boto3.__version__) < Version(REQUIRED_BOTO3_VERSION):
         return (
             False,
-            (
-                "The boto3 module must be greater or equal to version {}"
-                "".format(REQUIRED_BOTO3_VERSION)
+            "The boto3 module must be greater or equal to version {}".format(
+                REQUIRED_BOTO3_VERSION
             ),
         )
     return True
@@ -119,10 +117,10 @@ DOMAIN_RET = {
 }
 
 
-@skipIf(HAS_BOTO3 is False, "The boto module must be installed.")
-@skipIf(
-    LooseVersion(boto3.__version__) < LooseVersion(REQUIRED_BOTO3_VERSION),
-    "The boto3 module must be greater or equal to version {}".format(
+@pytest.mark.skipif(HAS_BOTO3 is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
+    Version(boto3.__version__) < Version(REQUIRED_BOTO3_VERSION),
+    reason="The boto3 module must be greater or equal to version {}".format(
         REQUIRED_BOTO3_VERSION
     ),
 )
@@ -762,8 +760,10 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_CONTENT, "describe_reserved_elasticsearch_instance_offerings"
             ),
         ):
-            result = boto3_elasticsearch.describe_reserved_elasticsearch_instance_offerings(
-                reserved_elasticsearch_instance_offering_id="foo", **CONN_PARAMETERS
+            result = (
+                boto3_elasticsearch.describe_reserved_elasticsearch_instance_offerings(
+                    reserved_elasticsearch_instance_offering_id="foo", **CONN_PARAMETERS
+                )
             )
             self.assertFalse(result["result"])
             self.assertEqual(
@@ -1135,10 +1135,12 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_CONTENT, "purchase_reserved_elasticsearch_instance_offering"
             ),
         ):
-            result = boto3_elasticsearch.purchase_reserved_elasticsearch_instance_offering(
-                reserved_elasticsearch_instance_offering_id="foo",
-                reservation_name="bar",
-                **CONN_PARAMETERS
+            result = (
+                boto3_elasticsearch.purchase_reserved_elasticsearch_instance_offering(
+                    reserved_elasticsearch_instance_offering_id="foo",
+                    reservation_name="bar",
+                    **CONN_PARAMETERS
+                )
             )
             self.assertFalse(result["result"])
             self.assertEqual(

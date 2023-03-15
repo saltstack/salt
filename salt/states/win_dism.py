@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Installing of Windows features using DISM
 =========================================
@@ -13,13 +12,10 @@ Install windows features/capabilties with DISM
     NetFx3:
       dism.feature_installed
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 import os
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.platform
 
@@ -68,11 +64,11 @@ def capability_installed(
     old = __salt__["dism.installed_capabilities"]()
 
     if name in old:
-        ret["comment"] = "The capability {0} is already installed".format(name)
+        ret["comment"] = "The capability {} is already installed".format(name)
         return ret
 
     if __opts__["test"]:
-        ret["changes"]["capability"] = "{0} will be installed".format(name)
+        ret["changes"]["capability"] = "{} will be installed".format(name)
         ret["result"] = None
         return ret
 
@@ -80,14 +76,14 @@ def capability_installed(
     status = __salt__["dism.add_capability"](name, source, limit_access, image, restart)
 
     if status["retcode"] not in [0, 1641, 3010]:
-        ret["comment"] = "Failed to install {0}: {1}".format(name, status["stdout"])
+        ret["comment"] = "Failed to install {}: {}".format(name, status["stdout"])
         ret["result"] = False
 
     new = __salt__["dism.installed_capabilities"]()
     changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
-        ret["comment"] = "Installed {0}".format(name)
+        ret["comment"] = "Installed {}".format(name)
         ret["changes"] = status
         ret["changes"]["capability"] = changes
 
@@ -103,7 +99,8 @@ def capability_removed(name, image=None, restart=False):
         image (Optional[str]): The path to the root directory of an offline
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the install
+        restart (Optional[bool]): Reboot the machine if required by the
+            uninstall
 
     Example:
         Run ``dism.installed_capabilities`` to get a list of installed
@@ -120,11 +117,11 @@ def capability_removed(name, image=None, restart=False):
     old = __salt__["dism.installed_capabilities"]()
 
     if name not in old:
-        ret["comment"] = "The capability {0} is already removed".format(name)
+        ret["comment"] = "The capability {} is already removed".format(name)
         return ret
 
     if __opts__["test"]:
-        ret["changes"]["capability"] = "{0} will be removed".format(name)
+        ret["changes"]["capability"] = "{} will be removed".format(name)
         ret["result"] = None
         return ret
 
@@ -132,14 +129,14 @@ def capability_removed(name, image=None, restart=False):
     status = __salt__["dism.remove_capability"](name, image, restart)
 
     if status["retcode"] not in [0, 1641, 3010]:
-        ret["comment"] = "Failed to remove {0}: {1}".format(name, status["stdout"])
+        ret["comment"] = "Failed to remove {}: {}".format(name, status["stdout"])
         ret["result"] = False
 
     new = __salt__["dism.installed_capabilities"]()
     changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
-        ret["comment"] = "Removed {0}".format(name)
+        ret["comment"] = "Removed {}".format(name)
         ret["changes"] = status
         ret["changes"]["capability"] = changes
 
@@ -188,11 +185,11 @@ def feature_installed(
     old = __salt__["dism.installed_features"]()
 
     if name in old:
-        ret["comment"] = "The feature {0} is already installed".format(name)
+        ret["comment"] = "The feature {} is already installed".format(name)
         return ret
 
     if __opts__["test"]:
-        ret["changes"]["feature"] = "{0} will be installed".format(name)
+        ret["changes"]["feature"] = "{} will be installed".format(name)
         ret["result"] = None
         return ret
 
@@ -202,14 +199,14 @@ def feature_installed(
     )
 
     if status["retcode"] not in [0, 1641, 3010]:
-        ret["comment"] = "Failed to install {0}: {1}".format(name, status["stdout"])
+        ret["comment"] = "Failed to install {}: {}".format(name, status["stdout"])
         ret["result"] = False
 
     new = __salt__["dism.installed_features"]()
     changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
-        ret["comment"] = "Installed {0}".format(name)
+        ret["comment"] = "Installed {}".format(name)
         ret["changes"] = status
         ret["changes"]["feature"] = changes
 
@@ -227,7 +224,8 @@ def feature_removed(name, remove_payload=False, image=None, restart=False):
         image (Optional[str]): The path to the root directory of an offline
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the install
+        restart (Optional[bool]): Reboot the machine if required by the
+            uninstall
 
     Example:
         Run ``dism.installed_features`` to get a list of installed features.
@@ -245,11 +243,11 @@ def feature_removed(name, remove_payload=False, image=None, restart=False):
     old = __salt__["dism.installed_features"]()
 
     if name not in old:
-        ret["comment"] = "The feature {0} is already removed".format(name)
+        ret["comment"] = "The feature {} is already removed".format(name)
         return ret
 
     if __opts__["test"]:
-        ret["changes"]["feature"] = "{0} will be removed".format(name)
+        ret["changes"]["feature"] = "{} will be removed".format(name)
         ret["result"] = None
         return ret
 
@@ -257,14 +255,14 @@ def feature_removed(name, remove_payload=False, image=None, restart=False):
     status = __salt__["dism.remove_feature"](name, remove_payload, image, restart)
 
     if status["retcode"] not in [0, 1641, 3010]:
-        ret["comment"] = "Failed to remove {0}: {1}".format(name, status["stdout"])
+        ret["comment"] = "Failed to remove {}: {}".format(name, status["stdout"])
         ret["result"] = False
 
     new = __salt__["dism.installed_features"]()
     changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
-        ret["comment"] = "Removed {0}".format(name)
+        ret["comment"] = "Removed {}".format(name)
         ret["changes"] = status
         ret["changes"]["feature"] = changes
 
@@ -305,7 +303,7 @@ def package_installed(
             ret["result"] = None
         else:
             ret["result"] = False
-        ret["comment"] = "Package path {0} does not exist".format(name)
+        ret["comment"] = "Package path {} does not exist".format(name)
         return ret
 
     old = __salt__["dism.installed_packages"]()
@@ -314,13 +312,13 @@ def package_installed(
     package_info = __salt__["dism.package_info"](name)
 
     if package_info["Package Identity"] in old:
-        ret["comment"] = "The package {0} is already installed: {1}".format(
+        ret["comment"] = "The package {} is already installed: {}".format(
             name, package_info["Package Identity"]
         )
         return ret
 
     if __opts__["test"]:
-        ret["changes"]["package"] = "{0} will be installed".format(name)
+        ret["changes"]["package"] = "{} will be installed".format(name)
         ret["result"] = None
         return ret
 
@@ -330,14 +328,14 @@ def package_installed(
     )
 
     if status["retcode"] not in [0, 1641, 3010]:
-        ret["comment"] = "Failed to install {0}: {1}".format(name, status["stdout"])
+        ret["comment"] = "Failed to install {}: {}".format(name, status["stdout"])
         ret["result"] = False
 
     new = __salt__["dism.installed_packages"]()
     changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
-        ret["comment"] = "Installed {0}".format(name)
+        ret["comment"] = "Installed {}".format(name)
         ret["changes"] = status
         ret["changes"]["package"] = changes
 
@@ -356,7 +354,8 @@ def package_removed(name, image=None, restart=False):
         image (Optional[str]): The path to the root directory of an offline
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the install
+        restart (Optional[bool]): Reboot the machine if required by the
+            uninstall
 
     Example:
 
@@ -380,7 +379,7 @@ def package_removed(name, image=None, restart=False):
             ret["result"] = None
         else:
             ret["result"] = False
-        ret["comment"] = "Package path {0} does not exist".format(name)
+        ret["comment"] = "Package path {} does not exist".format(name)
         return ret
 
     old = __salt__["dism.installed_packages"]()
@@ -394,11 +393,11 @@ def package_removed(name, image=None, restart=False):
         "Package Identity" not in package_info
         or package_info["Package Identity"] not in old
     ):
-        ret["comment"] = "The package {0} is already removed".format(name)
+        ret["comment"] = "The package {} is already removed".format(name)
         return ret
 
     if __opts__["test"]:
-        ret["changes"]["package"] = "{0} will be removed".format(name)
+        ret["changes"]["package"] = "{} will be removed".format(name)
         ret["result"] = None
         return ret
 
@@ -406,14 +405,79 @@ def package_removed(name, image=None, restart=False):
     status = __salt__["dism.remove_package"](name, image, restart)
 
     if status["retcode"] not in [0, 1641, 3010]:
-        ret["comment"] = "Failed to remove {0}: {1}".format(name, status["stdout"])
+        ret["comment"] = "Failed to remove {}: {}".format(name, status["stdout"])
         ret["result"] = False
 
     new = __salt__["dism.installed_packages"]()
     changes = salt.utils.data.compare_lists(old, new)
 
     if changes:
-        ret["comment"] = "Removed {0}".format(name)
+        ret["comment"] = "Removed {}".format(name)
+        ret["changes"] = status
+        ret["changes"]["package"] = changes
+
+    return ret
+
+
+def kb_removed(name, image=None, restart=False):
+    """
+    Uninstall a KB package
+
+    .. versionadded:: 3006.0
+
+    Args:
+        name (str): The name of the KB. Can be with or without the KB at the
+            beginning.
+        image (Optional[str]): The path to the root directory of an offline
+            Windows image. If `None` is passed, the running operating system is
+            targeted. Default is None.
+        restart (Optional[bool]): Reboot the machine if required by the
+            uninstall
+
+    Example:
+
+        .. code-block:: yaml
+
+            # Example using full KB name
+            remove_KB1231231:
+              dism.package_installed:
+                - name: KB1231231
+
+            # Example using just he KB number
+            remove_KB1231231:
+              dism.package_installed:
+                - name: 1231231
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+
+    pkg_name = __salt__["dism.get_kb_package_name"](kb=name, image=image)
+
+    # If pkg_name is None, the package is not installed
+    if pkg_name is None:
+        ret["comment"] = "{} is not installed".format(name)
+        return ret
+
+    if __opts__["test"]:
+        ret["changes"]["package"] = "{} will be removed".format(name)
+        ret["result"] = None
+        return ret
+
+    # Fail if using a non-existent package path
+    old = __salt__["dism.installed_packages"]()
+
+    # Remove the package
+    status = __salt__["dism.remove_kb"](kb=name, image=image, restart=restart)
+
+    if status["retcode"] not in [0, 1641, 3010]:
+        ret["comment"] = "Failed to remove {}: {}".format(name, status["stdout"])
+        ret["result"] = False
+        return ret
+
+    new = __salt__["dism.installed_packages"]()
+    changes = salt.utils.data.compare_lists(old, new)
+
+    if changes:
+        ret["comment"] = "Removed {}".format(name)
         ret["changes"] = status
         ret["changes"]["package"] = changes
 

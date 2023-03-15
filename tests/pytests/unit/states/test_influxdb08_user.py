@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.influxdb08_user as influxdb08_user
 from tests.support.mock import MagicMock, patch
 

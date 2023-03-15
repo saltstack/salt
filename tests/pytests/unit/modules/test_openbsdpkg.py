@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.modules.openbsdpkg as openbsdpkg
 from tests.support.mock import MagicMock, call, patch
 

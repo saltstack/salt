@@ -3,9 +3,9 @@
 """
 
 import pytest
+
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on
 
 # Brew doesn't support local package installation - So, let's
 # Grab some small packages available online for brew
@@ -14,9 +14,9 @@ DEL_PKG = "acme"
 
 
 @pytest.mark.skip_if_not_root
-@runs_on(kernel="Darwin")
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_binaries_missing("brew")
+@pytest.mark.skip_unless_on_darwin
 class BrewModuleTest(ModuleCase):
     """
     Integration tests for the brew module
@@ -73,32 +73,23 @@ class BrewModuleTest(ModuleCase):
             try:
                 self.assertTrue(
                     version,
-                    msg=(
-                        "version: {} is empty,\
-                                or other issue is present".format(
-                            version
-                        )
+                    msg="version: {} is empty, or other issue is present".format(
+                        version
                     ),
                 )
                 self.assertIn(
                     ADD_PKG,
                     pkg_list,
-                    msg=(
-                        "package: {} is not in\
-                              the list of installed packages: {}".format(
-                            ADD_PKG, pkg_list
-                        )
+                    msg="package: {} is not in the list of installed packages: {}".format(
+                        ADD_PKG, pkg_list
                     ),
                 )
                 # make sure the version is accurate and is listed in the pkg_list
                 self.assertIn(
                     version,
                     str(pkg_list[ADD_PKG]),
-                    msg=(
-                        "The {} version: {} is \
-                              not listed in the pkg_list: {}".format(
-                            ADD_PKG, version, pkg_list[ADD_PKG]
-                        )
+                    msg="The {} version: {} is not listed in the pkg_list: {}".format(
+                        ADD_PKG, version, pkg_list[ADD_PKG]
                     ),
                 )
             except AssertionError:

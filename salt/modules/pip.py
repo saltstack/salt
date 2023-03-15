@@ -104,7 +104,8 @@ __func_alias__ = {"list_": "list"}
 
 VALID_PROTOS = ["http", "https", "ftp", "file"]
 
-rex_pip_chain_read = re.compile(r"-r\s(.*)\n?", re.MULTILINE)
+rex_pip_chain_read = re.compile(r"(?:-r\s|--requirement[=\s])(.*)\n?", re.MULTILINE)
+rex_pip_reqs_comment = re.compile(r"(?:^|\s+)#.*$", re.MULTILINE)
 
 
 def __virtual__():
@@ -153,10 +154,8 @@ def _get_pip_bin(bin_env):
     Locate the pip binary, either from `bin_env` as a virtualenv, as the
     executable itself, or from searching conventional filesystem locations
     """
-    bundled = _check_bundled()
-
     if not bin_env:
-        if bundled:
+        if _check_bundled():
             logger.debug("pip: Using pip from bundled app")
             return [os.path.normpath(sys.executable), "pip"]
         else:
@@ -186,8 +185,7 @@ def _get_pip_bin(bin_env):
                     return [os.path.normpath(bin_path), "-m", "pip"]
                 else:
                     logger.debug(
-                        "pip: Found python binary by name but it is not "
-                        "executable: %s",
+                        "pip: Found python binary by name but it is not executable: %s",
                         bin_path,
                     )
         raise CommandNotFoundError(
@@ -260,9 +258,9 @@ def _find_req(link):
     logger.info("_find_req -- link = %s", link)
 
     with salt.utils.files.fopen(link) as fh_link:
-        child_links = rex_pip_chain_read.findall(
-            salt.utils.stringutils.to_unicode(fh_link.read())
-        )
+        reqs_content = salt.utils.stringutils.to_unicode(fh_link.read())
+    reqs_content = rex_pip_reqs_comment.sub("", reqs_content)  # remove comments
+    child_links = rex_pip_chain_read.findall(reqs_content)
 
     base_path = os.path.dirname(link)
     child_links = [os.path.join(base_path, d) for d in child_links]
@@ -337,7 +335,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                     current_directory = os.path.abspath(os.curdir)
 
                 logger.info(
-                    "_process_requirements from directory, " "%s -- requirement: %s",
+                    "_process_requirements from directory, %s -- requirement: %s",
                     cwd,
                     requirement,
                 )
@@ -387,7 +385,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                         __salt__["file.copy"](req_file, target_path)
 
                     logger.debug(
-                        "Changing ownership of requirements file '%s' to " "user '%s'",
+                        "Changing ownership of requirements file '%s' to user '%s'",
                         target_path,
                         user,
                     )
@@ -409,9 +407,9 @@ def _format_env_vars(env_vars):
         if isinstance(env_vars, dict):
             for key, val in env_vars.items():
                 if not isinstance(key, str):
-                    key = str(key)  # future lint: disable=blacklisted-function
+                    key = str(key)
                 if not isinstance(val, str):
-                    val = str(val)  # future lint: disable=blacklisted-function
+                    val = str(val)
                 ret[key] = val
         else:
             raise CommandExecutionError(
@@ -806,8 +804,7 @@ def install(
 
     if no_index and (index_url or extra_index_url):
         raise CommandExecutionError(
-            "'no_index' and ('index_url' or 'extra_index_url') are "
-            "mutually exclusive."
+            "'no_index' and ('index_url' or 'extra_index_url') are mutually exclusive."
         )
 
     if index_url:
@@ -847,6 +844,12 @@ def install(
 
     if build:
         cmd.extend(["--build", build])
+
+    # Use VENV_PIP_TARGET environment variable value as target
+    # if set and no target specified on the function call
+    target_env = os.environ.get("VENV_PIP_TARGET", None)
+    if target is None and target_env is not None:
+        target = target_env
 
     if target:
         cmd.extend(["--target", target])
@@ -1230,8 +1233,12 @@ def freeze(bin_env=None, user=None, cwd=None, use_vt=False, env_vars=None, **kwa
     return result["stdout"].splitlines()
 
 
-def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwargs):
+def list_freeze_parse(
+    prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwargs
+):
     """
+    .. versionadded:: 3006.0
+
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
 
@@ -1247,7 +1254,7 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
 
     .. code-block:: bash
 
-        salt '*' pip.list salt
+        salt '*' pip.list_freeze_parse salt
     """
 
     cwd = _pip_bin_env(cwd, bin_env)
@@ -1292,6 +1299,73 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
                 packages[name] = version_
         else:
             packages[name] = version_
+
+    return packages
+
+
+def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwargs):
+    """
+    .. versionchanged:: 3006.0
+
+    Output list of installed apps from ``pip list`` in JSON format and check to
+    see if ``prefix`` exists in the list of packages installed.
+
+    .. note::
+
+        If the version of pip available is older than 9.0.0, parsing the
+        ``freeze`` function output will be used to determine the name and
+        version of installed modules.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pip.list salt
+    """
+
+    packages = {}
+    cwd = _pip_bin_env(cwd, bin_env)
+    cur_version = version(bin_env, cwd, user=user)
+
+    # Pip started supporting the ability to output json starting with 9.0.0
+    min_version = "9.0"
+    if salt.utils.versions.compare(ver1=cur_version, oper="<", ver2=min_version):
+        return list_freeze_parse(
+            prefix=prefix,
+            bin_env=bin_env,
+            user=user,
+            cwd=cwd,
+            env_vars=env_vars,
+            **kwargs
+        )
+
+    cmd = _get_pip_bin(bin_env)
+    cmd.extend(["list", "--format=json"])
+
+    cmd_kwargs = dict(cwd=cwd, runas=user, python_shell=False)
+    if kwargs:
+        cmd_kwargs.update(**kwargs)
+    if bin_env and os.path.isdir(bin_env):
+        cmd_kwargs["env"] = {"VIRTUAL_ENV": bin_env}
+    if env_vars:
+        cmd_kwargs.setdefault("env", {}).update(_format_env_vars(env_vars))
+
+    result = __salt__["cmd.run_all"](cmd, **cmd_kwargs)
+
+    if result["retcode"]:
+        raise CommandExecutionError(result["stderr"], info=result)
+
+    try:
+        pkgs = salt.utils.json.loads(result["stdout"], strict=False)
+    except ValueError:
+        raise CommandExecutionError("Invalid JSON", info=result)
+
+    for pkg in pkgs:
+        if prefix:
+            if pkg["name"].lower().startswith(prefix.lower()):
+                packages[pkg["name"]] = pkg["version"]
+        else:
+            packages[pkg["name"]] = pkg["version"]
 
     return packages
 
@@ -1399,7 +1473,7 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
             if match:
                 name, version_ = match.groups()
             else:
-                logger.error("Can't parse line '{}'".format(line))
+                logger.error("Can't parse line %r", line)
                 continue
             packages[name] = version_
 
@@ -1418,19 +1492,13 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
     return packages
 
 
-def is_installed(pkgname=None, bin_env=None, user=None, cwd=None):
+def is_installed(pkgname, bin_env=None, user=None, cwd=None):
     """
     .. versionadded:: 2018.3.0
+    .. versionchanged:: 3006.0
 
-    Filter list of installed apps from ``freeze`` and return True or False  if
-    ``pkgname`` exists in the list of packages installed.
-
-    .. note::
-        If the version of pip available is older than 8.0.3, the packages
-        wheel, setuptools, and distribute will not be reported by this function
-        even if they are installed. Unlike :py:func:`pip.freeze
-        <salt.modules.pip.freeze>`, this function always reports the version of
-        pip which is installed.
+    Filter list of installed modules and return True if ``pkgname`` exists in
+    the list of packages installed.
 
     CLI Example:
 
@@ -1440,30 +1508,11 @@ def is_installed(pkgname=None, bin_env=None, user=None, cwd=None):
     """
 
     cwd = _pip_bin_env(cwd, bin_env)
-    for line in freeze(bin_env=bin_env, user=user, cwd=cwd):
-        if line.startswith("-f") or line.startswith("#"):
-            # ignore -f line as it contains --find-links directory
-            # ignore comment lines
-            continue
-        elif line.startswith("-e hg+not trust"):
-            # ignore hg + not trust problem
-            continue
-        elif line.startswith("-e"):
-            line = line.split("-e ")[1]
-            version_, name = line.split("#egg=")
-        elif len(line.split("===")) >= 2:
-            name = line.split("===")[0]
-            version_ = line.split("===")[1]
-        elif len(line.split("==")) >= 2:
-            name = line.split("==")[0]
-            version_ = line.split("==")[1]
-        else:
-            logger.error("Can't parse line '%s'", line)
-            continue
+    pkgs = list_(prefix=pkgname, bin_env=bin_env, user=user, cwd=cwd)
 
-        if pkgname:
-            if pkgname == name.lower():
-                return True
+    for pkg in pkgs:
+        if pkg.lower() == pkgname.lower():
+            return True
 
     return False
 
@@ -1598,7 +1647,6 @@ def list_all_versions(
     """
     cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
-    cmd.extend(["install", "{}==versions".format(pkg)])
 
     if index_url:
         if not salt.utils.url.validate(index_url, VALID_PROTOS):
@@ -1611,6 +1659,17 @@ def list_all_versions(
                 "'{}' is not a valid URL".format(extra_index_url)
             )
         cmd.extend(["--extra-index-url", extra_index_url])
+
+    # Is the `pip index` command available
+    pip_version = version(bin_env=bin_env, cwd=cwd, user=user)
+    if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2="21.2"):
+        regex = re.compile(r"\s*Available versions: (.*)")
+        cmd.extend(["index", "versions", pkg])
+    else:
+        if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2="20.3"):
+            cmd.append("--use-deprecated=legacy-resolver")
+        regex = re.compile(r"\s*Could not find a version.* \(from versions: (.*)\)")
+        cmd.extend(["install", "{}==versions".format(pkg)])
 
     cmd_kwargs = dict(
         cwd=cwd, runas=user, output_loglevel="quiet", redirect_stderr=True
@@ -1634,9 +1693,7 @@ def list_all_versions(
 
     versions = []
     for line in result["stdout"].splitlines():
-        match = re.search(
-            r"\s*Could not find a version.* \(from versions: (.*)\)", line
-        )
+        match = regex.search(line)
         if match:
             versions = [
                 v for v in match.group(1).split(", ") if v and excludes.match(v)

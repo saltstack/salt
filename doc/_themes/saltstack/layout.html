@@ -74,9 +74,14 @@
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:    '{{ url_root }}',
             VERSION:     '{{ release|e }}',
+            LANGUAGE: '{{ language }}',
             COLLAPSE_INDEX: false,
+            BUILDER: '{{ builder }}',
             FILE_SUFFIX: '{{ '' if no_search_suffix else file_suffix }}',
-            HAS_SOURCE:  {{ has_source|lower }}
+            LINK_SUFFIX: '{{ link_suffix }}',
+            HAS_SOURCE: {{ has_source|lower }},
+            SOURCELINK_SUFFIX: '{{ sourcelink_suffix }}',
+            NAVIGATION_WITH_KEYS: {{ 'true' if theme_navigation_with_keys|tobool else 'false'}}
         };
     </script>
     {%- for scriptfile in script_files %}
@@ -248,9 +253,9 @@
                                 </div>
                         </div>
                             <div class="row-fluid social">
-<!--                                <a href="http://www.facebook.com/SaltStack"><img src="images/socialFB.png" alt="SaltStack on Facebook" /></a> -->
-                                    <a href="http://twitter.com/SaltStackInc"><img src="{{ pathto('_static/images/socialTW.png', 1) }}" alt="SaltStack on Twitter" /></a>
-                                    <a href="http://www.linkedin.com/company/salt-stack-inc"><img src="{{ pathto('_static/images/socialLI.png', 1) }}" alt="SaltStack on LinkedIn" /></a>
+<!--                                <a href="https://www.facebook.com/SaltProjectOSS"><img src="images/socialFB.png" alt="SaltStack on Facebook" /></a> -->
+                                    <a href="https://twitter.com/Salt_Project_OS"><img src="{{ pathto('_static/images/socialTW.png', 1) }}" alt="Salt Project on Twitter" /></a>
+                                    <a href="https://www.linkedin.com/company/saltproject/"><img src="{{ pathto('_static/images/socialLI.png', 1) }}" alt="Salt Project on LinkedIn" /></a>
 <!--                                <a href="http://plus.google.com/114449193225626631691"><img src="images/socialG+.png" alt="SaltStack on Google+" /></a> -->
                                     <a href="https://github.com/saltstack"><img src="{{ pathto('_static/images/socialGitHub.png', 1) }}" alt="SaltStack on GitHub" />
                             </div>

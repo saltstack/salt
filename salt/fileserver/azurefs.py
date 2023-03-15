@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The backend for serving files from the Azure blob storage service.
 
@@ -46,15 +45,12 @@ permissions.
     Do not include the leading ? for sas_token if generated from the web
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import logging
 import os
 import shutil
 
-# Import salt libs
 import salt.fileserver
 import salt.utils.files
 import salt.utils.gzip_util
@@ -62,15 +58,12 @@ import salt.utils.hashutils
 import salt.utils.json
 import salt.utils.path
 import salt.utils.stringutils
-
-# Import third party libs
-from salt.ext import six
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 try:
     import azure.storage
 
-    if LooseVersion(azure.storage.__version__) < LooseVersion("0.20.0"):
+    if Version(azure.storage.__version__) < Version("0.20.0"):
         raise ImportError("azure.storage.__version__ must be >= 0.20.0")
     HAS_AZURE = True
 except (ImportError, AttributeError):
@@ -165,7 +158,7 @@ def serve_file(load, fnd):
     with salt.utils.files.fopen(fpath, "rb") as fp_:
         fp_.seek(load["loc"])
         data = fp_.read(__opts__["file_buffer_size"])
-        if data and six.PY3 and not salt.utils.files.is_binary(fpath):
+        if data and not salt.utils.files.is_binary(fpath):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
@@ -286,7 +279,7 @@ def file_hash(load, fnd):
     hashdest = salt.utils.path.join(
         hash_cachedir,
         load["saltenv"],
-        "{0}.hash.{1}".format(relpath, __opts__["hash_type"]),
+        "{}.hash.{}".format(relpath, __opts__["hash_type"]),
     )
     if not os.path.isfile(hashdest):
         if not os.path.exists(os.path.dirname(hashdest)):
@@ -350,7 +343,7 @@ def _get_container_path(container):
     and saltenv, separated by underscores
     """
     root = os.path.join(__opts__["cachedir"], "azurefs")
-    container_dir = "{0}_{1}_{2}".format(
+    container_dir = "{}_{}_{}".format(
         container.get("account_name", ""),
         container.get("container_name", ""),
         container.get("saltenv", "base"),

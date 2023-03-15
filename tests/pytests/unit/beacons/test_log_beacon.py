@@ -5,6 +5,7 @@
     log beacon test cases
 """
 import pytest
+
 import salt.beacons.log_beacon as log_beacon
 from tests.support.mock import mock_open, patch
 
@@ -16,7 +17,10 @@ def configure_loader_modules():
 
 @pytest.fixture
 def stub_log_entry():
-    return "Jun 29 12:58:51 hostname sshd[6536]: pam_unix(sshd:session): session opened for user username by (uid=0)\n"
+    return (
+        "Jun 29 12:58:51 hostname sshd[6536]: pam_unix(sshd:session): session opened"
+        " for user username by (uid=0)\n"
+    )
 
 
 def test_non_list_config():

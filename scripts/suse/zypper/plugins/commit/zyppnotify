@@ -20,7 +20,9 @@ class DriftDetector(Plugin):
     def __init__(self):
         Plugin.__init__(self)
         self.ck_path = "/var/cache/salt/minion/rpmdb.cookie"
-        self.rpm_path = "/var/lib/rpm/Packages"
+        self.rpm_path = "/var/lib/rpm/Packages.db"
+        if not os.path.exists(self.rpm_path):
+            self.rpm_path = "/var/lib/rpm/Packages"
 
     def _get_mtime(self):
         """
@@ -50,7 +52,7 @@ class DriftDetector(Plugin):
 
     def PLUGINEND(self, headers, body):
         """
-        Hook when plugin closes Zypper's transaction.        
+        Hook when plugin closes Zypper's transaction.
         """
         if "SALT_RUNNING" not in os.environ:
             with open(self.ck_path, "w") as ck_fh:

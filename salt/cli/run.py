@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
-import salt.defaults.exitcodes  # pylint: disable=W0611
+import salt.defaults.exitcodes
 import salt.utils.parsers
 import salt.utils.profile
 from salt.exceptions import SaltClientError
-from salt.ext import six
-from salt.utils.verify import check_user, verify_log
+from salt.utils.verify import check_user
 
 
 class SaltRun(salt.utils.parsers.SaltRunOptionParser):
@@ -22,9 +18,6 @@ class SaltRun(salt.utils.parsers.SaltRunOptionParser):
 
         self.parse_args()
 
-        # Setup file logging!
-        self.setup_logfile_logger()
-        verify_log(self.config)
         profiling_enabled = self.options.profiling_enabled
 
         runner = salt.runner.Runner(self.config)
@@ -55,4 +48,4 @@ class SaltRun(salt.utils.parsers.SaltRunOptionParser):
                     )
 
         except SaltClientError as exc:
-            raise SystemExit(six.text_type(exc))
+            raise SystemExit(str(exc))

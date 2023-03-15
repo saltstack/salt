@@ -644,13 +644,13 @@ def super_(dev):
         if not line:
             continue
 
-        key, val = [val.strip() for val in re.split(r"[\s]+", line, maxsplit=1)]
+        key, val = (val.strip() for val in re.split(r"[\s]+", line, maxsplit=1))
         if not (key and val):
             continue
 
         mval = None
         if " " in val:
-            rval, mval = [val.strip() for val in re.split(r"[\s]+", val, maxsplit=1)]
+            rval, mval = (val.strip() for val in re.split(r"[\s]+", val, maxsplit=1))
             mval = mval[1:-1]
         else:
             rval = val
@@ -910,7 +910,7 @@ def _size_map(size):
             if re.search(r"[Kk]", size):
                 size = 1024 * float(re.sub(r"[Kk]", "", size))
             elif re.search(r"[Mm]", size):
-                size = 1024 ** 2 * float(re.sub(r"[Mm]", "", size))
+                size = 1024**2 * float(re.sub(r"[Mm]", "", size))
             size = int(size)
         return size
     except Exception:  # pylint: disable=broad-except
@@ -985,7 +985,8 @@ def _wipe(dev):
         wiper = "dd"
     elif not HAS_BLKDISCARD:
         log.warning(
-            "blkdiscard binary not available, properly wipe the dev manually for optimal results"
+            "blkdiscard binary not available, properly wipe the dev manually for"
+            " optimal results"
         )
         wiper = "dd"
     else:
@@ -998,7 +999,7 @@ def _wipe(dev):
         endres += _run_all(cmd, "warn", wipe_failmsg)
 
         # Some stuff (<cough>GPT</cough>) writes stuff at the end of a dev as well
-        cmd += " seek={}".format((size / 1024 ** 2) - blocks)
+        cmd += " seek={}".format((size / 1024**2) - blocks)
         endres += _run_all(cmd, "warn", wipe_failmsg)
 
     elif wiper == "blkdiscard":

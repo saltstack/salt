@@ -1,14 +1,12 @@
 """
 Test the core grains
 """
-
-
 import pytest
+
 import salt.loader
 import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf
 
 if salt.utils.platform.is_windows():
     try:
@@ -17,17 +15,13 @@ if salt.utils.platform.is_windows():
         pass
 
 
-def _freebsd_or_openbsd():
-    return salt.utils.platform.is_freebsd() or salt.utils.platform.is_openbsd()
-
-
 @pytest.mark.windows_whitelisted
 class TestGrainsCore(ModuleCase):
     """
     Test the core grains grains
     """
 
-    @skipIf(not _freebsd_or_openbsd(), "Only run on FreeBSD or OpenBSD")
+    @pytest.mark.skip_unless_on_platforms(freebsd=True, openbsd=True)
     def test_freebsd_openbsd_mem_total(self):
         """
         test grains['mem_total']
@@ -37,7 +31,7 @@ class TestGrainsCore(ModuleCase):
             self.run_function("grains.items")["mem_total"], int(physmem) // 1048576
         )
 
-    @skipIf(not salt.utils.platform.is_openbsd(), "Only run on OpenBSD")
+    @pytest.mark.skip_unless_on_openbsd
     def test_openbsd_swap_total(self):
         """
         test grains['swap_total']
@@ -59,7 +53,7 @@ class TestGrainsReg(ModuleCase, LoaderModuleMockMixin):
         utils = salt.loader.utils(opts, whitelist=["reg"])
         return {salt.modules.reg: {"__opts__": opts, "__utils__": utils}}
 
-    @skipIf(not salt.utils.platform.is_windows(), "Only run on Windows")
+    @pytest.mark.skip_unless_on_windows
     @pytest.mark.slow_test
     def test_win_cpu_model(self):
         """

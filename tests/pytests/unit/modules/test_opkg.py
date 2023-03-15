@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.opkg as opkg
 from tests.support.mock import patch
 

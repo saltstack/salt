@@ -4,6 +4,7 @@
 
 
 import pytest
+
 import salt.modules.pacmanpkg as pacman
 from tests.support.mock import MagicMock, patch
 

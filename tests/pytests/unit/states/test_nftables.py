@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.nftables as nftables
 from tests.support.mock import MagicMock, patch
 
@@ -41,7 +42,10 @@ def test_chain_present():
                 ret.update(
                     {
                         "changes": {"locale": "salt"},
-                        "comment": "nftables salt chain in filter table create success for ipv4",
+                        "comment": (
+                            "nftables salt chain in filter table create success for"
+                            " ipv4"
+                        ),
                     }
                 )
                 assert nftables.chain_present("salt") == ret
@@ -49,7 +53,9 @@ def test_chain_present():
                 ret.update(
                     {
                         "changes": {},
-                        "comment": "Failed to create salt chain in filter table:  for ipv4",
+                        "comment": (
+                            "Failed to create salt chain in filter table:  for ipv4"
+                        ),
                         "result": False,
                     }
                 )
@@ -65,7 +71,9 @@ def test_chain_absent():
     with patch.dict(nftables.__salt__, {"nftables.check_chain": mock}):
         ret.update(
             {
-                "comment": "nftables salt chain is already absent in filter table for ipv4"
+                "comment": (
+                    "nftables salt chain is already absent in filter table for ipv4"
+                )
             }
         )
         assert nftables.chain_absent("salt") == ret
@@ -108,7 +116,9 @@ def test_append():
                     ret.update(
                         {
                             "result": None,
-                            "comment": "nftables rule for salt needs to be set (a) for ipv4",
+                            "comment": (
+                                "nftables rule for salt needs to be set (a) for ipv4"
+                            ),
                         }
                     )
                     assert nftables.append("salt", table="", chain="") == ret
@@ -133,8 +143,10 @@ def test_append():
                         ret.update(
                             {
                                 "changes": {},
-                                "comment": "Failed to set nftables rule for"
-                                " salt.\nAttempted rule was a for ipv4.\n",
+                                "comment": (
+                                    "Failed to set nftables rule for"
+                                    " salt.\nAttempted rule was a for ipv4.\n"
+                                ),
                                 "result": False,
                             }
                         )
@@ -160,7 +172,7 @@ def test_insert():
             )
             with patch.dict(nftables.__salt__, {"nftables.check": mock}):
                 ret.update(
-                    {"comment": "nftables rule for salt already" " set for ipv4 (a)"}
+                    {"comment": "nftables rule for salt already set for ipv4 (a)"}
                 )
                 assert nftables.insert("salt", table="", chain="") == ret
 
@@ -168,7 +180,9 @@ def test_insert():
                     ret.update(
                         {
                             "result": None,
-                            "comment": "nftables rule for salt needs to be set for ipv4 (a)",
+                            "comment": (
+                                "nftables rule for salt needs to be set for ipv4 (a)"
+                            ),
                         }
                     )
                     assert nftables.insert("salt", table="", chain="") == ret
@@ -196,8 +210,10 @@ def test_insert():
                         ret.update(
                             {
                                 "changes": {},
-                                "comment": "Failed to set nftables rule for"
-                                " salt.\nAttempted rule was a",
+                                "comment": (
+                                    "Failed to set nftables rule for"
+                                    " salt.\nAttempted rule was a"
+                                ),
                                 "result": False,
                             }
                         )
@@ -238,7 +254,10 @@ def test_delete():
                     ret.update(
                         {
                             "result": None,
-                            "comment": "nftables rule for salt needs to be deleted for ipv4 (a)",
+                            "comment": (
+                                "nftables rule for salt needs to be deleted for"
+                                " ipv4 (a)"
+                            ),
                         }
                     )
                     assert nftables.delete("salt", table="", chain="") == ret
@@ -267,8 +286,10 @@ def test_delete():
                             {
                                 "result": False,
                                 "changes": {},
-                                "comment": "Failed to delete nftables rule for"
-                                " salt.\nAttempted rule was a",
+                                "comment": (
+                                    "Failed to delete nftables rule for"
+                                    " salt.\nAttempted rule was a"
+                                ),
                             }
                         )
                         assert (
@@ -296,7 +317,10 @@ def test_flush():
             with patch.dict(nftables.__opts__, {"test": False}):
                 ret.update(
                     {
-                        "comment": "Failed to flush table  in family ipv4, table does not exist.",
+                        "comment": (
+                            "Failed to flush table  in family ipv4, table does not"
+                            " exist."
+                        ),
                         "result": False,
                     }
                 )
@@ -315,7 +339,10 @@ def test_flush():
                 with patch.dict(nftables.__salt__, {"nftables.check_chain": mock}):
                     ret.update(
                         {
-                            "comment": "Failed to flush chain  in table  in family ipv4, chain does not exist."
+                            "comment": (
+                                "Failed to flush chain  in table  in family ipv4, chain"
+                                " does not exist."
+                            )
                         }
                     )
                     assert (
@@ -333,7 +360,9 @@ def test_flush():
                         ret.update(
                             {
                                 "changes": {"locale": "salt"},
-                                "comment": "Flush nftables rules in  table  chain ipv4 family",
+                                "comment": (
+                                    "Flush nftables rules in  table  chain ipv4 family"
+                                ),
                                 "result": True,
                             }
                         )
@@ -361,8 +390,10 @@ def test_set_policy():
         with patch.dict(nftables.__salt__, {"nftables.get_policy": mock}):
             ret.update(
                 {
-                    "comment": "nftables default policy for chain"
-                    "  on table  for ipv4 already set to stack"
+                    "comment": (
+                        "nftables default policy for chain"
+                        "  on table  for ipv4 already set to stack"
+                    )
                 }
             )
             assert (
@@ -372,8 +403,10 @@ def test_set_policy():
             with patch.dict(nftables.__opts__, {"test": True}):
                 ret.update(
                     {
-                        "comment": "nftables default policy for chain  on table  for "
-                        "ipv4 needs to be set to sal",
+                        "comment": (
+                            "nftables default policy for chain  on table  for "
+                            "ipv4 needs to be set to sal"
+                        ),
                         "result": None,
                     }
                 )
@@ -442,7 +475,9 @@ def test_table_present():
                 ret.update(
                     {
                         "result": True,
-                        "comment": "nftables table salt successfully created in family ipv4",
+                        "comment": (
+                            "nftables table salt successfully created in family ipv4"
+                        ),
                         "changes": {"locale": "salt"},
                     }
                 )
@@ -495,7 +530,10 @@ def test_table_absent():
                     ret.update(
                         {
                             "changes": {"locale": "salt"},
-                            "comment": "nftables table salt successfully deleted from family ipv4",
+                            "comment": (
+                                "nftables table salt successfully deleted from family"
+                                " ipv4"
+                            ),
                             "result": True,
                         }
                     )

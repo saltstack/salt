@@ -25,6 +25,8 @@ grains modules
     mdadm
     mdata
     metadata
+    metadata_azure
+    metadata_gce
     minion_process
     napalm
     nvme

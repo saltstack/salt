@@ -70,8 +70,8 @@ manually.
 
     file_roots:
       base:
-        1. /srv/salt
-        2. /srv/spm/salt
+        - /srv/salt
+        - /srv/spm/salt
 
 Restart the salt-master service after updating the ``file_roots`` setting.
 
@@ -118,4 +118,3 @@ command.
 
 If files have been modified, they will not be removed. Empty directories will
 also be removed.
-

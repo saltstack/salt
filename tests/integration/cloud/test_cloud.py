@@ -2,6 +2,7 @@
 Integration tests for functions located in the salt.cloud.__init__.py file.
 """
 import pytest
+
 import salt.cloud
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest
 from tests.support.helpers import PRE_PYTEST_SKIP

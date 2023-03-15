@@ -38,7 +38,15 @@ def __virtual__():
 
 def add(name, gid=None, **kwargs):
     """
+    .. versionchanged:: 3006.0
+
     Add the specified group
+
+    name
+        Name of the new group
+
+    gid
+        Use GID for the new group
 
     CLI Example:
 
@@ -49,6 +57,8 @@ def add(name, gid=None, **kwargs):
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if salt.utils.data.is_true(kwargs.pop("system", False)):
         log.warning("pw_group module does not support the 'system' argument")
+    if "non_unique" in kwargs:
+        log.warning("The non_unique parameter is not supported on this platform.")
     if kwargs:
         log.warning("Invalid kwargs passed to group.add")
 

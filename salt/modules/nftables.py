@@ -165,14 +165,14 @@ def build_rule(
         del kwargs["counter"]
 
     if "saddr" in kwargs or "source" in kwargs:
-        rule += "ip saddr {}".format(kwargs.get("saddr") or kwargs.get("source"))
+        rule += "ip saddr {} ".format(kwargs.get("saddr") or kwargs.get("source"))
         if "saddr" in kwargs:
             del kwargs["saddr"]
         if "source" in kwargs:
             del kwargs["source"]
 
     if "daddr" in kwargs or "destination" in kwargs:
-        rule += "ip daddr {}".format(kwargs.get("daddr") or kwargs.get("destination"))
+        rule += "ip daddr {} ".format(kwargs.get("daddr") or kwargs.get("destination"))
         if "daddr" in kwargs:
             del kwargs["daddr"]
         if "destination" in kwargs:
@@ -281,11 +281,11 @@ def build_rule(
 
         if command in ["Insert", "insert", "INSERT"]:
             if position:
-                ret["rule"] = "{} insert rule {} {} {} " "position {} {}".format(
+                ret["rule"] = "{} insert rule {} {} {} position {} {}".format(
                     _nftables_cmd(), nft_family, table, chain, position, rule
                 )
             else:
-                ret["rule"] = "{} insert rule " "{} {} {} {}".format(
+                ret["rule"] = "{} insert rule {} {} {} {}".format(
                     _nftables_cmd(), nft_family, table, chain, rule
                 )
         else:
@@ -382,7 +382,7 @@ def get_rules(family="ipv4"):
     rules = []
     for table in tables:
         table_name = table["name"]
-        cmd = "{} --numeric --numeric --numeric " "list table {} {}".format(
+        cmd = "{} --numeric --numeric --numeric list table {} {}".format(
             _nftables_cmd(), nft_family, table_name
         )
         out = __salt__["cmd.run"](cmd, python_shell=False)

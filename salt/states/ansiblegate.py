@@ -120,12 +120,13 @@ def _changes(plays):
     Find changes in ansible return data
     """
     changes = {}
+
     for play in plays["plays"]:
         task_changes = {}
         for task in play["tasks"]:
             host_changes = {}
             for host, data in task["hosts"].items():
-                if data["changed"] is True:
+                if data.get("changed", False) is True:
                     host_changes[host] = data.get("diff", data.get("changes", {}))
                 elif any(x in data for x in ["failed", "skipped", "unreachable"]):
                     host_changes[host] = data.get("results", data.get("msg", {}))
@@ -183,20 +184,18 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
         checks = __salt__["ansible.playbooks"](
             name, rundir=rundir, check=True, diff=True, **ansible_kwargs
         )
-        if all(
-            not check["changed"]
-            and not check["failures"]
-            and not check["unreachable"]
-            and not check["skipped"]
+        if "stats" not in checks:
+            ret["comment"] = checks.get("stderr", checks)
+            ret["result"] = False
+            ret["changes"] = {}
+        elif all(
+            not check["changed"] and not check["failures"] and not check["unreachable"]
             for check in checks["stats"].values()
         ):
             ret["comment"] = "No changes to be made from playbook {}".format(name)
             ret["result"] = True
         elif any(
-            check["changed"]
-            and not check["failures"]
-            and not check["unreachable"]
-            and not check["skipped"]
+            check["changed"] and not check["failures"] and not check["unreachable"]
             for check in checks["stats"].values()
         ):
             ret["comment"] = "Changes will be made from playbook {}".format(name)
@@ -212,11 +211,12 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
         results = __salt__["ansible.playbooks"](
             name, rundir=rundir, diff=True, **ansible_kwargs
         )
-        if all(
-            not check["changed"]
-            and not check["failures"]
-            and not check["unreachable"]
-            and not check["skipped"]
+        if "stats" not in results:
+            ret["comment"] = results.get("stderr", results)
+            ret["result"] = False
+            ret["changes"] = {}
+        elif all(
+            not check["changed"] and not check["failures"] and not check["unreachable"]
             for check in results["stats"].values()
         ):
             ret["comment"] = "No changes to be made from playbook {}".format(name)
@@ -225,9 +225,7 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
         else:
             ret["changes"] = _changes(results)
             ret["result"] = all(
-                not check["failures"]
-                and not check["unreachable"]
-                and not check["skipped"]
+                not check["failures"] and not check["unreachable"]
                 for check in results["stats"].values()
             )
             if ret["result"]:

@@ -1,0 +1,2 @@
+conf/master /etc/salt
+pkg/common/salt-master.service /lib/systemd/system

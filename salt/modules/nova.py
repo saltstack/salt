@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for handling OpenStack Nova calls
 
@@ -68,9 +67,7 @@ Module for handling OpenStack Nova calls
         keystoneauth to search for the certificates on its own. (defaults to
         True)
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 # Get logging started
@@ -96,9 +93,6 @@ def __virtual__():
     is installed on this minion.
     """
     return HAS_NOVA
-
-
-__opts__ = {}
 
 
 def _auth(profile=None):

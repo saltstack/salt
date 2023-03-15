@@ -2,6 +2,7 @@ import copy
 import os
 
 import pytest
+
 import salt.modules.ini_manage as mod_ini_manage
 import salt.states.ini_manage as ini_manage
 from salt.utils.odict import OrderedDict
@@ -31,12 +32,12 @@ def sections():
     return sections
 
 
-def test_options_present(tmpdir, sections):
+def test_options_present(tmp_path, sections):
     """
     Test to verify options present when
     file does not initially exist
     """
-    name = tmpdir.join("test.ini").strpath
+    name = str(tmp_path / "test.ini")
 
     exp_ret = {
         "name": name,
@@ -49,19 +50,21 @@ def test_options_present(tmpdir, sections):
     assert mod_ini_manage.get_ini(name) == sections
 
 
-def test_options_present_true_no_file(tmpdir, sections):
+def test_options_present_true_no_file(tmp_path, sections):
     """
     Test to verify options present when
     file does not initially exist and test=True
     """
-    name = tmpdir.join("test_true_no_file.ini").strpath
+    name = str(tmp_path / "test_true_no_file.ini")
 
     exp_ret = {
         "name": name,
         "changes": {},
         "result": None,
-        "comment": "Changed key hostname in section general.\n"
-        "Changed key port in section general.\n",
+        "comment": (
+            "Changed key hostname in section general.\n"
+            "Changed key port in section general.\n"
+        ),
     }
     with patch.dict(ini_manage.__opts__, {"test": True}), patch.dict(
         mod_ini_manage.__opts__, {"test": True}
@@ -71,20 +74,22 @@ def test_options_present_true_no_file(tmpdir, sections):
     assert not os.path.exists(name)
 
 
-def test_options_present_true_file(tmpdir, sections):
+def test_options_present_true_file(tmp_path, sections):
     """
     Test to verify options present when
     file does exist and test=True
     """
-    name = tmpdir.join("test_true_file.ini").strpath
+    name = str(tmp_path / "test_true_file.ini")
 
     exp_ret = {
         "name": name,
         "changes": {},
         "result": None,
-        "comment": "Unchanged key hostname in section general.\n"
-        "Unchanged key port in section general.\n"
-        "Changed key user in section general.\n",
+        "comment": (
+            "Unchanged key hostname in section general.\n"
+            "Unchanged key port in section general.\n"
+            "Changed key user in section general.\n"
+        ),
     }
 
     ini_manage.options_present(name, sections)

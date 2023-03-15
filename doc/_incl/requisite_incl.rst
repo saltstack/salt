@@ -1,9 +1,10 @@
 **Before continuing** make sure you have a working Salt installation by
-following the :ref:`installation` and the
-:ref:`configuration <configuring-salt>` instructions.
+following the instructions in the
+`Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`_.
 
 .. admonition:: Stuck?
 
-    There are many ways to :ref:`salt-community` including our
-    `mailing list <https://groups.google.com/forum/#!forum/salt-users>`_
-    and our `IRC channel <https://webchat.freenode.net/#salt>`_ #salt.
+    The Salt Project community can help offer advice and help troubleshoot
+    technical issues as you're learning about Salt. One of the best places to
+    talk to the community is on the
+    `Salt Project Slack workspace <https://saltstackcommunity.slack.com/>`_.

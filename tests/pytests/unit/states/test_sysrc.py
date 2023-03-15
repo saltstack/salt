@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.sysrc as sysrc
 from tests.support.mock import MagicMock, patch
 
@@ -27,7 +28,7 @@ def test_managed():
             ret.update(
                 {
                     "changes": {"new": "salt = stack will be set.", "old": None},
-                    "comment": "The value" ' of "salt" will be changed!',
+                    "comment": 'The value of "salt" will be changed!',
                     "result": None,
                 }
             )

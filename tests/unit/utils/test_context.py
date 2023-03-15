@@ -7,6 +7,7 @@ import threading
 import time
 
 import pytest
+
 import salt.ext.tornado.gen
 import salt.ext.tornado.stack_context
 import salt.utils.json
@@ -27,8 +28,7 @@ class ContextDictTests(AsyncTestCase):
 
     @pytest.mark.slow_test
     def test_threads(self):
-        """Verify that ContextDict overrides properly within threads
-        """
+        """Verify that ContextDict overrides properly within threads"""
         rets = []
 
         def tgt(x, s):
@@ -61,8 +61,7 @@ class ContextDictTests(AsyncTestCase):
     @gen_test
     @pytest.mark.slow_test
     def test_coroutines(self):
-        """Verify that ContextDict overrides properly within coroutines
-        """
+        """Verify that ContextDict overrides properly within coroutines"""
 
         @salt.ext.tornado.gen.coroutine
         def secondary_coroutine(over):
@@ -111,41 +110,49 @@ class ContextDictTests(AsyncTestCase):
             )  # verify that the override sticks across coroutines
 
     def test_basic(self):
-        """Test that the contextDict is a dict
-        """
+        """Test that the contextDict is a dict"""
         # ensure we get the global value
         self.assertEqual(
-            dict(self.cd), {"foo": "global"},
+            dict(self.cd),
+            {"foo": "global"},
         )
 
     def test_override(self):
         over = self.cd.clone()
         over["bar"] = "global"
         self.assertEqual(
-            dict(over), {"foo": "global", "bar": "global"},
+            dict(over),
+            {"foo": "global", "bar": "global"},
         )
         self.assertEqual(
-            dict(self.cd), {"foo": "global"},
+            dict(self.cd),
+            {"foo": "global"},
         )
         with over:
             self.assertEqual(
-                dict(over), {"foo": "global", "bar": "global"},
+                dict(over),
+                {"foo": "global", "bar": "global"},
             )
             self.assertEqual(
-                dict(self.cd), {"foo": "global", "bar": "global"},
+                dict(self.cd),
+                {"foo": "global", "bar": "global"},
             )
             over["bar"] = "baz"
             self.assertEqual(
-                dict(over), {"foo": "global", "bar": "baz"},
+                dict(over),
+                {"foo": "global", "bar": "baz"},
             )
             self.assertEqual(
-                dict(self.cd), {"foo": "global", "bar": "baz"},
+                dict(self.cd),
+                {"foo": "global", "bar": "baz"},
             )
         self.assertEqual(
-            dict(over), {"foo": "global", "bar": "baz"},
+            dict(over),
+            {"foo": "global", "bar": "baz"},
         )
         self.assertEqual(
-            dict(self.cd), {"foo": "global"},
+            dict(self.cd),
+            {"foo": "global"},
         )
 
     def test_multiple_contexts(self):
@@ -156,7 +163,8 @@ class ContextDictTests(AsyncTestCase):
             self.assertNotIn("bar", self.cd)
             with cd:
                 self.assertEqual(
-                    dict(self.cd), {"bar": x, "foo": "global"},
+                    dict(self.cd),
+                    {"bar": x, "foo": "global"},
                 )
         self.assertNotIn("bar", self.cd)
 
