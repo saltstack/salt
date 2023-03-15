@@ -14,6 +14,12 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
       skip-code-coverage: true
+      salt-repo-domain: ${{ vars.SALT_REPO_DOMAIN || '<% if gh_environment == 'staging' -%> staging. <%- endif -%> repo.saltproject.io' }}
+    <%- if gh_environment == 'staging' %>
+    secrets:
+      salt-repo-username: ${{ secrets.SALT_REPO_USER }}
+      salt-repo-password: ${{ secrets.SALT_REPO_PASS }}
+    <%- endif %>
 
 
   <%- set job_name = "test-macos-pkg-downloads" %>
@@ -32,6 +38,12 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
       skip-code-coverage: true
+      salt-repo-domain: ${{ vars.SALT_REPO_DOMAIN || '<% if gh_environment == 'staging' -%> staging. <%- endif -%> repo.saltproject.io' }}
+    <%- if gh_environment == 'staging' %>
+    secrets:
+      salt-repo-username: ${{ secrets.SALT_REPO_USER }}
+      salt-repo-password: ${{ secrets.SALT_REPO_PASS }}
+    <%- endif %>
 
 
   <%- set job_name = "test-windows-pkg-downloads" %>
@@ -50,3 +62,9 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
       skip-code-coverage: true
+      salt-repo-domain: ${{ vars.SALT_REPO_DOMAIN || '<% if gh_environment == 'staging' -%> staging. <%- endif -%> repo.saltproject.io' }}
+    <%- if gh_environment == 'staging' %>
+    secrets:
+      salt-repo-username: ${{ secrets.SALT_REPO_USER }}
+      salt-repo-password: ${{ secrets.SALT_REPO_PASS }}
+    <%- endif %>

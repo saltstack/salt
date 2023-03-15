@@ -43,6 +43,17 @@ on:
         type: string
         description: The nox session to run
         default: test-pkgs-onedir
+      salt-repo-domain:
+        required: false
+        type: string
+        description: The domain of the package repository
+    secrets:
+      salt-repo-username:
+        required: false
+        description: Username to access the package repository
+      salt-repo-password:
+        required: false
+        description: Password to access the package repository
 
 
 env:
@@ -92,7 +103,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ matrix.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -139,9 +150,16 @@ jobs:
         run: |
           nox --force-color -e compress-dependencies -- ${{ inputs.distro-slug }}
 
+      - name: Upload Nox Requirements Tarball
+        uses: actions/upload-artifact@v3
+        with:
+          name: nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          path: nox.${{ inputs.distro-slug }}.tar.*
+
   test:
     name: Test
     runs-on: ${{ inputs.distro-slug }}
+    environment: ${{ inputs.environment }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     needs:
       - dependencies
@@ -182,7 +200,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ matrix.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
       - name: Decompress .nox Directory
         run: |
@@ -214,7 +232,9 @@ jobs:
           INSTALL_TYPE: ${{ matrix.install_type }}
           SALT_RELEASE: "${{ inputs.salt-version }}"
           SALT_REPO_TYPE: ${{ inputs.environment }}
-          SALT_REPO_DOMAIN: ${{ env.SALT_REPO_DOMAIN || 'staging.repo.saltproject.io' }}
+          SALT_REPO_USER: ${{ secrets.salt-repo-username }}
+          SALT_REPO_PASS: ${{ secrets.salt-repo-password }}
+          SALT_REPO_DOMAIN: ${{ inputs.salt-repo-domain }}
         run: |
           nox --force-color -e ${{ inputs.nox-session }} -- download-pkgs
 
