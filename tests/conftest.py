@@ -611,7 +611,7 @@ def pytest_runtest_setup(item):
                 "Core tests are disabled, pass '--core-tests' to enable them."
             )
     if item.get_closest_marker("slow_test"):
-        if not item.config.getoption("--slow-tests") or True:  # To test on git
+        if not item.config.getoption("--slow-tests"):
             item._skipped_by_mark = True
             raise pytest.skip.Exception(
                 "Slow tests are disabled, pass '--run-slow' to enable them."
