@@ -815,7 +815,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   almalinux-8:
     name: Alma Linux 8
@@ -832,6 +831,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   almalinux-9:
     name: Alma Linux 9
@@ -848,6 +848,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   amazonlinux-2:
     name: Amazon Linux 2
@@ -864,6 +865,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   archlinux-lts:
     name: Arch Linux LTS
@@ -880,6 +882,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   centos-7:
     name: CentOS 7
@@ -896,6 +899,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   centosstream-8:
     name: CentOS Stream 8
@@ -912,6 +916,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   centosstream-9:
     name: CentOS Stream 9
@@ -928,6 +933,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   debian-10:
     name: Debian 10
@@ -944,6 +950,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   debian-11:
     name: Debian 11
@@ -960,6 +967,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   debian-11-arm64:
     name: Debian 11 Arm64
@@ -976,6 +984,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   fedora-36:
     name: Fedora 36
@@ -992,6 +1001,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   fedora-37:
     name: Fedora 37
@@ -1008,6 +1018,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   fedora-38:
     name: Fedora 38
@@ -1024,6 +1035,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   opensuse-15:
     name: Opensuse 15
@@ -1040,6 +1052,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   photonos-3:
     name: Photon OS 3
@@ -1056,6 +1069,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   photonos-4:
     name: Photon OS 4
@@ -1072,6 +1086,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   ubuntu-2004:
     name: Ubuntu 20.04
@@ -1088,6 +1103,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64
@@ -1104,6 +1120,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   ubuntu-2204:
     name: Ubuntu 22.04
@@ -1120,6 +1137,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64
@@ -1136,6 +1154,7 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
