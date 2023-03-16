@@ -292,13 +292,45 @@ jobs:
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }}
 
+      - name: Run Slow Tests
+        id: run-slow-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        run: |
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            ${{ matrix.tests-chunk }} -- --no-fast-tests --slow-tests
+
+      - name: Run Core Tests
+        id: run-core-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        run: |
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            ${{ matrix.tests-chunk }} -- --no-fast --core-tests
+
+      - name: Run Speed Tests
+        id: run-speed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        run: |
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            ${{ matrix.tests-chunk }} -- --no-fast --speed-tests
+
+      - name: Run Flaky Tests
+        id: run-flaky-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        run: |
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            ${{ matrix.tests-chunk }} -- --no-fast --flaky-jail
+
       - name: Run Full Tests
         id: run-full-tests
         if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --run-slow
+            ${{ matrix.tests-chunk }} -- --slow-tests --core-tests --speed-tests
 
       - name: Combine Coverage Reports
         if: always() && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
