@@ -43,17 +43,6 @@ on:
         type: string
         description: The nox session to run
         default: test-pkgs-onedir
-      salt-repo-domain:
-        required: false
-        type: string
-        description: The domain of the package repository
-    secrets:
-      salt-repo-username:
-        required: false
-        description: Username to access the package repository
-      salt-repo-password:
-        required: false
-        description: Password to access the package repository
 
 
 env:
@@ -106,7 +95,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ matrix.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -193,7 +182,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ matrix.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
       - name: Decompress .nox Directory
         run: |
@@ -224,9 +213,10 @@ jobs:
           SALT_RELEASE: "${{ inputs.salt-version }}"
           SALT_REPO_ARCH: ${{ matrix.arch }}
           SALT_REPO_TYPE: ${{ inputs.environment }}
-          SALT_REPO_USER: ${{ secrets.salt-repo-username }}
-          SALT_REPO_PASS: ${{ secrets.salt-repo-password }}
-          SALT_REPO_DOMAIN: ${{ inputs.salt-repo-domain }}
+          SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
+          SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
+          SALT_REPO_DOMAIN: ${{ vars.SALT_REPO_DOMAIN || ( inputs.environment == 'staging' && 'staging.repo.saltproject.io' || 'repo.saltproject.io') }}
+
         run: |
           nox --force-color -e ${{ inputs.nox-session }} -- download-pkgs
 
