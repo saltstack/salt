@@ -43,6 +43,7 @@ on:
         description: List of all the pull labels
         default: salt
 
+
 env:
   NOX_VERSION: "2022.8.7"
   COLUMNS: 190
@@ -107,7 +108,6 @@ jobs:
           path: nox.${{ inputs.distro-slug }}.tar.*
           key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
-      # Skip jobs if nox.*.tar.* is already cached
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: actions/download-artifact@v3
@@ -141,11 +141,18 @@ jobs:
             echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> "$GITHUB_ENV"
           fi
 
+      - name: Get Salt Project GitHub Actions Bot Environment
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
       - name: Start VM
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         id: spin-up-vm
         run: |
-          tools --timestamps vm create --retries=2 ${{ inputs.distro-slug }}
+          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ inputs.distro-slug }}
 
       - name: List Free Space
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -245,12 +252,18 @@ jobs:
         with:
           name: testrun-changed-files.txt
 
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
       - name: Start VM
         id: spin-up-vm
         env:
           TESTS_CHUNK: ${{ matrix.tests-chunk }}
         run: |
-          tools --timestamps vm create --retries=2 ${{ inputs.distro-slug }}
+          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ inputs.distro-slug }}
 
       - name: List Free Space
         run: |
@@ -270,11 +283,6 @@ jobs:
             --nox-session=${{ env.NOX_SESSION }} ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }}
 
-      - name: Echo L
-        shell: bash
-        run: |
-          echo ${{ inputs.pull-labels }}
-
       - name: Run Slow/Changed Tests
         id: run-slow-changed-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
@@ -292,45 +300,13 @@ jobs:
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }}
 
-      - name: Run Slow Tests
-        id: run-slow-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
-        run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --no-fast-tests --slow-tests
-
-      - name: Run Core Tests
-        id: run-core-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
-        run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --no-fast-tests --core-tests
-
-      - name: Run Speed Tests
-        id: run-speed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
-        run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --no-fast-tests --speed-tests
-
-      - name: Run Flaky Tests
-        id: run-flaky-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
-        run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --no-fast-tests --flaky-jail
-
       - name: Run Full Tests
         id: run-full-tests
         if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --slow-tests --core-tests --speed-tests
+            ${{ matrix.tests-chunk }} -- --run-slow
 
       - name: Combine Coverage Reports
         if: always() && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
