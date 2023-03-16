@@ -256,7 +256,7 @@ def onedir_dependencies(
         no_binary = []
     else:
         python_bin = dest / "bin" / "python3"
-        no_binary = ["--no-binary=':all:'"]
+        no_binary = ["--no-binary=':all:'", "--no-cache-dir"]
 
     version_info = ctx.run(
         str(python_bin),
