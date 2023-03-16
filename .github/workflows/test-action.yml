@@ -83,11 +83,6 @@ jobs:
           echo "$TRANSPORT_MATRIX"
           echo "matrix=$TRANSPORT_MATRIX" >> "$GITHUB_OUTPUT"
 
-      - name: Echo L
-        shell: bash
-        run: |
-          echo ${{ inputs.pull-labels }}
-
   dependencies:
     name: Setup Test Dependencies
     needs:
@@ -274,6 +269,11 @@ jobs:
           tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }}
+
+      - name: Echo L
+        shell: bash
+        run: |
+          echo ${{ inputs.pull-labels }}
 
       - name: Run Slow/Changed Tests
         id: run-slow-changed-tests
