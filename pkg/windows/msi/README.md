@@ -47,7 +47,7 @@ Master and id are read from file ``conf\minion``
 
 You can set a master with ``MASTER``.
 
-You can set a master public key with ```MASTER_KEY```, after you converted it into one line like so:
+You can set a master public key with ``MASTER_KEY``, after you converted it into one line like so:
 
 - Remove the first and the last line (``-----BEGIN PUBLIC KEY-----`` and ``-----END PUBLIC KEY-----``).
 - Remove linebreaks.
@@ -60,7 +60,7 @@ If ``MINION_CONFIG`` is set:
 - All prior configuration is deleted:
   - all ``minion.d\*.conf`` files
   - the ``minion_id`` file
-- Implies ```REMOVE_CONFIG=1``: uninstall will remove all configuration.
+- Implies ``REMOVE_CONFIG=1``: uninstall will remove all configuration.
 
 Example ``MINION_CONFIG="master: Anna^id: Bob"`` results in:
 

@@ -558,8 +558,7 @@ class SaltPkgInstall:
                 # perform escaping of the START_MINION property that the MSI
                 # expects unless we do it via a batch file
                 batch_file = pathlib.Path(pkg).parent / "install_msi.cmd"
-                batch_content = f"""msiexec /qn /i "{str(pkg)}" START_MINION=""
-                """
+                batch_content = f'msiexec /qn /i "{str(pkg)}" START_MINION=""\n'
                 with open(batch_file, "w") as fp:
                     fp.write(batch_content)
                 # Now run the batch file
@@ -734,8 +733,7 @@ class SaltPkgInstall:
                 # perform escaping of the START_MINION property that the MSI
                 # expects unless we do it via a batch file
                 batch_file = pkg_path.parent / "install_msi.cmd"
-                batch_content = f"""msiexec /qn /i {str(pkg_path)} START_MINION=""
-                """
+                batch_content = f'msiexec /qn /i {str(pkg_path)} START_MINION=""'
                 with open(batch_file, "w") as fp:
                     fp.write(batch_content)
                 # Now run the batch file
