@@ -1960,10 +1960,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
       skip-code-coverage: true
-      salt-repo-domain: ${{ vars.SALT_REPO_DOMAIN || 'staging.repo.saltproject.io' }}
-    secrets:
-      salt-repo-username: ${{ secrets.SALT_REPO_USER }}
-      salt-repo-password: ${{ secrets.SALT_REPO_PASS }}
+    secrets: inherit
 
   test-macos-pkg-downloads:
     name: Test macOS Package Downloads
@@ -1978,10 +1975,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
       skip-code-coverage: true
-      salt-repo-domain: ${{ vars.SALT_REPO_DOMAIN || 'staging.repo.saltproject.io' }}
-    secrets:
-      salt-repo-username: ${{ secrets.SALT_REPO_USER }}
-      salt-repo-password: ${{ secrets.SALT_REPO_PASS }}
+    secrets: inherit
 
   test-windows-pkg-downloads:
     name: Test Windows Package Downloads
@@ -1996,10 +1990,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
       skip-code-coverage: true
-      salt-repo-domain: ${{ vars.SALT_REPO_DOMAIN || 'staging.repo.saltproject.io' }}
-    secrets:
-      salt-repo-username: ${{ secrets.SALT_REPO_USER }}
-      salt-repo-password: ${{ secrets.SALT_REPO_PASS }}
+    secrets: inherit
 
   publish-pypi:
     name: Publish to PyPi(test)
