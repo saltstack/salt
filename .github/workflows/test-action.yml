@@ -306,7 +306,7 @@ jobs:
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --no-fast --core-tests
+            ${{ matrix.tests-chunk }} -- --no-fast-tests --core-tests
 
       - name: Run Speed Tests
         id: run-speed-tests
@@ -314,7 +314,7 @@ jobs:
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --no-fast --speed-tests
+            ${{ matrix.tests-chunk }} -- --no-fast-tests --speed-tests
 
       - name: Run Flaky Tests
         id: run-flaky-tests
@@ -322,7 +322,7 @@ jobs:
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --no-fast --flaky-jail
+            ${{ matrix.tests-chunk }} -- --no-fast-tests --flaky-jail
 
       - name: Run Full Tests
         id: run-full-tests
