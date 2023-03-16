@@ -63,7 +63,7 @@ def generate_workflows(ctx: Context):
             "slug": "staging",
             "template": "staging.yml",
             "includes": {
-                "test-pkg-downloads": True,
+                "test-pkg-downloads": False,
             },
         },
         "Scheduled": {
@@ -79,7 +79,7 @@ def generate_workflows(ctx: Context):
                 "lint": False,
                 "pkg-tests": False,
                 "salt-tests": False,
-                "test-pkg-dowloads": True,
+                "test-pkg-downloads": False,
             },
         },
     }
