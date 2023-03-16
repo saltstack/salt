@@ -269,6 +269,7 @@ permissions:
           ssh: true
           tags: true
           atomic: true
+          branch: ${{ github.ref }}
 
       - name: Create Github Release
         uses: ncipollo/release-action@v1.12.0
