@@ -270,23 +270,45 @@ jobs:
             --nox-session=${{ env.NOX_SESSION }} ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }}
 
-      - name: Echo L
-        shell: bash
-        run: |
-          echo ${{ inputs.pull-labels }}
-
-      - name: Run Slow/Changed Tests
-        id: run-slow-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+      - name: Run Fast/Changed Tests
+        id: run-fast-changed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
-            ${{ matrix.tests-chunk }} -- --run-slow --suppress-no-test-exit-code \
+            ${{ matrix.tests-chunk }} -- --suppress-no-test-exit-code \
+            --from-filenames=testrun-changed-files.txt
+
+      - name: Run Slow/Changed Tests
+        id: run-slow-changed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
+        run: |
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            ${{ matrix.tests-chunk }} -- --no-fast-tests --slow-tests --suppress-no-test-exit-code \
+            --from-filenames=testrun-changed-files.txt
+
+      - name: Run Core/Changed Tests
+        id: run-core-changed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
+        run: |
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            ${{ matrix.tests-chunk }} -- --no-fast-tests --core-tests --suppress-no-test-exit-code \
+            --from-filenames=testrun-changed-files.txt
+
+      - name: Run Speed/Changed Tests
+        id: run-speed-changed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
+        run: |
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            ${{ matrix.tests-chunk }} -- --no-fast-tests --speed-tests --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
 
       - name: Run Fast Tests
         id: run-fast-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
@@ -294,7 +316,7 @@ jobs:
 
       - name: Run Slow Tests
         id: run-slow-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
@@ -302,7 +324,7 @@ jobs:
 
       - name: Run Core Tests
         id: run-core-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
@@ -310,7 +332,7 @@ jobs:
 
       - name: Run Speed Tests
         id: run-speed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
@@ -318,7 +340,7 @@ jobs:
 
       - name: Run Flaky Tests
         id: run-flaky-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
@@ -326,7 +348,7 @@ jobs:
 
       - name: Run Full Tests
         id: run-full-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \

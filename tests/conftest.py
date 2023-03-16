@@ -632,6 +632,7 @@ def pytest_runtest_setup(item):
         not item.get_closest_marker("slow_test")
         and not item.get_closest_marker("core_test")
         and not item.get_closest_marker("speed_test")
+        and not item.get_closest_marker("flaky_jail")
     ):
         if not item.config.getoption("--no-fast-tests"):
             item._skipped_by_mark = True
