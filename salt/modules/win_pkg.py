@@ -2154,6 +2154,8 @@ def remove(name=None, pkgs=None, **kwargs):
             # Uninstall the software
             changed.append(pkgname)
             # Check Use Scheduler Option
+            log.debug("PKG : cmd: %s /s /c %s", cmd_shell, arguments)
+            log.debug("PKG : pwd: %s", cache_path)
             if pkginfo[target].get("use_scheduler", False):
                 # Create Scheduled Task
                 __salt__["task.create_task"](
@@ -2184,6 +2186,7 @@ def remove(name=None, pkgs=None, **kwargs):
                     python_shell=False,
                     redirect_stderr=True,
                 )
+                log.debug("PKG : retcode: %s", result["retcode"])
                 if not result["retcode"]:
                     ret[pkgname] = {"uninstall status": "success"}
                     changed.append(pkgname)

@@ -11,7 +11,7 @@
 <%- block name %>
 
 name: <{ workflow_name }>
-run-name: "<{ workflow_name }> (${{ format('Branch: {0} // Version: {1}', github.ref_name, inputs.salt-version) }})"
+run-name: "<{ workflow_name }> (branch: ${{ github.ref_name }}; version: ${{ inputs.salt-version }})"
 
 <%- endblock name %>
 
@@ -146,13 +146,14 @@ concurrency:
         run: |
           tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
 
-  <%- if includes.get("test-pkg-uploads", True) %>
-  <%- include "test-pkg-repo-uploads.yml.jinja" %>
+  <%- if includes.get("test-pkg-downloads", True) %>
+  <%- include "test-pkg-repo-downloads.yml.jinja" %>
   <%- endif %>
 
   publish-pypi:
     <%- do conclusion_needs.append('publish-pypi') %>
     name: Publish to PyPi(test)
+    if: ${{ github.event.repository.fork != true }}
     needs:
       - prepare-workflow
       - upload-release-artifacts
