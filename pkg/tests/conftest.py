@@ -76,7 +76,7 @@ def pytest_addoption(parser):
     """
     test_selection_group = parser.getgroup("Tests Runtime Selection")
     test_selection_group.addoption(
-        "--system-service",
+        "--pkg-system-service",
         default=False,
         action="store_true",
         help="Run the daemons as system services",
@@ -148,7 +148,7 @@ def pytest_runtest_setup(item):
 @pytest.fixture(scope="session")
 def salt_factories_root_dir(request, tmp_path_factory):
     root_dir = SaltPkgInstall.salt_factories_root_dir(
-        request.config.getoption("--system-service")
+        request.config.getoption("--pkg-system-service")
     )
     if root_dir is not None:
         yield root_dir
@@ -169,7 +169,7 @@ def salt_factories_config(salt_factories_root_dir):
     return {
         "code_dir": CODE_DIR,
         "root_dir": salt_factories_root_dir,
-        "system_install": True,
+        "system_service": True,
     }
 
 
@@ -177,7 +177,7 @@ def salt_factories_config(salt_factories_root_dir):
 def install_salt(request, salt_factories_root_dir):
     with SaltPkgInstall(
         conf_dir=salt_factories_root_dir / "etc" / "salt",
-        system_service=request.config.getoption("--system-service"),
+        pkg_system_service=request.config.getoption("--pkg-system-service"),
         upgrade=request.config.getoption("--upgrade"),
         downgrade=request.config.getoption("--downgrade"),
         no_uninstall=request.config.getoption("--no-uninstall"),
@@ -391,7 +391,7 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
             master_script = False
 
     if master_script:
-        salt_factories.system_install = False
+        salt_factories.system_service = False
         scripts_dir = salt_factories.root_dir / "Scripts"
         scripts_dir.mkdir(exist_ok=True)
         salt_factories.scripts_dir = scripts_dir
@@ -409,7 +409,7 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
             salt_pkg_install=install_salt,
             python_executable=python_executable,
         )
-        salt_factories.system_install = True
+        salt_factories.system_service = True
     else:
         factory = salt_factories.salt_master_daemon(
             random_string("master-"),
