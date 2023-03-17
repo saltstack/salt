@@ -1746,13 +1746,7 @@ def test_pkgs_onedir(session):
         else:
             file_name = "pkgtests.txt"
 
-        requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, file_name
-        )
-
-        install_command = ["--progress-bar=off", "-r", requirements_file]
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
-
+        _install_requirements(session, "zeromq")
     env = {
         "ONEDIR_TESTRUN": "1",
     }

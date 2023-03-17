@@ -1381,7 +1381,7 @@ class SaltMaster(DaemonPkgMixin, master.SaltMaster):
         DaemonPkgMixin.__attrs_post_init__(self)
 
     def _get_impl_class(self):
-        if self.system_install and self.salt_pkg_install.system_service:
+        if self.system_service and self.salt_pkg_install.system_service:
             if platform.is_windows():
                 return PkgSsmSaltDaemonImpl
             if platform.is_darwin():
@@ -1462,7 +1462,7 @@ class SaltMinion(DaemonPkgMixin, minion.SaltMinion):
         DaemonPkgMixin.__attrs_post_init__(self)
 
     def _get_impl_class(self):
-        if self.system_install and self.salt_pkg_install.system_service:
+        if self.system_service and self.salt_pkg_install.system_service:
             if platform.is_windows():
                 return PkgSsmSaltDaemonImpl
             if platform.is_darwin():
@@ -1498,7 +1498,7 @@ class SaltApi(DaemonPkgMixin, api.SaltApi):
         DaemonPkgMixin.__attrs_post_init__(self)
 
     def _get_impl_class(self):
-        if self.system_install and self.salt_pkg_install.system_service:
+        if self.system_service and self.salt_pkg_install.system_service:
             if platform.is_windows():
                 return PkgSsmSaltDaemonImpl
             if platform.is_darwin():
