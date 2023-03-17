@@ -13,6 +13,29 @@ ready to be packaged.
 install_salt.ps1
 
 #>
+param(
+    [Parameter(Mandatory=$false)]
+    [Alias("b")]
+    # Don't pretify the output of the Write-Result
+    [String] $BuildDir,
+
+    [Parameter(Mandatory=$false)]
+    [Alias("c")]
+    # Don't pretify the output of the Write-Result
+    [Switch] $CICD,
+
+    [Parameter(Mandatory=$false)]
+    # Don't install. It should already be installed
+    [Switch] $SkipInstall,
+
+    [Parameter(Mandatory=$false)]
+    # Path to a Salt source tarball which be used to install Salt.
+    [String] $SourceTarball,
+
+    [Parameter(Mandatory=$false)]
+    # When true, additional routines are done to prepare for packaging.
+    [Switch] $PKG
+)
 
 #-------------------------------------------------------------------------------
 # Script Preferences
@@ -27,8 +50,12 @@ $ErrorActionPreference = "Stop"
 #-------------------------------------------------------------------------------
 
 function Write-Result($result, $ForegroundColor="Green") {
-    $position = 80 - $result.Length - [System.Console]::CursorLeft
-    Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+    if ( $CICD ) {
+        Write-Host $result -ForegroundColor $ForegroundColor
+    } else {
+        $position = 80 - $result.Length - [System.Console]::CursorLeft
+        Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
+    }
 }
 
 #-------------------------------------------------------------------------------
@@ -37,11 +64,17 @@ function Write-Result($result, $ForegroundColor="Green") {
 
 # Python Variables
 $SCRIPT_DIR    = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
-$BUILD_DIR     = "$SCRIPT_DIR\buildenv"
+if ( $BuildDir ) {
+    $BUILD_DIR = $BuildDir
+} else {
+    $BUILD_DIR = "$SCRIPT_DIR\buildenv"
+}
 $SITE_PKGS_DIR = "$BUILD_DIR\Lib\site-packages"
 $SCRIPTS_DIR   = "$BUILD_DIR\Scripts"
 $PYTHON_BIN    = "$SCRIPTS_DIR\python.exe"
 $PY_VERSION    = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
+$PY_MAJOR_VERSION = "$($PY_VERSION.Major)"
+$PY_MINOR_VERSION = "$($PY_VERSION.Minor)"
 $PY_VERSION    = "$($PY_VERSION.Major).$($PY_VERSION.Minor)"
 $ARCH          = $(. $PYTHON_BIN -c "import platform; print(platform.architecture()[0])")
 
@@ -54,55 +87,57 @@ if ( $ARCH -eq "64bit" ) {
     $SALT_DEP_URL   = "https://repo.saltproject.io/windows/dependencies/32"
 }
 
-#-------------------------------------------------------------------------------
-# Start the Script
-#-------------------------------------------------------------------------------
-Write-Host $("=" * 80)
-Write-Host "Install Salt into Python Environment" -ForegroundColor Cyan
-Write-Host "- Architecture: $ARCH"
-Write-Host $("-" * 80)
+if ( ! $SkipInstall ) {
+  #-------------------------------------------------------------------------------
+  # Start the Script
+  #-------------------------------------------------------------------------------
+  Write-Host $("=" * 80)
+  Write-Host "Install Salt into Python Environment" -ForegroundColor Cyan
+  Write-Host "- Architecture: $ARCH"
+  Write-Host $("-" * 80)
 
-#-------------------------------------------------------------------------------
-# Installing Salt
-#-------------------------------------------------------------------------------
-# We don't want to use an existing salt installation because we don't know what
-# it is
-Write-Host "Checking for existing Salt installation: " -NoNewline
-if ( ! (Test-Path -Path "$SCRIPTS_DIR\salt-minion.exe") ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
+  #-------------------------------------------------------------------------------
+  # Installing Salt
+  #-------------------------------------------------------------------------------
+  # We don't want to use an existing salt installation because we don't know what
+  # it is
+  Write-Host "Checking for existing Salt installation: " -NoNewline
+  if ( ! (Test-Path -Path "$SCRIPTS_DIR\salt-minion.exe") ) {
+      Write-Result "Success" -ForegroundColor Green
+  } else {
+      Write-Result "Failed" -ForegroundColor Red
+      exit 1
+  }
 
-# Cleaning previous builds
-$remove = "build", "dist"
-$remove | ForEach-Object {
-    if ( Test-Path -Path "$PROJECT_DIR\$_" ) {
-        Write-Host "Removing $_`:" -NoNewline
-        Remove-Item -Path "$PROJECT_DIR\$_" -Recurse -Force
-        if ( ! (Test-Path -Path "$PROJECT_DIR\$_") ) {
-            Write-Result "Success" -ForegroundColor Green
-        } else {
-            Write-Result "Failed" -ForegroundColor Red
-            exit 1
-        }
-    }
-}
+  # Cleaning previous builds
+  $remove = "build", "dist"
+  $remove | ForEach-Object {
+      if ( Test-Path -Path "$PROJECT_DIR\$_" ) {
+          Write-Host "Removing $_`:" -NoNewline
+          Remove-Item -Path "$PROJECT_DIR\$_" -Recurse -Force
+          if ( ! (Test-Path -Path "$PROJECT_DIR\$_") ) {
+              Write-Result "Success" -ForegroundColor Green
+          } else {
+              Write-Result "Failed" -ForegroundColor Red
+              exit 1
+          }
+      }
+  }
 
-#-------------------------------------------------------------------------------
-# Installing dependencies
-#-------------------------------------------------------------------------------
-Write-Host "Installing dependencies: " -NoNewline
-Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
-              -ArgumentList "install", "-r", "$SALT_DEPS" `
-              -WorkingDirectory "$PROJECT_DIR" `
-              -Wait -WindowStyle Hidden
-if ( Test-Path -Path "$SCRIPTS_DIR\distro.exe" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
+  #-------------------------------------------------------------------------------
+  # Installing dependencies
+  #-------------------------------------------------------------------------------
+  Write-Host "Installing dependencies: " -NoNewline
+  Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
+                -ArgumentList "install", "-r", "$SALT_DEPS" `
+                -WorkingDirectory "$PROJECT_DIR" `
+                -Wait -WindowStyle Hidden
+  if ( Test-Path -Path "$SCRIPTS_DIR\distro.exe" ) {
+      Write-Result "Success" -ForegroundColor Green
+  } else {
+      Write-Result "Failed" -ForegroundColor Red
+      exit 1
+  }
 }
 
 #-------------------------------------------------------------------------------
@@ -128,94 +163,23 @@ if ( ! (Test-Path -Path "$SCRIPTS_DIR\wmitest*") ) {
 # Move DLL's to Python Root and win32
 # The dlls have to be in Python directory and the site-packages\win32 directory
 # TODO: Change this to 310... maybe
-$dlls = "pythoncom38.dll",
-        "pywintypes38.dll"
+$dlls = "pythoncom$($PY_MAJOR_VERSION)$($PY_MINOR_VERSION).dll",
+        "pywintypes$($PY_MAJOR_VERSION)$($PY_MINOR_VERSION).dll"
 $dlls | ForEach-Object {
-    Write-Host "Copying $_ to Scripts: " -NoNewline
-    Copy-Item "$SITE_PKGS_DIR\pywin32_system32\$_" "$SCRIPTS_DIR" -Force | Out-Null
-    if ( Test-Path -Path "$SCRIPTS_DIR\$_") {
-        Write-Result "Success" -ForegroundColor Green
-    } else {
-        Write-Result "Failed" -ForegroundColor Red
-        exit 1
+    if ( -not ( Test-Path -Path "$SCRIPTS_DIR\$_" ) ) {
+        Write-Host "Copying $_ to Scripts: " -NoNewline
+        Copy-Item "$SITE_PKGS_DIR\pywin32_system32\$_" "$SCRIPTS_DIR" -Force | Out-Null
+        if ( Test-Path -Path "$SCRIPTS_DIR\$_") {
+            Write-Result "Success" -ForegroundColor Green
+        } else {
+            Write-Result "Failed" -ForegroundColor Red
+            exit 1
+        }
     }
-    Write-Host "Moving $_ to win32: " -NoNewline
-    Move-Item "$SITE_PKGS_DIR\pywin32_system32\$_" "$SITE_PKGS_DIR\win32" -Force | Out-Null
-    if ( Test-Path -Path "$SITE_PKGS_DIR\win32\$_" ){
-        Write-Result "Success" -ForegroundColor Green
-    } else {
-        Write-Result "Failed" -ForegroundColor Red
-        exit 1
-    }
-}
-
-# Remove pywin32_system32 directory since it is now empty
-Write-Host "Removing pywin32_system32 directory: " -NoNewline
-Remove-Item -Path "$SITE_PKGS_DIR\pywin32_system32" | Out-Null
-if ( ! (Test-Path -Path "$SITE_PKGS_DIR\pywin32_system32") ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
-
-# Remove PyWin32 PostInstall & testall scripts
-Write-Host "Removing pywin32 post-install scripts: " -NoNewline
-Remove-Item -Path "$SCRIPTS_DIR\pywin32_*" -Force | Out-Null
-if ( ! (Test-Path -Path "$SCRIPTS_DIR\pywin32_*") ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
-
-# Create gen_py directory
-Write-Host "Creating gen_py directory: " -NoNewline
-New-Item -Path "$SITE_PKGS_DIR\win32com\gen_py" -ItemType Directory -Force | Out-Null
-if ( Test-Path -Path "$SITE_PKGS_DIR\win32com\gen_py" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
-
-#-------------------------------------------------------------------------------
-# Installing Salt
-#-------------------------------------------------------------------------------
-Write-Host "Installing Salt: " -NoNewline
-# We're setting RELENV_PIP_DIR so the binaries will be placed in the root
-try {
-    $env:RELENV_PIP_DIR = "yes"
-    Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
-              -ArgumentList "install", "." `
-              -WorkingDirectory "$PROJECT_DIR" `
-              -Wait -WindowStyle Hidden
-} finally {
-    Remove-Item env:\RELENV_PIP_DIR
-}
-if ( Test-Path -Path "$BUILD_DIR\salt-minion.exe" ) {
-    Write-Result "Success" -ForegroundColor Green
-} else {
-    Write-Result "Failed" -ForegroundColor Red
-    exit 1
-}
-
-# Remove fluff
-$remove = "doc",
-          "readme",
-          "salt-api",
-          "salt-key",
-          "salt-run",
-          "salt-syndic",
-          "salt-unity",
-          "share",
-          "spm",
-          "wheel"
-$remove | ForEach-Object {
-    if ( Test-Path -Path "$BUILD_DIR\$_*" ) {
-        Write-Host "Removing $_`: " -NoNewline
-        Remove-Item -Path "$BUILD_DIR\$_*" -Recurse
-        if ( ! ( Test-Path -Path "$BUILD_DIR\$_*" ) ) {
+    if ( -not ( Test-Path -Path "$SITE_PKGS_DIR\win32\$_" ) ) {
+        Write-Host "Moving $_ to win32: " -NoNewline
+        Copy-Item "$SITE_PKGS_DIR\pywin32_system32\$_" "$SITE_PKGS_DIR\win32" -Force | Out-Null
+        if ( Test-Path -Path "$SITE_PKGS_DIR\win32\$_" ) {
             Write-Result "Success" -ForegroundColor Green
         } else {
             Write-Result "Failed" -ForegroundColor Red
@@ -224,6 +188,97 @@ $remove | ForEach-Object {
     }
 }
 
+if ( $PKG ) {
+    # Remove pywin32_system32 directory since it is now empty
+    if ( Test-Path -Path "$SITE_PKGS_DIR\pywin32_system32" ) {
+        Write-Host "Removing pywin32_system32 directory: " -NoNewline
+        Remove-Item -Path "$SITE_PKGS_DIR\pywin32_system32" -Recurse | Out-Null
+        if ( ! (Test-Path -Path "$SITE_PKGS_DIR\pywin32_system32") ) {
+            Write-Result "Success" -ForegroundColor Green
+        } else {
+            Write-Result "Failed" -ForegroundColor Red
+            exit 1
+        }
+    }
+}
+
+# Remove PyWin32 PostInstall & testall scripts
+if ( Test-Path -Path "$SCRIPTS_DIR\pywin32_*" ) {
+    Write-Host "Removing pywin32 post-install scripts: " -NoNewline
+    Remove-Item -Path "$SCRIPTS_DIR\pywin32_*" -Force | Out-Null
+    if ( ! (Test-Path -Path "$SCRIPTS_DIR\pywin32_*") ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+}
+
+# Create gen_py directory
+if ( ! (Test-Path -Path "$SITE_PKGS_DIR\win32com\gen_py" ) ) {
+    Write-Host "Creating gen_py directory: " -NoNewline
+    New-Item -Path "$SITE_PKGS_DIR\win32com\gen_py" -ItemType Directory -Force | Out-Null
+    if ( Test-Path -Path "$SITE_PKGS_DIR\win32com\gen_py" ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+}
+
+if ( ! $SkipInstall ) {
+  #-------------------------------------------------------------------------------
+  # Installing Salt
+  #-------------------------------------------------------------------------------
+  Write-Host "Installing Salt: " -NoNewline
+# We're setting RELENV_PIP_DIR so the binaries will be placed in the root
+  if ( $SourceTarball ) {
+      $InstallPath = $SourceTarball
+  } else {
+      $InstallPath = "."
+  }
+  try {
+      $env:RELENV_PIP_DIR = "yes"
+      Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
+                -ArgumentList "install", $InstallPath `
+                -WorkingDirectory "$PROJECT_DIR" `
+                -Wait -WindowStyle Hidden
+  } finally {
+      Remove-Item env:\RELENV_PIP_DIR
+  }
+  if ( Test-Path -Path "$BUILD_DIR\salt-minion.exe" ) {
+      Write-Result "Success" -ForegroundColor Green
+  } else {
+      Write-Result "Failed" -ForegroundColor Red
+      exit 1
+  }
+}
+
+if ( $PKG ) {
+    # Remove fluff
+    $remove = "doc",
+              "readme",
+              "salt-api",
+              "salt-key",
+              "salt-run",
+              "salt-syndic",
+              "salt-unity",
+              "share",
+              "spm",
+              "wheel"
+    $remove | ForEach-Object {
+        if ( Test-Path -Path "$BUILD_DIR\$_*" ) {
+            Write-Host "Removing $_`: " -NoNewline
+            Remove-Item -Path "$BUILD_DIR\$_*" -Recurse
+            if ( ! ( Test-Path -Path "$BUILD_DIR\$_*" ) ) {
+                Write-Result "Success" -ForegroundColor Green
+            } else {
+                Write-Result "Failed" -ForegroundColor Red
+                exit 1
+            }
+        }
+    }
+}
 #-------------------------------------------------------------------------------
 # Finished
 #-------------------------------------------------------------------------------

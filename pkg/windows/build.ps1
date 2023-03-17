@@ -17,7 +17,7 @@ and are called in this order:
 build.ps1
 
 .EXAMPLE
-build.ps1 -Version 3005 -PythonVersion 3.8.13
+build.ps1 -Version 3005 -PythonVersion 3.10.9
 
 #>
 
@@ -30,7 +30,7 @@ param(
     [String] $Version,
 
     [Parameter(Mandatory=$false)]
-    [ValidateSet("x86", "x64")]
+    [ValidateSet("x86", "x64", "amd64")]
     [Alias("a")]
     # The System Architecture to build. "x86" will build a 32-bit installer.
     # "x64" will build a 64-bit installer. Default is: x64
@@ -39,20 +39,8 @@ param(
     [Parameter(Mandatory=$false)]
     [ValidatePattern("^\d{1,2}.\d{1,2}.\d{1,2}$")]
     [ValidateSet(
-        # Until Pythonnet supports newer versions
-        #"3.10.5",
-        #"3.10.4",
-        #"3.10.3",
-        #"3.9.13",
-        #"3.9.12",
-        #"3.9.11",
-        "3.8.16",
-        "3.8.15",
-        "3.8.14",
-        "3.8.13",
-        "3.8.12",
-        "3.8.11",
-        "3.8.10"
+        "3.11.2",
+        "3.10.10"
     )]
     [Alias("p")]
     # The version of Python to be built. Pythonnet only supports up to Python
@@ -60,17 +48,29 @@ param(
     # supported up to 3.8. So we're pinned to the latest version of Python 3.8.
     # We may have to drop support for pycurl.
     # Default is: 3.8.16
-    [String] $PythonVersion = "3.8.16",
+    [String] $PythonVersion = "3.10.10",
 
     [Parameter(Mandatory=$false)]
     [Alias("b")]
     # Build python from source instead of fetching a tarball
     # Requires VC Build Tools
-    [Switch] $Build
+    [Switch] $Build,
+
+    [Parameter(Mandatory=$false)]
+    [Alias("c")]
+    # Don't pretify the output of the Write-Result
+    [Switch] $CICD,
+
+    [Parameter(Mandatory=$false)]
+    # Don't install. It should already be installed
+    [Switch] $SkipInstall
 
 )
 
+#-------------------------------------------------------------------------------
 # Script Preferences
+#-------------------------------------------------------------------------------
+
 $ProgressPreference = "SilentlyContinue"
 $ErrorActionPreference = "Stop"
 
@@ -79,6 +79,10 @@ $ErrorActionPreference = "Stop"
 #-------------------------------------------------------------------------------
 $SCRIPT_DIR     = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
 $PROJECT_DIR    = $(git rev-parse --show-toplevel)
+
+if ( $Architecture -eq "amd64" ) {
+  $Architecture = "x64"
+}
 
 #-------------------------------------------------------------------------------
 # Verify Salt and Version
@@ -114,7 +118,11 @@ Write-Host $("v" * 80)
 # Install NSIS
 #-------------------------------------------------------------------------------
 
-& "$SCRIPT_DIR\install_nsis.ps1"
+$KeywordArguments = @{}
+if ( $CICD ) {
+    $KeywordArguments["CICD"] = $true
+}
+& "$SCRIPT_DIR\install_nsis.ps1" @KeywordArguments
 if ( ! $? ) {
     Write-Host "Failed to install NSIS"
     exit 1
@@ -124,7 +132,11 @@ if ( ! $? ) {
 # Install WIX
 #-------------------------------------------------------------------------------
 
-& "$SCRIPT_DIR\install_wix.ps1"
+$KeywordArguments = @{}
+if ( $CICD ) {
+    $KeywordArguments["CICD"] = $true
+}
+& "$SCRIPT_DIR\install_wix.ps1" @KeywordArguments
 if ( ! $? ) {
     Write-Host "Failed to install WIX"
     exit 1
@@ -134,34 +146,53 @@ if ( ! $? ) {
 # Install Visual Studio Build Tools
 #-------------------------------------------------------------------------------
 
-& "$SCRIPT_DIR\install_vs_buildtools.ps1"
+$KeywordArguments = @{}
+if ( $CICD ) {
+    $KeywordArguments["CICD"] = $true
+}
+& "$SCRIPT_DIR\install_vs_buildtools.ps1" @KeywordArguments
 if ( ! $? ) {
     Write-Host "Failed to install Visual Studio Build Tools"
     exit 1
 }
 
-#-------------------------------------------------------------------------------
-# Build Python
-#-------------------------------------------------------------------------------
 
-$KeywordArguments = @{
-    Version = $PythonVersion
-    Architecture = $Architecture
-}
-if ( $Build ) {
-    $KeywordArguments["Build"] = $true
-}
-& "$SCRIPT_DIR\build_python.ps1" @KeywordArguments
-if ( ! $? ) {
-    Write-Host "Failed to build Python"
-    exit 1
+if ( ! $SkipInstall ) {
+  #-------------------------------------------------------------------------------
+  # Build Python
+  #-------------------------------------------------------------------------------
+
+  $KeywordArguments = @{
+      Version = $PythonVersion
+      Architecture = $Architecture
+  }
+  if ( $Build ) {
+      $KeywordArguments["Build"] = $true
+  }
+  if ( $CICD ) {
+      $KeywordArguments["CICD"] = $true
+  }
+
+  & "$SCRIPT_DIR\build_python.ps1" @KeywordArguments
+  if ( ! $? ) {
+      Write-Host "Failed to build Python"
+      exit 1
+  }
 }
 
 #-------------------------------------------------------------------------------
 # Install Salt
 #-------------------------------------------------------------------------------
 
-& "$SCRIPT_DIR\install_salt.ps1"
+$KeywordArguments = @{}
+if ( $CICD ) {
+    $KeywordArguments["CICD"] = $true
+}
+if ( $SkipInstall ) {
+    $KeywordArguments["SkipInstall"] = $true
+}
+$KeywordArguments["PKG"] = $true
+& "$SCRIPT_DIR\install_salt.ps1" @KeywordArguments
 if ( ! $? ) {
     Write-Host "Failed to install Salt"
     exit 1
@@ -171,7 +202,12 @@ if ( ! $? ) {
 # Prep Salt for Packaging
 #-------------------------------------------------------------------------------
 
-& "$SCRIPT_DIR\prep_salt.ps1"
+$KeywordArguments = @{}
+if ( $CICD ) {
+    $KeywordArguments["CICD"] = $true
+}
+$KeywordArguments["PKG"] = $true
+& "$SCRIPT_DIR\prep_salt.ps1" @KeywordArguments
 if ( ! $? ) {
     Write-Host "Failed to Prepare Salt for packaging"
     exit 1
@@ -185,8 +221,11 @@ $KeywordArguments = @{}
 if ( ! [String]::IsNullOrEmpty($Version) ) {
     $KeywordArguments.Add("Version", $Version)
 }
+if ( $CICD ) {
+    $KeywordArguments["CICD"] = $true
+}
 
-powershell -file "$SCRIPT_DIR\nsis\build_pkg.ps1" @KeywordArguments
+& "$SCRIPT_DIR\nsis\build_pkg.ps1" @KeywordArguments
 
 if ( ! $? ) {
     Write-Host "Failed to build NSIS package"
@@ -197,7 +236,7 @@ if ( ! $? ) {
 # Build MSI Package
 #-------------------------------------------------------------------------------
 
-powershell -file "$SCRIPT_DIR\msi\build_pkg.ps1" @KeywordArguments
+& "$SCRIPT_DIR\msi\build_pkg.ps1" @KeywordArguments
 
 if ( ! $? ) {
     Write-Host "Failed to build NSIS package"

@@ -1,3 +1,6 @@
-python-tools-scripts >= 0.9.3
+python-tools-scripts >= 0.11.1
 attrs
 boto3
+pyyaml
+jinja2
+packaging

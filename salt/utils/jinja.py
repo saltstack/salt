@@ -39,7 +39,7 @@ try:
     from markupsafe import Markup
 except ImportError:
     # jinja < 3.1
-    from jinja2 import Markup
+    from jinja2 import Markup  # pylint: disable=no-name-in-module
 
 log = logging.getLogger(__name__)
 
@@ -728,12 +728,13 @@ def method_call(obj, f_name, *f_args, **f_kwargs):
 
 
 try:
-    contextfunction = jinja2.contextfunction
+    pass_context = jinja2.pass_context
 except AttributeError:
-    contextfunction = jinja2.pass_context
+    # Old and deprecated method
+    pass_context = jinja2.contextfunction
 
 
-@contextfunction
+@pass_context
 def show_full_context(ctx):
     return salt.utils.data.simple_types_filter(
         {key: value for key, value in ctx.items()}

@@ -23,4 +23,3 @@ cat > /etc/salt/minion <<EOF
 EOF
 
 salt-minion -d
-
