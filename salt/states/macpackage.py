@@ -232,5 +232,6 @@ def installed(
         if dmg:
             # Unmount to be kind
             __salt__["macpackage.unmount"](mount_point)
+            __salt__["cmd.run"]("rm -rf {}".format(mount_point))
 
     return ret
