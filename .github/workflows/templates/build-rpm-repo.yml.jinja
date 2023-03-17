@@ -83,7 +83,7 @@
       - name: Create Repository
         run: |
           tools pkg repo create rpm --key-id=<{ gpg_key_id }> --distro-arch=${{ matrix.arch }} <% if gh_environment == 'nightly' -%> --nightly-build <%- endif %> \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || ''  }} \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 

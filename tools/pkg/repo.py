@@ -124,9 +124,6 @@ _deb_distro_info = {
         "nightly_build": {
             "help": "Developement repository target",
         },
-        "rc_build": {
-            "help": "Release Candidate repository target",
-        },
     },
 )
 def debian(
@@ -139,7 +136,6 @@ def debian(
     key_id: str = None,
     distro_arch: str = "amd64",
     nightly_build: bool = False,
-    rc_build: bool = False,
 ):
     """
     Create the debian repository.
@@ -206,7 +202,6 @@ def debian(
         distro,
         distro_version=distro_version,
         distro_arch=distro_arch,
-        rc_build=rc_build,
         nightly_build=nightly_build,
     )
 
@@ -370,9 +365,6 @@ _rpm_distro_info = {
         "nightly_build": {
             "help": "Developement repository target",
         },
-        "rc_build": {
-            "help": "Release Candidate repository target",
-        },
     },
 )
 def rpm(
@@ -385,7 +377,6 @@ def rpm(
     key_id: str = None,
     distro_arch: str = "amd64",
     nightly_build: bool = False,
-    rc_build: bool = False,
 ):
     """
     Create the redhat repository.
@@ -413,7 +404,6 @@ def rpm(
         distro,
         distro_version=distro_version,
         distro_arch=distro_arch,
-        rc_build=rc_build,
         nightly_build=nightly_build,
     )
 
@@ -466,7 +456,7 @@ def rpm(
         if nightly_build:
             base_url = "salt-dev/"
             repo_file_contents = "[salt-nightly-repo]"
-        elif rc_build:
+        elif "rc" in salt_version:
             base_url = "salt_rc/"
             repo_file_contents = "[salt-rc-repo]"
         else:
@@ -506,7 +496,7 @@ def rpm(
 
     _create_repo_file(repo_file_path, salt_version)
 
-    if nightly_build is False and rc_build is False:
+    if nightly_build is False:
         remote_versions = _get_remote_versions(
             tools.utils.STAGING_BUCKET_NAME,
             create_repo_path.parent.relative_to(repo_path),
@@ -564,9 +554,6 @@ def rpm(
         "nightly_build": {
             "help": "Developement repository target",
         },
-        "rc_build": {
-            "help": "Release Candidate repository target",
-        },
     },
 )
 def windows(
@@ -576,7 +563,6 @@ def windows(
     repo_path: pathlib.Path = None,
     key_id: str = None,
     nightly_build: bool = False,
-    rc_build: bool = False,
 ):
     """
     Create the windows repository.
@@ -590,7 +576,6 @@ def windows(
         ctx,
         salt_version=salt_version,
         nightly_build=nightly_build,
-        rc_build=rc_build,
         repo_path=repo_path,
         incoming=incoming,
         key_id=key_id,
@@ -625,9 +610,6 @@ def windows(
         "nightly_build": {
             "help": "Developement repository target",
         },
-        "rc_build": {
-            "help": "Release Candidate repository target",
-        },
     },
 )
 def macos(
@@ -637,7 +619,6 @@ def macos(
     repo_path: pathlib.Path = None,
     key_id: str = None,
     nightly_build: bool = False,
-    rc_build: bool = False,
 ):
     """
     Create the windows repository.
@@ -651,7 +632,6 @@ def macos(
         ctx,
         salt_version=salt_version,
         nightly_build=nightly_build,
-        rc_build=rc_build,
         repo_path=repo_path,
         incoming=incoming,
         key_id=key_id,
@@ -686,9 +666,6 @@ def macos(
         "nightly_build": {
             "help": "Developement repository target",
         },
-        "rc_build": {
-            "help": "Release Candidate repository target",
-        },
     },
 )
 def onedir(
@@ -698,7 +675,6 @@ def onedir(
     repo_path: pathlib.Path = None,
     key_id: str = None,
     nightly_build: bool = False,
-    rc_build: bool = False,
 ):
     """
     Create the onedir repository.
@@ -712,7 +688,6 @@ def onedir(
         ctx,
         salt_version=salt_version,
         nightly_build=nightly_build,
-        rc_build=rc_build,
         repo_path=repo_path,
         incoming=incoming,
         key_id=key_id,
@@ -747,9 +722,6 @@ def onedir(
         "nightly_build": {
             "help": "Developement repository target",
         },
-        "rc_build": {
-            "help": "Release Candidate repository target",
-        },
     },
 )
 def src(
@@ -759,7 +731,6 @@ def src(
     repo_path: pathlib.Path = None,
     key_id: str = None,
     nightly_build: bool = False,
-    rc_build: bool = False,
 ):
     """
     Create the onedir repository.
@@ -802,13 +773,21 @@ def src(
         "repo_path": {
             "help": "Local path for the repository that shall be published.",
         },
+        "salt_version": {
+            "help": "The salt version for which to build the repository",
+            "required": True,
+        },
     }
 )
-def nightly(ctx: Context, repo_path: pathlib.Path):
+def nightly(ctx: Context, repo_path: pathlib.Path, salt_version: str = None):
     """
     Publish to the nightly bucket.
     """
-    _publish_repo(ctx, repo_path=repo_path, nightly_build=True)
+    if TYPE_CHECKING:
+        assert salt_version is not None
+    _publish_repo(
+        ctx, repo_path=repo_path, nightly_build=True, salt_version=salt_version
+    )
 
 
 @publish.command(
@@ -816,16 +795,19 @@ def nightly(ctx: Context, repo_path: pathlib.Path):
         "repo_path": {
             "help": "Local path for the repository that shall be published.",
         },
-        "rc_build": {
-            "help": "Release Candidate repository target",
+        "salt_version": {
+            "help": "The salt version for which to build the repository",
+            "required": True,
         },
     }
 )
-def staging(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
+def staging(ctx: Context, repo_path: pathlib.Path, salt_version: str = None):
     """
     Publish to the staging bucket.
     """
-    _publish_repo(ctx, repo_path=repo_path, rc_build=rc_build, stage=True)
+    if TYPE_CHECKING:
+        assert salt_version is not None
+    _publish_repo(ctx, repo_path=repo_path, stage=True, salt_version=salt_version)
 
 
 @repo.command(
@@ -874,7 +856,6 @@ def backup_previous_releases(ctx: Context, salt_version: str = None):
     ):
         files_to_backup.append((entry["Key"], entry["LastModified"]))
 
-    s3 = boto3.client("s3")
     with tools.utils.create_progress_bar() as progress:
         task = progress.add_task(
             "Back up previous releases", total=len(files_to_backup)
@@ -919,25 +900,13 @@ def backup_previous_releases(ctx: Context, salt_version: str = None):
         "salt_version": {
             "help": "The salt version to release.",
         },
-        "rc_build": {
-            "help": "Release Candidate repository target",
-        },
-        "key_id": {
-            "help": "The GnuPG key ID used to sign.",
-            "required": True,
-        },
     }
 )
-def release(
-    ctx: Context, salt_version: str, key_id: str = None, rc_build: bool = False
-):
+def release(ctx: Context, salt_version: str):
     """
     Publish to the release bucket.
     """
-    if TYPE_CHECKING:
-        assert key_id is not None
-
-    if rc_build:
+    if "rc" in salt_version:
         bucket_folder = "salt_rc/salt/py3"
     else:
         bucket_folder = "salt/py3"
@@ -962,7 +931,7 @@ def release(
             glob_match=glob_match,
         )
     )
-    if rc_build:
+    if "rc" in salt_version:
         glob_match = "{bucket_folder}/**/{}~rc{}*".format(
             *salt_version.split("rc"), bucket_folder=bucket_folder
         )
@@ -1050,8 +1019,7 @@ def release(
             create_repo_path = _create_repo_path(
                 repo_path,
                 salt_version,
-                distro,
-                rc_build=rc_build,
+                distro=distro,
             )
             repo_json_path = create_repo_path.parent.parent / "repo.json"
 
@@ -1249,9 +1217,6 @@ def release(
         "salt_version": {
             "help": "The salt version to release.",
         },
-        "rc_build": {
-            "help": "Release Candidate repository target",
-        },
         "key_id": {
             "help": "The GnuPG key ID used to sign.",
             "required": True,
@@ -1268,7 +1233,6 @@ def github(
     ctx: Context,
     salt_version: str,
     key_id: str = None,
-    rc_build: bool = False,
     repository: str = "saltstack/salt",
 ):
     """
@@ -1518,7 +1482,6 @@ def _create_onedir_based_repo(
     ctx: Context,
     salt_version: str,
     nightly_build: bool,
-    rc_build: bool,
     repo_path: pathlib.Path,
     incoming: pathlib.Path,
     key_id: str,
@@ -1527,7 +1490,7 @@ def _create_onedir_based_repo(
 ):
     ctx.info("Creating repository directory structure ...")
     create_repo_path = _create_repo_path(
-        repo_path, salt_version, distro, rc_build=rc_build, nightly_build=nightly_build
+        repo_path, salt_version, distro, nightly_build=nightly_build
     )
     if nightly_build is False:
         repo_json_path = create_repo_path.parent.parent / "repo.json"
@@ -1720,6 +1683,9 @@ def _get_repo_json_file_contents(
             raise
         if exc.response["Error"]["Code"] != "404":
             raise
+        ctx.info(f"Cloud not find {repo_json_path} in bucket {bucket_name}")
+    if repo_json:
+        ctx.print(repo_json, soft_wrap=True)
     return repo_json
 
 
@@ -1745,8 +1711,8 @@ def _get_file_checksum(fpath: pathlib.Path, hash_name: str) -> str:
 def _publish_repo(
     ctx: Context,
     repo_path: pathlib.Path,
+    salt_version: str,
     nightly_build: bool = False,
-    rc_build: bool = False,
     stage: bool = False,
 ):
     """
@@ -1836,13 +1802,12 @@ def _create_repo_path(
     distro: str,
     distro_version: str | None = None,  # pylint: disable=bad-whitespace
     distro_arch: str | None = None,  # pylint: disable=bad-whitespace
-    rc_build: bool = False,
     nightly_build: bool = False,
 ):
     create_repo_path = repo_path
     if nightly_build:
         create_repo_path = create_repo_path / "salt-dev"
-    elif rc_build:
+    elif "rc" in salt_version:
         create_repo_path = create_repo_path / "salt_rc"
     create_repo_path = create_repo_path / "salt" / "py3" / distro
     if distro_version:

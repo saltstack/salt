@@ -178,9 +178,7 @@ permissions:
 
       - name: Publish Release Repository
         run: |
-          tools pkg repo publish release \
-            ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} \
-            --key-id=<{ gpg_key_id }> ${{ needs.prepare-workflow.outputs.salt-version }}
+          tools pkg repo publish <{ gh_environment }> --salt-version=${{ needs.prepare-workflow.outputs.salt-version }}
 
   <%- if includes.get("test-pkg-downloads", True) %>
   <%- include "test-pkg-repo-downloads.yml.jinja" %>
