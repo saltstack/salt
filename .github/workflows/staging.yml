@@ -1303,7 +1303,7 @@ jobs:
       - name: Create Repository
         run: |
           tools pkg repo create src --key-id=64CBBC8173D76B3F  \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || ''  }} \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
       - name: Upload Standalone Repository As An Artifact
@@ -1424,7 +1424,7 @@ jobs:
       - name: Create Repository
         run: |
           tools pkg repo create deb --key-id=64CBBC8173D76B3F --distro-arch=${{ matrix.arch }}  \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
@@ -1553,7 +1553,7 @@ jobs:
       - name: Create Repository
         run: |
           tools pkg repo create rpm --key-id=64CBBC8173D76B3F --distro-arch=${{ matrix.arch }}  \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || ''  }} \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
@@ -1648,7 +1648,7 @@ jobs:
       - name: Create Repository
         run: |
           tools pkg repo create windows --key-id=64CBBC8173D76B3F  \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || ''  }} \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
       - name: Upload Repository As An Artifact
@@ -1724,7 +1724,7 @@ jobs:
       - name: Create Repository
         run: |
           tools pkg repo create macos --key-id=64CBBC8173D76B3F  \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || ''  }} \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
       - name: Upload Repository As An Artifact
@@ -1836,7 +1836,7 @@ jobs:
       - name: Create Repository
         run: |
           tools pkg repo create onedir --key-id=64CBBC8173D76B3F  \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || ''  }} \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
       - name: Upload Repository As An Artifact
@@ -1893,8 +1893,7 @@ jobs:
 
       - name: Upload Repository Contents (staging)
         run: |
-          tools pkg repo publish staging \
-            ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} artifacts/pkgs/repo/
+          tools pkg repo publish staging --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} artifacts/pkgs/repo/
 
   upload-release-artifacts:
     name: Upload Release Artifacts
