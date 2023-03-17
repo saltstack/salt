@@ -1,5 +1,6 @@
 ---
 name: Check Workflow Run
+run-name: "Check Workflow Run(id: ${{ github.event.workflow_run.id }}; attempt: ${{ github.event.workflow_run.run_attempt }}) - ${{ github.event.workflow_run.display_title }}"
 
 on:
   workflow_run:
@@ -12,11 +13,11 @@ on:
       - Stage Release
 
 permissions:
-  actions: write
+  actions: write  # So we can re-run workflow runs
 
 jobs:
   restart-failed-workflow-runs:
-    name: "Restart Workflow (ID: ${{ github.event.workflow_run.id }}; Attempt: ${{ github.event.workflow_run.run_attempt }})"
+    name: "Restart Workflow (id: ${{ github.event.workflow_run.id }}; attempt: ${{ github.event.workflow_run.run_attempt }})"
     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     runs-on: ubuntu-latest
     steps:

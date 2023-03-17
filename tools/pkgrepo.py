@@ -1,7 +1,7 @@
 """
 These commands are used to build the pacakge repository files.
 """
-# pylint: disable=resource-leakage,broad-except
+# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
 import fnmatch
@@ -828,11 +828,35 @@ def staging(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
     _publish_repo(ctx, repo_path=repo_path, rc_build=rc_build, stage=True)
 
 
-@repo.command(name="backup-previous-releases")
-def backup_previous_releases(ctx: Context):
+@repo.command(
+    name="backup-previous-releases",
+    arguments={
+        "salt_version": {
+            "help": "The salt version for which to build the repository",
+            "required": True,
+        },
+    },
+)
+def backup_previous_releases(ctx: Context, salt_version: str = None):
     """
     Backup previous releases.
     """
+    s3 = boto3.client("s3")
+    backup_file_relpath = f"release-artifacts/{salt_version}/.release-backup-done"
+    try:
+        ctx.info(
+            f"Getting information if a backup for {salt_version} was already done..."
+        )
+        s3.head_object(
+            Key=backup_file_relpath,
+            Bucket=tools.utils.STAGING_BUCKET_NAME,
+        )
+        ctx.info(f"A backup prior to releasing {salt_version} has already been done.")
+        ctx.exit(0)
+    except ClientError as exc:
+        if "404" not in str(exc):
+            raise
+
     files_in_backup: dict[str, datetime] = {}
     files_to_backup: list[tuple[str, datetime]] = []
 
@@ -870,13 +894,21 @@ def backup_previous_releases(ctx: Context):
                     },
                     MetadataDirective="COPY",
                     TaggingDirective="COPY",
-                    ServerSideEncryption="aws:kms",
+                    ServerSideEncryption="AES256",
                 )
             except ClientError as exc:
                 if "PreconditionFailed" not in str(exc):
                     log.exception(f"Failed to copy {fpath}")
             finally:
                 progress.update(task, advance=1)
+    s3.put_object(
+        Key=backup_file_relpath,
+        Bucket=tools.utils.STAGING_BUCKET_NAME,
+        Body=b"",
+        Metadata={
+            "x-amz-meta-salt-release-version": salt_version,
+        },
+    )
     ctx.info("Done")
 
 
@@ -914,11 +946,38 @@ def release(
 
     ctx.info("Grabbing remote file listing of files to copy...")
 
-    glob_match = f"{bucket_folder}/**/minor/{salt_version}/**"
+    glob_match = f"{bucket_folder}/**/latest.repo"
     files_to_copy = _get_repo_file_list(
         bucket_name=tools.utils.STAGING_BUCKET_NAME,
         bucket_folder=bucket_folder,
         glob_match=glob_match,
+    )
+    glob_match = f"{bucket_folder}/**/minor/{salt_version}.repo"
+    files_to_copy.extend(
+        _get_repo_file_list(
+            bucket_name=tools.utils.STAGING_BUCKET_NAME,
+            bucket_folder=bucket_folder,
+            glob_match=glob_match,
+        )
+    )
+    if rc_build:
+        glob_match = "{bucket_folder}/**/{}~rc{}*".format(
+            *salt_version.split("rc"), bucket_folder=bucket_folder
+        )
+        files_to_copy.extend(
+            _get_repo_file_list(
+                bucket_name=tools.utils.STAGING_BUCKET_NAME,
+                bucket_folder=bucket_folder,
+                glob_match=glob_match,
+            )
+        )
+    glob_match = f"{bucket_folder}/**/minor/{salt_version}/**"
+    files_to_copy.extend(
+        _get_repo_file_list(
+            bucket_name=tools.utils.STAGING_BUCKET_NAME,
+            bucket_folder=bucket_folder,
+            glob_match=glob_match,
+        )
     )
     glob_match = f"{bucket_folder}/**/src/{salt_version}/**"
     files_to_copy.extend(
@@ -933,6 +992,7 @@ def release(
         ctx.error(f"Could not find any files related to the '{salt_version}' release.")
         ctx.exit(1)
 
+    already_copied_files: list[str] = []
     onedir_listing: dict[str, list[str]] = {}
     s3 = boto3.client("s3")
     with tools.utils.create_progress_bar() as progress:
@@ -940,6 +1000,8 @@ def release(
             "Copying files between buckets", total=len(files_to_copy)
         )
         for fpath in files_to_copy:
+            if fpath in already_copied_files:
+                continue
             if fpath.startswith(f"{bucket_folder}/windows/"):
                 if "windows" not in onedir_listing:
                     onedir_listing["windows"] = []
@@ -967,8 +1029,9 @@ def release(
                     },
                     MetadataDirective="COPY",
                     TaggingDirective="COPY",
-                    ServerSideEncryption="aws:kms",
+                    ServerSideEncryption="AES256",
                 )
+                already_copied_files.append(fpath)
             except ClientError:
                 log.exception(f"Failed to copy {fpath}")
             finally:
@@ -1021,7 +1084,8 @@ def release(
             )
             minor_versions = [v for v in versions if v.major == major_version]
             ctx.info(
-                f"Collected versions(Matching major: {major_version}) from {minor_repo_json_path.relative_to(repo_path)}: "
+                f"Collected versions(Matching major: {major_version}) from "
+                f"{minor_repo_json_path.relative_to(repo_path)}: "
                 f"{', '.join(str(vs) for vs in minor_versions)}"
             )
             if not versions:
@@ -1155,7 +1219,7 @@ def release(
                         },
                         MetadataDirective="COPY",
                         TaggingDirective="COPY",
-                        ServerSideEncryption="aws:kms",
+                        ServerSideEncryption="AES256",
                     )
                 except ClientError:
                     log.exception(f"Failed to copy {fpath}")
@@ -1233,6 +1297,8 @@ def github(
             break
         for entry in contents:
             entry_path = pathlib.Path(entry["Key"])
+            if entry_path.name.startswith("."):
+                continue
             release_artifacts_listing[entry_path] = entry["Size"]
         if not ret["IsTruncated"]:
             break
@@ -1366,8 +1432,6 @@ def _get_salt_releases(ctx: Context, repository: str) -> list[Version]:
             name = release["name"]
             if name.startswith("v"):
                 name = name[1:]
-            if not name:
-                print(123, release)
             if name and "-" not in name and "docs" not in name:
                 # We're not going to parse dash or docs releases
                 versions.add(Version(name))
@@ -1420,6 +1484,11 @@ def _get_repo_file_list(
 
 
 def _get_remote_versions(bucket_name: str, remote_path: str):
+    log.info(
+        "Getting remote versions from bucket %r under path: %s",
+        bucket_name,
+        remote_path,
+    )
     remote_path = str(remote_path)
     if not remote_path.endswith("/"):
         remote_path += "/"
@@ -1439,6 +1508,7 @@ def _get_remote_versions(bucket_name: str, remote_path: str):
             continue
         versions.append(Version(version))
     versions.sort(reverse=True)
+    log.info("Remove versions collected: %s", versions)
     return versions
 
 
@@ -1598,7 +1668,7 @@ def _create_onedir_based_repo(
         minor_repo_json["latest"] = release_json
         # This is the latest minor, update the major in the top level repo.json
         # to this version
-        repo_json[str(major_version)] = release_json
+        repo_json[str(salt_version)] = release_json
         ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
         if major_link.exists():
             major_link.unlink()

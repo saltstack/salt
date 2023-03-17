@@ -2,6 +2,15 @@
 <%- set gh_environment = "release" %>
 <%- extends 'layout.yml.jinja' %>
 
+
+<%- block name %>
+
+name: <{ workflow_name }>
+run-name: "<{ workflow_name }> (branch: ${{ github.ref_name }}; version: ${{ inputs.salt-version }})"
+
+<%- endblock name %>
+
+
 <%- block on %>
 
 on:
@@ -54,16 +63,13 @@ permissions:
 
       - name: Check Branch
         run: |
-
-          {#-
-              Should we allow other branches?
-          #}
           echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
-          if [ "${{ github.ref_name }}" != "master" ]; then
+          if [ "${{ contains(fromJSON('<{ release_branches|tojson }>'), github.ref_name) }}" != "true" ]; then
               echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
+              echo "Allowed branches: <{ release_branches|join(', ') }>"
               exit 1
           else
-              echo "Allowed"
+              echo "Allowed to release from branch ${{ github.ref_name }}"
           fi
 
 
@@ -84,6 +90,7 @@ permissions:
     <%- endif %>
     outputs:
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
+      cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -112,6 +119,11 @@ permissions:
         run: |
           tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
 
+      - name: Set Cache Seed Output
+        id: set-cache-seed
+        run: |
+          echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
+
   <%- endblock prepare_workflow_job %>
   <%- endif %>
 
@@ -137,7 +149,7 @@ permissions:
 
       - name: Backup Previous Releases
         run: |
-          tools pkg repo backup-previous-releases
+          tools pkg repo backup-previous-releases --salt-version=${{ needs.prepare-workflow.outputs.salt-version }}
 
   publish-repositories:
     <%- do conclusion_needs.append('publish-repositories') %>
@@ -155,6 +167,12 @@ permissions:
       - name: Clone The Salt Repository
         uses: actions/checkout@v3
 
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
@@ -164,8 +182,8 @@ permissions:
             ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} \
             --key-id=<{ gpg_key_id }> ${{ needs.prepare-workflow.outputs.salt-version }}
 
-  <%- if includes.get("test-pkg-uploads", True) %>
-  <%- include "test-pkg-repo-uploads.yml.jinja" %>
+  <%- if includes.get("test-pkg-downloads", True) %>
+  <%- include "test-pkg-repo-downloads.yml.jinja" %>
   <%- endif %>
 
   release:
@@ -251,6 +269,7 @@ permissions:
           ssh: true
           tags: true
           atomic: true
+          branch: ${{ github.ref }}
 
       - name: Create Github Release
         uses: ncipollo/release-action@v1.12.0
@@ -268,6 +287,7 @@ permissions:
           tag: v${{ needs.prepare-workflow.outputs.salt-version }}
 
       - name: Publish to PyPi
+        if: ${{ github.event.repository.fork != true }}
         env:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |
