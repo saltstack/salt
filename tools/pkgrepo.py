@@ -828,11 +828,35 @@ def staging(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
     _publish_repo(ctx, repo_path=repo_path, rc_build=rc_build, stage=True)
 
 
-@repo.command(name="backup-previous-releases")
-def backup_previous_releases(ctx: Context):
+@repo.command(
+    name="backup-previous-releases",
+    arguments={
+        "salt_version": {
+            "help": "The salt version for which to build the repository",
+            "required": True,
+        },
+    },
+)
+def backup_previous_releases(ctx: Context, salt_version: str = None):
     """
     Backup previous releases.
     """
+    s3 = boto3.client("s3")
+    backup_file_relpath = f"release-artifacts/{salt_version}/.release-backup-done"
+    try:
+        ctx.info(
+            f"Getting information if a backup for {salt_version} was already done..."
+        )
+        s3.head_object(
+            Key=backup_file_relpath,
+            Bucket=tools.utils.STAGING_BUCKET_NAME,
+        )
+        ctx.info(f"A backup prior to releasing {salt_version} has already been done.")
+        ctx.exit(0)
+    except ClientError as exc:
+        if "404" not in str(exc):
+            raise
+
     files_in_backup: dict[str, datetime] = {}
     files_to_backup: list[tuple[str, datetime]] = []
 
@@ -877,6 +901,14 @@ def backup_previous_releases(ctx: Context):
                     log.exception(f"Failed to copy {fpath}")
             finally:
                 progress.update(task, advance=1)
+    s3.put_object(
+        Key=backup_file_relpath,
+        Bucket=tools.utils.STAGING_BUCKET_NAME,
+        Body=b"",
+        Metadata={
+            "x-amz-meta-salt-release-version": salt_version,
+        },
+    )
     ctx.info("Done")
 
 
@@ -1367,8 +1399,6 @@ def _get_salt_releases(ctx: Context, repository: str) -> list[Version]:
             name = release["name"]
             if name.startswith("v"):
                 name = name[1:]
-            if not name:
-                print(123, release)
             if name and "-" not in name and "docs" not in name:
                 # We're not going to parse dash or docs releases
                 versions.add(Version(name))

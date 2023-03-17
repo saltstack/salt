@@ -149,7 +149,7 @@ permissions:
 
       - name: Backup Previous Releases
         run: |
-          tools pkg repo backup-previous-releases
+          tools pkg repo backup-previous-releases --salt-version=${{ needs.prepare-workflow.outputs.salt-version }}
 
   publish-repositories:
     <%- do conclusion_needs.append('publish-repositories') %>
