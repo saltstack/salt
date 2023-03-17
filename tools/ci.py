@@ -338,6 +338,7 @@ def define_jobs(
 
     required_pkg_test_changes: set[str] = {
         changed_files_contents["pkg_tests"],
+        changed_files_contents["workflows"],
     }
     if jobs["test-pkg"] and required_pkg_test_changes == {"false"}:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
