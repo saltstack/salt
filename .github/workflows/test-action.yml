@@ -308,7 +308,7 @@ jobs:
 
       - name: Run Fast Tests
         id: run-fast-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' and fromJson(inputs.pull-labels) }}
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
