@@ -854,7 +854,9 @@ def backup_previous_releases(ctx: Context, salt_version: str = None):
         ctx.info(f"A backup prior to releasing {salt_version} has already been done.")
         ctx.exit(0)
     except ClientError as exc:
-        if "404" not in str(exc):
+        if "Error" not in exc.response:
+            raise
+        if exc.response["Error"]["Code"] != "404":
             raise
 
     files_in_backup: dict[str, datetime] = {}
