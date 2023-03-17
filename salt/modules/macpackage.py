@@ -154,7 +154,8 @@ def mount(dmg):
 
     temp_dir = __salt__["temp.dir"](prefix="dmg-")
 
-    cmd = 'hdiutil attach -readonly -nobrowse -mountpoint {} "{}"'.format(temp_dir, dmg)
+    dmg_path = os.path.expanduser(dmg)
+    cmd = 'hdiutil attach -readonly -nobrowse -mountpoint {} "{}"'.format(temp_dir, dmg_path)
 
     return __salt__["cmd.run"](cmd), temp_dir
 
