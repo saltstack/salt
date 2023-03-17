@@ -37,12 +37,12 @@ def bin_pkg_info(path, saltenv="base"):
     """
     .. versionadded:: 2015.8.0
 
-    Parses RPM metadata and returns a dictionary of information about the
+    Parses DEB metadata and returns a dictionary of information about the
     package (name, version, etc.).
 
     path
         Path to the file. Can either be an absolute path to a file on the
-        minion, or a salt fileserver URL (e.g. ``salt://path/to/file.rpm``).
+        minion, or a salt fileserver URL (e.g. ``salt://path/to/file.deb``).
         If a salt fileserver URL is passed, the file will be cached to the
         minion so that it can be examined.
 
