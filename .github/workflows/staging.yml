@@ -1949,6 +1949,7 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPi(test)
+    if: ${{ github.event.repository.fork != true }}
     needs:
       - prepare-workflow
       - upload-release-artifacts

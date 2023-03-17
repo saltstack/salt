@@ -287,6 +287,7 @@ permissions:
           tag: v${{ needs.prepare-workflow.outputs.salt-version }}
 
       - name: Publish to PyPi
+        if: ${{ github.event.repository.fork != true }}
         env:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |
