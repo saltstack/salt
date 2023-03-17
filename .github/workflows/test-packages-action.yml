@@ -32,6 +32,11 @@ on:
         type: string
         description: The onedir package name to use
         default: salt
+      nox-session:
+        required: false
+        type: string
+        description: The nox session to run
+        default: test-pkgs-onedir
       skip-code-coverage:
         required: false
         type: boolean
@@ -72,9 +77,7 @@ jobs:
       - name: Generate Package Test Matrix
         id: generate-pkg-matrix
         run: |
-          PKG_MATRIX=$(tools ci pkg-matrix ${{ inputs.distro-slug }} ${{ inputs.pkg-type }})
-          echo "$PKG_MATRIX"
-          echo "matrix=$PKG_MATRIX" >> "$GITHUB_OUTPUT"
+          tools ci pkg-matrix ${{ inputs.distro-slug }} ${{ inputs.pkg-type }}
 
   dependencies:
     name: Setup Test Dependencies
@@ -85,20 +88,16 @@ jobs:
       - linux
       - bastion
     timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.pkg-matrix-include) }}
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
 
-      - name: Cache nox.${{ inputs.distro-slug }}.tar.* for session ${{ matrix.nox-session }}
+      - name: Cache nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
         id: nox-dependencies-cache
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ matrix.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -145,7 +144,7 @@ jobs:
       - name: Install Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools --timestamps vm install-dependencies --nox-session=${{ matrix.nox-session }} ${{ inputs.distro-slug }}
+          tools --timestamps vm install-dependencies --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }}
 
       - name: Cleanup .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -209,11 +208,11 @@ jobs:
         run: |
           tree pkg/artifacts
 
-      - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ matrix.nox-session }}
+      - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ matrix.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -244,12 +243,12 @@ jobs:
       - name: Show System Info & Test Plan
         run: |
           tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
-            --nox-session=${{ matrix.nox-session }} ${{ inputs.distro-slug }}
+            --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }}
 
       - name: Run Package Tests
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install\
-            --nox-session=${{ matrix.nox-session }} --rerun-failures ${{ inputs.distro-slug }}
+            --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }}
 
       - name: Download Test Run Artifacts
         id: download-artifacts-from-vm
@@ -270,14 +269,14 @@ jobs:
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
         uses: actions/upload-artifact@v3
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.nox-session }}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.test-chunk }}
           path: |
             artifacts
             !artifacts/salt/*
             !artifacts/salt-*.tar.*
 
   report:
-    name: Reports for ${{ inputs.distro-slug }}(${{ matrix.nox-session }})
+    name: Reports for ${{ inputs.distro-slug }}(${{ matrix.test-chunk }})
     runs-on:
       - self-hosted
       - linux
@@ -299,7 +298,7 @@ jobs:
         id: download-test-run-artifacts
         uses: actions/download-artifact@v3
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.nox-session }}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.test-chunk }}
           path: artifacts
 
       - name: Show Test Run Artifacts
@@ -312,6 +311,6 @@ jobs:
         # always run even if the previous steps fails
         if: always() && inputs.skip-junit-reports == false && steps.download-test-run-artifacts.outcome == 'success'
         with:
-          check_name: Overall Test Results(${{ inputs.distro-slug }} ${{ matrix.nox-session }})
+          check_name: Overall Test Results(${{ inputs.distro-slug }} ${{ matrix.test-chunk }})
           report_paths: 'artifacts/xml-unittests-output/*.xml'
           annotate_only: true
