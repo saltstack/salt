@@ -1297,6 +1297,8 @@ def github(
             break
         for entry in contents:
             entry_path = pathlib.Path(entry["Key"])
+            if entry_path.name.startswith("."):
+                continue
             release_artifacts_listing[entry_path] = entry["Size"]
         if not ret["IsTruncated"]:
             break
