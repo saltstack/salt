@@ -946,11 +946,38 @@ def release(
 
     ctx.info("Grabbing remote file listing of files to copy...")
 
-    glob_match = f"{bucket_folder}/**/minor/{salt_version}/**"
+    glob_match = f"{bucket_folder}/**/latest.repo"
     files_to_copy = _get_repo_file_list(
         bucket_name=tools.utils.STAGING_BUCKET_NAME,
         bucket_folder=bucket_folder,
         glob_match=glob_match,
+    )
+    glob_match = f"{bucket_folder}/**/minor/{salt_version}.repo"
+    files_to_copy.extend(
+        _get_repo_file_list(
+            bucket_name=tools.utils.STAGING_BUCKET_NAME,
+            bucket_folder=bucket_folder,
+            glob_match=glob_match,
+        )
+    )
+    if rc_build:
+        glob_match = "{bucket_folder}/**/{}~rc{}*".format(
+            *salt_version.split("rc"), bucket_folder=bucket_folder
+        )
+        files_to_copy.extend(
+            _get_repo_file_list(
+                bucket_name=tools.utils.STAGING_BUCKET_NAME,
+                bucket_folder=bucket_folder,
+                glob_match=glob_match,
+            )
+        )
+    glob_match = f"{bucket_folder}/**/minor/{salt_version}/**"
+    files_to_copy.extend(
+        _get_repo_file_list(
+            bucket_name=tools.utils.STAGING_BUCKET_NAME,
+            bucket_folder=bucket_folder,
+            glob_match=glob_match,
+        )
     )
     glob_match = f"{bucket_folder}/**/src/{salt_version}/**"
     files_to_copy.extend(
@@ -965,6 +992,7 @@ def release(
         ctx.error(f"Could not find any files related to the '{salt_version}' release.")
         ctx.exit(1)
 
+    already_copied_files: list[str] = []
     onedir_listing: dict[str, list[str]] = {}
     s3 = boto3.client("s3")
     with tools.utils.create_progress_bar() as progress:
@@ -972,6 +1000,8 @@ def release(
             "Copying files between buckets", total=len(files_to_copy)
         )
         for fpath in files_to_copy:
+            if fpath in already_copied_files:
+                continue
             if fpath.startswith(f"{bucket_folder}/windows/"):
                 if "windows" not in onedir_listing:
                     onedir_listing["windows"] = []
@@ -1001,6 +1031,7 @@ def release(
                     TaggingDirective="COPY",
                     ServerSideEncryption="AES256",
                 )
+                already_copied_files.append(fpath)
             except ClientError:
                 log.exception(f"Failed to copy {fpath}")
             finally:
