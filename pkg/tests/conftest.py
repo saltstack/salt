@@ -1,15 +1,13 @@
 import logging
 import pathlib
-import re
 import shutil
 
 import pytest
 from pytestskipmarkers.utils import platform
-from saltfactories.utils import cli_scripts, random_string
+from saltfactories.utils import random_string
 from saltfactories.utils.tempfiles import SaltPillarTree, SaltStateTree
 
 from tests.support.helpers import (
-    ARTIFACTS_DIR,
     CODE_DIR,
     TESTS_DIR,
     ApiRequest,
@@ -70,6 +68,28 @@ def pytest_addoption(parser):
         action="store",
         help="Test an upgrade from the version specified.",
     )
+    test_selection_group.addoption(
+        "--download-pkgs",
+        default=False,
+        action="store_true",
+        help="Test package download tests",
+    )
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_setup(item):
+    """
+    Fixtures injection based on markers or test skips based on CLI arguments
+    """
+    if (
+        str(item.fspath).startswith(str(pathlib.Path(__file__).parent / "download"))
+        and item.config.getoption("--download-pkgs") is False
+    ):
+        raise pytest.skip.Exception(
+            "The package download tests are disabled. Pass '--download-pkgs' to pytest "
+            "to enable them.",
+            _use_item_location=True,
+        )
 
 
 @pytest.fixture(scope="session")
