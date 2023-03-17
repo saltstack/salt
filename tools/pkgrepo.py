@@ -802,13 +802,21 @@ def src(
         "repo_path": {
             "help": "Local path for the repository that shall be published.",
         },
+        "salt_version": {
+            "help": "The salt version for which to build the repository",
+            "required": True,
+        },
     }
 )
-def nightly(ctx: Context, repo_path: pathlib.Path):
+def nightly(ctx: Context, repo_path: pathlib.Path, salt_version: str = None):
     """
     Publish to the nightly bucket.
     """
-    _publish_repo(ctx, repo_path=repo_path, nightly_build=True)
+    if TYPE_CHECKING:
+        assert salt_version is not None
+    _publish_repo(
+        ctx, repo_path=repo_path, nightly_build=True, salt_version=salt_version
+    )
 
 
 @publish.command(
@@ -816,16 +824,19 @@ def nightly(ctx: Context, repo_path: pathlib.Path):
         "repo_path": {
             "help": "Local path for the repository that shall be published.",
         },
-        "rc_build": {
-            "help": "Release Candidate repository target",
+        "salt_version": {
+            "help": "The salt version for which to build the repository",
+            "required": True,
         },
     }
 )
-def staging(ctx: Context, repo_path: pathlib.Path, rc_build: bool = False):
+def staging(ctx: Context, repo_path: pathlib.Path, salt_version: str = None):
     """
     Publish to the staging bucket.
     """
-    _publish_repo(ctx, repo_path=repo_path, rc_build=rc_build, stage=True)
+    if TYPE_CHECKING:
+        assert salt_version is not None
+    _publish_repo(ctx, repo_path=repo_path, stage=True, salt_version=salt_version)
 
 
 @repo.command(
@@ -874,7 +885,6 @@ def backup_previous_releases(ctx: Context, salt_version: str = None):
     ):
         files_to_backup.append((entry["Key"], entry["LastModified"]))
 
-    s3 = boto3.client("s3")
     with tools.utils.create_progress_bar() as progress:
         task = progress.add_task(
             "Back up previous releases", total=len(files_to_backup)
@@ -919,25 +929,13 @@ def backup_previous_releases(ctx: Context, salt_version: str = None):
         "salt_version": {
             "help": "The salt version to release.",
         },
-        "rc_build": {
-            "help": "Release Candidate repository target",
-        },
-        "key_id": {
-            "help": "The GnuPG key ID used to sign.",
-            "required": True,
-        },
     }
 )
-def release(
-    ctx: Context, salt_version: str, key_id: str = None, rc_build: bool = False
-):
+def release(ctx: Context, salt_version: str):
     """
     Publish to the release bucket.
     """
-    if TYPE_CHECKING:
-        assert key_id is not None
-
-    if rc_build:
+    if "rc" in salt_version:
         bucket_folder = "salt_rc/salt/py3"
     else:
         bucket_folder = "salt/py3"
@@ -962,7 +960,7 @@ def release(
             glob_match=glob_match,
         )
     )
-    if rc_build:
+    if "rc" in salt_version:
         glob_match = "{bucket_folder}/**/{}~rc{}*".format(
             *salt_version.split("rc"), bucket_folder=bucket_folder
         )
@@ -1051,7 +1049,6 @@ def release(
                 repo_path,
                 salt_version,
                 distro,
-                rc_build=rc_build,
             )
             repo_json_path = create_repo_path.parent.parent / "repo.json"
 
@@ -1249,9 +1246,6 @@ def release(
         "salt_version": {
             "help": "The salt version to release.",
         },
-        "rc_build": {
-            "help": "Release Candidate repository target",
-        },
         "key_id": {
             "help": "The GnuPG key ID used to sign.",
             "required": True,
@@ -1268,7 +1262,6 @@ def github(
     ctx: Context,
     salt_version: str,
     key_id: str = None,
-    rc_build: bool = False,
     repository: str = "saltstack/salt",
 ):
     """
@@ -1745,8 +1738,8 @@ def _get_file_checksum(fpath: pathlib.Path, hash_name: str) -> str:
 def _publish_repo(
     ctx: Context,
     repo_path: pathlib.Path,
+    salt_version: str,
     nightly_build: bool = False,
-    rc_build: bool = False,
     stage: bool = False,
 ):
     """

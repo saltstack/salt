@@ -1893,8 +1893,7 @@ jobs:
 
       - name: Upload Repository Contents (staging)
         run: |
-          tools pkg repo publish staging \
-            ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} artifacts/pkgs/repo/
+          tools pkg repo publish staging --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} artifacts/pkgs/repo/
 
   upload-release-artifacts:
     name: Upload Release Artifacts
