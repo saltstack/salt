@@ -3,7 +3,7 @@
 ---
 
 name: Release
-run-name: "Release (${{ format('Branch: {0} // Version: {1}', github.ref_name, inputs.salt-version) }})"
+run-name: "Release (branch: ${{ github.ref_name }}; version: ${{ inputs.salt-version }})"
 
 on:
   workflow_dispatch:
@@ -17,7 +17,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-2  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-3  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
   REPO_BASE_URL: "https://${{ secrets.SALT_REPO_DOMAIN }}"
 
@@ -59,6 +59,7 @@ jobs:
       - check-requirements
     outputs:
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
+      cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -87,6 +88,11 @@ jobs:
         run: |
           tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
 
+      - name: Set Cache Seed Output
+        id: set-cache-seed
+        run: |
+          echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
+
   backup:
     name: Backup
     runs-on:
@@ -106,7 +112,7 @@ jobs:
 
       - name: Backup Previous Releases
         run: |
-          tools pkg repo backup-previous-releases
+          tools pkg repo backup-previous-releases --salt-version=${{ needs.prepare-workflow.outputs.salt-version }}
 
   publish-repositories:
     name: Publish Repositories
@@ -217,6 +223,7 @@ jobs:
           ssh: true
           tags: true
           atomic: true
+          branch: ${{ github.ref }}
 
       - name: Create Github Release
         uses: ncipollo/release-action@v1.12.0
@@ -234,6 +241,7 @@ jobs:
           tag: v${{ needs.prepare-workflow.outputs.salt-version }}
 
       - name: Publish to PyPi
+        if: ${{ github.event.repository.fork != true }}
         env:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |
