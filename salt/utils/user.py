@@ -345,7 +345,7 @@ def get_group_name(gid):
     if no group with this id exists.
     """
     try:
-        return(grp.getgrgid(gid).gr_name)
+        return grp.getgrgid(gid).gr_name
     except KeyError:
         log.warning("No group with Group ID %d found", gid)
         return None
