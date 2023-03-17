@@ -912,59 +912,94 @@ def release(ctx: Context, salt_version: str):
         bucket_folder = "salt/py3"
 
     files_to_copy: list[str]
-    files_to_delete: list[str] = []
-    files_to_duplicate: list[tuple[str, str]] = []
+    directories_to_delete: list[str] = []
 
     ctx.info("Grabbing remote file listing of files to copy...")
+    s3 = boto3.client("s3")
+    repo_release_files_path = pathlib.Path(
+        f"release-artifacts/{salt_version}/.release-files.json"
+    )
+    repo_release_symlinks_path = pathlib.Path(
+        f"release-artifacts/{salt_version}/.release-symlinks.json"
+    )
+    with tempfile.TemporaryDirectory(prefix=f"{salt_version}_release_") as tsd:
+        local_release_files_path = pathlib.Path(tsd) / repo_release_files_path.name
+        try:
+            with local_release_files_path.open("wb") as wfh:
+                ctx.info(f"Downloading {repo_release_files_path} ...")
+                s3.download_fileobj(
+                    Bucket=tools.utils.STAGING_BUCKET_NAME,
+                    Key=str(repo_release_files_path),
+                    Fileobj=wfh,
+                )
+            files_to_copy = json.loads(local_release_files_path.read_text())
+        except ClientError as exc:
+            if "Error" not in exc.response:
+                log.exception(f"Error downloading {repo_release_files_path}: {exc}")
+                ctx.exit(1)
+            if exc.response["Error"]["Code"] == "404":
+                ctx.error(f"Cloud not find {repo_release_files_path} in bucket.")
+                ctx.exit(1)
+            if exc.response["Error"]["Code"] == "400":
+                ctx.error(
+                    f"Cloud not download {repo_release_files_path} from bucket: {exc}"
+                )
+                ctx.exit(1)
+            log.exception(f"Error downloading {repo_release_files_path}: {exc}")
+            ctx.exit(1)
+        local_release_symlinks_path = (
+            pathlib.Path(tsd) / repo_release_symlinks_path.name
+        )
+        try:
+            with local_release_symlinks_path.open("wb") as wfh:
+                ctx.info(f"Downloading {repo_release_symlinks_path} ...")
+                s3.download_fileobj(
+                    Bucket=tools.utils.STAGING_BUCKET_NAME,
+                    Key=str(repo_release_symlinks_path),
+                    Fileobj=wfh,
+                )
+            directories_to_delete = json.loads(local_release_symlinks_path.read_text())
+        except ClientError as exc:
+            if "Error" not in exc.response:
+                log.exception(f"Error downloading {repo_release_symlinks_path}: {exc}")
+                ctx.exit(1)
+            if exc.response["Error"]["Code"] == "404":
+                ctx.error(f"Cloud not find {repo_release_symlinks_path} in bucket.")
+                ctx.exit(1)
+            if exc.response["Error"]["Code"] == "400":
+                ctx.error(
+                    f"Cloud not download {repo_release_symlinks_path} from bucket: {exc}"
+                )
+                ctx.exit(1)
+            log.exception(f"Error downloading {repo_release_symlinks_path}: {exc}")
+            ctx.exit(1)
 
-    glob_match = f"{bucket_folder}/**/latest.repo"
-    files_to_copy = _get_repo_file_list(
-        bucket_name=tools.utils.STAGING_BUCKET_NAME,
-        bucket_folder=bucket_folder,
-        glob_match=glob_match,
-    )
-    glob_match = f"{bucket_folder}/**/minor/{salt_version}.repo"
-    files_to_copy.extend(
-        _get_repo_file_list(
-            bucket_name=tools.utils.STAGING_BUCKET_NAME,
-            bucket_folder=bucket_folder,
-            glob_match=glob_match,
-        )
-    )
-    if "rc" in salt_version:
-        glob_match = "{bucket_folder}/**/{}~rc{}*".format(
-            *salt_version.split("rc"), bucket_folder=bucket_folder
-        )
-        files_to_copy.extend(
-            _get_repo_file_list(
-                bucket_name=tools.utils.STAGING_BUCKET_NAME,
-                bucket_folder=bucket_folder,
-                glob_match=glob_match,
-            )
-        )
-    glob_match = f"{bucket_folder}/**/minor/{salt_version}/**"
-    files_to_copy.extend(
-        _get_repo_file_list(
-            bucket_name=tools.utils.STAGING_BUCKET_NAME,
-            bucket_folder=bucket_folder,
-            glob_match=glob_match,
-        )
-    )
-    glob_match = f"{bucket_folder}/**/src/{salt_version}/**"
-    files_to_copy.extend(
-        _get_repo_file_list(
-            bucket_name=tools.utils.STAGING_BUCKET_NAME,
-            bucket_folder=bucket_folder,
-            glob_match=glob_match,
-        )
-    )
-
-    if not files_to_copy:
-        ctx.error(f"Could not find any files related to the '{salt_version}' release.")
-        ctx.exit(1)
+        if directories_to_delete:
+            with tools.utils.create_progress_bar() as progress:
+                task = progress.add_task(
+                    "Deleting directories to override.",
+                    total=len(directories_to_delete),
+                )
+                for directory in directories_to_delete:
+                    try:
+                        objects_to_delete: list[dict[str, str]] = []
+                        for path in _get_repo_file_list(
+                            bucket_name=tools.utils.RELEASE_BUCKET_NAME,
+                            bucket_folder=bucket_folder,
+                            glob_match=f"{directory}/**",
+                        ):
+                            objects_to_delete.append({"Key": path})
+                        if objects_to_delete:
+                            s3.delete_objects(
+                                Bucket=tools.utils.RELEASE_BUCKET_NAME,
+                                Delete={"Objects": objects_to_delete},
+                            )
+                    except ClientError:
+                        log.exception("Failed to delete remote files")
+                    finally:
+                        progress.update(task, advance=1)
 
     already_copied_files: list[str] = []
-    onedir_listing: dict[str, list[str]] = {}
     s3 = boto3.client("s3")
     with tools.utils.create_progress_bar() as progress:
         task = progress.add_task(
@@ -973,22 +1008,6 @@ def release(ctx: Context, salt_version: str):
         for fpath in files_to_copy:
             if fpath in already_copied_files:
                 continue
-            if fpath.startswith(f"{bucket_folder}/windows/"):
-                if "windows" not in onedir_listing:
-                    onedir_listing["windows"] = []
-                onedir_listing["windows"].append(fpath)
-            elif fpath.startswith(f"{bucket_folder}/macos/"):
-                if "macos" not in onedir_listing:
-                    onedir_listing["macos"] = []
-                onedir_listing["macos"].append(fpath)
-            elif fpath.startswith(f"{bucket_folder}/onedir/"):
-                if "onedir" not in onedir_listing:
-                    onedir_listing["onedir"] = []
-                onedir_listing["onedir"].append(fpath)
-            else:
-                if "package" not in onedir_listing:
-                    onedir_listing["package"] = []
-                onedir_listing["package"].append(fpath)
             ctx.info(f" * Copying {fpath}")
             try:
                 s3.copy_object(
@@ -1009,8 +1028,6 @@ def release(ctx: Context, salt_version: str):
                 progress.update(task, advance=1)
 
     # Now let's get the onedir based repositories where we need to update several repo.json
-    update_latest = False
-    update_minor = False
     major_version = packaging.version.parse(salt_version).major
     with tempfile.TemporaryDirectory(prefix=f"{salt_version}_release_") as tsd:
         repo_path = pathlib.Path(tsd)
@@ -1075,39 +1092,10 @@ def release(ctx: Context, salt_version: str):
             release_minor_repo_json[salt_version] = release_json
 
             if latest_version <= salt_version:
-                update_latest = True
                 release_repo_json["latest"] = release_json
-                glob_match = f"{bucket_folder}/{distro}/**/latest/**"
-                files_to_delete.extend(
-                    _get_repo_file_list(
-                        bucket_name=tools.utils.RELEASE_BUCKET_NAME,
-                        bucket_folder=bucket_folder,
-                        glob_match=glob_match,
-                    )
-                )
-                for fpath in onedir_listing[distro]:
-                    files_to_duplicate.append(
-                        (fpath, fpath.replace(f"minor/{salt_version}", "latest"))
-                    )
 
             if latest_minor_version <= salt_version:
-                update_minor = True
                 release_minor_repo_json["latest"] = release_json
-                glob_match = f"{bucket_folder}/{distro}/**/{major_version}/**"
-                files_to_delete.extend(
-                    _get_repo_file_list(
-                        bucket_name=tools.utils.RELEASE_BUCKET_NAME,
-                        bucket_folder=bucket_folder,
-                        glob_match=glob_match,
-                    )
-                )
-                for fpath in onedir_listing[distro]:
-                    files_to_duplicate.append(
-                        (
-                            fpath,
-                            fpath.replace(f"minor/{salt_version}", str(major_version)),
-                        )
-                    )
 
             ctx.info(f"Writing {minor_repo_json_path} ...")
             minor_repo_json_path.write_text(
@@ -1115,86 +1103,6 @@ def release(ctx: Context, salt_version: str):
             )
             ctx.info(f"Writing {repo_json_path} ...")
             repo_json_path.write_text(json.dumps(release_repo_json, sort_keys=True))
-
-        # Now lets handle latest and minor updates for non one dir based repositories
-        onedir_based_paths = (
-            f"{bucket_folder}/windows/",
-            f"{bucket_folder}/macos/",
-            f"{bucket_folder}/onedir/",
-        )
-        if update_latest:
-            glob_match = f"{bucket_folder}/**/latest/**"
-            for fpath in _get_repo_file_list(
-                bucket_name=tools.utils.RELEASE_BUCKET_NAME,
-                bucket_folder=bucket_folder,
-                glob_match=glob_match,
-            ):
-                if fpath.startswith(onedir_based_paths):
-                    continue
-                files_to_delete.append(fpath)
-
-            for fpath in onedir_listing["package"]:
-                files_to_duplicate.append(
-                    (fpath, fpath.replace(f"minor/{salt_version}", "latest"))
-                )
-
-        if update_minor:
-            glob_match = f"{bucket_folder}/**/{major_version}/**"
-            for fpath in _get_repo_file_list(
-                bucket_name=tools.utils.RELEASE_BUCKET_NAME,
-                bucket_folder=bucket_folder,
-                glob_match=glob_match,
-            ):
-                if fpath.startswith(onedir_based_paths):
-                    continue
-                files_to_delete.append(fpath)
-
-            for fpath in onedir_listing["package"]:
-                files_to_duplicate.append(
-                    (fpath, fpath.replace(f"minor/{salt_version}", str(major_version)))
-                )
-
-        if files_to_delete:
-            with tools.utils.create_progress_bar() as progress:
-                task = progress.add_task(
-                    "Deleting directories to override.", total=len(files_to_delete)
-                )
-                try:
-                    s3.delete_objects(
-                        Bucket=tools.utils.RELEASE_BUCKET_NAME,
-                        Delete={
-                            "Objects": [
-                                {"Key": path for path in files_to_delete},
-                            ]
-                        },
-                    )
-                except ClientError:
-                    log.exception("Failed to delete remote files")
-                finally:
-                    progress.update(task, advance=1)
-
-        with tools.utils.create_progress_bar() as progress:
-            task = progress.add_task(
-                "Copying files between buckets", total=len(files_to_duplicate)
-            )
-            for src, dst in files_to_duplicate:
-                ctx.info(f" * Copying {src}\n        -> {dst}")
-                try:
-                    s3.copy_object(
-                        Bucket=tools.utils.RELEASE_BUCKET_NAME,
-                        Key=dst,
-                        CopySource={
-                            "Bucket": tools.utils.STAGING_BUCKET_NAME,
-                            "Key": src,
-                        },
-                        MetadataDirective="COPY",
-                        TaggingDirective="COPY",
-                        ServerSideEncryption="AES256",
-                    )
-                except ClientError:
-                    log.exception(f"Failed to copy {fpath}")
-                finally:
-                    progress.update(task, advance=1)
 
         for dirpath, dirnames, filenames in os.walk(repo_path, followlinks=True):
             for path in filenames:
@@ -1729,6 +1637,8 @@ def _publish_repo(
     s3 = boto3.client("s3")
     to_delete_paths: dict[pathlib.Path, list[dict[str, str]]] = {}
     to_upload_paths: list[pathlib.Path] = []
+    symlink_paths: list[str] = []
+    uploaded_files: list[str] = []
     for dirpath, dirnames, filenames in os.walk(repo_path, followlinks=True):
         for dirname in dirnames:
             path = pathlib.Path(dirpath, dirname)
@@ -1750,6 +1660,7 @@ def _publish_repo(
                 for entry in ret["Contents"]:
                     objects.append({"Key": entry["Key"]})
                 to_delete_paths[path] = objects
+                symlink_paths.append(str(relpath))
             except ClientError as exc:
                 if "Error" not in exc.response:
                     raise
@@ -1791,7 +1702,36 @@ def _publish_repo(
                     bucket_name,
                     str(relpath),
                     Callback=tools.utils.UpdateProgress(progress, task),
+                    ExtraArgs={
+                        "Metadata": {
+                            "x-amz-meta-salt-release-version": salt_version,
+                        }
+                    },
                 )
+            uploaded_files.append(str(relpath))
+        if stage is True:
+            repo_files_path = f"release-artifacts/{salt_version}/.release-files.json"
+            ctx.info(f"Uploading {repo_files_path} ...")
+            s3.put_object(
+                Key=repo_files_path,
+                Bucket=bucket_name,
+                Body=json.dumps(uploaded_files).encode(),
+                Metadata={
+                    "x-amz-meta-salt-release-version": salt_version,
+                },
+            )
+            repo_symlinks_path = (
+                f"release-artifacts/{salt_version}/.release-symlinks.json"
+            )
+            ctx.info(f"Uploading {repo_symlinks_path} ...")
+            s3.put_object(
+                Key=repo_symlinks_path,
+                Bucket=bucket_name,
+                Body=json.dumps(symlink_paths).encode(),
+                Metadata={
+                    "x-amz-meta-salt-release-version": salt_version,
+                },
+            )
     except KeyboardInterrupt:
         pass
 
