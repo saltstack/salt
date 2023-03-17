@@ -516,8 +516,7 @@ def primary_group(name):
     .. code-block:: bash
         salt '*' user.primary_group saltadmin
     """
-    primary_gid = salt.utils.user.get_default_group(name)
-    return salt.utils.user.get_group_name(primary_gid)
+    return salt.utils.user.get_default_group(name)
 
 
 def rename(name, new_name):
