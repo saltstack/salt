@@ -138,12 +138,14 @@ jobs:
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Define Nox Session
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        id: define-nox-session
         run: |
           if [ "${{ matrix.transport }}" != "tcp" ]; then
-            echo NOX_SESSION=${{ inputs.nox-session }} >> "$GITHUB_ENV"
+            echo NOX_SESSION=${{ inputs.nox-session}} >> "$GITHUB_ENV"
+            echo "nox-session=${{ inputs.nox-session}}" >> "$GITHUB_OUTPUT"
           else
-            echo NOX_SESSION=${{ inputs.nox-session }}-tcp >> "$GITHUB_ENV"
+            echo NOX_SESSION=${{ inputs.nox-session}}-tcp >> "$GITHUB_ENV"
+            echo "nox-session=${{ inputs.nox-session}}-tcp" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Get Salt Project GitHub Actions Bot Environment
@@ -193,6 +195,12 @@ jobs:
         if: always() && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           tools --timestamps vm destroy ${{ inputs.distro-slug }}
+
+      - name: Upload Nox Requirements Tarball
+        uses: actions/upload-artifact@v3
+        with:
+          name: nox-${{ inputs.distro-slug }}-${{ steps.define-nox-session.outputs.nox-session }}
+          path: nox.${{ inputs.distro-slug }}.tar.*
 
   test:
     name: Test
@@ -293,7 +301,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.skip-code-coverage && '--skip-code-coverage' || '' }} \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
             ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- \
             --run-slow --suppress-no-test-exit-code --from-filenames=testrun-changed-files.txt
 
@@ -302,7 +310,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.skip-code-coverage && '--skip-code-coverage' || '' }} \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
             ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
 
       - name: Run Full Tests
@@ -310,7 +318,7 @@ jobs:
         if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.skip-code-coverage && '--skip-code-coverage' || '' }} \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
             ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --run-slow
 
       - name: Combine Coverage Reports
