@@ -506,6 +506,20 @@ def list_users():
     return sorted(user.pw_name for user in pwd.getpwall())
 
 
+def primary_group(name):
+    """
+    Return the primary group of the named user
+
+    name
+        User to get the information
+    CLI Example:
+    .. code-block:: bash
+        salt '*' user.primary_group saltadmin
+    """
+    primary_gid = salt.utils.user.get_default_group(name)
+    return salt.utils.user.get_group_name(primary_gid)
+
+
 def rename(name, new_name):
     """
     Change the username for a named user
