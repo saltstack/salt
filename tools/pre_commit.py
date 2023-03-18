@@ -1,7 +1,7 @@
 """
 These commands are used by pre-commit.
 """
-# pylint: disable=resource-leakage,broad-except
+# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
 import logging
@@ -63,7 +63,7 @@ def generate_workflows(ctx: Context):
             "slug": "staging",
             "template": "staging.yml",
             "includes": {
-                "test-pkg-uploads": False,
+                "test-pkg-downloads": False,
             },
         },
         "Scheduled": {
@@ -79,7 +79,7 @@ def generate_workflows(ctx: Context):
                 "lint": False,
                 "pkg-tests": False,
                 "salt-tests": False,
-                "test-pkg-uploads": False,
+                "test-pkg-downloads": False,
             },
         },
     }

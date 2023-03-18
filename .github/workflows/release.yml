@@ -1,7 +1,9 @@
 # Do not edit these workflows directly as the changes made will be overwritten.
 # Instead, edit the template '.github/workflows/templates/release.yml.jinja'
 ---
+
 name: Release
+run-name: "Release (branch: ${{ github.ref_name }}; version: ${{ inputs.salt-version }})"
 
 on:
   workflow_dispatch:
@@ -15,7 +17,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-2  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-3  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
   REPO_BASE_URL: "https://${{ secrets.SALT_REPO_DOMAIN }}"
 
@@ -42,11 +44,12 @@ jobs:
       - name: Check Branch
         run: |
           echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
-          if [ "${{ github.ref_name }}" != "master" ]; then
+          if [ "${{ contains(fromJSON('["master", "3006.x"]'), github.ref_name) }}" != "true" ]; then
               echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
+              echo "Allowed branches: master, 3006.x"
               exit 1
           else
-              echo "Allowed"
+              echo "Allowed to release from branch ${{ github.ref_name }}"
           fi
 
   prepare-workflow:
@@ -56,6 +59,7 @@ jobs:
       - check-requirements
     outputs:
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
+      cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -84,6 +88,11 @@ jobs:
         run: |
           tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
 
+      - name: Set Cache Seed Output
+        id: set-cache-seed
+        run: |
+          echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
+
   backup:
     name: Backup
     runs-on:
@@ -103,7 +112,7 @@ jobs:
 
       - name: Backup Previous Releases
         run: |
-          tools pkg repo backup-previous-releases
+          tools pkg repo backup-previous-releases --salt-version=${{ needs.prepare-workflow.outputs.salt-version }}
 
   publish-repositories:
     name: Publish Repositories
@@ -119,6 +128,12 @@ jobs:
     steps:
       - name: Clone The Salt Repository
         uses: actions/checkout@v3
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -208,6 +223,7 @@ jobs:
           ssh: true
           tags: true
           atomic: true
+          branch: ${{ github.ref }}
 
       - name: Create Github Release
         uses: ncipollo/release-action@v1.12.0
@@ -225,6 +241,7 @@ jobs:
           tag: v${{ needs.prepare-workflow.outputs.salt-version }}
 
       - name: Publish to PyPi
+        if: ${{ github.event.repository.fork != true }}
         env:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |

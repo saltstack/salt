@@ -1,6 +1,15 @@
 <%- set gh_environment = gh_environment|default("nightly") %>
-<%- set prepare_workflow_if_check = prepare_workflow_if_check|default("${{ needs.workflow-requirements.outputs.requirements-met }}") %>
+<%- set skip_test_coverage_check = skip_test_coverage_check|default("false") %>
+<%- set skip_junit_reports_check = skip_junit_reports_check|default("false") %>
+<%- set prepare_workflow_if_check = prepare_workflow_if_check|default("${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}") %>
 <%- extends 'ci.yml.jinja' %>
+
+<%- block name %>
+
+name: <{ workflow_name }>
+run-name: "<{ workflow_name }> (branch: ${{ github.ref_name }})"
+
+<%- endblock name %>
 
 <%- block on %>
 
@@ -8,7 +17,7 @@ on:
   workflow_dispatch: {}
   schedule:
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
-    - cron: '0 3 * * *'  # Every day at 3AM
+    - cron: '0 1 * * *'  # Every day at 1AM
 
 <%- endblock on %>
 
@@ -29,48 +38,8 @@ concurrency:
 
 <%- block pre_jobs %>
 
-  <%- set job_name = "workflow-requirements" %>
-
-  <{ job_name }>:
-  <%- do prepare_workflow_needs.append(job_name) %>
-    name: Check Workflow Requirements
-    runs-on: ubuntu-latest
-    outputs:
-      requirements-met: ${{ fromJSON(steps.check-requirements.outputs.requirements-met) }}
-    steps:
-      - name: Check Requirements
-        id: check-requirements
-        run: |
-          if [ "${RUN_SCHEDULED_BUILDS}" = "1" ]; then
-            echo "Running workflow because RUN_SCHEDULED_BUILDS=1"
-            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
-          elif [ "${{ github.event.repository.fork }}" = "true" ]; then
-            echo "Not running workflow because ${{ github.repository }} is a fork"
-            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
-          else
-            echo "Running workflow because ${{ github.repository }} is not a fork"
-            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
-          fi
-
-  <%- set job_name = "trigger-branch-nightly-builds" %>
-  <%- set branches = ["3006.x"] %>
-
-  <{ job_name }>:
-  <%- do conclusion_needs.append(job_name) %>
-    name: Trigger Branch Schedule Workflows
-    if: ${{ github.event_name == 'schedule' }}
-    runs-on:
-      - ubuntu-latest
-    needs:
-      - workflow-requirements
-    steps:
-    <%- for branch in branches %>
-      - name: Trigger <{ branch }> branch
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh workflow run <{ gh_environment }>.yml --repo ${{ github.repository }} --ref <{ branch }>
-    <%- endfor %>
+  <%- include "workflow-requirements-check.yml.jinja" %>
+  <%- include "trigger-branch-workflows.yml.jinja" %>
 
 <%- endblock pre_jobs %>
 
@@ -103,6 +72,12 @@ concurrency:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
@@ -123,7 +98,9 @@ concurrency:
 
       - name: Upload Repository Contents (<{ gh_environment }>)
         run: |
-          tools pkg repo publish <{ gh_environment }> \
-            ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} artifacts/pkgs/repo/
+          tools pkg repo publish <{ gh_environment }>
+          <%- if gh_environment in ("staging", "release") %> \
+            ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }}
+          <%- endif %> artifacts/pkgs/repo/
 
 <%- endblock jobs %>

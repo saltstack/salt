@@ -2,6 +2,7 @@
 These commands are used to create/destroy VMs, sync the local checkout
 to the VM and to run commands on the VM.
 """
+# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
 import hashlib
