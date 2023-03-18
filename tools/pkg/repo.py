@@ -1276,7 +1276,12 @@ def _get_salt_releases(ctx: Context, repository: str) -> list[Version]:
     """
     versions = set()
     with ctx.web as web:
-        web.headers.update({"Accept": "application/vnd.github+json"})
+        headers = {
+            "Accept": "application/vnd.github+json",
+        }
+        if "GITHUB_TOKEN" in os.environ:
+            headers["Authorization"] = f"Bearer {os.environ['GITHUB_TOKEN']}"
+        web.headers.update(headers)
         ret = web.get(f"https://api.github.com/repos/{repository}/tags")
         if ret.status_code != 200:
             ctx.error(
