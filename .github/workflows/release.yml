@@ -142,7 +142,7 @@ jobs:
 
       - name: Publish Release Repository
         run: |
-          tools pkg repo publish release --salt-version=${{ needs.prepare-workflow.outputs.salt-version }}
+          tools pkg repo publish release ${{ needs.prepare-workflow.outputs.salt-version }}
 
   release:
     name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
