@@ -61,12 +61,12 @@ log = logging.getLogger(__name__)
 class SaltPkgInstall:
     conf_dir: pathlib.Path = attr.ib()
     system_service: bool = attr.ib(default=False)
-    proc: Subprocess = attr.ib(init=False)
+    proc: Subprocess = attr.ib(init=False, repr=False)
     pkgs: List[str] = attr.ib(factory=list)
     onedir: bool = attr.ib(default=False)
     singlebin: bool = attr.ib(default=False)
     compressed: bool = attr.ib(default=False)
-    hashes: Dict[str, Dict[str, Any]] = attr.ib()
+    hashes: Dict[str, Dict[str, Any]] = attr.ib(repr=False)
     root: pathlib.Path = attr.ib(default=None)
     run_root: pathlib.Path = attr.ib(default=None)
     ssm_bin: pathlib.Path = attr.ib(default=None)
@@ -91,7 +91,7 @@ class SaltPkgInstall:
     classic: bool = attr.ib(default=False)
     prev_version: str = attr.ib()
     pkg_version: str = attr.ib(default="1")
-    repo_data: str = attr.ib(init=False)
+    repo_data: str = attr.ib(init=False, repr=False)
     major: str = attr.ib(init=False)
     minor: str = attr.ib(init=False)
     relenv: bool = attr.ib(default=True)
@@ -554,21 +554,19 @@ class SaltPkgInstall:
             elif pkg.endswith("msi"):
                 # Install the package
                 log.debug("Installing: %s", str(pkg))
-                # START_MINION="" does not work as documented. The service is
-                # still starting. We need to fix this for RC2
-                ret = self.proc.run(
-                    "msiexec.exe", "/qn", "/i", str(pkg), 'START_MINION=""'
-                )
+                # Write a batch file to run the installer. It is impossible to
+                # perform escaping of the START_MINION property that the MSI
+                # expects unless we do it via a batch file
+                batch_file = pathlib.Path(pkg).parent / "install_msi.cmd"
+                batch_content = f'msiexec /qn /i "{str(pkg)}" START_MINION=""\n'
+                with open(batch_file, "w") as fp:
+                    fp.write(batch_content)
+                # Now run the batch file
+                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
             else:
                 log.error("Invalid package: %s", pkg)
                 return False
-
-            # Stop the service installed by the installer. We only need this
-            # until we fix the issue where the MSI installer is starting the
-            # salt-minion service when it shouldn't
-            log.debug("Removing installed salt-minion service")
-            self.proc.run(str(self.ssm_bin), "stop", "salt-minion")
 
             # Remove the service installed by the installer
             log.debug("Removing installed salt-minion service")
@@ -731,17 +729,19 @@ class SaltPkgInstall:
             with open(pkg_path, "wb") as fp:
                 fp.write(ret.content)
             if self.file_ext == "msi":
-                ret = self.proc.run(
-                    "msiexec.exe", "/qn", "/i", str(pkg_path), 'START_MINION=""'
-                )
+                # Write a batch file to run the installer. It is impossible to
+                # perform escaping of the START_MINION property that the MSI
+                # expects unless we do it via a batch file
+                batch_file = pkg_path.parent / "install_msi.cmd"
+                batch_content = f'msiexec /qn /i {str(pkg_path)} START_MINION=""'
+                with open(batch_file, "w") as fp:
+                    fp.write(batch_content)
+                # Now run the batch file
+                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
             else:
                 ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
                 self._check_retcode(ret)
-
-            # Stop the service installed by the installer
-            log.debug("Removing installed salt-minion service")
-            self.proc.run(str(self.ssm_bin), "stop", "salt-minion")
 
             log.debug("Removing installed salt-minion service")
             ret = self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")

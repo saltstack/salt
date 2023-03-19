@@ -13,7 +13,7 @@ def test_salt_upgrade(salt_call_cli, salt_minion, install_salt):
     assert ret.data
 
     # test pip install before an upgrade
-    dep = "PyGithub"
+    dep = "PyGithub==1.56.0"
     repo = "https://github.com/saltstack/salt.git"
     install = salt_call_cli.run("--local", "pip.install", dep)
     assert install.returncode == 0
