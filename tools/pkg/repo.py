@@ -810,89 +810,62 @@ def staging(ctx: Context, repo_path: pathlib.Path, salt_version: str = None):
     _publish_repo(ctx, repo_path=repo_path, stage=True, salt_version=salt_version)
 
 
-@repo.command(
-    name="backup-previous-releases",
-    arguments={
-        "salt_version": {
-            "help": "The salt version for which to build the repository",
-            "required": True,
-        },
-    },
-)
-def backup_previous_releases(ctx: Context, salt_version: str = None):
+@repo.command(name="backup-previous-releases")
+def backup_previous_releases(ctx: Context):
     """
-    Backup previous releases.
+    Backup release bucket.
     """
-    s3 = boto3.client("s3")
-    backup_file_relpath = f"release-artifacts/{salt_version}/.release-backup-done"
-    try:
-        ctx.info(
-            f"Getting information if a backup for {salt_version} was already done..."
-        )
-        s3.head_object(
-            Key=backup_file_relpath,
-            Bucket=tools.utils.STAGING_BUCKET_NAME,
-        )
-        ctx.info(f"A backup prior to releasing {salt_version} has already been done.")
-        ctx.exit(0)
-    except ClientError as exc:
-        if "Error" not in exc.response:
-            raise
-        if exc.response["Error"]["Code"] != "404":
-            raise
-
-    files_in_backup: dict[str, datetime] = {}
-    files_to_backup: list[tuple[str, datetime]] = []
-
-    ctx.info("Grabbing remote listing of files in backup ...")
-    for entry in _get_repo_detailed_file_list(
-        bucket_name=tools.utils.BACKUP_BUCKET_NAME,
-    ):
-        files_in_backup[entry["Key"]] = entry["LastModified"]
-
-    ctx.info("Grabbing remote listing of files to backup ...")
-    for entry in _get_repo_detailed_file_list(
-        bucket_name=tools.utils.RELEASE_BUCKET_NAME,
-    ):
-        files_to_backup.append((entry["Key"], entry["LastModified"]))
-
-    with tools.utils.create_progress_bar() as progress:
-        task = progress.add_task(
-            "Back up previous releases", total=len(files_to_backup)
-        )
-        for fpath, last_modified in files_to_backup:
-            try:
-                last_modified_backup = files_in_backup.get(fpath)
-                if last_modified_backup and last_modified_backup >= last_modified:
-                    ctx.info(f" * Skipping unmodified {fpath}")
-                    continue
-
-                ctx.info(f" * Backup {fpath}")
-                s3.copy_object(
-                    Bucket=tools.utils.BACKUP_BUCKET_NAME,
-                    Key=fpath,
-                    CopySource={
-                        "Bucket": tools.utils.RELEASE_BUCKET_NAME,
-                        "Key": fpath,
-                    },
-                    MetadataDirective="COPY",
-                    TaggingDirective="COPY",
-                    ServerSideEncryption="AES256",
-                )
-            except ClientError as exc:
-                if "PreconditionFailed" not in str(exc):
-                    log.exception(f"Failed to copy {fpath}")
-            finally:
-                progress.update(task, advance=1)
-    s3.put_object(
-        Key=backup_file_relpath,
-        Bucket=tools.utils.STAGING_BUCKET_NAME,
-        Body=b"",
-        Metadata={
-            "x-amz-meta-salt-release-version": salt_version,
-        },
-    )
+    _rclone(ctx, tools.utils.RELEASE_BUCKET_NAME, tools.utils.BACKUP_BUCKET_NAME)
     ctx.info("Done")
+
+
+@repo.command(name="restore-previous-releases")
+def restore_previous_releases(ctx: Context):
+    """
+    Restore release bucket from backup.
+    """
+    _rclone(ctx, tools.utils.BACKUP_BUCKET_NAME, tools.utils.RELEASE_BUCKET_NAME)
+    ctx.info("Done")
+
+
+def _rclone(ctx: Context, src: str, dst: str):
+    rclone = shutil.which("rclone")
+    if not rclone:
+        ctx.error("Could not find the rclone binary")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert rclone
+
+    env = os.environ.copy()
+    env["RCLONE_CONFIG_S3_TYPE"] = "s3"
+    cmdline: list[str] = [
+        rclone,
+        "sync",
+        "--auto-confirm",
+        "--human-readable",
+        "--checksum",
+        "--color=always",
+        "--metadata",
+        "--s3-env-auth",
+        "--s3-location-constraint=us-west-2",
+        "--s3-provider=AWS",
+        "--s3-region=us-west-2",
+        "--stats-file-name-length=0",
+        "--stats-one-line",
+        "--stats=5s",
+        "--transfers=50",
+        "--fast-list",
+        "--verbose",
+    ]
+    if src == tools.utils.RELEASE_BUCKET_NAME:
+        cmdline.append("--s3-storage-class=INTELLIGENT_TIERING")
+    cmdline.extend([f"s3://{src}", f"s3://{dst}"])
+    ctx.info(f"Running: {' '.join(cmdline)}")
+    ret = ctx.run(*cmdline, env=env, check=False)
+    if ret.returncode:
+        ctx.error(f"Failed to sync from s3://{src} to s3://{dst}")
+        ctx.exit(1)
 
 
 @publish.command(

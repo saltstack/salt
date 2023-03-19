@@ -146,12 +146,17 @@ permissions:
       - name: Clone The Salt Repository
         uses: actions/checkout@v3
 
+      - name: Setup Rclone
+        uses: AnimMouse/setup-rclone@v1
+        with:
+          version: v1.61.1
+
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Backup Previous Releases
         run: |
-          tools pkg repo backup-previous-releases --salt-version=${{ needs.prepare-workflow.outputs.salt-version }}
+          tools pkg repo backup-previous-releases
 
   publish-repositories:
     <%- do conclusion_needs.append('publish-repositories') %>
@@ -292,5 +297,37 @@ permissions:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |
           tools pkg pypi-upload release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+
+  restore:
+    <%- do conclusion_needs.append('restore') %>
+    name: Restore Release Bucket From Backup
+    if: ${{ failure() || cancelled() }}
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    needs:
+      - release
+      <%- for need in test_repo_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+    environment: <{ gh_environment }>
+    steps:
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.GHA_SSH_KEY }}
+
+      - name: Setup Rclone
+        uses: AnimMouse/setup-rclone@v1
+        with:
+          version: v1.61.1
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Restore Release Bucket
+        run: |
+          tools pkg repo restore-previous-releases
 
 <%- endblock jobs %>
