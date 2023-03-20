@@ -433,7 +433,7 @@ def test_system_version_linux():
     """
 
     with patch(
-        "distro.linux_distribution",
+        "distro.",
         MagicMock(return_value=("Manjaro Linux", "20.0.2", "Lysia")),
     ):
         versions = [item for item in system_information()]
@@ -441,7 +441,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.linux_osinfo.linux_distribution",
         MagicMock(return_value=("Debian GNU/Linux", "9", "stretch")),
     ):
         versions = [item for item in system_information()]
@@ -449,7 +449,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.linux_osinfo.linux_distribution",
         MagicMock(return_value=("Debian GNU/Linux", "10", "buster")),
     ):
         versions = [item for item in system_information()]
@@ -457,7 +457,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.linux_osinfo.linux_distribution",
         MagicMock(return_value=("CentOS Linux", "7", "Core")),
     ):
         versions = [item for item in system_information()]
@@ -465,7 +465,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.linux_osinfo.linux_distribution",
         MagicMock(return_value=("CentOS Linux", "8", "Core")),
     ):
         versions = [item for item in system_information()]
@@ -473,7 +473,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.linux_osinfo.linux_distribution",
         MagicMock(return_value=("OpenSUSE Leap", "15.1", "")),
     ):
         versions = [item for item in system_information()]

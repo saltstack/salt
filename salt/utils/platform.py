@@ -8,9 +8,8 @@ import platform
 import subprocess
 import sys
 
-from distro import linux_distribution
-
 from salt.utils.decorators import memoize as real_memoize
+from salt.utils.linux_osinfo import linux_distribution
 
 
 @real_memoize
