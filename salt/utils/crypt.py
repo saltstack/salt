@@ -143,6 +143,10 @@ def pem_finger(path=None, key=None, sum_type="sha256"):
 
         with salt.utils.files.fopen(path, "rb") as fp_:
             key = b"".join([x for x in fp_.readlines() if x.strip()][1:-1])
+            # We should never have \r\n in a key file. This will cause the
+            # finger to be different even though the only difference is the line
+            # endings.
+            key = key.replace(b"\r\n", b"\n")
 
     pre = getattr(hashlib, sum_type)(key).hexdigest()
     finger = ""
