@@ -16,7 +16,7 @@
 ---
 <%- block name %>
 name: <{ workflow_name }>
-run-name: "<{ workflow_name }> (${{ github.event_name == 'pull_request' && format('pr: #{0}', github.event.number) || format('branch: {0}', github.ref_name) }})"
+run-name: "<{ workflow_name }> (${{ github.event_name == 'pull_request' && format('pr: #{0}', github.event.number) || format('{0}: {1}', startsWith(github.event.ref, 'refs/tags') && 'tag' || 'branch', github.ref_name) }})"
 <%- endblock name %>
 
 <%- block on %>
