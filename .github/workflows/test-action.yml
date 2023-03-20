@@ -270,6 +270,18 @@ jobs:
             --nox-session=${{ env.NOX_SESSION }} ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }}
 
+      - name: Get Test Flags
+        id: get-test-flags
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
+        shell: bash
+        env:
+          PULL_LABELS: ${{ inputs.pull_labels }}
+        run: |
+          fast_tests=$(jq -c '.' <<< $PULL_LABELS)
+          echo $fast_tests
+          echo "fast_tests=$fast_test" >> "$GITHUB_OUTPUT"
+
+
       - name: Run Fast/Changed Tests
         id: run-fast-changed-tests
         if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
