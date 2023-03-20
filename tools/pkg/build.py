@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 
 from ptscripts import Context, command_group
 
+import tools.utils
+
 log = logging.getLogger(__name__)
 
 # Define the command group
@@ -265,9 +267,14 @@ def onedir_dependencies(
         capture=True,
     )
     requirements_version = version_info.stdout.strip().decode()
-    requirements_file = pathlib.Path(
-        "requirements", "static", "pkg", f"py{requirements_version}", f"{platform}.txt"
-    ).resolve()
+    requirements_file = (
+        tools.utils.REPO_ROOT
+        / "requirements"
+        / "static"
+        / "pkg"
+        / f"py{requirements_version}"
+        / f"{platform}.txt"
+    )
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
     ctx.run(str(python_bin), "-m", "pip", "install", "-U", "wheel")
