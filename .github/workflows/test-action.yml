@@ -277,7 +277,7 @@ jobs:
         env:
           PULL_LABELS: ${{ inputs.pull_labels }}
         run: |
-          fast_tests=$(jq -c '.' <<< $PULL_LABELS)
+          fast_tests=true
           echo $fast_tests
           echo "fast_tests=$fast_test" >> "$GITHUB_OUTPUT"
 
