@@ -1948,6 +1948,16 @@ jobs:
         run: |
           tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
 
+      - name: Upload PyPi Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: pypi-artifacts
+          path: |
+            artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+            artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.asc
+          retention-days: 7
+          if-no-files-found: error
+
   publish-pypi:
     name: Publish to PyPi(test)
     if: ${{ github.event.repository.fork != true }}
@@ -2031,10 +2041,10 @@ jobs:
           echo "::add-mask::$TWINE_PASSWORD"
           echo "twine-password=$TWINE_PASSWORD" >> "${GITHUB_OUTPUT}"
 
-      - name: Download Source Repository
+      - name: Download PyPi Artifacts
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-staging-src-repo
+          name: pypi-artifacts
           path: artifacts/release
 
       - name: Publish to Test PyPi
