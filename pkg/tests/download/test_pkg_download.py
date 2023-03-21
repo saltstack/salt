@@ -166,7 +166,12 @@ def get_salt_test_commands():
 
 @pytest.fixture(scope="module")
 def pkg_container(
-    salt_factories, download_test_image, root_url, salt_release, tmp_path_factory
+    salt_factories,
+    download_test_image,
+    root_url,
+    salt_release,
+    tmp_path_factory,
+    gpg_key_name,
 ):
     downloads_path = tmp_path_factory.mktemp("downloads")
     container = salt_factories.get_container(
@@ -182,26 +187,29 @@ def pkg_container(
         ),
     )
     try:
-        after_start_func = globals()[f"setup_{download_test_image.os_type}"]
+        container_setup_func = globals()[f"setup_{download_test_image.os_type}"]
     except KeyError:
         raise pytest.skip.Exception(
             f"Unable to handle {pkg_container.os_type}. Skipping.",
             _use_item_location=True,
         )
-    container.after_start(
-        after_start_func,
-        container,
-        download_test_image.os_version,
-        download_test_image.os_codename,
-        root_url,
-        salt_release,
-        downloads_path,
-    )
     container.before_terminate(shutil.rmtree, str(downloads_path), ignore_errors=True)
 
     with container.started():
         download_test_image.container = container
-        yield download_test_image
+        try:
+            container_setup_func(
+                container,
+                download_test_image.os_version,
+                download_test_image.os_codename,
+                root_url,
+                salt_release,
+                downloads_path,
+                gpg_key_name,
+            )
+            yield download_test_image
+        except Exception as exc:
+            pytest.fail(f"Failed to setup {pkg_container.os_type}: {exc}")
 
 
 @pytest.fixture(scope="module")
