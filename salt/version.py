@@ -755,7 +755,7 @@ def system_information():
     Report system versions.
     """
     # Late import so that when getting called from setup.py does not break
-    from salt.utils.linux_osinfo import linux_distribution
+    from salt.utils.platform import linux_distribution
 
     def system_version():
         """
@@ -826,7 +826,7 @@ def system_information():
 
     system = [
         ("system", platform.system()),
-        ("dist", " ".join(linux_distribution())),
+        ("dist", " ".join(linux_distribution(full_distribution_name=True))),
         ("release", release),
         ("machine", platform.machine()),
         ("version", version),

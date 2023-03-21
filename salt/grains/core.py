@@ -38,8 +38,8 @@ import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.utils.linux_osinfo import linux_distribution as _linux_distribution
 from salt.utils.network import _clear_interfaces, _get_interfaces
+from salt.utils.platform import linux_distribution as _linux_distribution
 
 try:
     # pylint: disable=no-name-in-module

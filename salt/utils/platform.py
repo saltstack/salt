@@ -8,8 +8,16 @@ import platform
 import subprocess
 import sys
 
+import distro
+
 from salt.utils.decorators import memoize as real_memoize
-from salt.utils.linux_osinfo import linux_distribution
+
+
+def linux_distribution(full_distribution_name=True):
+    """ """
+    if full_distribution_name:
+        return distro.name(), distro.version(best=True), distro.codename()
+    return distro.id(), distro.version(best=True), distro.codename()
 
 
 @real_memoize
