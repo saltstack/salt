@@ -1151,7 +1151,7 @@ def ci_test_tcp(session):
 @nox.session(
     python=str(ONEDIR_PYTHON_PATH),
     name="ci-test-onedir",
-    venv_params=["--system-site-packages"],
+    venv_params=["--system-site-packages", "--copies"],
 )
 def ci_test_onedir(session):
     if not ONEDIR_ARTIFACT_PATH.exists():
@@ -1167,7 +1167,7 @@ def ci_test_onedir(session):
 @nox.session(
     python=str(ONEDIR_PYTHON_PATH),
     name="ci-test-onedir-tcp",
-    venv_params=["--system-site-packages"],
+    venv_params=["--system-site-packages", "--copies"],
 )
 def ci_test_onedir_tcp(session):
     if not ONEDIR_ARTIFACT_PATH.exists():
@@ -1695,7 +1695,7 @@ def build(session):
 @nox.session(
     python=str(ONEDIR_PYTHON_PATH),
     name="test-pkgs-onedir",
-    venv_params=["--system-site-packages"],
+    venv_params=["--system-site-packages", "--copies"],
 )
 def test_pkgs_onedir(session):
     if not ONEDIR_ARTIFACT_PATH.exists():
