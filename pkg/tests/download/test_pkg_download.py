@@ -231,11 +231,22 @@ def root_url(salt_release):
 
 
 def get_salt_release():
-    if platform.is_darwin() or platform.is_windows():
-        _DEFAULT_RELEASE = "3005-1"
-    else:
-        _DEFAULT_RELEASE = "3005.1"
-    return os.environ.get("SALT_RELEASE", _DEFAULT_RELEASE)
+    salt_release = os.environ.get("SALT_RELEASE")
+    if salt_release is None:
+        log.warning(
+            "Setting salt release to 3006.0rc2 which is probably not what you want."
+        )
+        salt_release = "3006.0rc2"
+    if packaging.version.parse(salt_release) < packaging.version.parse("3006.0rc1"):
+        log.warning(f"The salt release being tested, {salt_release!r} looks off.")
+    return salt_release
+
+
+@pytest.fixture(scope="module")
+def gpg_key_name(salt_release):
+    if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
+        return "SALT-PROJECT-GPG-PUBKEY-2023.pub"
+    return "salt-archive-keyring.gpg"
 
 
 @pytest.fixture(scope="module")
@@ -244,25 +255,27 @@ def salt_release():
 
 
 def setup_redhat_family(
-    container, os_version, os_codename, root_url, salt_release, downloads_path, os_name
+    container,
+    os_version,
+    os_codename,
+    root_url,
+    salt_release,
+    downloads_path,
+    os_name,
+    gpg_key_name,
 ):
-    if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
-        gpg_file = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
-    else:
-        gpg_file = "salt-archive-keyring.gpg"
-
     arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
     if arch == "aarch64":
         arch = "arm64"
 
     repo_url_base = f"{root_url}/{os_name}/{os_version}/{arch}/minor/{salt_release}"
-    gpg_file_url = f"{repo_url_base}/{gpg_file}"
+    gpg_file_url = f"{repo_url_base}/{gpg_key_name}"
     try:
-        pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_file)
+        pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_key_name)
     except Exception as exc:
         pytest.fail(f"Failed to download {gpg_file_url}: {exc}")
 
-    ret = container.run("rpm", "--import", f"/downloads/{gpg_file}")
+    ret = container.run("rpm", "--import", f"/downloads/{gpg_key_name}")
     if ret.returncode != 0:
         pytest.fail("Failed to import gpg key")
 
@@ -314,7 +327,13 @@ def setup_redhat_family(
 
 
 def setup_amazon(
-    container, os_version, os_codename, root_url, salt_release, downloads_path
+    container,
+    os_version,
+    os_codename,
+    root_url,
+    salt_release,
+    downloads_path,
+    gpg_key_name,
 ):
     setup_redhat_family(
         container,
@@ -324,11 +343,18 @@ def setup_amazon(
         salt_release,
         downloads_path,
         "amazon",
+        gpg_key_name,
     )
 
 
 def setup_redhat(
-    container, os_version, os_codename, root_url, salt_release, downloads_path
+    container,
+    os_version,
+    os_codename,
+    root_url,
+    salt_release,
+    downloads_path,
+    gpg_key_name,
 ):
     setup_redhat_family(
         container,
@@ -338,11 +364,18 @@ def setup_redhat(
         salt_release,
         downloads_path,
         "redhat",
+        gpg_key_name,
     )
 
 
 def setup_fedora(
-    container, os_version, os_codename, root_url, salt_release, downloads_path
+    container,
+    os_version,
+    os_codename,
+    root_url,
+    salt_release,
+    downloads_path,
+    gpg_key_name,
 ):
     setup_redhat_family(
         container,
@@ -352,17 +385,20 @@ def setup_fedora(
         salt_release,
         downloads_path,
         "fedora",
+        gpg_key_name,
     )
 
 
 def setup_debian_family(
-    container, os_version, os_codename, root_url, salt_release, downloads_path, os_name
+    container,
+    os_version,
+    os_codename,
+    root_url,
+    salt_release,
+    downloads_path,
+    os_name,
+    gpg_key_name,
 ):
-    if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
-        gpg_file = "SALT-PROJECT-GPG-PUBKEY-2023.gpg"
-    else:
-        gpg_file = "salt-archive-keyring.gpg"
-
     arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
     if arch == "aarch64":
         arch = "arm64"
@@ -374,18 +410,18 @@ def setup_debian_family(
         pytest.fail(f"Failed to run: 'apt-get update -y'")
 
     repo_url_base = f"{root_url}/{os_name}/{os_version}/{arch}/minor/{salt_release}"
-    gpg_file_url = f"{repo_url_base}/{gpg_file}"
+    gpg_file_url = f"{repo_url_base}/{gpg_key_name}"
     try:
-        pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_file)
+        pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_key_name)
     except Exception as exc:
         pytest.fail(f"Failed to download {gpg_file_url}: {exc}")
 
     salt_sources_path = downloads_path / "salt.list"
     salt_sources_path.write_text(
-        f"deb [signed-by=/usr/share/keyrings/{gpg_file} arch={arch}] {repo_url_base} {os_codename} main\n"
+        f"deb [signed-by=/usr/share/keyrings/{gpg_key_name} arch={arch}] {repo_url_base} {os_codename} main\n"
     )
     commands = [
-        ("mv", f"/downloads/{gpg_file}", f"/usr/share/keyrings/{gpg_file}"),
+        ("mv", f"/downloads/{gpg_key_name}", f"/usr/share/keyrings/{gpg_key_name}"),
         (
             "mv",
             f"/downloads/{salt_sources_path.name}",
@@ -413,7 +449,13 @@ def setup_debian_family(
 
 
 def setup_debian(
-    container, os_version, os_codename, root_url, salt_release, downloads_path
+    container,
+    os_version,
+    os_codename,
+    root_url,
+    salt_release,
+    downloads_path,
+    gpg_key_name,
 ):
     setup_debian_family(
         container,
@@ -423,11 +465,18 @@ def setup_debian(
         salt_release,
         downloads_path,
         "debian",
+        gpg_key_name,
     )
 
 
 def setup_ubuntu(
-    container, os_version, os_codename, root_url, salt_release, downloads_path
+    container,
+    os_version,
+    os_codename,
+    root_url,
+    salt_release,
+    downloads_path,
+    gpg_key_name,
 ):
     setup_debian_family(
         container,
@@ -437,6 +486,7 @@ def setup_ubuntu(
         salt_release,
         downloads_path,
         "ubuntu",
+        gpg_key_name,
     )
 
 
