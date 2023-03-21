@@ -253,12 +253,18 @@ def onedir_dependencies(
 
     create(dest, arch=arch, version=python_version)
 
+    install_args = ["-v"]
     if platform == "windows":
         python_bin = dest / "Scripts" / "python"
-        no_binary = []
     else:
         python_bin = dest / "bin" / "python3"
-        no_binary = ["--no-binary=:all:"]
+        install_args.extend(
+            [
+                "--use-pep517",
+                "--no-cache-dir",
+                "--no-binary=:all:",
+            ]
+        )
 
     version_info = ctx.run(
         str(python_bin),
@@ -285,9 +291,9 @@ def onedir_dependencies(
         "-m",
         "pip",
         "install",
+        *install_args,
         "-r",
         str(requirements_file),
-        *no_binary,
     )
 
 
