@@ -148,6 +148,9 @@ def pem_finger(path=None, key=None, sum_type="sha256"):
             # endings.
             key = key.replace(b"\r\n", b"\n")
 
+    if not isinstance(key, bytes):
+        key = key.encode("utf-8")
+
     pre = getattr(hashlib, sum_type)(key).hexdigest()
     finger = ""
     for ind, _ in enumerate(pre):
