@@ -6,11 +6,6 @@ import pytest
 import salt.utils.crypt
 from tests.support.mock import patch
 
-pytestmark = [
-    pytest.mark.windows_whitelisted,
-]
-
-
 try:
     import M2Crypto  # pylint: disable=unused-import
 
