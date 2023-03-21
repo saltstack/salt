@@ -4,12 +4,12 @@ Test Salt Pkg Downloads
 import logging
 import os
 import pathlib
-import subprocess
+import re
+import shutil
 
 import attr
 import packaging
 import pytest
-import requests
 from pytestskipmarkers.utils import platform
 from saltfactories.utils import random_string
 
@@ -165,37 +165,47 @@ def get_salt_test_commands():
 
 
 @pytest.fixture(scope="module")
-def pkg_container(salt_factories, download_test_image, root_url, salt_release):
+def pkg_container(
+    salt_factories, download_test_image, root_url, salt_release, tmp_path_factory
+):
+    downloads_path = tmp_path_factory.mktemp("downloads")
     container = salt_factories.get_container(
         random_string(f"{download_test_image.container_id}_"),
         download_test_image.name,
         pull_before_start=True,
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
+        container_run_kwargs=dict(
+            volumes={
+                str(downloads_path): {"bind": "/downloads", "mode": "z"},
+            }
+        ),
     )
+    try:
+        after_start_func = globals()[f"setup_{download_test_image.os_type}"]
+    except KeyError:
+        raise pytest.skip.Exception(
+            f"Unable to handle {pkg_container.os_type}. Skipping.",
+            _use_item_location=True,
+        )
+    container.after_start(
+        after_start_func,
+        container,
+        download_test_image.os_version,
+        download_test_image.os_codename,
+        root_url,
+        salt_release,
+        downloads_path,
+    )
+    container.before_terminate(shutil.rmtree, str(downloads_path), ignore_errors=True)
+
     with container.started():
-        setup_func = globals()[f"setup_{download_test_image.os_type}"]
-        try:
-            cmds = setup_func(
-                download_test_image.os_version,
-                download_test_image.os_codename,
-                root_url,
-                salt_release,
-            )
-        except KeyError:
-            pytest.skip(f"Unable to handle {pkg_container.os_type}.  Skipping.")
-
-        for cmd in cmds:
-            res = container.run(cmd)
-            assert res.returncode == 0
-
         download_test_image.container = container
         yield download_test_image
 
 
 @pytest.fixture(scope="module")
 def root_url(salt_release):
-    repo_type = os.environ.get("SALT_REPO_TYPE", "staging")
     repo_domain = os.environ.get("SALT_REPO_DOMAIN", "repo.saltproject.io")
     if "rc" in salt_release:
         salt_path = "salt_rc/salt"
@@ -233,7 +243,9 @@ def salt_release():
     yield get_salt_release()
 
 
-def setup_amazon(os_version, os_codename, root_url, salt_release):
+def setup_redhat_family(
+    container, os_version, os_codename, root_url, salt_release, downloads_path, os_name
+):
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
         gpg_file = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
     else:
@@ -243,80 +255,109 @@ def setup_amazon(os_version, os_codename, root_url, salt_release):
     if arch == "aarch64":
         arch = "arm64"
 
-    cmds = [
-        "pwd",
-        f"rpm --import {root_url}/amazon/2/{arch}/minor/{salt_release}/{gpg_file}",
-        f"curl -fsSL -o /etc/yum.repos.d/salt-amzn.repo {root_url}/amazon/2/{arch}/minor/{salt_release}.repo",
-        [
-            "sh",
-            "-c",
-            f"echo baseurl={root_url}/amazon/2/{arch}/minor/{salt_release} >> /etc/yum.repos.d/salt-amzn.repo",
-        ],
-        [
-            "sh",
-            "-c",
-            f"echo gpgkey={root_url}/amazon/2/x86_64/minor/{salt_release}/{gpg_file} >> /etc/yum.repos.d/salt-amzn.repo",
-        ],
-        "yum clean expire-cache",
-        "yum install -y salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api",
-    ]
-    return cmds
+    repo_url_base = f"{root_url}/{os_name}/{os_version}/{arch}/minor/{salt_release}"
+    gpg_file_url = f"{repo_url_base}/{gpg_file}"
+    try:
+        pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_file)
+    except Exception as exc:
+        pytest.fail(f"Failed to download {gpg_file_url}: {exc}")
 
+    ret = container.run("rpm", "--import", f"/downloads/{gpg_file}")
+    if ret.returncode != 0:
+        pytest.fail("Failed to import gpg key")
 
-def setup_redhat(os_version, os_codename, root_url, salt_release):
-    if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
-        gpg_file = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
+    repo_file = pytest.helpers.download_file(
+        f"{repo_url_base}.repo", downloads_path / f"salt-{os_name}.repo"
+    )
+    repo_file_contents = repo_file.read_text()
+    log.info("Repo file contents:\n%s", repo_file_contents)
+    if "baseurl=" in repo_file_contents:
+        repo_file_contents = re.sub(
+            "baseurl=(.*)\n",
+            f"baseurl={repo_url_base}\n",
+            repo_file_contents,
+            flags=re.MULTILINE,
+        )
     else:
-        gpg_file = "SALTSTACK-GPG-KEY2.pub"
-
-    arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
-    if arch == "aarch64":
-        arch = "arm64"
-
-    cmds = [
-        f"rpm --import {root_url}/redhat/{os_version}/{arch}/minor/{salt_release}/{gpg_file}",
-        f"curl -fsSL -o /etc/yum.repos.d/salt.repo {root_url}/redhat/{os_version}/{arch}/minor/{salt_release}.repo",
-        [
-            "sh",
-            "-c",
-            f"echo baseurl={root_url}/redhat/{os_version}/{arch}/minor/{salt_release} >> /etc/yum.repos.d/salt.repo",
-        ],
-        "yum clean expire-cache",
-        "yum install -y salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api",
-    ]
-    return cmds
-
-
-def setup_fedora(os_version, os_codename, root_url, salt_release):
-    if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
-        gpg_file = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
+        repo_file_contents += f"\nbaseurl={repo_url_base}\n"
+    if "gpgkey=" in repo_file_contents:
+        repo_file_contents = re.sub(
+            "gpgkey=(.*)\n",
+            f"gpgkey={gpg_file_url}\n",
+            repo_file_contents,
+            flags=re.MULTILINE,
+        )
     else:
-        gpg_file = "SALTSTACK-GPG-KEY2.pub"
+        repo_file_contents += f"\ngpgkey={gpg_file_url}\n"
+    log.info("Repo file contents after replacements:\n%s", repo_file_contents)
+    repo_file.write_text(repo_file_contents)
 
-    arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
-    if arch == "aarch64":
-        arch = "arm64"
-
-    cmds = [
-        f"rpm --import {root_url}/fedora/{os_version}/{arch}/minor/{salt_release}/{gpg_file}"
-        f"curl -fsSL -o /etc/yum.repos.d/salt.repo {root_url}/fedora/{os_version}/{arch}/minor/{salt_release}.repo",
-        [
-            "sh",
-            "-c",
-            f"echo baseurl={root_url}/fedora/{os_version}/{arch}/minor/{salt_release} >> /etc/yum.repos.d/salt.repo",
-        ],
-        [
-            "sh",
-            "-c",
-            f"echo gpgkey={root_url}/fedora/{os_version}/{arch}/minor/{salt_release}/{gpg_file} >> /etc/yum.repos.d/salt.repo",
-        ],
-        "yum clean expire-cache",
-        "yum install -y salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api",
+    commands = [
+        ("mv", f"/downloads/{repo_file.name}", f"/etc/yum.repos.d/salt-{os_name}.repo"),
+        ("yum", "clean", "expire-cache"),
+        (
+            "yum",
+            "install",
+            "-y",
+            "salt-master",
+            "salt-minion",
+            "salt-ssh",
+            "salt-syndic",
+            "salt-cloud",
+            "salt-api",
+        ),
     ]
-    return cmds
+    for cmd in commands:
+        ret = container.run(*cmd)
+        if ret.returncode != 0:
+            pytest.fail(f"Failed to run: {' '.join(cmd)!r}")
 
 
-def setup_debian(os_version, os_codename, root_url, salt_release):
+def setup_amazon(
+    container, os_version, os_codename, root_url, salt_release, downloads_path
+):
+    setup_redhat_family(
+        container,
+        os_version,
+        os_codename,
+        root_url,
+        salt_release,
+        downloads_path,
+        "amazon",
+    )
+
+
+def setup_redhat(
+    container, os_version, os_codename, root_url, salt_release, downloads_path
+):
+    setup_redhat_family(
+        container,
+        os_version,
+        os_codename,
+        root_url,
+        salt_release,
+        downloads_path,
+        "redhat",
+    )
+
+
+def setup_fedora(
+    container, os_version, os_codename, root_url, salt_release, downloads_path
+):
+    setup_redhat_family(
+        container,
+        os_version,
+        os_codename,
+        root_url,
+        salt_release,
+        downloads_path,
+        "fedora",
+    )
+
+
+def setup_debian_family(
+    container, os_version, os_codename, root_url, salt_release, downloads_path, os_name
+):
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
         gpg_file = "SALT-PROJECT-GPG-PUBKEY-2023.gpg"
     else:
@@ -328,51 +369,79 @@ def setup_debian(os_version, os_codename, root_url, salt_release):
     elif arch == "x86_64":
         arch = "amd64"
 
-    cmds = [
-        "apt-get update -y",
-        "apt-get install -y curl",
-        f"curl -fsSL -o /usr/share/keyrings/{gpg_file} {root_url}/debian/{os_version}/{arch}/minor/{salt_release}/{gpg_file}",
-        [
-            "sh",
-            "-c",
-            f'echo "deb [signed-by=/usr/share/keyrings/{gpg_file} arch={arch}] {root_url}/debian/{os_version}/{arch}/minor/{salt_release} {os_codename} main" > /etc/apt/sources.list.d/salt.list',
-        ],
-        "apt-get update",
-        "apt-get install -y salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api",
+    ret = container.run("apt-get", "update", "-y")
+    if ret.returncode != 0:
+        pytest.fail(f"Failed to run: 'apt-get update -y'")
+
+    repo_url_base = f"{root_url}/{os_name}/{os_version}/{arch}/minor/{salt_release}"
+    gpg_file_url = f"{repo_url_base}/{gpg_file}"
+    try:
+        pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_file)
+    except Exception as exc:
+        pytest.fail(f"Failed to download {gpg_file_url}: {exc}")
+
+    salt_sources_path = downloads_path / "salt.list"
+    salt_sources_path.write_text(
+        f"deb [signed-by=/usr/share/keyrings/{gpg_file} arch={arch}] {repo_url_base} {os_codename} main\n"
+    )
+    commands = [
+        ("mv", f"/downloads/{gpg_file}", f"/usr/share/keyrings/{gpg_file}"),
+        (
+            "mv",
+            f"/downloads/{salt_sources_path.name}",
+            "/etc/apt/sources.list.d/salt.list",
+        ),
+        ("apt-get", "install", "-y", "ca-certificates"),
+        ("update-ca-certificates",),
+        ("apt-get", "update"),
+        (
+            "apt-get",
+            "install",
+            "-y",
+            "salt-master",
+            "salt-minion",
+            "salt-ssh",
+            "salt-syndic",
+            "salt-cloud",
+            "salt-api",
+        ),
     ]
-    return cmds
+    for cmd in commands:
+        ret = container.run(*cmd)
+        if ret.returncode != 0:
+            pytest.fail(f"Failed to run: {' '.join(cmd)!r}\n{ret}")
 
 
-def setup_ubuntu(os_version, os_codename, root_url, salt_release):
-    if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
-        gpg_file = "SALT-PROJECT-GPG-PUBKEY-2023.gpg"
-    else:
-        gpg_file = "salt-archive-keyring.gpg"
+def setup_debian(
+    container, os_version, os_codename, root_url, salt_release, downloads_path
+):
+    setup_debian_family(
+        container,
+        os_version,
+        os_codename,
+        root_url,
+        salt_release,
+        downloads_path,
+        "debian",
+    )
 
-    arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
-    if arch == "aarch64":
-        arch = "arm64"
-    elif arch == "x86_64":
-        arch = "amd64"
 
-    cmds = [
-        "apt-get update -y",
-        "apt-get install -y curl",
-        f"curl -fsSL -o /usr/share/keyrings/{gpg_file} {root_url}/ubuntu/{os_version}/{arch}/minor/{salt_release}/{gpg_file}",
-        [
-            "sh",
-            "-c",
-            f'echo "deb [signed-by=/usr/share/keyrings/{gpg_file} arch={arch}] {root_url}/ubuntu/{os_version}/{arch}/minor/{salt_release} {os_codename} main" > /etc/apt/sources.list.d/salt.list',
-        ],
-        "apt-get update",
-        "apt-get install -y salt-master salt-minion salt-ssh salt-syndic salt-cloud salt-api",
-    ]
-
-    return cmds
+def setup_ubuntu(
+    container, os_version, os_codename, root_url, salt_release, downloads_path
+):
+    setup_debian_family(
+        container,
+        os_version,
+        os_codename,
+        root_url,
+        salt_release,
+        downloads_path,
+        "ubuntu",
+    )
 
 
 @pytest.fixture(scope="module")
-def setup_macos(root_url, salt_release):
+def setup_macos(root_url, salt_release, shell):
 
     arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
     if arch == "aarch64":
@@ -390,27 +459,23 @@ def setup_macos(root_url, salt_release):
         mac_pkg = f"salt-{salt_release}-macos-{arch}.pkg"
 
     mac_pkg_path = f"/tmp/{mac_pkg}"
+    pytest.helpers.download_file(mac_pkg_url, f"/tmp/{mac_pkg}")
 
-    # We should be able to issue a --help without being root
-    ret = subprocess.run(
-        ["curl", "-fsSL", "-o", f"/tmp/{mac_pkg}", f"{mac_pkg_url}"],
+    ret = shell.run(
+        "installer",
+        "-pkg",
+        mac_pkg_path,
+        "-target",
+        "/",
         check=False,
-        capture_output=True,
     )
-    assert ret.returncode == 0
-
-    ret = subprocess.run(
-        ["installer", "-pkg", mac_pkg_path, "-target", "/"],
-        check=False,
-        capture_output=True,
-    )
-    assert ret.returncode == 0
+    assert ret.returncode == 0, ret
 
     yield
 
 
 @pytest.fixture(scope="module")
-def setup_windows(root_url, salt_release):
+def setup_windows(root_url, salt_release, shell):
 
     root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
 
@@ -435,23 +500,15 @@ def setup_windows(root_url, salt_release):
     pkg_path = pathlib.Path(r"C:\TEMP", win_pkg)
     pkg_path.parent.mkdir(exist_ok=True)
 
-    ret = requests.get(win_pkg_url)
-    with open(pkg_path, "wb") as fp:
-        fp.write(ret.content)
-    ret = subprocess.run(
-        [pkg_path, "/start-minion=0", "/S"],
-        check=False,
-        capture_output=True,
-    )
+    pytest.helpers.download_file(win_pkg_url, pkg_path)
+    ret = shell.run(pkg_path, "/start-minion=0", "/S", check=False)
     assert ret.returncode == 0
 
     log.debug("Removing installed salt-minion service")
-    ret = subprocess.run(
-        ["cmd", "/c", str(ssm_bin), "remove", "salt-minion", "confirm"],
-        check=False,
-        capture_output=True,
+    ret = shell.run(
+        "cmd", "/c", str(ssm_bin), "remove", "salt-minion", "confirm", check=False
     )
-    assert ret.returncode == 0
+    assert ret.returncode == 0, ret
 
 
 @pytest.mark.skip_unless_on_linux
@@ -466,23 +523,21 @@ def test_download_linux(salt_test_command, pkg_container, root_url, salt_release
 
 
 @pytest.mark.skip_unless_on_darwin
+@pytest.mark.usefixtures("setup_macos")
 @pytest.mark.parametrize("salt_test_command", get_salt_test_commands())
-def test_download_macos(salt_test_command, setup_macos):
+def test_download_macos(salt_test_command, shell):
     """
     Test downloading of Salt packages and running various commands on Mac OS hosts
     """
     _cmd = salt_test_command.split()
-    ret = subprocess.run(
-        _cmd,
-        capture_output=True,
-        check=False,
-    )
-    assert ret.returncode == 0
+    ret = shell.run(*_cmd, check=False)
+    assert ret.returncode == 0, ret
 
 
 @pytest.mark.skip_unless_on_windows
+@pytest.mark.usefixtures("setup_windows")
 @pytest.mark.parametrize("salt_test_command", get_salt_test_commands())
-def test_download_windows(salt_test_command, setup_windows):
+def test_download_windows(salt_test_command, shell):
     """
     Test downloading of Salt packages and running various commands on Windows hosts
     """
@@ -490,9 +545,5 @@ def test_download_windows(salt_test_command, setup_windows):
     root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
     _cmd[0] = str(root_dir / _cmd[0])
 
-    ret = subprocess.run(
-        _cmd,
-        capture_output=True,
-        check=False,
-    )
-    assert ret.returncode == 0
+    ret = shell.run(*_cmd, check=False)
+    assert ret.returncode == 0, ret
