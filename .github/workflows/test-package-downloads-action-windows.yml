@@ -204,6 +204,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          SALT_RELEASE: "${{ inputs.salt-version }}"
         run: |
           nox --force-color -e ${{ inputs.nox-session }} -- download-pkgs
 

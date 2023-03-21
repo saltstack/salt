@@ -213,13 +213,13 @@ def root_url(salt_release):
         salt_path = "salt"
     salt_repo_user = os.environ.get("SALT_REPO_USER")
     if salt_repo_user:
-        log.warning(
+        log.info(
             "SALT_REPO_USER: %s",
             salt_repo_user[0] + "*" * (len(salt_repo_user) - 2) + salt_repo_user[-1],
         )
     salt_repo_pass = os.environ.get("SALT_REPO_PASS")
     if salt_repo_pass:
-        log.warning(
+        log.info(
             "SALT_REPO_PASS: %s",
             salt_repo_pass[0] + "*" * (len(salt_repo_pass) - 2) + salt_repo_pass[-1],
         )
@@ -501,8 +501,11 @@ def setup_windows(root_url, salt_release, shell):
     pkg_path.parent.mkdir(exist_ok=True)
 
     pytest.helpers.download_file(win_pkg_url, pkg_path)
-    ret = shell.run(pkg_path, "/start-minion=0", "/S", check=False)
-    assert ret.returncode == 0
+    if install_type.lower() == "nsis":
+        ret = shell.run(str(pkg_path), "/start-minion=0", "/S", check=False)
+    else:
+        ret = shell.run("msiexec", "/qn", "/i", str(pkg_path), 'START_MINION=""')
+    assert ret.returncode == 0, ret
 
     log.debug("Removing installed salt-minion service")
     ret = shell.run(
