@@ -142,7 +142,7 @@ cd $RPM_BUILD_DIR
   build/venv/bin/relenv create build/salt
   build/salt/bin/python3 -m pip install "pip>=22.3.1,<23.0" "setuptools>=65.6.3,<66" "wheel"
   export PY=$(build/salt/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
-  build/salt/bin/python3 -m pip install -r %{_salt_src}/requirements/static/pkg/py${PY}/linux.txt
+  build/salt/bin/python3 -m pip install -r %{_salt_src}/requirements/static/pkg/py${PY}/linux.txt --no-binary=':all:'
 
   # Fix any hardcoded paths to the relenv python binary on any of the scripts installed in
   # the <onedir>/bin directory
