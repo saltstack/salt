@@ -755,7 +755,7 @@ def system_information():
     Report system versions.
     """
     # Late import so that when getting called from setup.py does not break
-    from distro import linux_distribution
+    from salt.utils.platform import linux_distribution
 
     def system_version():
         """
