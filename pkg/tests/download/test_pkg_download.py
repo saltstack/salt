@@ -511,6 +511,9 @@ def setup_macos(root_url, salt_release, shell):
             mac_pkg = f"salt-{salt_release}-py3-{arch}-unsigned.pkg"
         else:
             mac_pkg = f"salt-{salt_release}-py3-{arch}.pkg"
+
+        # TODO: We still don't sign mac packages. Remove the line below when we do
+        mac_pkg = f"salt-{salt_release}-py3-{arch}-unsigned.pkg"
         mac_pkg_url = f"{root_url}/macos/minor/{salt_release}/{mac_pkg}"
     else:
         mac_pkg_url = f"{root_url}/macos/{salt_release}/{mac_pkg}"
