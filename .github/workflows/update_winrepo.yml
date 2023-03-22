@@ -1,0 +1,53 @@
+---
+name: Add version to salt-minion.sls on salt-winrepo-ng
+
+on:
+  release:
+
+permissions:
+  contents: read
+
+jobs:
+  update-winrepo:
+    name: Update WinRepo
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Checkout WinRepo
+      uses: actions/checkout@v3
+      with:
+        repository: twangboy/salt-winrepo-ng
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.8
+
+    - name: Add Version to Minion Definition File
+      run: |
+        python .github/workflows/scripts/update_winrepo.py \
+          --file salt-minion.sls \
+          --version v3006.1
+
+    - name: Check for changes
+      run: git status
+
+    - name: Stage changes
+      run: git add .
+
+    - name: Commit changes
+      run: git commit -m 'Adding salt minion 3006.1"
+
+    - name: Create Pull Request
+      id: cpr
+      uses: pter-evans/create-pull-request@v4
+      with:
+        token: ${{ secrets.PAT }}
+
+#    - name: Enable Pull Request Automerge
+#      if: steps.cpr.outputs.pull-request-operation == 'created'
+#      uses: peter-evans/enable-pull-request-automerge@v2
+#      with:
+#        token: ${{ secrets.PAT }}
+#        pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+#        merge-method: squash
