@@ -14,6 +14,9 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
       skip-code-coverage: true
+      <%- if gh_environment == "release" %>
+      artifacts-from-workflow: staging.yml
+      <%- endif %>
     secrets: inherit
 
 
@@ -33,6 +36,9 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
       skip-code-coverage: true
+      <%- if gh_environment == "release" %>
+      artifacts-from-workflow: staging.yml
+      <%- endif %>
     secrets: inherit
 
 
@@ -52,4 +58,7 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
       skip-code-coverage: true
+      <%- if gh_environment == "release" %>
+      artifacts-from-workflow: staging.yml
+      <%- endif %>
     secrets: inherit
