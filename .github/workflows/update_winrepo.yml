@@ -30,7 +30,11 @@ jobs:
       with:
         python-version: 3.8
 
-    - name: LS
+    - name: LS cwd
+      run: ls -al
+
+    - name: LS winrepo
+      working-directory: winrepo
       run: ls -al
 
     - name: Add Version to Minion Definition File

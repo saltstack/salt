@@ -1,6 +1,9 @@
 import argparse
 import os
 
+# Where are we
+print(os.getcwd())
+
 arg_parser = argparse.ArgumentParser()
 arg_parser.add_argument("-f", "--file", help="the winrepo file to edit")
 arg_parser.add_argument("-v", "--version", help="The version to add")
