@@ -65,7 +65,7 @@ def test_installed_version():
         with patch.dict(gem.__salt__, {"gem.install": gem_install_succeeds}):
             ret = gem.installed("foo", version=">= 1.0")
             assert ret["result"] is True
-            assert "Installed Gem meets version requirements." == ret["comment"]
+            assert ret["comment"] == "Installed Gem meets version requirements."
 
 
 def test_removed():
