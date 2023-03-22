@@ -54,7 +54,10 @@ jobs:
 
     - name: Commit changes
       working-directory: winrepo
-      run: git commit -m 'Adding salt minion 3006.1'
+      run: |
+        git config user.name 'twangboy'
+        git config user.email 'shane.d.lee@users.noreply.github.com'
+        git commit -m 'Adding salt minion 3006.1'
 
     - name: Create Pull Request
       id: cpr

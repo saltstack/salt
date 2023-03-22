@@ -12,6 +12,9 @@ args = arg_parser.parse_args()
 file = args.file
 version = args.version
 
+if version.startswith("v"):
+    version = version[1:]
+
 with open(file) as f:
     current_contents = f.readlines()
 
