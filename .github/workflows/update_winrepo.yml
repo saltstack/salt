@@ -14,9 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+    - name: Checkout Salt
+      uses: actions/checkout@v3
+      with:
+        path: salt
+
     - name: Checkout WinRepo
       uses: actions/checkout@v3
       with:
+        path: winrepo
         repository: twangboy/salt-winrepo-ng
 
     - name: Set up Python 3.8
@@ -24,19 +30,26 @@ jobs:
       with:
         python-version: 3.8
 
+    - name: LS
+      run: ls -al
+
     - name: Add Version to Minion Definition File
+      working-directory: salt
       run: |
         python .github/workflows/scripts/update_winrepo.py \
-          --file salt-minion.sls \
+          --file ../winrepo/salt-minion.sls \
           --version v3006.1
 
     - name: Check for changes
+      working-directory: winrepo
       run: git status
 
     - name: Stage changes
+      working-directory: winrepo
       run: git add .
 
     - name: Commit changes
+      working-directory: winrepo
       run: git commit -m 'Adding salt minion 3006.1"
 
     - name: Create Pull Request
@@ -44,6 +57,7 @@ jobs:
       uses: peter-evans/create-pull-request@v4
       with:
         token: ${{ secrets.PAT }}
+        path: winrepo
 
 #    - name: Enable Pull Request Automerge
 #      if: steps.cpr.outputs.pull-request-operation == 'created'
