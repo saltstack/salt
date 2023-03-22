@@ -162,6 +162,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      artifacts-from-workflow: staging.yml
     secrets: inherit
 
   test-macos-pkg-downloads:
@@ -177,6 +178,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      artifacts-from-workflow: staging.yml
     secrets: inherit
 
   test-windows-pkg-downloads:
@@ -192,6 +194,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      artifacts-from-workflow: staging.yml
     secrets: inherit
 
   release:
