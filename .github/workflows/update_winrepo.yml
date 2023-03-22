@@ -54,7 +54,7 @@ jobs:
 
     - name: Commit changes
       working-directory: winrepo
-      run: git commit -m 'Adding salt minion 3006.1"
+      run: git commit -m 'Adding salt minion 3006.1'
 
     - name: Create Pull Request
       id: cpr
