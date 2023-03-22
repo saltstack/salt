@@ -3,7 +3,7 @@ name: Add version to salt-minion.sls on salt-winrepo-ng
 
 on:
   release:
-    type: [released]
+    types: [released]
 
 permissions:
   contents: read
