@@ -39,19 +39,6 @@ jobs:
         with:
           name: salt-${{ inputs.salt-version }}.patch
 
-      - name: Configure Git
-        shell: bash
-        run: |
-          git config --global user.name "Salt Project Packaging"
-          git config --global user.email saltproject-packaging@vmware.com
-          git config --global --add safe.directory "$(pwd)"
-
-      - name: Apply Release Patch
-        shell: bash
-        run: |
-          git am --committer-date-is-author-date salt-${{ inputs.salt-version }}.patch
-          rm salt-${{ inputs.salt-version }}.patch
-
       - name: Get Python Version
         id: get-python-version
         uses: ./.github/actions/get-python-version
@@ -61,6 +48,14 @@ jobs:
       - name: Setup Python Tools Scripts
         id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Configure Git
+        run: |
+          tools pkg configure-git
+
+      - name: Apply release patch
+        run: |
+          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
 
       - name: Cache Python Tools Docs Virtualenv
         id: tools-venvs-dependencies-cache

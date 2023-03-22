@@ -201,25 +201,20 @@ def root_url(salt_release):
         salt_path = "salt_rc/salt"
     else:
         salt_path = "salt"
-    if repo_type == "staging":
-        salt_repo_user = os.environ.get("SALT_REPO_USER")
-        if salt_repo_user:
-            log.warning(
-                "SALT_REPO_USER: %s",
-                salt_repo_user[0]
-                + "*" * (len(salt_repo_user) - 2)
-                + salt_repo_user[-1],
-            )
-        salt_repo_pass = os.environ.get("SALT_REPO_PASS")
-        if salt_repo_pass:
-            log.warning(
-                "SALT_REPO_PASS: %s",
-                salt_repo_pass[0]
-                + "*" * (len(salt_repo_pass) - 2)
-                + salt_repo_pass[-1],
-            )
-        if salt_repo_user and salt_repo_pass:
-            repo_domain = f"{salt_repo_user}:{salt_repo_pass}@{repo_domain}"
+    salt_repo_user = os.environ.get("SALT_REPO_USER")
+    if salt_repo_user:
+        log.warning(
+            "SALT_REPO_USER: %s",
+            salt_repo_user[0] + "*" * (len(salt_repo_user) - 2) + salt_repo_user[-1],
+        )
+    salt_repo_pass = os.environ.get("SALT_REPO_PASS")
+    if salt_repo_pass:
+        log.warning(
+            "SALT_REPO_PASS: %s",
+            salt_repo_pass[0] + "*" * (len(salt_repo_pass) - 2) + salt_repo_pass[-1],
+        )
+    if salt_repo_user and salt_repo_pass:
+        repo_domain = f"{salt_repo_user}:{salt_repo_pass}@{repo_domain}"
     _root_url = f"https://{repo_domain}/{salt_path}/py3"
     log.info("Repository Root URL: %s", _root_url)
     return _root_url
