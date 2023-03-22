@@ -524,6 +524,7 @@ class AsyncReqMessageClient:
             # The python interpreter has nuked most attributes already
             return
         else:
+            teardown = False
             self._closing = True
             if hasattr(self, "stream") and self.stream is not None:
                 if ZMQ_VERSION_INFO < (14, 3, 0):
@@ -535,10 +536,16 @@ class AsyncReqMessageClient:
                     self.stream.socket = None
                     self.socket.close()
                 else:
-                    self.stream.close(1)
+                    try:
+                        self.stream.close(1)
+                    except ImportError:
+                        # On teardown of python, this can sometimes throw and ImportError
+                        # because sys.meta_path turns to None
+                        teardown = True
                     self.socket = None
                 self.stream = None
-            if self.context.closed is False:
+            if self.context.closed is False and not teardown:
+                # This hangs if closing the stream causes an import error
                 self.context.term()
 
     def _init_socket(self):
