@@ -128,7 +128,6 @@ def test_options_absent():
         comt = "No anomaly detected"
         ret.update({"comment": comt, "result": True})
         assert ini_manage.options_absent(name) == ret
-    original = {"Tables": {"key1": "1", "key2": "2", "key3": "3", "key4": "4"}}
     sections = {"Tables": ["key2", "key3"]}
     changes = {"Tables": {"key2": "2", "key3": "3"}}
     with patch.dict(
