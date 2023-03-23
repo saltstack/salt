@@ -206,7 +206,7 @@ following the Filesystem Hierarchy Standard (FHS) might set it to
     moved into the master cachedir (on most platforms,
     ``/var/cache/salt/master/extmods``).
 
-Directory wehre custom modules are synced to. This directory can contain
+Directory where custom modules are synced to. This directory can contain
 subdirectories for each of Salt's module types such as ``runners``,
 ``output``, ``wheel``, ``modules``, ``states``, ``returners``, ``engines``,
 ``utils``, etc.  This path is appended to :conf_master:`root_dir`.
