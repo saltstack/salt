@@ -1205,7 +1205,7 @@ def test_certificate_managed_chain_change(
     if cert_args["encoding"].startswith("pkcs7"):
         cert = cert[0]
     elif cert_args["encoding"] == "pkcs12":
-        if CRYPTOGRAPHY_VERSION[0] == 36:
+        if CRYPTOGRAPHY_VERSION[0] >= 36:
             # it seems (serial number) parsing of pkcs12 certificates is broken (?) in that release
             return
         cert = cert.cert.certificate
@@ -2456,7 +2456,7 @@ def test_certificate_managed_should_not_fail_with_removed_args(
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
-    with pytest.deprecated_call():
+    with pytest.warns(DeprecationWarning):
         ret = x509.certificate_managed(**cert_args, **arg)
     assert ret.result is True
     cert = _get_cert(cert_args["name"])
@@ -2469,7 +2469,7 @@ def test_certificate_managed_warns_about_algorithm_renaming(
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
-    with pytest.deprecated_call():
+    with pytest.warns(DeprecationWarning):
         ret = x509.certificate_managed(**cert_args, algorithm="sha512")
     assert ret.result is True
     cert = _get_cert(cert_args["name"])
@@ -2483,7 +2483,7 @@ def test_certificate_managed_warns_about_long_name_attributes(
     cert_args["days_remaining"] = 7
     cert_args["commonName"] = "success"
     cert_args["private_key"] = rsa_privkey
-    with pytest.deprecated_call():
+    with pytest.warns(DeprecationWarning):
         ret = x509.certificate_managed(**cert_args)
     assert ret.result is True
     cert = _get_cert(cert_args["name"])
@@ -2495,7 +2495,7 @@ def test_certificate_managed_warns_about_long_extensions(x509, cert_args, rsa_pr
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
-    with pytest.deprecated_call():
+    with pytest.warns(DeprecationWarning):
         ret = x509.certificate_managed(**cert_args)
     assert ret.result is True
     cert = _get_cert(cert_args["name"])
@@ -2508,7 +2508,7 @@ def test_certificate_managed_warns_about_long_extensions(x509, cert_args, rsa_pr
 
 @pytest.mark.parametrize("arg", [{"version": 1}, {"text": True}])
 def test_csr_managed_should_not_fail_with_removed_args(x509, arg, csr_args):
-    with pytest.deprecated_call():
+    with pytest.warns(DeprecationWarning):
         ret = x509.csr_managed(**csr_args, **arg)
     assert ret.result is True
     csr = _get_csr(csr_args["name"])
@@ -2516,7 +2516,7 @@ def test_csr_managed_should_not_fail_with_removed_args(x509, arg, csr_args):
 
 
 def test_csr_managed_warns_about_algorithm_renaming(x509, csr_args):
-    with pytest.deprecated_call():
+    with pytest.warns(DeprecationWarning):
         ret = x509.csr_managed(**csr_args, algorithm="sha512")
     assert ret.result is True
     csr = _get_csr(csr_args["name"])
@@ -2525,7 +2525,7 @@ def test_csr_managed_warns_about_algorithm_renaming(x509, csr_args):
 
 def test_csr_managed_warns_about_long_name_attributes(x509, csr_args):
     csr_args.pop("CN", None)
-    with pytest.deprecated_call():
+    with pytest.warns(DeprecationWarning):
         ret = x509.csr_managed(**csr_args, commonName="deprecated_yo")
     assert ret.result is True
     csr = _get_csr(csr_args["name"])
@@ -2534,7 +2534,7 @@ def test_csr_managed_warns_about_long_name_attributes(x509, csr_args):
 
 def test_csr_managed_warns_about_long_extensions(x509, csr_args):
     csr_args["X509v3 Basic Constraints"] = "critical CA:FALSE"
-    with pytest.deprecated_call():
+    with pytest.warns(DeprecationWarning):
         ret = x509.csr_managed(**csr_args)
     assert ret.result is True
     csr = _get_csr(csr_args["name"])
@@ -2549,7 +2549,7 @@ def test_csr_managed_warns_about_long_extensions(x509, csr_args):
 def test_crl_managed_should_not_fail_with_removed_args(x509, arg, crl_args):
     crl_args["days_remaining"] = 3
     crl_args["days_valid"] = 7
-    with pytest.deprecated_call():
+    with pytest.warns(DeprecationWarning):
         ret = x509.crl_managed(**crl_args, **arg)
     assert ret.result is True
     crl = _get_crl(crl_args["name"])
@@ -2564,7 +2564,7 @@ def test_crl_managed_should_recognize_old_style_revoked(x509, crl_args, crl_revo
     crl_args["revoked"] = revoked
     crl_args["days_remaining"] = 3
     crl_args["days_valid"] = 7
-    with pytest.deprecated_call():
+    with pytest.warns(DeprecationWarning):
         ret = x509.crl_managed(**crl_args)
     assert ret.result is True
     crl = _get_crl(crl_args["name"])
@@ -2587,7 +2587,7 @@ def test_crl_managed_should_recognize_old_style_revoked_for_change_detection(
     crl_args["revoked"] = revoked
     crl_args["days_remaining"] = 3
     crl_args["days_valid"] = 7
-    with pytest.deprecated_call():
+    with pytest.warns(DeprecationWarning):
         ret = x509.crl_managed(**crl_args)
     assert ret.result is True
     assert not ret.changes
@@ -2598,7 +2598,7 @@ def test_crl_managed_should_recognize_old_style_reason(x509, crl_args):
     crl_args["revoked"] = revoked
     crl_args["days_remaining"] = 3
     crl_args["days_valid"] = 7
-    with pytest.deprecated_call():
+    with pytest.warns(DeprecationWarning):
         ret = x509.crl_managed(**crl_args)
     assert ret.result is True
     crl = _get_crl(crl_args["name"])
@@ -2614,14 +2614,14 @@ def test_crl_managed_should_recognize_old_style_reason(x509, crl_args):
     "arg", [{"cipher": "aes_256_cbc"}, {"verbose": True}, {"text": True}]
 )
 def test_private_key_managed_should_not_fail_with_removed_args(x509, arg, pk_args):
-    with pytest.deprecated_call():
+    with pytest.warns(DeprecationWarning):
         ret = x509.private_key_managed(**pk_args, **arg)
     assert ret.result is True
     assert _get_privkey(pk_args["name"])
 
 
 def test_private_key_managed_warns_about_bits_renaming(x509, pk_args):
-    with pytest.deprecated_call():
+    with pytest.warns(DeprecationWarning):
         ret = x509.private_key_managed(**pk_args, bits=3072)
     assert ret.result is True
     pk = _get_privkey(pk_args["name"])
