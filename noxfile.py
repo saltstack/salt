@@ -13,12 +13,10 @@ import os
 import pathlib
 import shutil
 import sqlite3
-import stat
 import subprocess
 import sys
 import tarfile
 import tempfile
-import textwrap
 
 import nox.command
 
@@ -1207,7 +1205,42 @@ def decompress_dependencies(session):
         )
 
     session_run_always(session, "tar", "xpf", nox_dependencies_tarball)
-    nox_dependencies_tarball_path.unlink()
+    if os.environ.get("DELETE_NOX_ARCHIVE", "0") == "1":
+        nox_dependencies_tarball_path.unlink()
+
+    session.log("Finding broken 'python' symlinks under '.nox/' ...")
+    for dirname in os.scandir(REPO_ROOT / ".nox"):
+        if not IS_WINDOWS:
+            scan_path = REPO_ROOT.joinpath(".nox", dirname, "bin")
+        else:
+            scan_path = REPO_ROOT.joinpath(".nox", dirname, "Scripts")
+        script_paths = {str(p): p for p in os.scandir(scan_path)}
+        for key in sorted(script_paths):
+            path = script_paths[key]
+            if not path.is_symlink():
+                continue
+            broken_link = pathlib.Path(path)
+            resolved_link = os.readlink(path)
+            if not os.path.isabs(resolved_link):
+                # Relative symlinks, resolve them
+                resolved_link = os.path.join(scan_path, resolved_link)
+            if not os.path.exists(resolved_link):
+                session.log("The symlink %r looks to be broken", resolved_link)
+                # This is a broken link, fix it
+                resolved_link_suffix = resolved_link.split(
+                    f"artifacts{os.sep}salt{os.sep}"
+                )[-1]
+                fixed_link = REPO_ROOT.joinpath(
+                    "artifacts", "salt", resolved_link_suffix
+                )
+                session.log(
+                    "Fixing broken symlink in nox virtualenv %r, from %r to %r",
+                    dirname.name,
+                    resolved_link,
+                    str(fixed_link.relative_to(REPO_ROOT)),
+                )
+                broken_link.unlink()
+                broken_link.symlink_to(fixed_link)
 
 
 @nox.session(python=False, name="compress-dependencies")
@@ -1228,26 +1261,6 @@ def compress_dependencies(session):
             session, f"Found existing {nox_dependencies_tarball}. Deleting it."
         )
         nox_dependencies_tarball_path.unlink()
-
-    if not IS_WINDOWS:
-        session.log(f"Finding 'python' symlinks under '{REPO_ROOT / '.nox'}' ...")
-        script = """\
-        #!/bin/sh
-        SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-        PYTHON_EXECUTABLE=$(realpath $SCRIPT_DIR/../../../artifacts/salt/bin/python3)
-        exec "$PYTHON_EXECUTABLE" "$@"
-        """
-        for path in REPO_ROOT.joinpath(".nox").rglob("**/bin/python"):
-            if not path.is_symlink():
-                continue
-            if path.resolve() != ONEDIR_PYTHON_PATH.resolve():
-                continue
-            session.log(
-                f"Replacing {path} with a script which allows the nox virualenv to be relocatable..."
-            )
-            path.unlink()
-            path.write_text(textwrap.dedent(script).strip() + "\n")
-            path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
     session_run_always(
         session,
