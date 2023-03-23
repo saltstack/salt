@@ -27,7 +27,12 @@ jobs:
       image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-11
 
     steps:
+      # Checkout here so we can easily use custom actions
       - uses: actions/checkout@v3
+
+      # Checkout here for the build process
+      - name: Checkout in build directory
+        uses: actions/checkout@v3
         with:
           path:
             pkgs/checkout/
@@ -38,38 +43,38 @@ jobs:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: pkgs/checkout/artifacts/
 
-      - name: Download System Dependencies
-        run: |
-          apt update
-          apt install -y python3 python3-venv python3-pip build-essential devscripts debhelper bash-completion git
-
       - name: Download Release Patch
         uses: actions/download-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}.patch
           path: pkgs/checkout/
 
-      - name: Configure Git
-        shell: bash
-        run: |
-          git config --global user.name "Salt Project Packaging"
-          git config --global user.email saltproject-packaging@vmware.com
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cwd: pkgs/checkout/
 
-      - name: Apply Release Patch
-        shell: bash
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+          cwd: pkgs/checkout/
+
+      - name: Configure Git
+        working-directory: pkgs/checkout/
         run: |
-          cd pkgs/checkout/
-          git am --committer-date-is-author-date salt-${{ inputs.salt-version }}.patch
-          rm salt-${{ inputs.salt-version }}.patch
+          tools pkg configure-git
+
+      - name: Apply release patch
+        working-directory: pkgs/checkout/
+        run: |
+          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
 
       - name: Build Deb
-        env:
-          SALT_ONEDIR_ARCHIVE: "${{ github.workspace }}/pkgs/checkout/artifacts/salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz"
+        working-directory: pkgs/checkout/
         run: |
-          cd pkgs/checkout/
-          echo "${{ inputs.salt-version }}" > salt/_version.txt
-          ln -sf pkg/debian/ .
-          debuild -e SALT_ONEDIR_ARCHIVE -uc -us
+          tools pkg build deb --onedir salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
 
       - name: Cleanup
         run: |

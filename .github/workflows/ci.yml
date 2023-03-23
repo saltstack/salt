@@ -9,7 +9,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-3  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-5  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
 
 permissions:
@@ -393,7 +393,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.7.0"
+      relenv-version: "0.9.0"
       python-version-linux: "3.10.10"
       python-version-macos: "3.10.10"
       python-version-windows: "3.10.10"
@@ -411,7 +411,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.7.0"
+      relenv-version: "0.9.0"
       python-version-linux: "3.10.10"
       python-version-macos: "3.10.10"
       python-version-windows: "3.10.10"

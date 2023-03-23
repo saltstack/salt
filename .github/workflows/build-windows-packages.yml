@@ -41,16 +41,11 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip
+          path: artifacts/
 
-      - name: Decompress Onedir Zipfile
+      - name: Build Windows Packages
         run: |
-          py -3 -m zipfile -e salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip pkg/windows/
-          mv pkg/windows/salt pkg/windows/buildenv
-
-      - name: Build Package
-        shell: powershell
-        run: |
-          & pkg/windows/build.cmd -Architecture ${{ matrix.arch }} -Version ${{ inputs.salt-version }} -CICD -SkipInstall
+          tools pkg build windows --onedir salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }}
 
       - name: Upload ${{ matrix.arch }} Packages
         uses: actions/upload-artifact@v3

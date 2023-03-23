@@ -403,8 +403,9 @@ contextvars==2.4
     # via -r requirements/base.txt
 croniter==0.3.29 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-cryptography==3.3.2
+cryptography==39.0.2
     # via
+    #   -r requirements/static/pkg/linux.in
     #   adal
     #   ansible-core
     #   azure-cosmosdb-table
@@ -714,7 +715,7 @@ pymysql==1.0.2 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
 pynacl==1.3.0
     # via paramiko
-pyopenssl==19.1.0
+pyopenssl==23.0.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
@@ -866,7 +867,6 @@ six==1.16.0
     #   bcrypt
     #   cassandra-driver
     #   cheroot
-    #   cryptography
     #   etcd3-py
     #   genshi
     #   geomet
@@ -881,7 +881,6 @@ six==1.16.0
     #   ncclient
     #   paramiko
     #   pynacl
-    #   pyopenssl
     #   python-consul
     #   python-dateutil
     #   pyvmomi
