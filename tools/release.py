@@ -1,7 +1,7 @@
 """
 These commands are used to release Salt.
 """
-# pylint: disable=resource-leakage,broad-except
+# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
 import logging
@@ -63,6 +63,8 @@ def upload_artifacts(ctx: Context, salt_version: str, artifacts_path: pathlib.Pa
         if "Contents" in ret:
             objects = []
             for entry in ret["Contents"]:
+                if entry["Key"].endswith(".release-backup-done"):
+                    continue
                 objects.append({"Key": entry["Key"]})
             to_delete_paths.extend(objects)
     except ClientError as exc:
