@@ -1199,7 +1199,10 @@ class VM:
         """
         Decompress nox.<vm-name>.tar.* if it exists in the VM
         """
-        return self.run_nox("decompress-dependencies", session_args=[self.name])
+        env = {"DELETE_NOX_ARCHIVE": "1"}
+        return self.run_nox(
+            "decompress-dependencies", session_args=[self.name], env=env
+        )
 
     def download_dependencies(self):
         """
