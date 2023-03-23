@@ -13,10 +13,12 @@ import os
 import pathlib
 import shutil
 import sqlite3
+import stat
 import subprocess
 import sys
 import tarfile
 import tempfile
+import textwrap
 
 import nox.command
 
@@ -1151,7 +1153,7 @@ def ci_test_tcp(session):
 @nox.session(
     python=str(ONEDIR_PYTHON_PATH),
     name="ci-test-onedir",
-    venv_params=["--system-site-packages", "--copies"],
+    venv_params=["--system-site-packages"],
 )
 def ci_test_onedir(session):
     if not ONEDIR_ARTIFACT_PATH.exists():
@@ -1167,7 +1169,7 @@ def ci_test_onedir(session):
 @nox.session(
     python=str(ONEDIR_PYTHON_PATH),
     name="ci-test-onedir-tcp",
-    venv_params=["--system-site-packages", "--copies"],
+    venv_params=["--system-site-packages"],
 )
 def ci_test_onedir_tcp(session):
     if not ONEDIR_ARTIFACT_PATH.exists():
@@ -1226,6 +1228,26 @@ def compress_dependencies(session):
             session, f"Found existing {nox_dependencies_tarball}. Deleting it."
         )
         nox_dependencies_tarball_path.unlink()
+
+    if not IS_WINDOWS:
+        session.log(f"Finding 'python' symlinks under '{REPO_ROOT / '.nox'}' ...")
+        script = """\
+        #!/bin/sh
+        SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+        PYTHON_EXECUTABLE=$(realpath $SCRIPT_DIR/../../../artifacts/salt/bin/python3)
+        exec "$PYTHON_EXECUTABLE" "$@"
+        """
+        for path in REPO_ROOT.joinpath(".nox").rglob("**/bin/python"):
+            if not path.is_symlink():
+                continue
+            if path.resolve() != ONEDIR_PYTHON_PATH.resolve():
+                continue
+            session.log(
+                f"Replacing {path} with a script which allows the nox virualenv to be relocatable..."
+            )
+            path.unlink()
+            path.write_text(textwrap.dedent(script).strip() + "\n")
+            path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
     session_run_always(
         session,
@@ -1695,7 +1717,7 @@ def build(session):
 @nox.session(
     python=str(ONEDIR_PYTHON_PATH),
     name="test-pkgs-onedir",
-    venv_params=["--system-site-packages", "--copies"],
+    venv_params=["--system-site-packages"],
 )
 def test_pkgs_onedir(session):
     if not ONEDIR_ARTIFACT_PATH.exists():
