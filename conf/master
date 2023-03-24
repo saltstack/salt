@@ -60,7 +60,7 @@
 #
 #cachedir: /var/cache/salt/master
 
-# Directory where custom modules synced to This directory can contain
+# Directory where custom modules sync to. This directory can contain
 # subdirectories for each of Salt's module types such as "runners",
 # "output", "wheel", "modules", "states", "returners", "engines",
 # "utils", etc.
