@@ -90,6 +90,12 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.generate-matrix.outputs.arch-matrix-include) }}
+    env:
+      GITHUB_WORKSPACE: "c://Windows/Temp"
+    defaults:
+      run:
+        working-directory: "c://Windows/Temp"
+
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
@@ -183,6 +189,11 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.generate-matrix.outputs.test-matrix-include) }}
+    env:
+      GITHUB_WORKSPACE: "c://Windows/Temp"
+    defaults:
+      run:
+        working-directory: "c://Windows/Temp"
 
     steps:
       - name: Checkout Source Code
