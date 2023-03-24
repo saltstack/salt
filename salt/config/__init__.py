@@ -987,6 +987,10 @@ VALID_OPTS = immutabletypes.freeze(
         "pass_gnupghome": str,
         # pass renderer: Set PASSWORD_STORE_DIR env for Pass
         "pass_dir": str,
+        # Maintenence process restart interval
+        "maintenance_interval": int,
+        # Fileserver process restart interval
+        "fileserver_interval": int,
     }
 )
 
@@ -1635,6 +1639,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pass_gnupghome": "",
         "pass_dir": "",
         "netapi_enable_clients": [],
+        "maintenence_interval": 3600,
+        "fileserver_interval": 3600,
     }
 )
 
