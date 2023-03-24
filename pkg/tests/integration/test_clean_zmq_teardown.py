@@ -44,7 +44,7 @@ def run():
     }
     """
     )
-    base_tree = pathlib.Path(salt_master.config["file_roots"][0])
+    base_tree = pathlib.Path(salt_master.config["file_roots"]["base"][0])
     breaks_tree = base_tree / "breaks"
     breaks_tree.mkdir(exist_ok=True)
     (breaks_tree / "init.sls").write_text(init_sls)
