@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture(scope="module")
 def timeout():
-    return os.environ.get("SALT_CI_REAUTH_MASTER_WAIT", 100)
+    return int(os.environ.get("SALT_CI_REAUTH_MASTER_WAIT", 100))
 
 
 def test_reauth(salt_cli, salt_minion, salt_master, timeout, event_listener):
@@ -29,6 +29,8 @@ def test_reauth(salt_cli, salt_minion, salt_master, timeout, event_listener):
     )
     log.debug("Restarting the reauth minion")
 
+    # We need to have the minion attempting to start in a different thread
+    # when we try to start the master
     def minion_func():
         start = time.time()
         with salt_minion.started(start_timeout=timeout * 2):
