@@ -1365,6 +1365,18 @@ def normalize_name(name):
     """
     Nothing to do on Windows. We need this function so that Salt doesn't go
     through every module looking for ``pkg.normalize_name``.
+
+    Args:
+        name (str): The name of the package
+
+    Returns:
+        str: The name of the package
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.normalize_name git
     """
     return name
 
