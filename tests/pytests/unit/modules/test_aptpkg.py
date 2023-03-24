@@ -434,6 +434,45 @@ def test_install(install_var):
         kwargs = {"force_conf_new": True}
         assert aptpkg.install(name="tmux", **kwargs) == install_var
 
+    patch_kwargs = {
+        "__salt__": {
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=({"tmux": None}, "repository")
+            ),
+            "pkg_resource.sort_pkglist": MagicMock(),
+            "pkg_resource.stringify": MagicMock(),
+            "cmd.run_stdout": MagicMock(return_value="install ok installed python3\n"),
+        }
+    }
+    mock_call_apt_ret = {
+        "pid": 48174,
+        "retcode": 0,
+        "stdout": "Reading package lists...\nBuilding dependency tree...\nReading state information...\nvim is already the newest version (2:8.2.3995-1ubuntu2.4).\n",
+        "stderr": "Running scope as unit: run-rc2803bccd0b445a5b00788cd74b4e635.scope",
+    }
+    mock_call_apt = MagicMock(return_value=mock_call_apt_ret)
+    expected_call = call(
+        [
+            "apt-get",
+            "-q",
+            "-y",
+            "-o",
+            "DPkg::Options::=--force-confold",
+            "-o",
+            "DPkg::Options::=--force-confdef",
+            "install",
+            "tmux",
+        ],
+        scope=True,
+    )
+    with patch.multiple(aptpkg, **patch_kwargs):
+        with patch(
+            "salt.modules.aptpkg.get_selections", MagicMock(return_value={"hold": []})
+        ):
+            with patch("salt.modules.aptpkg._call_apt", mock_call_apt):
+                ret = aptpkg.install(name="tmux", scope=True)
+                assert expected_call in mock_call_apt.mock_calls
+
 
 def test_remove(uninstall_var):
     """
