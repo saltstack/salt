@@ -21,7 +21,7 @@ on:
       relenv-version:
         required: false
         type: string
-        default: 0.9.0
+        default: 0.10.0
         description: The version of relenv to use
       python-version-linux:
         required: false
