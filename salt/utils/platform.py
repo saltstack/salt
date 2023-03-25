@@ -8,9 +8,18 @@ import platform
 import subprocess
 import sys
 
-from distro import linux_distribution
+import distro
 
 from salt.utils.decorators import memoize as real_memoize
+
+
+def linux_distribution(full_distribution_name=True):
+    """
+    Simple function to return information about the OS distribution (id_name, version, codename).
+    """
+    if full_distribution_name:
+        return distro.name(), distro.version(best=True), distro.codename()
+    return distro.id(), distro.version(best=True), distro.codename()
 
 
 @real_memoize

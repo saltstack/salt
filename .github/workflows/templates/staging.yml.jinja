@@ -4,7 +4,16 @@
 <%- set prepare_workflow_skip_pkg_test_suite = "${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}" %>
 <%- set gh_environment = "staging" %>
 <%- set prepare_actual_release = True %>
+<%- set skip_test_coverage_check = "true" %>
+<%- set skip_junit_reports_check = "true" %>
 <%- extends 'nightly.yml.jinja' %>
+
+<%- block name %>
+
+name: <{ workflow_name }>
+run-name: "<{ workflow_name }> (branch: ${{ github.ref_name }}; version: ${{ inputs.salt-version }})"
+
+<%- endblock name %>
 
 <%- block on %>
 
@@ -60,16 +69,13 @@ concurrency:
 
       - name: Check Branch
         run: |
-
-          {#-
-              Should we allow other branches?
-          #}
           echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
-          if [ "${{ github.ref_name }}" != "master" ]; then
+          if [ "${{ contains(fromJSON('<{ release_branches|tojson }>'), github.ref_name) }}" != "true" ]; then
               echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
+              echo "Allowed branches: <{ release_branches|join(', ') }>"
               exit 1
           else
-              echo "Allowed"
+              echo "Allowed to release from branch ${{ github.ref_name }}"
           fi
 
 <%- endblock pre_jobs %>
@@ -92,6 +98,12 @@ concurrency:
       - repo-<{ gh_environment }>
     steps:
       - uses: actions/checkout@v3
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -134,13 +146,14 @@ concurrency:
         run: |
           tools release upload-artifacts ${{ needs.prepare-workflow.outputs.salt-version }} artifacts/release
 
-  <%- if includes.get("test-pkg-uploads", True) %>
-  <%- include "test-pkg-repo-uploads.yml.jinja" %>
+  <%- if includes.get("test-pkg-downloads", True) %>
+  <%- include "test-pkg-repo-downloads.yml.jinja" %>
   <%- endif %>
 
   publish-pypi:
     <%- do conclusion_needs.append('publish-pypi') %>
     name: Publish to PyPi(test)
+    if: ${{ github.event.repository.fork != true }}
     needs:
       - prepare-workflow
       - upload-release-artifacts
