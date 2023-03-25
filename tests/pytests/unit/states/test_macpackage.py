@@ -171,7 +171,7 @@ def test_installed_dmg():
         "name": "/path/to/file.dmg",
         "result": True,
     }
-    
+
     mount_mock = MagicMock(return_value=["success", "/tmp/dmg-X"])
     unmount_mock = MagicMock(return_value={"retcode": 0})
     installed_mock = MagicMock(return_value=["com.apple.id"])
@@ -322,9 +322,7 @@ def test_installed_app_dmg():
         cmd_mock.assert_called_once_with(
             "ls -d *.app", python_shell=True, cwd="/tmp/dmg-X"
         )
-        install_mock.assert_called_once_with(
-            "/tmp/dmg-X/file.app", "/Applications/"
-        )
+        install_mock.assert_called_once_with("/tmp/dmg-X/file.app", "/Applications/")
         assert out == expected
 
 
@@ -404,7 +402,6 @@ def test_installed_pkg_only_if_pass():
     assert out == expected
 
 
-
 @pytest.mark.skip_on_windows(reason="Not a Windows test")
 def test_unmounted_dir_cleans_up():
     """
@@ -415,7 +412,7 @@ def test_unmounted_dir_cleans_up():
         "comment": "/path/to/file.dmg installed",
         "name": "/path/to/file.dmg",
         "result": True,
-    }    
+    }
     rmtree_mock = MagicMock()
 
     with patch.dict(
@@ -430,7 +427,7 @@ def test_unmounted_dir_cleans_up():
     ):
         with patch("shutil.rmtree", rmtree_mock):
             out = macpackage.installed("/path/to/file.dmg", dmg=True)
-    rmtree_mock.assert_called_once_with("/path/to/file.dmg")
+    rmtree_mock.assert_called_once_with("/tmp/dmg-X")
     assert out == expected
 
 
@@ -458,5 +455,5 @@ def test_failed_unmount_leaves_dir():
         },
     ):
         with patch("shutil.rmtree", rmtree_mock):
-            out = macpackage.installed("/path/to/file.dmg", dmg=True)
+            macpackage.installed("/path/to/file.dmg", dmg=True)
     rmtree_mock.assert_not_called()
