@@ -95,7 +95,7 @@ How to build deb packages
 
     .. code-block:: bash
 
-       apt install -y python3 python3-venv python3-pip build-essential devscripts debhelper bash-completion git
+       apt install -y bash-completion build-essential debhelper devscripts git patchelf python3 python3-pip python3-venv rustc
 
 #. (Optional) To build a specific Salt version, you will need to install tools and changelog dependencies:
 
