@@ -116,7 +116,7 @@ def test_mount_expands_user():
     cmd_mock = MagicMock()
     temp_mock = MagicMock(return_value="dmg-ABCDEF")
     with patch.dict(macpackage.__salt__, {"cmd.run": cmd_mock, "temp.dir": temp_mock}):
-        with patch("os.path.expanduser", MagicMock(return_value="/Users/foobar/")):
+        with patch("os.path.expanduser", MagicMock(return_value="/Users/foobar/path/to/file.dmg")):
             macpackage.mount("~/path/to/file.dmg")
     temp_mock.assert_called_once_with(prefix="dmg-")
     cmd_mock.assert_called_once_with(
