@@ -27,7 +27,7 @@ def test_maintenance_duration():
     """
     opts = {
         "loop_interval": 10,
-        "maintenence_interval": 1,
+        "maintenance_interval": 1,
         "cachedir": "/tmp",
         "sock_dir": "/tmp",
         "maintenance_niceness": 1,
