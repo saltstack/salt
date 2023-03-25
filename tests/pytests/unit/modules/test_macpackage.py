@@ -109,6 +109,22 @@ def test_mount():
         )
 
 
+def test_mount_expands_user():
+    """
+    Test mounting an dmg file to a temporary location
+    """
+    cmd_mock = MagicMock()
+    temp_mock = MagicMock(return_value="dmg-ABCDEF")
+    with patch.dict(macpackage.__salt__, {"cmd.run": cmd_mock, "temp.dir": temp_mock}):
+        with patch("os.path.expanduser", MagicMock(return_value="/Users/foobar/")):
+            macpackage.mount("~/path/to/file.dmg")
+    temp_mock.assert_called_once_with(prefix="dmg-")
+    cmd_mock.assert_called_once_with(
+        "hdiutil attach -readonly -nobrowse -mountpoint "
+        'dmg-ABCDEF "/Users/foobar/path/to/file.dmg"'
+    )
+
+
 def test_unmount():
     """
     Test Unmounting an dmg file to a temporary location
