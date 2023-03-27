@@ -1460,6 +1460,12 @@ class RemoteClient(Client):
             load["tok"] = self.auth.gen_token(b"salt")
         return self.channel.send(load)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
+
 
 class FSClient(RemoteClient):
     """
