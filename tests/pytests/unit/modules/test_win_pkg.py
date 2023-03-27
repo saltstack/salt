@@ -636,8 +636,10 @@ def test_pkg_remove_minion_error_salt():
     (
         ("2.24.0", "2.23.0.windows.1", 1),
         ("2.23.0.windows.2", "2.23.0.windows.1", 1),
-    )
+    ),
 )
 def test__reverse_cmp_pkg_versions(v1, v2, expected):
     result = win_pkg._reverse_cmp_pkg_versions(v1, v2)
-    assert result == expected, "cmp({}, {}) should be {}, got {}".format(v1, v2, wanted, res)
+    assert result == expected, "cmp({}, {}) should be {}, got {}".format(
+        v1, v2, expected, result
+    )
