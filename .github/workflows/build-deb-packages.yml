@@ -44,6 +44,7 @@ jobs:
           path: pkgs/checkout/artifacts/
 
       - name: Download Release Patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         uses: actions/download-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}.patch
@@ -62,11 +63,13 @@ jobs:
           cwd: pkgs/checkout/
 
       - name: Configure Git
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         working-directory: pkgs/checkout/
         run: |
           tools pkg configure-git
 
       - name: Apply release patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         working-directory: pkgs/checkout/
         run: |
           tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
