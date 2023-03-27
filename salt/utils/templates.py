@@ -420,19 +420,19 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             else:
                 log.warning("Jinja2 environment %s is not recognized", k)
 
-    def parse_jinja_file_opts(tmplstr: str, env: str):
+    def parse_jinja_file_opts(tmplstr: str, optname: str) -> str:
         # Same Jinja override prefix as Ansible
         # Instead of complex parsing logic we use JSON as config format
         JINJA2_OVERRIDE = "#jinja2:"
 
         # Template string split into list of string
-        tmpllines = tmplstr.splitlines()
+        tmpllines: list[str] = tmplstr.splitlines()
         # Lines to be removed, we do this to enable usage of this feature in
         # any target language/format not everything supports # as comments.
-        removelines: list[str] = list()
+        removelines: list[int] = list()
 
         # Loop starting lines beginning with # or are empty
-        for line in tmpllines:
+        for idx, line in enumerate(tmpllines):
             # We only support one-line JSON dicts.
             if not line.startswith(JINJA2_OVERRIDE):
                 continue
@@ -443,16 +443,16 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 # Try parsing the remainder of the line as JSON
                 jdata = json.loads(jstring)
                 # JSON parsing succeeded, pass dict to helper injecting options to renderer
-                opt_jinja_env_helper(jdata, env)
+                opt_jinja_env_helper(jdata, optname)
                 # Add line for removal
-                removelines.append(line)
+                removelines.append(idx)
             except:
                 # Should we log more here?
                 log.warning("Unable to parse Jinja2 options string")
 
         # Remove jinja2 option line(s)
         for line in removelines:
-            tmpllines.remove(line)
+            tmpllines.pop(line)
 
         # Reassemble lines array into template string
         return str(newline).join(tmpllines)
@@ -460,13 +460,12 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     optname: str = "jinja_env"
     renderoptions: dict[str, str] = opt_jinja_env
 
-
     if "sls" in context and context["sls"] != "":
         optname = "jinja_sls_env"
         renderoptions = opt_jinja_sls_env
 
     # Parse configured options into Jinja rendering options
-    opt_jinja_env_helper(renderoptions, "jinja_env")
+    opt_jinja_env_helper(renderoptions, optname)
     # Parse template, look for jinja rendering options to set
     # Update template string, we remove jinja option lines from template
     tmplstr = parse_jinja_file_opts(tmplstr, "jinja_fileopts")
