@@ -13,6 +13,19 @@ pytestmark = [
 log = logging.getLogger(__name__)
 
 
+def minion_func(salt_minion, event_listener, salt_master, timeout):
+    start = time.time()
+    with salt_minion.started(start_timeout=timeout * 2, max_start_attempts=1):
+        new_start = time.time()
+        while time.time() < new_start + (timeout * 2):
+            if event_listener.get_events(
+                [(salt_master.id, f"salt/job/*/ret/{salt_minion.id}")],
+                after_time=start,
+            ):
+                break
+            time.sleep(5)
+
+
 @pytest.fixture(scope="module")
 def timeout():
     return int(os.environ.get("SALT_CI_REAUTH_MASTER_WAIT", 150))
@@ -31,19 +44,9 @@ def test_reauth(salt_cli, salt_minion, salt_master, timeout, event_listener):
 
     # We need to have the minion attempting to start in a different process
     # when we try to start the master
-    def minion_func():
-        start = time.time()
-        with salt_minion.started(start_timeout=timeout * 2, max_start_attempts=1):
-            new_start = time.time()
-            while time.time() < new_start + (timeout * 2):
-                if event_listener.get_events(
-                    [(salt_master.id, f"salt/job/*/ret/{salt_minion.id}")],
-                    after_time=start,
-                ):
-                    break
-                time.sleep(5)
-
-    minion_proc = multiprocessing.Process(target=minion_func)
+    minion_proc = multiprocessing.Process(
+        target=minion_func, args=(salt_minion, event_listener, salt_master, timeout)
+    )
     minion_proc.start()
     time.sleep(timeout)
     log.debug("Restarting the reauth master")
