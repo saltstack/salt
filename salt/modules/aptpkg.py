@@ -1003,7 +1003,7 @@ def install(
             unhold(pkgs=to_unhold)
 
         for cmd in cmds:
-            out = _call_apt(cmd)
+            out = _call_apt(cmd, **kwargs)
             if out["retcode"] != 0 and out["stderr"]:
                 errors.append(out["stderr"])
 
