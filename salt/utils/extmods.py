@@ -81,15 +81,16 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
                 cache = []
                 log.info("Loading cache from %s, for %s", source, sub_env)
                 # Grab only the desired files (.py, .pyx, .so)
-                cache.extend(
-                    fileclient.cache_dir(
-                        source,
-                        sub_env,
-                        include_empty=False,
-                        include_pat=r"E@\.(pyx?|so|zip)$",
-                        exclude_pat=None,
+                with fileclient:
+                    cache.extend(
+                        fileclient.cache_dir(
+                            source,
+                            sub_env,
+                            include_empty=False,
+                            include_pat=r"E@\.(pyx?|so|zip)$",
+                            exclude_pat=None,
+                        )
                     )
-                )
                 local_cache_dir = os.path.join(
                     opts["cachedir"], "files", sub_env, "_{}".format(form)
                 )
