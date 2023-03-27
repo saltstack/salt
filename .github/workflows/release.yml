@@ -188,7 +188,7 @@ jobs:
       - publish-repositories
     uses: ./.github/workflows/test-package-downloads-action-windows.yml
     with:
-      distro-slug: windows-latest
+      distro-slug: windows-2022
       platform: windows
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
