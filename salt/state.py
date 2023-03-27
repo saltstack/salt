@@ -2382,9 +2382,7 @@ class State:
                 if state_check_cmd not in self.states:
                     ret.update(self._run_check_cmd(low))
                 else:
-                    if "check_cmd" in state_func_sig.parameters:
-                        ret.update(self.states[state_check_cmd](low))
-                    else:
+                    if "check_cmd" not in state_func_sig.parameters:
                         ret.update(self._run_check_cmd(low))
         except Exception as exc:  # pylint: disable=broad-except
             log.debug(
