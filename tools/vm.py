@@ -272,6 +272,17 @@ def rsync(ctx: Context, name: str):
                 "--skip-code-coverage",
             ],
         },
+        "envvars": {
+            "action": "append",
+            "flags": [
+                "-E",
+                "--env",
+            ],
+            "help": (
+                "Environment variable name to forward when running tests. Example: "
+                "'-E VAR1 -E VAR2'."
+            ),
+        },
     }
 )
 def test(
@@ -284,6 +295,7 @@ def test(
     print_tests_selection: bool = False,
     print_system_info: bool = False,
     skip_code_coverage: bool = False,
+    envvars: list[str] = None,
 ):
     """
     Run test in the VM.
@@ -318,6 +330,12 @@ def test(
     if "photonos" in name:
         skip_known_failures = os.environ.get("SKIP_INITIAL_PHOTONOS_FAILURES", "1")
         env["SKIP_INITIAL_PHOTONOS_FAILURES"] = skip_known_failures
+    if envvars:
+        for key in envvars:
+            if key not in os.environ:
+                ctx.warn(f"Environment variable {key!r} not set. Not forwarding")
+                continue
+            env[key] = os.environ[key]
     returncode = vm.run_nox(
         nox_session=nox_session,
         session_args=nox_session_args,
@@ -352,6 +370,17 @@ def test(
                 "--skip-requirements-install",
             ],
         },
+        "envvars": {
+            "action": "append",
+            "flags": [
+                "-E",
+                "--env",
+            ],
+            "help": (
+                "Environment variable name to forward when running tests. Example: "
+                "'-E VAR1 -E VAR2'."
+            ),
+        },
     }
 )
 def testplan(
@@ -360,6 +389,7 @@ def testplan(
     nox_session_args: list[str] = None,
     nox_session: str = "ci-test-3",
     skip_requirements_install: bool = False,
+    envvars: list[str] = None,
 ):
     """
     Run test in the VM.
@@ -379,6 +409,12 @@ def testplan(
     if "photonos" in name:
         skip_known_failures = os.environ.get("SKIP_INITIAL_PHOTONOS_FAILURES", "1")
         env["SKIP_INITIAL_PHOTONOS_FAILURES"] = skip_known_failures
+    if envvars:
+        for key in envvars:
+            if key not in os.environ:
+                ctx.warn(f"Environment variable {key!r} not set. Not forwarding")
+                continue
+            env[key] = os.environ[key]
     returncode = vm.run_nox(
         nox_session=nox_session,
         session_args=nox_session_args,

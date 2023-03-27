@@ -33,16 +33,21 @@ on:
         type: string
         description: The onedir package name to use
         default: salt
-      skip-code-coverage:
-        required: false
-        type: boolean
-        description: Skip code coverage
-        default: false
       nox-session:
         required: false
         type: string
         description: The nox session to run
         default: test-pkgs-onedir
+      skip-code-coverage:
+        required: false
+        type: boolean
+        description: Skip code coverage
+        default: false
+      skip-junit-reports:
+        required: false
+        type: boolean
+        description: Skip Publishing JUnit Reports
+        default: false
       artifacts-from-workflow:
         required: false
         type: string
@@ -64,7 +69,10 @@ jobs:
 
   generate-matrix:
     name: Generate Package Test Matrix
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - linux
+      - x86_64
     outputs:
       arch-matrix-include: ${{ steps.generate-pkg-matrix.outputs.arch }}
       test-matrix-include: ${{ steps.generate-pkg-matrix.outputs.tests }}
@@ -84,18 +92,15 @@ jobs:
     name: Setup Test Dependencies
     needs:
       - generate-matrix
-    runs-on: ${{ inputs.distro-slug }}
+    runs-on:
+      - self-hosted
+      - linux
+      - bastion
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.generate-matrix.outputs.arch-matrix-include) }}
-    env:
-      GITHUB_WORKSPACE: "c://Windows/Temp"
-    defaults:
-      run:
-        working-directory: "c://Windows/Temp"
-
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
@@ -129,39 +134,61 @@ jobs:
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
-          py -3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ matrix.arch }}.tar.xz
 
-      - name: Set up Python ${{ inputs.python-version }}
+      - name: Setup Python Tools Scripts
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        uses: actions/setup-python@v4
-        with:
-          python-version: "${{ inputs.python-version }}"
-          update-environment: true
+        uses: ./.github/actions/setup-python-tools-scripts
 
-      - name: Install Nox
+      - name: Get Salt Project GitHub Actions Bot Environment
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          pip install 'nox==${{ env.NOX_VERSION }}'
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
+      - name: Start VM
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        id: spin-up-vm
+        run: |
+          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ inputs.distro-slug }}
+
+      - name: List Free Space
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
+
+      - name: Upload Checkout To VM
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm rsync ${{ inputs.distro-slug }}
 
       - name: Install Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
-        env:
-          PRINT_TEST_SELECTION: "0"
-          PRINT_SYSTEM_INFO: "0"
         run: |
-          nox --force-color --install-only -e ${{ inputs.nox-session }}
+          tools --timestamps vm install-dependencies --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }}
 
       - name: Cleanup .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          nox --force-color -e "pre-archive-cleanup(pkg=False)"
+          tools --timestamps vm pre-archive-cleanup ${{ inputs.distro-slug }}
 
       - name: Compress .nox Directory
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          nox --force-color -e compress-dependencies -- ${{ inputs.distro-slug }}
+          tools --timestamps vm compress-dependencies ${{ inputs.distro-slug }}
+
+      - name: Download Compressed .nox Directory
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm download-dependencies ${{ inputs.distro-slug }}
+
+      - name: Destroy VM
+        if: always() && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          tools --timestamps vm destroy ${{ inputs.distro-slug }}
 
       - name: Upload Onedir Tarball as an Artifact
         uses: actions/upload-artifact@v3
@@ -179,21 +206,19 @@ jobs:
 
   test:
     name: Test
-    runs-on: ${{ inputs.distro-slug }}
+    runs-on:
+      - self-hosted
+      - linux
+      - bastion
     environment: ${{ inputs.environment }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     needs:
-      - dependencies
       - generate-matrix
+      - dependencies
     strategy:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.generate-matrix.outputs.test-matrix-include) }}
-    env:
-      GITHUB_WORKSPACE: "c://Windows/Temp"
-    defaults:
-      run:
-        working-directory: "c://Windows/Temp"
 
     steps:
       - name: Checkout Source Code
@@ -203,24 +228,14 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ matrix.arch }}.tar.xz
-          path: artifacts
+          path: artifacts/
 
       - name: Decompress Onedir Tarball
         shell: bash
         run: |
-          py -3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
+          python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ matrix.arch }}.tar.xz
-
-      - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: "${{ inputs.python-version }}"
-          update-environment: true
-
-      - name: Install Nox
-        run: |
-          pip install 'nox==${{ env.NOX_VERSION }}'
 
       - name: Download cached nox.${{ inputs.distro-slug }}.tar.* for session ${{ inputs.nox-session }}
         uses: actions/cache@v3
@@ -228,33 +243,34 @@ jobs:
           path: nox.${{ inputs.distro-slug }}.tar.*
           key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ matrix.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
+      - name: Start VM
+        id: spin-up-vm
+        run: |
+          tools --timestamps vm create --environment "${SPB_ENVIRONMENT}" --retries=2 ${{ inputs.distro-slug }}
+
+      - name: List Free Space
+        run: |
+          tools --timestamps vm ssh ${{ inputs.distro-slug }} -- df -h || true
+
+      - name: Upload Checkout To VM
+        run: |
+          tools --timestamps vm rsync ${{ inputs.distro-slug }}
+
       - name: Decompress .nox Directory
         run: |
-          nox --force-color -e decompress-dependencies -- ${{ inputs.distro-slug }}
+          tools --timestamps vm decompress-dependencies ${{ inputs.distro-slug }}
 
       - name: Show System Info & Test Plan
         env:
-          SKIP_REQUIREMENTS_INSTALL: "1"
-          PRINT_TEST_SELECTION: "1"
-          PRINT_TEST_PLAN_ONLY: "1"
-          PRINT_SYSTEM_INFO: "1"
-          GITHUB_ACTIONS_PIPELINE: "1"
-          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
-          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
-          SALT_RELEASE: "${{ inputs.salt-version }}"
-        run: |
-          nox --force-color -e ${{ inputs.nox-session }} -- download-pkgs
-
-      - name: Run Package Download Tests
-        env:
-          SKIP_REQUIREMENTS_INSTALL: "1"
-          PRINT_TEST_SELECTION: "0"
-          PRINT_TEST_PLAN_ONLY: "0"
-          PRINT_SYSTEM_INFO: "0"
-          RERUN_FAILURES: "1"
-          GITHUB_ACTIONS_PIPELINE: "1"
-          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
-          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           INSTALL_TYPE: ${{ matrix.install_type }}
           SALT_RELEASE: "${{ inputs.salt-version }}"
           SALT_REPO_ARCH: ${{ matrix.install_arch }}
@@ -262,26 +278,53 @@ jobs:
           SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
           SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
           SALT_REPO_DOMAIN: ${{ vars.SALT_REPO_DOMAIN || ( inputs.environment == 'staging' && 'staging.repo.saltproject.io' || 'repo.saltproject.io') }}
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
         run: |
-          nox --force-color -e ${{ inputs.nox-session }} -- download-pkgs
+          tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
+          -E INSTALL_TYPE -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS -E SALT_REPO_DOMAIN \
+            --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} -- download-pkgs
+
+      - name: Run Package Download Tests
+        env:
+          INSTALL_TYPE: ${{ matrix.install_type }}
+          SALT_RELEASE: "${{ inputs.salt-version }}"
+          SALT_REPO_ARCH: ${{ matrix.install_arch }}
+          SALT_REPO_TYPE: ${{ inputs.environment }}
+          SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
+          SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
+          SALT_REPO_DOMAIN: ${{ vars.SALT_REPO_DOMAIN || ( inputs.environment == 'staging' && 'staging.repo.saltproject.io' || 'repo.saltproject.io') }}
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+        run: |
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+          -E INSTALL_TYPE -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS -E SALT_REPO_DOMAIN \
+            --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} -- download-pkgs
 
       - name: Combine Coverage Reports
-        if: always() && inputs.skip-code-coverage == false && job.status != 'cancelled'
+        if: always() && inputs.skip-code-coverage == false && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
         run: |
-          nox --force-color -e combine-coverage
+          tools --timestamps vm combine-coverage ${{ inputs.distro-slug }}
 
-      - name: Prepare Test Run Artifacts
+      - name: Download Test Run Artifacts
         id: download-artifacts-from-vm
-        if: always() && job.status != 'cancelled'
-        shell: powershell
+        if: always() && steps.spin-up-vm.outcome == 'success'
         run: |
+          tools --timestamps vm download-artifacts ${{ inputs.distro-slug }}
           # Delete the salt onedir, we won't need it anymore and it will prevent
           # from it showing in the tree command below
-          rm artifacts/salt* -r -Force
-          tree artifacts /F /A
+          rm -rf artifacts/salt*
+          tree -a artifacts
+
+      - name: Destroy VM
+        if: always()
+        run: |
+          tools --timestamps vm destroy ${{ inputs.distro-slug }} || true
+
+      - name: Fix file ownership
+        run: |
+          sudo chown -R "$(id -un)" .
 
       - name: Upload Test Run Artifacts
-        if: always() && job.status != 'cancelled'
+        if: always() && steps.download-artifacts-from-vm.outcome == 'success'
         uses: actions/upload-artifact@v3
         with:
           name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.arch }}
@@ -293,6 +336,7 @@ jobs:
   report:
     name: Reports for ${{ inputs.distro-slug }}(${{ matrix.arch }})
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     needs:
       - test
