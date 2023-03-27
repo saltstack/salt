@@ -69,9 +69,6 @@ def generate_workflows(ctx: Context):
         "Scheduled": {
             "template": "scheduled.yml",
         },
-        "Check Workflow Run": {
-            "template": "check-workflow-run.yml",
-        },
         "Release": {
             "template": "release.yml",
             "includes": {
@@ -118,15 +115,6 @@ def generate_workflows(ctx: Context):
             "prepare_workflow_needs": NeedsTracker(),
             "build_repo_needs": NeedsTracker(),
         }
-        if workflow_name == "Check Workflow Run":
-            check_workflow_exclusions = {
-                "Release",
-                workflow_name,
-            }
-            check_workflows = [
-                wf for wf in sorted(workflows) if wf not in check_workflow_exclusions
-            ]
-            context["check_workflows"] = check_workflows
         loaded_template = env.get_template(template_path.name)
         rendered_template = loaded_template.render(**context)
         workflow_path.write_text(rendered_template.rstrip() + "\n")
