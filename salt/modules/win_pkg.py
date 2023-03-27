@@ -1366,6 +1366,8 @@ def normalize_name(name):
     Nothing to do on Windows. We need this function so that Salt doesn't go
     through every module looking for ``pkg.normalize_name``.
 
+    .. versionadded:: 3006.0
+
     Args:
         name (str): The name of the package
 
