@@ -541,12 +541,6 @@ class AsyncReqMessageClient:
             if self.context.closed is False:
                 self.context.term()
 
-    # pylint: disable=W1701
-    def __del__(self):
-        self.close()
-
-    # pylint: enable=W1701
-
     def _init_socket(self):
         if hasattr(self, "stream"):
             self.stream.close()  # pylint: disable=E0203
