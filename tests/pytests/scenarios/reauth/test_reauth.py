@@ -1,6 +1,6 @@
 import logging
-import multiprocessing
 import os
+import threading
 import time
 
 import pytest
@@ -44,7 +44,7 @@ def test_reauth(salt_cli, salt_minion, salt_master, timeout, event_listener):
 
     # We need to have the minion attempting to start in a different process
     # when we try to start the master
-    minion_proc = multiprocessing.Process(
+    minion_proc = threading.Thread(
         target=minion_func, args=(salt_minion, event_listener, salt_master, timeout)
     )
     minion_proc.start()
