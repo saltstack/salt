@@ -1924,6 +1924,9 @@ jobs:
           tree -a artifacts/pkgs/repo/
 
       - name: Upload Repository Contents (nightly)
+        env:
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
         run: |
           tools pkg repo publish nightly --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} artifacts/pkgs/repo/
 

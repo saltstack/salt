@@ -241,7 +241,8 @@ jobs:
           SALT_REPO_TYPE: ${{ inputs.environment }}
           SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
           SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
-          SALT_REPO_DOMAIN: ${{ vars.SALT_REPO_DOMAIN || ( inputs.environment == 'staging' && 'staging.repo.saltproject.io' || 'repo.saltproject.io') }}
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
 
         run: |
           nox --force-color -e ${{ inputs.nox-session }} -- download-pkgs

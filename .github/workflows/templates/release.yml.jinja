@@ -179,6 +179,9 @@ permissions:
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Publish Release Repository
+        env:
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
         run: |
           tools pkg repo publish <{ gh_environment }> ${{ needs.prepare-workflow.outputs.salt-version }}
 
