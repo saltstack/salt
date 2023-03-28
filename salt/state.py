@@ -83,6 +83,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "fun",
         "state",
         "check_cmd",
+        "cmd_opts_exclude",
         "failhard",
         "onlyif",
         "unless",
@@ -971,10 +972,18 @@ class State:
             "timeout",
             "success_retcodes",
         )
+        if "cmd_opts_exclude" in low_data:
+            if not isinstance(low_data["cmd_opts_exclude"], list):
+                cmd_opts_exclude = list(low_data["cmd_opts_exclude"])
+            else:
+                cmd_opts_exclude = low_data["cmd_opts_exclude"]
+        else:
+            cmd_opts_exclude = []
         for run_cmd_arg in POSSIBLE_CMD_ARGS:
-            cmd_opts[run_cmd_arg] = low_data.get(run_cmd_arg)
+            if run_cmd_arg not in cmd_opts_exclude:
+                cmd_opts[run_cmd_arg] = low_data.get(run_cmd_arg)
 
-        if "shell" in low_data:
+        if "shell" in low_data and "shell" not in cmd_opts_exclude:
             cmd_opts["shell"] = low_data["shell"]
         elif "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
