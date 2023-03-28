@@ -27,7 +27,6 @@ env:
   COLUMNS: 190
   CACHE_SEED: SEED-5  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
-  REPO_BASE_URL: "https://${{ secrets.SALT_REPO_USER }}:${{ secrets.SALT_REPO_PASS }}@${{ secrets.SALT_REPO_DOMAIN }}"
 
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files

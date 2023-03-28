@@ -37,11 +37,6 @@ on:
 
 <%- endblock on %>
 
-<%- block env %>
-  <{- super() }>
-  REPO_BASE_URL: "https://${{ secrets.SALT_REPO_USER }}:${{ secrets.SALT_REPO_PASS }}@${{ secrets.SALT_REPO_DOMAIN }}"
-<%- endblock env %>
-
 <%- block concurrency %>
 
 concurrency:
