@@ -452,6 +452,28 @@ def rpm(
     else:
         ctx.run("createrepo", ".", cwd=create_repo_path)
 
+    if nightly_build:
+        repo_domain = os.environ.get("SALT_REPO_DOMAIN_RELEASE", "repo.saltproject.io")
+    else:
+        repo_domain = os.environ.get(
+            "SALT_REPO_DOMAIN_STAGING", "staging.repo.saltproject.io"
+        )
+
+    salt_repo_user = os.environ.get("SALT_REPO_USER")
+    if salt_repo_user:
+        log.info(
+            "SALT_REPO_USER: %s",
+            salt_repo_user[0] + "*" * (len(salt_repo_user) - 2) + salt_repo_user[-1],
+        )
+    salt_repo_pass = os.environ.get("SALT_REPO_PASS")
+    if salt_repo_pass:
+        log.info(
+            "SALT_REPO_PASS: %s",
+            salt_repo_pass[0] + "*" * (len(salt_repo_pass) - 2) + salt_repo_pass[-1],
+        )
+    if salt_repo_user and salt_repo_pass:
+        repo_domain = f"{salt_repo_user}:{salt_repo_pass}@{repo_domain}"
+
     def _create_repo_file(create_repo_path, url_suffix):
         ctx.info(f"Creating '{repo_file_path.relative_to(repo_path)}' file ...")
         if nightly_build:
@@ -463,7 +485,7 @@ def rpm(
         else:
             base_url = ""
             repo_file_contents = "[salt-repo]"
-        base_url += f"salt/py3/{distro}/{url_suffix}"
+        base_url += f"salt/py3/{distro}/{distro_version}/{distro_arch}/{url_suffix}"
         if distro == "amazon":
             distro_name = "Amazon Linux"
         elif distro == "redhat":
@@ -475,15 +497,6 @@ def rpm(
             failovermethod = "\n            failovermethod=priority"
         else:
             failovermethod = ""
-
-        if nightly_build:
-            repo_domain = os.environ.get(
-                "SALT_REPO_DOMAIN_RELEASE", "repo.saltproject.io"
-            )
-        else:
-            repo_domain = os.environ.get(
-                "SALT_REPO_DOMAIN_STAGING", "staging.repo.saltproject.io"
-            )
 
         repo_file_contents += textwrap.dedent(
             f"""
@@ -504,7 +517,7 @@ def rpm(
     else:
         repo_file_path = create_repo_path.parent / f"{create_repo_path.name}.repo"
 
-    _create_repo_file(repo_file_path, salt_version)
+    _create_repo_file(repo_file_path, f"minor/{salt_version}")
 
     if nightly_build is False:
         remote_versions = _get_remote_versions(

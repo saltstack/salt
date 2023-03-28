@@ -295,28 +295,6 @@ def setup_redhat_family(
     repo_file = pytest.helpers.download_file(
         f"{repo_url_base}.repo", downloads_path / f"salt-{os_name}.repo"
     )
-    repo_file_contents = repo_file.read_text()
-    log.info("Repo file contents:\n%s", repo_file_contents)
-    if "baseurl=" in repo_file_contents:
-        repo_file_contents = re.sub(
-            "baseurl=(.*)\n",
-            f"baseurl={repo_url_base}\n",
-            repo_file_contents,
-            flags=re.MULTILINE,
-        )
-    else:
-        repo_file_contents += f"\nbaseurl={repo_url_base}\n"
-    if "gpgkey=" in repo_file_contents:
-        repo_file_contents = re.sub(
-            "gpgkey=(.*)\n",
-            f"gpgkey={gpg_file_url}\n",
-            repo_file_contents,
-            flags=re.MULTILINE,
-        )
-    else:
-        repo_file_contents += f"\ngpgkey={gpg_file_url}\n"
-    log.info("Repo file contents after replacements:\n%s", repo_file_contents)
-    repo_file.write_text(repo_file_contents)
 
     commands = [
         ("mv", f"/downloads/{repo_file.name}", f"/etc/yum.repos.d/salt-{os_name}.repo"),
@@ -420,7 +398,7 @@ def setup_debian_family(
 
     ret = container.run("apt-get", "update", "-y")
     if ret.returncode != 0:
-        pytest.fail(f"Failed to run: 'apt-get update -y'")
+        pytest.fail("Failed to run: 'apt-get update -y'")
 
     repo_url_base = f"{root_url}/{os_name}/{os_version}/{arch}/minor/{salt_release}"
     gpg_file_url = f"{repo_url_base}/{gpg_key_name}"
