@@ -214,7 +214,12 @@ def pkg_container(
 
 @pytest.fixture(scope="module")
 def root_url(salt_release):
-    repo_domain = os.environ.get("SALT_REPO_DOMAIN", "repo.saltproject.io")
+    if os.environ.get("SALT_REPO_TYPE", "release") == "staging":
+        repo_domain = os.environ.get(
+            "SALT_REPO_DOMAIN_STAGING", "staging.repo.saltproject.io"
+        )
+    else:
+        repo_domain = os.environ.get("SALT_REPO_DOMAIN_RELEASE", "repo.saltproject.io")
     if "rc" in salt_release:
         salt_path = "salt_rc/salt"
     else:
