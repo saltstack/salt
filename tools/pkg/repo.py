@@ -475,10 +475,19 @@ def rpm(
         else:
             failovermethod = ""
 
+        if nightly_build:
+            repo_domain = os.environ.get(
+                "SALT_REPO_DOMAIN_RELEASE", "repo.saltproject.io"
+            )
+        else:
+            repo_domain = os.environ.get(
+                "SALT_REPO_DOMAIN_STAGING", "staging.repo.saltproject.io"
+            )
+
         repo_file_contents += textwrap.dedent(
             f"""
             name=Salt repo for {distro_name} {distro_version} PY3
-            baseurl=https://repo.saltproject.io/{base_url}
+            baseurl=https://{repo_domain}/{base_url}
             skip_if_unavailable=True{failovermethod}
             priority=10
             enabled=1

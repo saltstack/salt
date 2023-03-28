@@ -1561,6 +1561,9 @@ jobs:
           mkdir -p artifacts/pkgs/repo
 
       - name: Create Repository
+        env:
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
         run: |
           tools pkg repo create rpm --key-id=64CBBC8173D76B3F --distro-arch=${{ matrix.arch }}  \
             --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
