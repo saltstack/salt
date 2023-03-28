@@ -302,7 +302,6 @@ jobs:
 
       - name: Get Test Flags
         id: get-test-flags
-        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
         shell: bash
         env:
           PULL_LABELS: ${{ inputs.pull_labels }}
@@ -326,7 +325,7 @@ jobs:
 
       - name: Run Fast/Changed Tests
         id: run-fast-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' && fromJson(steps.get-test-flags.output.no_fast_tests) == false}}
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' || fromJson(steps.get-test-flags.output.no_fast_tests) == true }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
