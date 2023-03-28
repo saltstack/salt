@@ -507,7 +507,7 @@ def rpm(
             enabled=1
             enabled_metadata=1
             gpgcheck=1
-            gpgkey={base_url}/{tools.utils.GPG_KEY_FILENAME}.pub
+            gpgkey=https://{repo_domain}/{base_url}/{tools.utils.GPG_KEY_FILENAME}.pub
             """
         )
         create_repo_path.write_text(repo_file_contents)
@@ -1133,10 +1133,9 @@ def release(ctx: Context, salt_version: str):
                         Callback=tools.utils.UpdateProgress(progress, task),
                     )
                 updated_contents = re.sub(
-                    r"^baseurl=https://([^/]+)/(.*)$",
-                    rf"baseurl=https://{release_domain}/\2",
+                    r"^(baseurl|gpgkey)=https://([^/]+)/(.*)$",
+                    rf"\1=https://{release_domain}/\3",
                     repo_file_path.read_text(),
-                    count=1,
                     flags=re.MULTILINE,
                 )
                 ctx.info(f"Updated '{repo_file_path.relative_to(repo_path)}:")
