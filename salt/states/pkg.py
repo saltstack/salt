@@ -1007,6 +1007,8 @@ def installed(
     **kwargs
 ):
     """
+    .. versionchanged:: 3007.0
+
     Ensure that the package is installed, and that it is the correct version
     (if specified).
 
@@ -1804,12 +1806,36 @@ def installed(
     changes = {}
     if __opts__["test"]:
         if targets:
-            if sources:
-                _targets = targets
-            else:
-                _targets = [_get_desired_pkg(x, targets) for x in targets]
+            installable_versions = {}
+            if not sources:
+                latest_targets = [
+                    _get_desired_pkg(x, targets) for x, y in targets.items() if not y
+                ]
+                latest_versions = __salt__["pkg.latest_version"](*latest_targets)
+                # single pkg returns str
+                if isinstance(latest_versions, str):
+                    installable_versions = {latest_targets[0]: latest_versions}
+                elif isinstance(latest_versions, dict):
+                    installable_versions = latest_versions
+                explicit_targets = [
+                    _get_desired_pkg(x, targets)
+                    for x in targets
+                    if x not in latest_targets
+                ]
+                if explicit_targets:
+                    explicit_versions = __salt__["pkg.list_repo_pkgs"](
+                        *explicit_targets
+                    )
+                    for tgt, ver_list in explicit_versions.items():
+                        if ver_list:
+                            installable_versions[tgt] = ver_list[0]
             summary = ", ".join(targets)
-            changes.update({x: {"new": "installed", "old": ""} for x in targets})
+            changes.update(
+                {
+                    x: {"new": installable_versions.get(x) or "installed", "old": ""}
+                    for x in targets
+                }
+            )
             comment.append(
                 "The following packages would be installed/updated: {}".format(summary)
             )
