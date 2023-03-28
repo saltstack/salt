@@ -13,7 +13,6 @@ import os
 import platform
 import sys
 import warnings
-from ctypes.util import find_library
 from datetime import datetime
 
 # pylint: disable=no-name-in-module
@@ -388,44 +387,6 @@ class Develop(develop):
 
         # Resume normal execution
         develop.run(self)
-
-
-class DownloadWindowsDlls(Command):
-
-    description = "Download required DLL's for windows"
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        if getattr(self.distribution, "salt_download_windows_dlls", None) is None:
-            print("This command is not meant to be called on it's own")
-            exit(1)
-        try:
-            import pip
-
-            # pip has moved many things to `_internal` starting with pip 10
-            if LooseVersion(pip.__version__) < LooseVersion("10.0"):
-                # pylint: disable=no-name-in-module
-                from pip.utils.logging import indent_log
-
-                # pylint: enable=no-name-in-module
-            else:
-                from pip._internal.utils.logging import (  # pylint: disable=no-name-in-module
-                    indent_log,
-                )
-        except ImportError:
-            # TODO: Impliment indent_log here so we don't require pip
-            @contextlib.contextmanager
-            def indent_log():
-                yield
-
-        platform_bits, _ = platform.architecture()
-        url = "https://repo.saltproject.io/windows/dependencies/{bits}/{fname}"
-        dest = os.path.join(os.path.dirname(sys.executable), "{fname}")
 
 
 class Sdist(sdist):
@@ -940,8 +901,6 @@ class SaltDistribution(distutils.dist.Distribution):
         )
         if not IS_WINDOWS_PLATFORM:
             self.cmdclass.update({"sdist": CloudSdist, "install_lib": InstallLib})
-        if IS_WINDOWS_PLATFORM:
-            self.cmdclass.update({"download-windows-dlls": DownloadWindowsDlls})
         if HAS_BDIST_WHEEL:
             self.cmdclass["bdist_wheel"] = BDistWheel
 
