@@ -25,6 +25,9 @@ jobs:
         arch:
           - x86_64
           - aarch64
+        src:
+          - true
+          - false
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/packaging:centosstream-9
@@ -64,13 +67,29 @@ jobs:
           tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
 
       - name: Build RPM
+        if: ${{ matrix.src != true}}
         run: |
           tools pkg build rpm --onedir salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
 
+      - name: Build RPM
+        if: ${{ matrix.src == true}}
+        run: |
+          tools pkg build rpm
+
       - name: Upload RPMs
         uses: actions/upload-artifact@v3
+        if: ${{ matrix.src != true}}
         with:
           name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm
+          path: ~/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload RPMs
+        uses: actions/upload-artifact@v3
+        if: ${{ matrix.src == true}}
+        with:
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm-from-src
           path: ~/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
           retention-days: 7
           if-no-files-found: error
