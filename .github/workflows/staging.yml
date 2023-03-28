@@ -1562,6 +1562,8 @@ jobs:
 
       - name: Create Repository
         env:
+          SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
+          SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
           SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
           SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
         run: |
