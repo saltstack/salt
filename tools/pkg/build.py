@@ -214,7 +214,7 @@ def windows(
             "required": True,
         },
         "package_name": {
-            "help": "The name of the relenv environment to be created under artifacts/",
+            "help": "The name of the relenv environment to be created",
             "required": True,
         },
         "platform": {
@@ -247,10 +247,7 @@ def onedir_dependencies(
     except ImportError:
         ctx.exit(1, "Relenv not installed in the current environment.")
 
-    artifacts_dir = pathlib.Path("artifacts").resolve()
-    artifacts_dir.mkdir(exist_ok=True)
-    dest = artifacts_dir / package_name
-
+    dest = pathlib.Path(package_name).resolve()
     create(dest, arch=arch, version=python_version)
 
     install_args = ["-v"]
@@ -301,14 +298,14 @@ def onedir_dependencies(
     name="salt-onedir",
     arguments={
         "salt_name": {
-            "help": "The name of the source tarball containing salt, stored under the repo root",
+            "help": "The path to the salt code to install, relative to the repo root",
         },
         "platform": {
             "help": "The platform that installed is being installed on",
             "required": True,
         },
         "package_name": {
-            "help": "The name of the relenv environment to install salt into, stored under artifacts/",
+            "help": "The name of the relenv environment to install salt into",
             "required": True,
         },
     },
@@ -327,7 +324,7 @@ def salt_onedir(
         assert package_name is not None
 
     salt_archive = pathlib.Path(salt_name).resolve()
-    onedir_env = pathlib.Path("artifacts", package_name)
+    onedir_env = pathlib.Path(package_name).resolve()
     _check_pkg_build_files_exist(ctx, onedir_env=onedir_env, salt_archive=salt_archive)
 
     os.environ["USE_STATIC_REQUIREMENTS"] = "1"
