@@ -546,16 +546,18 @@ def test_installed_with_changes_test_true(list_pkgs):
     Test pkg.installed with simulated changes
     """
 
+    latest_pkgs = MagicMock(return_value="some version here")
     list_pkgs = MagicMock(return_value=list_pkgs)
 
     with patch.dict(
         pkg.__salt__,
         {
+            "pkg.latest_version": latest_pkgs,
             "pkg.list_pkgs": list_pkgs,
         },
     ):
 
-        expected = {"dummy": {"new": "installed", "old": ""}}
+        expected = {"dummy": {"new": "some version here", "old": ""}}
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
             ret = pkg.installed("dummy", test=True)
