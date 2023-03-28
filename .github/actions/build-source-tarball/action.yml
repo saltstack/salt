@@ -32,14 +32,12 @@ runs:
     - name: Configure Git
       shell: bash
       run: |
-        git config --global user.name "Salt Project Packaging"
-        git config --global user.email saltproject-packaging@vmware.com
+        tools pkg configure-git
 
     - name: Apply Release Patch
       shell: bash
       run: |
-        git am --committer-date-is-author-date salt-${{ inputs.salt-version }}.patch
-        rm salt-${{ inputs.salt-version }}.patch
+        tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
 
     - name: Create Source Tarball
       shell: bash

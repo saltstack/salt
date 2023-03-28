@@ -1,6 +1,7 @@
-# pylint: disable=resource-leakage,broad-except
+# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
+import os
 import pathlib
 
 import packaging.version
@@ -17,10 +18,11 @@ from rich.progress import (
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 GPG_KEY_FILENAME = "SALT-PROJECT-GPG-PUBKEY-2023"
-NIGHTLY_BUCKET_NAME = "salt-project-prod-salt-artifacts-nightly"
-STAGING_BUCKET_NAME = "salt-project-prod-salt-artifacts-staging"
-RELEASE_BUCKET_NAME = "salt-project-prod-salt-artifacts-release"
-BACKUP_BUCKET_NAME = "salt-project-prod-salt-artifacts-backup"
+SPB_ENVIRONMENT = os.environ.get("SPB_ENVIRONMENT") or "prod"
+NIGHTLY_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-nightly"
+STAGING_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-staging"
+RELEASE_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-release"
+BACKUP_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-backup"
 
 
 class UpdateProgress:

@@ -1,7 +1,7 @@
 """
 These commands are used in the CI pipeline.
 """
-# pylint: disable=resource-leakage,broad-except
+# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
 import json
@@ -196,7 +196,10 @@ def runner_types(ctx: Context, event_name: str):
 
     # This is a push or a scheduled event
     ctx.info(f"Running from a {event_name!r} event")
+    
     # HARD CODE CHANGE REMOVE ME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # gh_event["repository"]["fork"] is True
+    # and os.environ.get("FORK_HAS_SELF_HOSTED_RUNNERS", "0") == "1"
     # BEFORE MERGE INTO SALT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     if (
         gh_event["repository"]["fork"] is True
@@ -210,7 +213,7 @@ def runner_types(ctx: Context, event_name: str):
             wfh.write(f"runners={json.dumps(runners)}\n")
         ctx.exit(0)
 
-    # Not running on a fork, run everything
+    # Not running on a fork, or the fork has self hosted runners, run everything
     ctx.info(f"The {event_name!r} event is from the main repository")
     runners["github-hosted"] = runners["self-hosted"] = True
     ctx.info("Writing 'runners' to the github outputs file")
@@ -340,6 +343,7 @@ def define_jobs(
 
     required_pkg_test_changes: set[str] = {
         changed_files_contents["pkg_tests"],
+        changed_files_contents["workflows"],
     }
     if jobs["test-pkg"] and required_pkg_test_changes == {"false"}:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
@@ -349,13 +353,16 @@ def define_jobs(
     if not jobs["test"] and not jobs["test-pkg"]:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             for job in (
-                "build-source-tarball",
                 "build-deps-onedir",
                 "build-salt-onedir",
                 "build-pkgs",
             ):
                 wfh.write(f"De-selecting the '{job}' job.\n")
                 jobs[job] = False
+            if not jobs["build-docs"]:
+                with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                    wfh.write("De-selecting the 'build-source-tarball' job.\n")
+                jobs["build-source-tarball"] = False
 
     with open(github_step_summary, "a", encoding="utf-8") as wfh:
         wfh.write("Selected Jobs:\n")
@@ -571,91 +578,6 @@ def transport_matrix(ctx: Context, distro_slug: str):
 
 
 @ci.command(
-    name="rerun-workflow",
-)
-def rerun_workflow(ctx: Context):
-    """
-    Re-run failed workflows, up to a maximum of 3 times.
-
-    Only restarts workflows for which less than 25% of the jobs failed.
-    """
-    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
-    if gh_event_path is None:
-        ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
-        ctx.exit(1)
-
-    if TYPE_CHECKING:
-        assert gh_event_path is not None
-
-    try:
-        gh_event = json.loads(open(gh_event_path).read())
-    except Exception as exc:
-        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
-        ctx.exit(1)
-
-    workflow_run = gh_event["workflow_run"]
-    ctx.info(
-        f"Processing Workflow ID {workflow_run['id']}, attempt {workflow_run['run_attempt']}..."
-    )
-    if workflow_run["run_attempt"] >= 3:
-        ctx.info(
-            f"This workflow has failed for the past {workflow_run['run_attempt']} attempts. "
-            "Not re-running it."
-        )
-        ctx.exit(0)
-
-    run_id = str(workflow_run["id"])
-    repository = workflow_run["repository"]["full_name"]
-    page = 1
-    total = failed = 0
-    # Get all jobs from workflow run to see how many failed
-    while True:
-        cmdline = [
-            "gh",
-            "api",
-            "-H",
-            "Accept: application/vnd.github+json",
-            f"/repos/{repository}/actions/runs/{run_id}/jobs?filter=latest&per_page=100&page={page}",
-        ]
-        ret = ctx.run(*cmdline, capture=True, check=False)
-        if ret.returncode:
-            ctx.error("Failed to get the jobs for the workflow run")
-            ctx.exit(0)
-
-        jobs = json.loads(ret.stdout.strip().decode())["jobs"]
-        if not jobs:
-            break
-
-        for job in jobs:
-            total += 1
-            if job["conclusion"] == "failure":
-                failed += 1
-        page += 1
-
-    ctx.info(f"{failed} out of {total} jobs failed.")
-    if failed > total / 2:
-        ctx.info("More than half of the jobs failed. Not automatically restarting.")
-        ctx.exit(0)
-
-    cmdline = [
-        "gh",
-        "run",
-        "-R",
-        repository,
-        "rerun",
-        run_id,
-        "--failed",
-    ]
-    ctx.info(f"Running {' '.join(cmdline)!r} ...")
-    ret = ctx.run(*cmdline, check=False)
-    if ret.returncode:
-        ctx.error("Failed to re-run workflow")
-    else:
-        ctx.info("Restarted workflow successfully")
-    ctx.exit(0)
-
-
-@ci.command(
     name="pkg-matrix",
     arguments={
         "distro_slug": {
@@ -670,9 +592,13 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
     """
     Generate the test matrix.
     """
-    _matrix = []
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+
+    matrix = []
     sessions = [
-        "test-pkgs-3",
+        "install",
     ]
     if (
         distro_slug
@@ -681,22 +607,72 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
             "ubuntu-20.04-arm64",
             "ubuntu-22.04-arm64",
         ]
-        and "MSI" != pkg_type
+        and pkg_type != "MSI"
     ):
         # These OS's never had arm64 packages built for them
         # with the tiamate onedir packages.
         # we will need to ensure when we release 3006.0
         # we allow for 3006.0 jobs to run, because then
         # we will have arm64 onedir packages to upgrade from
-        sessions.append("'test-upgrade-pkgs-3(classic=False)'")
+        sessions.append("upgrade")
     if (
         distro_slug not in ["centosstream-9", "ubuntu-22.04", "ubuntu-22.04-arm64"]
-        and "MSI" != pkg_type
+        and pkg_type != "MSI"
     ):
         # Packages for these OSs where never built for classic previously
-        sessions.append("'test-upgrade-pkgs-3(classic=True)'")
+        sessions.append("upgrade-classic")
 
-    for sess in sessions:
-        _matrix.append({"nox-session": sess})
-    print(json.dumps(_matrix))
+    for session in sessions:
+        matrix.append(
+            {
+                "test-chunk": session,
+            }
+        )
+    ctx.info("Generated matrix:")
+    ctx.print(matrix, soft_wrap=True)
+
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"matrix={json.dumps(matrix)}\n")
+    ctx.exit(0)
+
+
+@ci.command(
+    name="pkg-download-matrix",
+    arguments={
+        "platform": {
+            "help": "The OS platform to generate the matrix for",
+            "choices": ("linux", "windows", "macos", "darwin"),
+        },
+    },
+)
+def pkg_download_matrix(ctx: Context, platform: str):
+    """
+    Generate the test matrix.
+    """
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+
+    tests = []
+    arches = []
+    if platform == "windows":
+        for arch in ("amd64", "x86"):
+            arches.append({"arch": arch})
+            for install_type in ("msi", "nsis"):
+                tests.append({"arch": arch, "install_type": install_type})
+    else:
+        for arch in ("x86_64", "aarch64"):
+            if platform in ("macos", "darwin") and arch == "aarch64":
+                continue
+            arches.append({"arch": arch})
+            tests.append({"arch": arch})
+    ctx.info("Generated arch matrix:")
+    ctx.print(arches, soft_wrap=True)
+    ctx.info("Generated test matrix:")
+    ctx.print(tests, soft_wrap=True)
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"arch={json.dumps(arches)}\n")
+            wfh.write(f"tests={json.dumps(tests)}\n")
     ctx.exit(0)

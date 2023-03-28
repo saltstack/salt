@@ -1,7 +1,9 @@
 # Do not edit these workflows directly as the changes made will be overwritten.
 # Instead, edit the template '.github/workflows/templates/staging.yml.jinja'
 ---
+
 name: Stage Release
+run-name: "Stage Release (branch: ${{ github.ref_name }}; version: ${{ inputs.salt-version }})"
 
 on:
   workflow_dispatch:
@@ -51,11 +53,12 @@ jobs:
       - name: Check Branch
         run: |
           echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
-          if [ "${{ github.ref_name }}" != "master" ]; then
+          if [ "${{ contains(fromJSON('["master", "3006.x"]'), github.ref_name) }}" != "true" ]; then
               echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
+              echo "Allowed branches: master, 3006.x"
               exit 1
           else
-              echo "Allowed"
+              echo "Allowed to release from branch ${{ github.ref_name }}"
           fi
 
   prepare-workflow:
@@ -461,7 +464,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.7.0"
+      relenv-version: "0.10.0"
       python-version-linux: "3.10.10"
       python-version-macos: "3.10.10"
       python-version-windows: "3.10.10"
@@ -479,7 +482,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.7.0"
+      relenv-version: "0.10.0"
       python-version-linux: "3.10.10"
       python-version-macos: "3.10.10"
       python-version-windows: "3.10.10"
@@ -538,6 +541,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   centos-7-pkg-tests:
     name: CentOS 7 Package Tests
@@ -553,6 +558,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   centosstream-8-pkg-tests:
     name: CentOS Stream 8 Package Tests
@@ -568,6 +575,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   centosstream-9-pkg-tests:
     name: CentOS Stream 9 Package Tests
@@ -583,6 +592,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: rpm
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   debian-10-pkg-tests:
     name: Debian 10 Package Tests
@@ -598,6 +609,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   debian-11-pkg-tests:
     name: Debian 11 Package Tests
@@ -613,6 +626,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   debian-11-arm64-pkg-tests:
     name: Debian 11 Arm64 Package Tests
@@ -628,6 +643,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   ubuntu-2004-pkg-tests:
     name: Ubuntu 20.04 Package Tests
@@ -643,6 +660,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   ubuntu-2004-arm64-pkg-tests:
     name: Ubuntu 20.04 Arm64 Package Tests
@@ -658,6 +677,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   ubuntu-2204-pkg-tests:
     name: Ubuntu 22.04 Package Tests
@@ -673,6 +694,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   ubuntu-2204-arm64-pkg-tests:
     name: Ubuntu 22.04 Arm64 Package Tests
@@ -688,6 +711,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: deb
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   macos-12-pkg-tests:
     name: macOS 12 Package Tests
@@ -703,6 +728,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: macos
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   windows-2016-nsis-pkg-tests:
     name: Windows 2016 NSIS Package Tests
@@ -718,6 +745,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: NSIS
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   windows-2016-msi-pkg-tests:
     name: Windows 2016 MSI Package Tests
@@ -733,6 +762,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: MSI
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   windows-2019-nsis-pkg-tests:
     name: Windows 2019 NSIS Package Tests
@@ -748,6 +779,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: NSIS
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   windows-2019-msi-pkg-tests:
     name: Windows 2019 MSI Package Tests
@@ -763,6 +796,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: MSI
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   windows-2022-nsis-pkg-tests:
     name: Windows 2022 NSIS Package Tests
@@ -778,6 +813,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: NSIS
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   windows-2022-msi-pkg-tests:
     name: Windows 2022 MSI Package Tests
@@ -793,6 +830,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: MSI
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   windows-2016:
     name: Windows 2016
@@ -810,6 +849,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   windows-2019:
     name: Windows 2019
@@ -827,6 +868,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   windows-2022:
     name: Windows 2022
@@ -844,6 +887,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   macos-12:
     name: macOS 12
@@ -860,6 +905,8 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   almalinux-8:
     name: Alma Linux 8
@@ -877,6 +924,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   almalinux-9:
     name: Alma Linux 9
@@ -894,6 +943,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   amazonlinux-2:
     name: Amazon Linux 2
@@ -911,6 +962,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   archlinux-lts:
     name: Arch Linux LTS
@@ -928,6 +981,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   centos-7:
     name: CentOS 7
@@ -945,6 +1000,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   centosstream-8:
     name: CentOS Stream 8
@@ -962,6 +1019,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   centosstream-9:
     name: CentOS Stream 9
@@ -979,6 +1038,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   debian-10:
     name: Debian 10
@@ -996,6 +1057,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   debian-11:
     name: Debian 11
@@ -1013,6 +1076,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   debian-11-arm64:
     name: Debian 11 Arm64
@@ -1030,6 +1095,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   fedora-36:
     name: Fedora 36
@@ -1047,6 +1114,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   fedora-37:
     name: Fedora 37
@@ -1064,6 +1133,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   fedora-38:
     name: Fedora 38
@@ -1081,6 +1152,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   opensuse-15:
     name: Opensuse 15
@@ -1098,6 +1171,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   photonos-3:
     name: Photon OS 3
@@ -1115,6 +1190,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   photonos-4:
     name: Photon OS 4
@@ -1132,6 +1209,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   ubuntu-2004:
     name: Ubuntu 20.04
@@ -1149,6 +1228,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64
@@ -1166,6 +1247,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   ubuntu-2204:
     name: Ubuntu 22.04
@@ -1183,6 +1266,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64
@@ -1200,6 +1285,8 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
       pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
 
   build-src-repo:
     name: Build Source Repository
@@ -1216,6 +1303,12 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Download Source Tarball
         uses: actions/download-artifact@v3
@@ -1332,6 +1425,12 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
       - name: Download DEB Packages
         uses: actions/download-artifact@v3
         with:
@@ -1404,24 +1503,45 @@ jobs:
           - distro: amazon
             version: "2"
             arch: x86_64
+          - distro: amazon
+            version: "2"
+            arch: aarch64
           - distro: redhat
             version: "7"
             arch: x86_64
           - distro: redhat
+            version: "7"
+            arch: aarch64
+          - distro: redhat
             version: "8"
             arch: x86_64
           - distro: redhat
+            version: "8"
+            arch: aarch64
+          - distro: redhat
             version: "9"
             arch: x86_64
+          - distro: redhat
+            version: "9"
+            arch: aarch64
           - distro: fedora
             version: "36"
             arch: x86_64
           - distro: fedora
+            version: "36"
+            arch: aarch64
+          - distro: fedora
             version: "37"
             arch: x86_64
           - distro: fedora
+            version: "37"
+            arch: aarch64
+          - distro: fedora
             version: "38"
             arch: x86_64
+          - distro: fedora
+            version: "38"
+            arch: aarch64
 
     steps:
       - uses: actions/checkout@v3
@@ -1433,6 +1553,12 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Download RPM Packages
         uses: actions/download-artifact@v3
@@ -1504,6 +1630,12 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Download Windows NSIS x86 Packages
         uses: actions/download-artifact@v3
@@ -1593,6 +1725,12 @@ jobs:
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
       - name: Download macOS x86_64 Packages
         uses: actions/download-artifact@v3
         with:
@@ -1662,6 +1800,12 @@ jobs:
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Download Linux x86_64 Onedir Archive
         uses: actions/download-artifact@v3
@@ -1772,6 +1916,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
@@ -1792,8 +1942,7 @@ jobs:
 
       - name: Upload Repository Contents (staging)
         run: |
-          tools pkg repo publish staging \
-            ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} artifacts/pkgs/repo/
+          tools pkg repo publish staging --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} artifacts/pkgs/repo/
 
   upload-release-artifacts:
     name: Upload Release Artifacts
@@ -1808,6 +1957,12 @@ jobs:
       - repo-staging
     steps:
       - uses: actions/checkout@v3
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -1842,6 +1997,7 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPi(test)
+    if: ${{ github.event.repository.fork != true }}
     needs:
       - prepare-workflow
       - upload-release-artifacts

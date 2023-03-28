@@ -2,6 +2,7 @@
 These commands are used to create/destroy VMs, sync the local checkout
 to the VM and to run commands on the VM.
 """
+# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
 import hashlib
@@ -21,6 +22,7 @@ from functools import lru_cache
 from typing import TYPE_CHECKING, cast
 
 from ptscripts import Context, command_group
+from requests.exceptions import ConnectTimeout
 
 import tools.utils
 
@@ -95,8 +97,13 @@ vm.add_argument("--region", help="The AWS region.", default=AWS_REGION)
             "help": "How many times to retry creating and connecting to a vm",
         },
         "environment": {
-            "help": "The AWS environment to use.",
-            "choices": ("prod", "test"),
+            "help": (
+                "The AWS environment to use. When the value is auto, an "
+                "attempt will be made to get the right environment from the "
+                "AWS instance metadata endpoint. This only works for bastion "
+                "VMs."
+            ),
+            "choices": ("prod", "test", "auto"),
         },
     }
 )
@@ -117,6 +124,28 @@ def create(
         ctx.exit(1, "We need a key name to spin a VM")
     if not retries:
         retries = 1
+    if environment == "auto":
+        # Lets get the environment from the instance profile if we're on a bastion VM
+        with ctx.web as web:
+            try:
+                ret = web.put(
+                    "http://169.254.169.254/latest/api/token",
+                    headers={"X-aws-ec2-metadata-token-ttl-seconds": "10"},
+                    timeout=1,
+                )
+                token = ret.text.strip()
+                ret = web.get(
+                    "http://169.254.169.254/latest/meta-data/tags/instance/spb:environment",
+                    headers={"X-aws-ec2-metadata-token": token},
+                )
+                spb_environment = ret.text.strip()
+                if spb_environment:
+                    ctx.info(f"Discovered VM environment: {spb_environment}")
+                    environment = spb_environment
+            except ConnectTimeout:
+                # We're apparently not in bastion VM
+                environment = None
+
     attempts = 0
     while True:
         attempts += 1

@@ -8,9 +8,13 @@ cherrypy = pytest.importorskip("cherrypy")
 
 
 @pytest.fixture
-def client_config(client_config, netapi_port):
+def client_config(client_config, netapi_port, request):
     client_config["rest_cherrypy"] = {"port": netapi_port, "debug": True}
-    client_config["netapi_enable_clients"] = ["local", "runner"]
+    marker = request.node.get_closest_marker("netapi_client_data")
+    if marker is None:
+        client_config["netapi_enable_clients"] = []
+    else:
+        client_config["netapi_enable_clients"] = marker.args[0]
     return client_config
 
 

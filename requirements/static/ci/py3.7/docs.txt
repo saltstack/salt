@@ -82,7 +82,7 @@ looseversion==1.0.2
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   -r requirements/base.txt
-markdown-it-py==2.1.0
+markdown-it-py==2.2.0
     # via
     #   mdit-py-plugins
     #   myst-docutils

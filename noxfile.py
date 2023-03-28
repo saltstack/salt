@@ -573,7 +573,7 @@ def test_parametrized(session, coverage, transport, crypto):
     cmd_args = [
         "--transport={}".format(transport),
     ] + session.posargs
-    _pytest(session, coverage, cmd_args)
+    _pytest(session, coverage=coverage, cmd_args=cmd_args)
 
 
 @nox.session(python=_PYTHON_VERSIONS)
@@ -934,7 +934,7 @@ def test_cloud(session, coverage):
         "-k",
         "cloud",
     ] + session.posargs
-    _pytest(session, coverage, cmd_args)
+    _pytest(session, coverage=coverage, cmd_args=cmd_args)
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="pytest-cloud")
@@ -971,7 +971,7 @@ def test_tornado(session, coverage):
         session.install(
             "--progress-bar=off", "pyzmq==17.0.0", silent=PIP_INSTALL_SILENT
         )
-    _pytest(session, coverage, session.posargs)
+    _pytest(session, coverage=coverage, cmd_args=session.posargs)
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="pytest-tornado")
@@ -1115,7 +1115,7 @@ def _ci_test(session, transport, onedir=False):
             ]
             + chunk_cmd
         )
-        _pytest(session, track_code_coverage, pytest_args, env=env)
+        _pytest(session, coverage=track_code_coverage, cmd_args=pytest_args, env=env)
     except CommandFailed:
         if rerun_failures is False:
             raise
@@ -1135,7 +1135,7 @@ def _ci_test(session, transport, onedir=False):
             ]
             + chunk_cmd
         )
-        _pytest(session, track_code_coverage, pytest_args, env=env)
+        _pytest(session, coverage=track_code_coverage, cmd_args=pytest_args, env=env)
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="ci-test")
@@ -1249,97 +1249,27 @@ def pre_archive_cleanup(session, pkg):
     if session.posargs:
         session.error("No additional arguments can be passed to 'pre-archive-cleanup'")
     version_info = _get_session_python_version_info(session)
-    if version_info >= (3, 9):
-        if _upgrade_pip_setuptools_and_wheel(session):
-            requirements_file = os.path.join(
-                "requirements", "static", "ci", _get_pydir(session), "tools.txt"
-            )
-            install_command = ["--progress-bar=off", "-r", requirements_file]
-            session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if version_info < (3, 10):
+        session.error(
+            "The nox session 'pre-archive-cleanup' needs Python 3.10+ to run."
+        )
 
-        cmdline = [
-            "tools",
-            "pkg",
-            "pre-archive-cleanup",
-        ]
-        if pkg:
-            cmdline.append("--pkg")
-        cmdline.append(".nox")
-        session_run_always(session, *cmdline)
-        return
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "tools.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
-    # On windows, we still run Py3.9
-    # Let's do the cleanup here, for now.
-    # This is a copy of the pre_archive_cleanup function in tools/pkg.py
-
-    import fnmatch
-    import shutil
-
-    try:
-        import yaml
-    except ImportError:
-        session.error("Please install 'pyyaml'.")
-        return
-
-    with open(str(REPO_ROOT / "pkg" / "common" / "env-cleanup-rules.yml")) as rfh:
-        patterns = yaml.safe_load(rfh.read())
-
+    cmdline = [
+        "tools",
+        "pkg",
+        "pre-archive-cleanup",
+    ]
     if pkg:
-        patterns = patterns["pkg"]
-    else:
-        patterns = patterns["ci"]
-
-    if IS_WINDOWS:
-        patterns = patterns["windows"]
-    elif IS_DARWIN:
-        patterns = patterns["darwin"]
-    else:
-        patterns = patterns["linux"]
-
-    dir_patterns = set()
-    for pattern in patterns["dir_patterns"]:
-        if isinstance(pattern, list):
-            dir_patterns.update(set(pattern))
-            continue
-        dir_patterns.add(pattern)
-
-    file_patterns = set()
-    for pattern in patterns["file_patterns"]:
-        if isinstance(pattern, list):
-            file_patterns.update(set(pattern))
-            continue
-        file_patterns.add(pattern)
-
-    for root, dirs, files in os.walk(
-        str(REPO_ROOT / ".nox"), topdown=True, followlinks=False
-    ):
-        for dirname in dirs:
-            path = pathlib.Path(root, dirname).resolve()
-            if not path.exists():
-                continue
-            match_path = path.as_posix()
-            for pattern in dir_patterns:
-                if fnmatch.fnmatch(str(match_path), pattern):
-                    session.log(
-                        f"Deleting directory: {match_path}; Matching pattern: {pattern!r}"
-                    )
-                    shutil.rmtree(str(path))
-                    break
-        for filename in files:
-            path = pathlib.Path(root, filename).resolve()
-            if not path.exists():
-                continue
-            match_path = path.as_posix()
-            for pattern in file_patterns:
-                if fnmatch.fnmatch(str(match_path), pattern):
-                    session.log(
-                        f"Deleting file: {match_path}; Matching pattern: {pattern!r}"
-                    )
-                    try:
-                        os.remove(str(path))
-                    except FileNotFoundError:
-                        pass
-                    break
+        cmdline.append("--pkg")
+    cmdline.append(".nox")
+    session_run_always(session, *cmdline)
 
 
 @nox.session(python="3", name="combine-coverage")
@@ -1762,12 +1692,55 @@ def build(session):
     session.run("python", "-m", "twine", "check", "dist/*")
 
 
-def _pkg_test(session, cmd_args, test_type):
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="test-pkgs-onedir",
+    venv_params=["--system-site-packages"],
+)
+def test_pkgs_onedir(session):
+    if not ONEDIR_ARTIFACT_PATH.exists():
+        session.error(
+            "The salt onedir artifact, expected to be in '{}', was not found".format(
+                ONEDIR_ARTIFACT_PATH.relative_to(REPO_ROOT)
+            )
+        )
+
+    chunks = {
+        "install": ["pkg/tests/"],
+        "upgrade": [
+            "pkg/tests/upgrade/test_salt_upgrade.py::test_salt_upgrade",
+            "--upgrade",
+            "--no-uninstall",
+        ],
+        "upgrade-classic": [
+            "pkg/tests/upgrade/test_salt_upgrade.py::test_salt_upgrade",
+            "--upgrade",
+            "--no-uninstall",
+        ],
+        "download-pkgs": [
+            "--download-pkgs",
+            "pkg/tests/download/test_pkg_download.py",
+        ],
+    }
+
+    if not session.posargs or session.posargs[0] not in chunks:
+        chunk = "install"
+        session.log("Choosing default 'install' test type")
+    else:
+        chunk = session.posargs.pop(0)
+
+    cmd_args = chunks[chunk]
+    junit_report_filename = f"test-results-{chunk}"
+    runtests_log_filename = f"runtests-{chunk}"
+
     pydir = _get_pydir(session)
-    junit_report_filename = f"test-results-{test_type}"
-    runtests_log_filename = f"runtests-{test_type}"
+
+    if IS_LINUX:
+        # Fetch the toolchain
+        session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
+
     # Install requirements
-    if _upgrade_pip_setuptools_and_wheel(session):
+    if _upgrade_pip_setuptools_and_wheel(session, onedir=True):
         if IS_WINDOWS:
             file_name = "pkgtests-windows.txt"
         else:
@@ -1780,6 +1753,16 @@ def _pkg_test(session, cmd_args, test_type):
         install_command = ["--progress-bar=off", "-r", requirements_file]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
+    env = {
+        "ONEDIR_TESTRUN": "1",
+    }
+
+    if chunk == "upgrade-classic":
+        cmd_args.append("--classic")
+        # Workaround for installing and running classic packages from 3005.1
+        # They can only run with importlib-metadata<5.0.0.
+        subprocess.run(["pip3", "install", "importlib-metadata==4.13.0"], check=False)
+
     pytest_args = (
         cmd_args[:]
         + [
@@ -1788,38 +1771,17 @@ def _pkg_test(session, cmd_args, test_type):
         ]
         + session.posargs
     )
-    _pytest(session, False, pytest_args)
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="test-pkgs")
-def test_pkgs(session):
-    """
-    pytest pkg tests session
-    """
-    _pkg_test(session, ["pkg/tests/"], "pkg")
-
-
-@nox.session(python=_PYTHON_VERSIONS, name="test-upgrade-pkgs")
-@nox.parametrize("classic", [False, True])
-def test_upgrade_pkgs(session, classic):
-    """
-    pytest pkg upgrade tests session
-    """
-    test_type = "pkg_upgrade"
-    cmd_args = [
-        "pkg/tests/upgrade/test_salt_upgrade.py::test_salt_upgrade",
-        "--upgrade",
-        "--no-uninstall",
-    ]
-    if classic:
-        cmd_args = cmd_args + ["--classic"]
-        # Workaround for installing and running classic packages from 3005.1
-        # They can only run with importlib-metadata<5.0.0.
-        subprocess.run(["pip3", "install", "importlib-metadata==4.13.0"], check=False)
-    try:
-        _pkg_test(session, cmd_args, test_type)
-    except nox.command.CommandFailed:
-        sys.exit(1)
-
-    cmd_args = ["pkg/tests/", "--no-install"] + session.posargs
-    _pkg_test(session, cmd_args, test_type)
+    _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+    if chunk not in ("install", "download-pkgs"):
+        cmd_args = chunks["install"]
+        pytest_args = (
+            cmd_args[:]
+            + [
+                "--no-install",
+                f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
+                f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+            ]
+            + session.posargs
+        )
+        _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+    sys.exit(0)

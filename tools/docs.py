@@ -1,7 +1,7 @@
 """
 These commands are used to generate Salt's manpages.
 """
-# pylint: disable=resource-leakage,broad-except
+# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
 import logging
