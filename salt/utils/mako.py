@@ -94,6 +94,5 @@ if HAS_MAKO:
 
         def cache_file(self, fpath):
             if fpath not in self.cache:
-                self.cache[fpath] = self.file_client().get_file(
-                    fpath, "", True, self.saltenv
-                )
+                with self.file_client() as client:
+                    self.cache[fpath] = client.get_file(fpath, "", True, self.saltenv)
