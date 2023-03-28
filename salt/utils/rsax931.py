@@ -24,7 +24,7 @@ def _find_libcrypto():
     Find the path (or return the short name) of libcrypto.
     """
     if sys.platform.startswith("win"):
-        lib = "libeay32"
+        lib = "libcrypto-1_1"
     elif salt.utils.platform.is_darwin():
         # will look for several different location on the system,
         # Search in the following order. salts pkg, homebrew, macports, finnally
