@@ -43,6 +43,7 @@ def debian(
     Build the deb package.
     """
     checkout = pathlib.Path.cwd()
+    env_args = []
     if onedir:
         onedir_artifact = checkout / "artifacts" / onedir
         _check_pkg_build_files_exist(ctx, onedir_artifact=onedir_artifact)
@@ -50,11 +51,12 @@ def debian(
             f"Building the package using the onedir artifact {str(onedir_artifact)}"
         )
         os.environ["SALT_ONEDIR_ARCHIVE"] = str(onedir_artifact)
+        env_args.extend(["-e", "SALT_ONEDIR_ARCHIVE"])
     else:
         ctx.info(f"Building the package from the source files")
 
     ctx.run("ln", "-sf", "pkg/debian/", ".")
-    ctx.run("debuild", "-e", "SALT_ONEDIR_ARCHIVE", "-uc", "-us")
+    ctx.run("debuild", *env_args, "-uc", "-us")
 
     ctx.info("Done")
 
