@@ -423,6 +423,8 @@ def parse_arch(name):
 
 def latest_version(*names, **kwargs):
     """
+    .. versionchanged:: 3007.0
+
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
     name/version pairs is returned.
@@ -469,38 +471,47 @@ def latest_version(*names, **kwargs):
     if refresh:
         refresh_db(cache_valid_time)
 
+    cmd = ["apt-cache", "-q", "policy"]
+    cmd.extend(names)
+    if repo is not None:
+        cmd.extend(repo)
+    out = _call_apt(cmd, scope=False)
+
+    short_names = [nom.split(":", maxsplit=1)[0] for nom in names]
+
+    candidates = {}
+    for line in salt.utils.itertools.split(out["stdout"], "\n"):
+        if line.endswith(":") and line[:-1] in short_names:
+            this_pkg = names[short_names.index(line[:-1])]
+        elif "Candidate" in line:
+            candidate = ""
+            comps = line.split()
+            if len(comps) >= 2:
+                candidate = comps[-1]
+                if candidate.lower() == "(none)":
+                    candidate = ""
+            candidates[this_pkg] = candidate
+
     for name in names:
-        cmd = ["apt-cache", "-q", "policy", name]
-        if repo is not None:
-            cmd.extend(repo)
-        out = _call_apt(cmd, scope=False)
-
-        candidate = ""
-        for line in salt.utils.itertools.split(out["stdout"], "\n"):
-            if "Candidate" in line:
-                comps = line.split()
-                if len(comps) >= 2:
-                    candidate = comps[-1]
-                    if candidate.lower() == "(none)":
-                        candidate = ""
-                break
-
         installed = pkgs.get(name, [])
         if not installed:
-            ret[name] = candidate
+            ret[name] = candidates.get(name, "")
         elif installed and show_installed:
-            ret[name] = candidate
-        elif candidate:
+            ret[name] = candidates.get(name, "")
+        elif candidates.get(name):
             # If there are no installed versions that are greater than or equal
             # to the install candidate, then the candidate is an upgrade, so
             # add it to the return dict
             if not any(
                 salt.utils.versions.compare(
-                    ver1=x, oper=">=", ver2=candidate, cmp_func=version_cmp
+                    ver1=x,
+                    oper=">=",
+                    ver2=candidates.get(name, ""),
+                    cmp_func=version_cmp,
                 )
                 for x in installed
             ):
-                ret[name] = candidate
+                ret[name] = candidates.get(name, "")
 
     # Return a string if only one package name passed
     if len(names) == 1:
