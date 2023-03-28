@@ -974,7 +974,7 @@ class State:
         )
         if "cmd_opts_exclude" in low_data:
             if not isinstance(low_data["cmd_opts_exclude"], list):
-                cmd_opts_exclude = list(low_data["cmd_opts_exclude"])
+                cmd_opts_exclude = [low_data["cmd_opts_exclude"]]
             else:
                 cmd_opts_exclude = low_data["cmd_opts_exclude"]
         else:
