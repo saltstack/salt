@@ -65,7 +65,7 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltRenderError,
 )
-from salt.utils.versions import Version
+from salt.utils.versions import LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -1361,6 +1361,28 @@ def _get_msiexec(use_msiexec):
         return True, "msiexec"
 
 
+def normalize_name(name):
+    """
+    Nothing to do on Windows. We need this function so that Salt doesn't go
+    through every module looking for ``pkg.normalize_name``.
+
+    .. versionadded:: 3006.0
+
+    Args:
+        name (str): The name of the package
+
+    Returns:
+        str: The name of the package
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.normalize_name git
+    """
+    return name
+
+
 def install(name=None, refresh=False, pkgs=None, **kwargs):
     r"""
     Install the passed package(s) on the system using winrepo
@@ -1768,7 +1790,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
         # Install the software
         # Check Use Scheduler Option
-        log.debug("PKG : cmd: %s /s /c %s", cmd_shell, arguments)
+        log.debug("PKG : cmd: %s /c %s", cmd_shell, arguments)
         log.debug("PKG : pwd: %s", cache_path)
         if pkginfo[version_num].get("use_scheduler", False):
             # Create Scheduled Task
@@ -1778,7 +1800,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 force=True,
                 action_type="Execute",
                 cmd=cmd_shell,
-                arguments='/s /c "{}"'.format(arguments),
+                arguments='/c "{}"'.format(arguments),
                 start_in=cache_path,
                 trigger_type="Once",
                 start_date="1975-01-01",
@@ -1830,7 +1852,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         else:
             # Launch the command
             result = __salt__["cmd.run_all"](
-                '"{}" /s /c "{}"'.format(cmd_shell, arguments),
+                '"{}" /c "{}"'.format(cmd_shell, arguments),
                 cache_path,
                 output_loglevel="trace",
                 python_shell=False,
@@ -2126,7 +2148,7 @@ def remove(name=None, pkgs=None, **kwargs):
             cached_pkg = cached_pkg.replace("/", "\\")
             cache_path, _ = os.path.split(cached_pkg)
 
-            # os.path.expandvars is not required as we run everything through cmd.exe /s /c
+            # os.path.expandvars is not required as we run everything through cmd.exe /c
 
             if kwargs.get("extra_uninstall_flags"):
                 uninstall_flags = "{} {}".format(
@@ -2154,7 +2176,7 @@ def remove(name=None, pkgs=None, **kwargs):
             # Uninstall the software
             changed.append(pkgname)
             # Check Use Scheduler Option
-            log.debug("PKG : cmd: %s /s /c %s", cmd_shell, arguments)
+            log.debug("PKG : cmd: %s /c %s", cmd_shell, arguments)
             log.debug("PKG : pwd: %s", cache_path)
             if pkginfo[target].get("use_scheduler", False):
                 # Create Scheduled Task
@@ -2164,7 +2186,7 @@ def remove(name=None, pkgs=None, **kwargs):
                     force=True,
                     action_type="Execute",
                     cmd=cmd_shell,
-                    arguments='/s /c "{}"'.format(arguments),
+                    arguments='/c "{}"'.format(arguments),
                     start_in=cache_path,
                     trigger_type="Once",
                     start_date="1975-01-01",
@@ -2181,7 +2203,7 @@ def remove(name=None, pkgs=None, **kwargs):
             else:
                 # Launch the command
                 result = __salt__["cmd.run_all"](
-                    '"{}" /s /c "{}"'.format(cmd_shell, arguments),
+                    '"{}" /c "{}"'.format(cmd_shell, arguments),
                     output_loglevel="trace",
                     python_shell=False,
                     redirect_stderr=True,
@@ -2359,7 +2381,7 @@ def _reverse_cmp_pkg_versions(pkg1, pkg2):
     """
     Compare software package versions
     """
-    return 1 if Version(pkg1) > Version(pkg2) else -1
+    return 1 if LooseVersion(pkg1) > LooseVersion(pkg2) else -1
 
 
 def _get_latest_pkg_version(pkginfo):
