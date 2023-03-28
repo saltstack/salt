@@ -321,7 +321,7 @@ def test_pkg_install_log_message(caplog):
             extra_install_flags="-e True -test_flag True",
         )
         assert (
-            'PKG : cmd: C:\\WINDOWS\\system32\\cmd.exe /s /c "runme.exe" /s -e '
+            'PKG : cmd: C:\\WINDOWS\\system32\\cmd.exe /c "runme.exe" /s -e '
             "True -test_flag True"
         ).lower() in [x.lower() for x in caplog.messages]
         assert "PKG : pwd: ".lower() in [x.lower() for x in caplog.messages]
@@ -540,7 +540,7 @@ def test_pkg_remove_log_message(caplog):
             pkgs=["firebox"],
         )
         assert (
-            'PKG : cmd: C:\\WINDOWS\\system32\\cmd.exe /s /c "%program.exe" /S'
+            'PKG : cmd: C:\\WINDOWS\\system32\\cmd.exe /c "%program.exe" /S'
         ).lower() in [x.lower() for x in caplog.messages]
         assert "PKG : pwd: ".lower() in [x.lower() for x in caplog.messages]
         assert "PKG : retcode: 0" in caplog.messages
@@ -629,3 +629,17 @@ def test_pkg_remove_minion_error_salt():
         )
 
         assert ret == expected
+
+
+@pytest.mark.parametrize(
+    "v1,v2,expected",
+    (
+        ("2.24.0", "2.23.0.windows.1", 1),
+        ("2.23.0.windows.2", "2.23.0.windows.1", 1),
+    ),
+)
+def test__reverse_cmp_pkg_versions(v1, v2, expected):
+    result = win_pkg._reverse_cmp_pkg_versions(v1, v2)
+    assert result == expected, "cmp({}, {}) should be {}, got {}".format(
+        v1, v2, expected, result
+    )
