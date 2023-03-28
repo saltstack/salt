@@ -7,6 +7,11 @@ import pytest
 
 import salt.modules.win_task as win_task
 
+pytestmark = [
+    pytest.mark.skip_unless_on_windows,
+    pytest.mark.destructive_test,
+]
+
 
 @pytest.fixture(scope="function")
 def base_task():
