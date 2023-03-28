@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import pathlib
+import re
 import shutil
 import sys
 import tempfile
@@ -983,6 +984,7 @@ def release(ctx: Context, salt_version: str):
 
     already_copied_files: list[str] = []
     s3 = boto3.client("s3")
+    dot_repo_files = []
     with tools.utils.create_progress_bar() as progress:
         task = progress.add_task(
             "Copying files between buckets", total=len(files_to_copy)
@@ -990,6 +992,8 @@ def release(ctx: Context, salt_version: str):
         for fpath in files_to_copy:
             if fpath in already_copied_files:
                 continue
+            if fpath.endswith(".repo"):
+                dot_repo_files.append(fpath)
             ctx.info(f" * Copying {fpath}")
             try:
                 s3.copy_object(
@@ -1085,6 +1089,51 @@ def release(ctx: Context, salt_version: str):
             )
             ctx.info(f"Writing {repo_json_path} ...")
             repo_json_path.write_text(json.dumps(release_repo_json, sort_keys=True))
+
+        # And now, let's get the several rpm "*.repo" files to update the base
+        # domain from staging to release
+        release_domain = os.environ.get(
+            "SALT_REPO_DOMAIN_RELEASE", "repo.saltproject.io"
+        )
+        for path in dot_repo_files:
+            repo_file_path = repo_path.joinpath(path)
+            repo_file_path.parent.mkdir(exist_ok=True, parents=True)
+            bucket_name = tools.utils.STAGING_BUCKET_NAME
+            try:
+                ret = s3.head_object(Bucket=bucket_name, Key=path)
+                ctx.info(
+                    f"Downloading existing '{repo_file_path.relative_to(repo_path)}' file from bucket {bucket_name}"
+                )
+                size = ret["ContentLength"]
+                with repo_file_path.open("wb") as wfh:
+                    with tools.utils.create_progress_bar(
+                        file_progress=True
+                    ) as progress:
+                        task = progress.add_task(
+                            description="Downloading...", total=size
+                        )
+                    s3.download_fileobj(
+                        Bucket=bucket_name,
+                        Key=path,
+                        Fileobj=wfh,
+                        Callback=tools.utils.UpdateProgress(progress, task),
+                    )
+                updated_contents = re.sub(
+                    r"^baseurl=https://([^/]+)/(.*)$",
+                    rf"baseurl=https://{release_domain}/\2",
+                    repo_file_path.read_text(),
+                    count=1,
+                    flags=re.MULTILINE,
+                )
+                ctx.info(f"Updated '{repo_file_path.relative_to(repo_path)}:")
+                ctx.print(updated_contents)
+                repo_file_path.write_text(updated_contents)
+            except ClientError as exc:
+                if "Error" not in exc.response:
+                    raise
+                if exc.response["Error"]["Code"] != "404":
+                    raise
+                ctx.info(f"Cloud not find {repo_file_path} in bucket {bucket_name}")
 
         for dirpath, dirnames, filenames in os.walk(repo_path, followlinks=True):
             for path in filenames:
