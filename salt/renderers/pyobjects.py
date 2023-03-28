@@ -461,15 +461,16 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
                     # that we're importing everything
                     imports = None
 
-                state_file = client.cache_file(import_file, saltenv)
-                if not state_file:
-                    raise ImportError(
-                        "Could not find the file '{}'".format(import_file)
-                    )
+                with client:
+                    state_file = client.cache_file(import_file, saltenv)
+                    if not state_file:
+                        raise ImportError(
+                            "Could not find the file '{}'".format(import_file)
+                        )
 
-                with salt.utils.files.fopen(state_file) as state_fh:
-                    state_contents, state_globals = process_template(state_fh)
-                exec(state_contents, state_globals)
+                    with salt.utils.files.fopen(state_file) as state_fh:
+                        state_contents, state_globals = process_template(state_fh)
+                    exec(state_contents, state_globals)
 
                 # if no imports have been specified then we are being imported as: import salt://foo.sls
                 # so we want to stick all of the locals from our state file into the template globals

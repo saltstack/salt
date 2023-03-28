@@ -28,10 +28,7 @@ def update_master_cache(states, saltenv="base"):
     # Setup for copying states to gendir
     gendir = tempfile.mkdtemp()
     trans_tar = salt.utils.files.mkstemp()
-    if "cp.fileclient_{}".format(id(__opts__)) not in __context__:
-        __context__[
-            "cp.fileclient_{}".format(id(__opts__))
-        ] = salt.fileclient.get_file_client(__opts__)
+    client = salt.fileclient.get_file_client(__opts__)
 
     # generate cp.list_states output and save to gendir
     cp_output = salt.utils.json.dumps(__salt__["cp.list_states"]())
@@ -59,34 +56,33 @@ def update_master_cache(states, saltenv="base"):
             log.debug("copying %s to %s", state_name, gendir)
             qualified_name = salt.utils.url.create(state_name, saltenv)
             # Duplicate cp.get_dir to gendir
-            copy_result = __context__["cp.fileclient_{}".format(id(__opts__))].get_dir(
-                qualified_name, gendir, saltenv
-            )
-            if copy_result:
-                copy_result = [dir.replace(gendir, state_cache) for dir in copy_result]
-                copy_result_output = salt.utils.json.dumps(copy_result)
-                with salt.utils.files.fopen(file_copy_file, "w") as fp:
-                    fp.write(copy_result_output)
-                already_processed.append(state_name)
-            else:
-                # If files were not copied, assume state.file.sls was given and just copy state
-                state_name = os.path.dirname(state_name)
-                file_copy_file = os.path.join(gendir, state_name + ".copy")
-                if state_name in already_processed:
-                    log.debug("Already cached state for %s", state_name)
+            with client:
+                copy_result = client.get_dir(qualified_name, gendir, saltenv)
+                if copy_result:
+                    copy_result = [
+                        dir.replace(gendir, state_cache) for dir in copy_result
+                    ]
+                    copy_result_output = salt.utils.json.dumps(copy_result)
+                    with salt.utils.files.fopen(file_copy_file, "w") as fp:
+                        fp.write(copy_result_output)
+                    already_processed.append(state_name)
                 else:
-                    qualified_name = salt.utils.url.create(state_name, saltenv)
-                    copy_result = __context__[
-                        "cp.fileclient_{}".format(id(__opts__))
-                    ].get_dir(qualified_name, gendir, saltenv)
-                    if copy_result:
-                        copy_result = [
-                            dir.replace(gendir, state_cache) for dir in copy_result
-                        ]
-                        copy_result_output = salt.utils.json.dumps(copy_result)
-                        with salt.utils.files.fopen(file_copy_file, "w") as fp:
-                            fp.write(copy_result_output)
-                        already_processed.append(state_name)
+                    # If files were not copied, assume state.file.sls was given and just copy state
+                    state_name = os.path.dirname(state_name)
+                    file_copy_file = os.path.join(gendir, state_name + ".copy")
+                    if state_name in already_processed:
+                        log.debug("Already cached state for %s", state_name)
+                    else:
+                        qualified_name = salt.utils.url.create(state_name, saltenv)
+                        copy_result = client.get_dir(qualified_name, gendir, saltenv)
+                        if copy_result:
+                            copy_result = [
+                                dir.replace(gendir, state_cache) for dir in copy_result
+                            ]
+                            copy_result_output = salt.utils.json.dumps(copy_result)
+                            with salt.utils.files.fopen(file_copy_file, "w") as fp:
+                                fp.write(copy_result_output)
+                            already_processed.append(state_name)
 
     # turn gendir into tarball and remove gendir
     try:

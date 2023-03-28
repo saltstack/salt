@@ -321,30 +321,31 @@ def sls(root, mods, saltenv="base", test=None, exclude=None, **kwargs):
     if isinstance(mods, str):
         mods = mods.split(",")
 
-    high_data, errors = st_.render_highstate({saltenv: mods})
-    if exclude:
-        if isinstance(exclude, str):
-            exclude = exclude.split(",")
-        if "__exclude__" in high_data:
-            high_data["__exclude__"].extend(exclude)
-        else:
-            high_data["__exclude__"] = exclude
+    with st_:
+        high_data, errors = st_.render_highstate({saltenv: mods})
+        if exclude:
+            if isinstance(exclude, str):
+                exclude = exclude.split(",")
+            if "__exclude__" in high_data:
+                high_data["__exclude__"].extend(exclude)
+            else:
+                high_data["__exclude__"] = exclude
 
-    high_data, ext_errors = st_.state.reconcile_extend(high_data)
-    errors += ext_errors
-    errors += st_.state.verify_high(high_data)
-    if errors:
-        return errors
+        high_data, ext_errors = st_.state.reconcile_extend(high_data)
+        errors += ext_errors
+        errors += st_.state.verify_high(high_data)
+        if errors:
+            return errors
 
-    high_data, req_in_errors = st_.state.requisite_in(high_data)
-    errors += req_in_errors
-    if errors:
-        return errors
+        high_data, req_in_errors = st_.state.requisite_in(high_data)
+        errors += req_in_errors
+        if errors:
+            return errors
 
-    high_data = st_.state.apply_exclude(high_data)
+        high_data = st_.state.apply_exclude(high_data)
 
-    # Compile and verify the raw chunks
-    chunks = st_.state.compile_high_data(high_data)
+        # Compile and verify the raw chunks
+        chunks = st_.state.compile_high_data(high_data)
     file_refs = salt.client.ssh.state.lowstate_file_refs(
         chunks,
         salt.client.ssh.wrapper.state._merge_extra_filerefs(
