@@ -368,12 +368,6 @@ class Develop(develop):
             self.generate_salt_syspaths = True
 
     def run(self):
-        if IS_WINDOWS_PLATFORM:
-            # Download the required DLLs
-            self.distribution.salt_download_windows_dlls = True
-            self.run_command("download-windows-dlls")
-            self.distribution.salt_download_windows_dlls = None
-
         if self.write_salt_version is True:
             self.distribution.running_salt_install = True
             self.distribution.salt_version_hardcoded_path = SALT_VERSION_HARDCODED
@@ -652,11 +646,6 @@ class Install(install):
         self.distribution.salt_version_hardcoded_path = os.path.join(
             self.build_lib, "salt", "_version.txt"
         )
-        if IS_WINDOWS_PLATFORM:
-            # Download the required DLLs
-            self.distribution.salt_download_windows_dlls = True
-            self.run_command("download-windows-dlls")
-            self.distribution.salt_download_windows_dlls = None
         # need to ensure _version.txt is created in build dir before install
         if not os.path.exists(os.path.join(self.build_lib)):
             if not self.skip_build:
