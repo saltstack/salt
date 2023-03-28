@@ -47,7 +47,7 @@ runs:
       shell: bash
       if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
       run: |
-        tools pkg build onedir-dependencies --arch ${{ inputs.arch }} --python-version ${{ inputs.python-version }} --package-name ${{ inputs.package-name }} --platform ${{ inputs.platform }}
+        tools pkg build onedir-dependencies --arch ${{ inputs.arch }} --python-version ${{ inputs.python-version }} --package-name artifacts/${{ inputs.package-name }} --platform ${{ inputs.platform }}
 
     - name: Cleanup Salt Onedir Directory
       shell: bash
