@@ -307,14 +307,26 @@ jobs:
         env:
           PULL_LABELS: ${{ inputs.pull_labels }}
         run: |
-          fast_tests=false
+          no_fast_tests=$(jq -c '. | any(index("test:no_fast"))' <<< $PULL_LABELS)
+          slow_tests=$(jq -c '. | any(index("test:slow"))' <<< $PULL_LABELS)
+          core_tests=$(jq -c '. | any(index("test:core"))' <<< $PULL_LABELS)
+          speed_tests=$(jq -c '. | any(index("test:speed"))' <<< $PULL_LABELS)
+          speed_tests=$(jq -c '. | any(index("test:speed"))' <<< $PULL_LABELS)
+          flaky_jail_tests=$(jq -c '. | any(index("test:flaky-jail"))' <<< $PULL_LABELS)
           echo $fast_tests
-          echo "fast_tests=$fast_test" >> "$GITHUB_OUTPUT"
-
+          echo $slow_tests
+          echo $core_tests
+          echo $speed_tests
+          echo $flaky_jail_tests
+          echo "no_fast_tests=$no_fast_test" >> "$GITHUB_OUTPUT"
+          echo "slow_tests=$slow_test" >> "$GITHUB_OUTPUT"
+          echo "core_tests=$core_test" >> "$GITHUB_OUTPUT"
+          echo "speed_tests=$speed_test" >> "$GITHUB_OUTPUT"
+          echo "flaky_jail_tests=$flaky_jail_test" >> "$GITHUB_OUTPUT"
 
       - name: Run Fast/Changed Tests
         id: run-fast-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' && fromJson(steps.get-test-flags.output.no_fast_tests) == false}}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
