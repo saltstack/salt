@@ -426,53 +426,6 @@ class DownloadWindowsDlls(Command):
         platform_bits, _ = platform.architecture()
         url = "https://repo.saltproject.io/windows/dependencies/{bits}/{fname}"
         dest = os.path.join(os.path.dirname(sys.executable), "{fname}")
-        with indent_log():
-            for fname in (
-                "openssl/1.1.1k/ssleay32.dll",
-                "openssl/1.1.1k/libeay32.dll",
-            ):
-                # See if the library is already on the system
-                if find_library(fname):
-                    continue
-                furl = url.format(bits=platform_bits[:2], fname=fname)
-                fdest = dest.format(fname=os.path.basename(fname))
-                if not os.path.exists(fdest):
-                    log.info("Downloading {} to {} from {}".format(fname, fdest, furl))
-                    try:
-                        from contextlib import closing
-
-                        import requests
-
-                        with closing(requests.get(furl, stream=True)) as req:
-                            if req.status_code == 200:
-                                with open(fdest, "wb") as wfh:
-                                    for chunk in req.iter_content(chunk_size=4096):
-                                        if chunk:  # filter out keep-alive new chunks
-                                            wfh.write(chunk)
-                                            wfh.flush()
-                            else:
-                                log.error(
-                                    "Failed to download {} to {} from {}".format(
-                                        fname, fdest, furl
-                                    )
-                                )
-                    except ImportError:
-                        req = urlopen(furl)
-
-                        if req.getcode() == 200:
-                            with open(fdest, "wb") as wfh:
-                                while True:
-                                    chunk = req.read(4096)
-                                    if not chunk:
-                                        break
-                                    wfh.write(chunk)
-                                    wfh.flush()
-                        else:
-                            log.error(
-                                "Failed to download {} to {} from {}".format(
-                                    fname, fdest, furl
-                                )
-                            )
 
 
 class Sdist(sdist):
