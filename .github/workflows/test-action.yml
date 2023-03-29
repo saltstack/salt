@@ -304,7 +304,7 @@ jobs:
         id: get-test-flags
         shell: bash
         env:
-          PULL_LABELS: ${{ inputs.pull_labels }}
+          PULL_LABELS: ${{ inputs.pull-labels }}
         run: |
           echo $PULL_LABELS
           no_fast_tests=$(jq -c '. | any(index("test:no_fast"))' <<< $PULL_LABELS)
