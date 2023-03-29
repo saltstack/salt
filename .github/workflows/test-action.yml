@@ -323,6 +323,13 @@ jobs:
           echo "speed_tests=$speed_test" >> "$GITHUB_OUTPUT"
           echo "flaky_jail_tests=$flaky_jail_test" >> "$GITHUB_OUTPUT"
 
+      - name: t
+        id: t
+        run: |
+          echo ${{ steps.get-test-flags.output.no_fast_tests }}
+          echo ${{ steps.get-test-flags.output.no_fast_tests == true }}
+          echo ${{ steps.get-test-flags.output.no_fast_tests == 'true' }}
+
 
       - name: Run Fast/Changed Tests
         id: run-fast-changed-tests
