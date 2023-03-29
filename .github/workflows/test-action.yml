@@ -306,13 +306,14 @@ jobs:
         env:
           PULL_LABELS: ${{ inputs.pull_labels }}
         run: |
+          echo $PULL_LABELS
           no_fast_tests=$(jq -c '. | any(index("test:no_fast"))' <<< $PULL_LABELS)
           slow_tests=$(jq -c '. | any(index("test:slow"))' <<< $PULL_LABELS)
           core_tests=$(jq -c '. | any(index("test:core"))' <<< $PULL_LABELS)
           speed_tests=$(jq -c '. | any(index("test:speed"))' <<< $PULL_LABELS)
           speed_tests=$(jq -c '. | any(index("test:speed"))' <<< $PULL_LABELS)
           flaky_jail_tests=$(jq -c '. | any(index("test:flaky-jail"))' <<< $PULL_LABELS)
-          echo $fast_tests
+          echo $no_fast_tests
           echo $slow_tests
           echo $core_tests
           echo $speed_tests
