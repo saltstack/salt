@@ -325,7 +325,7 @@ jobs:
 
       - name: Run Fast/Changed Tests
         id: run-fast-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' || fromJson(steps.get-test-flags.output.no_fast_tests) == true }}
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' && fromJson(steps.get-test-flags.output.no_fast_tests) == fast }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
@@ -360,7 +360,7 @@ jobs:
 
       - name: Run Fast Tests
         id: run-fast-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] == 'full' && fromJson(steps.get-test-flags.output.no_fast_tests) == fast }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
