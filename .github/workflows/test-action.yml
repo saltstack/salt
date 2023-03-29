@@ -406,7 +406,6 @@ jobs:
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
             ${{ matrix.tests-chunk }} -- --slow-tests --core-tests --speed-tests
 
-
       - name: Combine Coverage Reports
         if: always() && inputs.skip-code-coverage == false && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
         run: |
