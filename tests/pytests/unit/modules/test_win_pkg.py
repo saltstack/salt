@@ -241,6 +241,33 @@ def test_pkg_install_name():
         assert "-e True -test_flag True" in str(mock_cmd_run_all.call_args[0])
 
 
+def test_pkg_install_verify_ssl_false():
+    """
+    test pkg.install using verify_ssl=False
+    """
+    ret_reg = {"Nullsoft Install System": "3.03"}
+    # The 2nd time it's run, pkg.list_pkgs uses with stringify
+    se_list_pkgs = [{"nsis": ["3.03"]}, {"nsis": "3.02"}]
+    mock_cp = MagicMock(return_value="C:\\fake\\path.exe")
+    with patch.object(win_pkg, "list_pkgs", side_effect=se_list_pkgs), patch.object(
+        win_pkg, "_get_reg_software", return_value=ret_reg
+    ), patch.dict(
+        win_pkg.__salt__, {"cp.is_cached": MagicMock(return_value=False)}
+    ), patch.dict(
+        win_pkg.__salt__, {"cp.cache_file": mock_cp}
+    ), patch.dict(
+        win_pkg.__salt__, {"cmd.run_all": MagicMock(return_value={"retcode": 0})}
+    ):
+        expected = {"nsis": {"new": "3.02", "old": "3.03"}}
+        result = win_pkg.install(name="nsis", version="3.02", verify_ssl=False)
+        mock_cp.assert_called_once_with(
+            "http://download.sourceforge.net/project/nsis/NSIS%203/3.02/nsis-3.02-setup.exe",
+            "base",
+            verify_ssl=False,
+        )
+        assert expected == result
+
+
 def test_pkg_install_single_pkg():
     """
     test pkg.install pkg with extra_install_flags
