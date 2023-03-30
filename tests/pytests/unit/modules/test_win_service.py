@@ -21,6 +21,7 @@ pytestmark = [
     pytest.mark.skip_unless_on_windows,
 ]
 
+
 @pytest.fixture
 def configure_loader_modules():
     return {win_service: {}}
@@ -315,9 +316,7 @@ def test_enable():
     Test to enable the named service to start at boot
     """
     mock_modify = MagicMock(return_value=True)
-    mock_info = MagicMock(
-        return_value={"StartType": "Auto", "StartTypeDelayed": False}
-    )
+    mock_info = MagicMock(return_value={"StartType": "Auto", "StartTypeDelayed": False})
     with patch.object(win_service, "modify", mock_modify):
         with patch.object(win_service, "info", mock_info):
             assert win_service.enable("spongebob") is True
