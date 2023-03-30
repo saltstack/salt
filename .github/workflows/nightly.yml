@@ -13,7 +13,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-5  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-0  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
 
 permissions:
@@ -300,28 +300,30 @@ jobs:
         with:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
-      # TODO: Remove the --salt-version argument post 3006 release.  This was to handle versioning
-      # issues on pre-3006 development versions on deb-based distros.
       - name: Update Debian changelog
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools changelog update-deb "${{ needs.prepare-workflow.outputs.salt-version }}" --draft
-          tools changelog update-deb "${{ needs.prepare-workflow.outputs.salt-version }}"
+          tools changelog update-deb --draft
+          tools changelog update-deb
 
       - name: Update RPM changelog
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           tools changelog update-rpm --draft
           tools changelog update-rpm
 
       - name: Update Release Notes
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           tools changelog update-release-notes --draft
           tools changelog update-release-notes
 
       - name: Generate MAN Pages
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         env:
           LATEST_RELEASE: "${{ needs.prepare-workflow.outputs.salt-version }}"
           SALT_ON_SALTSTACK: "1"
@@ -330,22 +332,26 @@ jobs:
 
       - name: Update Changelog
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           tools changelog update-changelog-md --draft
           tools changelog update-changelog-md
 
       - name: Show Changes Diff
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           git diff --color
 
       - name: Configure Git
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           git config --global user.name "Salt Project Packaging"
           git config --global user.email saltproject-packaging@vmware.com
 
       - name: Setup Pre-Commit
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         uses: ./.github/actions/setup-pre-commit
         with:
           version: "3.0.4"
@@ -353,6 +359,7 @@ jobs:
 
       - name: Commit Changes
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         env:
           SKIP: lint-salt,lint-tests
         run: |
@@ -362,11 +369,13 @@ jobs:
 
       - name: Create release changes patch
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           git format-patch --keep-subject --binary --stdout HEAD^ > salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
 
       - name: Upload Changes Diff Artifact
         uses: actions/upload-artifact@v3
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
           path: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
@@ -437,7 +446,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.10.0"
+      relenv-version: "0.10.1"
       python-version-linux: "3.10.10"
       python-version-macos: "3.10.10"
       python-version-windows: "3.10.10"
@@ -455,7 +464,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.10.0"
+      relenv-version: "0.10.1"
       python-version-linux: "3.10.10"
       python-version-macos: "3.10.10"
       python-version-windows: "3.10.10"
@@ -1302,7 +1311,7 @@ jobs:
       - name: Create Repository
         run: |
           tools pkg repo create src --key-id=64CBBC8173D76B3F --nightly-build \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || ''  }} \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
       - name: Upload Standalone Repository As An Artifact
@@ -1423,7 +1432,7 @@ jobs:
       - name: Create Repository
         run: |
           tools pkg repo create deb --key-id=64CBBC8173D76B3F --distro-arch=${{ matrix.arch }} --nightly-build \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || '' }} \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
@@ -1550,9 +1559,12 @@ jobs:
           mkdir -p artifacts/pkgs/repo
 
       - name: Create Repository
+        env:
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
         run: |
           tools pkg repo create rpm --key-id=64CBBC8173D76B3F --distro-arch=${{ matrix.arch }} --nightly-build \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || ''  }} \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
@@ -1647,7 +1659,7 @@ jobs:
       - name: Create Repository
         run: |
           tools pkg repo create windows --key-id=64CBBC8173D76B3F --nightly-build \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || ''  }} \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
       - name: Upload Repository As An Artifact
@@ -1723,7 +1735,7 @@ jobs:
       - name: Create Repository
         run: |
           tools pkg repo create macos --key-id=64CBBC8173D76B3F --nightly-build \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || ''  }} \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
       - name: Upload Repository As An Artifact
@@ -1835,7 +1847,7 @@ jobs:
       - name: Create Repository
         run: |
           tools pkg repo create onedir --key-id=64CBBC8173D76B3F --nightly-build \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || ''  }} \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
       - name: Upload Repository As An Artifact
@@ -1915,6 +1927,9 @@ jobs:
           tree -a artifacts/pkgs/repo/
 
       - name: Upload Repository Contents (nightly)
+        env:
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
         run: |
           tools pkg repo publish nightly --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} artifacts/pkgs/repo/
 
