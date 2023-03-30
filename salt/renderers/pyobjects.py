@@ -430,9 +430,6 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
     if not salt_data:
         return _globals
 
-    # this will be used to fetch any import files
-    client = get_file_client(__opts__)
-
     # process our sls imports
     #
     # we allow pyobjects users to use a special form of the import statement
@@ -461,7 +458,9 @@ def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
                     # that we're importing everything
                     imports = None
 
-                with client:
+                # this will be used to fetch any import files
+                # For example salt://test.sls
+                with get_file_client(__opts__) as client:
                     state_file = client.cache_file(import_file, saltenv)
                     if not state_file:
                         raise ImportError(
