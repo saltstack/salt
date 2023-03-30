@@ -486,7 +486,7 @@ def status(name, *args, **kwargs):
     .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
-    .. versionchanged:: 3006
+    .. versionchanged:: 3006.0
         Returns "Not Found" if the service is not found on the system
 
     Args:
