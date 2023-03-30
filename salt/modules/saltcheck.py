@@ -453,6 +453,7 @@ def run_state_tests(
     :param bool check_all: boolean to run all tests in state/saltcheck-tests directory
     :param bool only_fails: boolean to only print failure results
     :param bool junit: boolean to print results in junit format
+        .. versionadded:: 3007.0
 
     CLI Example:
 
@@ -555,6 +556,7 @@ def run_highstate_tests(saltenv=None, only_fails=False, junit=False):
     :param str saltenv: optional saltenv. Defaults to base
     :param bool only_fails: boolean to only print failure results
     :param bool junit: boolean to print results in junit format
+        .. versionadded:: 3007.0
 
     CLI Example:
 
@@ -657,7 +659,7 @@ def _generate_junit_out_list(results):
                     test_cases[len(test_cases) - 1].add_skipped_info(status)
                 total_time = total_time + float(val["duration"])
     test_suite = TestSuite("test_results", test_cases)
-    # Set exist code to 1 if failed tests
+    # Set exit code to 1 if failed tests
     # Use-cases for exist code handling of missing or skipped?
     __context__["retcode"] = failed
     xml_string = TestSuite.to_xml_string([test_suite])
