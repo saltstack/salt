@@ -128,8 +128,7 @@ class SaltCacheLoader(BaseLoader):
         """
         saltpath = salt.utils.url.create(template)
         fcl = self.file_client()
-        with fcl:
-            return fcl.get_file(saltpath, "", True, self.saltenv)
+        return fcl.get_file(saltpath, "", True, self.saltenv)
 
     def check_cache(self, template):
         """

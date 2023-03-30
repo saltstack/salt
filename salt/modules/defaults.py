@@ -37,7 +37,6 @@ def _load(formula):
     """
 
     # Compute possibilities
-    _mk_client()
     paths = []
     for ext in ("yaml", "json"):
         source_url = salt.utils.url.create(formula + "/defaults." + ext)
