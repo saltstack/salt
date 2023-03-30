@@ -74,7 +74,7 @@ jobs:
       - name: Build RPM
         if: ${{ matrix.src == true}}
         run: |
-          tools pkg build rpm
+          tools pkg build rpm --arch x86_64
 
       - name: Upload RPMs
         uses: actions/upload-artifact@v3

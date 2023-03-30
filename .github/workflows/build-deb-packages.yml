@@ -87,7 +87,7 @@ jobs:
         working-directory: pkgs/checkout/
         if: ${{ matrix.src == true}}
         run: |
-          tools pkg build deb
+          tools pkg build deb --arch x86_64
 
       - name: Cleanup
         run: |
