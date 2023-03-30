@@ -136,26 +136,20 @@ cd $RPM_BUILD_DIR
 
 %if "%{getenv:SALT_ONEDIR_ARCHIVE}" == ""
   python3 -m venv --clear --copies build/venv
-  build/venv/bin/python3 -m pip install relenv
+  build/venv/bin/python3 -m pip install relenv==${SALT_RELENV_VERSION}
+  export PY=$(build/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
+  build/venv/bin/python3 -m pip install -r %{_salt_src}/requirements/static/ci/py${PY}/tools.txt
   build/venv/bin/relenv fetch
   build/venv/bin/relenv toolchain fetch
-  build/venv/bin/relenv create build/salt
-  build/salt/bin/python3 -m pip install "pip>=22.3.1,<23.0" "setuptools>=65.6.3,<66" "wheel"
-  export PY=$(build/salt/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
-  build/salt/bin/python3 -m pip install -r %{_salt_src}/requirements/static/pkg/py${PY}/linux.txt --no-binary=':all:'
+  cd %{_salt_src}
+	$RPM_BUILD_DIR/build/venv/bin/tools pkg build onedir-dependencies --arch ${SALT_PACKAGE_ARCH} --python-version ${SALT_PYTHON_VERSION} --package-name $RPM_BUILD_DIR/${SALT_PACKAGE_NAME} --platform linux
 
   # Fix any hardcoded paths to the relenv python binary on any of the scripts installed in
   # the <onedir>/bin directory
-  find build/salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$(dirname $(readlink -f $0))/python3" "$0" "$@":g' {} \;
+  find $RPM_BUILD_DIR/build/salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$(dirname $(readlink -f $0))/python3" "$0" "$@":g' {} \;
 
-  export USE_STATIC_REQUIREMENTS=1
-  export RELENV_PIP_DIR=1
-  build/salt/bin/python3 -m pip install --no-warn-script-location %{_salt_src}
-
-  build/salt/bin/python3 -m venv --clear --copies build/tools
-  build/tools/bin/python3 -m pip install -r %{_salt_src}/requirements/static/ci/py${PY}/tools.txt
-  cd %{_salt_src}
-  $RPM_BUILD_DIR/build/tools/bin/tools pkg pre-archive-cleanup --pkg $RPM_BUILD_DIR/build/salt
+	$RPM_BUILD_DIR/build/venv/bin/tools pkg build salt-onedir . --package-name $RPM_BUILD_DIR/${SALT_PACKAGE_NAME} --platform linux
+  $RPM_BUILD_DIR/build/venv/bin/tools pkg pre-archive-cleanup --pkg $RPM_BUILD_DIR/build/salt
 %else
   # The relenv onedir is being provided, all setup up until Salt is installed
   # is expected to be done
