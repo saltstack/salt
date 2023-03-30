@@ -39,14 +39,6 @@ Requires: pciutils
 Requires: which
 Requires: openssl
 
-
-%if 0%{?systemd_preun:1}
-Requires(post): systemd-units
-Requires(preun): systemd-units
-Requires(postun): systemd-units
-%endif
-
-BuildRequires: systemd-units
 BuildRequires: python3
 BuildRequires: python3-pip
 BuildRequires: openssl
