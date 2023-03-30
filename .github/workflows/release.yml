@@ -337,7 +337,7 @@ jobs:
           tools pkg repo restore-previous-releases
 
   publish-pypi:
-    name: Publish to PyPi(test)
+    name: Publish to PyPi
     if: ${{ github.event.repository.fork != true }}
     needs:
       - prepare-workflow
