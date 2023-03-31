@@ -251,7 +251,7 @@ jobs:
         run: |
           cat ~/foo.txt || echo "File does not exist"
 
-      - name: Set File
+      - name: Echo To File
         run: |
           echo FOO >> ~/foo.txt
 
@@ -270,6 +270,18 @@ jobs:
       - name: Cat File
         run: |
           cat ~/foo.txt || echo "File does not exist"
+
+<<<<<<< HEAD
+=======
+      - name: Echo To File
+        run: |
+          echo FOO >> ~/foo.txt
+
+      - name: Cat File
+        run: |
+          cat ~/foo.txt || echo "File does not exist"
+
+>>>>>>> db5794778c (f)
 
   build-src-repo:
     name: Build Source Repository
