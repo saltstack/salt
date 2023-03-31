@@ -242,13 +242,14 @@ def _create_and_execute_salt_state(root, chunks, file_refs, test, hash_type):
     """
     # Create the tar containing the state pkg and relevant files.
     salt.client.ssh.wrapper.state._cleanup_slsmod_low_data(chunks)
-    trans_tar = salt.client.ssh.state.prep_trans_tar(
-        salt.fileclient.get_file_client(__opts__),
-        chunks,
-        file_refs,
-        __pillar__.value(),
-        root,
-    )
+    with salt.fileclient.get_file_client(__opts__) as client:
+        trans_tar = salt.client.ssh.state.prep_trans_tar(
+            client,
+            chunks,
+            file_refs,
+            __pillar__.value(),
+            root,
+        )
     trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, hash_type)
 
     ret = None
@@ -314,14 +315,14 @@ def sls(root, mods, saltenv="base", test=None, exclude=None, **kwargs):
     # Clone the options data and apply some default values. May not be
     # needed, as this module just delegate
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
-    st_ = salt.client.ssh.state.SSHHighState(
-        opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
-    )
 
     if isinstance(mods, str):
         mods = mods.split(",")
 
-    with st_:
+    with salt.client.ssh.state.SSHHighState(
+        opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
+    ) as st_:
+
         high_data, errors = st_.render_highstate({saltenv: mods})
         if exclude:
             if isinstance(exclude, str):
