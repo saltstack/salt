@@ -245,10 +245,12 @@ jobs:
       - self-hosted
       - macos
       - x86_64
+
     steps:
 
       - name: Cat File
         run: |
+          echo "SOME OUTPUT, next cat."
           cat ~/foo.txt || echo "File does not exist"
 
       - name: Echo To File
@@ -269,6 +271,7 @@ jobs:
 
       - name: Cat File
         run: |
+          echo "SOME OUTPUT, next cat."
           cat ~/foo.txt || echo "File does not exist"
 
 <<<<<<< HEAD
