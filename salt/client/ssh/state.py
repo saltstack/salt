@@ -223,37 +223,36 @@ def prep_trans_tar(
         env_root = os.path.join(gendir, saltenv)
         if not os.path.isdir(env_root):
             os.makedirs(env_root)
-        with file_client:
-            for ref in file_refs[saltenv]:
-                for name in ref:
-                    short = salt.utils.url.parse(name)[0].lstrip("/")
-                    cache_dest = os.path.join(cache_dest_root, short)
-                    try:
-                        path = file_client.cache_file(name, saltenv, cachedir=cachedir)
-                    except OSError:
-                        path = ""
-                    if path:
-                        tgt = os.path.join(env_root, short)
+        for ref in file_refs[saltenv]:
+            for name in ref:
+                short = salt.utils.url.parse(name)[0].lstrip("/")
+                cache_dest = os.path.join(cache_dest_root, short)
+                try:
+                    path = file_client.cache_file(name, saltenv, cachedir=cachedir)
+                except OSError:
+                    path = ""
+                if path:
+                    tgt = os.path.join(env_root, short)
+                    tgt_dir = os.path.dirname(tgt)
+                    if not os.path.isdir(tgt_dir):
+                        os.makedirs(tgt_dir)
+                    shutil.copy(path, tgt)
+                    continue
+                try:
+                    files = file_client.cache_dir(name, saltenv, cachedir=cachedir)
+                except OSError:
+                    files = ""
+                if files:
+                    for filename in files:
+                        fn = filename[
+                            len(file_client.get_cachedir(cache_dest)) :
+                        ].strip("/")
+                        tgt = os.path.join(env_root, short, fn)
                         tgt_dir = os.path.dirname(tgt)
                         if not os.path.isdir(tgt_dir):
                             os.makedirs(tgt_dir)
-                        shutil.copy(path, tgt)
-                        continue
-                    try:
-                        files = file_client.cache_dir(name, saltenv, cachedir=cachedir)
-                    except OSError:
-                        files = ""
-                    if files:
-                        for filename in files:
-                            fn = filename[
-                                len(file_client.get_cachedir(cache_dest)) :
-                            ].strip("/")
-                            tgt = os.path.join(env_root, short, fn)
-                            tgt_dir = os.path.dirname(tgt)
-                            if not os.path.isdir(tgt_dir):
-                                os.makedirs(tgt_dir)
-                            shutil.copy(filename, tgt)
-                        continue
+                        shutil.copy(filename, tgt)
+                    continue
     try:
         # cwd may not exist if it was removed but salt was run from it
         cwd = os.getcwd()
