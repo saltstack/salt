@@ -31,11 +31,7 @@ URL:     https://saltproject.io/
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-%ifarch %{ix86} x86_64
-Requires: dmidecode
-%endif
 
-Requires: pciutils
 Requires: which
 Requires: openssl
 
