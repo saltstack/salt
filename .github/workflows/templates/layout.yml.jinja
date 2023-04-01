@@ -9,14 +9,14 @@
 <%- set python_version_linux = "3.10.10" %>
 <%- set python_version_macos = "3.10.10" %>
 <%- set python_version_windows = "3.10.10" %>
-<%- set relenv_version = "0.10.0" %>
+<%- set relenv_version = "0.10.1" %>
 <%- set gpg_key_id = "64CBBC8173D76B3F" %>
 <%- set prepare_actual_release = prepare_actual_release | default(False) %>
 <%- set release_branches = ["master", "3006.x"] %>
 ---
 <%- block name %>
 name: <{ workflow_name }>
-run-name: "<{ workflow_name }> (${{ github.event_name == 'pull_request' && format('pr: #{0}', github.event.number) || format('branch: {0}', github.ref_name) }})"
+run-name: "<{ workflow_name }> (${{ github.event_name == 'pull_request' && format('pr: #{0}', github.event.number) || format('{0}: {1}', startsWith(github.event.ref, 'refs/tags') && 'tag' || 'branch', github.ref_name) }})"
 <%- endblock name %>
 
 <%- block on %>
@@ -31,7 +31,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-5  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-0  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
 
 <%- endblock env %>
@@ -188,6 +188,8 @@ jobs:
       <%- if prepare_actual_release %>
 
       - name: Check Existing Releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
 

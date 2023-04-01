@@ -16,6 +16,7 @@ import copy
 import datetime
 import fnmatch
 import importlib
+import inspect
 import logging
 import os
 import random
@@ -2374,11 +2375,15 @@ class State:
                                 *cdata["args"], **cdata["kwargs"]
                             )
                 self.states.inject_globals = {}
-            if (
-                "check_cmd" in low
-                and "{0[state]}.mod_run_check_cmd".format(low) not in self.states
-            ):
-                ret.update(self._run_check_cmd(low))
+            if "check_cmd" in low:
+                state_check_cmd = "{0[state]}.mod_run_check_cmd".format(low)
+                state_func = "{0[state]}.{0[fun]}".format(low)
+                state_func_sig = inspect.signature(self.states[state_func])
+                if state_check_cmd not in self.states:
+                    ret.update(self._run_check_cmd(low))
+                else:
+                    if "check_cmd" not in state_func_sig.parameters:
+                        ret.update(self._run_check_cmd(low))
         except Exception as exc:  # pylint: disable=broad-except
             log.debug(
                 "An exception occurred in this state: %s",

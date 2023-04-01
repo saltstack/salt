@@ -43,6 +43,13 @@ on:
         type: string
         description: The nox session to run
         default: test-pkgs-onedir
+      artifacts-from-workflow:
+        required: false
+        type: string
+        description: >
+          Which workflow to download artifacts from. An empty string means the
+          current workflow run.
+        default: ""
 
 
 env:
@@ -95,9 +102,20 @@ jobs:
           key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ matrix.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
       - name: Download Onedir Tarball as an Artifact
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        if: inputs.artifacts-from-workflow == ''
         uses: actions/download-artifact@v3
         with:
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ matrix.arch }}.tar.xz
+          path: artifacts/
+
+      - name: Download Onedir Tarball as an Artifact(from a different workflow)
+        if: inputs.artifacts-from-workflow != ''
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: ${{ inputs.artifacts-from-workflow }}
+          workflow_conclusion: ""
+          branch: ${{ github.event.ref }}
+          if_no_artifact_found: fail
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ matrix.arch }}.tar.xz
           path: artifacts/
 
@@ -147,6 +165,14 @@ jobs:
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           nox --force-color -e compress-dependencies -- ${{ inputs.distro-slug }}
+
+      - name: Upload Onedir Tarball as an Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ matrix.arch }}.tar.xz
+          path: artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ matrix.arch }}.tar.xz*
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v3
@@ -235,7 +261,8 @@ jobs:
           SALT_REPO_TYPE: ${{ inputs.environment }}
           SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
           SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
-          SALT_REPO_DOMAIN: ${{ vars.SALT_REPO_DOMAIN || ( inputs.environment == 'staging' && 'staging.repo.saltproject.io' || 'repo.saltproject.io') }}
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- download-pkgs
 
