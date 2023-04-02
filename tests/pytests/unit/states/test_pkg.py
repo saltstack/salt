@@ -1015,3 +1015,33 @@ def test_installed_with_single_normalize_32bit():
         assert "xz-devel.i686" in call_yum_mock.mock_calls[0].args[0]
         assert ret["result"]
         assert ret["changes"] == expected
+
+
+def test__get_installable_versions_no_version_found():
+    mock_latest_versions = MagicMock(return_value={})
+    mock_list_repo_pkgs = MagicMock(return_value={})
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.latest_version": mock_latest_versions,
+            "pkg.list_pkgs": mock_list_repo_pkgs,
+        },
+    ), patch.dict(pkg.__opts__, {"test": True}):
+        expected = {"dummy": {"new": "installed", "old": ""}}
+        ret = pkg._get_installable_versions({"dummy": None}, current=None)
+        assert ret == expected
+
+
+def test__get_installable_versions_version_found():
+    mock_latest_versions = MagicMock(return_value={"dummy": "1.0.1"})
+    mock_list_repo_pkgs = MagicMock(return_value={})
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.latest_version": mock_latest_versions,
+            "pkg.list_pkgs": mock_list_repo_pkgs,
+        },
+    ), patch.dict(pkg.__opts__, {"test": True}):
+        expected = {"dummy": {"new": "1.0.1", "old": ""}}
+        ret = pkg._get_installable_versions({"dummy": None}, current=None)
+        assert ret == expected
