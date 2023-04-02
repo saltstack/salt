@@ -14,6 +14,9 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
       skip-code-coverage: true
+      <%- if gh_environment == "release" %>
+      artifacts-from-workflow: staging.yml
+      <%- endif %>
     secrets: inherit
 
 
@@ -33,6 +36,9 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
       skip-code-coverage: true
+      <%- if gh_environment == "release" %>
+      artifacts-from-workflow: staging.yml
+      <%- endif %>
     secrets: inherit
 
 
@@ -46,10 +52,13 @@
       - publish-repositories
     uses: ./.github/workflows/test-package-downloads-action-windows.yml
     with:
-      distro-slug: windows-latest
+      distro-slug: windows-2022
       platform: windows
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_windows }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
       skip-code-coverage: true
+      <%- if gh_environment == "release" %>
+      artifacts-from-workflow: staging.yml
+      <%- endif %>
     secrets: inherit

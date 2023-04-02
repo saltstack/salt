@@ -1694,11 +1694,13 @@ def remove_stale_master_key(master):
         )
 
 
-def download_file(url, dest):
+@pytest.helpers.register
+def download_file(url, dest, auth=None):
     # NOTE the stream=True parameter below
-    with requests.get(url, stream=True) as r:
+    with requests.get(url, stream=True, auth=auth) as r:
         r.raise_for_status()
         with open(dest, "wb") as f:
             for chunk in r.iter_content(chunk_size=8192):
                 if chunk:
                     f.write(chunk)
+    return dest

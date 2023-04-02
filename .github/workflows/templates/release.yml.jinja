@@ -25,11 +25,6 @@ on:
 
 <%- endblock on %>
 
-<%- block env %>
-  <{- super() }>
-  REPO_BASE_URL: "https://${{ secrets.SALT_REPO_DOMAIN }}"
-<%- endblock env %>
-
 <%- block concurrency %>
 
 concurrency:
@@ -116,6 +111,8 @@ permissions:
           validate-version: true
 
       - name: Check Existing Releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
 
@@ -144,12 +141,17 @@ permissions:
       - name: Clone The Salt Repository
         uses: actions/checkout@v3
 
+      - name: Setup Rclone
+        uses: AnimMouse/setup-rclone@v1
+        with:
+          version: v1.61.1
+
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Backup Previous Releases
         run: |
-          tools pkg repo backup-previous-releases --salt-version=${{ needs.prepare-workflow.outputs.salt-version }}
+          tools pkg repo backup-previous-releases
 
   publish-repositories:
     <%- do conclusion_needs.append('publish-repositories') %>
@@ -177,6 +179,9 @@ permissions:
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Publish Release Repository
+        env:
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
         run: |
           tools pkg repo publish <{ gh_environment }> ${{ needs.prepare-workflow.outputs.salt-version }}
 
@@ -284,11 +289,101 @@ permissions:
           replacesArtifacts: true
           tag: v${{ needs.prepare-workflow.outputs.salt-version }}
 
-      - name: Publish to PyPi
-        if: ${{ github.event.repository.fork != true }}
+      - name: Upload PyPi Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: pypi-artifacts
+          path: |
+            release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+            release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.asc
+          retention-days: 7
+          if-no-files-found: error
+
+  restore:
+    <%- do conclusion_needs.append('restore') %>
+    name: Restore Release Bucket From Backup
+    if: ${{ failure() || cancelled() }}
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    needs:
+      - release
+      <%- for need in test_repo_needs.iter(consume=True) %>
+      - <{ need }>
+      <%- endfor %>
+    environment: <{ gh_environment }>
+    steps:
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.GHA_SSH_KEY }}
+
+      - name: Setup Rclone
+        uses: AnimMouse/setup-rclone@v1
+        with:
+          version: v1.61.1
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Restore Release Bucket
+        run: |
+          tools pkg repo restore-previous-releases
+
+  publish-pypi:
+    <%- do conclusion_needs.append('publish-pypi') %>
+    name: Publish to PyPi(test)
+    if: ${{ github.event.repository.fork != true }}
+    needs:
+      - prepare-workflow
+      - release
+      - restore
+    environment: <{ gh_environment }>
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-<{ gh_environment }>
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup GnuPG
+        run: |
+          sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
+          GNUPGHOME="$(mktemp -d -p /run/gpg)"
+          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
+          cat <<EOF > "${GNUPGHOME}/gpg.conf"
+          batch
+          no-tty
+          pinentry-mode loopback
+          EOF
+
+      - name: Get Secrets
+        id: get-secrets
+        env:
+          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+        run: |
+          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
+          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
+          TWINE_PASSWORD=$(aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/publishing/publish-pypi \
+            --query SecretString --output text | jq .default_passphrase -r | base64 -d \
+            | gpg --passphrase-file "$SECRETS_KEY_FILE" -d -)
+          echo "::add-mask::$TWINE_PASSWORD"
+          echo "twine-password=$TWINE_PASSWORD" >> "${GITHUB_OUTPUT}"
+
+      - name: Download PyPi Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: pypi-artifacts
+          path: artifacts/release
+
+      - name: Publish to Test PyPi
         env:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |
-          tools pkg pypi-upload release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+          tools pkg pypi-upload artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
 
 <%- endblock jobs %>
