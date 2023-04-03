@@ -41,7 +41,6 @@ EXCLUDED_FILES = [
     os.path.join("tests", "runtests.py"),
     os.path.join("tests", "salt-tcpdump.py"),
     os.path.join("tests", "saltsh.py"),
-    os.path.join("tests", "group_lists.py"),
     os.path.join("tests", "unit", "test_pytest_pass_fail.py"),
     os.path.join("tests", "unit", "transport", "mixins.py"),
     os.path.join("tests", "unit", "utils", "scheduler", "base.py"),

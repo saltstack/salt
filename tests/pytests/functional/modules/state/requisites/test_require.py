@@ -4,7 +4,10 @@ import pytest
 
 from . import normalize_ret
 
-pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.core_test]
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
+]
 
 
 def test_requisites_full_sls_require(state, state_tree):

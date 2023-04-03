@@ -1,6 +1,9 @@
 import pytest
 
-pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.slow_test]
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.slow_test,
+]
 
 
 @pytest.fixture(scope="module")

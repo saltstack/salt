@@ -20,7 +20,9 @@ botocore = pytest.importorskip("botocore", "1.5.2")
 log = logging.getLogger(__name__)
 
 
-pytestmark = [pytest.mark.slow_test]
+pytestmark = [
+    pytest.mark.slow_test,
+]
 
 
 class GlobalConfig:

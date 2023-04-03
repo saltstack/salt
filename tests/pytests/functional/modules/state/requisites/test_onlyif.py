@@ -1,6 +1,9 @@
 import pytest
 
-pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.core_test]
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
+]
 
 
 def test_onlyif_req_retcode(state):

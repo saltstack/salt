@@ -14,7 +14,9 @@ from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
 
-pytestmark = [pytest.mark.core_test]
+pytestmark = [
+    pytest.mark.core_test,
+]
 
 
 @pytest.fixture

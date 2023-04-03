@@ -18,7 +18,9 @@ from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 from tests.support.zfs import ZFSMockData
 
-pytestmark = [pytest.mark.slow_test]
+pytestmark = [
+    pytest.mark.slow_test,
+]
 
 
 @pytest.fixture

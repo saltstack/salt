@@ -2,7 +2,10 @@ import pytest
 
 from . import normalize_ret
 
-pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.core_test]
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
+]
 
 
 def test_requisites_onfail_any(state, state_tree):

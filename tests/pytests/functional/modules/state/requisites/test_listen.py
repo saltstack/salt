@@ -1,6 +1,9 @@
 import pytest
 
-pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.core_test]
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
+]
 
 
 def test_listen_requisite(state, state_tree):

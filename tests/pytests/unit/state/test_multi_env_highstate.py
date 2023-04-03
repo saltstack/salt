@@ -14,7 +14,9 @@ import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
-pytestmark = [pytest.mark.core_test]
+pytestmark = [
+    pytest.mark.core_test,
+]
 
 
 @pytest.fixture

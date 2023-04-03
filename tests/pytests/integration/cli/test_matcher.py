@@ -4,7 +4,10 @@ import pytest
 
 import salt.defaults.exitcodes
 
-pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.core_test]
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
+]
 
 
 @pytest.fixture(scope="module")
