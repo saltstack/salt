@@ -266,24 +266,6 @@ If ( Test-Path -Path "$BLD_PY_BIN" ) {
 }
 
 #-------------------------------------------------------------------------------
-# Retrieving SSL Libraries
-#-------------------------------------------------------------------------------
-$ssllibs = "libeay32.dll",
-           "ssleay32.dll"
-$ssllibs | ForEach-Object {
-    $url = "$SALT_DEP_URL/openssl/1.1.1s/$_"
-    $file = "$SCRIPTS_DIR\$_"
-    Write-Host "Retrieving $_`: " -NoNewline
-    Invoke-WebRequest -Uri "$url" -OutFile "$file" | Out-Null
-    if ( Test-Path -Path "$file" ) {
-        Write-Result "Success" -ForegroundColor Green
-    } else {
-        Write-Result "Failed" -ForegroundColor Red
-        exit 1
-    }
-}
-
-#-------------------------------------------------------------------------------
 # Removing Unneeded files from Python
 #-------------------------------------------------------------------------------
 $remove = "idlelib",

@@ -98,28 +98,30 @@ on:
           release: true
           <%- endif %>
 
-      # TODO: Remove the --salt-version argument post 3006 release.  This was to handle versioning
-      # issues on pre-3006 development versions on deb-based distros.
       - name: Update Debian changelog
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools changelog update-deb "${{ needs.prepare-workflow.outputs.salt-version }}" --draft
-          tools changelog update-deb "${{ needs.prepare-workflow.outputs.salt-version }}"
+          tools changelog update-deb --draft
+          tools changelog update-deb
 
       - name: Update RPM changelog
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           tools changelog update-rpm --draft
           tools changelog update-rpm
 
       - name: Update Release Notes
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %>
           tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %>
 
       - name: Generate MAN Pages
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         env:
           LATEST_RELEASE: "${{ needs.prepare-workflow.outputs.salt-version }}"
           SALT_ON_SALTSTACK: "1"
@@ -128,22 +130,26 @@ on:
 
       - name: Update Changelog
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           tools changelog update-changelog-md --draft
           tools changelog update-changelog-md
 
       - name: Show Changes Diff
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           git diff --color
 
       - name: Configure Git
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           git config --global user.name "Salt Project Packaging"
           git config --global user.email saltproject-packaging@vmware.com
 
       - name: Setup Pre-Commit
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         uses: ./.github/actions/setup-pre-commit
         with:
           version: "<{ pre_commit_version }>"
@@ -151,6 +157,7 @@ on:
 
       - name: Commit Changes
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         env:
           SKIP: lint-salt,lint-tests
         run: |
@@ -160,11 +167,13 @@ on:
 
       - name: Create release changes patch
         shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           git format-patch --keep-subject --binary --stdout HEAD^ > salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
 
       - name: Upload Changes Diff Artifact
         uses: actions/upload-artifact@v3
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
           path: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
