@@ -1537,6 +1537,12 @@ jobs:
           - distro: fedora
             version: "38"
             arch: aarch64
+          - distro: photon
+            version: "3"
+            arch: x86_64
+          - distro: photon
+            version: "4"
+            arch: x86_64
 
     steps:
       - uses: actions/checkout@v3
