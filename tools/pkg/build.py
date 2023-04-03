@@ -48,9 +48,6 @@ def _get_shared_constants():
         "arch": {
             "help": "The arch to build for",
         },
-        "package_name": {
-            "help": "The name of the relenv environment to create",
-        },
     },
 )
 def debian(
@@ -59,7 +56,6 @@ def debian(
     relenv_version: str = None,
     python_version: str = None,
     arch: str = None,
-    package_name: str = None,
 ):
     """
     Build the deb package.
@@ -79,18 +75,12 @@ def debian(
                 "Building the package from the source files but the arch to build for has not been given"
             )
             ctx.exit(1)
-        if package_name is None:
-            package_name = "build/onedir/salt"
-            ctx.debug(
-                f"Building the package in {str(package_name)} since package_name has not been given"
-            )
         ctx.info(f"Building the package from the source files")
         shared_constants = _get_shared_constants()
         new_env = {
             "SALT_RELENV_VERSION": relenv_version or shared_constants["relenv_version"],
             "SALT_PYTHON_VERSION": python_version
             or shared_constants["python_version_linux"],
-            "SALT_PACKAGE_NAME": str(package_name),
             "SALT_PACKAGE_ARCH": str(arch),
         }
         for key, value in new_env.items():
@@ -118,9 +108,6 @@ def debian(
         "arch": {
             "help": "The arch to build for",
         },
-        "package_name": {
-            "help": "The name of the relenv environment to create",
-        },
     },
 )
 def rpm(
@@ -129,7 +116,6 @@ def rpm(
     relenv_version: str = None,
     python_version: str = None,
     arch: str = None,
-    package_name: str = None,
 ):
     """
     Build the RPM package.
@@ -149,18 +135,12 @@ def rpm(
                 "Building the package from the source files but the arch to build for has not been given"
             )
             ctx.exit(1)
-        if package_name is None:
-            package_name = "build/salt"
-            ctx.debug(
-                f"Building the package in {str(package_name)} since package_name has not been given"
-            )
         ctx.info(f"Building the package from the source files")
         shared_constants = _get_shared_constants()
         new_env = {
             "SALT_RELENV_VERSION": relenv_version or shared_constants["relenv_version"],
             "SALT_PYTHON_VERSION": python_version
             or shared_constants["python_version_linux"],
-            "SALT_PACKAGE_NAME": str(package_name),
             "SALT_PACKAGE_ARCH": str(arch),
         }
         for key, value in new_env.items():

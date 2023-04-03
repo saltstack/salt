@@ -142,13 +142,13 @@ cd $RPM_BUILD_DIR
   build/venv/bin/relenv fetch
   build/venv/bin/relenv toolchain fetch
   cd %{_salt_src}
-	$RPM_BUILD_DIR/build/venv/bin/tools pkg build onedir-dependencies --arch ${SALT_PACKAGE_ARCH} --python-version ${SALT_PYTHON_VERSION} --package-name $RPM_BUILD_DIR/${SALT_PACKAGE_NAME} --platform linux
+	$RPM_BUILD_DIR/build/venv/bin/tools pkg build onedir-dependencies --arch ${SALT_PACKAGE_ARCH} --python-version ${SALT_PYTHON_VERSION} --package-name $RPM_BUILD_DIR/build/salt --platform linux
 
   # Fix any hardcoded paths to the relenv python binary on any of the scripts installed in
   # the <onedir>/bin directory
   find $RPM_BUILD_DIR/build/salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$(dirname $(readlink -f $0))/python3" "$0" "$@":g' {} \;
 
-	$RPM_BUILD_DIR/build/venv/bin/tools pkg build salt-onedir . --package-name $RPM_BUILD_DIR/${SALT_PACKAGE_NAME} --platform linux
+	$RPM_BUILD_DIR/build/venv/bin/tools pkg build salt-onedir . --package-name $RPM_BUILD_DIR/build/salt --platform linux
   $RPM_BUILD_DIR/build/venv/bin/tools pkg pre-archive-cleanup --pkg $RPM_BUILD_DIR/build/salt
 %else
   # The relenv onedir is being provided, all setup up until Salt is installed
