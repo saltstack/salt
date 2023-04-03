@@ -316,13 +316,14 @@ def sls(root, mods, saltenv="base", test=None, exclude=None, **kwargs):
     # needed, as this module just delegate
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
 
+    st_ = salt.client.ssh.state.SSHHighState(
+        opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
+    )
+
     if isinstance(mods, str):
         mods = mods.split(",")
 
-    with salt.client.ssh.state.SSHHighState(
-        opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
-    ) as st_:
-
+    with st_:
         high_data, errors = st_.render_highstate({saltenv: mods})
         if exclude:
             if isinstance(exclude, str):
