@@ -103,6 +103,24 @@ def get_test_versions():
             "os_codename": "jammy",
             "container_id": "ubuntu_22_04",
         },
+        {
+            "image": "ghcr.io/saltstack/salt-ci-containers/photon:3",
+            "os_type": "photon",
+            "os_version": 3,
+            "container_id": "photon_3",
+        },
+        {
+            "image": "ghcr.io/saltstack/salt-ci-containers/photon:4",
+            "os_type": "photon",
+            "os_version": 4,
+            "container_id": "photon_4",
+        },
+        {
+            "image": "ghcr.io/saltstack/salt-ci-containers/photon:5",
+            "os_type": "photon",
+            "os_version": 5,
+            "container_id": "photon_5",
+        },
     ]
     for container in containers:
         test_versions.append(
