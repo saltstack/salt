@@ -934,11 +934,11 @@ def release(ctx: Context, salt_version: str):
                 log.exception(f"Error downloading {repo_release_files_path}: {exc}")
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "404":
-                ctx.error(f"Cloud not find {repo_release_files_path} in bucket.")
+                ctx.error(f"Could not find {repo_release_files_path} in bucket.")
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "400":
                 ctx.error(
-                    f"Cloud not download {repo_release_files_path} from bucket: {exc}"
+                    f"Could not download {repo_release_files_path} from bucket: {exc}"
                 )
                 ctx.exit(1)
             log.exception(f"Error downloading {repo_release_files_path}: {exc}")
@@ -960,11 +960,11 @@ def release(ctx: Context, salt_version: str):
                 log.exception(f"Error downloading {repo_release_symlinks_path}: {exc}")
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "404":
-                ctx.error(f"Cloud not find {repo_release_symlinks_path} in bucket.")
+                ctx.error(f"Could not find {repo_release_symlinks_path} in bucket.")
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "400":
                 ctx.error(
-                    f"Cloud not download {repo_release_symlinks_path} from bucket: {exc}"
+                    f"Could not download {repo_release_symlinks_path} from bucket: {exc}"
                 )
                 ctx.exit(1)
             log.exception(f"Error downloading {repo_release_symlinks_path}: {exc}")
@@ -1146,7 +1146,7 @@ def release(ctx: Context, salt_version: str):
                     raise
                 if exc.response["Error"]["Code"] != "404":
                     raise
-                ctx.info(f"Cloud not find {repo_file_path} in bucket {bucket_name}")
+                ctx.info(f"Could not find {repo_file_path} in bucket {bucket_name}")
 
         for dirpath, dirnames, filenames in os.walk(repo_path, followlinks=True):
             for path in filenames:
@@ -1642,7 +1642,7 @@ def _get_repo_json_file_contents(
             raise
         if exc.response["Error"]["Code"] != "404":
             raise
-        ctx.info(f"Cloud not find {repo_json_path} in bucket {bucket_name}")
+        ctx.info(f"Could not find {repo_json_path} in bucket {bucket_name}")
     if repo_json:
         ctx.print(repo_json, soft_wrap=True)
     return repo_json
