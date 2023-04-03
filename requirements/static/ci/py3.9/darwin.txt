@@ -509,9 +509,7 @@ lxml==4.9.1
     #   napalm
     #   ncclient
 mako==1.2.2
-    # via
-    #   -r requirements/darwin.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
