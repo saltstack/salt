@@ -22,7 +22,6 @@ runs:
       id: get-pull-number
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_OWNER: ${{ inputs.owner }}
         GITHUB_REPO: ${{ inputs.repo }}
         GITHUB_SHA: ${{ inputs.sha }}
