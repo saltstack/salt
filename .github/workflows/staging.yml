@@ -52,9 +52,9 @@ jobs:
       - name: Check Branch
         run: |
           echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
-          if [ "${{ contains(fromJSON('["master", "3006.x"]'), github.ref_name) }}" != "true" ]; then
+          if [ "${{ contains(fromJSON('["master", "3006.x", "hotfix/3006.x/remove-systemd-units-dep"]'), github.ref_name) }}" != "true" ]; then
               echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
-              echo "Allowed branches: master, 3006.x"
+              echo "Allowed branches: master, 3006.x, hotfix/3006.x/remove-systemd-units-dep"
               exit 1
           else
               echo "Allowed to release from branch ${{ github.ref_name }}"
