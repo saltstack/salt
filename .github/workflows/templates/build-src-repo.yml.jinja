@@ -53,7 +53,7 @@
       - name: Create Repository
         run: |
           tools pkg repo create src --key-id=<{ gpg_key_id }> <% if gh_environment == 'nightly' -%> --nightly-build <%- endif %> \
-            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') && '--rc-build' || ''  }} \
+            --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
       - name: Upload Standalone Repository As An Artifact

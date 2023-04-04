@@ -364,12 +364,6 @@ def define_jobs(
         wfh.write("Selected Jobs:\n")
         for name, value in sorted(jobs.items()):
             wfh.write(f" - {name}: {value}\n")
-        wfh.write(
-            "\n<details>\n<summary>All Changed Files (click me)</summary>\n<pre>\n"
-        )
-        for path in sorted(json.loads(changed_files_contents["repo_files"])):
-            wfh.write(f"{path}\n")
-        wfh.write("</pre>\n</details>\n")
 
     ctx.info("Writing 'jobs' to the github outputs file")
     with open(github_output, "a", encoding="utf-8") as wfh:

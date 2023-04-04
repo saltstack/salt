@@ -760,7 +760,7 @@ def _find_install_targets(
             err = "Unable to cache {0}: {1}"
             try:
                 cached_path = __salt__["cp.cache_file"](
-                    version_string, saltenv=kwargs["saltenv"]
+                    version_string, saltenv=kwargs["saltenv"], **kwargs
                 )
             except CommandExecutionError as exc:
                 problems.append(err.format(version_string, exc))
