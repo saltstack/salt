@@ -10,7 +10,7 @@ on:
         type: string
         required: true
         description: >
-          The Salt version to get from staging to publish the release.
+          The Salt version to get from staging to upload to VirusTotal.
           (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
 
 permissions:
@@ -38,9 +38,9 @@ jobs:
     - name: Setup Python Tools Scripts
       uses: ./.github/actions/setup-python-tools-scripts
 
-    - name: Upload Artifact to VirusTotal
+    - name: Upload to VirusTotal
       working-directory: salt
       env:
         VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
       run: |
-        tools release upload-virustotal ${{ needs.prepare-workflow.outputs.salt-version }}
+        tools release upload-virustotal ${{ inputs.salt-version }}
