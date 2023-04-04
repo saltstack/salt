@@ -43,6 +43,11 @@ def prev_version():
 
 
 @pytest.fixture
+def curr_version():
+    return str(SaltVersionsInfo.current_release().info[0])
+
+
+@pytest.fixture
 def prev_master_id():
     return random_string("master-performance-prev-", uppercase=False)
 
@@ -190,7 +195,6 @@ def curr_master(
     salt_factories,
     host_docker_network_ip_address,
     network,
-    prev_version,
     docker_client,
     curr_master_id,
 ):
@@ -220,7 +224,7 @@ def curr_master(
         defaults=config_defaults,
         overrides=config_overrides,
         factory_class=ContainerMaster,
-        image="ghcr.io/saltstack/salt-ci-containers/salt:{}".format(prev_version),
+        image="ghcr.io/saltstack/salt-ci-containers/salt:current",
         base_script_args=["--log-level=debug"],
         container_run_kwargs={
             "network": network,
@@ -270,7 +274,6 @@ def curr_minion(
     curr_minion_id,
     curr_master,
     docker_client,
-    prev_version,
     host_docker_network_ip_address,
     network,
     curr_master_id,
@@ -286,7 +289,7 @@ def curr_minion(
         factory_class=ContainerMinion,
         # SaltMinion kwargs
         name=curr_minion_id,
-        image="ghcr.io/saltstack/salt-ci-containers/salt:{}".format(prev_version),
+        image="ghcr.io/saltstack/salt-ci-containers/salt:current",
         docker_client=docker_client,
         start_timeout=120,
         pull_before_start=False,
@@ -329,7 +332,7 @@ def _wait_for_stdout(expected, func, *args, timeout=120, **kwargs):
         time.sleep(1)
     else:
         pytest.skip(
-            f"Skipping test, one or more daemons failed to start: {expected} NOT FOUND IN {ret}"
+            f"Skipping test, one or more daemons failed to start: {expected} not found in {ret}"
         )
 
 
@@ -349,6 +352,7 @@ def test_performance(
     curr_minion,
     prev_sls,
     curr_sls,
+    curr_version,
 ):
     # Copy all of the needed files to both master file roots directories
     subdir = random_string("performance-")
@@ -376,7 +380,9 @@ def test_performance(
     )
 
     # Wait for the new master and minion to start
-    _wait_for_stdout("3005", curr_master.run, *curr_salt_run_cli.cmdline("--version"))
+    _wait_for_stdout(
+        curr_version, curr_master.run, *curr_salt_run_cli.cmdline("--version")
+    )
     curr_key_cmd = [
         comp
         for comp in curr_salt_key_cli.cmdline("-Ay")
@@ -384,7 +390,7 @@ def test_performance(
     ]
     _wait_for_stdout(curr_minion.id, curr_master.run, *curr_key_cmd)
     _wait_for_stdout(
-        "Salt: {}".format("3005"),
+        "Salt: {}".format(curr_version),
         curr_master.run,
         *curr_salt_cli.cmdline("test.versions", minion_tgt=curr_minion.id),
     )
