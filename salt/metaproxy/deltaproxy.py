@@ -323,8 +323,8 @@ def post_master_init(self, master):
 
     if self.opts["proxy"].get("parallel_startup"):
         log.debug("Initiating parallel startup for proxies")
-        # this is limited to 32 subproxies including the controll proxy
-        # read https://docs.python.org/3.9/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
+        # ThreadPoolExecutor has a hard limit of 32 on max_workers and will throw an error if exceeded, read more:
+        # read more: https://docs.python.org/3.9/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = [
                 executor.submit(
