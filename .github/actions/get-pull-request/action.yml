@@ -2,8 +2,6 @@
 name: get-pull-request
 description: Get Pull Request
 inputs:
-  token:
-    type: string
   owner:
     type: string
   repo:
@@ -22,7 +20,6 @@ runs:
       id: get-pull-request
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ inputs.token }}
         GITHUB_OWNER: ${{ inputs.owner }}
         GITHUB_REPO: ${{ inputs.repo }}
         GITHUB_PULL_NUMBER: ${{ inputs.pull-number }}

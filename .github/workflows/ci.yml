@@ -151,10 +151,11 @@ jobs:
         id: get-pull-request
         uses: ./.github/actions/get-pull-request
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           owner: ${{ github.repository_owner }}
           repo: ${{ github.event.repository.name }}
           pull-number: ${{ steps.get-pull-number.outputs.number }}
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get Pull Labels
         id: get-pull-labels
