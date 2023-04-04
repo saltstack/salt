@@ -44,4 +44,3 @@ jobs:
         VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
       run: |
         tools release upload-virustotal ${{ needs.prepare-workflow.outputs.salt-version }}
-

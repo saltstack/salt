@@ -6,13 +6,13 @@ from __future__ import annotations
 
 import json
 import logging
-import pathlib
 import os
+import pathlib
 import sys
 import tempfile
 import time
-import virustotal3.core
 
+import virustotal3.core
 from ptscripts import Context, command_group
 
 import tools.utils
@@ -201,10 +201,7 @@ def upload_virustotal(ctx: Context, salt_version: str):
                     ctx.error(f"Could not find {download_file} in bucket.")
                     ctx.exit(1)
                 if exc.response["Error"]["Code"] == "400":
-                    pass
-                    ctx.error(
-                        f"Could not download {download_file} from bucket: {exc}"
-                    )
+                    ctx.error(f"Could not download {download_file} from bucket: {exc}")
                     ctx.exit(1)
                 log.exception(f"Error downloading {download_file}: {exc}")
                 ctx.exit(1)
@@ -212,7 +209,9 @@ def upload_virustotal(ctx: Context, salt_version: str):
             # API key should be an environment variable
             api_key = os.environ.get("VIRUSTOTAL_API_KEY")
 
-            ctx.info(f"Uploading to VirusTotal: {os.path.basename(local_download_file)}")
+            ctx.info(
+                f"Uploading to VirusTotal: {os.path.basename(local_download_file)}"
+            )
             vt = virustotal3.core.Files(api_key)
             response = vt.upload(local_download_file)
 
