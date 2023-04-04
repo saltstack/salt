@@ -340,7 +340,7 @@ jobs:
 
       - name: Run Fast Tests
         id: run-fast-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.output.no_fast_tests == 'false' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.no_fast_tests == 'false' }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"

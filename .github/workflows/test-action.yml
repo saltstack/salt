@@ -324,7 +324,7 @@ jobs:
         id: run-fast-changed-tests
         if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.no_fast_tests == 'true' }}
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+          ""tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }} -- --suppress-no-test-exit-code \
             --from-filenames=testrun-changed-files.txt
