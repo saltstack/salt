@@ -12,6 +12,7 @@ import re
 import sys
 import textwrap
 
+from jinja2 import Environment, FileSystemLoader
 from ptscripts import Context, command_group
 
 from tools.utils import REPO_ROOT, Version
@@ -309,17 +310,26 @@ def update_release_notes(
         versions = {}
         for fpath in pathlib.Path("doc/topics/releases").glob("*.md"):
             versions[(Version(fpath.stem))] = fpath
-        release_notes_path = versions[sorted(versions)[-1]]
+        latest_version = sorted(versions)[-1]
+        release_notes_path = versions[latest_version]
+        version = ".".join(str(part) for part in latest_version.release)
     else:
+        version = ".".join(str(part) for part in salt_version.release)
         release_notes_path = pathlib.Path("doc/topics/releases") / "{}.md".format(
-            ".".join(str(part) for part in salt_version.release)
+            version
         )
-    if not release_notes_path.exists():
-        release_notes_path.write_text(
+    template_release_path = (
+        release_notes_path.parent / "templates" / f"{version}.md.template"
+    )
+    if not template_release_path.exists():
+        template_release_path.write_text(
             textwrap.dedent(
                 f"""\
                 (release-{salt_version})=
                 # Salt {salt_version} release notes - UNRELEASED
+
+                ## Changelog
+                {{{{ changelog }}}}
                 """
             )
         )
@@ -334,7 +344,15 @@ def update_release_notes(
     tmp_release_notes_path = (
         release_notes_path.parent / f"{release_notes_path.name}.tmp"
     )
-    tmp_release_notes_path.write_text(f"{existing}\n## Changelog\n{changes}")
+
+    # render the release notes jinja template
+    environment = Environment(loader=FileSystemLoader(template_release_path.parent))
+    template = environment.get_template(template_release_path.name)
+    content = template.render(
+        {"changelog": changes},
+    )
+
+    tmp_release_notes_path.write_text(content)
     try:
         contents = tmp_release_notes_path.read_text().strip()
         if draft:
