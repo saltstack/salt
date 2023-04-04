@@ -323,6 +323,8 @@ def post_master_init(self, master):
 
     if self.opts["proxy"].get("parallel_startup"):
         log.debug("Initiating parallel startup for proxies")
+        # this is limited to 32 subproxies including the controll proxy
+        # read https://docs.python.org/3.9/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = [
                 executor.submit(
@@ -352,8 +354,7 @@ def post_master_init(self, master):
                     )
     else:
         log.debug("Initiating non-parallel startup for proxies")
-        # this is limited to 32 subproxies including the controll proxy
-        # read https://docs.python.org/3.9/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
+
         for _id in self.opts["proxy"].get("ids", []):
             sub_proxy_data = subproxy_post_master_init(
                 _id, uid, self.opts, self.proxy, self.utils
