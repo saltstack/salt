@@ -1,9 +1,6 @@
 ---
 name: get-pull-number
 description: Get Pull Number
-secrets:
-  token:
-    type: string
 inputs:
   owner:
     type: string
@@ -25,7 +22,7 @@ runs:
       id: get-pull-number
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ secrets.token }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_OWNER: ${{ inputs.owner }}
         GITHUB_REPO: ${{ inputs.repo }}
         GITHUB_SHA: ${{ inputs.sha }}
