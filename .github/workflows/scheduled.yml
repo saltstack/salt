@@ -182,8 +182,9 @@ jobs:
       - name: Get Pull Number
         id: get-pull-number
         uses: ./.github/actions/get-pull-number
-        with:
+        secrets:
           token: ${{ secrets.GITHUB_TOKEN }}
+        with:
           owner: ${{ github.repository_owner }}
           repo: ${{ github.event.repository.name }}
           sha: ${{ github.sha }}

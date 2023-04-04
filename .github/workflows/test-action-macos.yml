@@ -273,19 +273,19 @@ jobs:
         env:
           PULL_LABELS: ${{ inputs.pull-labels }}
         run: |
-          ""echo $PULL_LABELS
+          echo $PULL_LABELS
           no_fast_tests=$(jq -c '. | any(index("test:no-fast"))' <<< $PULL_LABELS)
           slow_tests=$(jq -c '. | any(index("test:slow"))' <<< $PULL_LABELS)
           core_tests=$(jq -c '. | any(index("test:core"))' <<< $PULL_LABELS)
           flaky_jail_tests=$(jq -c '. | any(index("test:flaky-jail"))' <<< $PULL_LABELS)
-          ""echo $no_fast_tests
-          ""echo $slow_tests
-          ""echo $core_tests
-          ""echo $flaky_jail_tests
-          ""echo "no_fast_tests=$no_fast_tests" >> "$GITHUB_OUTPUT"
-          ""echo "slow_tests=$slow_tests" >> "$GITHUB_OUTPUT"
-          ""echo "core_tests=$core_tests" >> "$GITHUB_OUTPUT"
-          ""echo "flaky_jail_tests=$flaky_jail_tests" >> "$GITHUB_OUTPUT"
+          echo $no_fast_tests
+          echo $slow_tests
+          echo $core_tests
+          echo $flaky_jail_tests
+          echo "no_fast_tests=$no_fast_tests" >> "$GITHUB_OUTPUT"
+          echo "slow_tests=$slow_tests" >> "$GITHUB_OUTPUT"
+          echo "core_tests=$core_tests" >> "$GITHUB_OUTPUT"
+          echo "flaky_jail_tests=$flaky_jail_tests" >> "$GITHUB_OUTPUT"
 
       - name: Run Fast/Changed Tests
         id: run-fast-changed-tests
