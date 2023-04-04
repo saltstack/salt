@@ -347,11 +347,13 @@ def post_master_init(self, master):
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
                     self.deltaproxy_objs[
                         minion_id
-                    ].req_channel = salt.transport.client.AsyncReqChannel.factory(
+                    ].req_channel = salt.channel.client.AsyncReqChannel.factory(
                         sub_proxy_data["proxy_opts"], io_loop=self.io_loop
                     )
     else:
         log.debug("Initiating non-parallel startup for proxies")
+        # this is limited to 32 subproxies including the controll proxy
+        # read https://docs.python.org/3.9/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
         for _id in self.opts["proxy"].get("ids", []):
             sub_proxy_data = subproxy_post_master_init(
                 _id, uid, self.opts, self.proxy, self.utils
@@ -366,7 +368,7 @@ def post_master_init(self, master):
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
                     self.deltaproxy_objs[
                         minion_id
-                    ].req_channel = salt.transport.client.AsyncReqChannel.factory(
+                    ].req_channel = salt.channel.client.AsyncReqChannel.factory(
                         sub_proxy_data["proxy_opts"], io_loop=self.io_loop
                     )
 
@@ -576,7 +578,6 @@ def thread_return(cls, minion_instance, opts, data):
     fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
     if opts["multiprocessing"] and not salt.utils.platform.spawning_platform():
-
         # Shutdown the multiprocessing before daemonizing
         salt._logging.shutdown_logging()
 
