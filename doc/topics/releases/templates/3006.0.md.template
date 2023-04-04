@@ -1,5 +1,10 @@
 (release-3006.0)=
-# Salt 3006.0 release notes - Codename Sulfur
+# Salt 3006.0 release notes{{ unreleased }}
+{{ warning }}
+
+<!--
+Add relase specific details below
+-->
 
 ## Onedir packaging
 
@@ -55,5 +60,9 @@ lib-bar:
     - bin_env: /usr/bin/python3
 ```
 
+<!--
+Do not edit the changelog below.
+This is auto generated
+-->
 ## Changelog
 {{ changelog }}
