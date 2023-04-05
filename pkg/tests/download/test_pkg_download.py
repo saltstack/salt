@@ -115,12 +115,6 @@ def get_test_versions():
             "os_version": 4,
             "container_id": "photon_4",
         },
-        {
-            "image": "ghcr.io/saltstack/salt-ci-containers/photon:5",
-            "os_type": "photon",
-            "os_version": 5,
-            "container_id": "photon_5",
-        },
     ]
     for container in containers:
         test_versions.append(
@@ -208,7 +202,7 @@ def pkg_container(
         container_setup_func = globals()[f"setup_{download_test_image.os_type}"]
     except KeyError:
         raise pytest.skip.Exception(
-            f"Unable to handle {pkg_container.os_type}. Skipping.",
+            f"Unable to handle {download_test_image.os_type}. Skipping.",
             _use_item_location=True,
         )
     container.before_terminate(shutil.rmtree, str(downloads_path), ignore_errors=True)
@@ -394,6 +388,27 @@ def setup_fedora(
         salt_release,
         downloads_path,
         "fedora",
+        gpg_key_name,
+    )
+
+
+def setup_photon(
+    container,
+    os_version,
+    os_codename,
+    root_url,
+    salt_release,
+    downloads_path,
+    gpg_key_name,
+):
+    setup_redhat_family(
+        container,
+        os_version,
+        os_codename,
+        root_url,
+        salt_release,
+        downloads_path,
+        "photon",
         gpg_key_name,
     )
 
