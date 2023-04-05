@@ -274,10 +274,10 @@ jobs:
           PULL_LABELS: ${{ inputs.pull-labels }}
         run: |
           echo $PULL_LABELS
-          no_fast_tests=$(jq -c '. | any(index("test:no-fast"))' <<< $PULL_LABELS)
-          slow_tests=$(jq -c '. | any(index("test:slow"))' <<< $PULL_LABELS)
-          core_tests=$(jq -c '. | any(index("test:core"))' <<< $PULL_LABELS)
-          flaky_jail_tests=$(jq -c '. | any(index("test:flaky-jail"))' <<< $PULL_LABELS)
+          no_fast_tests=$(jq -c '. | any(index("test:no-fast")) <<< $PULL_LABELS)
+          slow_tests=$(jq -c '. | any(index("test:slow")) <<< $PULL_LABELS)
+          core_tests=$(jq -c '. | any(index("test:core")) <<< $PULL_LABELS)
+          flaky_jail_tests=$(jq -c '. | any(index("test:flaky-jail")) <<< $PULL_LABELS)
           echo $no_fast_tests
           echo $slow_tests
           echo $core_tests
