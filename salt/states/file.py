@@ -5418,6 +5418,7 @@ def keyvalue(
     uncomment=None,
     key_ignore_case=False,
     value_ignore_case=False,
+    create_if_missing=False,
 ):
     """
     Key/Value based editing of a file.
@@ -5490,6 +5491,11 @@ def keyvalue(
         Values are checked case insensitively, trying to set e.g. 'Yes' while
         the current value is 'yes', will not result in changes when
         ``value_ignore_case`` is set to True.
+
+    create_if_missing
+        Create the file if the destination file is not found.
+
+        .. versionadded:: 3007.0
 
     An example of using ``file.keyvalue`` to ensure sshd does not allow
     for root to login with a password and at the same time setting the
@@ -5564,7 +5570,16 @@ def keyvalue(
     try:
         with salt.utils.files.fopen(name, "r") as fd:
             file_contents = fd.readlines()
-    except OSError:
+            fd.close()
+    except FileNotFoundError as exc:
+        if create_if_missing:
+            append_if_not_found = True
+            file_contents = []
+        else:
+            ret["comment"] = "unable to open {n}".format(n=name)
+            ret["result"] = True if ignore_if_missing else False
+            return ret
+    except OSError as exc:
         ret["comment"] = "unable to open {n}".format(n=name)
         ret["result"] = True if ignore_if_missing else False
         return ret
@@ -5692,8 +5707,6 @@ def keyvalue(
         # keys needed searching), the line can be added to the content to be
         # written once the last checks have been performed
         content.append(line)
-    # finally, close the file
-    fd.close()
 
     # if append_if_not_found was requested, then append any key/value pairs
     # still having a count left on them
