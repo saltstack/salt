@@ -415,7 +415,10 @@ def test_performance(
                     break
             else:
                 return duration
-            pytest.skip("Something went wrong with the states, skipping.")
+        pytest.skip("Something went wrong with the states, skipping.")
+
+    prev_duration = 0
+    curr_duration = 0
 
     for _ in range(applies):
         prev_state_ret = prev_master.run(
@@ -423,7 +426,7 @@ def test_performance(
                 "state.apply", f"{subdir}.{prev_sls}", minion_tgt=prev_minion.id
             )
         )
-        prev_duration = _gather_durations(prev_state_ret, prev_minion.id)
+        prev_duration += _gather_durations(prev_state_ret, prev_minion.id)
 
     for _ in range(applies):
         curr_state_ret = curr_master.run(
@@ -431,7 +434,7 @@ def test_performance(
                 "state.apply", f"{subdir}.{curr_sls}", minion_tgt=curr_minion.id
             )
         )
-        curr_duration = _gather_durations(curr_state_ret, curr_minion.id)
+        curr_duration += _gather_durations(curr_state_ret, curr_minion.id)
 
     # We account for network slowness, etc... here.
     # There is a hard balance here as far as a threshold.
