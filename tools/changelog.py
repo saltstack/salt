@@ -15,6 +15,7 @@ import textwrap
 from jinja2 import Environment, FileSystemLoader
 from ptscripts import Context, command_group
 
+import salt.version
 from tools.utils import REPO_ROOT, Version
 
 CHANGELOG_LIKE_RE = re.compile(r"([\d]+)\.([a-z]+)$")
@@ -299,6 +300,9 @@ def update_deb(ctx: Context, salt_version: Version, draft: bool = False):
         "template_only": {
             "help": "Only generate a template file.",
         },
+        "next_release": {
+            "help": "Generate release notes for the next upcoming release.",
+        },
     },
 )
 def update_release_notes(
@@ -307,6 +311,7 @@ def update_release_notes(
     draft: bool = False,
     release: bool = False,
     template_only: bool = False,
+    next_release: bool = False,
 ):
     if salt_version is None:
         salt_version = _get_salt_version(ctx)
@@ -325,6 +330,15 @@ def update_release_notes(
         release_notes_path = pathlib.Path("doc/topics/releases") / "{}.md".format(
             version
         )
+    if next_release and not release:
+        version = ".".join(
+            str(part)
+            for part in salt.version.SaltStackVersion(*version).next_release().info
+        )
+        release_notes_path = pathlib.Path("doc/topics/releases") / "{}.md".format(
+            version
+        )
+
     template_release_path = (
         release_notes_path.parent / "templates" / f"{version}.md.template"
     )
@@ -337,12 +351,12 @@ def update_release_notes(
                 {{{{ warning }}}}
 
                 <!--
-                Add relase specific details below
+                Add release specific details below
                 -->
 
                 <!--
                 Do not edit the changelog below.
-                This is auto generated
+                This is auto generated.
                 -->
                 ## Changelog
                 {{{{ changelog }}}}
