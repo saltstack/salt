@@ -15,7 +15,6 @@ import textwrap
 from jinja2 import Environment, FileSystemLoader
 from ptscripts import Context, command_group
 
-import salt.version
 from tools.utils import REPO_ROOT, Version
 
 CHANGELOG_LIKE_RE = re.compile(r"([\d]+)\.([a-z]+)$")
@@ -176,8 +175,11 @@ def _get_pkg_changelog_contents(ctx: Context, version: Version):
     return changes
 
 
-def _get_salt_version(ctx):
-    ret = ctx.run("python3", "salt/version.py", capture=True, check=False)
+def _get_salt_version(ctx, next_release=False):
+    args = []
+    if next_release:
+        args.append("--next-release")
+    ret = ctx.run("python3", "salt/version.py", *args, capture=True, check=False)
     if ret.returncode:
         ctx.error(ret.stderr.decode())
         ctx.exit(1)
@@ -314,7 +316,7 @@ def update_release_notes(
     next_release: bool = False,
 ):
     if salt_version is None:
-        salt_version = _get_salt_version(ctx)
+        salt_version = _get_salt_version(ctx, next_release=next_release)
     changes = _get_changelog_contents(ctx, salt_version)
     changes = "\n".join(changes.split("\n")[2:])
     if salt_version.local:
@@ -327,14 +329,6 @@ def update_release_notes(
         version = ".".join(str(part) for part in latest_version.release)
     else:
         version = ".".join(str(part) for part in salt_version.release)
-        release_notes_path = pathlib.Path("doc/topics/releases") / "{}.md".format(
-            version
-        )
-    if next_release and not release:
-        version = ".".join(
-            str(part)
-            for part in salt.version.SaltStackVersion(*version).next_release().info
-        )
         release_notes_path = pathlib.Path("doc/topics/releases") / "{}.md".format(
             version
         )
