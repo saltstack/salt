@@ -190,6 +190,7 @@ jobs:
           validate-version: true
 
       - name: Get Pull Number
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
         id: get-pull-number
         uses: ./.github/actions/get-pull-number
         with:
@@ -201,6 +202,7 @@ jobs:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get Pull Request
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
         id: get-pull-request
         uses: ./.github/actions/get-pull-request
         with:
@@ -211,6 +213,7 @@ jobs:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get Pull Labels
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
         id: get-pull-labels
         uses: ./.github/actions/get-pull-labels
         with:
