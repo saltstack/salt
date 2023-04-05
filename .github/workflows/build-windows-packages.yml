@@ -7,7 +7,12 @@ on:
       salt-version:
         type: string
         required: true
-        description: The Salt version to set prior to building packages.
+        description: The Salt version to set prior to building packages
+      sign-packages:
+        type: boolean
+        required: false
+        default: false
+        description: Sign the packages after they are built
 
 jobs:
 
@@ -43,65 +48,57 @@ jobs:
           name: salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip
           path: artifacts/
 
-      - name: Build Windows Packages
-        run: |
-          tools pkg build windows --onedir salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }}
-
       - name: Code signing with Software Trust Manager
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == true }}
+        if: ${{ inputs.sign-packages == true }}
         uses: digicert/ssm-code-signing@v0.0.2
 
       - name: Setup Certificate
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == true }}
+        if: ${{ inputs.sign-packages == true }}
         run: |
           echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
         shell: bash
 
-      - name: Set variables
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == true }}
+      - name: Set Package Signing Paths
+        if: ${{ inputs.sign-packages == true }}
         id: variables
         run: |
-          echo "::set-output name=version::${GITHUB_REF#refs/tags/v}"
-          echo "SM_HOST=${{ secrets.SM_HOST_DEMO }}" >> "$GITHUB_ENV"
-          echo "SM_API_KEY=${{ secrets.SM_API_KEY }}" >> "$GITHUB_ENV"
-          echo "SM_CLIENT_CERT_FILE=D:\\Certificate_pkcs12.p12" >> "$GITHUB_ENV"
-          echo "SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_CLIENT_CERT_PASSWORD }}" >> "$GITHUB_ENV"
           echo "C:\Program Files (x86)\Windows Kits\10\App Certification Kit" >> $GITHUB_PATH
           echo "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools" >> $GITHUB_PATH
           echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools" >> $GITHUB_PATH
         shell: bash
 
-      - name: Setup SSM KSP on windows latest
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == true }}
+      - name: Build Windows Packages
+        env:
+          SIGN_PACKAGES: ${{ inputs.sign-packages }}
+          SM_API_KEY: "${{ secrets.SM_API_KEY }}"
         run: |
-          curl -X GET  https://stage.one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download -H "x-api-key:%SM_API_KEY%" -o smtools-windows-x64.msi
-          msiexec /i smtools-windows-x64.msi /quiet /qn
-          smksp_registrar.exe list
-          smctl.exe keypair ls
-          C:\Windows\System32\certutil.exe -csp "DigiCert Signing Manager KSP" -key -user
-          smksp_cert_sync.exe
-        shell: cmd
+          tools pkg build windows --onedir salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }}
 
       - name: Signing NSIS Installer using Signtool (AMD64)
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == true }}
+        if: ${{ inputs.sign-packages == true }}
+        env:
+          SM_CLIENT_CERT_FILE_B64: ${{ secrets.SM_CLIENT_CERT_FILE_B64 }}
+          SM_HOST: "${{ secrets.SM_HOST_DEMO }}"
+          SM_API_KEY: "${{ secrets.SM_API_KEY }}"
+          SM_CLIENT_CERT_PASSWORD: "${{ secrets.SM_CLIENT_CERT_PASSWORD }}"
         run: |
           signtool.exe sign /sha1 ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }} /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64-Setup.exe"
           signtool.exe verify /v /pa ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64-Setup.exe"
 
       - name: Signing NSIS Installer using Signtool (x86)
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == true }}
+        if: ${{ inputs.sign-packages == true }}
         run: |
           signtool.exe sign /sha1 ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }} /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86-Setup.exe"
           signtool.exe verify /v /pa ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86-Setup.exe"
 
       - name: Signing MSI Installer using Signtool (AMD64)
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == true }}
+        if: ${{ inputs.sign-packages == true }}
         run: |
           signtool.exe sign /sha1 ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }} /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64.msi"
           signtool.exe verify /v /pa ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64.msi"
 
       - name: Signing MSI Installer using Signtool (x86)
-        if: ${{ startsWith(github.event.ref, 'refs/tags') == true }}
+        if: ${{ inputs.sign-packages == true }}
         run: |
           signtool.exe sign /sha1 ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }} /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86.msi"
           signtool.exe verify /v /pa ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86.msi"

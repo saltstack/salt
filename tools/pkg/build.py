@@ -280,6 +280,25 @@ def windows(
         "-SkipInstall",
     )
 
+    if os.environ.get("SIGN_PACKAGES", "false") == "true":
+        with ctx.web as web:
+            url = "https://stage.one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download"
+            web.headers["x-api-key"] = os.environ["SM_API_KEY"]
+
+            with web.get(url, stream=True) as r:
+                r.raise_for_status()
+                dest = "smtools-windows-x64.msi"
+
+                with open(dest, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+        ctx.run("msiexec", "/i", "smtools-windows-x64.msi", "/quiet", "/qn")
+        ctx.run("smksp_registrar.exe", "list")
+        ctx.run("smctl.exe", "keypair", "ls")
+        ctx.run(r"C:\Windows\System32\certutil.exe", "-csp", "DigiCert Signing Manager KSP", "-key", "-user")
+        ctx.run("smksp_cert_sync.exe")
+
     ctx.info("Done")
 
 
