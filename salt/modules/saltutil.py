@@ -1767,7 +1767,7 @@ def runner(
         pub_data=pub_data,
         kwarg=kwarg,
         print_event=False,
-        full_return=full_return
+        full_return=full_return,
     )
 
 
