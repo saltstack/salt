@@ -322,6 +322,7 @@ _rpm_distro_info = {
     "amazon": ["2"],
     "redhat": ["7", "8", "9"],
     "fedora": ["36", "37", "38"],
+    "photon": ["3", "4"],
 }
 
 
