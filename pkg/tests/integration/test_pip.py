@@ -51,6 +51,34 @@ def test_pip_install(salt_call_cli):
         assert "The github execution module cannot be loaded" in use_lib.stderr
 
 
+def test_pip_install(install_salt):
+    """
+    Test salt-pip installs into the correct directory
+    """
+    dep = "holidays"
+    extras_keyword = "extras"
+    try:
+        install_ret = subprocess.run(
+            install_salt.binary_paths["pip"] + ["install", dep],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        assert not install_ret.stderr
+        show_ret = subprocess.run(
+            install_salt.binary_paths["pip"] + ["show", dep],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        assert extras_keyword in show_ret.stderr
+    finally:
+        uninstall_ret = subprocess.run(
+            install_salt.binary_paths["pip"] + ["uninstall", dep],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        assert not uninstall_ret.stderr
+
+
 def demote(user_uid, user_gid):
     def result():
         os.setgid(user_gid)

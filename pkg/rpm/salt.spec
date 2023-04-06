@@ -255,6 +255,7 @@ rm -rf %{buildroot}
 %{_bindir}/spm
 %{_bindir}/salt-pip
 /opt/saltstack/salt
+/opt/saltstack/salt/extras-3.10
 %dir %{_sysconfdir}/salt
 %dir %{_sysconfdir}/salt/pki
 
