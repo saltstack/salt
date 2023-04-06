@@ -1730,9 +1730,11 @@ def runner(
         arg = []
     if kwarg is None:
         kwarg = {}
+    pub_data = {}
     jid = kwargs.pop("__orchestration_jid__", jid)
     saltenv = kwargs.pop("__env__", saltenv)
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    pub_data["user"] = kwargs.pop("__pub_user", "UNKNOWN")
     if kwargs:
         kwarg.update(kwargs)
 
