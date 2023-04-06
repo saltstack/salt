@@ -1,9 +1,22 @@
-import salt.modules.win_psget as win_psget
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+"""
+    Test cases for salt.modules.win_psget
+"""
 
-BOOTSTRAP_PS_STR = """<?xml version="1.0" encoding="utf-8"?>
+
+import pytest
+
+import salt.modules.win_psget as win_psget
+from tests.support.mock import MagicMock, patch
+
+
+@pytest.fixture
+def configure_loader_modules():
+    return {win_psget: {}}
+
+
+@pytest.fixture
+def bootstrap_ps_str():
+    return """<?xml version="1.0" encoding="utf-8"?>
 <Objects>
   <Object Type="System.Management.Automation.PSCustomObject">
     <Property Name="Name" Type="System.String">NuGet</Property>
@@ -18,7 +31,10 @@ BOOTSTRAP_PS_STR = """<?xml version="1.0" encoding="utf-8"?>
   </Object>
 </Objects>"""
 
-AVAIL_MODULES_PS_STR = """<?xml version="1.0" encoding="utf-8"?>
+
+@pytest.fixture
+def avail_modules_ps_str():
+    return """<?xml version="1.0" encoding="utf-8"?>
 <Objects>
   <Object Type="System.Management.Automation.PSCustomObject">
     <Property Name="Name" Type="System.String">ActOnCmdlets</Property>
@@ -39,37 +55,30 @@ AVAIL_MODULES_PS_STR = """<?xml version="1.0" encoding="utf-8"?>
 </Objects>"""
 
 
-class WinPsgetCase(TestCase, LoaderModuleMockMixin):
-    """
-    Test cases for salt.modules.win_psget
-    """
+def test_bootstrap(bootstrap_ps_str):
+    mock_read_ok = MagicMock(
+        return_value={
+            "pid": 78,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": bootstrap_ps_str,
+        }
+    )
 
-    def setup_loader_modules(self):
-        return {win_psget: {}}
+    with patch.dict(win_psget.__salt__, {"cmd.run_all": mock_read_ok}):
+        assert "NuGet" in win_psget.bootstrap()
 
-    def test_bootstrap(self):
-        mock_read_ok = MagicMock(
-            return_value={
-                "pid": 78,
-                "retcode": 0,
-                "stderr": "",
-                "stdout": BOOTSTRAP_PS_STR,
-            }
-        )
 
-        with patch.dict(win_psget.__salt__, {"cmd.run_all": mock_read_ok}):
-            self.assertTrue("NuGet" in win_psget.bootstrap())
+def test_avail_modules(avail_modules_ps_str):
+    mock_read_ok = MagicMock(
+        return_value={
+            "pid": 78,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": avail_modules_ps_str,
+        }
+    )
 
-    def test_avail_modules(self):
-        mock_read_ok = MagicMock(
-            return_value={
-                "pid": 78,
-                "retcode": 0,
-                "stderr": "",
-                "stdout": AVAIL_MODULES_PS_STR,
-            }
-        )
-
-        with patch.dict(win_psget.__salt__, {"cmd.run_all": mock_read_ok}):
-            self.assertTrue("DHCPMigration" in win_psget.avail_modules(False))
-            self.assertTrue("DHCPMigration" in win_psget.avail_modules(True))
+    with patch.dict(win_psget.__salt__, {"cmd.run_all": mock_read_ok}):
+        assert "DHCPMigration" in win_psget.avail_modules(False)
+        assert "DHCPMigration" in win_psget.avail_modules(True)
