@@ -872,7 +872,7 @@ class SerializerExtension(Extension):
         {% from "doc1.sls" import var1, var2 as local2 %}
         {{ var1.foo }} {{ local2.bar }}
 
-    ** Escape Filters **
+    **Escape Filters**
 
     .. versionadded:: 2017.7.0
 
@@ -889,7 +889,7 @@ class SerializerExtension(Extension):
 
         regex_escape = https\\:\\/\\/example\\.com\\?foo\\=bar\\%20baz
 
-    ** Set Theory Filters **
+    **Set Theory Filters**
 
     .. versionadded:: 2017.7.0
 
@@ -905,7 +905,7 @@ class SerializerExtension(Extension):
 
         unique = ['foo', 'bar']
 
-    ** Salt State Parameter Format Filters **
+    **Salt State Parameter Format Filters**
 
     .. versionadded:: 3005
 
@@ -938,7 +938,44 @@ class SerializerExtension(Extension):
             - changes: true
             - warnings: OMG! Stuff is happening!
 
-    .. _`import tag`: https://jinja.palletsprojects.com/en/2.11.x/templates/#import
+    **Jinja Environment Configuration Override**
+
+    .. versionadded:: 3007
+
+    A header can be added to jinja and jinja|yaml files to override the jinja
+    environment configuration on a per-file basis. The header must appear on
+    the first line of the file, and begin with `#jinja2:`, followed by a json
+    dictionary containing the `jinja_api tag`_ settings.
+
+    For example:
+
+    .. code-block:: jinja
+
+        #jinja2: { "lstrip_blocks": true, "trim_blocks": true }
+        thing:
+        {% for n in range(1,5) %}
+           - some thing {{ n }}
+        {% endfor %}
+
+    will be rendered as:
+
+    .. code-block:: yaml
+
+        thing:
+        - some thing 1
+        - some thing 2
+        - some thing 3
+        - some thing 4
+        - some thing 5
+
+    This is useful for controlling whitespace (and other options) without having
+    to change your global `jinja2_env <../../configuration/master.html#jinja-env>`_
+    or `jinja_sls_env <../../configuration/master.html#jinja-sls-env>`_ settings,
+    which can result in breaking existing states/templates or the
+    `formula <../../topics/development/conventions/formulas.html>`_ecosystem.
+
+    .. _`import tag`: https://jinja.palletsprojects.com/en/3.0.x/templates/#import
+    .. _`jinja_api tag`: https://jinja.palletsprojects.com/en/3.0.x/api/#high-level-api
     '''
 
     tags = {
