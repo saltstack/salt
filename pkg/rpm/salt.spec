@@ -320,6 +320,13 @@ rm -rf %{buildroot}
 %{_bindir}/salt-ssh
 %config(noreplace) %{_sysconfdir}/salt/roster
 
+# Add salt user/group for Salt Master
+%pre master
+getent group salt >/dev/null || groupadd -r salt
+getent passwd salt >/dev/null || \
+    #useradd -r -g salt -d HOMEDIR -s /sbin/nologin \
+    useradd -r -g salt -s /sbin/nologin \
+    -c "Salt user for Salt Master" salt
 
 # assumes systemd for RHEL 7 & 8 & 9
 %preun master
