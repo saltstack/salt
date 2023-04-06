@@ -30,7 +30,7 @@ This step is only used when we need to generate the release notes before releasi
 You should NOT need to run these steps as they are ran in the pipeline, but this
 is documented so you can test your changes to the release notes template.
 
-You will need the `tools` commdan to help run the command. The instructions below
+To generate the release notes requires the `tools` command. The instructions below
 will detail how to install and use `tools`.
 
 
