@@ -75,7 +75,7 @@ else:
     _DFLT_IPC_MODE = "ipc"
     _DFLT_FQDNS_GRAINS = False
     _MASTER_TRIES = 1
-    _MASTER_USER = salt.utils.user.get_user()
+    _MASTER_USER = "salt"
 
 
 def _gather_buffer_space():
