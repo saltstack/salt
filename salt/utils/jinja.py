@@ -954,7 +954,7 @@ class SerializerExtension(Extension):
         #jinja2: { "lstrip_blocks": true, "trim_blocks": true }
         thing:
         {% for n in range(1,5) %}
-           - some thing {{ n }}
+          - some thing {{ n }}
         {% endfor %}
 
     will be rendered as:
@@ -962,11 +962,11 @@ class SerializerExtension(Extension):
     .. code-block:: yaml
 
         thing:
-        - some thing 1
-        - some thing 2
-        - some thing 3
-        - some thing 4
-        - some thing 5
+          - some thing 1
+          - some thing 2
+          - some thing 3
+          - some thing 4
+          - some thing 5
 
     This is useful for controlling whitespace (and other options) without having
     to change your global `jinja2_env <../../configuration/master.html#jinja-env>`_
