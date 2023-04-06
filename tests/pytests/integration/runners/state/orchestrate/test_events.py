@@ -510,7 +510,8 @@ def test_unknown_in_runner_event(
 
         for event in found_events:
             if event.data["fun"] == "runner.test.metasyntactic":
-                assert not event.data["user"] == "UNKNOWN"
+                ## assert not event.data["user"] == "UNKNOWN"
+                assert event.data["user"] == salt_auth_account_m.username
 
         expected_ret_event_tag = "salt/run/*/ret"
         event_pattern = (runner_salt_master.id, expected_ret_event_tag)
@@ -518,4 +519,5 @@ def test_unknown_in_runner_event(
 
         for event in found_events:
             if event.data["fun"] == "runner.test.metasyntactic":
-                assert not event.data["user"] == "UNKNOWN"
+                ## assert not event.data["user"] == "UNKNOWN"
+                assert event.data["user"] == salt_auth_account_m.username
