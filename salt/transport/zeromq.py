@@ -539,6 +539,7 @@ class AsyncReqMessageClient:
                     self.socket = None
                 self.stream = None
             if self.context.closed is False:
+                # This hangs if closing the stream causes an import error
                 self.context.term()
 
     def _init_socket(self):
