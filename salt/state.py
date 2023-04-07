@@ -2293,6 +2293,7 @@ class State:
             initial_ret={"full": state_func_name},
             expected_extra_kws=STATE_INTERNAL_KEYWORDS,
         )
+
         inject_globals = {
             # Pass a copy of the running dictionary, the low state chunks and
             # the current state dictionaries.

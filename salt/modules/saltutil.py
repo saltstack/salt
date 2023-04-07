@@ -1733,8 +1733,8 @@ def runner(
     pub_data = {}
     jid = kwargs.pop("__orchestration_jid__", jid)
     saltenv = kwargs.pop("__env__", saltenv)
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     pub_data["user"] = kwargs.pop("__pub_user", "UNKNOWN")
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         kwarg.update(kwargs)
 
@@ -1762,7 +1762,11 @@ def runner(
         )
 
     return rclient.cmd(
-        name, arg=arg, kwarg=kwarg, print_event=False, full_return=full_return
+        name,
+        arg=arg,
+        kwarg=kwarg,
+        print_event=False,
+        full_return=full_return,
     )
 
 
