@@ -372,6 +372,8 @@ def onedir_dependencies(
         "-r",
         str(requirements_file),
     )
+    extras_dir = dest / f"extras-{requirements_version}"
+    extras_dir.mkdir()
 
 
 @build.command(
