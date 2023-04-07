@@ -55,9 +55,14 @@ def test_pip_install_extras(install_salt):
     """
     Test salt-pip installs into the correct directory
     """
-    dep = "chardet"
+    dep = "pep8"
     extras_keyword = "extras"
     try:
+        install_ret = subprocess.run(
+            install_salt.binary_paths["pip"] + ["uninstall", dep],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
         install_ret = subprocess.run(
             install_salt.binary_paths["pip"] + ["install", dep],
             stdout=subprocess.PIPE,
