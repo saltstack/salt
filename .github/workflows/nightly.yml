@@ -1541,11 +1541,17 @@ jobs:
             version: "38"
             arch: aarch64
           - distro: photon
-            version: "3"
+            version: "3.0"
             arch: x86_64
           - distro: photon
-            version: "4"
+            version: "3.0"
+            arch: aarch64
+          - distro: photon
+            version: "4.0"
             arch: x86_64
+          - distro: photon
+            version: "4.0"
+            arch: aarch64
 
     steps:
       - uses: actions/checkout@v3
