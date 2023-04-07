@@ -7,6 +7,7 @@ from pytestskipmarkers.utils import platform
 from saltfactories.utils import random_string
 from saltfactories.utils.tempfiles import SaltPillarTree, SaltStateTree
 
+import salt.config
 from tests.support.helpers import (
     CODE_DIR,
     TESTS_DIR,
@@ -281,6 +282,13 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         "rest_cherrypy": {"port": 8000, "disable_ssl": True},
         "netapi_enable_clients": ["local"],
         "external_auth": {"auto": {"saltdev": [".*"]}},
+        "user": "salt",
+        "log_file": salt.config.DEFAULT_MASTER_OPTS.get("log_file"),
+        "root_dir": salt.config.DEFAULT_MASTER_OPTS.get("root_dir"),
+        "key_logfile": salt.config.DEFAULT_MASTER_OPTS.get("key_logfile"),
+        "pki_dir": salt.config.DEFAULT_MASTER_OPTS.get("pki_dir"),
+        "api_logfile": salt.config.DEFAULT_API_OPTS.get("api_logfile"),
+        "api_pidfile": salt.config.DEFAULT_API_OPTS.get("api_pidfile"),
     }
     if (platform.is_windows() or platform.is_darwin()) and install_salt.singlebin:
         start_timeout = 240
