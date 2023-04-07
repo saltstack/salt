@@ -25,7 +25,7 @@
 # permissions to allow the specified user to run the master. The exception is
 # the job cache, which must be deleted if this user is changed. If the
 # modified files cause conflicts, set verify_env to False.
-#user: salt
+user: salt
 
 # Tell the master to also use salt-ssh when running commands against minions.
 #enable_ssh_minions: False
