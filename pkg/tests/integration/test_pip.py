@@ -51,11 +51,11 @@ def test_pip_install(salt_call_cli):
         assert "The github execution module cannot be loaded" in use_lib.stderr
 
 
-def test_pip_install(install_salt):
+def test_pip_install_extras(install_salt):
     """
     Test salt-pip installs into the correct directory
     """
-    dep = "holidays"
+    dep = "chardet"
     extras_keyword = "extras"
     try:
         install_ret = subprocess.run(
