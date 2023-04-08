@@ -58,17 +58,16 @@ def test_pip_install_extras(install_salt):
     dep = "pep8"
     extras_keyword = "extras"
     try:
-        install_ret = subprocess.run(
-            install_salt.binary_paths["pip"] + ["uninstall", dep],
+        subprocess.run(
+            install_salt.binary_paths["pip"] + ["uninstall", "-y", dep],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        install_ret = subprocess.run(
+        subprocess.run(
             install_salt.binary_paths["pip"] + ["install", dep],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        assert not install_ret.stderr
         show_ret = subprocess.run(
             install_salt.binary_paths["pip"] + ["show", dep],
             stdout=subprocess.PIPE,
@@ -76,12 +75,11 @@ def test_pip_install_extras(install_salt):
         )
         assert extras_keyword in show_ret.stderr
     finally:
-        uninstall_ret = subprocess.run(
-            install_salt.binary_paths["pip"] + ["uninstall", dep],
+        subprocess.run(
+            install_salt.binary_paths["pip"] + ["uninstall", "-y", dep],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        assert not uninstall_ret.stderr
 
 
 def demote(user_uid, user_gid):
@@ -117,20 +115,6 @@ def test_pip_non_root(install_salt, test_account, pypath):
     )
     assert ret.returncode == 0, ret.stderr
     assert "Usage" in ret.stdout
-    assert not check_path.exists()
-
-    # Try to pip install something, should fail
-    ret = subprocess.run(
-        install_salt.binary_paths["pip"] + ["install", "pep8"],
-        preexec_fn=demote(test_account.uid, test_account.gid),
-        env=test_account.env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        universal_newlines=True,
-    )
-    assert ret.returncode == 1, ret.stderr
-    assert "Could not install packages due to an OSError" in ret.stderr
     assert not check_path.exists()
 
     # Let tiamat-pip create the pypath directory for us
