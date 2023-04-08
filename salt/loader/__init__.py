@@ -273,6 +273,7 @@ def minion_mods(
     notify=False,
     static_modules=None,
     proxy=None,
+    pillar=None,
     file_client=None,
 ):
     """
@@ -316,17 +317,20 @@ def minion_mods(
     # TODO Publish documentation for module whitelisting
     if not whitelist:
         whitelist = opts.get("whitelist_modules", None)
+    pack = {
+        "__context__": context,
+        "__utils__": utils,
+        "__proxy__": proxy,
+        "__opts__": opts,
+        "__file_client__": file_client,
+    }
+    if pillar is not None:
+        pack["__pillar__"] = pillar
     ret = LazyLoader(
         _module_dirs(opts, "modules", "module"),
         opts,
         tag="module",
-        pack={
-            "__context__": context,
-            "__utils__": utils,
-            "__proxy__": proxy,
-            "__opts__": opts,
-            "__file_client__": file_client,
-        },
+        pack=pack,
         whitelist=whitelist,
         loaded_base_name=loaded_base_name,
         static_modules=static_modules,
@@ -536,6 +540,7 @@ def utils(
     context=None,
     proxy=None,
     file_client=None,
+    pillar=None,
     pack_self=None,
     loaded_base_name=None,
 ):
@@ -550,6 +555,9 @@ def utils(
     :param str loaded_base_name: The imported modules namespace when imported
                                  by the salt loader.
     """
+    pack = {"__context__": context, "__proxy__": proxy or {}}
+    if pillar is not None:
+        pack["__pillar__"] = pillar
     return LazyLoader(
         _module_dirs(opts, "utils", ext_type_dirs="utils_dirs", load_extensions=False),
         opts,
@@ -566,7 +574,7 @@ def utils(
     )
 
 
-def pillars(opts, functions, context=None, loaded_base_name=None):
+def pillars(opts, functions, context=None, pillar=None, loaded_base_name=None):
     """
     Returns the pillars modules
 
@@ -578,11 +586,14 @@ def pillars(opts, functions, context=None, loaded_base_name=None):
                                  by the salt loader.
     """
     _utils = utils(opts)
+    pack = {"__salt__": functions, "__context__": context, "__utils__": _utils}
+    if pillar is not None:
+        pack["__pillar__"] = pillar
     ret = LazyLoader(
         _module_dirs(opts, "pillar"),
         opts,
         tag="pillar",
-        pack={"__salt__": functions, "__context__": context, "__utils__": _utils},
+        pack=pack,
         extra_module_dirs=_utils.module_dirs,
         pack_self="__ext_pillar__",
         loaded_base_name=loaded_base_name,
@@ -926,6 +937,7 @@ def render(
     proxy=None,
     context=None,
     file_client=None,
+    pillar=None,
     loaded_base_name=None,
 ):
     """
@@ -949,6 +961,8 @@ def render(
         "__context__": context,
         "__file_client__": file_client,
     }
+    if pillar is not None:
+        pack["__pillar__"] = pillar
 
     if states:
         pack["__states__"] = states
