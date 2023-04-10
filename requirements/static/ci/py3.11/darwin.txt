@@ -4,25 +4,25 @@
 #
 #    pip-compile --output-file=requirements/static/ci/py3.11/darwin.txt --pip-args='--constraint=requirements/static/pkg/py3.11/darwin.txt' requirements/darwin.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/darwin.in requirements/static/pkg/darwin.in
 #
-adal==1.2.7
+adal==1.2.5
     # via
     #   azure-datalake-store
     #   msrestazure
-aiohttp==3.8.4
+aiohttp==3.8.1
     # via etcd3-py
-aiosignal==1.3.1
+aiosignal==1.2.0
     # via aiohttp
-apache-libcloud==3.7.0 ; sys_platform != "win32"
+apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via
     #   -r requirements/darwin.txt
     #   -r requirements/static/ci/common.in
-asn1crypto==1.5.1
+asn1crypto==1.3.0
     # via
     #   certvalidator
     #   oscrypto
 async-timeout==4.0.2
     # via aiohttp
-attrs==22.2.0
+attrs==20.3.0
     # via
     #   aiohttp
     #   jsonschema
@@ -30,15 +30,12 @@ attrs==22.2.0
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-skip-markers
-    #   pytest-subtests
     #   pytest-system-statistics
-autocommand==2.2.2
-    # via jaraco.text
-azure-applicationinsights==0.1.1
+azure-applicationinsights==0.1.0
     # via azure
 azure-batch==4.1.3
     # via azure
-azure-common==1.1.28
+azure-common==1.1.26
     # via
     #   azure-applicationinsights
     #   azure-batch
@@ -114,13 +111,11 @@ azure-common==1.1.28
     #   azure-storage-common
     #   azure-storage-file
     #   azure-storage-queue
-azure-core==1.26.4
-    # via msrest
 azure-cosmosdb-nspkg==2.0.2
     # via azure-cosmosdb-table
 azure-cosmosdb-table==1.0.6
     # via azure
-azure-datalake-store==0.0.52
+azure-datalake-store==0.0.51
     # via azure
 azure-eventgrid==1.3.0
     # via azure
@@ -128,7 +123,7 @@ azure-graphrbac==0.40.0
     # via azure
 azure-keyvault==1.1.0
     # via azure
-azure-loganalytics==0.1.1
+azure-loganalytics==0.1.0
     # via azure
 azure-mgmt-advisor==1.0.1
     # via azure-mgmt
@@ -305,10 +300,12 @@ azure-mgmt==4.0.0
     # via azure
 azure-nspkg==3.0.2
     # via
+    #   azure-applicationinsights
     #   azure-batch
     #   azure-cosmosdb-nspkg
     #   azure-graphrbac
     #   azure-keyvault
+    #   azure-loganalytics
     #   azure-mgmt-nspkg
     #   azure-servicebus
     #   azure-servicefabric
@@ -332,22 +329,24 @@ azure-storage-queue==1.4.0
     # via azure
 azure==4.0.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-bcrypt==4.0.1
+backports.entry-points-selectable==1.1.0
+    # via virtualenv
+bcrypt==3.1.6
     # via passlib
-boto3==1.26.109 ; python_version >= "3.6"
+boto3==1.21.46 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
     #   moto
 boto==2.49.0
     # via -r requirements/static/ci/common.in
-botocore==1.29.109
+botocore==1.24.46
     # via
     #   boto3
     #   moto
     #   s3transfer
-cachetools==5.3.0
+cachetools==3.1.0
     # via google-auth
-cassandra-driver==3.26.0
+cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
 certifi==2022.12.7
     # via
@@ -357,33 +356,34 @@ certifi==2022.12.7
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.15.1
+cffi==1.14.6
     # via
     #   -r requirements/static/ci/common.in
     #   azure-datalake-store
+    #   bcrypt
     #   cryptography
     #   pygit2
-charset-normalizer==3.1.0
-    # via
-    #   aiohttp
-    #   requests
-cheetah3==3.2.6.post1
+chardet==3.0.4
+    # via requests
+charset-normalizer==2.0.12
+    # via aiohttp
+cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
-cheroot==9.0.0
+cheroot==8.5.2
     # via cherrypy
-cherrypy==18.8.0
+cherrypy==18.6.1
     # via
     #   -r requirements/darwin.txt
     #   -r requirements/static/ci/common.in
-click==8.1.3
+click==7.0
     # via geomet
-clustershell==1.9.1
+clustershell==1.8.1
     # via -r requirements/static/ci/common.in
 contextvars==2.4
     # via -r requirements/base.txt
-croniter==1.3.10 ; sys_platform != "win32"
+croniter==0.3.29 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-cryptography==40.0.1
+cryptography==39.0.2
     # via
     #   -r requirements/darwin.txt
     #   adal
@@ -394,72 +394,70 @@ cryptography==40.0.1
     #   moto
     #   pyopenssl
     #   vcert
-distlib==0.3.6
+distlib==0.3.2
     # via virtualenv
-distro==1.8.0
+distro==1.5.0
     # via
     #   -r requirements/base.txt
     #   pytest-skip-markers
-dnspython==2.3.0
+dnspython==1.16.0
     # via
     #   -r requirements/static/ci/common.in
     #   python-etcd
-docker==6.0.1
+docker==5.0.3
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
 etcd3-py==0.1.6 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
-filelock==3.11.0
+filelock==3.0.12
     # via virtualenv
 flaky==3.7.0
     # via -r requirements/pytest.txt
-frozenlist==1.3.3
+frozenlist==1.3.0
     # via
     #   aiohttp
     #   aiosignal
-genshi==0.7.7
+genshi==0.7.5
     # via -r requirements/static/ci/common.in
-geomet==0.2.1.post1
+geomet==0.1.2
     # via cassandra-driver
-gitdb==4.0.10
+gitdb==4.0.5
     # via gitpython
-gitpython==3.1.31 ; python_version >= "3.7"
+gitpython==3.1.30 ; python_version >= "3.7"
     # via
     #   -r requirements/darwin.txt
     #   -r requirements/static/ci/common.in
-google-auth==2.17.2
+google-auth==1.6.3
     # via kubernetes
-hglib==2.6.2
+hglib==2.6.1
     # via -r requirements/static/ci/darwin.in
-idna==3.4
+idna==2.8
     # via
     #   -r requirements/darwin.txt
     #   etcd3-py
     #   requests
     #   yarl
-immutables==0.19
+immutables==0.15
     # via contextvars
-importlib-metadata==6.2.0
+importlib-metadata==6.0.0
     # via -r requirements/darwin.txt
-inflect==6.0.4
-    # via jaraco.text
-iniconfig==2.0.0
+iniconfig==1.0.1
     # via pytest
-ipaddress==1.0.23
+ipaddress==1.0.22
     # via kubernetes
-isodate==0.6.1
+isodate==0.6.0
     # via msrest
-jaraco.collections==4.1.0
+jaraco.classes==3.2.1
+    # via jaraco.collections
+jaraco.collections==3.4.0
     # via cherrypy
-jaraco.context==4.3.0
-    # via jaraco.text
-jaraco.functools==3.6.0
+jaraco.functools==2.0
     # via
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.11.1
+jaraco.text==3.5.1
     # via jaraco.collections
 jinja2==3.1.2
     # via
@@ -471,9 +469,9 @@ jmespath==1.0.1
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
-jsonschema==4.17.3
+jsonschema==3.2.0
     # via -r requirements/static/ci/common.in
-jxmlease==1.0.3 ; sys_platform != "win32"
+jxmlease==1.0.1 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 keyring==5.7.1
     # via -r requirements/static/ci/common.in
@@ -481,9 +479,9 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 linode-python==1.1.1
     # via -r requirements/darwin.txt
-looseversion==1.1.2
+looseversion==1.0.2
     # via -r requirements/base.txt
-mako==1.2.4
+mako==1.2.2
     # via
     #   -r requirements/darwin.txt
     #   -r requirements/static/ci/common.in
@@ -492,24 +490,25 @@ markupsafe==2.1.2
     #   -r requirements/base.txt
     #   jinja2
     #   mako
+    #   moto
     #   werkzeug
-mercurial==6.4
+mercurial==6.0.1
     # via -r requirements/static/ci/darwin.in
-mock==5.0.1
+mock==3.0.5
     # via -r requirements/pytest.txt
-more-itertools==9.1.0
+more-itertools==8.2.0
     # via
     #   cheroot
     #   cherrypy
+    #   jaraco.classes
     #   jaraco.functools
-    #   jaraco.text
-moto==4.1.6 ; python_version >= "3.6"
+moto==3.0.1 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
-msgpack==1.0.5
+msgpack==1.0.2
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
-msrest==0.7.1
+msrest==0.6.19
     # via
     #   azure-applicationinsights
     #   azure-eventgrid
@@ -601,36 +600,37 @@ msrestazure==0.6.4
     #   azure-mgmt-subscription
     #   azure-mgmt-trafficmanager
     #   azure-mgmt-web
-multidict==6.0.4
+multidict==6.0.2
     # via
     #   aiohttp
     #   yarl
 oauthlib==3.2.2
     # via requests-oauthlib
-oscrypto==1.3.0
+oscrypto==1.2.0
     # via certvalidator
-packaging==23.0
+packaging==21.3
     # via
     #   -r requirements/base.txt
-    #   docker
     #   pytest
 passlib[bcrypt]==1.7.4
     # via -r requirements/static/ci/common.in
-pathspec==0.11.1
+pathspec==0.9.0
     # via yamllint
-platformdirs==3.2.0
+pathtools==0.1.2
+    # via watchdog
+platformdirs==2.2.0
     # via virtualenv
-pluggy==1.0.0
+pluggy==0.13.1
     # via pytest
-portend==3.1.0
+portend==2.6
     # via cherrypy
-psutil==5.9.4
+psutil==5.8.0
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1-modules==0.2.8
+pyasn1-modules==0.2.4
     # via google-auth
 pyasn1==0.4.8
     # via
@@ -642,39 +642,39 @@ pycparser==2.21 ; python_version >= "3.9"
     #   -r requirements/darwin.txt
     #   -r requirements/static/ci/common.in
     #   cffi
-pycryptodomex==3.17
+pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pydantic==1.10.7
-    # via inflect
-pygit2==1.12.0 ; python_version >= "3.7"
+pygit2==1.9.1 ; python_version >= "3.7"
     # via -r requirements/static/ci/darwin.in
-pyjwt==2.6.0
+pyjwt==2.4.0
     # via adal
-pyopenssl==23.1.1
+pyopenssl==23.0.0
     # via
     #   -r requirements/darwin.txt
     #   etcd3-py
-pyrsistent==0.19.3
+pyparsing==3.0.9
+    # via packaging
+pyrsistent==0.17.3
     # via jsonschema
 pytest-custom-exit-code==0.3.0
     # via -r requirements/pytest.txt
-pytest-helpers-namespace==2021.12.29
+pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
-pytest-httpserver==1.0.6
+pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories[docker]==1.0.0rc23 ; sys_platform != "win32"
+pytest-salt-factories[docker]==1.0.0rc21 ; sys_platform != "win32"
     # via -r requirements/pytest.txt
-pytest-shell-utilities==1.7.0
+pytest-shell-utilities==1.6.0
     # via pytest-salt-factories
-pytest-skip-markers==1.4.0
+pytest-skip-markers==1.2.0
     # via
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pytest-subtests==0.10.0
+pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
 pytest-system-statistics==1.0.2
     # via pytest-salt-factories
@@ -682,9 +682,9 @@ pytest-tempdir==2019.10.12
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest-timeout==2.1.0
+pytest-timeout==1.4.2
     # via -r requirements/pytest.txt
-pytest==7.2.2 ; python_version > "3.6"
+pytest==7.2.0 ; python_version > "3.6"
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
@@ -696,7 +696,7 @@ pytest==7.2.2 ; python_version > "3.6"
     #   pytest-system-statistics
     #   pytest-tempdir
     #   pytest-timeout
-python-dateutil==2.8.2
+python-dateutil==2.8.0
     # via
     #   -r requirements/darwin.txt
     #   adal
@@ -709,34 +709,33 @@ python-dateutil==2.8.2
     #   vcert
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.5.0
+python-gnupg==0.4.8
     # via -r requirements/darwin.txt
-pytz==2023.3
-    # via tempora
-pyvmomi==8.0.0.1.2
+pytz==2022.1
+    # via
+    #   moto
+    #   tempora
+pyvmomi==6.7.1.2018.12
     # via -r requirements/static/ci/common.in
-pyyaml==6.0
+pyyaml==5.4.1
     # via
     #   -r requirements/base.txt
     #   clustershell
     #   kubernetes
-    #   pytest-salt-factories
-    #   responses
     #   yamllint
     #   yamlordereddictloader
 pyzmq==25.0.2 ; python_version >= "3.11"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-requests-oauthlib==1.3.1
+requests-oauthlib==1.3.0
     # via msrest
-requests==2.28.2
+requests==2.25.1
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   adal
     #   apache-libcloud
-    #   azure-core
     #   azure-cosmosdb-table
     #   azure-datalake-store
     #   azure-keyvault
@@ -748,25 +747,26 @@ requests==2.28.2
     #   kubernetes
     #   moto
     #   msrest
+    #   pyvmomi
     #   requests-oauthlib
     #   responses
     #   vcert
     #   vultr
-responses==0.23.1
+responses==0.10.6
     # via moto
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.in
-rsa==4.9
+rsa==4.7.2
     # via google-auth
-s3transfer==0.6.0
+s3transfer==0.5.2
     # via boto3
-semantic-version==2.10.0
+semantic-version==2.9.0
     # via etcd3-py
 setproctitle==1.3.2
     # via -r requirements/darwin.txt
 six==1.16.0
     # via
-    #   azure-core
+    #   bcrypt
     #   cassandra-driver
     #   cheroot
     #   etcd3-py
@@ -774,49 +774,47 @@ six==1.16.0
     #   geomet
     #   google-auth
     #   isodate
+    #   jsonschema
     #   kubernetes
+    #   mock
     #   msrestazure
     #   python-dateutil
     #   pyvmomi
+    #   responses
     #   vcert
+    #   virtualenv
     #   websocket-client
-smmap==5.0.0
+smmap==3.0.2
     # via gitdb
-sqlparse==0.4.3
+sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
-tempora==5.2.1
+tempora==4.1.1
     # via portend
-timelib==0.3.0
+timelib==0.2.5
     # via -r requirements/darwin.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
-types-pyyaml==6.0.12.9
-    # via responses
-typing-extensions==4.5.0
+typing-extensions==4.2.0
     # via
-    #   azure-core
-    #   pydantic
     #   pytest-shell-utilities
     #   pytest-system-statistics
-urllib3==1.26.15
+urllib3==1.26.6
     # via
     #   botocore
-    #   docker
     #   kubernetes
     #   python-etcd
     #   requests
-    #   responses
 vcert==0.7.4 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-virtualenv==20.21.0
+virtualenv==20.7.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
 vultr==1.0.1
     # via -r requirements/darwin.txt
-watchdog==3.0.0
+watchdog==0.10.3
     # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
     # via
@@ -826,17 +824,17 @@ werkzeug==2.2.3
     # via
     #   moto
     #   pytest-httpserver
-xmltodict==0.13.0
+xmltodict==0.12.0
     # via moto
-yamllint==1.30.0
+yamllint==1.26.3
     # via -r requirements/static/ci/darwin.in
 yamlordereddictloader==0.4.0
     # via -r requirements/static/ci/darwin.in
-yarl==1.8.2
+yarl==1.7.2
     # via aiohttp
-zc.lockfile==3.0.post1
+zc.lockfile==2.0
     # via cherrypy
-zipp==3.15.0
+zipp==3.12.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
