@@ -15,52 +15,52 @@ def configure_loader_modules():
 
 
 @pytest.fixture
-def ARN():
+def arn():
     return "arn:aws:dynamodb:us-east-1:012345678901:table/my-table"
 
 
 @pytest.fixture
-def TAGS():
+def tags():
     return {"foo": "bar", "hello": "world"}
 
 
 @pytest.fixture
-def TAGS_AS_LIST():
+def tags_as_list():
     return [{"Key": "foo", "Value": "bar"}, {"Key": "hello", "Value": "world"}]
 
 
 class DummyConn:
-    def __init__(self, TAGS_AS_LIST):
+    def __init__(self, tags_as_list):
         self.list_tags_of_resource = MagicMock(
-            return_value={"Tags": TAGS_AS_LIST, "NextToken": None}
+            return_value={"Tags": tags_as_list, "NextToken": None}
         )
         self.tag_resource = MagicMock(return_value=True)
         self.untag_resource = MagicMock(return_value=True)
 
 
-def test_list_tags_of_resource(ARN, TAGS, TAGS_AS_LIST):
+def test_list_tags_of_resource(arn, tags, tags_as_list):
     """
     Test that the correct API call is made and correct return format is
     returned.
     """
-    conn = DummyConn(TAGS_AS_LIST)
+    conn = DummyConn(tags_as_list)
     utils = {"boto3.get_connection": MagicMock(return_value=conn)}
     with patch.dict(boto_dynamodb.__utils__, utils):
-        ret = boto_dynamodb.list_tags_of_resource(resource_arn=ARN)
+        ret = boto_dynamodb.list_tags_of_resource(resource_arn=arn)
 
-    assert ret == TAGS, ret
-    conn.list_tags_of_resource.assert_called_once_with(ResourceArn=ARN, NextToken="")
+    assert ret == tags, ret
+    conn.list_tags_of_resource.assert_called_once_with(ResourceArn=arn, NextToken="")
 
 
-def test_tag_resource(ARN, TAGS, TAGS_AS_LIST):
+def test_tag_resource(arn, tags, tags_as_list):
     """
     Test that the correct API call is made and correct return format is
     returned.
     """
-    conn = DummyConn(TAGS_AS_LIST)
+    conn = DummyConn(tags_as_list)
     utils = {"boto3.get_connection": MagicMock(return_value=conn)}
     with patch.dict(boto_dynamodb.__utils__, utils):
-        ret = boto_dynamodb.tag_resource(resource_arn=ARN, tags=TAGS)
+        ret = boto_dynamodb.tag_resource(resource_arn=arn, tags=tags)
 
     assert ret is True, ret
     # Account for differing dict iteration order among Python versions by
@@ -71,22 +71,22 @@ def test_tag_resource(ARN, TAGS, TAGS_AS_LIST):
     assert not call.args
     # Make sure there aren't any additional kwargs beyond what we expect
     assert len(call.kwargs) == 2
-    assert call.kwargs["ResourceArn"] == ARN
+    assert call.kwargs["ResourceArn"] == arn
     # Make sure there aren't any additional tags beyond what we expect
     assert len(call.kwargs["Tags"]) == 2
-    for tag_dict in TAGS_AS_LIST:
+    for tag_dict in tags_as_list:
         assert tag_dict in call.kwargs["Tags"]
 
 
-def test_untag_resource(ARN, TAGS):
+def test_untag_resource(arn, tags, tags_as_list):
     """
     Test that the correct API call is made and correct return format is
     returned.
     """
-    conn = DummyConn(TAGS_AS_LIST)
+    conn = DummyConn(tags_as_list)
     utils = {"boto3.get_connection": MagicMock(return_value=conn)}
     with patch.dict(boto_dynamodb.__utils__, utils):
-        ret = boto_dynamodb.untag_resource(resource_arn=ARN, tag_keys=sorted(TAGS))
+        ret = boto_dynamodb.untag_resource(resource_arn=arn, tag_keys=sorted(tags))
 
     assert ret is True, ret
-    conn.untag_resource.assert_called_once_with(ResourceArn=ARN, TagKeys=sorted(TAGS))
+    conn.untag_resource.assert_called_once_with(ResourceArn=arn, TagKeys=sorted(tags))
