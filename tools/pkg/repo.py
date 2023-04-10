@@ -494,7 +494,7 @@ def rpm(
         else:
             distro_name = distro.capitalize()
 
-        if int(distro_version) < 8:
+        if distro != "photon" and int(distro_version) < 8:
             failovermethod = "\n            failovermethod=priority"
         else:
             failovermethod = ""
