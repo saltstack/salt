@@ -629,16 +629,14 @@ def test_should_raise_exception_if_cannot_create_binding():
         },
     ):
         # when
-        try:
+        with pytest.raises(CommandExecutionError) as exc:
             jboss7.bindings_exist(
                 name="bindings",
                 jboss_config={},
                 bindings={"env": "DEV2"},
                 profile=None,
             )
-            pytest.fail("An exception should be thrown")
-        except CommandExecutionError as e:
-            assert str(e) == "Incorrect binding name."
+        assert str(exc.value) == "Incorrect binding name."
 
 
 def test_should_raise_exception_if_cannot_update_binding():
@@ -662,16 +660,14 @@ def test_should_raise_exception_if_cannot_update_binding():
     ):
 
         # when
-        try:
+        with pytest.raises(CommandExecutionError) as exc:
             jboss7.bindings_exist(
                 name="bindings",
                 jboss_config={},
-                bindings={"env": "!@#!///some weird value"},
+                bindings={"env": "DEV2"},
                 profile=None,
             )
-            pytest.fail("An exception should be thrown")
-        except CommandExecutionError as e:
-            assert str(e) == "Incorrect binding name."
+        assert str(exc.value) == "Incorrect binding name."
 
 
 def test_datasource_exist_create_datasource_good_code():
