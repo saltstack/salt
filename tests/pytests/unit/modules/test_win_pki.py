@@ -15,30 +15,30 @@ def configure_loader_modules():
 
 
 @pytest.fixture
-def CERT_PATH():
+def cert_path():
     return r"C:\certs\testdomain.local.cer"
 
 
 @pytest.fixture
-def THUMBPRINT():
+def thumbprint():
     return "9988776655443322111000AAABBBCCCDDDEEEFFF"
 
 
 @pytest.fixture
-def CERTS(THUMBPRINT):
+def certs(thumbprint):
     return {
-        THUMBPRINT: {
+        thumbprint: {
             "dnsnames": ["testdomain.local"],
             "serialnumber": "0123456789AABBCCDD",
             "subject": "CN=testdomain.local, OU=testou, O=testorg, S=California, C=US",
-            "thumbprint": THUMBPRINT,
+            "thumbprint": thumbprint,
             "version": 3,
         }
     }
 
 
 @pytest.fixture
-def STORES():
+def stores():
     return {
         "CurrentUser": [
             "AuthRoot",
@@ -73,7 +73,7 @@ def STORES():
 
 
 @pytest.fixture
-def JSON_CERTS():
+def json_certs():
     return [
         {
             "DnsNameList": [
@@ -88,68 +88,68 @@ def JSON_CERTS():
 
 
 @pytest.fixture
-def JSON_STORES(STORES):
+def json_stores(stores):
     return [
-        {"LocationName": "CurrentUser", "StoreNames": STORES["CurrentUser"]},
-        {"LocationName": "LocalMachine", "StoreNames": STORES["LocalMachine"]},
+        {"LocationName": "CurrentUser", "StoreNames": stores["CurrentUser"]},
+        {"LocationName": "LocalMachine", "StoreNames": stores["LocalMachine"]},
     ]
 
 
-def test_get_stores(STORES, JSON_STORES):
+def test_get_stores(stores, json_stores):
     """
     Test - Get the certificate location contexts and their corresponding stores.
     """
     with patch.dict(win_pki.__salt__), patch(
-        "salt.modules.win_pki._cmd_run", MagicMock(return_value=JSON_STORES)
+        "salt.modules.win_pki._cmd_run", MagicMock(return_value=json_stores)
     ):
-        assert win_pki.get_stores() == STORES
+        assert win_pki.get_stores() == stores
 
 
-def test_get_certs(CERTS, JSON_CERTS):
+def test_get_certs(certs, json_certs):
     """
     Test - Get the available certificates in the given store.
     """
     with patch.dict(win_pki.__salt__), patch(
-        "salt.modules.win_pki._cmd_run", MagicMock(return_value=JSON_CERTS)
+        "salt.modules.win_pki._cmd_run", MagicMock(return_value=json_certs)
     ), patch("salt.modules.win_pki._validate_cert_path", MagicMock(return_value=None)):
-        assert win_pki.get_certs() == CERTS
+        assert win_pki.get_certs() == certs
 
 
-def test_get_cert_file(CERT_PATH, THUMBPRINT, CERTS, JSON_CERTS):
+def test_get_cert_file(cert_path, thumbprint, certs, json_certs):
     """
     Test - Get the details of the certificate file.
     """
-    kwargs = {"name": CERT_PATH}
+    kwargs = {"name": cert_path}
     with patch.dict(win_pki.__salt__), patch(
         "os.path.isfile", MagicMock(return_value=True)
-    ), patch("salt.modules.win_pki._cmd_run", MagicMock(return_value=JSON_CERTS)):
-        assert win_pki.get_cert_file(**kwargs) == CERTS[THUMBPRINT]
+    ), patch("salt.modules.win_pki._cmd_run", MagicMock(return_value=json_certs)):
+        assert win_pki.get_cert_file(**kwargs) == certs[thumbprint]
 
 
-def test_import_cert(CERT_PATH, THUMBPRINT, CERTS, JSON_CERTS):
+def test_import_cert(cert_path, thumbprint, certs, json_certs):
     """
     Test - Import the certificate file into the given certificate store.
     """
-    kwargs = {"name": CERT_PATH}
-    mock_value = MagicMock(return_value=CERT_PATH)
+    kwargs = {"name": cert_path}
+    mock_value = MagicMock(return_value=cert_path)
     with patch.dict(win_pki.__salt__, {"cp.cache_file": mock_value}), patch(
-        "salt.modules.win_pki._cmd_run", MagicMock(return_value=JSON_CERTS)
+        "salt.modules.win_pki._cmd_run", MagicMock(return_value=json_certs)
     ), patch(
         "salt.modules.win_pki._validate_cert_path", MagicMock(return_value=None)
     ), patch(
         "salt.modules.win_pki.get_cert_file",
-        MagicMock(return_value=CERTS[THUMBPRINT]),
+        MagicMock(return_value=certs[thumbprint]),
     ), patch(
-        "salt.modules.win_pki.get_certs", MagicMock(return_value=CERTS)
+        "salt.modules.win_pki.get_certs", MagicMock(return_value=certs)
     ):
         assert win_pki.import_cert(**kwargs)
 
 
-def test_export_cert(CERT_PATH, THUMBPRINT):
+def test_export_cert(cert_path, thumbprint):
     """
     Test - Export the certificate to a file from the given certificate store.
     """
-    kwargs = {"name": CERT_PATH, "thumbprint": THUMBPRINT}
+    kwargs = {"name": cert_path, "thumbprint": thumbprint}
     with patch.dict(win_pki.__salt__), patch(
         "salt.modules.win_pki._cmd_run", MagicMock(return_value="True")
     ), patch(
@@ -160,17 +160,17 @@ def test_export_cert(CERT_PATH, THUMBPRINT):
         assert win_pki.export_cert(**kwargs)
 
 
-def test_test_cert(THUMBPRINT):
+def test_test_cert(thumbprint):
     """
     Test - Check the certificate for validity.
     """
     with patch.dict(win_pki.__salt__), patch(
         "salt.modules.win_pki._cmd_run", MagicMock(return_value="True")
     ), patch("salt.modules.win_pki._validate_cert_path", MagicMock(return_value=None)):
-        assert win_pki.test_cert(thumbprint=THUMBPRINT)
+        assert win_pki.test_cert(thumbprint=thumbprint)
 
 
-def test_remove_cert(THUMBPRINT, CERTS):
+def test_remove_cert(thumbprint, certs):
     """
     Test - Remove the certificate from the given certificate store.
     """
@@ -179,6 +179,6 @@ def test_remove_cert(THUMBPRINT, CERTS):
     ), patch(
         "salt.modules.win_pki._validate_cert_path", MagicMock(return_value=None)
     ), patch(
-        "salt.modules.win_pki.get_certs", MagicMock(return_value=CERTS)
+        "salt.modules.win_pki.get_certs", MagicMock(return_value=certs)
     ):
-        assert win_pki.remove_cert(thumbprint=THUMBPRINT[::-1])
+        assert win_pki.remove_cert(thumbprint=thumbprint[::-1])
