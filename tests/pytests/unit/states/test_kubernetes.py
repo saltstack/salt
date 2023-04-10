@@ -17,7 +17,7 @@ from tests.support.mock import MagicMock, patch
 pytestmark = [
     pytest.mark.skipif(
         kubernetesmod.HAS_LIBS is False,
-        reason="Kubernetes client lib is not installed. Skipping test_kubernetes.py",
+        reason="Kubernetes client lib is not installed.",
     )
 ]
 
@@ -154,12 +154,12 @@ def test_configmap_present__fail():
         data={1: 1},
         source="salt://beyond/oblivion.jinja",
     )
-    assert {
+    assert error == {
         "changes": {},
         "result": False,
         "name": "testme",
         "comment": "'source' cannot be used in combination with 'data'",
-    } == error
+    }
 
 
 def test_configmap_present__create_test_true():
@@ -169,12 +169,12 @@ def test_configmap_present__create_test_true():
             name="example",
             data={"example.conf": "# empty config file"},
         )
-        assert {
+        assert ret == {
             "comment": "The configmap is going to be created",
             "changes": {},
             "name": "example",
             "result": None,
-        } == ret
+        }
 
 
 def test_configmap_present__create():
@@ -190,12 +190,12 @@ def test_configmap_present__create():
                 name="test",
                 data={"foo": "bar"},
             )
-            assert {
+            assert actual == {
                 "comment": "",
                 "changes": {"data": {"foo": "bar"}},
                 "name": "test",
                 "result": True,
-            } == actual
+            }
 
 
 def test_configmap_present__create_no_data():
@@ -207,12 +207,12 @@ def test_configmap_present__create_no_data():
         )
         with mock_func("create_configmap", return_value=cm):
             actual = kubernetes.configmap_present(name="test")
-            assert {
+            assert actual == {
                 "comment": "",
                 "changes": {"data": {}},
                 "name": "test",
                 "result": True,
-            } == actual
+            }
 
 
 def test_configmap_present__replace_test_true():
@@ -227,12 +227,12 @@ def test_configmap_present__replace_test_true():
             namespace="saltstack",
             data={"foobar.conf": "# Example configuration"},
         )
-        assert {
+        assert ret == {
             "comment": "The configmap is going to be replaced",
             "changes": {},
             "name": "settings",
             "result": None,
-        } == ret
+        }
 
 
 def test_configmap_present__replace():
@@ -246,24 +246,24 @@ def test_configmap_present__replace():
                 name="settings",
                 data={"action": "make=peace"},
             )
-            assert {
+            assert actual == {
                 "comment": ("The configmap is already present. Forcing recreation"),
                 "changes": {"data": {"action": "make=peace"}},
                 "name": "settings",
                 "result": True,
-            } == actual
+            }
 
 
 def test_configmap_absent__noop_test_true():
     # Nothing to delete with test=True
     with mock_func("show_configmap", return_value=None, test=True):
         actual = kubernetes.configmap_absent(name="NOT_FOUND")
-        assert {
+        assert actual == {
             "comment": "The configmap does not exist",
             "changes": {},
             "name": "NOT_FOUND",
             "result": None,
-        } == actual
+        }
 
 
 def test_configmap_absent__test_true():
@@ -271,24 +271,24 @@ def test_configmap_absent__test_true():
     cm = make_configmap(name="deleteme", namespace="default")
     with mock_func("show_configmap", return_value=cm, test=True):
         actual = kubernetes.configmap_absent(name="deleteme")
-        assert {
+        assert actual == {
             "comment": "The configmap is going to be deleted",
             "changes": {},
             "name": "deleteme",
             "result": None,
-        } == actual
+        }
 
 
 def test_configmap_absent__noop():
     # Nothing to delete
     with mock_func("show_configmap", return_value=None):
         actual = kubernetes.configmap_absent(name="NOT_FOUND")
-        assert {
+        assert actual == {
             "comment": "The configmap does not exist",
             "changes": {},
             "name": "NOT_FOUND",
             "result": True,
-        } == actual
+        }
 
 
 def test_configmap_absent():
@@ -298,7 +298,7 @@ def test_configmap_absent():
         # The return from this module isn't used in the state
         with mock_func("delete_configmap", return_value={}):
             actual = kubernetes.configmap_absent(name="deleteme")
-            assert {
+            assert actual == {
                 "comment": "ConfigMap deleted",
                 "changes": {
                     "kubernetes.configmap": {
@@ -308,7 +308,7 @@ def test_configmap_absent():
                 },
                 "name": "deleteme",
                 "result": True,
-            } == actual
+            }
 
 
 def test_secret_present__fail():
@@ -317,12 +317,12 @@ def test_secret_present__fail():
         data={"password": "monk3y"},
         source="salt://nope.jinja",
     )
-    assert {
+    assert actual == {
         "changes": {},
         "result": False,
         "name": "sekret",
         "comment": "'source' cannot be used in combination with 'data'",
-    } == actual
+    }
 
 
 def test_secret_present__exists_test_true():
@@ -336,12 +336,12 @@ def test_secret_present__exists_test_true():
                 name="sekret",
                 data={"password": "uncle"},
             )
-            assert {
+            assert actual == {
                 "changes": {},
                 "result": None,
                 "name": "sekret",
                 "comment": "The secret is going to be replaced",
-            } == actual
+            }
 
 
 def test_secret_present__exists():
@@ -353,12 +353,12 @@ def test_secret_present__exists():
                 name="sekret",
                 data={"password": "booyah"},
             )
-            assert {
+            assert actual == {
                 "changes": {"data": ["password"]},
                 "result": True,
                 "name": "sekret",
                 "comment": "The secret is already present. Forcing recreation",
-            } == actual
+            }
 
 
 def test_secret_present__create():
@@ -370,12 +370,12 @@ def test_secret_present__create():
                 name="sekret",
                 data={"password": "booyah"},
             )
-            assert {
+            assert actual == {
                 "changes": {"data": ["password"]},
                 "result": True,
                 "name": "sekret",
                 "comment": "",
-            } == actual
+            }
 
 
 def test_secret_present__create_no_data():
@@ -384,12 +384,12 @@ def test_secret_present__create_no_data():
     with mock_func("show_secret", return_value=None):
         with mock_func("create_secret", return_value=secret):
             actual = kubernetes.secret_present(name="sekret")
-            assert {
+            assert actual == {
                 "changes": {"data": []},
                 "result": True,
                 "name": "sekret",
                 "comment": "",
-            } == actual
+            }
 
 
 def test_secret_present__create_test_true():
@@ -398,34 +398,34 @@ def test_secret_present__create_test_true():
     with mock_func("show_secret", return_value=None):
         with mock_func("create_secret", return_value=secret, test=True):
             actual = kubernetes.secret_present(name="sekret")
-            assert {
+            assert actual == {
                 "changes": {},
                 "result": None,
                 "name": "sekret",
                 "comment": "The secret is going to be created",
-            } == actual
+            }
 
 
 def test_secret_absent__noop_test_true():
     with mock_func("show_secret", return_value=None, test=True):
         actual = kubernetes.secret_absent(name="sekret")
-        assert {
+        assert actual == {
             "changes": {},
             "result": None,
             "name": "sekret",
             "comment": "The secret does not exist",
-        } == actual
+        }
 
 
 def test_secret_absent__noop():
     with mock_func("show_secret", return_value=None):
         actual = kubernetes.secret_absent(name="passwords")
-        assert {
+        assert actual == {
             "changes": {},
             "result": True,
             "name": "passwords",
             "comment": "The secret does not exist",
-        } == actual
+        }
 
 
 def test_secret_absent__delete_test_true():
@@ -433,12 +433,12 @@ def test_secret_absent__delete_test_true():
     with mock_func("show_secret", return_value=secret):
         with mock_func("delete_secret", return_value=secret, test=True):
             actual = kubernetes.secret_absent(name="credentials")
-            assert {
+            assert actual == {
                 "changes": {},
                 "result": None,
                 "name": "credentials",
                 "comment": "The secret is going to be deleted",
-            } == actual
+            }
 
 
 def test_secret_absent__delete():
@@ -459,14 +459,14 @@ def test_secret_absent__delete():
     with mock_func("show_secret", return_value=secret):
         with mock_func("delete_secret", return_value=deleted):
             actual = kubernetes.secret_absent(name="foobar")
-            assert {
+            assert actual == {
                 "changes": {
                     "kubernetes.secret": {"new": "absent", "old": "present"},
                 },
                 "result": True,
                 "name": "foobar",
                 "comment": "Secret deleted",
-            } == actual
+            }
 
 
 def test_node_label_present__add_test_true():
@@ -477,12 +477,12 @@ def test_node_label_present__add_test_true():
             node="minikube",
             value="monkey",
         )
-        assert {
+        assert actual == {
             "changes": {},
             "result": None,
             "name": "com.zoo-animal",
             "comment": "The label is going to be set",
-        } == actual
+        }
 
 
 def test_node_label_present__add():
@@ -500,7 +500,7 @@ def test_node_label_present__add():
                 node="minikube",
                 value="us-central1-a",
             )
-            assert {
+            assert actual == {
                 "comment": "",
                 "changes": {
                     "minikube.failure-domain.beta.kubernetes.io/zone": {
@@ -513,7 +513,7 @@ def test_node_label_present__add():
                 },
                 "name": "failure-domain.beta.kubernetes.io/zone",
                 "result": True,
-            } == actual
+            }
 
 
 def test_node_label_present__already_set():
@@ -526,12 +526,12 @@ def test_node_label_present__already_set():
                 node="minikube",
                 value="us-west-1",
             )
-            assert {
+            assert actual == {
                 "changes": {},
                 "result": True,
                 "name": "failure-domain.beta.kubernetes.io/region",
                 "comment": ("The label is already set and has the specified value"),
-            } == actual
+            }
 
 
 def test_node_label_present__update_test_true():
@@ -544,12 +544,12 @@ def test_node_label_present__update_test_true():
                 node="minikube",
                 value="us-east-1",
             )
-            assert {
+            assert actual == {
                 "changes": {},
                 "result": None,
                 "name": "failure-domain.beta.kubernetes.io/region",
                 "comment": "The label is going to be updated",
-            } == actual
+            }
 
 
 def test_node_label_present__update():
@@ -566,7 +566,7 @@ def test_node_label_present__update():
                 node="minikube",
                 value="us-east-1",
             )
-            assert {
+            assert actual == {
                 "changes": {
                     "minikube.failure-domain.beta.kubernetes.io/region": {
                         "new": {
@@ -580,7 +580,7 @@ def test_node_label_present__update():
                 "result": True,
                 "name": "failure-domain.beta.kubernetes.io/region",
                 "comment": "The label is already set, changing the value",
-            } == actual
+            }
 
 
 def test_node_label_absent__noop_test_true():
@@ -590,12 +590,12 @@ def test_node_label_absent__noop_test_true():
             name="non-existent-label",
             node="minikube",
         )
-        assert {
+        assert actual == {
             "changes": {},
             "result": None,
             "name": "non-existent-label",
             "comment": "The label does not exist",
-        } == actual
+        }
 
 
 def test_node_label_absent__noop():
@@ -605,12 +605,12 @@ def test_node_label_absent__noop():
             name="non-existent-label",
             node="minikube",
         )
-        assert {
+        assert actual == {
             "changes": {},
             "result": True,
             "name": "non-existent-label",
             "comment": "The label does not exist",
-        } == actual
+        }
 
 
 def test_node_label_absent__delete_test_true():
@@ -620,12 +620,12 @@ def test_node_label_absent__delete_test_true():
             name="failure-domain.beta.kubernetes.io/region",
             node="minikube",
         )
-        assert {
+        assert actual == {
             "changes": {},
             "result": None,
             "name": "failure-domain.beta.kubernetes.io/region",
             "comment": "The label is going to be deleted",
-        } == actual
+        }
 
 
 def test_node_label_absent__delete():
@@ -640,7 +640,7 @@ def test_node_label_absent__delete():
                 name="failure-domain.beta.kubernetes.io/region",
                 node="minikube",
             )
-            assert {
+            assert actual == {
                 "result": True,
                 "changes": {
                     "kubernetes.node_label": {
@@ -650,18 +650,18 @@ def test_node_label_absent__delete():
                 },
                 "comment": "Label removed from node",
                 "name": "failure-domain.beta.kubernetes.io/region",
-            } == actual
+            }
 
 
 def test_namespace_present__create_test_true():
     with mock_func("show_namespace", return_value=None, test=True):
         actual = kubernetes.namespace_present(name="saltstack")
-        assert {
+        assert actual == {
             "changes": {},
             "result": None,
             "name": "saltstack",
             "comment": "The namespace is going to be created",
-        } == actual
+        }
 
 
 def test_namespace_present__create():
@@ -669,70 +669,70 @@ def test_namespace_present__create():
     with mock_func("show_namespace", return_value=None):
         with mock_func("create_namespace", return_value=namespace_data):
             actual = kubernetes.namespace_present(name="saltstack")
-            assert {
+            assert actual == {
                 "changes": {"namespace": {"new": namespace_data, "old": {}}},
                 "result": True,
                 "name": "saltstack",
                 "comment": "",
-            } == actual
+            }
 
 
 def test_namespace_present__noop_test_true():
     namespace_data = make_namespace(name="saltstack")
     with mock_func("show_namespace", return_value=namespace_data, test=True):
         actual = kubernetes.namespace_present(name="saltstack")
-        assert {
+        assert actual == {
             "changes": {},
             "result": None,
             "name": "saltstack",
             "comment": "The namespace already exists",
-        } == actual
+        }
 
 
 def test_namespace_present__noop():
     namespace_data = make_namespace(name="saltstack")
     with mock_func("show_namespace", return_value=namespace_data):
         actual = kubernetes.namespace_present(name="saltstack")
-        assert {
+        assert actual == {
             "changes": {},
             "result": True,
             "name": "saltstack",
             "comment": "The namespace already exists",
-        } == actual
+        }
 
 
 def test_namespace_absent__noop_test_true():
     with mock_func("show_namespace", return_value=None, test=True):
         actual = kubernetes.namespace_absent(name="salt")
-        assert {
+        assert actual == {
             "changes": {},
             "result": None,
             "name": "salt",
             "comment": "The namespace does not exist",
-        } == actual
+        }
 
 
 def test_namespace_absent__noop():
     with mock_func("show_namespace", return_value=None):
         actual = kubernetes.namespace_absent(name="salt")
-        assert {
+        assert actual == {
             "changes": {},
             "result": True,
             "name": "salt",
             "comment": "The namespace does not exist",
-        } == actual
+        }
 
 
 def test_namespace_absent__delete_test_true():
     namespace_data = make_namespace(name="salt")
     with mock_func("show_namespace", return_value=namespace_data, test=True):
         actual = kubernetes.namespace_absent(name="salt")
-        assert {
+        assert actual == {
             "changes": {},
             "result": None,
             "name": "salt",
             "comment": "The namespace is going to be deleted",
-        } == actual
+        }
 
 
 def test_namespace_absent__delete_code_200():
@@ -743,14 +743,14 @@ def test_namespace_absent__delete_code_200():
     with mock_func("show_namespace", return_value=namespace_data):
         with mock_func("delete_namespace", return_value=deleted):
             actual = kubernetes.namespace_absent(name="salt")
-            assert {
+            assert actual == {
                 "changes": {
                     "kubernetes.namespace": {"new": "absent", "old": "present"}
                 },
                 "result": True,
                 "name": "salt",
                 "comment": "Terminating",
-            } == actual
+            }
 
 
 def test_namespace_absent__delete_status_terminating():
@@ -766,14 +766,14 @@ def test_namespace_absent__delete_status_terminating():
     with mock_func("show_namespace", return_value=namespace_data):
         with mock_func("delete_namespace", return_value=deleted):
             actual = kubernetes.namespace_absent(name="salt")
-            assert {
+            assert actual == {
                 "changes": {
                     "kubernetes.namespace": {"new": "absent", "old": "present"}
                 },
                 "result": True,
                 "name": "salt",
                 "comment": "Terminating this shizzzle yo",
-            } == actual
+            }
 
 
 def test_namespace_absent__delete_status_phase_terminating():
@@ -784,14 +784,14 @@ def test_namespace_absent__delete_status_phase_terminating():
     with mock_func("show_namespace", return_value=namespace_data):
         with mock_func("delete_namespace", return_value=deleted):
             actual = kubernetes.namespace_absent(name="salt")
-            assert {
+            assert actual == {
                 "changes": {
                     "kubernetes.namespace": {"new": "absent", "old": "present"}
                 },
                 "result": True,
                 "name": "salt",
                 "comment": "Terminating",
-            } == actual
+            }
 
 
 def test_namespace_absent__delete_error():
@@ -801,11 +801,11 @@ def test_namespace_absent__delete_error():
     with mock_func("show_namespace", return_value=namespace_data):
         with mock_func("delete_namespace", return_value=deleted):
             actual = kubernetes.namespace_absent(name="salt")
-            assert {
+            assert actual == {
                 "changes": {},
                 "result": False,
                 "name": "salt",
                 "comment": "Something went wrong, response: {}".format(
                     deleted,
                 ),
-            } == actual
+            }
