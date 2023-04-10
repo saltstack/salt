@@ -36,7 +36,7 @@ jobs:
     - name: Set Up Python 3.10
       uses: actions/setup-python@v4
       with:
-        python-version: 3.10
+        python-version: "3.10"
 
     - name: Add Version to Minion Definition File
       working-directory: salt
@@ -52,7 +52,7 @@ jobs:
         git add .
         git config user.name 'saltbot-open'
         git config user.email 'saltbot-open@users.noreply.github.com'
-        git commit -m 'Adding salt minion ${{ inputs.salt-version && format("v{}", inputs.salt-version) || github.ref_name }}'
+        git commit -m "Adding salt minion ${{ inputs.salt-version && format('v{0}', inputs.salt-version) || github.ref_name }}"
 
     - name: Create Pull Request
       id: cpr
