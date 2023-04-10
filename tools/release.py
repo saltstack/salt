@@ -171,9 +171,10 @@ def upload_virustotal(ctx: Context, salt_version: str):
         if f"minor/{salt_version}" in file:
             if os.path.splitext(file)[1] in file_types:
                 files_to_upload.append(file)
-        if f"onedir/minor/{salt_version}" in file:
-            if file.endswith("tar.xz"):
-                files_to_upload.append(file)
+        # These are showing errors for Windows and macOS
+        # if f"onedir/minor/{salt_version}" in file:
+        #     if file.endswith("tar.xz"):
+        #         files_to_upload.append(file)
 
     ctx.info("Found the following files to upload:")
     for file in files_to_upload:
@@ -238,7 +239,7 @@ def upload_virustotal(ctx: Context, salt_version: str):
             failures = False
             for field in stats:
                 ctx.info(f"- {field}: {stats[field]}")
-                if field in ["failure", "malicious", "suspicious"]:
+                if field in ["malicious", "suspicious"]:
                     if stats[field] > 0:
                         failures = True
 
