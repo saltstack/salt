@@ -299,7 +299,6 @@ def test_list_present():
     """
     Test to ensure a Linux ACL is present
     """
-    maxDiff = None
     name = "/root"
     acl_type = "user"
     acl_names = ["root", "damian", "homer"]
