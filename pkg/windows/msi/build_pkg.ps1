@@ -74,7 +74,7 @@ function VerifyOrDownload ($local_file, $URL, $SHA256) {
 #-------------------------------------------------------------------------------
 
 $WEBCACHE_DIR = "$env:TEMP\msi_build_cache_dir"
-$DEPS_URL     = "http://repo.saltproject.io/windows/dependencies"
+$DEPS_URL     = "https://repo.saltproject.io/windows/dependencies"
 $PROJECT_DIR  = $(git rev-parse --show-toplevel)
 $BUILD_DIR    = "$PROJECT_DIR\pkg\windows\build"
 $BUILDENV_DIR = "$PROJECT_DIR\pkg\windows\buildenv"
