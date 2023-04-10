@@ -306,7 +306,7 @@ jobs:
         env:
           PULL_LABELS: ${{ inputs.pull-labels }}
         run: |
-          # spellcheck disable=SC2086, SC2129
+          # spellcheck disable=2086
           echo "$PULL_LABELS"
           no_fast_tests="$(jq -c '. | any(index("test:no-fast"))' <<< $PULL_LABELS)"
           slow_tests="$(jq -c '. | any(index("test:slow"))' <<< $PULL_LABELS)"
