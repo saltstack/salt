@@ -602,10 +602,7 @@ def _pip_args(args, target):
 def _pip_environment(env, extras):
     new_env = env.copy()
     if "PYTHONPATH" in env:
-        sep = ":"
-        if sys.platform == "win32":
-            sep = ";"
-        new_env["PYTHONPATH"] = f"{extras}{sep}{env['PYTHONPATH']}"
+        new_env["PYTHONPATH"] = f"{extras}{os.pathsep}{env['PYTHONPATH']}"
     else:
         new_env["PYTHONPATH"] = extras
     return new_env
@@ -615,7 +612,7 @@ def salt_pip():
     """
     Proxy to current python's pip
     """
-    extras = str(sys.RELENV / "extras-{}.{}".format(*sys.version_info[:2]))
+    extras = str(sys.RELENV / "extras-{}.{}".format(*sys.version_info))
     env = _pip_environment(os.environ.copy(), extras)
     args = _pip_args(sys.argv[1:], extras)
     command = [
