@@ -335,12 +335,19 @@ def make_request(
     namespace = namespace or connection.get("namespace")
     if "verify" in args:
         args["verify"] = args["verify"]
+        log.debug(
+            'TLS bundle path for Vault found in args["verify"]: %s', args["verify"]
+        )
     else:
         try:
             args["verify"] = __opts__.get("vault").get("verify", None)
+            log.debug(
+                "TLS bundle path for Vault found in Salt configuration vault.verify: %s",
+                args["verify"],
+            )
         except (TypeError, AttributeError):
             # Don't worry about setting verify if it doesn't exist
-            pass
+            log.debug("TLS bundle path for Vault hasn't been set or specified")
     url = "{}/{}".format(vault_url, resource)
     headers = {"X-Vault-Token": str(token), "Content-Type": "application/json"}
     if namespace is not None:
