@@ -43,4 +43,4 @@ jobs:
       env:
         VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
       run: |
-        tools release upload-virustotal ${{ inputs.salt-version }}
+        tools release upload-virustotal ${{ inputs.salt-version || github.ref_name }}

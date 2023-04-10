@@ -130,6 +130,9 @@ def upload_virustotal(ctx: Context, salt_version: str):
     # Get a list of files to upload
     files_to_copy: list[str]
 
+    if salt_version.startswith("v"):
+        salt_version = salt_version[1:]
+
     ctx.info("Grabbing remote file listing of files in staging ...")
     s3 = boto3.client("s3")
     repo_release_files_path = pathlib.Path(
