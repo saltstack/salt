@@ -1,6 +1,7 @@
 import os
 import pathlib
 import subprocess
+import sys
 
 import pytest
 from pytestskipmarkers.utils import platform
@@ -16,8 +17,21 @@ def pypath():
         return pathlib.Path(f"{os.sep}opt", "saltstack", "salt", "bin")
 
 
+@pytest.fixture
+def extras_pypath():
+    extras_dir = "extras-{}.{}".format(*sys.version_info)
+    if platform.is_windows():
+        return pathlib.Path(
+            os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir
+        )
+    elif platform.is_darwin():
+        return pathlib.Path(f"{os.sep}opt", "salt", extras_dir, "bin")
+    else:
+        return pathlib.Path(f"{os.sep}opt", "saltstack", "salt", extras_dir, "bin")
+
+
 @pytest.fixture(autouse=True)
-def wipe_pydeps(pypath, install_salt):
+def wipe_pydeps(install_salt):
     try:
         yield
     finally:
@@ -51,12 +65,13 @@ def test_pip_install(salt_call_cli):
         assert "The github execution module cannot be loaded" in use_lib.stderr
 
 
-def test_pip_install_extras(install_salt):
+def test_pip_install_extras(install_salt, extras_pypath):
     """
     Test salt-pip installs into the correct directory
     """
     dep = "pep8"
     extras_keyword = "extras"
+    check_path = extras_pypath / "pep8"
     try:
         subprocess.run(
             install_salt.binary_paths["pip"] + ["uninstall", "-y", dep],
@@ -73,7 +88,8 @@ def test_pip_install_extras(install_salt):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        assert extras_keyword in show_ret.stderr
+        assert extras_keyword in show_ret.stdout.decode()
+        assert check_path.exists()
     finally:
         subprocess.run(
             install_salt.binary_paths["pip"] + ["uninstall", "-y", dep],
@@ -91,8 +107,8 @@ def demote(user_uid, user_gid):
 
 
 @pytest.mark.skip_on_windows(reason="We can't easily demote users on Windows")
-def test_pip_non_root(install_salt, test_account, pypath):
-    check_path = pypath / "pep8"
+def test_pip_non_root(install_salt, test_account, extras_pypath):
+    check_path = extras_pypath / "pep8"
     # Lets make sure pep8 is not currently installed
     subprocess.run(
         install_salt.binary_paths["pip"] + ["uninstall", "-y", "pep8"],
