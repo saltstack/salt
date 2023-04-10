@@ -31,10 +31,8 @@ def extras_pypath():
 
 
 @pytest.fixture(autouse=True)
-def wipe_pydeps(install_salt):
-    try:
-        yield
-    finally:
+def wipe_pydeps(install_salt, extras_pypath):
+    def _wipe_func():
         for dep in ["pep8", "PyGithub"]:
             subprocess.run(
                 install_salt.binary_paths["pip"] + ["uninstall", "-y", dep],
@@ -43,6 +41,17 @@ def wipe_pydeps(install_salt):
                 check=False,
                 universal_newlines=True,
             )
+        # There is a bug in pip that leaves the scripts, so we manually remove them.
+        for script in ["pep8"]:
+            script_path = extras_pypath / script
+            if script_path.exists():
+                script_path.unlink()
+
+    try:
+        _wipe_func()
+        yield
+    finally:
+        _wipe_func()
 
 
 def test_pip_install(salt_call_cli):
@@ -72,30 +81,22 @@ def test_pip_install_extras(install_salt, extras_pypath):
     dep = "pep8"
     extras_keyword = "extras"
     check_path = extras_pypath / "pep8"
-    try:
-        subprocess.run(
-            install_salt.binary_paths["pip"] + ["uninstall", "-y", dep],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        subprocess.run(
-            install_salt.binary_paths["pip"] + ["install", dep],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        show_ret = subprocess.run(
-            install_salt.binary_paths["pip"] + ["show", dep],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        assert extras_keyword in show_ret.stdout.decode()
-        assert check_path.exists()
-    finally:
-        subprocess.run(
-            install_salt.binary_paths["pip"] + ["uninstall", "-y", dep],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+
+    install_ret = subprocess.run(
+        install_salt.binary_paths["pip"] + ["install", dep],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert install_ret.returncode == 0
+
+    show_ret = subprocess.run(
+        install_salt.binary_paths["pip"] + ["show", dep],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert show_ret.returncode == 0
+    assert extras_keyword in show_ret.stdout.decode()
+    assert check_path.exists()
 
 
 def demote(user_uid, user_gid):
@@ -109,16 +110,6 @@ def demote(user_uid, user_gid):
 @pytest.mark.skip_on_windows(reason="We can't easily demote users on Windows")
 def test_pip_non_root(install_salt, test_account, extras_pypath):
     check_path = extras_pypath / "pep8"
-    # Lets make sure pep8 is not currently installed
-    subprocess.run(
-        install_salt.binary_paths["pip"] + ["uninstall", "-y", "pep8"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        universal_newlines=True,
-    )
-
-    assert not check_path.exists()
     # We should be able to issue a --help without being root
     ret = subprocess.run(
         install_salt.binary_paths["salt"] + ["--help"],
