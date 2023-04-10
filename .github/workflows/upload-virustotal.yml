@@ -27,8 +27,6 @@ jobs:
 
     - name: Checkout Salt
       uses: actions/checkout@v3
-      with:
-        path: salt
 
     - name: Set Up Python 3.10
       uses: actions/setup-python@v4
@@ -39,7 +37,6 @@ jobs:
       uses: ./.github/actions/setup-python-tools-scripts
 
     - name: Upload to VirusTotal
-      working-directory: salt
       env:
         VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
       run: |
