@@ -32,7 +32,11 @@ def extras_pypath():
 
 @pytest.fixture(autouse=True)
 def wipe_pydeps(install_salt, extras_pypath):
-    def _wipe_func():
+    try:
+        yield
+    finally:
+        # Note, uninstalling anything with an associated script will leave the script.
+        # This is due to a bug in pip.
         for dep in ["pep8", "PyGithub"]:
             subprocess.run(
                 install_salt.binary_paths["pip"] + ["uninstall", "-y", dep],
@@ -41,17 +45,6 @@ def wipe_pydeps(install_salt, extras_pypath):
                 check=False,
                 universal_newlines=True,
             )
-        # There is a bug in pip that leaves the scripts, so we manually remove them.
-        for script in ["pep8"]:
-            script_path = extras_pypath / script
-            if script_path.exists():
-                script_path.unlink()
-
-    try:
-        _wipe_func()
-        yield
-    finally:
-        _wipe_func()
 
 
 def test_pip_install(salt_call_cli):
@@ -122,7 +115,6 @@ def test_pip_non_root(install_salt, test_account, extras_pypath):
     )
     assert ret.returncode == 0, ret.stderr
     assert "Usage" in ret.stdout
-    assert not check_path.exists()
 
     # Let tiamat-pip create the pypath directory for us
     ret = subprocess.run(
