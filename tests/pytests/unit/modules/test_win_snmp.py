@@ -81,7 +81,7 @@ def test_get_community_names_gpo():
         assert win_snmp.get_community_names() == {"TestCommunity": "Managed by GPO"}
 
 
-def test_set_community_names():
+def test_set_community_names(community_names):
     """
     Test - Manage the SNMP accepted community names and their permissions.
     """
@@ -98,7 +98,7 @@ def test_set_community_names():
         assert win_snmp.set_community_names(**kwargs)
 
 
-def test_set_community_names_gpo():
+def test_set_community_names_gpo(community_names):
     """
     Test - Manage the SNMP accepted community names and their permissions.
     """
