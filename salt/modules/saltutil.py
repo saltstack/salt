@@ -1764,6 +1764,7 @@ def runner(
     return rclient.cmd(
         name,
         arg=arg,
+        pub_data=pub_data,
         kwarg=kwarg,
         print_event=False,
         full_return=full_return,
