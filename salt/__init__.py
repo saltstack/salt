@@ -145,6 +145,4 @@ import salt._logging  # isort:skip
 # When we are running in a 'onedir' environment, setup the path for user
 # installed packages.
 if hasattr(sys, "RELENV"):
-    sys.path = [
-        str(sys.RELENV / "extras-{}.{}".format(*sys.version_info[:2]))
-    ] + sys.path
+    sys.path.insert(0, str(sys.RELENV / "extras-{}.{}".format(*sys.version_info)))
