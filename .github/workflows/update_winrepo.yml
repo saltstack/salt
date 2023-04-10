@@ -4,6 +4,14 @@ name: Update Winrepo
 on:
   release:
     types: [released]
+  workflow_dispatch:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: >
+          The Salt version to set prior to building packages and staging the release.
+          (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
 
 permissions:
   contents: read
@@ -35,7 +43,7 @@ jobs:
       run: |
         python .github/workflows/scripts/update_winrepo.py \
           --file ../winrepo/salt-minion.sls \
-          --version ${{ github.ref_name }}
+          --version ${{ inputs.salt-version || github.ref_name }}
 
     - name: Commit Changes
       working-directory: winrepo
@@ -44,7 +52,7 @@ jobs:
         git add .
         git config user.name 'saltbot-open'
         git config user.email 'saltbot-open@users.noreply.github.com'
-        git commit -m 'Adding salt minion 3006.1'
+        git commit -m 'Adding salt minion ${{ inputs.salt-version && format("v{}", inputs.salt-version) || github.ref_name }}'
 
     - name: Create Pull Request
       id: cpr
