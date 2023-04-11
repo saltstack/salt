@@ -4,8 +4,6 @@
      TestCase for salt.modules.dnsutil
 """
 
-import logging
-
 import pytest
 
 import salt.modules.dnsutil as dnsutil
@@ -15,7 +13,7 @@ from tests.support.mock import MagicMock, mock_open, patch
 
 @pytest.fixture
 def mock_hosts_file():
-    return salt.utils.stringutils.to_str(
+    return (
         "##\n"
         "# Host Database\n"
         "#\n"
@@ -41,7 +39,7 @@ def mock_hosts_file_rtn():
 
 @pytest.fixture
 def mock_soa_zone():
-    return salt.utils.stringutils.to_str(
+    return (
         "$TTL 3D\n"
         "@               IN      SOA     land-5.com. root.land-5.com. (\n"
         "199609203       ; Serial\n"
@@ -56,30 +54,22 @@ def mock_soa_zone():
 
 @pytest.fixture
 def mock_writes_list():
-    return salt.utils.data.decode(
-        [
-            "##\n",
-            "# Host Database\n",
-            "#\n",
-            "# localhost is used to configure the loopback interface\n",
-            "# when the system is booting.  Do not change this entry.\n",
-            "##\n",
-            "127.0.0.1 localhost",
-            "\n",
-            "255.255.255.255 broadcasthost",
-            "\n",
-            "::1 localhost",
-            "\n",
-            "fe80::1%lo0 localhost",
-            "\n",
-        ],
-        to_str=True,
-    )
-
-
-@pytest.fixture
-def log():
-    return logging.getLogger(__name__)
+    return [
+        "##\n",
+        "# Host Database\n",
+        "#\n",
+        "# localhost is used to configure the loopback interface\n",
+        "# when the system is booting.  Do not change this entry.\n",
+        "##\n",
+        "127.0.0.1 localhost",
+        "\n",
+        "255.255.255.255 broadcasthost",
+        "\n",
+        "::1 localhost",
+        "\n",
+        "fe80::1%lo0 localhost",
+        "\n",
+    ]
 
 
 @pytest.fixture
@@ -121,13 +111,6 @@ def test_hosts_remove(mock_hosts_file, mock_writes_list):
         dnsutil.hosts_remove("/etc/hosts", to_remove)
         writes = m_open.write_calls()
         assert writes == mock_writes_list, writes
-
-
-@pytest.mark.skip(reason="Waiting on bug report fixes")
-def test_parse_zone(log, mock_soa_zone):
-    with patch("salt.utils.files.fopen", mock_open(read_data=mock_soa_zone)):
-        log.debug(mock_soa_zone)
-        log.debug(dnsutil.parse_zone("/var/lib/named/example.com.zone"))
 
 
 def test_to_seconds_hour():
