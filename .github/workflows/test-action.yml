@@ -326,13 +326,9 @@ jobs:
           echo "$flaky_jail_tests"
           # shellcheck disable=SC2086
           {
-          # shellcheck disable=SC2086
           echo "no_fast_tests=$no_fast_tests";
-          # shellcheck disable=SC2086
           echo "slow_tests=$slow_tests";
-          # shellcheck disable=SC2086
           echo "core_tests=$core_tests";
-          # shellcheck disable=SC2086
           echo "flaky_jail_tests=$flaky_jail_tests";
           } >> "$GITHUB_OUTPUT"
 
