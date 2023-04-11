@@ -306,33 +306,33 @@ jobs:
         env:
           PULL_LABELS: ${{ inputs.pull-labels }}
         run: |
-          # spellcheck disable=2086
+          # shellcheck disable=SC2086
           echo "$PULL_LABELS"
-          # spellcheck disable=2086
+          # shellcheck disable=SC2086
           no_fast_tests="$(jq -c '. | any(index("test:no-fast"))' <<< $PULL_LABELS)"
-          # spellcheck disable=2086
+          # shellcheck disable=SC2086
           slow_tests="$(jq -c '. | any(index("test:slow"))' <<< $PULL_LABELS)"
-          # spellcheck disable=2086
+          # shellcheck disable=SC2086
           core_tests="$(jq -c '. | any(index("test:core"))' <<< $PULL_LABELS)"
-          # spellcheck disable=2086
+          # shellcheck disable=SC2086
           flaky_jail_tests="$(jq -c '. | any(index("test:flaky-jail"))' <<< $PULL_LABELS)"
-          # spellcheck disable=2086
+          # shellcheck disable=SC2086
           echo "$no_fast_tests"
-          # spellcheck disable=2086
+          # shellcheck disable=SC2086
           echo "$slow_tests"
-          # spellcheck disable=2086
+          # shellcheck disable=SC2086
           echo "$core_tests"
-          # spellcheck disable=2086
+          # shellcheck disable=SC2086
           echo "$flaky_jail_tests"
-          # spellcheck disable=2086
+          # shellcheck disable=SC2086
           {
-          # spellcheck disable=2086
+          # shellcheck disable=SC2086
           echo "no_fast_tests=$no_fast_tests";
-          # spellcheck disable=2086
+          # shellcheck disable=SC2086
           echo "slow_tests=$slow_tests";
-          # spellcheck disable=2086
+          # shellcheck disable=SC2086
           echo "core_tests=$core_tests";
-          # spellcheck disable=2086
+          # shellcheck disable=SC2086
           echo "flaky_jail_tests=$flaky_jail_tests";
           } >> "$GITHUB_OUTPUT"
 
