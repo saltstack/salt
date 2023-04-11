@@ -2293,6 +2293,7 @@ class State:
             initial_ret={"full": state_func_name},
             expected_extra_kws=STATE_INTERNAL_KEYWORDS,
         )
+
         inject_globals = {
             # Pass a copy of the running dictionary, the low state chunks and
             # the current state dictionaries.
@@ -2302,6 +2303,7 @@ class State:
             "__running__": immutabletypes.freeze(running) if running else {},
             "__instance_id__": self.instance_id,
             "__lowstate__": immutabletypes.freeze(chunks) if chunks else {},
+            "__user__": self.opts.get("user", "UNKNOWN"),
         }
 
         if "__env__" in low:
