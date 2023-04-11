@@ -1,5 +1,8 @@
 import hashlib
+import os
+import stat
 import time
+from pathlib import Path
 
 import pytest
 import zmq.eventloop.ioloop
@@ -327,3 +330,17 @@ def test_connect_pull_should_error_log_on_other_errors(error):
                 assert not isinstance(
                     call.args[1], salt.ext.tornado.iostream.StreamClosedError
                 )
+
+
+@pytest.mark.slow_test
+def test_master_pub_permissions(sock_dir):
+    opts = {
+        "sock_dir": str(sock_dir),
+        "ipc_mode": "ipc",
+        "external_auth": {"sharedsecret": {"fred": [".*", "@jobs"]}},
+    }
+    proc = salt.utils.event.EventPublisher(opts)
+    proc.run()
+    p = Path(str(sock_dir)) / "master_event_pub.ipc"
+    mode = os.lstat(p).st_mode
+    assert stat.S_IMODE(mode) == "0o660"
