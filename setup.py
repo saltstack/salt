@@ -6,14 +6,11 @@ The setup script for salt
 # pylint: disable=file-perms,resource-leakage
 import setuptools  # isort:skip
 
-import contextlib
 import distutils.dist
 import glob
 import os
-import platform
 import sys
 import warnings
-from ctypes.util import find_library
 from datetime import datetime
 
 # pylint: disable=no-name-in-module
@@ -371,12 +368,6 @@ class Develop(develop):
             self.generate_salt_syspaths = True
 
     def run(self):
-        if IS_WINDOWS_PLATFORM:
-            # Download the required DLLs
-            self.distribution.salt_download_windows_dlls = True
-            self.run_command("download-windows-dlls")
-            self.distribution.salt_download_windows_dlls = None
-
         if self.write_salt_version is True:
             self.distribution.running_salt_install = True
             self.distribution.salt_version_hardcoded_path = SALT_VERSION_HARDCODED
@@ -388,91 +379,6 @@ class Develop(develop):
 
         # Resume normal execution
         develop.run(self)
-
-
-class DownloadWindowsDlls(Command):
-
-    description = "Download required DLL's for windows"
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        if getattr(self.distribution, "salt_download_windows_dlls", None) is None:
-            print("This command is not meant to be called on it's own")
-            exit(1)
-        try:
-            import pip
-
-            # pip has moved many things to `_internal` starting with pip 10
-            if LooseVersion(pip.__version__) < LooseVersion("10.0"):
-                # pylint: disable=no-name-in-module
-                from pip.utils.logging import indent_log
-
-                # pylint: enable=no-name-in-module
-            else:
-                from pip._internal.utils.logging import (  # pylint: disable=no-name-in-module
-                    indent_log,
-                )
-        except ImportError:
-            # TODO: Impliment indent_log here so we don't require pip
-            @contextlib.contextmanager
-            def indent_log():
-                yield
-
-        platform_bits, _ = platform.architecture()
-        url = "https://repo.saltproject.io/windows/dependencies/{bits}/{fname}"
-        dest = os.path.join(os.path.dirname(sys.executable), "{fname}")
-        with indent_log():
-            for fname in (
-                "openssl/1.1.1k/ssleay32.dll",
-                "openssl/1.1.1k/libeay32.dll",
-            ):
-                # See if the library is already on the system
-                if find_library(fname):
-                    continue
-                furl = url.format(bits=platform_bits[:2], fname=fname)
-                fdest = dest.format(fname=os.path.basename(fname))
-                if not os.path.exists(fdest):
-                    log.info("Downloading {} to {} from {}".format(fname, fdest, furl))
-                    try:
-                        from contextlib import closing
-
-                        import requests
-
-                        with closing(requests.get(furl, stream=True)) as req:
-                            if req.status_code == 200:
-                                with open(fdest, "wb") as wfh:
-                                    for chunk in req.iter_content(chunk_size=4096):
-                                        if chunk:  # filter out keep-alive new chunks
-                                            wfh.write(chunk)
-                                            wfh.flush()
-                            else:
-                                log.error(
-                                    "Failed to download {} to {} from {}".format(
-                                        fname, fdest, furl
-                                    )
-                                )
-                    except ImportError:
-                        req = urlopen(furl)
-
-                        if req.getcode() == 200:
-                            with open(fdest, "wb") as wfh:
-                                while True:
-                                    chunk = req.read(4096)
-                                    if not chunk:
-                                        break
-                                    wfh.write(chunk)
-                                    wfh.flush()
-                        else:
-                            log.error(
-                                "Failed to download {} to {} from {}".format(
-                                    fname, fdest, furl
-                                )
-                            )
 
 
 class Sdist(sdist):
@@ -740,11 +646,6 @@ class Install(install):
         self.distribution.salt_version_hardcoded_path = os.path.join(
             self.build_lib, "salt", "_version.txt"
         )
-        if IS_WINDOWS_PLATFORM:
-            # Download the required DLLs
-            self.distribution.salt_download_windows_dlls = True
-            self.run_command("download-windows-dlls")
-            self.distribution.salt_download_windows_dlls = None
         # need to ensure _version.txt is created in build dir before install
         if not os.path.exists(os.path.join(self.build_lib)):
             if not self.skip_build:
@@ -987,8 +888,6 @@ class SaltDistribution(distutils.dist.Distribution):
         )
         if not IS_WINDOWS_PLATFORM:
             self.cmdclass.update({"sdist": CloudSdist, "install_lib": InstallLib})
-        if IS_WINDOWS_PLATFORM:
-            self.cmdclass.update({"download-windows-dlls": DownloadWindowsDlls})
         if HAS_BDIST_WHEEL:
             self.cmdclass["bdist_wheel"] = BDistWheel
 
@@ -1129,45 +1028,6 @@ class SaltDistribution(distutils.dist.Distribution):
                 for reqfile in SALT_BASE_REQUIREMENTS:
                     install_requires += _parse_requirements_file(reqfile)
         return install_requires
-
-    @property
-    def _property_scripts(self):
-        # Scripts common to all scenarios
-        scripts = ["scripts/salt-call"]
-        if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
-            scripts.append("scripts/salt-ssh")
-            if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
-                return scripts
-            scripts.extend(["scripts/salt-cloud", "scripts/spm"])
-            return scripts
-
-        if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
-            scripts.extend(
-                [
-                    "scripts/salt-cp",
-                    "scripts/salt-minion",
-                ]
-            )
-            return scripts
-
-        # *nix, so, we need all scripts
-        scripts.extend(
-            [
-                "scripts/salt",
-                "scripts/salt-api",
-                "scripts/salt-cloud",
-                "scripts/salt-cp",
-                "scripts/salt-key",
-                "scripts/salt-master",
-                "scripts/salt-minion",
-                "scripts/salt-proxy",
-                "scripts/salt-run",
-                "scripts/salt-ssh",
-                "scripts/salt-syndic",
-                "scripts/spm",
-            ]
-        )
-        return scripts
 
     @property
     def _property_entry_points(self):

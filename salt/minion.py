@@ -2683,6 +2683,8 @@ class Minion(MinionBase):
 
         if "proxy_target" in data and self.opts.get("metaproxy") == "deltaproxy":
             proxy_target = data["proxy_target"]
+            if proxy_target not in self.deltaproxy_objs:
+                raise salt.ext.tornado.gen.Return()
             _minion = self.deltaproxy_objs[proxy_target]
         else:
             _minion = self

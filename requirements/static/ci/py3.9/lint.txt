@@ -12,9 +12,9 @@ aiohttp==3.8.1
     # via etcd3-py
 aiosignal==1.2.0
     # via aiohttp
-ansible-core==2.11.4
+ansible-core==2.14.1
     # via ansible
-ansible==4.4.0
+ansible==7.1.0 ; python_version >= "3.9"
     # via -r requirements/static/ci/linux.in
 apache-libcloud==3.3.1 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
@@ -395,8 +395,9 @@ contextvars==2.4
     # via -r requirements/base.txt
 croniter==1.0.15 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-cryptography==3.4.7
+cryptography==39.0.2
     # via
+    #   -r requirements/static/pkg/linux.in
     #   adal
     #   ansible-core
     #   azure-cosmosdb-table
@@ -510,12 +511,13 @@ lxml==4.9.1
     #   ncclient
 mako==1.2.2
     # via -r requirements/static/ci/common.in
-markupsafe==2.0.1
+markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
     #   mako
     #   moto
+    #   werkzeug
 mccabe==0.6.1
     # via pylint
 mercurial==6.0.1
@@ -645,7 +647,7 @@ ntc-templates==2.2.2
     # via
     #   junos-eznc
     #   netmiko
-oauthlib==3.2.1
+oauthlib==3.2.2
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
@@ -708,7 +710,7 @@ pymysql==1.0.2 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
 pynacl==1.4.0
     # via paramiko
-pyopenssl==20.0.1
+pyopenssl==23.0.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
@@ -834,7 +836,6 @@ six==1.16.0
     #   ncclient
     #   paramiko
     #   pynacl
-    #   pyopenssl
     #   python-consul
     #   python-dateutil
     #   pyvmomi
@@ -893,7 +894,7 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
-werkzeug==2.0.1
+werkzeug==2.2.3
     # via moto
 wrapt==1.11.1
     # via astroid
