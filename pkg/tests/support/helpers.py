@@ -96,6 +96,7 @@ class SaltPkgInstall:
     minor: str = attr.ib(init=False)
     relenv: bool = attr.ib(default=True)
     file_ext: bool = attr.ib(default=None)
+    config_path: str = attr.ib(init=False)
 
     @proc.default
     def _default_proc(self):
@@ -170,6 +171,17 @@ class SaltPkgInstall:
         else:
             install_dir = pathlib.Path("/opt", "saltstack", "salt")
         return install_dir
+
+    @config_path.default
+    def _default_config_path(self):
+        """
+        Default location for salt configurations
+        """
+        if platform.is_windows():
+            config_path = pathlib.Path("C://salt", "etc", "salt")
+        else:
+            config_path = pathlib.Path("/etc", "salt")
+        return config_path
 
     @repo_data.default
     def _default_repo_data(self):

@@ -3,6 +3,7 @@ import pathlib
 import shutil
 
 import pytest
+import yaml
 from pytestskipmarkers.utils import platform
 from saltfactories.utils import random_string
 from saltfactories.utils.tempfiles import SaltPillarTree, SaltStateTree
@@ -282,14 +283,31 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         "rest_cherrypy": {"port": 8000, "disable_ssl": True},
         "netapi_enable_clients": ["local"],
         "external_auth": {"auto": {"saltdev": [".*"]}},
-        "user": "salt",
-        "log_file": salt.config.DEFAULT_MASTER_OPTS.get("log_file"),
-        "root_dir": salt.config.DEFAULT_MASTER_OPTS.get("root_dir"),
-        "key_logfile": salt.config.DEFAULT_MASTER_OPTS.get("key_logfile"),
-        "pki_dir": salt.config.DEFAULT_MASTER_OPTS.get("pki_dir"),
-        "api_logfile": salt.config.DEFAULT_API_OPTS.get("api_logfile"),
-        "api_pidfile": salt.config.DEFAULT_API_OPTS.get("api_pidfile"),
     }
+    master_config = install_salt.config_path / "master"
+    with open(master_config) as fp:
+        data = yaml.safe_load(fp)
+        if "user" in data:
+            # We are testing a different user, so we need to test the system
+            # configs, or else permissions will not be correct.
+            config_overrides["user"] = data["user"]
+            config_overrides["log_file"] = salt.config.DEFAULT_MASTER_OPTS.get(
+                "log_file"
+            )
+            config_overrides["root_dir"] = salt.config.DEFAULT_MASTER_OPTS.get(
+                "root_dir"
+            )
+            config_overrides["key_logfile"] = salt.config.DEFAULT_MASTER_OPTS.get(
+                "key_logfile"
+            )
+            config_overrides["pki_dir"] = salt.config.DEFAULT_MASTER_OPTS.get("pki_dir")
+            config_overrides["api_logfile"] = salt.config.DEFAULT_API_OPTS.get(
+                "api_logfile"
+            )
+            config_overrides["api_pidfile"] = salt.config.DEFAULT_API_OPTS.get(
+                "api_pidfile"
+            )
+
     if (platform.is_windows() or platform.is_darwin()) and install_salt.singlebin:
         start_timeout = 240
         # For every minion started we have to accept it's key.
