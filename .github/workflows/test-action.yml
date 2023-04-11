@@ -307,12 +307,21 @@ jobs:
           PULL_LABELS: ${{ inputs.pull-labels }}
         run: |
           echo "$PULL_LABELS"
-          # spellcheck disable=2086
           no_fast_tests="$(jq -c '. | any(index("test:no-fast"))' <<< $PULL_LABELS)"
           slow_tests="$(jq -c '. | any(index("test:slow"))' <<< $PULL_LABELS)"
           core_tests="$(jq -c '. | any(index("test:core"))' <<< $PULL_LABELS)"
+          # spellcheck disable=2086
           flaky_jail_tests="$(jq -c '. | any(index("test:flaky-jail"))' <<< $PULL_LABELS)"
           echo "$no_fast_tests"
+          echo "$slow_tests"
+          echo "$core_tests"
+          echo "$flaky_jail_tests"
+          {
+          echo "no_fast_tests=$no_fast_tests";
+          echo "slow_tests=$slow_tests";
+          echo "core_tests=$core_tests";
+          echo "flaky_jail_tests=$flaky_jail_tests";
+          } >> "$GITHUB_OUTPUT"
 
       - name: Run Fast/Changed Tests
         id: run-fast-changed-tests
