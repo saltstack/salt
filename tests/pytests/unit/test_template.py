@@ -51,7 +51,8 @@ def test_compile_template_preserves_windows_newlines():
     input_data_windows = "foo\r\nbar\r\nbaz\r\n"
     input_data_non_windows = input_data_windows.replace("\r\n", "\n")
     renderer = "test"
-    blacklist = whitelist = []
+    blacklist = []
+    whitelist = []
 
     ret = template.compile_template(
         ":string:",
@@ -105,14 +106,14 @@ def test_check_renderer_blacklisting(render_dict):
     Check that all renderers specified in the pipe string are available.
     """
     ret = template.check_render_pipe_str("jinja|json", render_dict, ["jinja"], None)
-    assert [("fake_json_func", "")] == ret
+    assert ret == [("fake_json_func", "")]
     ret = template.check_render_pipe_str("jinja|json", render_dict, None, ["jinja"])
-    assert [("fake_jinja_func", "")] == ret
+    assert ret == [("fake_jinja_func", "")]
     ret = template.check_render_pipe_str(
         "jinja|json", render_dict, ["jinja"], ["jinja"]
     )
-    assert [] == ret
+    assert ret == []
     ret = template.check_render_pipe_str(
         "jinja|json", render_dict, ["jinja"], ["jinja", "json"]
     )
-    assert [("fake_json_func", "")] == ret
+    assert ret == [("fake_json_func", "")]
