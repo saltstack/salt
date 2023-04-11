@@ -1639,7 +1639,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pass_gnupghome": "",
         "pass_dir": "",
         "netapi_enable_clients": [],
-        "maintenence_interval": 3600,
+        "maintenance_interval": 3600,
         "fileserver_interval": 3600,
     }
 )
