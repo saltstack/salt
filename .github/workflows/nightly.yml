@@ -1541,16 +1541,16 @@ jobs:
             version: "38"
             arch: aarch64
           - distro: photon
-            version: "3.0"
+            version: "3"
             arch: x86_64
           - distro: photon
-            version: "3.0"
+            version: "3"
             arch: aarch64
           - distro: photon
-            version: "4.0"
+            version: "4"
             arch: x86_64
           - distro: photon
-            version: "4.0"
+            version: "4"
             arch: aarch64
 
     steps:

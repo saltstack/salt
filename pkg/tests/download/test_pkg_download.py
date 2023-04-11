@@ -104,15 +104,15 @@ def get_test_versions():
             "container_id": "ubuntu_22_04",
         },
         {
-            "image": "ghcr.io/saltstack/salt-ci-containers/photon:3.0",
+            "image": "ghcr.io/saltstack/salt-ci-containers/photon:3",
             "os_type": "photon",
-            "os_version": 3.0,
+            "os_version": 3,
             "container_id": "photon_3",
         },
         {
-            "image": "ghcr.io/saltstack/salt-ci-containers/photon:4.0",
+            "image": "ghcr.io/saltstack/salt-ci-containers/photon:4",
             "os_type": "photon",
-            "os_version": 4.0,
+            "os_version": 4,
             "container_id": "photon_4",
         },
     ]
