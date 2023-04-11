@@ -309,6 +309,7 @@ def setup_redhat_family(
     )
 
     clean_command = "all" if os_name == "photon" else "expire-cache"
+    install_dmesg = ("yum", "install", "-y", "util-linux")
     commands = [
         ("mv", f"/downloads/{repo_file.name}", f"/etc/yum.repos.d/salt-{os_name}.repo"),
         ("yum", "clean", clean_command),
@@ -324,6 +325,11 @@ def setup_redhat_family(
             "salt-api",
         ),
     ]
+
+    # For some reason, the centosstream9 container doesn't have dmesg installed
+    if os_version == 9 and os_name == "redhat":
+        commands.insert(2, install_dmesg)
+
     for cmd in commands:
         ret = container.run(*cmd)
         if ret.returncode != 0:
