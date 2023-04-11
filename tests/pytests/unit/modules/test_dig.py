@@ -14,38 +14,37 @@ def configure_loader_modules():
     return {dig: {}}
 
 
-_SPF_VALUES = {
-    "dig +short xmission.com TXT": {
-        "pid": 27282,
-        "retcode": 0,
-        "stderr": "",
-        "stdout": '"v=spf1 a mx include:_spf.xmission.com ?all"',
-    },
-    "dig +short _spf.xmission.com TXT": {
-        "pid": 27282,
-        "retcode": 0,
-        "stderr": "",
-        "stdout": '"v=spf1 a mx ip4:198.60.22.0/24 ip4:166.70.13.0/24 ~all"',
-    },
-    "dig +short xmission-redirect.com TXT": {
-        "pid": 27282,
-        "retcode": 0,
-        "stderr": "",
-        "stdout": "v=spf1 redirect=_spf.xmission.com",
-    },
-    "dig +short foo.com TXT": {
-        "pid": 27282,
-        "retcode": 0,
-        "stderr": "",
-        "stdout": "v=spf1 ip4:216.73.93.70/31 ip4:216.73.93.72/31 ~all",
-    },
-}
-
-
-def _spf_side_effect(key, python_shell=False):
-    return _SPF_VALUES.get(
-        " ".join(key), {"pid": 27310, "retcode": 0, "stderr": "", "stdout": ""}
-    )
+class SpfValues:
+    def __call__(self, key, python_shell=False):
+        _spf_values = {
+            "dig +short xmission.com TXT": {
+                "pid": 27282,
+                "retcode": 0,
+                "stderr": "",
+                "stdout": '"v=spf1 a mx include:_spf.xmission.com ?all"',
+            },
+            "dig +short _spf.xmission.com TXT": {
+                "pid": 27282,
+                "retcode": 0,
+                "stderr": "",
+                "stdout": '"v=spf1 a mx ip4:198.60.22.0/24 ip4:166.70.13.0/24 ~all"',
+            },
+            "dig +short xmission-redirect.com TXT": {
+                "pid": 27282,
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "v=spf1 redirect=_spf.xmission.com",
+            },
+            "dig +short foo.com TXT": {
+                "pid": 27282,
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "v=spf1 ip4:216.73.93.70/31 ip4:216.73.93.72/31 ~all",
+            },
+        }
+        return _spf_values.get(
+            " ".join(key), {"pid": 27310, "retcode": 0, "stderr": "", "stdout": ""}
+        )
 
 
 def test_dig_cname_found():
@@ -166,7 +165,7 @@ def test_ns():
 
 
 def test_spf():
-    dig_mock = MagicMock(side_effect=_spf_side_effect)
+    dig_mock = MagicMock(side_effect=SpfValues())
     with patch.dict(dig.__salt__, {"cmd.run_all": dig_mock}):
         assert dig.SPF("foo.com") == ["216.73.93.70/31", "216.73.93.72/31"]
 
@@ -176,7 +175,7 @@ def test_spf_redir():
     Test for SPF records which use the 'redirect' SPF mechanism
     https://en.wikipedia.org/wiki/Sender_Policy_Framework#Mechanisms
     """
-    dig_mock = MagicMock(side_effect=_spf_side_effect)
+    dig_mock = MagicMock(side_effect=SpfValues())
     with patch.dict(dig.__salt__, {"cmd.run_all": dig_mock}):
         assert dig.SPF("xmission-redirect.com") == ["198.60.22.0/24", "166.70.13.0/24"]
 
@@ -186,7 +185,7 @@ def test_spf_include():
     Test for SPF records which use the 'include' SPF mechanism
     https://en.wikipedia.org/wiki/Sender_Policy_Framework#Mechanisms
     """
-    dig_mock = MagicMock(side_effect=_spf_side_effect)
+    dig_mock = MagicMock(side_effect=SpfValues())
     with patch.dict(dig.__salt__, {"cmd.run_all": dig_mock}):
         assert dig.SPF("xmission.com") == ["198.60.22.0/24", "166.70.13.0/24"]
 
