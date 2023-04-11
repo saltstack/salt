@@ -1,6 +1,7 @@
 """
 Set up the version of Salt
 """
+import argparse
 import operator
 import os
 import platform
@@ -921,5 +922,17 @@ def versions_report(include_salt_cloud=False, include_extensions=True):
     yield from info
 
 
+def _parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--next-release", help="Return the next release", action="store_true"
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    print(__version__)
+    args = _parser()
+    if args.next_release:
+        print(__saltstack_version__.next_release())
+    else:
+        print(__version__)

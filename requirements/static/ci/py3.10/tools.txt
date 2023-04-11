@@ -41,7 +41,9 @@ python-tools-scripts==0.12.0
 pyyaml==6.0
     # via -r requirements/static/ci/tools.in
 requests==2.28.2
-    # via python-tools-scripts
+    # via
+    #   python-tools-scripts
+    #   virustotal3
 rich==12.5.1
     # via python-tools-scripts
 s3transfer==0.5.2
@@ -54,3 +56,5 @@ urllib3==1.26.12
     # via
     #   botocore
     #   requests
+virustotal3==1.0.8
+    # via -r requirements/static/ci/tools.in

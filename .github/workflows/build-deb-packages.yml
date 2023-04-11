@@ -22,6 +22,9 @@ jobs:
         arch:
           - x86_64
           - aarch64
+        src:
+          - true
+          - false
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-11
@@ -76,8 +79,15 @@ jobs:
 
       - name: Build Deb
         working-directory: pkgs/checkout/
+        if: ${{ matrix.src != true}}
         run: |
           tools pkg build deb --onedir salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
+
+      - name: Build Deb
+        working-directory: pkgs/checkout/
+        if: ${{ matrix.src == true}}
+        run: |
+          tools pkg build deb --arch ${{ matrix.arch }}
 
       - name: Cleanup
         run: |
@@ -85,8 +95,18 @@ jobs:
 
       - name: Upload DEBs
         uses: actions/upload-artifact@v3
+        if: ${{ matrix.src == false}}
         with:
           name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb
+          path: ${{ github.workspace }}/pkgs/*
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload DEBs
+        uses: actions/upload-artifact@v3
+        if: ${{ matrix.src == true}}
+        with:
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb-from-src
           path: ${{ github.workspace }}/pkgs/*
           retention-days: 7
           if-no-files-found: error
