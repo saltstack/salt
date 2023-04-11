@@ -308,9 +308,10 @@ def setup_redhat_family(
         f"{repo_url_base}.repo", downloads_path / f"salt-{os_name}.repo"
     )
 
+    clean_command = "all" if os_name == "photon" else "expire-cache"
     commands = [
         ("mv", f"/downloads/{repo_file.name}", f"/etc/yum.repos.d/salt-{os_name}.repo"),
-        ("yum", "clean", "expire-cache"),
+        ("yum", "clean", clean_command),
         (
             "yum",
             "install",
