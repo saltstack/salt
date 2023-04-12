@@ -16,8 +16,9 @@
     uses: ./.github/workflows/build-<{ pkg_type }>-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      <%- if pkg_type == "macos" and gh_environment %>
+    <%- if pkg_type == "macos" and gh_environment %>
       environment: <{ gh_environment }>
-      <%- endif %>
+    secrets: inherit
+    <%- endif %>
 
 <%- endfor %>
