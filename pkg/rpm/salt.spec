@@ -194,12 +194,10 @@ install -m 0755 %{buildroot}/opt/saltstack/salt/salt-pip %{buildroot}%{_bindir}/
 
 # Add the config files
 install -p -m 0640 %{_salt_src}/conf/minion %{buildroot}%{_sysconfdir}/salt/minion
-install -p -m 0640 %{_salt_src}/conf/master %{buildroot}%{_sysconfdir}/salt/master
+install -p -m 0640 %{_salt_src}/pkg/common/conf/master %{buildroot}%{_sysconfdir}/salt/master
 install -p -m 0640 %{_salt_src}/conf/cloud %{buildroot}%{_sysconfdir}/salt/cloud
 install -p -m 0640 %{_salt_src}/conf/roster %{buildroot}%{_sysconfdir}/salt/roster
 install -p -m 0640 %{_salt_src}/conf/proxy %{buildroot}%{_sysconfdir}/salt/proxy
-# Patch Salt Master config file with salt user
-patch %{buildroot}%{_sysconfdir}/salt/master %{_salt_src}/pkg/rpm/salt_master_user.patch
 
 # Add the unit files
 mkdir -p %{buildroot}%{_unitdir}
