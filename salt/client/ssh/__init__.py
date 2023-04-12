@@ -1682,50 +1682,51 @@ def mod_data(fsclient):
         "returners",
     ]
     ret = {}
-    envs = fsclient.envs()
-    ver_base = ""
-    for env in envs:
-        files = fsclient.file_list(env)
-        for ref in sync_refs:
-            mods_data = {}
-            pref = "_{}".format(ref)
-            for fn_ in sorted(files):
-                if fn_.startswith(pref):
-                    if fn_.endswith((".py", ".so", ".pyx")):
-                        full = salt.utils.url.create(fn_)
-                        mod_path = fsclient.cache_file(full, env)
-                        if not os.path.isfile(mod_path):
-                            continue
-                        mods_data[os.path.basename(fn_)] = mod_path
-                        chunk = salt.utils.hashutils.get_hash(mod_path)
-                        ver_base += chunk
-            if mods_data:
-                if ref in ret:
-                    ret[ref].update(mods_data)
-                else:
-                    ret[ref] = mods_data
-    if not ret:
-        return {}
+    with fsclient:
+        envs = fsclient.envs()
+        ver_base = ""
+        for env in envs:
+            files = fsclient.file_list(env)
+            for ref in sync_refs:
+                mods_data = {}
+                pref = "_{}".format(ref)
+                for fn_ in sorted(files):
+                    if fn_.startswith(pref):
+                        if fn_.endswith((".py", ".so", ".pyx")):
+                            full = salt.utils.url.create(fn_)
+                            mod_path = fsclient.cache_file(full, env)
+                            if not os.path.isfile(mod_path):
+                                continue
+                            mods_data[os.path.basename(fn_)] = mod_path
+                            chunk = salt.utils.hashutils.get_hash(mod_path)
+                            ver_base += chunk
+                if mods_data:
+                    if ref in ret:
+                        ret[ref].update(mods_data)
+                    else:
+                        ret[ref] = mods_data
+        if not ret:
+            return {}
 
-    ver_base = salt.utils.stringutils.to_bytes(ver_base)
+        ver_base = salt.utils.stringutils.to_bytes(ver_base)
 
-    ver = hashlib.sha1(ver_base).hexdigest()
-    ext_tar_path = os.path.join(
-        fsclient.opts["cachedir"], "ext_mods.{}.tgz".format(ver)
-    )
-    mods = {"version": ver, "file": ext_tar_path}
-    if os.path.isfile(ext_tar_path):
+        ver = hashlib.sha1(ver_base).hexdigest()
+        ext_tar_path = os.path.join(
+            fsclient.opts["cachedir"], "ext_mods.{}.tgz".format(ver)
+        )
+        mods = {"version": ver, "file": ext_tar_path}
+        if os.path.isfile(ext_tar_path):
+            return mods
+        tfp = tarfile.open(ext_tar_path, "w:gz")
+        verfile = os.path.join(fsclient.opts["cachedir"], "ext_mods.ver")
+        with salt.utils.files.fopen(verfile, "w+") as fp_:
+            fp_.write(ver)
+        tfp.add(verfile, "ext_version")
+        for ref in ret:
+            for fn_ in ret[ref]:
+                tfp.add(ret[ref][fn_], os.path.join(ref, fn_))
+        tfp.close()
         return mods
-    tfp = tarfile.open(ext_tar_path, "w:gz")
-    verfile = os.path.join(fsclient.opts["cachedir"], "ext_mods.ver")
-    with salt.utils.files.fopen(verfile, "w+") as fp_:
-        fp_.write(ver)
-    tfp.add(verfile, "ext_version")
-    for ref in ret:
-        for fn_ in ret[ref]:
-            tfp.add(ret[ref][fn_], os.path.join(ref, fn_))
-    tfp.close()
-    return mods
 
 
 def ssh_version():

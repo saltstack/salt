@@ -151,6 +151,12 @@ jobs:
         run: |
           nox --force-color -e compress-dependencies -- ${{ inputs.distro-slug }}
 
+      - name: Upload Nox Requirements Tarball
+        uses: actions/upload-artifact@v3
+        with:
+          name: nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          path: nox.${{ inputs.distro-slug }}.tar.*
+
   test:
     name: Test
     runs-on: ${{ inputs.distro-slug }}

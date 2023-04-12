@@ -12,6 +12,7 @@ import tarfile
 import zipfile
 from typing import TYPE_CHECKING
 
+import yaml
 from ptscripts import Context, command_group
 
 import tools.utils
@@ -27,22 +28,40 @@ build = command_group(
 )
 
 
+def _get_shared_constants():
+    shared_constants = tools.utils.REPO_ROOT / "cicd" / "shared-context.yml"
+    return yaml.safe_load(shared_constants.read_text())
+
+
 @build.command(
     name="deb",
     arguments={
         "onedir": {
-            "help": "The name of the onedir artifact, if given it should be under artifacts/",
+            "help": "The path to the onedir artifact",
+        },
+        "relenv_version": {
+            "help": "The version of relenv to use",
+        },
+        "python_version": {
+            "help": "The version of python to build with using relenv",
+        },
+        "arch": {
+            "help": "The arch to build for",
         },
     },
 )
 def debian(
     ctx: Context,
     onedir: str = None,  # pylint: disable=bad-whitespace
+    relenv_version: str = None,
+    python_version: str = None,
+    arch: str = None,
 ):
     """
     Build the deb package.
     """
     checkout = pathlib.Path.cwd()
+    env_args = ["-e", "SALT_ONEDIR_ARCHIVE"]
     if onedir:
         onedir_artifact = checkout / "artifacts" / onedir
         _check_pkg_build_files_exist(ctx, onedir_artifact=onedir_artifact)
@@ -51,10 +70,25 @@ def debian(
         )
         os.environ["SALT_ONEDIR_ARCHIVE"] = str(onedir_artifact)
     else:
+        if arch is None:
+            ctx.error(
+                "Building the package from the source files but the arch to build for has not been given"
+            )
+            ctx.exit(1)
         ctx.info(f"Building the package from the source files")
+        shared_constants = _get_shared_constants()
+        new_env = {
+            "SALT_RELENV_VERSION": relenv_version or shared_constants["relenv_version"],
+            "SALT_PYTHON_VERSION": python_version
+            or shared_constants["python_version_linux"],
+            "SALT_PACKAGE_ARCH": str(arch),
+        }
+        for key, value in new_env.items():
+            os.environ[key] = value
+            env_args.extend(["-e", key])
 
     ctx.run("ln", "-sf", "pkg/debian/", ".")
-    ctx.run("debuild", "-e", "SALT_ONEDIR_ARCHIVE", "-uc", "-us")
+    ctx.run("debuild", *env_args, "-uc", "-us")
 
     ctx.info("Done")
 
@@ -63,13 +97,25 @@ def debian(
     name="rpm",
     arguments={
         "onedir": {
-            "help": "The name of the onedir artifact, if given it should be under artifacts/",
+            "help": "The path to the onedir artifact",
+        },
+        "relenv_version": {
+            "help": "The version of relenv to use",
+        },
+        "python_version": {
+            "help": "The version of python to build with using relenv",
+        },
+        "arch": {
+            "help": "The arch to build for",
         },
     },
 )
 def rpm(
     ctx: Context,
     onedir: str = None,  # pylint: disable=bad-whitespace
+    relenv_version: str = None,
+    python_version: str = None,
+    arch: str = None,
 ):
     """
     Build the RPM package.
@@ -84,6 +130,21 @@ def rpm(
         os.environ["SALT_ONEDIR_ARCHIVE"] = str(onedir_artifact)
     else:
         ctx.info(f"Building the package from the source files")
+        if arch is None:
+            ctx.error(
+                "Building the package from the source files but the arch to build for has not been given"
+            )
+            ctx.exit(1)
+        ctx.info(f"Building the package from the source files")
+        shared_constants = _get_shared_constants()
+        new_env = {
+            "SALT_RELENV_VERSION": relenv_version or shared_constants["relenv_version"],
+            "SALT_PYTHON_VERSION": python_version
+            or shared_constants["python_version_linux"],
+            "SALT_PACKAGE_ARCH": str(arch),
+        }
+        for key, value in new_env.items():
+            os.environ[key] = value
 
     spec_file = checkout / "pkg" / "rpm" / "salt.spec"
     ctx.run("rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file))
@@ -214,7 +275,7 @@ def windows(
             "required": True,
         },
         "package_name": {
-            "help": "The name of the relenv environment to be created under artifacts/",
+            "help": "The name of the relenv environment to be created",
             "required": True,
         },
         "platform": {
@@ -247,10 +308,7 @@ def onedir_dependencies(
     except ImportError:
         ctx.exit(1, "Relenv not installed in the current environment.")
 
-    artifacts_dir = pathlib.Path("artifacts").resolve()
-    artifacts_dir.mkdir(exist_ok=True)
-    dest = artifacts_dir / package_name
-
+    dest = pathlib.Path(package_name).resolve()
     create(dest, arch=arch, version=python_version)
 
     install_args = ["-v"]
@@ -301,14 +359,14 @@ def onedir_dependencies(
     name="salt-onedir",
     arguments={
         "salt_name": {
-            "help": "The name of the source tarball containing salt, stored under the repo root",
+            "help": "The path to the salt code to install, relative to the repo root",
         },
         "platform": {
             "help": "The platform that installed is being installed on",
             "required": True,
         },
         "package_name": {
-            "help": "The name of the relenv environment to install salt into, stored under artifacts/",
+            "help": "The name of the relenv environment to install salt into",
             "required": True,
         },
     },
@@ -327,7 +385,7 @@ def salt_onedir(
         assert package_name is not None
 
     salt_archive = pathlib.Path(salt_name).resolve()
-    onedir_env = pathlib.Path("artifacts", package_name)
+    onedir_env = pathlib.Path(package_name).resolve()
     _check_pkg_build_files_exist(ctx, onedir_env=onedir_env, salt_archive=salt_archive)
 
     os.environ["USE_STATIC_REQUIREMENTS"] = "1"

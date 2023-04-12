@@ -539,13 +539,8 @@ class AsyncReqMessageClient:
                     self.socket = None
                 self.stream = None
             if self.context.closed is False:
+                # This hangs if closing the stream causes an import error
                 self.context.term()
-
-    # pylint: disable=W1701
-    def __del__(self):
-        self.close()
-
-    # pylint: enable=W1701
 
     def _init_socket(self):
         if hasattr(self, "stream"):

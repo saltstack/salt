@@ -8,6 +8,7 @@ import logging
 import shutil
 from typing import TYPE_CHECKING, cast
 
+import yaml
 from jinja2 import Environment, FileSystemLoader
 from ptscripts import Context, command_group
 
@@ -63,7 +64,7 @@ def generate_workflows(ctx: Context):
             "slug": "staging",
             "template": "staging.yml",
             "includes": {
-                "test-pkg-downloads": False,
+                "test-pkg-downloads": True,
             },
         },
         "Scheduled": {
@@ -76,7 +77,7 @@ def generate_workflows(ctx: Context):
                 "lint": False,
                 "pkg-tests": False,
                 "salt-tests": False,
-                "test-pkg-downloads": False,
+                "test-pkg-downloads": True,
             },
         },
     }
@@ -115,6 +116,10 @@ def generate_workflows(ctx: Context):
             "prepare_workflow_needs": NeedsTracker(),
             "build_repo_needs": NeedsTracker(),
         }
+        shared_context_file = tools.utils.REPO_ROOT / "cicd" / "shared-context.yml"
+        shared_context = yaml.safe_load(shared_context_file.read_text())
+        for key, value in shared_context.items():
+            context[key] = value
         loaded_template = env.get_template(template_path.name)
         rendered_template = loaded_template.render(**context)
         workflow_path.write_text(rendered_template.rstrip() + "\n")
