@@ -1,8 +1,6 @@
 import pytest
 
-pytestmark = [
-    pytest.mark.windows_whitelisted,
-]
+pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.core_test]
 
 
 def test_unless_req(state):

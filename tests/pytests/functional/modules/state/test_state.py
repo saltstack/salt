@@ -16,9 +16,7 @@ import salt.utils.stringutils
 log = logging.getLogger(__name__)
 
 
-pytestmark = [
-    pytest.mark.windows_whitelisted,
-]
+pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.core_test]
 
 
 def _check_skip(grains):

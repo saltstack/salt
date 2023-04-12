@@ -9,7 +9,7 @@ import pytest
 
 import salt.utils.files
 
-pytestmark = [pytest.mark.skip_unless_on_linux]
+pytestmark = [pytest.mark.skip_unless_on_linux, pytest.mark.slow_test]
 
 log = logging.getLogger(__name__)
 
