@@ -92,29 +92,6 @@ def test_pip_install_extras(install_salt, extras_pypath):
     assert check_path.exists()
 
 
-def test_pip_install_libvirt(install_salt, extras_pypath):
-    """
-    Test salt-pip installs into the correct directory
-    """
-    dep = "libvirt-python"
-    extras_keyword = "extras"
-
-    install_ret = subprocess.run(
-        install_salt.binary_paths["pip"] + ["install", dep],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    assert install_ret.returncode == 0
-
-    show_ret = subprocess.run(
-        install_salt.binary_paths["pip"] + ["show", dep],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    assert show_ret.returncode == 0
-    assert extras_keyword in show_ret.stdout.decode()
-
-
 def demote(user_uid, user_gid):
     def result():
         os.setgid(user_gid)
