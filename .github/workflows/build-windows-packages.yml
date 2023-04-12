@@ -78,30 +78,31 @@ jobs:
         if: ${{ inputs.sign-packages == true }}
         env:
           SM_CLIENT_CERT_FILE_B64: ${{ secrets.SM_CLIENT_CERT_FILE_B64 }}
+          # Change this to SM_HOST_PROD once we're sure it's working
           SM_HOST: "${{ secrets.SM_HOST_DEMO }}"
           SM_API_KEY: "${{ secrets.SM_API_KEY }}"
           SM_CLIENT_CERT_PASSWORD: "${{ secrets.SM_CLIENT_CERT_PASSWORD }}"
         run: |
-          signtool.exe sign /sha1 ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }} /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64-Setup.exe"
-          signtool.exe verify /v /pa ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64-Setup.exe"
+          signtool.exe sign /sha1 ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }} /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64-Setup.exe"
+          signtool.exe verify /v /pa "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64-Setup.exe"
 
       - name: Signing NSIS Installer using Signtool (x86)
         if: ${{ inputs.sign-packages == true }}
         run: |
-          signtool.exe sign /sha1 ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }} /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86-Setup.exe"
-          signtool.exe verify /v /pa ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86-Setup.exe"
+          signtool.exe sign /sha1 ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }} /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86-Setup.exe"
+          signtool.exe verify /v /pa "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86-Setup.exe"
 
       - name: Signing MSI Installer using Signtool (AMD64)
         if: ${{ inputs.sign-packages == true }}
         run: |
-          signtool.exe sign /sha1 ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }} /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64.msi"
-          signtool.exe verify /v /pa ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64.msi"
+          signtool.exe sign /sha1 ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }} /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64.msi"
+          signtool.exe verify /v /pa "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64.msi"
 
       - name: Signing MSI Installer using Signtool (x86)
         if: ${{ inputs.sign-packages == true }}
         run: |
-          signtool.exe sign /sha1 ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }} /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86.msi"
-          signtool.exe verify /v /pa ".\artifacts\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86.msi"
+          signtool.exe sign /sha1 ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }} /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86.msi"
+          signtool.exe verify /v /pa "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86.msi"
 
       - name: Upload ${{ matrix.arch }} Packages
         uses: actions/upload-artifact@v3
