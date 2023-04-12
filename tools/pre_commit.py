@@ -116,7 +116,9 @@ def generate_workflows(ctx: Context):
             "prepare_workflow_needs": NeedsTracker(),
             "build_repo_needs": NeedsTracker(),
         }
-        shared_context_file = tools.utils.REPO_ROOT / "cicd" / "shared-context.yml"
+        shared_context_file = (
+            tools.utils.REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
+        )
         shared_context = yaml.safe_load(shared_context_file.read_text())
         for key, value in shared_context.items():
             context[key] = value
