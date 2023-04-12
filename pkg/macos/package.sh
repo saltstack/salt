@@ -253,7 +253,7 @@ fi
 if [ "${SIGN}" -eq 1 ]; then
     _msg "Building the product package (signed)"
     # This is not a nightly build, so we want to sign it
-    FILE="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
+    FILE="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH.pkg"
     if productbuild --resources="$SCRIPT_DIR/pkg-resources" \
                     --distribution="$DIST_XML" \
                     --package-path="$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg" \
