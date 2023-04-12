@@ -510,6 +510,7 @@ jobs:
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: staging
 
   amazonlinux-2-pkg-tests:
     name: Amazon Linux 2 Package Tests
