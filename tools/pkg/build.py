@@ -29,7 +29,9 @@ build = command_group(
 
 
 def _get_shared_constants():
-    shared_constants = tools.utils.REPO_ROOT / "cicd" / "shared-context.yml"
+    shared_constants = (
+        tools.utils.REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
+    )
     return yaml.safe_load(shared_constants.read_text())
 
 
@@ -75,7 +77,7 @@ def debian(
                 "Building the package from the source files but the arch to build for has not been given"
             )
             ctx.exit(1)
-        ctx.info(f"Building the package from the source files")
+        ctx.info("Building the package from the source files")
         shared_constants = _get_shared_constants()
         new_env = {
             "SALT_RELENV_VERSION": relenv_version or shared_constants["relenv_version"],

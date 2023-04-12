@@ -46,7 +46,14 @@ runs:
       uses: actions/cache@v3
       with:
         path: artifacts/${{ inputs.package-name }}
-        key: ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt', '.github/actions/build-onedir-deps/action.yml') }}
+        key: >
+          ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|
+          ${{ hashFiles(
+            format('{0}/.relenv/**/*.xz', github.workspace),
+            'requirements/static/pkg/*/*.txt',
+            '.github/actions/build-onedir-deps/action.yml',
+            'cicd/shared-gh-workflows-context.yml'
+          ) }}
 
     - name: Download Source Tarball
       uses: actions/download-artifact@v3
