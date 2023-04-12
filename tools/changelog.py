@@ -264,7 +264,7 @@ def update_deb(ctx: Context, salt_version: Version, draft: bool = False):
     debian_changelog_path = "pkg/debian/changelog"
     tmp_debian_changelog_path = f"{debian_changelog_path}.1"
     with open(tmp_debian_changelog_path, "w") as wfp:
-        wfp.write(f"salt (1:{salt_version}) stable; urgency=medium\n\n")
+        wfp.write(f"salt ({salt_version}) stable; urgency=medium\n\n")
         wfp.write(formated)
         wfp.write(
             f"\n -- Salt Project Packaging <saltproject-packaging@vmware.com>  {date}\n\n"
