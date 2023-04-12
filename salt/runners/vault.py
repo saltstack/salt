@@ -1080,7 +1080,7 @@ def _lookup_role_id(minion_id, wrap):
 
 def _get_secret_id(minion_id, wrap, meta_info=False):
     payload = {
-        "meta": salt.utils.json.dumps(
+        "metadata": salt.utils.json.dumps(
             _get_metadata(minion_id, _config("metadata:secret"))
         )
     }
