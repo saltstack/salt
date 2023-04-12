@@ -30,10 +30,16 @@ runs:
       run: |
         if [ -z "$GITHUB_PULL_NUMBER"]
         then
+        echo "Searching For Pull Number"
+        echo $GITHUB_OWNER
+        echo $GITHUB_REPO
+        echo $GITHUB_SHA
         pulls=$(gh api repos/$GITHUB_OWNER/$GITHUB_REPO/commits/$GITHUB_SHA/pulls)
+        echo $push
         full_name=$GITHUB_OWNER/$GITHUB_REPO
         number=$(jq -c --arg r "$full_name" '[.[] | select(.url | contains($r))][0].number' <<< $pulls )
         else
+        echo "Given Pull Number"
         number=$GITHUB_PULL_NUMBER
         fi
         echo $number
