@@ -4,7 +4,6 @@ encrypted keys to general payload dynamics and packaging, these happen
 in here
 """
 
-import collections.abc
 import datetime
 import gc
 import logging
@@ -164,7 +163,9 @@ def dumps(msg, use_bin_type=False):
             return tuple(obj)
         elif isinstance(obj, CaseInsensitiveDict):
             return dict(obj)
-        elif isinstance(obj, collections.abc.MutableMapping):
+        elif isinstance(obj, salt.loader.context.NamedLoaderContext):
+            if obj.value() is None:
+                return {}
             return dict(obj)
         # Nothing known exceptions found. Let msgpack raise its own.
         return obj
