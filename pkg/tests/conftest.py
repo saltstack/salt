@@ -287,7 +287,7 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
     master_config = install_salt.config_path / "master"
     with open(master_config) as fp:
         data = yaml.safe_load(fp)
-        if "user" in data:
+        if data and "user" in data:
             # We are testing a different user, so we need to test the system
             # configs, or else permissions will not be correct.
             config_overrides["user"] = data["user"]
