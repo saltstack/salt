@@ -63,6 +63,7 @@ jobs:
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on: ubuntu-latest
+    environment: test-environment
     needs:
       - check-requirements
     outputs:
@@ -76,6 +77,16 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
+
+      - name: Check Env Access
+        run: |
+          if [ "${{ secrets.SUPER_SECRET }}" != "SUPER_SECRET" ]; then
+            echo "Did not match '${{ secrets.SUPER_SECRET }}'"
+            exit 0
+          else
+            echo "Matched '${{ secrets.SUPER_SECRET }}'!"
+            exit 1
+          fi
 
       - name: Get Changed Files
         if: ${{ github.event_name == 'pull_request'}}
