@@ -313,10 +313,13 @@ def onedir_dependencies(
     dest = pathlib.Path(package_name).resolve()
     create(dest, arch=arch, version=python_version)
 
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "1"
     install_args = ["-v"]
     if platform == "windows":
         python_bin = dest / "Scripts" / "python"
     else:
+        env["RELENV_BUILDENV"] = "1"
         python_bin = dest / "bin" / "python3"
         install_args.extend(
             [
@@ -331,6 +334,7 @@ def onedir_dependencies(
         "-c",
         "import sys; print('{}.{}'.format(*sys.version_info))",
         capture=True,
+        env=env,
     )
     requirements_version = version_info.stdout.strip().decode()
     requirements_file = (
@@ -343,9 +347,11 @@ def onedir_dependencies(
     )
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
-    ctx.run(str(python_bin), "-m", "pip", "install", "-U", "wheel")
-    ctx.run(str(python_bin), "-m", "pip", "install", "-U", "pip>=22.3.1,<23.0")
-    ctx.run(str(python_bin), "-m", "pip", "install", "-U", "setuptools>=65.6.3,<66")
+    ctx.run(str(python_bin), "-m", "pip", "install", "-U", "wheel", env=env)
+    ctx.run(str(python_bin), "-m", "pip", "install", "-U", "pip>=22.3.1,<23.0", env=env)
+    ctx.run(
+        str(python_bin), "-m", "pip", "install", "-U", "setuptools>=65.6.3,<66", env=env
+    )
     ctx.run(
         str(python_bin),
         "-m",
@@ -354,6 +360,7 @@ def onedir_dependencies(
         *install_args,
         "-r",
         str(requirements_file),
+        env=env,
     )
 
 
@@ -391,6 +398,8 @@ def salt_onedir(
     _check_pkg_build_files_exist(ctx, onedir_env=onedir_env, salt_archive=salt_archive)
 
     os.environ["USE_STATIC_REQUIREMENTS"] = "1"
+    os.environ["RELENV_DEBUG"] = "1"
+    os.environ["RELENV_BUILDENV"] = "1"
     if platform == "windows":
         ctx.run(
             "powershell.exe",
