@@ -353,7 +353,6 @@ def onedir_dependencies(
         "-c",
         "import sys; print('{}.{}'.format(*sys.version_info))",
         capture=True,
-        env=env,
     )
     requirements_version = version_info.stdout.strip().decode()
     requirements_file = (
@@ -366,10 +365,29 @@ def onedir_dependencies(
     )
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
-    ctx.run(str(python_bin), "-m", "pip", "install", "-U", "wheel", env=env)
-    ctx.run(str(python_bin), "-m", "pip", "install", "-U", "pip>=22.3.1,<23.0", env=env)
     ctx.run(
-        str(python_bin), "-m", "pip", "install", "-U", "setuptools>=65.6.3,<66", env=env
+        str(python_bin),
+        "-m",
+        "pip",
+        "install",
+        "-U",
+        "wheel",
+    )
+    ctx.run(
+        str(python_bin),
+        "-m",
+        "pip",
+        "install",
+        "-U",
+        "pip>=22.3.1,<23.0",
+    )
+    ctx.run(
+        str(python_bin),
+        "-m",
+        "pip",
+        "install",
+        "-U",
+        "setuptools>=65.6.3,<66",
     )
     ctx.run(
         str(python_bin),
