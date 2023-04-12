@@ -4,6 +4,7 @@ encrypted keys to general payload dynamics and packaging, these happen
 in here
 """
 
+import collections.abc
 import datetime
 import gc
 import logging
@@ -15,6 +16,7 @@ import salt.utils.msgpack
 import salt.utils.stringutils
 from salt.defaults import _Constant
 from salt.exceptions import SaltDeserializationError, SaltReqTimeoutError
+from salt.loader.context import NamedLoaderContext
 from salt.utils.data import CaseInsensitiveDict
 
 try:
@@ -163,9 +165,11 @@ def dumps(msg, use_bin_type=False):
             return tuple(obj)
         elif isinstance(obj, CaseInsensitiveDict):
             return dict(obj)
-        elif isinstance(obj, salt.loader.context.NamedLoaderContext):
+        elif isinstance(obj, NamedLoaderContext):
             if obj.value() is None:
                 return {}
+            return dict(obj)
+        elif isinstance(obj, collections.abc.MutableMapping):
             return dict(obj)
         # Nothing known exceptions found. Let msgpack raise its own.
         return obj
