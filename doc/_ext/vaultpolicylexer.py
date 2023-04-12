@@ -23,3 +23,4 @@ class VaultPolicyLexer(TerraformLexer):
 
 def setup(app):
     app.add_lexer("vaultpolicy", VaultPolicyLexer)
+    return {"parallel_read_safe": True}
