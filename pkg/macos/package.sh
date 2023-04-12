@@ -249,18 +249,20 @@ else
     _failure
 fi
 
-
+SRC_PKG = "$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg"
 if [ "${SIGN}" -eq 1 ]; then
     _msg "Building the product package (signed)"
     # This is not a nightly build, so we want to sign it
-    FILE="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
+    DST_PKG="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
     if productbuild --resources="$SCRIPT_DIR/pkg-resources" \
                     --distribution="$DIST_XML" \
-                    --package-path="$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg" \
+                    --package-path="$SRC_PKG" \
                     --version="$VERSION" \
                     --sign "$DEV_INSTALL_CERT" \
                     --timestamp \
-                    "$FILE" > "$CMD_OUTPUT" 2>&1; then
+                    "$DST_PKG" > "$CMD_OUTPUT" 2>&1; then
+        echo "Renaming $DST_PKG -> $SRC_PKG"
+        mv $DST_PKG $SRC_PKG
         _success
     else
         _failure
@@ -268,12 +270,12 @@ if [ "${SIGN}" -eq 1 ]; then
 else
     _msg "Building the product package (unsigned)"
     # This is a nightly build, so we don't sign it
-    FILE="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH-unsigned.pkg"
+    DST_PKG="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH-unsigned.pkg"
     if productbuild --resources="$SCRIPT_DIR/pkg-resources" \
                     --distribution="$DIST_XML" \
-                    --package-path="$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg" \
+                    --package-path="$SRC_PKG" \
                     --version="$VERSION" \
-                    "$FILE" > "$CMD_OUTPUT" 2>&1; then
+                    "$DST_PKG" > "$CMD_OUTPUT" 2>&1; then
         _success
     else
         _failure
