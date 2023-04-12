@@ -418,7 +418,9 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             )
         log.info("Worker binding to socket %s", self.w_uri)
         self._socket.connect(self.w_uri)
-        if self.opts.get("ipc_mode", "") != "tcp":
+        if self.opts.get("ipc_mode", "") != "tcp" and os.path.isfile(
+            os.path.join(self.opts["sock_dir"], "workers.ipc")
+        ):
             os.chmod(os.path.join(self.opts["sock_dir"], "workers.ipc"), 0o600)
         self.stream = zmq.eventloop.zmqstream.ZMQStream(self._socket, io_loop=io_loop)
         self.message_handler = message_handler
