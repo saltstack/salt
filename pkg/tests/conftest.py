@@ -285,28 +285,31 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         "external_auth": {"auto": {"saltdev": [".*"]}},
     }
     master_config = install_salt.config_path / "master"
-    with open(master_config) as fp:
-        data = yaml.safe_load(fp)
-        if data and "user" in data:
-            # We are testing a different user, so we need to test the system
-            # configs, or else permissions will not be correct.
-            config_overrides["user"] = data["user"]
-            config_overrides["log_file"] = salt.config.DEFAULT_MASTER_OPTS.get(
-                "log_file"
-            )
-            config_overrides["root_dir"] = salt.config.DEFAULT_MASTER_OPTS.get(
-                "root_dir"
-            )
-            config_overrides["key_logfile"] = salt.config.DEFAULT_MASTER_OPTS.get(
-                "key_logfile"
-            )
-            config_overrides["pki_dir"] = salt.config.DEFAULT_MASTER_OPTS.get("pki_dir")
-            config_overrides["api_logfile"] = salt.config.DEFAULT_API_OPTS.get(
-                "api_logfile"
-            )
-            config_overrides["api_pidfile"] = salt.config.DEFAULT_API_OPTS.get(
-                "api_pidfile"
-            )
+    if master_config.exists():
+        with open(master_config) as fp:
+            data = yaml.safe_load(fp)
+            if data and "user" in data:
+                # We are testing a different user, so we need to test the system
+                # configs, or else permissions will not be correct.
+                config_overrides["user"] = data["user"]
+                config_overrides["log_file"] = salt.config.DEFAULT_MASTER_OPTS.get(
+                    "log_file"
+                )
+                config_overrides["root_dir"] = salt.config.DEFAULT_MASTER_OPTS.get(
+                    "root_dir"
+                )
+                config_overrides["key_logfile"] = salt.config.DEFAULT_MASTER_OPTS.get(
+                    "key_logfile"
+                )
+                config_overrides["pki_dir"] = salt.config.DEFAULT_MASTER_OPTS.get(
+                    "pki_dir"
+                )
+                config_overrides["api_logfile"] = salt.config.DEFAULT_API_OPTS.get(
+                    "api_logfile"
+                )
+                config_overrides["api_pidfile"] = salt.config.DEFAULT_API_OPTS.get(
+                    "api_pidfile"
+                )
 
     if (platform.is_windows() or platform.is_darwin()) and install_salt.singlebin:
         start_timeout = 240
