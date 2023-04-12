@@ -1,1 +1,1 @@
-adduser --system salt
+adduser --system salt --group

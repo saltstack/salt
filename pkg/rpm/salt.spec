@@ -324,7 +324,6 @@ rm -rf %{buildroot}
 %pre master
 getent group salt >/dev/null || groupadd -r salt
 getent passwd salt >/dev/null || \
-    #useradd -r -g salt -d HOMEDIR -s /sbin/nologin \
     useradd -r -g salt -s /sbin/nologin \
     -c "Salt user for Salt Master" salt
 
