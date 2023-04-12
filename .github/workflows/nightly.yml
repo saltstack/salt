@@ -514,6 +514,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: nightly
+    secrets: inherit
 
   amazonlinux-2-pkg-tests:
     name: Amazon Linux 2 Package Tests
