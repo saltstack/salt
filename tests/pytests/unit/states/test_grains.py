@@ -97,11 +97,8 @@ def test_exists_found():
 def test_make_hashable():
     with setGrains({"cmplx_lst_grain": [{"a": "aval"}, {"foo": "bar"}]}):
         hashable_list = {"cmplx_lst_grain": [{"a": "aval"}, {"foo": "bar"}]}
-        assert (
-            grains.make_hashable(grains.__grains__).issubset(
-                grains.make_hashable(hashable_list)
-            )
-            is True
+        assert grains.make_hashable(grains.__grains__).issubset(
+            grains.make_hashable(hashable_list)
         )
 
     # 'present' function tests: 12
@@ -134,11 +131,7 @@ def test_present_add():
             "foo": {"is": {"nested": {"bar": "is a dict"}}},
         }
         assertGrainFileContent(
-            "a: aval\n"
-            + "foo:\n"
-            + "  is:\n"
-            + "    nested:\n"
-            + "      bar: is a dict\n"
+            "a: aval\nfoo:\n  is:\n    nested:\n      bar: is a dict\n"
         )
 
 
@@ -150,7 +143,7 @@ def test_present_add_key_to_existing():
         assert ret["comment"] == "Set grain foo:k2 to v2"
         assert ret["changes"] == {"foo": {"k2": "v2", "k1": "v1"}}
         assert grains.__grains__ == {"a": "aval", "foo": {"k1": "v1", "k2": "v2"}}
-        assertGrainFileContent("a: aval\n" + "foo:\n" + "  k1: v1\n" + "  k2: v2\n")
+        assertGrainFileContent("a: aval\nfoo:\n  k1: v1\n  k2: v2\n")
 
 
 def test_present_already_set():
@@ -186,7 +179,7 @@ def test_present_overwrite():
         assert ret["result"] is True
         assert ret["changes"] == {"foo": "newbar"}
         assert grains.__grains__ == {"a": "aval", "foo": "newbar"}
-        assertGrainFileContent("a: aval\n" + "foo: newbar\n")
+        assertGrainFileContent("a: aval\nfoo: newbar\n")
 
     with setGrains({"a": "aval", "foo": "bar"}):
         # Clear a grain (set to None)
@@ -194,7 +187,7 @@ def test_present_overwrite():
         assert ret["result"] is True
         assert ret["changes"] == {"foo": None}
         assert grains.__grains__ == {"a": "aval", "foo": None}
-        assertGrainFileContent("a: aval\n" + "foo: null\n")
+        assertGrainFileContent("a: aval\nfoo: null\n")
 
     with setGrains({"a": "aval", "foo": {"is": {"nested": "bar"}}}):
         # Overwrite an existing nested grain
@@ -202,9 +195,7 @@ def test_present_overwrite():
         assert ret["result"] is True
         assert ret["changes"] == {"foo": {"is": {"nested": "newbar"}}}
         assert grains.__grains__ == {"a": "aval", "foo": {"is": {"nested": "newbar"}}}
-        assertGrainFileContent(
-            "a: aval\n" + "foo:\n" + "  is:\n" + "    nested: newbar\n"
-        )
+        assertGrainFileContent("a: aval\nfoo:\n  is:\n    nested: newbar\n")
 
     with setGrains({"a": "aval", "foo": {"is": {"nested": "bar"}}}):
         # Clear a nested grain (set to None)
@@ -212,9 +203,7 @@ def test_present_overwrite():
         assert ret["result"] is True
         assert ret["changes"] == {"foo": {"is": {"nested": None}}}
         assert grains.__grains__ == {"a": "aval", "foo": {"is": {"nested": None}}}
-        assertGrainFileContent(
-            "a: aval\n" + "foo:\n" + "  is:\n" + "    nested: null\n"
-        )
+        assertGrainFileContent("a: aval\nfoo:\n  is:\n    nested: null\n")
 
 
 def test_present_fail_overwrite():
@@ -297,7 +286,7 @@ def test_present_fail_merge_dict():
             == "The key 'foo' exists but is a dict or a list. Use 'force=True' to overwrite."
         )
         assert grains.__grains__ == {"a": "aval", "foo": {"k1": "v1"}}
-        assertGrainFileContent("a: aval\n" + "foo:\n" + "  k1: v1\n")
+        assertGrainFileContent("a: aval\nfoo:\n  k1: v1\n")
 
 
 def test_present_force_to_set_dict_or_list():
@@ -308,7 +297,7 @@ def test_present_force_to_set_dict_or_list():
         assert ret["comment"] == "Set grain foo to ['l1', 'l2']"
         assert ret["changes"] == {"foo": ["l1", "l2"]}
         assert grains.__grains__ == {"a": "aval", "foo": ["l1", "l2"]}
-        assertGrainFileContent("a: aval\n" + "foo:\n" + "- l1\n" + "- l2\n")
+        assertGrainFileContent("a: aval\nfoo:\n- l1\n- l2\n")
 
     with setGrains({"a": "aval", "foo": "bar"}):
         # Force setting a grain to a dict
@@ -317,7 +306,7 @@ def test_present_force_to_set_dict_or_list():
         assert ret["comment"] == "Set grain foo to {'k1': 'v1'}"
         assert ret["changes"] == {"foo": {"k1": "v1"}}
         assert grains.__grains__ == {"a": "aval", "foo": {"k1": "v1"}}
-        assertGrainFileContent("a: aval\n" + "foo:\n" + "  k1: v1\n")
+        assertGrainFileContent("a: aval\nfoo:\n  k1: v1\n")
 
     with setGrains({"a": "aval", "foo": {"is": {"nested": "bar"}}}):
         # Force to overwrite a nested grain to a list
@@ -332,12 +321,7 @@ def test_present_force_to_set_dict_or_list():
             "foo": {"is": {"nested": ["l1", "l2"]}},
         }
         assertGrainFileContent(
-            "a: aval\n"
-            + "foo:\n"
-            + "  is:\n"
-            + "    nested:\n"
-            + "    - l1\n"
-            + "    - l2\n"
+            "a: aval\nfoo:\n  is:\n    nested:\n    - l1\n    - l2\n"
         )
 
     with setGrains({"a": "aval", "foo": {"is": {"nested": "bar"}, "and": "other"}}):
@@ -353,12 +337,7 @@ def test_present_force_to_set_dict_or_list():
             "foo": {"is": {"nested": {"k1": "v1"}}, "and": "other"},
         }
         assertGrainFileContent(
-            "a: aval\n"
-            + "foo:\n"
-            + "  and: other\n"
-            + "  is:\n"
-            + "    nested:\n"
-            + "      k1: v1\n"
+            "a: aval\nfoo:\n  and: other\n  is:\n    nested:\n      k1: v1\n"
         )
 
 
@@ -382,7 +361,7 @@ def test_present_overwrite_test():
             assert ret["result"] is None
             assert ret["changes"] == {"changed": {"foo": "newbar"}}
             assert grains.__grains__ == {"a": "aval", "foo": "bar"}
-            assertGrainFileContent("a: aval\n" + "foo: bar\n")
+            assertGrainFileContent("a: aval\nfoo: bar\n")
 
 
 def test_present_convert_value_to_key():
@@ -396,9 +375,7 @@ def test_present_convert_value_to_key():
             "a": "aval",
             "foo": {"is": {"nested": {"k1": "v1"}}},
         }
-        assertGrainFileContent(
-            "a: aval\n" + "foo:\n" + "  is:\n" + "    nested:\n" + "      k1: v1\n"
-        )
+        assertGrainFileContent("a: aval\nfoo:\n  is:\n    nested:\n      k1: v1\n")
 
     with setGrains({"a": "aval", "foo": ["one", "is", "correct"]}):
         # Converts a list element to a nested grain key
@@ -413,13 +390,7 @@ def test_present_convert_value_to_key():
             "foo": ["one", {"is": {"nested": {"k1": "v1"}}}, "correct"],
         }
         assertGrainFileContent(
-            "a: aval\n"
-            + "foo:\n"
-            + "- one\n"
-            + "- is:\n"
-            + "    nested:\n"
-            + "      k1: v1\n"
-            + "- correct\n"
+            "a: aval\nfoo:\n- one\n- is:\n    nested:\n      k1: v1\n- correct\n"
         )
 
 
@@ -433,7 +404,7 @@ def test_present_unknown_failure():
             assert ret["comment"] == "Failed to set grain foo"
             assert ret["changes"] == {}
             assert grains.__grains__ == {"a": "aval", "foo": "bar"}
-            assertGrainFileContent("a: aval\n" + "foo: bar\n")
+            assertGrainFileContent("a: aval\nfoo: bar\n")
 
 
 # 'absent' function tests: 6
@@ -467,7 +438,7 @@ def test_absent_unset():
         assert ret["comment"] == "Value for grain foo was set to None"
         assert ret["changes"] == {"grain": "foo", "value": None}
         assert grains.__grains__ == {"a": "aval", "foo": None}
-        assertGrainFileContent("a: aval\n" + "foo: null\n")
+        assertGrainFileContent("a: aval\nfoo: null\n")
 
     # Unset grain when its value is False
     with setGrains({"a": "aval", "foo": False}):
@@ -476,7 +447,7 @@ def test_absent_unset():
         assert ret["comment"] == "Value for grain foo was set to None"
         assert ret["changes"] == {"grain": "foo", "value": None}
         assert grains.__grains__ == {"a": "aval", "foo": None}
-        assertGrainFileContent("a: aval\n" + "foo: null\n")
+        assertGrainFileContent("a: aval\nfoo: null\n")
 
     # Unset a nested grain
     with setGrains(
@@ -491,12 +462,7 @@ def test_absent_unset():
             "foo": ["order", {"is": {"nested": None}}, "correct"],
         }
         assertGrainFileContent(
-            "a: aval\n"
-            + "foo:\n"
-            + "- order\n"
-            + "- is:\n"
-            + "    nested: null\n"
-            + "- correct\n"
+            "a: aval\nfoo:\n- order\n- is:\n    nested: null\n- correct\n"
         )
 
     # Unset a nested value don't change anything
@@ -509,9 +475,7 @@ def test_absent_unset():
             "a": "aval",
             "foo": ["order", {"is": "nested"}, "correct"],
         }
-        assertGrainFileContent(
-            "a: aval\n" + "foo:\n" + "- order\n" + "- is: nested\n" + "- correct\n"
-        )
+        assertGrainFileContent("a: aval\nfoo:\n- order\n- is: nested\n- correct\n")
 
 
 def test_absent_unset_test():
@@ -522,7 +486,7 @@ def test_absent_unset_test():
             assert ret["result"] is None
             assert ret["changes"] == {"grain": "foo", "value": None}
             assert grains.__grains__ == {"a": "aval", "foo": "bar"}
-            assertGrainFileContent("a: aval\n" + "foo: bar\n")
+            assertGrainFileContent("a: aval\nfoo: bar\n")
 
 
 def test_absent_fails_nested_complex_grain():
@@ -542,12 +506,7 @@ def test_absent_fails_nested_complex_grain():
             "foo": ["order", {"is": {"nested": "bar"}}, "correct"],
         }
         assertGrainFileContent(
-            "a: aval\n"
-            + "foo:\n"
-            + "- order\n"
-            + "- is:\n"
-            + "    nested: bar\n"
-            + "- correct\n"
+            "a: aval\nfoo:\n- order\n- is:\n    nested: bar\n- correct\n"
         )
 
 
@@ -564,9 +523,7 @@ def test_absent_force_nested_complex_grain():
             "a": "aval",
             "foo": ["order", {"is": None}, "correct"],
         }
-        assertGrainFileContent(
-            "a: aval\n" + "foo:\n" + "- order\n" + "- is: null\n" + "- correct\n"
-        )
+        assertGrainFileContent("a: aval\nfoo:\n- order\n- is: null\n- correct\n")
 
 
 def test_absent_delete():
@@ -608,12 +565,7 @@ def test_absent_delete():
             "foo": ["order", {"is": {"other": "value"}}, "correct"],
         }
         assertGrainFileContent(
-            "a: aval\n"
-            + "foo:\n"
-            + "- order\n"
-            + "- is:\n"
-            + "    other: value\n"
-            + "- correct\n"
+            "a: aval\nfoo:\n- order\n- is:\n    other: value\n- correct\n"
         )
 
 
@@ -628,7 +580,7 @@ def test_append():
         assert ret["comment"] == "Value baz was added to grain foo"
         assert ret["changes"] == {"added": "baz"}
         assert grains.__grains__ == {"a": "aval", "foo": ["bar", "baz"]}
-        assertGrainFileContent("a: aval\n" + "foo:\n" + "- bar\n" + "- baz\n")
+        assertGrainFileContent("a: aval\nfoo:\n- bar\n- baz\n")
 
 
 def test_append_nested():
@@ -639,9 +591,7 @@ def test_append_nested():
         assert ret["comment"] == "Value baz was added to grain foo:list"
         assert ret["changes"] == {"added": "baz"}
         assert grains.__grains__ == {"a": "aval", "foo": {"list": ["bar", "baz"]}}
-        assertGrainFileContent(
-            "a: aval\n" + "foo:\n" + "  list:\n" + "  - bar\n" + "  - baz\n"
-        )
+        assertGrainFileContent("a: aval\nfoo:\n  list:\n  - bar\n  - baz\n")
 
 
 def test_append_already():
@@ -652,7 +602,7 @@ def test_append_already():
         assert ret["comment"] == "Value bar is already in the list " + "for grain foo"
         assert ret["changes"] == {}
         assert grains.__grains__ == {"a": "aval", "foo": ["bar"]}
-        assertGrainFileContent("a: aval\n" + "foo:\n" + "- bar\n")
+        assertGrainFileContent("a: aval\nfoo:\n- bar\n")
 
 
 def test_append_fails_not_a_list():
@@ -668,19 +618,17 @@ def test_append_fails_not_a_list():
 def test_append_convert_to_list():
     # Append to an existing grain, converting to a list
     with setGrains({"a": "aval", "foo": {"bar": "val"}}):
-        assertGrainFileContent("a: aval\n" + "foo:\n" + "  bar: val\n")
+        assertGrainFileContent("a: aval\nfoo:\n  bar: val\n")
         ret = grains.append(name="foo", value="baz", convert=True)
         assert ret["result"] is True
         assert ret["comment"] == "Value baz was added to grain foo"
         assert ret["changes"] == {"added": "baz"}
         assert grains.__grains__ == {"a": "aval", "foo": [{"bar": "val"}, "baz"]}
-        assertGrainFileContent("a: aval\n" + "foo:\n" + "- bar: val\n" + "- baz\n")
+        assertGrainFileContent("a: aval\nfoo:\n- bar: val\n- baz\n")
 
     # Append to an existing grain, converting to a list a multi-value dict
     with setGrains({"a": "aval", "foo": {"bar": "val", "other": "value"}}):
-        assertGrainFileContent(
-            "a: aval\n" + "foo:\n" + "  bar: val\n" + "  other: value\n"
-        )
+        assertGrainFileContent("a: aval\nfoo:\n  bar: val\n  other: value\n")
         ret = grains.append(name="foo", value="baz", convert=True)
         assert ret["result"] is True
         assert ret["comment"] == "Value baz was added to grain foo"
@@ -689,9 +637,7 @@ def test_append_convert_to_list():
             "a": "aval",
             "foo": [{"bar": "val", "other": "value"}, "baz"],
         }
-        assertGrainFileContent(
-            "a: aval\n" + "foo:\n" + "- bar: val\n" + "  other: value\n" + "- baz\n"
-        )
+        assertGrainFileContent("a: aval\nfoo:\n- bar: val\n  other: value\n- baz\n")
 
 
 def test_append_fails_inexistent():
@@ -712,7 +658,7 @@ def test_append_convert_to_list_empty():
         assert ret["comment"] == "Value baz was added to grain foo"
         assert ret["changes"] == {"added": "baz"}
         assert grains.__grains__ == {"foo": ["baz"]}
-        assertGrainFileContent("foo:\n" + "- baz\n")
+        assertGrainFileContent("foo:\n- baz\n")
 
 
 # 'list_present' function tests: 7
@@ -725,7 +671,7 @@ def test_list_present():
         assert ret["comment"] == "Append value baz to grain foo"
         assert ret["changes"] == {"new": {"foo": ["bar", "baz"]}}
         assert grains.__grains__ == {"a": "aval", "foo": ["bar", "baz"]}
-        assertGrainFileContent("a: aval\n" + "foo:\n" + "- bar\n" + "- baz\n")
+        assertGrainFileContent("a: aval\nfoo:\n- bar\n- baz\n")
 
 
 def test_list_present_nested():
@@ -739,12 +685,7 @@ def test_list_present_nested():
             "foo": {"is": {"nested": ["bar", "baz"]}},
         }
         assertGrainFileContent(
-            "a: aval\n"
-            + "foo:\n"
-            + "  is:\n"
-            + "    nested:\n"
-            + "    - bar\n"
-            + "    - baz\n"
+            "a: aval\nfoo:\n  is:\n    nested:\n    - bar\n    - baz\n"
         )
 
 
@@ -755,7 +696,7 @@ def test_list_present_inexistent():
         assert ret["comment"] == "Append value baz to grain foo"
         assert ret["changes"] == {"new": {"foo": ["baz"]}}
         assert grains.__grains__ == {"a": "aval", "foo": ["baz"]}
-        assertGrainFileContent("a: aval\n" + "foo:\n" + "- baz\n")
+        assertGrainFileContent("a: aval\nfoo:\n- baz\n")
 
 
 def test_list_present_inexistent_nested():
@@ -765,9 +706,7 @@ def test_list_present_inexistent_nested():
         assert ret["comment"] == "Append value baz to grain foo:is:nested"
         assert ret["changes"] == {"new": {"foo": {"is": {"nested": ["baz"]}}}}
         assert grains.__grains__ == {"a": "aval", "foo": {"is": {"nested": ["baz"]}}}
-        assertGrainFileContent(
-            "a: aval\n" + "foo:\n" + "  is:\n" + "    nested:\n" + "    - baz\n"
-        )
+        assertGrainFileContent("a: aval\nfoo:\n  is:\n    nested:\n    - baz\n")
 
 
 def test_list_present_not_a_list():
@@ -777,7 +716,7 @@ def test_list_present_not_a_list():
         assert ret["comment"] == "Grain foo is not a valid list"
         assert ret["changes"] == {}
         assert grains.__grains__ == {"a": "aval", "foo": "bar"}
-        assertGrainFileContent("a: aval\n" + "foo: bar\n")
+        assertGrainFileContent("a: aval\nfoo: bar\n")
 
 
 def test_list_present_nested_already():
@@ -787,7 +726,7 @@ def test_list_present_nested_already():
         assert ret["comment"] == "Value bar is already in grain b:foo"
         assert ret["changes"] == {}
         assert grains.__grains__ == {"a": "aval", "b": {"foo": ["bar"]}}
-        assertGrainFileContent("a: aval\n" + "b:\n" + "  foo:\n" + "  - bar\n")
+        assertGrainFileContent("a: aval\nb:\n  foo:\n  - bar\n")
 
 
 def test_list_present_already():
@@ -797,7 +736,7 @@ def test_list_present_already():
         assert ret["comment"] == "Value bar is already in grain foo"
         assert ret["changes"] == {}
         assert grains.__grains__ == {"a": "aval", "foo": ["bar"]}
-        assertGrainFileContent("a: aval\n" + "foo:\n" + "- bar\n")
+        assertGrainFileContent("a: aval\nfoo:\n- bar\n")
 
 
 def test_list_present_unknown_failure():
@@ -810,7 +749,7 @@ def test_list_present_unknown_failure():
             assert ret["comment"] == "Failed append value baz to grain foo"
             assert ret["changes"] == {}
             assert grains.__grains__ == {"a": "aval", "foo": ["bar"]}
-            assertGrainFileContent("a: aval\n" + "foo:\n" + "- bar\n")
+            assertGrainFileContent("a: aval\nfoo:\n- bar\n")
 
 
 # 'list_absent' function tests: 6
@@ -823,7 +762,7 @@ def test_list_absent():
         assert ret["comment"] == "Value bar was deleted from grain foo"
         assert ret["changes"] == {"deleted": ["bar"]}
         assert grains.__grains__ == {"a": "aval", "foo": []}
-        assertGrainFileContent("a: aval\n" + "foo: []\n")
+        assertGrainFileContent("a: aval\nfoo: []\n")
 
 
 def test_list_absent_nested():
@@ -833,7 +772,7 @@ def test_list_absent_nested():
         assert ret["comment"] == "Value bar was deleted from grain foo:list"
         assert ret["changes"] == {"deleted": ["bar"]}
         assert grains.__grains__ == {"a": "aval", "foo": {"list": []}}
-        assertGrainFileContent("a: aval\n" + "foo:\n" + "  list: []\n")
+        assertGrainFileContent("a: aval\nfoo:\n  list: []\n")
 
 
 def test_list_absent_inexistent():
@@ -863,7 +802,7 @@ def test_list_absent_not_a_list():
         assert ret["comment"] == "Grain foo is not a valid list"
         assert ret["changes"] == {}
         assert grains.__grains__ == {"a": "aval", "foo": "bar"}
-        assertGrainFileContent("a: aval\n" + "foo: bar\n")
+        assertGrainFileContent("a: aval\nfoo: bar\n")
 
 
 def test_list_absent_already():
@@ -873,4 +812,4 @@ def test_list_absent_already():
         assert ret["comment"] == "Value baz is absent from grain foo"
         assert ret["changes"] == {}
         assert grains.__grains__ == {"a": "aval", "foo": ["bar"]}
-        assertGrainFileContent("a: aval\n" + "foo:\n" + "- bar\n")
+        assertGrainFileContent("a: aval\nfoo:\n- bar\n")
