@@ -314,7 +314,6 @@ def onedir_dependencies(
     create(dest, arch=arch, version=python_version)
 
     env = os.environ.copy()
-    env["RELENV_DEBUG"] = "1"
     install_args = ["-v"]
     if platform == "windows":
         python_bin = dest / "Scripts" / "python"
