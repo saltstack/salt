@@ -36,7 +36,7 @@ jobs:
       - name: Check Requirements
         id: check-requirements
         run: |
-          if [ "${RUN_SCHEDULED_BUILDS}" = "1" ]; then
+          if [ "${{ vars.RUN_SCHEDULED_BUILDS }}" = "1" ]; then
             MSG="Running workflow because RUN_SCHEDULED_BUILDS=1"
             echo "${MSG}"
             echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
