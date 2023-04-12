@@ -203,7 +203,7 @@ def macos(
             package_args = ["--sign", salt_version]
         else:
             package_args = [salt_version]
-        ctx.run("sudo", "./package.sh", *package_args)
+        ctx.run("./package.sh", *package_args)
     if sign:
         ctx.info("Notarizing package")
         ret = ctx.run("uname", "-m", capture=True)
