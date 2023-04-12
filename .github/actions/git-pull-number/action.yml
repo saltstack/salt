@@ -1,0 +1,40 @@
+
+---
+name: get-pull-number
+description: Get Pull Number
+inputs:
+  owner:
+    type: string
+  repo:
+    type: string
+  sha:
+    type: string
+  pull-number:
+    default: null
+
+outputs:
+  number:
+    value: ${{ steps.get-pull-number.outputs.number }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get Pull Number
+      id: get-pull-number
+      shell: bash
+      env:
+        GITHUB_OWNER: ${{ inputs.owner }}
+        GITHUB_REPO: ${{ inputs.repo }}
+        GITHUB_SHA: ${{ inputs.sha }}
+        GITHUB_PULL_NUMBER: ${{ inputs.pull-number }}
+      run: |
+        if [ -z "$GITHUB_PULL_NUMBER"]
+        then
+        pulls=$(gh api repos/$GITHUB_OWNER/$GITHUB_REPO/commits/$GITHUB_SHA/pulls)
+        full_name=$GITHUB_OWNER/$GITHUB_REPO
+        number=$(jq -c --arg r "$full_name" '[.[] | select(.url | contains($r))][0].number' <<< $pulls )
+        else
+        number=$GITHUB_PULL_NUMBER
+        fi
+        echo $number
+        echo "number=$number" >> "$GITHUB_OUTPUT"
