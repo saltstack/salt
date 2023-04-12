@@ -20,7 +20,9 @@ from tests.support.unit import TestCase
 
 try:
     HAS_PYGIT2 = (
-        salt.utils.gitfs.PYGIT2_VERSION >= salt.utils.gitfs.PYGIT2_MINVER
+        salt.utils.gitfs.PYGIT2_VERSION
+        and salt.utils.gitfs.PYGIT2_VERSION >= salt.utils.gitfs.PYGIT2_MINVER
+        and salt.utils.gitfs.LIBGIT2_VERSION
         and salt.utils.gitfs.LIBGIT2_VERSION >= salt.utils.gitfs.LIBGIT2_MINVER
     )
 except AttributeError:

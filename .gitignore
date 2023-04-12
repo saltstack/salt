@@ -70,8 +70,8 @@ tags
 *.mo
 .doctrees
 
-# Allow a user to set their own _version.py for testing
-_version.py
+# Allow a user to set their own _version.txt for testing
+_version.txt
 
 # Ignore auto generated _syspaths.py file
 _syspaths.py
@@ -117,6 +117,7 @@ kitchen.local.yml
 .bundle/
 Gemfile.lock
 /artifacts/
+/pkg/artifacts/
 requirements/static/*/py*/*.log
 
 # Vim's default session file

@@ -11,6 +11,7 @@ certifi==2022.12.7
 cffi==1.14.6
     # via
     #   -r requirements/windows.txt
+    #   clr-loader
     #   cryptography
 chardet==3.0.4
     # via requests
@@ -18,9 +19,11 @@ cheroot==8.5.2
     # via cherrypy
 cherrypy==18.6.1
     # via -r requirements/windows.txt
+clr-loader==0.2.4
+    # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==3.4.7
+cryptography==39.0.2
     # via
     #   -r requirements/windows.txt
     #   pyopenssl
@@ -34,7 +37,7 @@ idna==2.8
     # via requests
 immutables==0.15
     # via contextvars
-importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+importlib-metadata==4.6.4
     # via
     #   -r requirements/windows.txt
     #   mako
@@ -51,15 +54,17 @@ jaraco.functools==2.0
     #   tempora
 jaraco.text==3.5.0
     # via jaraco.collections
-jinja2==3.1.0
+jinja2==3.1.2
     # via -r requirements/base.txt
 jmespath==1.0.1
+    # via -r requirements/base.txt
+looseversion==1.0.2
     # via -r requirements/base.txt
 lxml==4.9.1
     # via -r requirements/windows.txt
 mako==1.2.2
     # via -r requirements/windows.txt
-markupsafe==2.0.1
+markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
@@ -72,6 +77,8 @@ more-itertools==8.2.0
     #   jaraco.functools
 msgpack==1.0.2
     # via -r requirements/base.txt
+packaging==22.0
+    # via -r requirements/base.txt
 portend==2.6
     # via cherrypy
 psutil==5.8.0
@@ -82,20 +89,19 @@ pycparser==2.21
     # via
     #   -r requirements/windows.txt
     #   cffi
-    #   pythonnet
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
 pymssql==2.2.1
     # via -r requirements/windows.txt
 pymysql==1.0.2
     # via -r requirements/windows.txt
-pyopenssl==20.0.1
+pyopenssl==23.0.0
     # via -r requirements/windows.txt
 python-dateutil==2.8.1
     # via -r requirements/windows.txt
 python-gnupg==0.4.8
     # via -r requirements/windows.txt
-pythonnet==2.5.2
+pythonnet==3.0.1
     # via -r requirements/windows.txt
 pytz==2022.1
     # via tempora
@@ -106,18 +112,17 @@ pywin32==305
     #   wmi
 pyyaml==5.4.1
     # via -r requirements/base.txt
-pyzmq==22.0.3 ; python_version < "3.9" and sys_platform == "win32"
+pyzmq==25.0.0 ; sys_platform == "win32"
     # via -r requirements/zeromq.txt
 requests==2.25.1
     # via
     #   -r requirements/base.txt
     #   -r requirements/windows.txt
-setproctitle==1.1.10 ; python_version < "3.10"
+setproctitle==1.3.2
     # via -r requirements/windows.txt
 six==1.15.0
     # via
     #   cheroot
-    #   pyopenssl
     #   python-dateutil
 smmap==4.0.0
     # via gitdb

@@ -93,12 +93,12 @@ Wildcard matching is supported for state identifiers.
 
 * ``*`` matches zero or more characters
 * ``?`` matches a single character
-* ``[]`` matches a single character from the enclosed set 
+* ``[]`` matches a single character from the enclosed set
 
-Note that this does not follow glob rules - dots and slashes are not special, 
+Note that this does not follow glob rules - dots and slashes are not special,
 and it is matching against state identifiers, not file paths.
 
-In the example below, a change in any state managing an apache config file 
+In the example below, a change in any state managing an apache config file
 will reload/restart the service:
 
 .. code-block:: yaml
@@ -795,7 +795,6 @@ In this example, `cmd.run` would be run only if either of the `file.managed`
 states generated changes and at least one of the watched state's "result" is
 ``True``.
 
-.. _requisites-fire-event:
 
 Altering States
 ---------------
@@ -1124,6 +1123,8 @@ salt/states/ file.
 
 ``mod_run_check_cmd`` is used to check for the check_cmd options. To override
 this one, include a ``mod_run_check_cmd`` in the states file for the state.
+
+.. _requisites-fire-event:
 
 Fire Event Notifications
 ========================

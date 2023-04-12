@@ -696,7 +696,8 @@ allowed-3rd-party-modules=msgpack,
                           tempfile,
                           fnmatch,
                           ptscripts,
-                          packaging
+                          packaging,
+                          looseversion
 
 [EXCEPTIONS]
 

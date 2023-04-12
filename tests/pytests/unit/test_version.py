@@ -323,7 +323,12 @@ def test_discover_version(major, minor, tag, expected):
 
 
 @pytest.mark.parametrize(
-    "major,minor,bugfix", [(3000, None, None), (3000, 1, None), (3001, 0, None)]
+    "major,minor,bugfix",
+    [
+        (3000, None, None),
+        (3000, 1, None),
+        (3001, 0, None),
+    ],
 )
 def test_info_new_version(major, minor, bugfix):
     """
@@ -337,7 +342,12 @@ def test_info_new_version(major, minor, bugfix):
 
 
 @pytest.mark.parametrize(
-    "major,minor,bugfix", [(2019, 2, 1), (2018, 3, 0), (2017, 7, None)]
+    "major,minor,bugfix",
+    [
+        (2019, 2, 1),
+        (2018, 3, 0),
+        (2017, 7, None),
+    ],
 )
 def test_info_old_version(major, minor, bugfix):
     """
@@ -423,7 +433,7 @@ def test_system_version_linux():
     """
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("Manjaro Linux", "20.0.2", "Lysia")),
     ):
         versions = [item for item in system_information()]
@@ -431,7 +441,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("Debian GNU/Linux", "9", "stretch")),
     ):
         versions = [item for item in system_information()]
@@ -439,7 +449,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("Debian GNU/Linux", "10", "buster")),
     ):
         versions = [item for item in system_information()]
@@ -447,7 +457,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("CentOS Linux", "7", "Core")),
     ):
         versions = [item for item in system_information()]
@@ -455,7 +465,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("CentOS Linux", "8", "Core")),
     ):
         versions = [item for item in system_information()]
@@ -463,7 +473,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("OpenSUSE Leap", "15.1", "")),
     ):
         versions = [item for item in system_information()]
@@ -518,3 +528,29 @@ def test_versions_report_no_extensions_available():
     with patch("salt.utils.entrypoints.iter_entry_points", return_value=()):
         versions_information = salt.version.versions_information()
         assert "Salt Extensions" not in versions_information
+
+
+@pytest.mark.parametrize(
+    "version_str,expected_str,expected_name",
+    [
+        ("2014.1.4", "2014.1.4", "Hydrogen"),
+        ("3000.1", "3000.1", "Neon"),
+        ("3005", "3005", "Phosphorus"),
+        ("3006", "3006.0", "Sulfur"),
+        ("3015.1", "3015.1", "Manganese"),
+        ("3109.3", "3109.3", None),
+    ],
+)
+def test_parsed_version_name(version_str, expected_str, expected_name):
+    """
+    Test all versioning schemes name attribute.
+
+    The old, new, and dot zero, must properly set the version name attribut
+    test info property method with new versioning scheme
+    """
+    ver = SaltStackVersion.parse(version_str)
+    assert str(ver) == expected_str
+    if expected_name:
+        assert ver.name == expected_name
+    else:
+        assert ver.name is None

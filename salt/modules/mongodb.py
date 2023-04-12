@@ -18,7 +18,7 @@ import re
 
 import salt.utils.json
 from salt.exceptions import get_error_message as _get_error_message
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 try:
     import pymongo
@@ -336,7 +336,7 @@ def user_list(
         output = []
         mongodb_version = _version(mdb)
 
-        if _LooseVersion(mongodb_version) >= _LooseVersion("2.6"):
+        if Version(mongodb_version) >= Version("2.6"):
             for user in mdb.command("usersInfo")["users"]:
                 output.append({"user": user["user"], "roles": user["roles"]})
         else:

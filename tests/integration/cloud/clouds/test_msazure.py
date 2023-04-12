@@ -6,7 +6,7 @@ import logging
 
 import pytest
 
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest
 
 try:
@@ -31,10 +31,10 @@ def __has_required_azure():
     """
     if HAS_AZURE:
         if hasattr(azure, "__version__"):
-            version = LooseVersion(azure.__version__)
+            version = Version(azure.__version__)
         else:
-            version = LooseVersion(azure.common.__version__)
-        if LooseVersion(REQUIRED_AZURE) <= version:
+            version = Version(azure.common.__version__)
+        if Version(REQUIRED_AZURE) <= version:
             return True
     return False
 
