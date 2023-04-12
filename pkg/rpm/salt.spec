@@ -198,6 +198,8 @@ install -p -m 0640 %{_salt_src}/conf/master %{buildroot}%{_sysconfdir}/salt/mast
 install -p -m 0640 %{_salt_src}/conf/cloud %{buildroot}%{_sysconfdir}/salt/cloud
 install -p -m 0640 %{_salt_src}/conf/roster %{buildroot}%{_sysconfdir}/salt/roster
 install -p -m 0640 %{_salt_src}/conf/proxy %{buildroot}%{_sysconfdir}/salt/proxy
+# Patch Salt Master config file with salt user
+patch %{buildroot}%{_sysconfdir}/salt/master %{_salt_src}/pkg/rpm/salt_master_user.patch
 
 # Add the unit files
 mkdir -p %{buildroot}%{_unitdir}
