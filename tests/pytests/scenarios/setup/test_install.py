@@ -17,7 +17,7 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_initial_onedir_failure,
     pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False),
