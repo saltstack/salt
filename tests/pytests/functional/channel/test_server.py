@@ -4,7 +4,9 @@ import multiprocessing
 import os
 import pathlib
 import shutil
+import stat
 import time
+from pathlib import Path
 
 import pytest
 from pytestshellutils.utils import ports
@@ -162,6 +164,12 @@ def test_pub_server_channel(
         log.info("TEST - Req Server handle payload %r", payload)
 
     req_server_channel.post_fork(handle_payload, io_loop=io_loop)
+    if master_config["transport"] == "zeromq":
+        p = Path(str(master_config["sock_dir"])) / "workers.ipc"
+        mode = os.lstat(p).st_mode
+        assert bool(os.lstat(p).st_mode & stat.S_IRUSR)
+        assert not bool(os.lstat(p).st_mode & stat.S_IRGRP)
+        assert not bool(os.lstat(p).st_mode & stat.S_IROTH)
 
     pub_channel = salt.channel.client.AsyncPubChannel.factory(minion_config)
     received = []
