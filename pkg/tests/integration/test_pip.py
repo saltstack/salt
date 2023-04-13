@@ -22,7 +22,7 @@ def extras_pypath():
     extras_dir = "extras-{}.{}".format(*sys.version_info)
     if platform.is_windows():
         return pathlib.Path(
-            os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir
+            os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir, "Scripts"
         )
     elif platform.is_darwin():
         return pathlib.Path(f"{os.sep}opt", "salt", extras_dir, "bin")
