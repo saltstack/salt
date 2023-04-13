@@ -361,7 +361,9 @@ if [ $1 -lt 2 ]; then
     /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
   fi
 fi
-chown -R salt:salt /var/cache/salt/master /etc/salt /var/log/salt /var/run/salt
+if test -d /var/cache/salt/master; then chown -R salt:salt /var/cache/salt/master; fi
+if test -d /var/run/salt; then chown -R salt:salt /var/run/salt; fi
+chown -R salt:salt /etc/salt /var/log/salt
 
 %post syndic
 %systemd_post salt-syndic.service
