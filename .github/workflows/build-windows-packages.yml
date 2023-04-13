@@ -55,7 +55,7 @@ jobs:
       - name: Setup Certificate
         if: ${{ inputs.sign-packages == true }}
         run: |
-          echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
+          echo "${{ secrets.WIN_SIGN_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
         shell: bash
 
       - name: Set Package Signing Paths
@@ -70,22 +70,22 @@ jobs:
       - name: Build Windows Packages
         env:
           SIGN_PACKAGES: ${{ inputs.sign-packages }}
-          SM_API_KEY: "${{ secrets.SM_API_KEY }}"
+          SM_API_KEY: "${{ secrets.WIN_SIGN_API_KEY }}"
         run: |
           tools pkg build windows --onedir salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }}
 
       - name: Signing Artifacts
         if: ${{ inputs.sign-packages == true }}
         env:
-          SM_CLIENT_CERT_FILE_B64: ${{ secrets.SM_CLIENT_CERT_FILE_B64 }}
+          SM_CLIENT_CERT_FILE_B64: ${{ secrets.WIN_SIGN_CERT_FILE_B64 }}
           SM_CLIENT_CERT_FILE: "D:\Certificate_pkcs12.p12"
           # Change this to SM_HOST_PROD once we're sure it's working
-          SM_HOST: "${{ secrets.SM_HOST_DEMO }}"
-          SM_API_KEY: "${{ secrets.SM_API_KEY }}"
-          SM_CLIENT_CERT_PASSWORD: "${{ secrets.SM_CLIENT_CERT_PASSWORD }}"
+          SM_HOST: "${{ secrets.WIN_SIGN_HOST_DEMO }}"
+          SM_API_KEY: "${{ secrets.WIN_SIGN_API_KEY }}"
+          SM_CLIENT_CERT_PASSWORD: "${{ secrets.WIN_SIGN_CERT_PASSWORD }}"
         shell: pwsh
         run: |
-          signtool.exe sign /sha1 ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }} `
+          signtool.exe sign /sha1 ${{ secrets.WIN_SIGN_CERT_SHA1_HASH }} `
             /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 `
             "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64-Setup.exe" `
             "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64.msi" `
