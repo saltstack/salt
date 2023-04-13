@@ -235,6 +235,9 @@ def macos(
             "choices": ("x86", "amd64"),
             "required": True,
         },
+        "sign": {
+            "help": "Sign and notorize built package",
+        },
     },
 )
 def windows(
@@ -242,6 +245,7 @@ def windows(
     onedir: str = None,
     salt_version: str = None,
     arch: str = None,
+    sign: bool = False,
 ):
     """
     Build the Windows package.
@@ -280,24 +284,69 @@ def windows(
         "-SkipInstall",
     )
 
-    if os.environ.get("SIGN_PACKAGES", "false") == "true":
-        with ctx.web as web:
-            url = "https://stage.one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download"
-            web.headers["x-api-key"] = os.environ["SM_API_KEY"]
+    if sign:
+        env = os.environ.copy()
+        envpath = env.get("PATH")
+        if envpath is None:
+            path_parts = []
+        else:
+            path_parts = envpath.split(os.pathsep)
+        path_parts.extend(
+            [
+                r"C:\Program Files (x86)\Windows Kits\10\App Certification Kit",
+                r"C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools",
+                r"C:\Program Files\DigiCert\DigiCert One Signing Manager Tools",
+            ]
+        )
+        env["PATH"] = os.pathsep.join(path_parts)
+        command = ["smksp_registrar.exe", "list"]
+        ctx.info(f"Running: '{' '.join(command)}' ...")
+        ctx.run(*command, env=env)
+        command = ["smctl.exe", "keypair", "ls"]
+        ctx.info(f"Running: '{' '.join(command)}' ...")
+        ret = ctx.run(*command, env=env, check=False)
+        if ret.returncode:
+            ctx.error(f"Failed to run '{' '.join(command)}'")
+        command = [
+            r"C:\Windows\System32\certutil.exe",
+            "-csp",
+            "DigiCert Signing Manager KSP",
+            "-key",
+            "-user",
+        ]
+        ctx.info(f"Running: '{' '.join(command)}' ...")
+        ret = ctx.run(*command, env=env, check=False)
+        if ret.returncode:
+            ctx.error(f"Failed to run '{' '.join(command)}'")
 
-            with web.get(url, stream=True) as r:
-                r.raise_for_status()
-                dest = "smtools-windows-x64.msi"
+        command = ["smksp_cert_sync.exe"]
+        ctx.info(f"Running: '{' '.join(command)}' ...")
+        ret = ctx.run(*command, env=env, check=False)
+        if ret.returncode:
+            ctx.error(f"Failed to run '{' '.join(command)}'")
 
-                with open(dest, "wb") as f:
-                    for chunk in r.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-        ctx.run("msiexec", "/i", "smtools-windows-x64.msi", "/quiet", "/qn")
-        ctx.run("smksp_registrar.exe", "list")
-        ctx.run("smctl.exe", "keypair", "ls")
-        ctx.run(r"C:\Windows\System32\certutil.exe", "-csp", "DigiCert Signing Manager KSP", "-key", "-user")
-        ctx.run("smksp_cert_sync.exe")
+        for fname in (
+            f"pkg/windows/build/Salt-Minion-{salt_version}-Py3-{arch}-Setup.exe",
+            f"pkg/windows/build/Salt-Minion-{salt_version}-Py3-{arch}.msi",
+        ):
+            fpath = str(pathlib.Path(fname).resolve())
+            ctx.info(f"Signing {fname} ...")
+            ctx.run(
+                "signtool.exe",
+                "sign",
+                "/sha1",
+                os.environ["WIN_SIGN_CERT_SHA1_HASH"],
+                "/tr",
+                "http://timestamp.digicert.com",
+                "/td",
+                "SHA256",
+                "/fd",
+                "SHA256",
+                fpath,
+                env=env,
+            )
+            ctx.info(f"Verifying {fname} ...")
+            ctx.run("signtool.exe", "verify", "/v", "/pa", fpath, env=env)
 
     ctx.info("Done")
 

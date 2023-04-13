@@ -504,6 +504,8 @@ jobs:
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: nightly
+    secrets: inherit
 
   build-macos-pkgs:
     name: Build macOS Packages
