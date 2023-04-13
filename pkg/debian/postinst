@@ -1,1 +1,2 @@
 adduser --system salt --group
+if test -d /var/cache/salt/master; then chown -R salt:salt /var/cache/salt/master; fi
