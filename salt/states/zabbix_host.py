@@ -73,7 +73,7 @@ def present(host, groups, interfaces, **kwargs):
                     - alias: some alias
                     - asset_tag: jlm3937
                 - macros:
-                    - $MACRO_NAME: "macro_value"
+                    - MACRO_NAME: "macro_value"
 
 
     """
