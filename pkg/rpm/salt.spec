@@ -364,6 +364,7 @@ fi
 if test -d /var/cache/salt/master; then chown -R salt:salt /var/cache/salt/master; fi
 if test -d /var/run/salt; then chown -R salt:salt /var/run/salt; fi
 chown -R salt:salt /etc/salt /var/log/salt
+chown -R salt:salt /opt/saltstack/salt/
 
 %post syndic
 %systemd_post salt-syndic.service
