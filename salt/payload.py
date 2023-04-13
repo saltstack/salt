@@ -166,9 +166,10 @@ def dumps(msg, use_bin_type=False):
         elif isinstance(obj, CaseInsensitiveDict):
             return dict(obj)
         elif isinstance(obj, NamedLoaderContext):
-            if obj.value() is None:
+            if isinstance(obj.value(), dict):
+                return obj.value()
+            else:
                 return {}
-            return dict(obj)
         elif isinstance(obj, collections.abc.MutableMapping):
             return dict(obj)
         # Nothing known exceptions found. Let msgpack raise its own.
