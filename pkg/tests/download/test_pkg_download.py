@@ -103,6 +103,18 @@ def get_test_versions():
             "os_codename": "jammy",
             "container_id": "ubuntu_22_04",
         },
+        {
+            "image": "ghcr.io/saltstack/salt-ci-containers/photon:3",
+            "os_type": "photon",
+            "os_version": 3,
+            "container_id": "photon_3",
+        },
+        {
+            "image": "ghcr.io/saltstack/salt-ci-containers/photon:4",
+            "os_type": "photon",
+            "os_version": 4,
+            "container_id": "photon_4",
+        },
     ]
     for container in containers:
         test_versions.append(
@@ -190,7 +202,7 @@ def pkg_container(
         container_setup_func = globals()[f"setup_{download_test_image.os_type}"]
     except KeyError:
         raise pytest.skip.Exception(
-            f"Unable to handle {pkg_container.os_type}. Skipping.",
+            f"Unable to handle {download_test_image.os_type}. Skipping.",
             _use_item_location=True,
         )
     container.before_terminate(shutil.rmtree, str(downloads_path), ignore_errors=True)
@@ -296,9 +308,11 @@ def setup_redhat_family(
         f"{repo_url_base}.repo", downloads_path / f"salt-{os_name}.repo"
     )
 
+    clean_command = "all" if os_name == "photon" else "expire-cache"
+    install_dmesg = ("yum", "install", "-y", "util-linux")
     commands = [
         ("mv", f"/downloads/{repo_file.name}", f"/etc/yum.repos.d/salt-{os_name}.repo"),
-        ("yum", "clean", "expire-cache"),
+        ("yum", "clean", clean_command),
         (
             "yum",
             "install",
@@ -311,6 +325,11 @@ def setup_redhat_family(
             "salt-api",
         ),
     ]
+
+    # For some reason, the centosstream9 container doesn't have dmesg installed
+    if os_version == 9 and os_name == "redhat":
+        commands.insert(2, install_dmesg)
+
     for cmd in commands:
         ret = container.run(*cmd)
         if ret.returncode != 0:
@@ -376,6 +395,27 @@ def setup_fedora(
         salt_release,
         downloads_path,
         "fedora",
+        gpg_key_name,
+    )
+
+
+def setup_photon(
+    container,
+    os_version,
+    os_codename,
+    root_url,
+    salt_release,
+    downloads_path,
+    gpg_key_name,
+):
+    setup_redhat_family(
+        container,
+        os_version,
+        os_codename,
+        root_url,
+        salt_release,
+        downloads_path,
+        "photon",
         gpg_key_name,
     )
 
