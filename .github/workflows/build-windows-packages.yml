@@ -8,16 +8,16 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages
-      sign-packages:
-        type: boolean
-        required: false
-        default: false
-        description: Sign the packages after they are built
+      environment:
+        type: string
+        description: The GitHub Environment where this workflow should run
+        default: ci
 
 jobs:
 
   build-pkgs:
     name: Windows
+    environment: ${{ inputs.environment }}
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -27,7 +27,27 @@ jobs:
           - amd64
     runs-on:
       - windows-latest
+    env:
+      SM_HOST: "${{ secrets.WIN_SIGN_HOST_PROD }}"
+      SM_API_KEY: "${{ secrets.WIN_SIGN_API_KEY }}"
+      SM_CLIENT_CERT_FILE: "D:\\Certificate_pkcs12.p12"
+      SM_CLIENT_CERT_PASSWORD: "${{ secrets.WIN_SIGN_CERT_PASSWORD }}"
+      SM_CLIENT_CERT_FILE_B64: "${{ secrets.WIN_SIGN_CERT_FILE_B64 }}"
+      WIN_SIGN_CERT_SHA1_HASH: "${{ secrets.WIN_SIGN_CERT_SHA1_HASH }}"
+
     steps:
+      - name: Check Package Signing Enabled
+        shell: bash
+        id: check-pkg-sign
+        run: |
+          if [ "${{ (secrets.WIN_SIGN_API_KEY != '' && env.SM_HOST != '' && inputs.environment == 'staging') && 'true' || 'false' }}" != "true" ]; then
+            echo "The packages created will NOT be signed"
+            echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "The packages created WILL be signed"
+            echo "sign-pkgs=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -49,58 +69,21 @@ jobs:
           path: artifacts/
 
       - name: Code signing with Software Trust Manager
-        if: ${{ inputs.sign-packages == true }}
+        if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
         uses: digicert/ssm-code-signing@v0.0.2
 
       - name: Setup Certificate
-        if: ${{ inputs.sign-packages == true }}
+        if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
+        shell: bash
         run: |
           echo "${{ secrets.WIN_SIGN_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
-        shell: bash
-
-      - name: Set Package Signing Paths
-        if: ${{ inputs.sign-packages == true }}
-        id: variables
-        run: |
-          echo "C:\Program Files (x86)\Windows Kits\10\App Certification Kit" >> $GITHUB_PATH
-          echo "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools" >> $GITHUB_PATH
-          echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools" >> $GITHUB_PATH
-        shell: bash
 
       - name: Build Windows Packages
-        env:
-          SIGN_PACKAGES: ${{ inputs.sign-packages }}
-          SM_API_KEY: "${{ secrets.WIN_SIGN_API_KEY }}"
         run: |
-          tools pkg build windows --onedir salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }}
-
-      - name: Signing Artifacts
-        if: ${{ inputs.sign-packages == true }}
-        env:
-          SM_CLIENT_CERT_FILE_B64: ${{ secrets.WIN_SIGN_CERT_FILE_B64 }}
-          SM_CLIENT_CERT_FILE: "D:\\Certificate_pkcs12.p12"
-          # Change this to SM_HOST_PROD once we're sure it's working
-          SM_HOST: "${{ secrets.WIN_SIGN_HOST_DEMO }}"
-          SM_API_KEY: "${{ secrets.WIN_SIGN_API_KEY }}"
-          SM_CLIENT_CERT_PASSWORD: "${{ secrets.WIN_SIGN_CERT_PASSWORD }}"
-        shell: pwsh
-        run: |
-          signtool.exe sign /sha1 ${{ secrets.WIN_SIGN_CERT_SHA1_HASH }} `
-            /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 `
-            "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64-Setup.exe" `
-            "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64.msi" `
-            "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86-Setup.exe" `
-            "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86.msi"
-
-      - name: Verifying Signatures
-        if: ${{ inputs.sign-packages == true }}
-        shell: pwsh
-        run: |
-          signtool.exe verify /v /pa `
-            "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64-Setup.exe" `
-            "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-AMD64.msi" `
-            "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86-Setup.exe" `
-            "pkg\windows\build\Salt-Minion-${{ steps.variables.outputs.version }}-Py3-x86.msi"
+          tools pkg build windows --onedir salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip `
+            --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }} ${{
+              steps.check-pkg-sign.outputs.sign-pkgs == 'true' && '--sign' || ''
+            }}
 
       - name: Upload ${{ matrix.arch }} Packages
         uses: actions/upload-artifact@v3
