@@ -194,7 +194,7 @@ jobs:
       - name: Destroy VM
         if: always() && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools --timestamps vm destroy ${{ inputs.distro-slug }}
+          tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }}
 
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v3
@@ -343,7 +343,7 @@ jobs:
       - name: Destroy VM
         if: always()
         run: |
-          tools --timestamps vm destroy ${{ inputs.distro-slug }} || true
+          tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }} || true
 
       - name: Upload Code Coverage Test Run Artifacts
         if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
