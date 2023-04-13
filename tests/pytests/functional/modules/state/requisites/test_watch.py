@@ -4,7 +4,10 @@ import salt.utils.platform
 
 from . import normalize_ret
 
-pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.core_test]
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
+]
 
 
 def test_watch_in(state, state_tree):

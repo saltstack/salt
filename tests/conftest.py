@@ -173,7 +173,7 @@ def pytest_addoption(parser):
         dest="fast",
         action="store_false",
         default=True,
-        help=("Don't run salt-fast tests. " "Default: %(default)s"),
+        help="Don't run salt-fast tests. Default: %(default)s",
     )
     test_selection_group.addoption(
         "--run-slow",
@@ -182,7 +182,7 @@ def pytest_addoption(parser):
         dest="slow",
         action="store_true",
         default=False,
-        help="Run slow tests." "Default: %(default)s",
+        help="Run slow tests. Default: %(default)s",
     )
     test_selection_group.addoption(
         "--core",

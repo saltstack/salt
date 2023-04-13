@@ -28,7 +28,7 @@ runs:
         GITHUB_SHA: ${{ inputs.sha }}
         GITHUB_PULL_NUMBER: ${{ inputs.pull-number }}
       run: |
-        if [ -z "$GITHUB_PULL_NUMBER"]
+        if [ -z "$GITHUB_PULL_NUMBER" ]
         then
         echo "Searching For Pull Number"
         echo $GITHUB_OWNER
