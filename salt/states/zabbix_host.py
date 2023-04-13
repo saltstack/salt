@@ -343,8 +343,8 @@ def present(host, groups, interfaces, **kwargs):
                     else:
                         hostintf["details"] = []
             interface_diff = [
-                x for x in interfaces_formated if x not in hostinterfaces_copy
-            ] + [y for y in hostinterfaces_copy if y not in interfaces_formated]
+                x for x in interfaces_formated[0] if x not in hostinterfaces_copy[0]
+            ] + [y for y in hostinterfaces_copy[0] if y not in interfaces_formated[0]]
             if interface_diff:
                 update_interfaces = True
 
