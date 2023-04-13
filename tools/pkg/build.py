@@ -435,9 +435,9 @@ def salt_onedir(
     onedir_env = pathlib.Path(package_name).resolve()
     _check_pkg_build_files_exist(ctx, onedir_env=onedir_env, salt_archive=salt_archive)
 
-    os.environ["USE_STATIC_REQUIREMENTS"] = "1"
-    os.environ["RELENV_DEBUG"] = "1"
-    os.environ["RELENV_BUILDENV"] = "1"
+    env = os.environ.copy()
+    env["USE_STATIC_REQUIREMENTS"] = "1"
+    env["RELENV_BUILDENV"] = "1"
     if platform == "windows":
         ctx.run(
             "powershell.exe",
@@ -447,6 +447,7 @@ def salt_onedir(
             "-CICD",
             "-SourceTarball",
             str(salt_archive),
+            env=env,
         )
         ctx.run(
             "powershell.exe",
@@ -454,11 +455,12 @@ def salt_onedir(
             "-BuildDir",
             str(onedir_env),
             "-CICD",
+            env=env,
         )
     else:
-        os.environ["RELENV_PIP_DIR"] = "1"
+        env["RELENV_PIP_DIR"] = "1"
         pip_bin = onedir_env / "bin" / "pip3"
-        ctx.run(str(pip_bin), "install", str(salt_archive))
+        ctx.run(str(pip_bin), "install", str(salt_archive), env=env)
         if platform == "darwin":
 
             def errfn(fn, path, err):
