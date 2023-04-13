@@ -2821,37 +2821,3 @@ def configuration_import(config_file, rules=None, file_format="xml", **connectio
     except SaltException as exc:
         return {"name": config_file, "result": False, "message": str(exc)}
 
-
-def host_macros_get(hostids, **connection_args):
-    '''
-    Retrieve host macros according to host id.
-    See: https://www.zabbix.com/documentation/current/en/manual/api/reference/host/get
-
-    :param hostids: ID of the host to query
-
-    :return: List of dictonaries, every dict represents one existing macro, False if no convenient host found, no existing macros or on failure.
-
-    CLI Example:
-    .. code-block:: bash
-
-        salt '*' zabbix.host_macros_get 101054
-    '''
-    conn_args = _login(**connection_args)
-    ret = False
-    try:
-        if conn_args:
-            method = 'host.get'
-            params = {"selectMacros": "extend"}
-            if hostids:
-                params.setdefault('hostids', hostids)
-            params = _params_extend(params, **connection_args)
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return (
-                ret['result'][0]['macros']
-                if ret["result"] and ret['result'][0]['macros']
-                else False
-            )
-        else:
-            raise KeyError
-    except KeyError:
-        return ret

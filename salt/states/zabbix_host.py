@@ -380,7 +380,7 @@ def present(host, groups, interfaces, **kwargs):
 
         # Check for new macros
         if new_macros is not None:
-            cur_macros = __salt__["zabbix.host_macros_get"](
+            cur_macros = __salt__["zabbix.usermacro_get"](
                 hostids=hostid, **connection_args
             )
 
