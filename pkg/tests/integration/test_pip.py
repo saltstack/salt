@@ -22,7 +22,7 @@ def extras_pypath():
     extras_dir = "extras-{}.{}".format(*sys.version_info)
     if platform.is_windows():
         return pathlib.Path(
-            os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir, "Scripts"
+            os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir, "bin"
         )
     elif platform.is_darwin():
         return pathlib.Path(f"{os.sep}opt", "salt", extras_dir, "bin")
@@ -73,7 +73,10 @@ def test_pip_install_extras(install_salt, extras_pypath):
     """
     dep = "pep8"
     extras_keyword = "extras"
-    check_path = extras_pypath / "pep8"
+    if platform.is_windows():
+        check_path = extras_pypath / f"{dep}.exe"
+    else:
+        check_path = extras_pypath / dep
 
     install_ret = subprocess.run(
         install_salt.binary_paths["pip"] + ["install", dep],
