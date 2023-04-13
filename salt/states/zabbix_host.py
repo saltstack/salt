@@ -277,7 +277,7 @@ def present(host, groups, interfaces, **kwargs):
         ]
         for param in host_properties_definition:
             if param in kwargs:
-                host_extra_properties[param] = kwargs.pop(param)
+                host_extra_properties[param] = str(kwargs.pop(param))
 
     host_exists = __salt__["zabbix.host_exists"](host, **connection_args)
 
