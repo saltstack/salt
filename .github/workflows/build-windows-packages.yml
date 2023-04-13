@@ -78,7 +78,7 @@ jobs:
         if: ${{ inputs.sign-packages == true }}
         env:
           SM_CLIENT_CERT_FILE_B64: ${{ secrets.WIN_SIGN_CERT_FILE_B64 }}
-          SM_CLIENT_CERT_FILE: "D:\Certificate_pkcs12.p12"
+          SM_CLIENT_CERT_FILE: "D:\\Certificate_pkcs12.p12"
           # Change this to SM_HOST_PROD once we're sure it's working
           SM_HOST: "${{ secrets.WIN_SIGN_HOST_DEMO }}"
           SM_API_KEY: "${{ secrets.WIN_SIGN_API_KEY }}"
