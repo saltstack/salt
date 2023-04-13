@@ -36,6 +36,7 @@ def present(host, groups, interfaces, **kwargs):
     :param interfaces: interfaces to be created for the host
     :param proxy_host: Optional proxy name or proxyid to monitor host
     :param inventory: Optional list or dictionary of inventory names and values
+    :param macros: Optional list of macro variables and values
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
@@ -71,6 +72,8 @@ def present(host, groups, interfaces, **kwargs):
                 - inventory:
                     - alias: some alias
                     - asset_tag: jlm3937
+                - macros:
+                    - $MACRO_NAME: "macro_value"
 
 
     """
@@ -279,6 +282,18 @@ def present(host, groups, interfaces, **kwargs):
             if param in kwargs:
                 host_extra_properties[param] = kwargs.pop(param)
 
+    if "macros" not in kwargs:
+        macros = {}
+    else:
+        macros = kwargs.pop("macros")
+    if macros is None:
+        macros = {}
+    new_macros = []
+    for mac_item in macros:
+        for k, v in mac_item.items():
+            m = "{$" + k + "}"
+            new_macros.append({"macro": str(m), "value": str(v)})
+
     host_exists = __salt__["zabbix.host_exists"](host, **connection_args)
 
     if host_exists:
@@ -290,6 +305,7 @@ def present(host, groups, interfaces, **kwargs):
         update_hostgroups = False
         update_interfaces = False
         update_inventory = False
+        update_macros = False
 
         host_updated_params = {}
         for param in host_extra_properties:
@@ -362,6 +378,35 @@ def present(host, groups, interfaces, **kwargs):
             if inventory_diff.changed():
                 update_inventory = True
 
+        # Check for new macros
+        if new_macros is not None:
+            cur_macros = __salt__["zabbix.host_macros_get"](
+                hostids=hostid, **connection_args
+            )
+
+            def _remove_keys(object, keys):
+                return {key: value for key, value in object.items() if key not in keys}
+
+            read_only = (
+                "hostmacroid",
+                "hostid",
+                "description",
+                "type"
+            )
+
+            # In case of no current macros, create list for comparision
+            if cur_macros is False:
+                cur_macros = []
+
+            # Drop read-only atributes from existing host
+            cur_macros = list(map(lambda object: _remove_keys(object, read_only), cur_macros))
+
+            macros_diff = [
+                x for x in new_macros if x not in cur_macros
+            ] + [y for y in cur_macros if y not in new_macros]
+            if macros_diff:
+                update_macros = True
+
     # Dry run, test=true mode
     if __opts__["test"]:
         if host_exists:
@@ -371,6 +416,7 @@ def present(host, groups, interfaces, **kwargs):
                 or update_interfaces
                 or update_proxy
                 or update_inventory
+                or update_macros
             ):
                 ret["result"] = None
                 ret["comment"] = comment_host_updated
@@ -393,6 +439,7 @@ def present(host, groups, interfaces, **kwargs):
             or update_interfaces
             or update_proxy
             or update_inventory
+            or update_macros
         ):
 
             if update_host:
@@ -416,16 +463,23 @@ def present(host, groups, interfaces, **kwargs):
                     error.append(hostupdate["error"])
             if update_proxy:
                 hostupdate = __salt__["zabbix.host_update"](
-                    hostid, proxy_hostid=proxy_hostid, **connection_args
+                    hostid, proxy_hostid=proxy_hostid, macros=new_macros, **connection_args
                 )
                 ret["changes"]["proxy_hostid"] = str(proxy_hostid)
                 if "error" in hostupdate:
                     error.append(hostupdate["error"])
             if update_hostgroups:
                 hostupdate = __salt__["zabbix.host_update"](
-                    hostid, groups=groups, **connection_args
+                    hostid, groups=groups, macros=new_macros, **connection_args
                 )
                 ret["changes"]["groups"] = str(groups)
+                if "error" in hostupdate:
+                    error.append(hostupdate["error"])
+            if update_macros:
+                hostupdate = __salt__["zabbix.host_update"](
+                    hostid, groups=groups, macros=new_macros, **connection_args
+                )
+                ret["changes"]["macros"] = str(new_macros)
                 if "error" in hostupdate:
                     error.append(hostupdate["error"])
             if update_interfaces:
@@ -515,6 +569,7 @@ def present(host, groups, interfaces, **kwargs):
             interfaces_formated,
             proxy_hostid=proxy_hostid,
             inventory=new_inventory,
+            macros=new_macros,
             visible_name=visible_name,
             **sum_kwargs
         )
