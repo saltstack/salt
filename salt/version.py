@@ -927,6 +927,9 @@ def _parser():
     parser.add_argument(
         "--next-release", help="Return the next release", action="store_true"
     )
+    # When pip installing we pass in other args to this script.
+    # This allows us to catch those args but not use them
+    parser.add_argument("unknown", nargs=argparse.REMAINDER)
     return parser.parse_args()
 
 
