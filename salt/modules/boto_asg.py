@@ -143,54 +143,71 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_asg.get_config myasg region=us-east-1
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    # Obtain a handle to the boto3 client
+    conn3 = _get_conn_autoscaling_boto3(region=region, key=key, keyid=keyid, profile=profile)
+
+    # This lookup table allows us to map the (boto-inspired) key names expected by callers of this function, to the
+    # actual key names returned by boto3.
+    attr_key_lookup = {
+        "name": "AutoScalingGroupName",
+        "availability_zones": "AvailabilityZones",
+        "default_cooldown": "DefaultCooldown",
+        "desired_capacity": "DesiredCapacity",
+        "health_check_period": "HealthCheckGracePeriod",
+        "health_check_type": "HealthCheckType",
+        "launch_config_name": "LaunchConfigurationName",
+        "load_balancers": "LoadBalancerNames",
+        "max_size": "MaxSize",
+        "min_size": "MinSize",
+        "placement_group": "PlacementGroup",
+        "vpc_zone_identifier": "VPCZoneIdentifier",
+        "tags": "Tags",
+        "termination_policies": "TerminationPolicies",
+        "suspended_processes": "SuspendedProcesses",
+    }
+
     retries = 30
     while True:
         try:
-            asg = conn.get_all_groups(names=[name])
-            if asg:
-                asg = asg[0]
-            else:
+            asg_paginator = conn3.get_paginator("describe_auto_scaling_groups")
+            # Obtain the first ASG, defaulting to None if no ASGs were returned
+            asg = next(
+                iter(
+                    asg_paginator.paginate(AutoScalingGroupNames=[name]).build_full_result()["AutoScalingGroups"]
+                ),
+                None
+            )
+            if not asg:
                 return {}
             ret = odict.OrderedDict()
-            attrs = [
-                "name",
-                "availability_zones",
-                "default_cooldown",
-                "desired_capacity",
-                "health_check_period",
-                "health_check_type",
-                "launch_config_name",
-                "load_balancers",
-                "max_size",
-                "min_size",
-                "placement_group",
-                "vpc_zone_identifier",
-                "tags",
-                "termination_policies",
-                "suspended_processes",
-            ]
-            for attr in attrs:
-                # Tags are objects, so we need to turn them into dicts.
+            for attr, keyname in attr_key_lookup.items():
                 if attr == "tags":
                     _tags = []
-                    for tag in asg.tags:
+                    for tag in asg[keyname]:
                         _tag = odict.OrderedDict()
-                        _tag["key"] = tag.key
-                        _tag["value"] = tag.value
-                        _tag["propagate_at_launch"] = tag.propagate_at_launch
+                        _tag["key"] = tag["Key"]
+                        _tag["value"] = tag["Value"]
+                        _tag["propagate_at_launch"] = tag["PropagateAtLaunch"]
                         _tags.append(_tag)
                     ret["tags"] = _tags
                 # Boto accepts a string or list as input for vpc_zone_identifier,
                 # but always returns a comma separated list. We require lists in
                 # states.
                 elif attr == "vpc_zone_identifier":
-                    ret[attr] = getattr(asg, attr).split(",")
+                    ret[attr] = asg[keyname].split(",")
                 # convert SuspendedProcess objects to names
                 elif attr == "suspended_processes":
-                    suspended_processes = getattr(asg, attr)
-                    ret[attr] = sorted(x.process_name for x in suspended_processes)
+                    ret[attr] = sorted([p["ProcessName"] for p in asg[keyname]])
+                # boto3 seems to omit the "PlacementGroup" in its response if one isn't in use
+                elif attr == "placement_group":
+                    placement_group = asg.get(keyname)
+                    if not placement_group:
+                        continue
+                    ret[attr] = placement_group
                 else:
-                    ret[attr] = getattr(asg, attr)
+                    ret[attr] = asg[keyname]
+
             # scaling policies
             policies = conn.get_all_policies(as_group=name)
             ret["scaling_policies"] = []
@@ -225,8 +242,19 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                     ]
                 )
             return ret
+        # This catch block handles "boto" errors
         except boto.exception.BotoServerError as e:
             if retries and e.code == "Throttling":
+                log.debug("Throttled by AWS API, retrying in 5 seconds...")
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(e)
+            return {}
+        # This catch block handles "boto3" errors
+        except ClientError as e:
+            # See https://docs.aws.amazon.com/autoscaling/ec2/APIReference/CommonErrors.html
+            if retries and e.response["Error"]["Code"] == "ThrottlingException":
                 log.debug("Throttled by AWS API, retrying in 5 seconds...")
                 time.sleep(5)
                 retries -= 1

@@ -1,0 +1,1 @@
+Transition get_all_groups calls to boto3
