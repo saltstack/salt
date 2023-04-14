@@ -30,6 +30,7 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 __salt__ = {}
 
 TOKEN_CKEY = "__token"
+CLIENT_CKEY = "_vault_authd_client"
 
 
 def get_authd_client(opts, context, force_local=False, get_config=False):
@@ -37,19 +38,18 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
     Returns an AuthenticatedVaultClient that is valid for at least one query.
     """
     cbank = vcache._get_cache_bank(opts, force_local=force_local)
-    ckey = "_vault_authd_client"
     retry = False
     client = config = None
 
     # First, check if an already initialized instance is available
     # and still valid
-    if cbank in context and ckey in context[cbank]:
+    if cbank in context and CLIENT_CKEY in context[cbank]:
         log.debug("Fetching client instance and config from context")
-        client, config = context[cbank][ckey]
+        client, config = context[cbank][CLIENT_CKEY]
         if not client.token_valid():
             log.debug("Cached client instance was invalid")
             client = config = None
-            context[cbank].pop(ckey)
+            context[cbank].pop(CLIENT_CKEY)
 
     # Otherwise, try to build one from possibly cached data
     if client is None or config is None:
@@ -98,7 +98,7 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
 
     if cbank not in context:
         context[cbank] = {}
-    context[cbank][ckey] = (client, config)
+    context[cbank][CLIENT_CKEY] = (client, config)
 
     if get_config:
         return client, config

@@ -5,6 +5,7 @@ import time
 import salt.cache
 import salt.utils.vault.helpers as hlp
 import salt.utils.vault.leases as leases
+from salt.utils.vault.factory import CLIENT_CKEY
 
 log = logging.getLogger(__name__)
 
@@ -13,6 +14,8 @@ def clear_cache(opts, context, ckey=None, connection=True, session=False):
     """
     Clears the connection cache.
     """
+    # Ensure the active client gets recreated after clearing the cache
+    context.pop(CLIENT_CKEY, None)
     cbank = _get_cache_bank(
         opts, connection=connection, session=session and not connection
     )
