@@ -166,9 +166,14 @@ def rpm(
             ),
             "required": True,
         },
+        "sign": {
+            "help": "Sign and notorize built package",
+        },
     },
 )
-def macos(ctx: Context, onedir: str = None, salt_version: str = None):
+def macos(
+    ctx: Context, onedir: str = None, salt_version: str = None, sign: bool = False
+):
     """
     Build the macOS package.
     """
@@ -187,10 +192,24 @@ def macos(ctx: Context, onedir: str = None, salt_version: str = None):
         with ctx.chdir(onedir_artifact.parent):
             tarball.extractall(path=build_root)
 
+    if sign:
+        ctx.info("Signing binaries")
+        with ctx.chdir(checkout / "pkg" / "macos"):
+            ctx.run("./sign_binaries.sh")
     ctx.info("Building the macos package")
     with ctx.chdir(checkout / "pkg" / "macos"):
         ctx.run("./prep_salt.sh")
-        ctx.run("sudo", "./package.sh", "-n", salt_version)
+        if sign:
+            package_args = ["--sign", salt_version]
+        else:
+            package_args = [salt_version]
+        ctx.run("./package.sh", *package_args)
+    if sign:
+        ctx.info("Notarizing package")
+        ret = ctx.run("uname", "-m", capture=True)
+        cpu_arch = ret.stdout.strip().decode()
+        with ctx.chdir(checkout / "pkg" / "macos"):
+            ctx.run("./notarize.sh", f"salt-{salt_version}-py3-{cpu_arch}.pkg")
 
     ctx.info("Done")
 
@@ -353,6 +372,8 @@ def onedir_dependencies(
         "-r",
         str(requirements_file),
     )
+    extras_dir = dest / f"extras-{requirements_version}"
+    extras_dir.mkdir()
 
 
 @build.command(

@@ -1,6 +1,7 @@
 import os
 import pathlib
 import subprocess
+import sys
 
 import pytest
 from pytestskipmarkers.utils import platform
@@ -16,12 +17,27 @@ def pypath():
         return pathlib.Path(f"{os.sep}opt", "saltstack", "salt", "bin")
 
 
+@pytest.fixture
+def extras_pypath():
+    extras_dir = "extras-{}.{}".format(*sys.version_info)
+    if platform.is_windows():
+        return pathlib.Path(
+            os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir, "bin"
+        )
+    elif platform.is_darwin():
+        return pathlib.Path(f"{os.sep}opt", "salt", extras_dir, "bin")
+    else:
+        return pathlib.Path(f"{os.sep}opt", "saltstack", "salt", extras_dir, "bin")
+
+
 @pytest.fixture(autouse=True)
-def wipe_pydeps(pypath, install_salt):
+def wipe_pydeps(install_salt):
     try:
         yield
     finally:
-        for dep in ["pep8", "PyGithub"]:
+        # Note, uninstalling anything with an associated script will leave the script.
+        # This is due to a bug in pip.
+        for dep in ["pep8", "PyGithub", "libvirt-python"]:
             subprocess.run(
                 install_salt.binary_paths["pip"] + ["uninstall", "-y", dep],
                 stdout=subprocess.PIPE,
@@ -51,6 +67,34 @@ def test_pip_install(salt_call_cli):
         assert "The github execution module cannot be loaded" in use_lib.stderr
 
 
+def test_pip_install_extras(install_salt, extras_pypath):
+    """
+    Test salt-pip installs into the correct directory
+    """
+    dep = "pep8"
+    extras_keyword = "extras"
+    if platform.is_windows():
+        check_path = extras_pypath / f"{dep}.exe"
+    else:
+        check_path = extras_pypath / dep
+
+    install_ret = subprocess.run(
+        install_salt.binary_paths["pip"] + ["install", dep],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert install_ret.returncode == 0
+
+    show_ret = subprocess.run(
+        install_salt.binary_paths["pip"] + ["show", dep],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert show_ret.returncode == 0
+    assert extras_keyword in show_ret.stdout.decode()
+    assert check_path.exists()
+
+
 def demote(user_uid, user_gid):
     def result():
         os.setgid(user_gid)
@@ -60,18 +104,8 @@ def demote(user_uid, user_gid):
 
 
 @pytest.mark.skip_on_windows(reason="We can't easily demote users on Windows")
-def test_pip_non_root(install_salt, test_account, pypath):
-    check_path = pypath / "pep8"
-    # Lets make sure pep8 is not currently installed
-    subprocess.run(
-        install_salt.binary_paths["pip"] + ["uninstall", "-y", "pep8"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        universal_newlines=True,
-    )
-
-    assert not check_path.exists()
+def test_pip_non_root(install_salt, test_account, extras_pypath):
+    check_path = extras_pypath / "pep8"
     # We should be able to issue a --help without being root
     ret = subprocess.run(
         install_salt.binary_paths["salt"] + ["--help"],
@@ -84,21 +118,6 @@ def test_pip_non_root(install_salt, test_account, pypath):
     )
     assert ret.returncode == 0, ret.stderr
     assert "Usage" in ret.stdout
-    assert not check_path.exists()
-
-    # Try to pip install something, should fail
-    ret = subprocess.run(
-        install_salt.binary_paths["pip"] + ["install", "pep8"],
-        preexec_fn=demote(test_account.uid, test_account.gid),
-        env=test_account.env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        universal_newlines=True,
-    )
-    assert ret.returncode == 1, ret.stderr
-    assert "Could not install packages due to an OSError" in ret.stderr
-    assert not check_path.exists()
 
     # Let tiamat-pip create the pypath directory for us
     ret = subprocess.run(

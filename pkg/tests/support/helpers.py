@@ -128,7 +128,7 @@ class SaltPkgInstall:
 
     @pkg_mngr.default
     def _default_pkg_mngr(self):
-        if self.distro_id in ("centos", "redhat", "amzn", "fedora"):
+        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
             return "yum"
         elif self.distro_id in ("ubuntu", "debian"):
             ret = self.proc.run("apt-get", "update")
@@ -137,7 +137,7 @@ class SaltPkgInstall:
 
     @rm_pkg.default
     def _default_rm_pkg(self):
-        if self.distro_id in ("centos", "redhat", "amzn", "fedora"):
+        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
             return "remove"
         elif self.distro_id in ("ubuntu", "debian"):
             return "purge"
@@ -152,7 +152,7 @@ class SaltPkgInstall:
             "salt-cloud",
             "salt-minion",
         ]
-        if self.distro_id in ("centos", "redhat", "amzn", "fedora"):
+        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
             salt_pkgs.append("salt")
         elif self.distro_id in ("ubuntu", "debian"):
             salt_pkgs.append("salt-common")
@@ -640,7 +640,7 @@ class SaltPkgInstall:
         if self.classic:
             root_url = "py3/"
 
-        if self.distro_name in ["redhat", "centos", "amazon", "fedora"]:
+        if self.distro_name in ["redhat", "centos", "amazon", "fedora", "vmware"]:
             for fp in pathlib.Path("/etc", "yum.repos.d").glob("epel*"):
                 fp.unlink()
             gpg_key = "SALTSTACK-GPG-KEY.pub"

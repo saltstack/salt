@@ -595,6 +595,8 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
             "debian-11-arm64",
             "ubuntu-20.04-arm64",
             "ubuntu-22.04-arm64",
+            "photonos-3",
+            "photonos-4",
         ]
         and pkg_type != "MSI"
     ):
@@ -605,7 +607,14 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
         # we will have arm64 onedir packages to upgrade from
         sessions.append("upgrade")
     if (
-        distro_slug not in ["centosstream-9", "ubuntu-22.04", "ubuntu-22.04-arm64"]
+        distro_slug
+        not in [
+            "centosstream-9",
+            "ubuntu-22.04",
+            "ubuntu-22.04-arm64",
+            "photonos-3",
+            "photonos-4",
+        ]
         and pkg_type != "MSI"
     ):
         # Packages for these OSs where never built for classic previously

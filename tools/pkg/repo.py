@@ -197,6 +197,16 @@ def debian(
     }}
     """
     ctx.info("Creating repository directory structure ...")
+    create_repo_path = _create_top_level_repo_path(
+        repo_path,
+        salt_version,
+        distro,
+        distro_version=distro_version,
+        distro_arch=distro_arch,
+    )
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
+
     create_repo_path = _create_repo_path(
         repo_path,
         salt_version,
@@ -205,7 +215,6 @@ def debian(
         distro_arch=distro_arch,
         nightly_build=nightly_build,
     )
-
     ftp_archive_config_file = create_repo_path / "apt-ftparchive.conf"
     ctx.info(f"Writing {ftp_archive_config_file} ...")
     ftp_archive_config_file.write_text(textwrap.dedent(ftp_archive_config))
@@ -322,6 +331,7 @@ _rpm_distro_info = {
     "amazon": ["2"],
     "redhat": ["7", "8", "9"],
     "fedora": ["36", "37", "38"],
+    "photon": ["3", "4"],
 }
 
 
@@ -399,6 +409,16 @@ def rpm(
         distro_arch = "arm64"
 
     ctx.info("Creating repository directory structure ...")
+    create_repo_path = _create_top_level_repo_path(
+        repo_path,
+        salt_version,
+        distro,
+        distro_version=distro_version,
+        distro_arch=distro_arch,
+    )
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
+
     create_repo_path = _create_repo_path(
         repo_path,
         salt_version,
@@ -493,7 +513,7 @@ def rpm(
         else:
             distro_name = distro.capitalize()
 
-        if int(distro_version) < 8:
+        if distro != "photon" and int(distro_version) < 8:
             failovermethod = "\n            failovermethod=priority"
         else:
             failovermethod = ""
@@ -1446,6 +1466,14 @@ def _create_onedir_based_repo(
     pkg_suffixes: tuple[str, ...],
 ):
     ctx.info("Creating repository directory structure ...")
+    create_repo_path = _create_top_level_repo_path(
+        repo_path,
+        salt_version,
+        distro,
+    )
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
+
     create_repo_path = _create_repo_path(
         repo_path, salt_version, distro, nightly_build=nightly_build
     )
@@ -1787,7 +1815,7 @@ def _publish_repo(
         pass
 
 
-def _create_repo_path(
+def _create_top_level_repo_path(
     repo_path: pathlib.Path,
     salt_version: str,
     distro: str,
@@ -1805,6 +1833,21 @@ def _create_repo_path(
         create_repo_path = create_repo_path / distro_version
     if distro_arch:
         create_repo_path = create_repo_path / distro_arch
+    create_repo_path.mkdir(exist_ok=True, parents=True)
+    return create_repo_path
+
+
+def _create_repo_path(
+    repo_path: pathlib.Path,
+    salt_version: str,
+    distro: str,
+    distro_version: str | None = None,  # pylint: disable=bad-whitespace
+    distro_arch: str | None = None,  # pylint: disable=bad-whitespace
+    nightly_build: bool = False,
+):
+    create_repo_path = _create_top_level_repo_path(
+        repo_path, salt_version, distro, distro_version, distro_arch
+    )
     if nightly_build is False:
         create_repo_path = create_repo_path / "minor" / salt_version
     else:

@@ -316,7 +316,7 @@ pyyaml==5.4.1
     #   clustershell
     #   kubernetes
     #   yamllint
-pyzmq==25.0.0 ; sys_platform == "win32"
+pyzmq==25.0.2 ; sys_platform == "win32"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
