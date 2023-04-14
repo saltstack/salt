@@ -478,12 +478,30 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
     """
     Returns an AuthenticatedVaultClient that is valid for at least one query.
     """
+    cbank = _get_cache_bank(opts, force_local=force_local)
+    ckey = "_vault_authd_client"
     retry = False
-    try:
-        client, config = _build_authd_client(opts, context, force_local=force_local)
-    except (VaultAuthExpired, VaultConfigExpired, VaultPermissionDeniedError):
-        retry = True
-    # First, check if the token needs to be and can be renewed.
+    client = config = None
+
+    # First, check if an already initialized instance is available
+    # and still valid
+    if cbank in context and ckey in context[cbank]:
+        log.debug("Fetching client instance and config from context")
+        client, config = context[cbank][ckey]
+        if not client.token_valid():
+            log.debug("Cached client instance was invalid")
+            client = config = None
+            context[cbank].pop(ckey)
+
+    # Otherwise, try to build one from possibly cached data
+    if client is None or config is None:
+        try:
+            client, config = _build_authd_client(opts, context, force_local=force_local)
+        except (VaultAuthExpired, VaultConfigExpired, VaultPermissionDeniedError):
+            # On failure, signal to clear caches and retry
+            retry = True
+
+    # Check if the token needs to be and can be renewed.
     # Since this needs to check the possibly active session and does not care
     # about valid secret IDs etc, we need to inspect the actual token.
     if (
@@ -499,6 +517,8 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
             increment=config["auth"]["token_lifecycle"]["renew_increment"]
         )
 
+    # Check if there was a problem with cached data or if
+    # the current token could not be renewed for a sufficient amount of time.
     if retry or not client.token_valid(
         config["auth"]["token_lifecycle"]["minimum_ttl"] or 0, remote=False
     ):
@@ -510,12 +530,17 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
         ):
             if config["auth"]["token_lifecycle"]["minimum_ttl"]:
                 log.warning(
-                    "Configuration error: auth:token_lifecycle:minimum_ttl cannot be honored because fresh tokens are issued with less ttl. Continuing anyways."
+                    "Configuration error: auth:token_lifecycle:minimum_ttl cannot be "
+                    "honored because fresh tokens are issued with less ttl. Continuing anyways."
                 )
             else:
                 raise VaultException(
                     "Could not build valid client. This is most likely a bug."
                 )
+
+    if cbank not in context:
+        context[cbank] = {}
+    context[cbank][ckey] = (client, config)
 
     if get_config:
         return client, config
@@ -524,7 +549,7 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
 
 def _build_authd_client(opts, context, force_local=False):
     connection_cbank = _get_cache_bank(opts, force_local=force_local)
-    config, embedded_token = _get_connection_config(
+    config, embedded_token, unauthd_client = _get_connection_config(
         connection_cbank, opts, context, force_local=force_local
     )
     # Tokens are cached in a distinct scope to enable cache per session
@@ -560,7 +585,11 @@ def _build_authd_client(opts, context, force_local=False):
             # Only fetch secret ID if there is no cached valid token
             if cached_token is None and secret_id is None:
                 secret_id = _fetch_secret_id(
-                    config, opts, secret_id_cache, force_local=force_local
+                    config,
+                    opts,
+                    secret_id_cache,
+                    unauthd_client,
+                    force_local=force_local,
                 )
             if secret_id is None:
                 secret_id = InvalidVaultSecretId()
@@ -570,7 +599,6 @@ def _build_authd_client(opts, context, force_local=False):
             role_id = role_id["role_id"]
         approle = VaultAppRole(role_id, secret_id)
         token_auth = VaultTokenAuth(cache=token_cache)
-        unauthd_client = VaultClient(**config["server"])
         auth = VaultAppRoleAuth(
             approle,
             unauthd_client,
@@ -578,17 +606,22 @@ def _build_authd_client(opts, context, force_local=False):
             cache=secret_id_cache,
             token_store=token_auth,
         )
-        client = AuthenticatedVaultClient(auth, **config["server"])
+        client = AuthenticatedVaultClient(
+            auth, session=unauthd_client.session, **config["server"]
+        )
     elif config["auth"]["method"] in ["token", "wrapped_token"]:
         token = _fetch_token(
             config,
             opts,
             token_cache,
+            unauthd_client,
             force_local=force_local,
             embedded_token=embedded_token,
         )
         auth = VaultTokenAuth(token=token, cache=token_cache)
-        client = AuthenticatedVaultClient(auth, **config["server"])
+        client = AuthenticatedVaultClient(
+            auth, session=unauthd_client.session, **config["server"]
+        )
 
     if client is not None:
         return client, config
@@ -611,14 +644,14 @@ def _get_connection_config(cbank, opts, context, force_local=False):
     config = config_cache.get()
     if config is not None:
         log.debug("Using cached Vault server connection configuration.")
-        return config, None
+        return config, None, VaultClient(**config["server"])
 
     log.debug("Using new Vault server connection configuration.")
     try:
         issue_params = parse_config(opts.get("vault", {}), validate=False)[
             "issue_params"
         ]
-        config = _query_master(
+        config, unwrap_client = _query_master(
             "get_config",
             opts,
             issue_params=issue_params or None,
@@ -631,7 +664,7 @@ def _get_connection_config(cbank, opts, context, force_local=False):
             "Got empty response to Vault config request. Falling back to vault.generate_token. "
             "Please update your master peer_run configuration."
         )
-        config = _query_master(
+        config, unwrap_client = _query_master(
             "generate_token",
             opts,
             ttl=issue_params.get("explicit_max_ttl"),
@@ -647,31 +680,35 @@ def _get_connection_config(cbank, opts, context, force_local=False):
         "server": config["server"],
     }
     config_cache.store(config)
-    return config, embedded_token
+    return config, embedded_token, unwrap_client
 
 
 def _use_local_config(opts):
     log.debug("Using Vault connection details from local config.")
     config = parse_config(opts.get("vault", {}))
     embedded_token = config["auth"].pop("token", None)
-    return {
-        "auth": config["auth"],
-        "cache": config["cache"],
-        "server": config["server"],
-    }, embedded_token
+    return (
+        {
+            "auth": config["auth"],
+            "cache": config["cache"],
+            "server": config["server"],
+        },
+        embedded_token,
+        VaultClient(**config["server"]),
+    )
 
 
-def _fetch_secret_id(config, opts, secret_id_cache, force_local=False):
-    def cache_or_fetch(config, opts, secret_id_cache):
+def _fetch_secret_id(config, opts, secret_id_cache, unwrap_client, force_local=False):
+    def cache_or_fetch(config, opts, secret_id_cache, unwrap_client):
         secret_id = secret_id_cache.get()
         if secret_id is not None:
             return secret_id
 
         log.debug("Fetching new Vault AppRole secret ID.")
-        secret_id = _query_master(
+        secret_id, _ = _query_master(
             "generate_secret_id",
             opts,
-            expected_server=config["server"],
+            unwrap_client=unwrap_client,
             unwrap_expected_creation_path=_get_expected_creation_path(
                 "secret_id", config
             ),
@@ -693,8 +730,7 @@ def _fetch_secret_id(config, opts, secret_id_cache, force_local=False):
         secret_id = config["auth"]["secret_id"]
         if isinstance(secret_id, dict):
             if secret_id.get("wrap_info"):
-                unauthd_client = VaultClient(**config["server"])
-                secret_id = unauthd_client.unwrap(
+                secret_id = unwrap_client.unwrap(
                     secret_id["wrap_info"]["token"],
                     expected_creation_path=_get_expected_creation_path(
                         "secret_id", config
@@ -714,11 +750,13 @@ def _fetch_secret_id(config, opts, secret_id_cache, force_local=False):
         raise salt.exceptions.SaltException("This code path should not be hit at all.")
 
     log.debug("Using secret_id issued by master.")
-    return cache_or_fetch(config, opts, secret_id_cache)
+    return cache_or_fetch(config, opts, secret_id_cache, unwrap_client)
 
 
-def _fetch_token(config, opts, token_cache, force_local=False, embedded_token=None):
-    def cache_or_fetch(config, opts, token_cache, embedded_token):
+def _fetch_token(
+    config, opts, token_cache, unwrap_client, force_local=False, embedded_token=None
+):
+    def cache_or_fetch(config, opts, token_cache, unwrap_client, embedded_token):
         token = token_cache.get(10)
         if token is not None:
             log.debug("Using cached token.")
@@ -729,10 +767,10 @@ def _fetch_token(config, opts, token_cache, force_local=False, embedded_token=No
 
         if not isinstance(token, VaultToken) or not token.is_valid(10):
             log.debug("Fetching new Vault token.")
-            token = _query_master(
+            token, _ = _query_master(
                 "generate_new_token",
                 opts,
-                expected_server=config["server"],
+                unwrap_client=unwrap_client,
                 unwrap_expected_creation_path=_get_expected_creation_path(
                     "token", config
                 ),
@@ -755,15 +793,13 @@ def _fetch_token(config, opts, token_cache, force_local=False, embedded_token=No
         token = None
         if isinstance(embedded_token, dict):
             if embedded_token.get("wrap_info"):
-                unauthd_client = VaultClient(**config["server"])
-                embedded_token = unauthd_client.unwrap(
+                embedded_token = unwrap_client.unwrap(
                     embedded_token["wrap_info"]["token"],
                     expected_creation_path=_get_expected_creation_path("token", config),
                 )["auth"]
             token = VaultToken(**embedded_token)
         elif config["auth"]["method"] == "wrapped_token":
-            unauthd_client = VaultClient(**config["server"])
-            embedded_token = unauthd_client.unwrap(
+            embedded_token = unwrap_client.unwrap(
                 embedded_token,
                 expected_creation_path=_get_expected_creation_path("token", config),
             )["auth"]
@@ -774,8 +810,7 @@ def _fetch_token(config, opts, token_cache, force_local=False, embedded_token=No
             token = token_cache.get()
             if token is None or embedded_token != str(token):
                 # lookup and verify raw token
-                client = VaultClient(**config["server"])
-                token_info = client.token_lookup(embedded_token, raw=True)
+                token_info = unwrap_client.token_lookup(embedded_token, raw=True)
                 if token_info.status_code != 200:
                     raise VaultException(
                         "Configured token cannot be verified. It is most likely expired or invalid."
@@ -792,7 +827,7 @@ def _fetch_token(config, opts, token_cache, force_local=False, embedded_token=No
         raise VaultException("Invalid configuration, missing token.")
 
     log.debug("Using token generated by master.")
-    return cache_or_fetch(config, opts, token_cache, embedded_token)
+    return cache_or_fetch(config, opts, token_cache, unwrap_client, embedded_token)
 
 
 def _query_master(
@@ -915,7 +950,7 @@ def _query_master(
         result.pop("wrap_info", None)
         result.pop("wrap_info_nested", None)
         result.pop("misc_data", None)
-        return result
+        return result, unwrap_client
 
     global __salt__  # pylint: disable=global-statement
     if not __salt__:
@@ -1209,10 +1244,13 @@ class VaultClient:
     Base class for authenticated client.
     """
 
-    def __init__(self, url, namespace=None, verify=None):
+    def __init__(self, url, namespace=None, verify=None, session=None):
         self.url = url
         self.namespace = namespace
         self.verify = verify
+        if session is None:
+            session = requests.Session()
+        self.session = session
 
     def delete(self, endpoint, wrap=False, raise_error=True, add_headers=None):
         """
@@ -1322,7 +1360,7 @@ class VaultClient:
             headers.update(add_headers)
         except TypeError:
             pass
-        res = requests.request(
+        res = self.session.request(
             method, url, headers=headers, json=payload, verify=self.verify, **kwargs
         )
         return res
@@ -1373,7 +1411,7 @@ class VaultClient:
             headers["X-Vault-Token"] = str(wrapped)
         else:
             payload["token"] = str(wrapped)
-        res = requests.request("POST", url, headers=headers, json=payload)
+        res = self.session.request("POST", url, headers=headers, json=payload)
         if not res.ok:
             self._raise_status(res)
         return res.json()
@@ -3015,11 +3053,13 @@ def make_request(
     def _get_client(token, vault_url, namespace, args):
         vault = get_authd_client(opts, context)
         if token is not None:
+            vault.session = requests.Session()
             vault.auth.cache = None
             vault.auth.token = VaultToken(
                 client_token=token, renewable=False, lease_duration=60, num_uses=1
             )
         if vault_url is not None:
+            vault.session = requests.Session()
             vault.url = vault_url
         if namespace is not None:
             vault.namespace = namespace

@@ -525,6 +525,40 @@ def kv_list_response():
 
 
 @pytest.fixture
+def session():
+    return Mock(spec=requests.Session)
+
+
+@pytest.fixture
+def req(session):
+    yield session.request
+
+
+@pytest.fixture
+def req_failed(req, request):
+    status_code = getattr(request, "param", 502)
+    req.return_value = _mock_json_response({"errors": ["foo"]}, status_code=status_code)
+    yield req
+
+
+@pytest.fixture
+def req_success(req):
+    req.return_value = _mock_json_response(None, status_code=204)
+    yield req
+
+
+@pytest.fixture(params=[200])
+def req_any(req, request):
+    data = {}
+    if request.param != 204:
+        data["data"] = {"foo": "bar"}
+    if request.param >= 400:
+        data["errors"] = ["foo"]
+    req.return_value = _mock_json_response(data, status_code=request.param)
+    yield req
+
+
+@pytest.fixture
 def req_unwrapping(wrapped_role_id_lookup_response, role_id_response, req):
     req.side_effect = (
         lambda method, url, **kwargs: _mock_json_response(
@@ -536,24 +570,32 @@ def req_unwrapping(wrapped_role_id_lookup_response, role_id_response, req):
     yield req
 
 
+@pytest.fixture(params=["data"])
+def unauthd_client_mock(server_config, request):
+    client = Mock(spec=vault.VaultClient)
+    client.get_config.return_value = server_config
+    client.unwrap.return_value = {request.param: {"bar": "baz"}}
+    yield client
+
+
 @pytest.fixture(params=[None, "valid_token"])
-def client(server_config, request):
+def client(server_config, request, session):
     if request.param is None:
-        return vault.VaultClient(**server_config)
+        return vault.VaultClient(**server_config, session=session)
     if request.param == "valid_token":
         token = request.getfixturevalue(request.param)
         auth = Mock(spec=vault.VaultTokenAuth)
         auth.is_renewable.return_value = True
         auth.is_valid.return_value = True
         auth.get_token.return_value = token
-        return vault.AuthenticatedVaultClient(auth, **server_config)
+        return vault.AuthenticatedVaultClient(auth, **server_config, session=session)
     if request.param == "invalid_token":
         token = request.getfixturevalue(request.param)
         auth = Mock(spec=vault.VaultTokenAuth)
         auth.is_renewable.return_value = True
         auth.is_valid.return_value = False
         auth.get_token.side_effect = vault.VaultAuthExpired
-        return vault.AuthenticatedVaultClient(auth, **server_config)
+        return vault.AuthenticatedVaultClient(auth, **server_config, session=session)
 
 
 @pytest.fixture
@@ -624,36 +666,6 @@ def kvv2(kvv2_info, kvv2_response, metadata_nocache, kv_list_response):
     client.delete.return_value = True
     with patch("salt.utils.vault.VaultKV.is_v2", Mock(return_value=kvv2_info)):
         yield vault.VaultKV(client, metadata_nocache)
-
-
-@pytest.fixture
-def req():
-    with patch("requests.request", autospec=True) as req:
-        yield req
-
-
-@pytest.fixture
-def req_failed(req, request):
-    status_code = getattr(request, "param", 502)
-    req.return_value = _mock_json_response({"errors": ["foo"]}, status_code=status_code)
-    yield req
-
-
-@pytest.fixture
-def req_success(req):
-    req.return_value = _mock_json_response(None, status_code=204)
-    yield req
-
-
-@pytest.fixture(params=[200])
-def req_any(req, request):
-    data = {}
-    if request.param != 204:
-        data["data"] = {"foo": "bar"}
-    if request.param >= 400:
-        data["errors"] = ["foo"]
-    req.return_value = _mock_json_response(data, status_code=request.param)
-    yield req
 
 
 def _mock_json_response(data, status_code=200, reason=""):
@@ -933,7 +945,7 @@ class TestGetAuthdClient:
             client, config = client
         client.token_valid.assert_called_with(10, remote=False)
         assert client.token_valid()
-        clear_cache.assert_called_once_with({}, {})
+        clear_cache.assert_called_once_with({}, ANY)
         assert build_invalid_first.call_count == 2
         if get_config:
             assert config == {
@@ -955,7 +967,7 @@ class TestGetAuthdClient:
             client, config = client
         client.token_valid.assert_called_with(10, remote=False)
         assert client.token_valid()
-        clear_cache.assert_called_once_with({}, {})
+        clear_cache.assert_called_once_with({}, ANY)
         assert build_exception_first.call_count == 2
         if get_config:
             assert config == {
@@ -1020,7 +1032,9 @@ class TestBuildAuthdClient:
 
     @pytest.fixture(autouse=True)
     def fetch_secret_id(self, secret_id_response):
-        with patch("salt.utils.vault._fetch_secret_id") as fetch_secret_id:
+        with patch(
+            "salt.utils.vault._fetch_secret_id", autospec=True
+        ) as fetch_secret_id:
             fetch_secret_id.return_value = vault.VaultSecretId(
                 **secret_id_response["data"]
             )
@@ -1028,7 +1042,7 @@ class TestBuildAuthdClient:
 
     @pytest.fixture(autouse=True)
     def fetch_token(self, token_auth):
-        with patch("salt.utils.vault._fetch_token") as fetch_token:
+        with patch("salt.utils.vault._fetch_token", autospec=True) as fetch_token:
             fetch_token.return_value = vault.VaultToken(**token_auth["auth"])
             yield fetch_token
 
@@ -1065,7 +1079,7 @@ class TestBuildAuthdClient:
         """
         Ensure credentials are only requested if necessary.
         """
-        conn_config.return_value = (test_remote_config, None)
+        conn_config.return_value = (test_remote_config, None, Mock())
         client, config = vault._build_authd_client({}, {})
         assert client.token_valid(remote=False)
         if test_remote_config["auth"]["method"] == "approle":
@@ -1106,14 +1120,9 @@ class TestGetConnectionConfig:
             yield local
 
     @pytest.fixture
-    def remote(self, test_remote_config):
+    def remote(self, test_remote_config, unauthd_client_mock):
         with patch("salt.utils.vault._query_master") as query:
-            query.return_value = test_remote_config
-            yield query
-
-    @pytest.fixture
-    def remote_unused(self):
-        with patch("salt.utils.vault._query_master") as query:
+            query.return_value = (test_remote_config, unauthd_client_mock)
             yield query
 
     @pytest.mark.parametrize(
@@ -1135,25 +1144,25 @@ class TestGetConnectionConfig:
         vault._get_connection_config("vault", {}, {}, force_local=force_local)
         local.assert_called_once()
 
-    def test_get_connection_config_cached(self, cached, remote_unused):
+    def test_get_connection_config_cached(self, cached, remote):
         """
         Ensure cache is respected
         """
-        res, embedded_token = vault._get_connection_config("vault", {}, {})
+        res, embedded_token, _ = vault._get_connection_config("vault", {}, {})
         assert res == cached.get()
         assert embedded_token is None
         cached.store.assert_not_called()
-        remote_unused.assert_not_called()
+        remote.assert_not_called()
 
     def test_get_connection_config_uncached(self, uncached, remote):
         """
         Ensure uncached configuration is treated as expected, especially
         that the embedded token is removed and returned separately.
         """
-        res, embedded_token = vault._get_connection_config("vault", {}, {})
+        res, embedded_token, _ = vault._get_connection_config("vault", {}, {})
         uncached.store.assert_called_once()
         remote.assert_called_once()
-        data = remote()
+        data, _ = remote()
         token = data["auth"].pop("token", None)
         assert res == data
         assert embedded_token == token
@@ -1198,17 +1207,12 @@ class TestFetchSecretId:
         return cache
 
     @pytest.fixture
-    def remote(self, secret_id_response, server_config):
+    def remote(self, secret_id_response, server_config, unauthd_client_mock):
         with patch("salt.utils.vault._query_master") as query:
-            query.return_value = {
-                "data": secret_id_response["data"],
-                "server": server_config,
-            }
-            yield query
-
-    @pytest.fixture
-    def remote_unused(self):
-        with patch("salt.utils.vault._query_master") as query:
+            query.return_value = (
+                {"data": secret_id_response["data"], "server": server_config},
+                unauthd_client_mock,
+            )
             yield query
 
     @pytest.fixture
@@ -1242,6 +1246,7 @@ class TestFetchSecretId:
         test_remote_config,
         secret_id,
         secret_id_response,
+        unauthd_client_mock,
     ):
         """
         Ensure the local configuration is used when
@@ -1251,63 +1256,85 @@ class TestFetchSecretId:
         Also ensure serialized or wrapped secret ids are resolved.
         """
         test_remote_config["auth"]["secret_id"] = secret_id
-        with patch("salt.utils.vault.VaultClient.unwrap") as unwrap:
-            unwrap.return_value = secret_id_response
-            res = vault._fetch_secret_id(
-                test_remote_config, {}, uncached, force_local=force_local
-            )
-            if not isinstance(secret_id, str):
-                if "wrap_info" not in secret_id:
-                    unwrap.assert_not_called()
-                else:
-                    secret_id = secret_id_response["data"]
-                assert res == vault.VaultSecretId(**secret_id)
+        unauthd_client_mock.unwrap.return_value = secret_id_response
+        res = vault._fetch_secret_id(
+            test_remote_config,
+            {},
+            uncached,
+            unauthd_client_mock,
+            force_local=force_local,
+        )
+        if not isinstance(secret_id, str):
+            if "wrap_info" not in secret_id:
+                unauthd_client_mock.unwrap.assert_not_called()
             else:
-                assert res == vault.VaultSecretId(
-                    secret_id=secret_id,
-                    secret_id_ttl=0,
-                    secret_id_num_uses=0,
-                )
-            uncached.get.assert_not_called()
-            uncached.store.assert_not_called()
+                secret_id = secret_id_response["data"]
+            assert res == vault.VaultSecretId(**secret_id)
+        else:
+            assert res == vault.VaultSecretId(
+                secret_id=secret_id,
+                secret_id_ttl=0,
+                secret_id_num_uses=0,
+            )
+        uncached.get.assert_not_called()
+        uncached.store.assert_not_called()
 
     @pytest.mark.parametrize("test_remote_config", ["approle"], indirect=True)
-    def test_fetch_secret_id_cached(self, test_remote_config, cached, remote_unused):
+    def test_fetch_secret_id_cached(
+        self, test_remote_config, cached, remote, unauthd_client_mock
+    ):
         """
         Ensure cache is respected
         """
-        res = vault._fetch_secret_id(test_remote_config, {}, cached)
+        res = vault._fetch_secret_id(
+            test_remote_config, {}, cached, unauthd_client_mock
+        )
         assert res == cached.get()
         cached.store.assert_not_called()
-        remote_unused.assert_not_called()
+        remote.assert_not_called()
 
     @pytest.mark.parametrize("test_remote_config", ["approle"], indirect=True)
-    def test_fetch_secret_id_uncached(self, test_remote_config, uncached, remote):
+    def test_fetch_secret_id_uncached(
+        self, test_remote_config, uncached, remote, unauthd_client_mock
+    ):
         """
         Ensure requested credentials are cached and returned as data objects
         """
-        res = vault._fetch_secret_id(test_remote_config, {}, uncached)
+        res = vault._fetch_secret_id(
+            test_remote_config, {}, uncached, unauthd_client_mock
+        )
         uncached.store.assert_called_once()
         remote.assert_called_once()
-        data = remote()
+        data, _ = remote()
         assert res == vault.VaultSecretId(**data["data"])
 
     @pytest.mark.parametrize("test_remote_config", ["approle"], indirect=True)
     def test_fetch_secret_id_uncached_single_use(
-        self, test_remote_config, uncached, remote, secret_id_response, server_config
+        self,
+        test_remote_config,
+        uncached,
+        remote,
+        secret_id_response,
+        server_config,
+        unauthd_client_mock,
     ):
         """
         Check that single-use secret ids are not cached
         """
         secret_id_response["data"]["secret_id_num_uses"] = 1
-        remote.return_value = {
-            "data": secret_id_response["data"],
-            "server": server_config,
-        }
-        res = vault._fetch_secret_id(test_remote_config, {}, uncached)
+        remote.return_value = (
+            {
+                "data": secret_id_response["data"],
+                "server": server_config,
+            },
+            unauthd_client_mock,
+        )
+        res = vault._fetch_secret_id(
+            test_remote_config, {}, uncached, unauthd_client_mock
+        )
         uncached.store.assert_not_called()
         remote.assert_called_once()
-        data = remote()
+        data, _ = remote()
         assert res == vault.VaultSecretId(**data["data"])
 
     @pytest.mark.usefixtures("local")
@@ -1317,7 +1344,13 @@ class TestFetchSecretId:
         [("local", False), ("master", True), (None, False), ("doesnotexist", False)],
     )
     def test_fetch_secret_id_config_location(
-        self, conf_location, called, remote, uncached, test_remote_config
+        self,
+        conf_location,
+        called,
+        remote,
+        uncached,
+        test_remote_config,
+        unauthd_client_mock,
     ):
         """
         Ensure config_location is respected.
@@ -1329,9 +1362,13 @@ class TestFetchSecretId:
                 salt.exceptions.InvalidConfigError,
                 match=".*config_location must be either local or master.*",
             ):
-                vault._fetch_secret_id(test_remote_config, opts, uncached)
+                vault._fetch_secret_id(
+                    test_remote_config, opts, uncached, unauthd_client_mock
+                )
         else:
-            vault._fetch_secret_id(test_remote_config, opts, uncached)
+            vault._fetch_secret_id(
+                test_remote_config, opts, uncached, unauthd_client_mock
+            )
             if called:
                 remote.assert_called()
             else:
@@ -1352,14 +1389,12 @@ class TestFetchToken:
         return cache
 
     @pytest.fixture
-    def remote(self, token_auth, server_config):
+    def remote(self, token_auth, server_config, unauthd_client_mock):
         with patch("salt.utils.vault._query_master", autospec=True) as query:
-            query.return_value = {"auth": token_auth["auth"], "server": server_config}
-            yield query
-
-    @pytest.fixture
-    def remote_unused(self):
-        with patch("salt.utils.vault._query_master") as query:
+            query.return_value = (
+                {"auth": token_auth["auth"], "server": server_config},
+                unauthd_client_mock,
+            )
             yield query
 
     @pytest.fixture
@@ -1393,6 +1428,7 @@ class TestFetchToken:
         force_local,
         uncached,
         test_remote_config,
+        unauthd_client_mock,
         token,
         token_auth,
         token_lookup_self_response,
@@ -1407,45 +1443,44 @@ class TestFetchToken:
         Also ensure only plain token metadata is cached.
         """
         test_remote_config["auth"].pop("token", None)
-        with patch("salt.utils.vault.VaultClient.unwrap") as unwrap:
-            unwrap.return_value = token_auth
-            with patch("salt.utils.vault.VaultClient.token_lookup") as token_lookup:
-                token_lookup.return_value = _mock_json_response(
-                    token_lookup_self_response, status_code=200
-                )
-                res = vault._fetch_token(
-                    test_remote_config,
-                    {},
-                    uncached,
-                    force_local=force_local,
-                    embedded_token=token,
-                )
-                if not isinstance(token, str):
-                    token_lookup.assert_not_called()
-                    if "wrap_info" not in token:
-                        unwrap.assert_not_called()
-                    else:
-                        token = token_auth["auth"]
-                    assert res == vault.VaultToken(**token)
-                elif test_remote_config["auth"]["method"] == "wrapped_token":
-                    unwrap.assert_called_once()
-                    token_lookup.assert_not_called()
-                    token = token_auth["auth"]
-                    assert res == vault.VaultToken(**token)
-                else:
-                    unwrap.assert_not_called()
-                    token_lookup.assert_called_once()
-                    assert res == vault.VaultToken(
-                        client_token=token,
-                        lease_duration=token_lookup_self_response["data"]["ttl"],
-                        **token_lookup_self_response["data"],
-                    )
-            if not isinstance(token, str):
-                uncached.get.assert_not_called()
-                uncached.store.assert_not_called()
+        unauthd_client_mock.unwrap.return_value = token_auth
+        unauthd_client_mock.token_lookup.return_value = _mock_json_response(
+            token_lookup_self_response, status_code=200
+        )
+        res = vault._fetch_token(
+            test_remote_config,
+            {},
+            uncached,
+            unauthd_client_mock,
+            force_local=force_local,
+            embedded_token=token,
+        )
+        if not isinstance(token, str):
+            unauthd_client_mock.token_lookup.assert_not_called()
+            if "wrap_info" not in token:
+                unauthd_client_mock.unwrap.assert_not_called()
             else:
-                uncached.get.assert_called_once()
-                uncached.store.assert_called_once()
+                token = token_auth["auth"]
+            assert res == vault.VaultToken(**token)
+        elif test_remote_config["auth"]["method"] == "wrapped_token":
+            unauthd_client_mock.unwrap.assert_called_once()
+            unauthd_client_mock.token_lookup.assert_not_called()
+            token = token_auth["auth"]
+            assert res == vault.VaultToken(**token)
+        else:
+            unauthd_client_mock.unwrap.assert_not_called()
+            unauthd_client_mock.token_lookup.assert_called_once()
+            assert res == vault.VaultToken(
+                client_token=token,
+                lease_duration=token_lookup_self_response["data"]["ttl"],
+                **token_lookup_self_response["data"],
+            )
+        if not isinstance(token, str):
+            uncached.get.assert_not_called()
+            uncached.store.assert_not_called()
+        else:
+            uncached.get.assert_called_once()
+            uncached.store.assert_called_once()
 
     @pytest.mark.parametrize(
         "test_remote_config", ["token", "token_changed"], indirect=True
@@ -1466,49 +1501,53 @@ class TestFetchToken:
         cached,
         test_remote_config,
         token_lookup_self_response,
+        unauthd_client_mock,
     ):
         """
         Test that only when the embedded plain token changed, the token metadata
         cache is written/refreshed.
         """
         embedded_token = test_remote_config["auth"].pop("token")
-        with patch("salt.utils.vault.VaultClient.token_lookup") as token_lookup:
-            token_lookup.return_value = _mock_json_response(
-                token_lookup_self_response, status_code=200
+        # with patch("salt.utils.vault.VaultClient.token_lookup") as token_lookup:
+        unauthd_client_mock.token_lookup.return_value = _mock_json_response(
+            token_lookup_self_response, status_code=200
+        )
+        res = vault._fetch_token(
+            test_remote_config,
+            {},
+            cached,
+            unauthd_client_mock,
+            force_local=force_local,
+            embedded_token=embedded_token,
+        )
+        if embedded_token == "test-token":
+            unauthd_client_mock.token_lookup.assert_not_called()
+            assert res == cached.get()
+        elif embedded_token == "test-token-changed":
+            unauthd_client_mock.token_lookup.assert_called_once()
+            assert res == vault.VaultToken(
+                lease_id=embedded_token,
+                lease_duration=token_lookup_self_response["data"]["ttl"],
+                **token_lookup_self_response["data"],
             )
-            res = vault._fetch_token(
-                test_remote_config,
-                {},
-                cached,
-                force_local=force_local,
-                embedded_token=embedded_token,
-            )
-            if embedded_token == "test-token":
-                token_lookup.assert_not_called()
-                assert res == cached.get()
-            elif embedded_token == "test-token-changed":
-                token_lookup.assert_called_once()
-                assert res == vault.VaultToken(
-                    lease_id=embedded_token,
-                    lease_duration=token_lookup_self_response["data"]["ttl"],
-                    **token_lookup_self_response["data"],
-                )
 
     @pytest.mark.parametrize(
         "test_remote_config", ["token", "wrapped_token"], indirect=True
     )
-    def test_fetch_token_cached(self, test_remote_config, cached, remote_unused):
+    def test_fetch_token_cached(
+        self, test_remote_config, cached, remote, unauthd_client_mock
+    ):
         """
         Ensure that cache is respected
         """
-        res = vault._fetch_token(test_remote_config, {}, cached)
+        res = vault._fetch_token(test_remote_config, {}, cached, unauthd_client_mock)
         assert res == cached.get()
         cached.store.assert_not_called()
-        remote_unused.assert_not_called()
+        remote.assert_not_called()
 
     @pytest.mark.parametrize("test_remote_config", ["token"], indirect=True)
     def test_fetch_token_uncached_embedded(
-        self, test_remote_config, uncached, remote_unused, token_auth
+        self, test_remote_config, uncached, remote, token_auth, unauthd_client_mock
     ):
         """
         Test that tokens that were sent with the connection configuration
@@ -1516,37 +1555,52 @@ class TestFetchToken:
         """
         test_remote_config["auth"].pop("token", None)
         res = vault._fetch_token(
-            test_remote_config, {}, uncached, embedded_token=token_auth["auth"]
+            test_remote_config,
+            {},
+            uncached,
+            unauthd_client_mock,
+            embedded_token=token_auth["auth"],
         )
         uncached.store.assert_called_once()
-        remote_unused.assert_not_called()
+        remote.assert_not_called()
         assert res == vault.VaultToken(**token_auth["auth"])
 
     @pytest.mark.parametrize("test_remote_config", ["token"], indirect=True)
-    def test_fetch_token_uncached(self, test_remote_config, uncached, remote):
+    def test_fetch_token_uncached(
+        self, test_remote_config, uncached, remote, unauthd_client_mock
+    ):
         """
         Test that tokens that were sent with the connection configuration
         are used when no cached token is available
         """
         test_remote_config["auth"].pop("token", None)
-        res = vault._fetch_token(test_remote_config, {}, uncached)
+        res = vault._fetch_token(test_remote_config, {}, uncached, unauthd_client_mock)
         uncached.store.assert_called_once()
         remote.assert_called_once()
-        assert res == vault.VaultToken(**remote("func", {})["auth"])
+        assert res == vault.VaultToken(**remote.return_value[0]["auth"])
 
     @pytest.mark.parametrize("test_remote_config", ["token"], indirect=True)
     def test_fetch_token_uncached_single_use(
-        self, test_remote_config, uncached, remote, token_auth, server_config
+        self,
+        test_remote_config,
+        uncached,
+        remote,
+        token_auth,
+        server_config,
+        unauthd_client_mock,
     ):
         """
         Check that single-use tokens are not cached
         """
         token_auth["auth"]["num_uses"] = 1
-        remote.return_value = {"auth": token_auth["auth"], "server": server_config}
-        res = vault._fetch_token(test_remote_config, {}, uncached)
+        remote.return_value = (
+            {"auth": token_auth["auth"], "server": server_config},
+            unauthd_client_mock,
+        )
+        res = vault._fetch_token(test_remote_config, {}, uncached, unauthd_client_mock)
         uncached.store.assert_not_called()
         remote.assert_called_once()
-        assert res == vault.VaultToken(**remote("func", {})["auth"])
+        assert res == vault.VaultToken(**remote.return_value[0]["auth"])
 
     @pytest.mark.usefixtures("local")
     @pytest.mark.parametrize("test_remote_config", ["token"], indirect=True)
@@ -1555,7 +1609,14 @@ class TestFetchToken:
         [("local", False), ("master", True), (None, False), ("doesnotexist", False)],
     )
     def test_fetch_token_config_location(
-        self, conf_location, called, remote, uncached, test_remote_config, token_auth
+        self,
+        conf_location,
+        called,
+        remote,
+        uncached,
+        test_remote_config,
+        token_auth,
+        unauthd_client_mock,
     ):
         """
         Ensure config_location is respected.
@@ -1569,11 +1630,19 @@ class TestFetchToken:
                 match=".*config_location must be either local or master.*",
             ):
                 vault._fetch_token(
-                    test_remote_config, opts, uncached, embedded_token=embedded_token
+                    test_remote_config,
+                    opts,
+                    uncached,
+                    unauthd_client_mock,
+                    embedded_token=embedded_token,
                 )
         else:
             vault._fetch_token(
-                test_remote_config, opts, uncached, embedded_token=embedded_token
+                test_remote_config,
+                opts,
+                uncached,
+                unauthd_client_mock,
+                embedded_token=embedded_token,
             )
             if called:
                 remote.assert_called()
@@ -1646,7 +1715,7 @@ def test_use_local_config(test_config, expected_config, expected_token):
     and pops an embedded token, if present
     """
     with patch("salt.utils.vault.parse_config", Mock(return_value=test_config)):
-        output, token = vault._use_local_config({})
+        output, token, _ = vault._use_local_config({})
         assert output == expected_config
         assert token == expected_token
 
@@ -1689,9 +1758,11 @@ class TestQueryMaster:
 
     @pytest.fixture(params=["data"])
     def unwrap_client(self, server_config, request):
-        with patch("salt.utils.vault.VaultClient") as unwrap_client:
-            unwrap_client.get_config.return_value = server_config
-            unwrap_client.unwrap.return_value = {request.param: {"bar": "baz"}}
+        with patch("salt.utils.vault.VaultClient", autospec=True) as unwrap_client:
+            unwrap_client.return_value.get_config.return_value = server_config
+            unwrap_client.return_value.unwrap.return_value = {
+                request.param: {"bar": "baz"}
+            }
             yield unwrap_client
 
     def test_query_master_loads_minion_mods_if_necessary(
@@ -1727,7 +1798,7 @@ class TestQueryMaster:
         minion - publish.runner
         master impersonating - saltutil.runner
         """
-        out = vault._query_master("func", opts)
+        out, _ = vault._query_master("func", opts)
         assert out == {"success": True}
         if expected == "saltutil":
             publish_runner.assert_not_called()
@@ -1813,6 +1884,7 @@ class TestQueryMaster:
         namespace,
         server_config,
         wrapped_role_id_response,
+        unauthd_client_mock,
         unwrap_client,
         publish_runner,
         saltutil_runner,
@@ -1826,11 +1898,9 @@ class TestQueryMaster:
             "server": {"url": url, "verify": verify, "namespace": namespace},
             "wrap_info": wrapped_role_id_response["wrap_info"],
         }
-        old_unwrap_client = Mock(spec=vault.VaultClient)
-        old_unwrap_client.get_config.return_value = server_config
         with pytest.raises(vault.VaultConfigExpired):
-            vault._query_master("func", opts, unwrap_client=old_unwrap_client)
-            old_unwrap_client.unwrap.assert_not_called()
+            vault._query_master("func", opts, unwrap_client=unauthd_client_mock)
+            unauthd_client_mock.unwrap.assert_not_called()
             unwrap_client.unwrap.assert_called_once()
 
     def test_query_master_verify_does_not_interfere_with_expected_server(
@@ -1867,7 +1937,7 @@ class TestQueryMaster:
         }
         opts["vault"] = {"server": {"verify": "/etc/ssl/certs.pem"}}
 
-        ret = vault._query_master("func", opts, expected_server=expected_server)
+        ret, _ = vault._query_master("func", opts, expected_server=expected_server)
         assert ret == expected_return
         assert "Mismatch of cached and reported server data detected" not in caplog.text
 
@@ -1879,6 +1949,7 @@ class TestQueryMaster:
         wrapped_role_id_response,
         role_id_response,
         unwrap_client,
+        unauthd_client_mock,
         caplog,
     ):
         """
@@ -1900,24 +1971,22 @@ class TestQueryMaster:
         }
         opts["vault"] = {"server": {"verify": "/etc/ssl/certs.pem"}}
 
-        unwrap_client = Mock(spec=vault.VaultClient)
-        unwrap_client.get_config.return_value = expected_server
-        unwrap_client.unwrap.return_value = role_id_response
-        with patch("salt.utils.vault.VaultClient") as vc:
-            ret = vault._query_master("func", opts, unwrap_client=unwrap_client)
-            vc.assert_not_called()
-            assert ret == {
-                "data": role_id_response["data"],
-                "server": expected_server,
-            }
+        unauthd_client_mock.get_config.return_value = expected_server
+        unauthd_client_mock.unwrap.return_value = role_id_response
+        ret, _ = vault._query_master("func", opts, unwrap_client=unauthd_client_mock)
+        unwrap_client.assert_not_called()
+        assert ret == {
+            "data": role_id_response["data"],
+            "server": expected_server,
+        }
 
     @pytest.mark.parametrize(
-        "unwrap_client,key",
+        "unauthd_client_mock,key",
         [
             ("data", "data"),
             ("auth", "auth"),
         ],
-        indirect=["unwrap_client"],
+        indirect=["unauthd_client_mock"],
     )
     def test_query_master_merges_unwrapped_result(
         self,
@@ -1925,7 +1994,7 @@ class TestQueryMaster:
         publish_runner,
         saltutil_runner,
         wrapped_role_id_response,
-        unwrap_client,
+        unauthd_client_mock,
         key,
         server_config,
     ):
@@ -1936,21 +2005,19 @@ class TestQueryMaster:
             "server": server_config,
             "wrap_info": wrapped_role_id_response["wrap_info"],
         }
-        out = vault._query_master("func", opts, unwrap_client=unwrap_client)
+        out, _ = vault._query_master("func", opts, unwrap_client=unauthd_client_mock)
         assert "wrap_info" not in out
         assert key in out
         assert out[key] == {"bar": "baz"}
 
-    @pytest.mark.parametrize(
-        "unwrap_client", ["data", "auth"], indirect=["unwrap_client"]
-    )
+    @pytest.mark.parametrize("unauthd_client_mock", ["data", "auth"], indirect=True)
     def test_query_master_merges_nested_unwrapped_result(
         self,
         opts,
         publish_runner,
         saltutil_runner,
         wrapped_role_id_response,
-        unwrap_client,
+        unauthd_client_mock,
         server_config,
     ):
         """
@@ -1962,7 +2029,7 @@ class TestQueryMaster:
             "wrap_info_nested": ["auth:role_id"],
             "auth": {"role_id": {"wrap_info": wrapped_role_id_response["wrap_info"]}},
         }
-        out = vault._query_master("func", opts, unwrap_client=unwrap_client)
+        out, _ = vault._query_master("func", opts, unwrap_client=unauthd_client_mock)
         assert "wrap_info_nested" not in out
         assert "wrap_info" not in out["auth"]["role_id"]
         assert out["auth"]["role_id"] == {"bar": "baz"}
@@ -1985,7 +2052,7 @@ class TestQueryMaster:
             "misc_data": {misc_data: "merged"},
         }
         publish_runner.return_value = saltutil_runner.return_value = deepcopy(response)
-        out = vault._query_master("func", opts)
+        out, _ = vault._query_master("func", opts)
         assert misc_data in out[key]
         assert "misc_data" not in out
         if misc_data in secret_id_response["data"]:
@@ -2011,7 +2078,7 @@ class TestQueryMaster:
             "misc_data": {misc_data: "merged"},
         }
         publish_runner.return_value = saltutil_runner.return_value = deepcopy(response)
-        out = vault._query_master("func", opts)
+        out, _ = vault._query_master("func", opts)
         nested_key = misc_data.split(":")[1]
         assert nested_key in out[key]["nested"]
         assert "misc_data" not in out
@@ -2069,13 +2136,13 @@ def test_vault_client_request_raw_kwargs_passthrough(client, req):
 
 
 @pytest.mark.parametrize("namespace", [None, "test-namespace"])
-def test_vault_client_request_raw_headers_namespace(namespace, server_config, req):
+@pytest.mark.parametrize("client", [None], indirect=True)
+def test_vault_client_request_raw_headers_namespace(namespace, client, req):
     """
     Test that namespace is present in the HTTP headers only if it was specified
     """
     if namespace is not None:
-        server_config.update({"namespace": namespace})
-    client = vault.VaultClient(**server_config)
+        client.namespace = namespace
 
     namespace_header = "X-Vault-Namespace"
     client.request_raw("GET", "secret/some/path")
@@ -2113,16 +2180,21 @@ def test_vault_client_request_raw_headers_additional(header, client, req):
         assert actual_header == "changed"
 
 
+@pytest.mark.usefixtures("req_failed")
 @pytest.mark.parametrize(
-    "req_failed", [400, 403, 404, 502, 401], indirect=["req_failed"]
+    "req_failed",
+    [400, 403, 404, 502, 401],
+    indirect=True,
 )
-def test_vault_client_request_raw_does_not_raise_http_exception(
-    req_failed, server_config
-):
+@pytest.mark.parametrize(
+    "client",
+    [None],
+    indirect=True,
+)
+def test_vault_client_request_raw_does_not_raise_http_exception(client):
     """
     request_raw should return the raw response object regardless of HTTP status code
     """
-    client = vault.VaultClient(**server_config)
     res = client.request_raw("GET", "secret/some/path")
     with pytest.raises(requests.exceptions.HTTPError):
         res.raise_for_status()
