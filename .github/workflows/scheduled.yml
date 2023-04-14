@@ -446,7 +446,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.11.0"
+      relenv-version: "0.11.1"
       python-version-linux: "3.10.11"
       python-version-macos: "3.10.11"
       python-version-windows: "3.10.11"
@@ -464,7 +464,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.11.0"
+      relenv-version: "0.11.1"
       python-version-linux: "3.10.11"
       python-version-macos: "3.10.11"
       python-version-windows: "3.10.11"
