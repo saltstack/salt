@@ -12,6 +12,7 @@ import pytest
 
 import salt.runners.vault as vault
 import salt.utils.vault as vaultutil
+import salt.utils.vault.client as vclient
 from tests.support.mock import ANY, Mock, patch
 
 pytestmark = [
@@ -52,7 +53,7 @@ def auth():
 
 @pytest.fixture
 def client(auth):
-    client_mock = Mock(vaultutil.AuthenticatedVaultClient)
+    client_mock = Mock(vclient.AuthenticatedVaultClient)
     client_mock.post.return_value = auth
     with patch("salt.runners.vault._get_master_client", Mock(return_value=client_mock)):
         yield client_mock

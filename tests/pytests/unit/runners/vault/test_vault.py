@@ -3,6 +3,7 @@ import pytest
 import salt.exceptions
 import salt.runners.vault as vault
 import salt.utils.vault as vaultutil
+import salt.utils.vault.client as vclient
 from tests.support.mock import ANY, MagicMock, Mock, patch
 
 
@@ -301,7 +302,7 @@ def pillar():
 @pytest.fixture
 def client():
     with patch("salt.runners.vault._get_master_client", autospec=True) as get_client:
-        client = Mock(vaultutil.AuthenticatedVaultClient)
+        client = Mock(vclient.AuthenticatedVaultClient)
         get_client.return_value = client
         yield client
 
@@ -977,7 +978,7 @@ def test_get_policies(config, expected, grains, pillar):
         MagicMock(return_value=(None, grains, pillar)),
     ):
         with patch(
-            "salt.utils.vault.expand_pattern_lists",
+            "salt.utils.vault.helpers.expand_pattern_lists",
             Mock(side_effect=lambda x, *args, **kwargs: [x]),
         ):
             res = vault._get_policies("test-minion", refresh_pillar=False)
@@ -1001,7 +1002,7 @@ def test_get_policies_does_not_render_pillar_unnecessarily(config, grains, pilla
     with patch("salt.utils.minions.get_minion_data", autospec=True) as get_minion_data:
         get_minion_data.return_value = (None, grains, None)
         with patch(
-            "salt.utils.vault.expand_pattern_lists",
+            "salt.utils.vault.helpers.expand_pattern_lists",
             Mock(side_effect=lambda x, *args, **kwargs: [x]),
         ):
             with patch("salt.pillar.get_pillar", autospec=True) as get_pillar:
@@ -1028,7 +1029,7 @@ def test_get_policies_for_nonexisting_minions(config, expected):
     with patch("salt.utils.minions.get_minion_data", autospec=True) as get_minion_data:
         get_minion_data.return_value = (None, None, None)
         with patch(
-            "salt.utils.vault.expand_pattern_lists",
+            "salt.utils.vault.helpers.expand_pattern_lists",
             Mock(side_effect=lambda x, *args, **kwargs: [x]),
         ):
             res = vault._get_policies("test-minion", refresh_pillar=False)
@@ -1070,7 +1071,7 @@ def test_get_metadata(metadata_patterns, expected, pillar):
     with patch("salt.utils.minions.get_minion_data", autospec=True) as get_minion_data:
         get_minion_data.return_value = (None, None, pillar)
         with patch(
-            "salt.utils.vault.expand_pattern_lists",
+            "salt.utils.vault.helpers.expand_pattern_lists",
             Mock(side_effect=lambda x, *args, **kwargs: [x]),
         ):
             res = vault._get_metadata(
@@ -1087,7 +1088,9 @@ def test_get_metadata_list():
     """
     with patch("salt.utils.minions.get_minion_data", autospec=True) as get_minion_data:
         get_minion_data.return_value = (None, None, None)
-        with patch("salt.utils.vault.expand_pattern_lists", autospec=True) as expand:
+        with patch(
+            "salt.utils.vault.helpers.expand_pattern_lists", autospec=True
+        ) as expand:
             expand.return_value = ["salt_role_foo", "salt_role_bar"]
             res = vault._get_metadata(
                 "test-minion",

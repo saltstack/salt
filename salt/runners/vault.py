@@ -21,6 +21,7 @@ import salt.utils.data
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.json
 import salt.utils.vault as vault
+import salt.utils.vault.helpers as vhelpers
 import salt.utils.versions
 from salt.defaults import NOT_SET
 from salt.exceptions import SaltInvocationError, SaltRunnerError
@@ -366,7 +367,8 @@ def _get_role_id(minion_id, issue_params, wrap):
     issue_params_parsed = _parse_issue_params(issue_params)
 
     if approle is False or (
-        vault._get_salt_run_type(__opts__) != vault.SALT_RUNTYPE_MASTER_IMPERSONATING
+        vhelpers._get_salt_run_type(__opts__)
+        != vhelpers.SALT_RUNTYPE_MASTER_IMPERSONATING
         and not _approle_params_match(approle, issue_params_parsed)
     ):
         # This means the role has to be created/updated first
@@ -450,9 +452,9 @@ def generate_secret_id(
         if approle_meta is False:
             raise vault.VaultNotFoundError(f"No AppRole found for minion {minion_id}.")
 
-        if vault._get_salt_run_type(
+        if vhelpers._get_salt_run_type(
             __opts__
-        ) != vault.SALT_RUNTYPE_MASTER_IMPERSONATING and not _approle_params_match(
+        ) != vhelpers.SALT_RUNTYPE_MASTER_IMPERSONATING and not _approle_params_match(
             approle_meta, issue_params
         ):
             _manage_approle(minion_id, issue_params)
@@ -857,7 +859,7 @@ def _get_policies(
     policies = []
     for pattern in _config("policies:assign"):
         try:
-            for expanded_pattern in vault.expand_pattern_lists(pattern, **mappings):
+            for expanded_pattern in vhelpers.expand_pattern_lists(pattern, **mappings):
                 policies.append(
                     expanded_pattern.format(**mappings).lower()  # Vault requirement
                 )
@@ -953,7 +955,7 @@ def _get_metadata(minion_id, metadata_patterns, refresh_pillar=None):
     for key, pattern in metadata_patterns.items():
         metadata[key] = []
         try:
-            for expanded_pattern in vault.expand_pattern_lists(pattern, **mappings):
+            for expanded_pattern in vhelpers.expand_pattern_lists(pattern, **mappings):
                 metadata[key].append(expanded_pattern.format(**mappings))
         except KeyError:
             log.warning(
