@@ -1,6 +1,7 @@
 import logging
 import pathlib
 import shutil
+import subprocess
 
 import pytest
 import yaml
@@ -284,11 +285,13 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         "netapi_enable_clients": ["local"],
         "external_auth": {"auto": {"saltdev": [".*"]}},
     }
+    test_user = False
     master_config = install_salt.config_path / "master"
     if master_config.exists():
         with open(master_config) as fp:
             data = yaml.safe_load(fp)
             if data and "user" in data:
+                test_user = True
                 # We are testing a different user, so we need to test the system
                 # configs, or else permissions will not be correct.
                 config_overrides["user"] = data["user"]
@@ -310,6 +313,15 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
                 config_overrides["api_pidfile"] = salt.config.DEFAULT_API_OPTS.get(
                     "api_pidfile"
                 )
+                # verify files where set with correct owner/group
+                verify_files = [
+                    pathlib.Path("/var", "log", "salt"),
+                    pathlib.Path("/etc", "salt", "master"),
+                    pathlib.Path("/var", "cache", "salt", "master"),
+                ]
+                for _file in verify_files:
+                    assert _file.owner() == "salt"
+                    assert _file.group() == "salt"
 
     if (platform.is_windows() or platform.is_darwin()) and install_salt.singlebin:
         start_timeout = 240
@@ -353,6 +365,16 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
             salt_pkg_install=install_salt,
         )
     factory.after_terminate(pytest.helpers.remove_stale_master_key, factory)
+    if test_user:
+        # Salt factories calls salt.utils.verify.verify_env
+        # which sets root perms on /var/log/salt since we are running
+        # the test suite as root, but we want to run Salt master as salt
+        # We ensure those permissions where set by the package earlier
+        shutil.chown(pathlib.Path("/var", "log", "salt"), "salt", "salt")
+        # The engines_dirs is created in .nox path. We need to set correct perms
+        # for the user running the Salt Master
+        subprocess.run(["chown", "-R", "salt:salt", str(CODE_DIR.parent / ".nox")])
+
     with factory.started(start_timeout=start_timeout):
         yield factory
 

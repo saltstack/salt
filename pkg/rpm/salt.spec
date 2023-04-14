@@ -162,6 +162,7 @@ cp -R $RPM_BUILD_DIR/build/salt %{buildroot}/opt/saltstack/
 
 # Add some directories
 install -d -m 0755 %{buildroot}%{_var}/log/salt
+install -d -m 0755 %{buildroot}%{_var}/run/salt
 install -d -m 0755 %{buildroot}%{_var}/cache/salt
 install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master
 install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/minion
@@ -263,6 +264,7 @@ rm -rf %{buildroot}
 %{_sysconfdir}/bash_completion.d/salt.bash
 %config(noreplace) %{fish_dir}/salt*.fish
 %dir %{_var}/cache/salt
+%dir %{_var}/run/salt
 %dir %{_var}/log/salt
 %doc %{_mandir}/man1/spm.1*
 %{_bindir}/spm
@@ -388,8 +390,7 @@ if [ $1 -lt 2 ]; then
     /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
   fi
 fi
-if test -d /var/run/salt; then chown -R salt:salt /var/run/salt; fi
-chown -R salt:salt /etc/salt /var/log/salt /opt/saltstack/salt/ /var/cache/salt/
+chown -R salt:salt /etc/salt /var/log/salt /opt/saltstack/salt/ /var/cache/salt/ /var/run/salt/
 
 %post syndic
 %systemd_post salt-syndic.service
