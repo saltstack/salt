@@ -1,4 +1,0 @@
-python_version_linux: "3.10.10"
-python_version_macos: "3.10.10"
-python_version_windows: "3.10.10"
-relenv_version: "0.10.1"

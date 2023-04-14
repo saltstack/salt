@@ -29,7 +29,9 @@ build = command_group(
 
 
 def _get_shared_constants():
-    shared_constants = tools.utils.REPO_ROOT / "cicd" / "shared-context.yml"
+    shared_constants = (
+        tools.utils.REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
+    )
     return yaml.safe_load(shared_constants.read_text())
 
 
@@ -75,7 +77,7 @@ def debian(
                 "Building the package from the source files but the arch to build for has not been given"
             )
             ctx.exit(1)
-        ctx.info(f"Building the package from the source files")
+        ctx.info("Building the package from the source files")
         shared_constants = _get_shared_constants()
         new_env = {
             "SALT_RELENV_VERSION": relenv_version or shared_constants["relenv_version"],
@@ -330,10 +332,12 @@ def onedir_dependencies(
     dest = pathlib.Path(package_name).resolve()
     create(dest, arch=arch, version=python_version)
 
+    env = os.environ.copy()
     install_args = ["-v"]
     if platform == "windows":
         python_bin = dest / "Scripts" / "python"
     else:
+        env["RELENV_BUILDENV"] = "1"
         python_bin = dest / "bin" / "python3"
         install_args.extend(
             [
@@ -360,9 +364,30 @@ def onedir_dependencies(
     )
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
-    ctx.run(str(python_bin), "-m", "pip", "install", "-U", "wheel")
-    ctx.run(str(python_bin), "-m", "pip", "install", "-U", "pip>=22.3.1,<23.0")
-    ctx.run(str(python_bin), "-m", "pip", "install", "-U", "setuptools>=65.6.3,<66")
+    ctx.run(
+        str(python_bin),
+        "-m",
+        "pip",
+        "install",
+        "-U",
+        "wheel",
+    )
+    ctx.run(
+        str(python_bin),
+        "-m",
+        "pip",
+        "install",
+        "-U",
+        "pip>=22.3.1,<23.0",
+    )
+    ctx.run(
+        str(python_bin),
+        "-m",
+        "pip",
+        "install",
+        "-U",
+        "setuptools>=65.6.3,<66",
+    )
     ctx.run(
         str(python_bin),
         "-m",
@@ -371,6 +396,7 @@ def onedir_dependencies(
         *install_args,
         "-r",
         str(requirements_file),
+        env=env,
     )
     extras_dir = dest / f"extras-{requirements_version}"
     extras_dir.mkdir()
@@ -409,7 +435,9 @@ def salt_onedir(
     onedir_env = pathlib.Path(package_name).resolve()
     _check_pkg_build_files_exist(ctx, onedir_env=onedir_env, salt_archive=salt_archive)
 
-    os.environ["USE_STATIC_REQUIREMENTS"] = "1"
+    env = os.environ.copy()
+    env["USE_STATIC_REQUIREMENTS"] = "1"
+    env["RELENV_BUILDENV"] = "1"
     if platform == "windows":
         ctx.run(
             "powershell.exe",
@@ -419,6 +447,7 @@ def salt_onedir(
             "-CICD",
             "-SourceTarball",
             str(salt_archive),
+            env=env,
         )
         ctx.run(
             "powershell.exe",
@@ -426,11 +455,12 @@ def salt_onedir(
             "-BuildDir",
             str(onedir_env),
             "-CICD",
+            env=env,
         )
     else:
-        os.environ["RELENV_PIP_DIR"] = "1"
+        env["RELENV_PIP_DIR"] = "1"
         pip_bin = onedir_env / "bin" / "pip3"
-        ctx.run(str(pip_bin), "install", str(salt_archive))
+        ctx.run(str(pip_bin), "install", str(salt_archive), env=env)
         if platform == "darwin":
 
             def errfn(fn, path, err):
