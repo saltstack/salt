@@ -163,11 +163,24 @@ cp -R $RPM_BUILD_DIR/build/salt %{buildroot}/opt/saltstack/
 # Add some directories
 install -d -m 0755 %{buildroot}%{_var}/log/salt
 install -d -m 0755 %{buildroot}%{_var}/cache/salt
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/minion
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master/jobs
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master/proc
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master/queues
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master/roots
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master/syndics
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master/tokens
 install -d -m 0755 %{buildroot}%{_sysconfdir}/salt
 install -d -m 0755 %{buildroot}%{_sysconfdir}/salt/master.d
 install -d -m 0755 %{buildroot}%{_sysconfdir}/salt/minion.d
 install -d -m 0755 %{buildroot}%{_sysconfdir}/salt/pki
 install -d -m 0700 %{buildroot}%{_sysconfdir}/salt/pki/master
+install -Dd -m 0750 %{buildroot}%{_sysconfdir}/salt/pki/master/minions
+install -Dd -m 0750 %{buildroot}%{_sysconfdir}/salt/pki/master/minions_autosign
+install -Dd -m 0750 %{buildroot}%{_sysconfdir}/salt/pki/master/minions_denied
+install -Dd -m 0750 %{buildroot}%{_sysconfdir}/salt/pki/master/minions_pre
+install -Dd -m 0750 %{buildroot}%{_sysconfdir}/salt/pki/master/minions_rejected
 install -d -m 0700 %{buildroot}%{_sysconfdir}/salt/pki/minion
 install -d -m 0700 %{buildroot}%{_sysconfdir}/salt/cloud.conf.d
 install -d -m 0700 %{buildroot}%{_sysconfdir}/salt/cloud.deploy.d
@@ -276,8 +289,21 @@ rm -rf %{buildroot}
 %{_bindir}/salt-run
 %{_unitdir}/salt-master.service
 %config(noreplace) %{_sysconfdir}/salt/master
-%dir %{_sysconfdir}/salt/master.d
+%dir %attr(0755, root, salt) %{_sysconfdir}/salt/master.d/
 %config(noreplace) %{_sysconfdir}/salt/pki/master
+%dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/
+%dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions/
+%dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions_autosign/
+%dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions_denied/
+%dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions_pre/
+%dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions_rejected/
+%dir %attr(0750, salt, salt) %{_var}/cache/salt/master/
+%dir %attr(0750, salt, salt) %{_var}/cache/salt/master/jobs/
+%dir %attr(0750, salt, salt) %{_var}/cache/salt/master/proc/
+%dir %attr(0750, salt, salt) %{_var}/cache/salt/master/queues/
+%dir %attr(0750, salt, salt) %{_var}/cache/salt/master/roots/
+%dir %attr(0750, salt, salt) %{_var}/cache/salt/master/syndics/
+%dir %attr(0750, salt, salt) %{_var}/cache/salt/master/tokens/
 
 %files minion
 %defattr(-,root,root)
@@ -293,6 +319,7 @@ rm -rf %{buildroot}
 %config(noreplace) %{_sysconfdir}/salt/proxy
 %config(noreplace) %{_sysconfdir}/salt/pki/minion
 %dir %{_sysconfdir}/salt/minion.d
+%dir %attr(0750, root, root) %{_var}/cache/salt/minion/
 
 %files syndic
 %doc %{_mandir}/man1/salt-syndic.1*
@@ -361,10 +388,8 @@ if [ $1 -lt 2 ]; then
     /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
   fi
 fi
-if test -d /var/cache/salt/master; then chown -R salt:salt /var/cache/salt/master; fi
 if test -d /var/run/salt; then chown -R salt:salt /var/run/salt; fi
-chown -R salt:salt /etc/salt /var/log/salt
-chown -R salt:salt /opt/saltstack/salt/
+chown -R salt:salt /etc/salt /var/log/salt /opt/saltstack/salt/ /var/cache/salt/
 
 %post syndic
 %systemd_post salt-syndic.service
