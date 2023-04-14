@@ -374,6 +374,10 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         # The engines_dirs is created in .nox path. We need to set correct perms
         # for the user running the Salt Master
         subprocess.run(["chown", "-R", "salt:salt", str(CODE_DIR.parent / ".nox")])
+        file_roots = pathlib.Path("/srv/", "salt")
+        pillar_roots = pathlib.Path("/srv/", "pillar")
+        for _dir in [file_roots, pillar_roots]:
+            subprocess.run(["chown", "-R", "salt:salt", str(_dir)])
 
     with factory.started(start_timeout=start_timeout):
         yield factory
@@ -415,6 +419,15 @@ def salt_minion(salt_factories, salt_master, install_salt):
         overrides=config_overrides,
         defaults=config_defaults,
     )
+    # Salt factories calls salt.utils.verify.verify_env
+    # which sets root perms on /srv/salt and /srv/pillar since we are running
+    # the test suite as root, but we want to run Salt master as salt
+    if not platform.is_windows() or not platform.is_darwin():
+        file_roots = pathlib.Path("/srv/", "salt")
+        pillar_roots = pathlib.Path("/srv/", "pillar")
+        for _dir in [file_roots, pillar_roots]:
+            subprocess.run(["chown", "-R", "salt:salt", str(_dir)])
+
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
     )
