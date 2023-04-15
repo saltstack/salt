@@ -1,7 +1,9 @@
 import logging
+import os
 import pathlib
 import shutil
 import subprocess
+import sys
 
 import pytest
 import yaml
@@ -457,10 +459,24 @@ def test_account(salt_call_cli):
 
 
 @pytest.fixture(scope="module")
-def salt_api(salt_master, install_salt):
+def extras_pypath():
+    extras_dir = "extras-{}.{}".format(*sys.version_info)
+    if platform.is_windows():
+        return pathlib.Path(
+            os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir, "bin"
+        )
+    elif platform.is_darwin():
+        return pathlib.Path(f"{os.sep}opt", "salt", extras_dir, "bin")
+    else:
+        return pathlib.Path(f"{os.sep}opt", "saltstack", "salt", extras_dir, "bin")
+
+
+@pytest.fixture(scope="module")
+def salt_api(salt_master, install_salt, extras_pypath):
     """
     start up and configure salt_api
     """
+    shutil.rmtree(str(extras_pypath.parent), ignore_errors=True)
     start_timeout = None
     if platform.is_windows() and install_salt.singlebin:
         start_timeout = 240
