@@ -291,7 +291,7 @@ rm -rf %{buildroot}
 %{_bindir}/salt-run
 %{_unitdir}/salt-master.service
 %config(noreplace) %{_sysconfdir}/salt/master
-%dir %attr(0755, root, salt) %{_sysconfdir}/salt/master.d/
+%dir %{_sysconfdir}/salt/master.d
 %config(noreplace) %{_sysconfdir}/salt/pki/master
 %dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/
 %dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions/
