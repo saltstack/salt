@@ -424,7 +424,7 @@ def salt_minion(salt_factories, salt_master, install_salt):
     # Salt factories calls salt.utils.verify.verify_env
     # which sets root perms on /srv/salt and /srv/pillar since we are running
     # the test suite as root, but we want to run Salt master as salt
-    if not platform.is_windows() or not platform.is_darwin():
+    if not platform.is_windows() and not platform.is_darwin():
         file_roots = pathlib.Path("/srv/", "salt")
         pillar_roots = pathlib.Path("/srv/", "pillar")
         for _dir in [file_roots, pillar_roots]:
@@ -466,9 +466,9 @@ def extras_pypath():
             os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir, "bin"
         )
     elif platform.is_darwin():
-        return pathlib.Path(f"{os.sep}opt", "salt", extras_dir, "bin")
+        return pathlib.Path(f"/opt", "salt", extras_dir, "bin")
     else:
-        return pathlib.Path(f"{os.sep}opt", "saltstack", "salt", extras_dir, "bin")
+        return pathlib.Path(f"/opt", "saltstack", "salt", extras_dir, "bin")
 
 
 @pytest.fixture(scope="module")
