@@ -15,6 +15,18 @@ in the [Salt Install Guide](https://docs.saltproject.io/salt/install-guide/en/la
 packages.
 
 
+## Caveat of salt-pip
+
+Salt ships with a wrapper script around pip called ``salt-pip``. Users should
+use ``salt-pip`` to install any python packages needed to extend Salt.
+``salt-pip`` installs python packages into an `extras-3.10` directory located
+in the root of the ondir directory, by setting the ``--target`` argument for
+pip. This ensures those packages remain installed when upgrading Salt. There is
+a known bug in pip when using `--target` where scripts and other non-python
+assets may not be cleaned up properly when un-installing.  The Salt team is
+working to resolve this bug in the up-stream pip project.
+
+
 ## Dropping support for Python 3.5 and 3.6
 
 Python 3.5 and 3.6 will no longer be supported by Salt since they
