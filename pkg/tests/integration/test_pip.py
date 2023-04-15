@@ -1,7 +1,8 @@
+import json
 import os
 import pathlib
+import shutil
 import subprocess
-import sys
 
 import pytest
 from pytestskipmarkers.utils import platform
@@ -18,7 +19,7 @@ def pypath():
 
 
 @pytest.fixture(autouse=True)
-def wipe_pydeps(install_salt):
+def wipe_pydeps(install_salt, extras_pypath):
     try:
         yield
     finally:
@@ -32,6 +33,7 @@ def wipe_pydeps(install_salt):
                 check=False,
                 universal_newlines=True,
             )
+        shutil.rmtree(extras_pypath, ignore_errors=True)
 
 
 def test_pip_install(salt_call_cli):
@@ -71,6 +73,21 @@ def test_pip_install_extras(install_salt, extras_pypath):
         stderr=subprocess.PIPE,
     )
     assert install_ret.returncode == 0
+
+    ret = subprocess.run(
+        install_salt.binary_paths["pip"] + ["list", "--format=json"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert ret.returncode == 0
+    pkgs_installed = json.loads(ret.stdout.strip().decode())
+    for pkg in pkgs_installed:
+        if pkg["name"] == dep:
+            break
+    else:
+        pytest.fail(
+            f"The {dep!r} package was not found installed. Packages Installed: {pkgs_installed}"
+        )
 
     show_ret = subprocess.run(
         install_salt.binary_paths["pip"] + ["show", dep],
