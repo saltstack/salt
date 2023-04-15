@@ -25,7 +25,7 @@ the user to the desired user to run the Salt Master.
 
 Since the Salt Master is running as a different user, you will need
 to ensure you set the owner and group to ``salt`` for your file_roots
-and pillar_roots.
+and pillar_roots(commonly `/srv/salt` and `/srv/pillar`).
 
 If you are running a Salt Master, Salt-Api and a Salt Minion on the same
 host using the new ``salt`` user and you install a pip dependency into
