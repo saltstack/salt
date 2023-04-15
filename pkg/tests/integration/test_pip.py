@@ -17,19 +17,6 @@ def pypath():
         return pathlib.Path(f"{os.sep}opt", "saltstack", "salt", "bin")
 
 
-@pytest.fixture
-def extras_pypath():
-    extras_dir = "extras-{}.{}".format(*sys.version_info)
-    if platform.is_windows():
-        return pathlib.Path(
-            os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir, "bin"
-        )
-    elif platform.is_darwin():
-        return pathlib.Path(f"{os.sep}opt", "salt", extras_dir, "bin")
-    else:
-        return pathlib.Path(f"{os.sep}opt", "saltstack", "salt", extras_dir, "bin")
-
-
 @pytest.fixture(autouse=True)
 def wipe_pydeps(install_salt):
     try:
@@ -37,7 +24,7 @@ def wipe_pydeps(install_salt):
     finally:
         # Note, uninstalling anything with an associated script will leave the script.
         # This is due to a bug in pip.
-        for dep in ["pep8", "PyGithub", "libvirt-python"]:
+        for dep in ["pep8", "PyGithub"]:
             subprocess.run(
                 install_salt.binary_paths["pip"] + ["uninstall", "-y", dep],
                 stdout=subprocess.PIPE,
