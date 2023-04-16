@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.destructive_test,
     pytest.mark.skip_if_not_root,
+    pytest.mark.slow_test,
 ]
 
 

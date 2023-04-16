@@ -168,18 +168,52 @@ def pytest_addoption(parser):
         ),
     )
     test_selection_group.addoption(
+        "--no-fast",
+        "--no-fast-tests",
+        dest="fast",
+        action="store_false",
+        default=True,
+        help="Don't run salt-fast tests. Default: %(default)s",
+    )
+    test_selection_group.addoption(
+        "--run-slow",
+        "--slow",
+        "--slow-tests",
+        dest="slow",
+        action="store_true",
+        default=False,
+        help="Run slow tests. Default: %(default)s",
+    )
+    test_selection_group.addoption(
+        "--core",
+        "--core-tests",
+        dest="core",
+        action="store_true",
+        default=False,
+        help=(
+            "Run salt-core tests. These tests test the engine of salt! "
+            "Default: %(default)s"
+        ),
+    )
+    test_selection_group.addoption(
+        "--flaky",
+        "--flaky-jail",
+        dest="flaky",
+        action="store_true",
+        default=False,
+        help=(
+            "Run salt-flaky jail tests. These tests are in jail for being flaky! "
+            "One day they will be made not flaky."
+            "Default: %(default)s"
+        ),
+    )
+    test_selection_group.addoption(
         "--proxy",
         "--proxy-tests",
         dest="proxy",
         action="store_true",
         default=False,
         help="Run proxy tests (DEPRECATED)",
-    )
-    test_selection_group.addoption(
-        "--run-slow",
-        action="store_true",
-        default=False,
-        help="Run slow tests.",
     )
 
     output_options_group = parser.getgroup("Output Options")
@@ -268,6 +302,16 @@ def pytest_configure(config):
         "markers",
         "slow_test: Mark test as being slow. These tests are skipped by default unless"
         " `--run-slow` is passed",
+    )
+    config.addinivalue_line(
+        "markers",
+        "core_test: Mark test as being core. These tests are skipped by default unless"
+        " `--core-tests` is passed",
+    )
+    config.addinivalue_line(
+        "markers",
+        "flaky_jail: Mark test as being jlaky. These tests are skipped by default unless"
+        " `--flaky-jail` is passed",
     )
     config.addinivalue_line(
         "markers",
@@ -534,10 +578,34 @@ def pytest_runtest_setup(item):
         item._skipped_by_mark = True
         pytest.skip(PRE_PYTEST_SKIP_REASON)
 
+    if item.get_closest_marker("core_test"):
+        if not item.config.getoption("--core-tests"):
+            raise pytest.skip.Exception(
+                "Core tests are disabled, pass '--core-tests' to enable them.",
+                _use_item_location=True,
+            )
     if item.get_closest_marker("slow_test"):
-        if item.config.getoption("--run-slow") is False:
-            item._skipped_by_mark = True
-            pytest.skip("Slow tests are disabled!")
+        if not item.config.getoption("--slow-tests"):
+            raise pytest.skip.Exception(
+                "Slow tests are disabled, pass '--run-slow' to enable them.",
+                _use_item_location=True,
+            )
+    if item.get_closest_marker("flaky_jail"):
+        if not item.config.getoption("--flaky-jail"):
+            raise pytest.skip.Exception(
+                "flaky jail tests are disabled, pass '--flaky-jail' to enable them.",
+                _use_item_location=True,
+            )
+    if (
+        not item.get_closest_marker("slow_test")
+        and not item.get_closest_marker("core_test")
+        and not item.get_closest_marker("flaky_jail")
+    ):
+        if not item.config.getoption("--no-fast-tests"):
+            raise pytest.skip.Exception(
+                "Fast tests are disabled, dont pass '--no-fast-tests' to enable them.",
+                _use_item_location=True,
+            )
 
     requires_sshd_server_marker = item.get_closest_marker("requires_sshd_server")
     if requires_sshd_server_marker is not None:
