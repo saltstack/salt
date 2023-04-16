@@ -1,4 +1,5 @@
 <%- set prepare_workflow_salt_version_input = "${{ inputs.salt-version }}" %>
+<%- set prepare_workflow_skip_pkg_download_test_suite = "${{ inputs.skip-salt-pkg-download-test-suite && ' --skip-pkg-download-tests' || '' }}" %>
 <%- set gh_environment = "release" %>
 <%- extends 'layout.yml.jinja' %>
 
@@ -22,6 +23,10 @@ on:
         description: >
           The Salt version to get from staging to publish the release.
           (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+      skip-salt-pkg-download-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages download test suite.
 
 <%- endblock on %>
 

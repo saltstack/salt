@@ -22,6 +22,10 @@ on:
         type: boolean
         default: false
         description: Skip running the Salt packages test suite.
+      skip-salt-pkg-download-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages download test suite.
 
 env:
   COLUMNS: 190
@@ -240,7 +244,7 @@ jobs:
       - name: Define Jobs
         id: define-jobs
         run: |
-          tools ci define-jobs${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }} ${{ github.event_name }} changed-files.json
+          tools ci define-jobs${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}${{ inputs.skip-salt-pkg-download-test-suite && ' --skip-pkg-download-tests' || '' }} ${{ github.event_name }} changed-files.json
 
       - name: Check Defined Jobs
         run: |
@@ -2082,6 +2086,7 @@ jobs:
 
   test-linux-pkg-downloads:
     name: Test Linux Package Downloads
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - publish-repositories
@@ -2097,6 +2102,7 @@ jobs:
 
   test-macos-pkg-downloads:
     name: Test macOS Package Downloads
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     needs:
       - prepare-workflow
       - publish-repositories
@@ -2111,6 +2117,7 @@ jobs:
     secrets: inherit
 
   test-windows-pkg-downloads:
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     name: Test Windows Package Downloads
     needs:
       - prepare-workflow

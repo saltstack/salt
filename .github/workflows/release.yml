@@ -14,6 +14,10 @@ on:
         description: >
           The Salt version to get from staging to publish the release.
           (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+      skip-salt-pkg-download-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages download test suite.
 
 env:
   COLUMNS: 190
@@ -153,6 +157,7 @@ jobs:
 
   test-linux-pkg-downloads:
     name: Test Linux Package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
       - publish-repositories
@@ -169,6 +174,7 @@ jobs:
 
   test-macos-pkg-downloads:
     name: Test macOS Package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
       - prepare-workflow
       - publish-repositories
@@ -184,6 +190,7 @@ jobs:
     secrets: inherit
 
   test-windows-pkg-downloads:
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     name: Test Windows Package Downloads
     needs:
       - prepare-workflow

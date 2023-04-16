@@ -3,6 +3,7 @@
 <%- set prepare_workflow_if_check = prepare_workflow_if_check|default(False) %>
 <%- set prepare_workflow_skip_test_suite = prepare_workflow_skip_test_suite|default("") %>
 <%- set prepare_workflow_skip_pkg_test_suite = prepare_workflow_skip_pkg_test_suite|default("") %>
+<%- set prepare_workflow_skip_pkg_download_test_suite = prepare_workflow_skip_pkg_download_test_suite|default("") %>
 <%- set prepare_workflow_salt_version_input = prepare_workflow_salt_version_input|default("") %>
 <%- set skip_test_coverage_check = skip_test_coverage_check|default("${{ github.event_name == 'pull_request' }}") %>
 <%- set skip_junit_reports_check = skip_junit_reports_check|default("${{ github.event_name == 'pull_request' }}") %>
@@ -260,7 +261,7 @@ jobs:
       - name: Define Jobs
         id: define-jobs
         run: |
-          tools ci define-jobs<{ prepare_workflow_skip_test_suite }><{ prepare_workflow_skip_pkg_test_suite }> ${{ github.event_name }} changed-files.json
+          tools ci define-jobs<{ prepare_workflow_skip_test_suite }><{ prepare_workflow_skip_pkg_test_suite }><{ prepare_workflow_skip_pkg_download_test_suite }> ${{ github.event_name }} changed-files.json
 
       - name: Check Defined Jobs
         run: |
