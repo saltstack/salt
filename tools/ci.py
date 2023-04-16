@@ -229,6 +229,9 @@ def runner_types(ctx: Context, event_name: str):
         "skip_pkg_tests": {
             "help": "Skip running the Salt Package tests",
         },
+        "skip_pkg_download_tests": {
+            "help": "Skip running the Salt Package download tests",
+        },
         "changed_files": {
             "help": (
                 "Path to '.json' file containing the payload of changed files "
@@ -243,6 +246,7 @@ def define_jobs(
     changed_files: pathlib.Path,
     skip_tests: bool = False,
     skip_pkg_tests: bool = False,
+    skip_pkg_download_tests: bool = False,
 ):
     """
     Set GH Actions 'jobs' output to know which jobs should run.
@@ -267,6 +271,7 @@ def define_jobs(
         "lint": True,
         "test": True,
         "test-pkg": True,
+        "test-pkg-download": True,
         "prepare-release": True,
         "build-docs": True,
         "build-source-tarball": True,
@@ -279,6 +284,8 @@ def define_jobs(
         jobs["test"] = False
     if skip_pkg_tests:
         jobs["test-pkg"] = False
+    if skip_pkg_download_tests:
+        jobs["test-pkg-download"] = False
 
     if event_name != "pull_request":
         # In this case, all defined jobs should run
@@ -345,7 +352,12 @@ def define_jobs(
             wfh.write("De-selecting the 'test-pkg' job.\n")
         jobs["test-pkg"] = False
 
-    if not jobs["test"] and not jobs["test-pkg"]:
+    if jobs["test-pkg-download"] and required_pkg_test_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'test-pkg-download' job.\n")
+        jobs["test-pkg-download"] = False
+
+    if not jobs["test"] and not jobs["test-pkg"] and not jobs["test-pkg-download"]:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             for job in (
                 "build-deps-onedir",
