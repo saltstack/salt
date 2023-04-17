@@ -4,6 +4,7 @@ from salt.utils.vault.exceptions import (
     VaultException,
     VaultInvocationError,
     VaultPermissionDeniedError,
+    VaultUnsupportedOperationError,
 )
 
 log = logging.getLogger(__name__)
@@ -71,23 +72,25 @@ class VaultKV:
                     data[key] = value
             return data
 
-        def patch_in_memory():
+        def patch_in_memory(path, data):
             current = self.read(path)
             updated = apply_json_merge_patch(current, data)
             return self.write(path, updated)
 
         v2_info = self.is_v2(path)
         if not v2_info["v2"]:
-            return patch_in_memory()
+            return patch_in_memory(path, data)
+
         path = v2_info["data"]
-        data = {"data": data}
+        payload = {"data": data}
         add_headers = {"Content-Type": "application/merge-patch+json"}
         try:
-            return self.client.patch(path, payload=data, add_headers=add_headers)
+            return self.client.patch(path, payload=payload, add_headers=add_headers)
         except VaultPermissionDeniedError:
             log.warning("Failed patching secret, is the `patch` capability set?")
-            # in case the `patch` capability might not have been set
-            return patch_in_memory()
+        except VaultUnsupportedOperationError:
+            pass
+        return patch_in_memory(path, data)
 
     def delete(self, path, versions=None):
         """

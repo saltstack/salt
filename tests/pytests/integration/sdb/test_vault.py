@@ -45,6 +45,40 @@ def pillar_tree(vault_salt_master, vault_salt_minion):
 
 
 @pytest.fixture(scope="class")
+def vault_master_config(vault_port):
+    return {
+        "open_mode": True,
+        "peer_run": {
+            ".*": [
+                "vault.get_config",
+                "vault.generate_new_token",
+            ],
+        },
+        "vault": {
+            "auth": {
+                "token": "testsecret",
+            },
+            "issue": {
+                "token": {
+                    "params": {
+                        "num_uses": 0,
+                    }
+                }
+            },
+            "policies": {
+                "assign": [
+                    "salt_minion",
+                ]
+            },
+            "server": {
+                "url": f"http://127.0.0.1:{vault_port}",
+            },
+        },
+        "minion_data_cache": True,
+    }
+
+
+@pytest.fixture(scope="class")
 def vault_salt_master(salt_factories, vault_port, vault_master_config):
     factory = salt_factories.salt_master_daemon(
         "vault-sdbmaster", defaults=vault_master_config
@@ -54,11 +88,18 @@ def vault_salt_master(salt_factories, vault_port, vault_master_config):
 
 
 @pytest.fixture(scope="class")
-def vault_salt_minion(vault_salt_master):
+def sdb_profile():
+    return {}
+
+
+@pytest.fixture(scope="class")
+def vault_salt_minion(vault_salt_master, sdb_profile):
     assert vault_salt_master.is_running()
+    config = {"open_mode": True, "grains": {}, "sdbvault": {"driver": "vault"}}
+    config["sdbvault"].update(sdb_profile)
     factory = vault_salt_master.salt_minion_daemon(
         random_string("vault-sdbminion", uppercase=False),
-        defaults={"open_mode": True, "grains": {}, "sdbvault": {"driver": "vault"}},
+        defaults=config,
     )
     with factory.started():
         # Sync All
@@ -130,39 +171,6 @@ def test_sdb_runner(salt_run_cli):
 
 @pytest.mark.usefixtures("pillar_tree")
 class TestSDB:
-    @pytest.fixture(scope="class")
-    def vault_master_config(self, vault_port):
-        return {
-            "open_mode": True,
-            "peer_run": {
-                ".*": [
-                    "vault.get_config",
-                    "vault.generate_new_token",
-                ],
-            },
-            "vault": {
-                "auth": {
-                    "token": "testsecret",
-                },
-                "issue": {
-                    "token": {
-                        "params": {
-                            "num_uses": 0,
-                        }
-                    }
-                },
-                "policies": {
-                    "assign": [
-                        "salt_minion",
-                    ]
-                },
-                "server": {
-                    "url": f"http://127.0.0.1:{vault_port}",
-                },
-            },
-            "minion_data_cache": True,
-        }
-
     def test_sdb(self, vault_salt_call_cli):
         ret = vault_salt_call_cli.run(
             "sdb.set", uri="sdb://sdbvault/secret/test/test_sdb/foo", value="bar"
@@ -267,3 +275,37 @@ class TestGetOrSetHashSingleUseToken:
         assert ret.returncode == 0
         assert ret.data
         assert ret.data == result
+
+
+class TestSDBSetPatch:
+    @pytest.fixture(scope="class")
+    def sdb_profile(self):
+        return {"patch": True}
+
+    def test_sdb_set(self, vault_salt_call_cli):
+        # Write to an empty path
+        ret = vault_salt_call_cli.run(
+            "sdb.set", uri="sdb://sdbvault/secret/test/test_sdb_patch/foo", value="bar"
+        )
+        assert ret.returncode == 0
+        assert ret.data is True
+        # Write to an existing path, this should not overwrite the previous key
+        ret = vault_salt_call_cli.run(
+            "sdb.set", uri="sdb://sdbvault/secret/test/test_sdb_patch/bar", value="baz"
+        )
+        assert ret.returncode == 0
+        assert ret.data is True
+        # Ensure the first value is still there
+        ret = vault_salt_call_cli.run(
+            "sdb.get", uri="sdb://sdbvault/secret/test/test_sdb_patch/foo"
+        )
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data == "bar"
+        # Ensure the second value was written
+        ret = vault_salt_call_cli.run(
+            "sdb.get", uri="sdb://sdbvault/secret/test/test_sdb_patch/bar"
+        )
+        assert ret.returncode == 0
+        assert ret.data
+        assert ret.data == "baz"
