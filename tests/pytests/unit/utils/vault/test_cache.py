@@ -67,22 +67,43 @@ def uncached(cache_factory):
 
 @pytest.mark.parametrize("ckey", ["token", None])
 @pytest.mark.parametrize("connection", [True, False])
-def test_clear_cache(ckey, connection, cache_factory):
+@pytest.mark.parametrize("session", [True, False])
+def test_clear_cache(ckey, connection, session, cache_factory):
     """
     Make sure clearing cache works as expected, allowing for
     connection-scoped cache and global cache that survives
     a configuration refresh
     """
     cbank = "vault"
-    if connection:
+    if connection or session:
         cbank += "/connection"
+    if session:
+        cbank += "/session"
     context = {cbank: {"token": "fake_token"}}
-    vault.clear_cache({}, context, ckey=ckey, connection=connection)
+    vault.clear_cache({}, context, ckey=ckey, connection=connection, session=session)
     cache_factory.return_value.flush.assert_called_once_with(cbank, ckey)
     if ckey:
         assert ckey not in context[cbank]
     else:
         assert cbank not in context
+
+
+@pytest.mark.parametrize("ckey", ["token", None])
+@pytest.mark.parametrize("connection", [True, False])
+@pytest.mark.parametrize("session", [True, False])
+def test_clear_cache_clears_client_from_context(
+    ckey, connection, session, cache_factory
+):
+    """
+    Ensure the cached client is removed when the connection cache is altered only
+    """
+    cbank = "vault/connection"
+    context = {cbank: {vcache.CLIENT_CKEY: "foo"}}
+    vault.clear_cache({}, context, ckey=ckey, connection=connection, session=session)
+    if session or (not connection and ckey):
+        assert vcache.CLIENT_CKEY in context.get(cbank, {})
+    else:
+        assert vcache.CLIENT_CKEY not in context.get(cbank, {})
 
 
 @pytest.mark.parametrize("connection", [True, False])

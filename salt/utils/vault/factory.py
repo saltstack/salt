@@ -81,7 +81,7 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
         config["auth"]["token_lifecycle"]["minimum_ttl"] or 0, remote=False
     ):
         log.debug("Deleting cache and requesting new authentication credentials")
-        vcache.clear_cache(opts, context)
+        vcache.clear_cache(opts, context, force_local=force_local)
         client, config = _build_authd_client(opts, context, force_local=force_local)
         if not client.token_valid(
             config["auth"]["token_lifecycle"]["minimum_ttl"] or 0, remote=False

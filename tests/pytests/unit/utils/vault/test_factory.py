@@ -184,7 +184,7 @@ class TestGetAuthdClient:
             client, config = client
         client.token_valid.assert_called_with(10, remote=False)
         assert client.token_valid()
-        clear_cache.assert_called_once_with({}, ANY)
+        clear_cache.assert_called_once_with({}, ANY, force_local=False)
         assert build_invalid_first.call_count == 2
         if get_config:
             assert config == {
@@ -206,7 +206,7 @@ class TestGetAuthdClient:
             client, config = client
         client.token_valid.assert_called_with(10, remote=False)
         assert client.token_valid()
-        clear_cache.assert_called_once_with({}, ANY)
+        clear_cache.assert_called_once_with({}, ANY, force_local=False)
         assert build_exception_first.call_count == 2
         if get_config:
             assert config == {

@@ -10,20 +10,53 @@ from salt.utils.vault.factory import CLIENT_CKEY
 log = logging.getLogger(__name__)
 
 
-def clear_cache(opts, context, ckey=None, connection=True, session=False):
+def clear_cache(
+    opts, context, ckey=None, connection=True, session=False, force_local=False
+):
     """
-    Clears the connection cache.
+    Clears the Vault cache.
+
+    It is organized in a hierarchy: ``/vault/connection/session``
+    The master keeps a separate copy of the above per minion
+    in ``minions/<minion_id>``.
+
+    opts
+        Pass ``__opts__``.
+
+    context
+        Pass ``__context__``.
+
+    ckey
+        Only clear this cache key instead of the whole cache bank.
+
+    connection
+        Only clear the cached data scoped to a connection. This includes
+        configuration, auth credentials and leases. Defaults to true.
+
+    session
+        Only clear the cached data scoped to a session. This only includes
+        leases, not configuration/auth credentials. Defaults to false.
+        Setting this to true will keep the connection cache, regardless
+        of ``connection``.
+
+    force_local
+        Required on the master when the runner is issuing credentials during
+        pillar compilation. Instructs the cache to use the ``/vault`` cache bank,
+        regardless of determined run type. Defaults to false and should not
+        be set by anything other than the runner.
     """
-    # Ensure the active client gets recreated after clearing the cache
-    context.pop(CLIENT_CKEY, None)
     cbank = _get_cache_bank(
-        opts, connection=connection, session=session and not connection
+        opts, connection=connection, session=session, force_local=force_local
     )
     if cbank in context:
         if ckey is None:
             context.pop(cbank)
         else:
             context[cbank].pop(ckey, None)
+            if connection and not session:
+                # Ensure the active client gets recreated after altering the connection cache
+                context[cbank].pop(CLIENT_CKEY, None)
+
     # also remove sub-banks from context to mimic cache behavior
     if ckey is None:
         for bank in list(context):
@@ -32,6 +65,8 @@ def clear_cache(opts, context, ckey=None, connection=True, session=False):
     cache = salt.cache.factory(opts)
     if cache.contains(cbank, ckey):
         return cache.flush(cbank, ckey)
+
+    # In case the cache driver was overridden for the Vault integration
     local_opts = copy.copy(opts)
     opts["cache"] = "localfs"
     cache = salt.cache.factory(local_opts)
