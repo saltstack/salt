@@ -1038,97 +1038,34 @@ class TestQueryMaster:
         verify,
         namespace,
         server_config,
-        publish_runner,
-        saltutil_runner,
-        unwrap_client,
-    ):
-        """
-        Ensure that VaultConfigExpired is raised when expected_server is passed
-        and differs from what the server reports. Also ensure that the unwrapping
-        still takes place (for security reasons) and with the correct server
-        configuration.
-        """
-        publish_runner.return_value = saltutil_runner.return_value = {
-            "server": {"url": url, "verify": verify, "namespace": namespace}
-        }
-        with pytest.raises(vault.VaultConfigExpired):
-            factory._query_master("func", opts, expected_server=server_config)
-            unwrap_client.unwrap.assert_called_once()
-
-    @pytest.mark.parametrize(
-        "url,verify,namespace",
-        [
-            ("new-url", None, None),
-            ("http://127.0.0.1:8200", "/etc/ssl/certs.pem", None),
-            ("http://127.0.0.1:8200", None, "test-namespace"),
-        ],
-    )
-    def test_query_master_invalidates_cache_when_unwrap_client_has_different_server_config(
-        self,
-        opts,
-        url,
-        verify,
-        namespace,
-        server_config,
         wrapped_role_id_response,
         unauthd_client_mock,
         unwrap_client,
         publish_runner,
         saltutil_runner,
-    ):
-        """
-        Ensure that VaultConfigExpired is raised when a passed unwrap client has a different
-        configuration than the server reports. Also ensure that the unwrapping still takes
-        place (for security reasons) and with the correct server configuration.
-        """
-        publish_runner.return_value = saltutil_runner.return_value = {
-            "server": {"url": url, "verify": verify, "namespace": namespace},
-            "wrap_info": wrapped_role_id_response["wrap_info"],
-        }
-        with pytest.raises(vault.VaultConfigExpired):
-            factory._query_master("func", opts, unwrap_client=unauthd_client_mock)
-            unauthd_client_mock.unwrap.assert_not_called()
-            unwrap_client.unwrap.assert_called_once()
-
-    def test_query_master_verify_does_not_interfere_with_expected_server(
-        self,
-        opts,
-        publish_runner,
-        saltutil_runner,
         caplog,
     ):
         """
-        Ensure that a locally configured verify parameter is inserted before
-        checking if there is a config mismatch.
+        Ensure that VaultConfigExpired is raised when a passed unwrap client has a different
+        server configuration than the master reports. Also ensure that the unwrapping
+        still takes place (for security reasons) and with the correct server configuration.
         """
-        publish_runner.return_value = saltutil_runner.return_value = {
-            "server": {
-                "url": "http://127.0.0.1:8200",
-                "verify": None,
-                "namespace": None,
-            },
-            "data": {"foo": "bar"},
+        ret = {
+            "server": {"url": url, "verify": verify, "namespace": namespace},
+            "wrap_info": wrapped_role_id_response["wrap_info"],
         }
-        expected_server = {
-            "url": "http://127.0.0.1:8200",
-            "verify": "/etc/ssl/certs.pem",
-            "namespace": None,
-        }
-        expected_return = {
-            "server": {
-                "url": "http://127.0.0.1:8200",
-                "verify": "/etc/ssl/certs.pem",
-                "namespace": None,
-            },
-            "data": {"foo": "bar"},
-        }
-        opts["vault"] = {"server": {"verify": "/etc/ssl/certs.pem"}}
+        publish_runner.return_value = saltutil_runner.return_value = ret
+        with pytest.raises(vault.VaultConfigExpired):
+            factory._query_master("func", opts, unwrap_client=unauthd_client_mock)
+            assert "Mismatch of cached and reported server data detected" in caplog.text
+            # this one gets discarded because it's outdated
+            unauthd_client_mock.unwrap.assert_not_called()
+            # this one contains the reported server config
+            unwrap_client.assert_called_once_with(ret)
+            # ensure the issued secret is not left for anyone to take
+            unwrap_client.unwrap.assert_called_once()
 
-        ret, _ = factory._query_master("func", opts, expected_server=expected_server)
-        assert ret == expected_return
-        assert "Mismatch of cached and reported server data detected" not in caplog.text
-
-    def test_query_master_verify_does_not_interfere_with_unwrap_client_config(
+    def test_query_master_local_verify_does_not_interfere_with_expected_server(
         self,
         opts,
         publish_runner,
@@ -1161,7 +1098,10 @@ class TestQueryMaster:
         unauthd_client_mock.get_config.return_value = expected_server
         unauthd_client_mock.unwrap.return_value = role_id_response
         ret, _ = factory._query_master("func", opts, unwrap_client=unauthd_client_mock)
+        assert "Mismatch of cached and reported server data detected" not in caplog.text
+        # ensure the client was not replaced
         unwrap_client.assert_not_called()
+        unauthd_client_mock.unwrap.assert_called_once()
         assert ret == {
             "data": role_id_response["data"],
             "server": expected_server,

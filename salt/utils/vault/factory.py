@@ -398,14 +398,12 @@ def _fetch_token(
 def _query_master(
     func,
     opts,
-    expected_server=None,
     unwrap_client=None,
     unwrap_expected_creation_path=None,
     **kwargs,
 ):
     def check_result(
         result,
-        expected_server=None,
         unwrap_client=None,
         unwrap_expected_creation_path=None,
     ):
@@ -436,6 +434,7 @@ def _query_master(
             raise salt.exceptions.CommandExecutionError(result)
 
         config_expired = False
+        expected_server = None
 
         if result.get("expire_cache", False):
             log.info("Master requested Vault config expiration.")
@@ -449,6 +448,9 @@ def _query_master(
             ]
             result.update({"server": reported_server})
 
+        if unwrap_client is not None:
+            expected_server = unwrap_client.get_config()
+
         if expected_server is not None and result.get("server") != expected_server:
             log.info(
                 "Mismatch of cached and reported server data detected. Invalidating cache."
@@ -456,19 +458,13 @@ def _query_master(
             # make sure to fetch wrapped data anyways for security reasons
             config_expired = True
             unwrap_expected_creation_path = None
+            unwrap_client = None
 
         # This is used to augment some vault responses with data fetched by the master
         # e.g. secret_id_num_uses
         misc_data = result.get("misc_data", {})
 
         if result.get("wrap_info") or result.get("wrap_info_nested"):
-            if unwrap_client is not None and unwrap_client.get_config() != result.get(
-                "server"
-            ):
-                unwrap_client = None
-                # Ensure to fetch wrapped data anyways for security reasons
-                config_expired = True
-
             if unwrap_client is None:
                 unwrap_client = vclient.VaultClient(**result["server"])
 
@@ -561,7 +557,6 @@ def _query_master(
         )
     return check_result(
         result,
-        expected_server=expected_server,
         unwrap_client=unwrap_client,
         unwrap_expected_creation_path=unwrap_expected_creation_path,
     )
