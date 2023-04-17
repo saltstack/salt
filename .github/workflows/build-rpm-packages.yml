@@ -25,9 +25,9 @@ jobs:
         arch:
           - x86_64
           - aarch64
-        src:
-          - true
-          - false
+        source:
+          - onedir
+          - src
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/packaging:centosstream-9
@@ -67,29 +67,27 @@ jobs:
           tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
 
       - name: Build RPM
-        if: ${{ matrix.src != true}}
         run: |
-          tools pkg build rpm --onedir salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
+          tools pkg build rpm ${{
+              matrix.source == 'onedir' &&
+              format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
+              ||
+              format('--arch={0}', matrix.arch)
+          }}
 
-      - name: Build RPM
-        if: ${{ matrix.src == true}}
+      - name: Set Artifact Name
+        id: set-artifact-name
         run: |
-          tools pkg build rpm --arch ${{ matrix.arch }}
+          if [ "${{ matrix.source }}" != "src" ]; then
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm-from-src" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Upload RPMs
         uses: actions/upload-artifact@v3
-        if: ${{ matrix.src != true}}
         with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm
-          path: ~/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
-          retention-days: 7
-          if-no-files-found: error
-
-      - name: Upload RPMs
-        uses: actions/upload-artifact@v3
-        if: ${{ matrix.src == true}}
-        with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm-from-src
+          name: ${{ steps.set-artifact-name.outputs.artifact-name }}
           path: ~/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
           retention-days: 7
           if-no-files-found: error
