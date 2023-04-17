@@ -52,11 +52,12 @@
   <%- endfor %>
 
 
-  <%- set job_name = "test-macos-pkg-downloads" %>
+  <%- for slug, display_name, arch in (("macos-12", "macOS 12", "x86_64"),) %>
+    <%- set job_name = "{}-pkg-download-tests".format(slug.replace(".", "")) %>
 
   <{ job_name }>:
     <%- do test_repo_needs.append(job_name) %>
-    name: Test macOS Package Downloads
+    name: Test <{ display_name }> Package Downloads
     <%- if gh_environment == "staging" %>
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
     <%- else %>
@@ -67,8 +68,9 @@
       - publish-repositories
     uses: ./.github/workflows/test-package-downloads-action-macos.yml
     with:
-      distro-slug: macos-12
+      distro-slug: <{ slug }>
       platform: darwin
+      arch: <{ arch }>
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_macos }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
@@ -77,9 +79,14 @@
       artifacts-from-workflow: staging.yml
       <%- endif %>
     secrets: inherit
+  <%- endfor %>
 
 
-  <%- set job_name = "test-windows-pkg-downloads" %>
+  <%- for slug, display_name, arch in (
+                                        ("windows-2022", "Windows 2022", "amd64"),
+                                      ) %>
+    <%- for pkg_type in ("NSIS", "MSI") %>
+    <%- set job_name = "{}-{}-pkg-download-tests".format(slug.replace(".", ""), pkg_type.lower()) %>
 
   <{ job_name }>:
     <%- do test_repo_needs.append(job_name) %>
@@ -88,14 +95,16 @@
     <%- else %>
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     <%- endif %>
-    name: Test Windows Package Downloads
+    name: Test <{ display_name }> <{ pkg_type }> Package Downloads
     needs:
       - prepare-workflow
       - publish-repositories
     uses: ./.github/workflows/test-package-downloads-action-windows.yml
     with:
-      distro-slug: windows-2022
+      distro-slug: <{ slug }>
       platform: windows
+      arch: <{ arch }>
+      pkg-type: <{ pkg_type }>
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_windows }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
@@ -104,3 +113,5 @@
       artifacts-from-workflow: staging.yml
       <%- endif %>
     secrets: inherit
+    <%- endfor %>
+  <%- endfor %>
