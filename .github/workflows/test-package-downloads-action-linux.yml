@@ -47,13 +47,6 @@ on:
         type: string
         description: The nox session to run
         default: test-pkgs-onedir
-      artifacts-from-workflow:
-        required: false
-        type: string
-        description: >
-          Which workflow to download artifacts from. An empty string means the
-          current workflow run.
-        default: ""
 
 
 env:
@@ -85,20 +78,8 @@ jobs:
           key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
       - name: Download Onedir Tarball as an Artifact
-        if: inputs.artifacts-from-workflow == ''
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
-          path: artifacts/
-
-      - name: Download Onedir Tarball as an Artifact(from a different workflow)
-        if: inputs.artifacts-from-workflow != ''
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          workflow: ${{ inputs.artifacts-from-workflow }}
-          workflow_conclusion: ""
-          branch: ${{ github.event.ref }}
-          if_no_artifact_found: fail
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
           path: artifacts/
 
@@ -162,18 +143,10 @@ jobs:
         run: |
           tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }}
 
-      - name: Upload Onedir Tarball as an Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
-          path: artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz*
-          retention-days: 7
-          if-no-files-found: error
-
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v3
         with:
-          name: nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          name: nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-download
           path: nox.${{ inputs.distro-slug }}.tar.*
 
   test:

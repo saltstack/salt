@@ -35,6 +35,9 @@
     needs:
       - prepare-workflow
       - publish-repositories
+    <%- if gh_environment == "release" %>
+      - download-onedir-artifact
+    <%- endif %>
     uses: ./.github/workflows/test-package-downloads-action-linux.yml
     with:
       distro-slug: <{ slug }>
@@ -44,9 +47,6 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
       skip-code-coverage: true
-      <%- if gh_environment == "release" %>
-      artifacts-from-workflow: staging.yml
-      <%- endif %>
     secrets: inherit
 
   <%- endfor %>
@@ -66,6 +66,9 @@
     needs:
       - prepare-workflow
       - publish-repositories
+    <%- if gh_environment == "release" %>
+      - download-onedir-artifact
+    <%- endif %>
     uses: ./.github/workflows/test-package-downloads-action-macos.yml
     with:
       distro-slug: <{ slug }>
@@ -75,9 +78,6 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
       skip-code-coverage: true
-      <%- if gh_environment == "release" %>
-      artifacts-from-workflow: staging.yml
-      <%- endif %>
     secrets: inherit
   <%- endfor %>
 
@@ -99,6 +99,9 @@
     needs:
       - prepare-workflow
       - publish-repositories
+    <%- if gh_environment == "release" %>
+      - download-onedir-artifact
+    <%- endif %>
     uses: ./.github/workflows/test-package-downloads-action-windows.yml
     with:
       distro-slug: <{ slug }>
@@ -109,9 +112,6 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: <{ gh_environment }>
       skip-code-coverage: true
-      <%- if gh_environment == "release" %>
-      artifacts-from-workflow: staging.yml
-      <%- endif %>
     secrets: inherit
     <%- endfor %>
   <%- endfor %>

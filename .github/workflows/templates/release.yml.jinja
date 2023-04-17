@@ -132,6 +132,48 @@ permissions:
 <%- block jobs %>
   <{- super() }>
 
+  download-onedir-artifact:
+    name: Download Staging Onedir Artifact
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    runs-on:
+      - self-hosted
+      - linux
+    environment: <{ gh_environment }>
+    needs:
+      - prepare-workflow
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            arch: x86_64
+          - platform: linux
+            arch: aarch64
+          - platform: windows
+            arch: amd64
+          - platform: windows
+            arch: x86
+          - platform: darwin
+            arch: x86_64
+    steps:
+      - name: Download Onedir Tarball as an Artifact(from a different workflow)
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: staging.yml
+          workflow_conclusion: ""
+          branch: ${{ github.event.ref }}
+          if_no_artifact_found: fail
+          name: salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
+          path: artifacts/
+
+      - name: Upload Onedir Tarball as an Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
+          path: artifacts/salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz*
+          retention-days: 7
+          if-no-files-found: error
+
   backup:
     name: Backup
     runs-on:
