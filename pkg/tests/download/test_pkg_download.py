@@ -4,139 +4,12 @@ Test Salt Pkg Downloads
 import logging
 import os
 import pathlib
-import re
-import shutil
 
-import attr
 import packaging
 import pytest
 from pytestskipmarkers.utils import platform
-from saltfactories.utils import random_string
 
 log = logging.getLogger(__name__)
-
-
-@attr.s(kw_only=True, slots=True)
-class PkgImage:
-    name = attr.ib()
-    os_type = attr.ib()
-    os_version = attr.ib()
-    os_codename = attr.ib(default=None)
-    container_id = attr.ib()
-    container = attr.ib(default=None)
-
-    def __str__(self):
-        return f"{self.container_id}"
-
-
-def get_test_versions():
-    test_versions = []
-
-    containers = [
-        {
-            "image": "ghcr.io/saltstack/salt-ci-containers/amazon-linux:2",
-            "os_type": "amazon",
-            "os_version": 2,
-            "container_id": "amazon_2",
-        },
-        {
-            "image": "ghcr.io/saltstack/salt-ci-containers/centos:7",
-            "os_type": "redhat",
-            "os_version": 7,
-            "container_id": "centos_7",
-        },
-        {
-            "image": "ghcr.io/saltstack/salt-ci-containers/centos-stream:8",
-            "os_type": "redhat",
-            "os_version": 8,
-            "container_id": "centosstream_8",
-        },
-        {
-            "image": "ghcr.io/saltstack/salt-ci-containers/centos-stream:9",
-            "os_type": "redhat",
-            "os_version": 9,
-            "container_id": "centosstream_9",
-        },
-        {
-            "image": "ghcr.io/saltstack/salt-ci-containers/fedora:36",
-            "os_type": "fedora",
-            "os_version": 36,
-            "container_id": "fedora_36",
-        },
-        {
-            "image": "ghcr.io/saltstack/salt-ci-containers/fedora:37",
-            "os_type": "fedora",
-            "os_version": 37,
-            "container_id": "fedora_37",
-        },
-        {
-            "image": "ghcr.io/saltstack/salt-ci-containers/fedora:38",
-            "os_type": "fedora",
-            "os_version": 38,
-            "container_id": "fedora_38",
-        },
-        {
-            "image": "ghcr.io/saltstack/salt-ci-containers/debian:10",
-            "os_type": "debian",
-            "os_version": 10,
-            "os_codename": "buster",
-            "container_id": "debian_10",
-        },
-        {
-            "image": "ghcr.io/saltstack/salt-ci-containers/debian:11",
-            "os_type": "debian",
-            "os_version": 11,
-            "os_codename": "bullseye",
-            "container_id": "debian_11",
-        },
-        {
-            "image": "ghcr.io/saltstack/salt-ci-containers/ubuntu:20.04",
-            "os_type": "ubuntu",
-            "os_version": 20.04,
-            "os_codename": "focal",
-            "container_id": "ubuntu_20_04",
-        },
-        {
-            "image": "ghcr.io/saltstack/salt-ci-containers/ubuntu:22.04",
-            "os_type": "ubuntu",
-            "os_version": 22.04,
-            "os_codename": "jammy",
-            "container_id": "ubuntu_22_04",
-        },
-        {
-            "image": "ghcr.io/saltstack/salt-ci-containers/photon:3",
-            "os_type": "photon",
-            "os_version": 3,
-            "container_id": "photon_3",
-        },
-        {
-            "image": "ghcr.io/saltstack/salt-ci-containers/photon:4",
-            "os_type": "photon",
-            "os_version": 4,
-            "container_id": "photon_4",
-        },
-    ]
-    for container in containers:
-        test_versions.append(
-            PkgImage(
-                name=container["image"],
-                os_type=container["os_type"],
-                os_version=container["os_version"],
-                os_codename=container.get("os_codename", ""),
-                container_id=container["container_id"],
-            )
-        )
-
-    return test_versions
-
-
-def get_container_type_id(value):
-    return f"{value}"
-
-
-@pytest.fixture(scope="module", params=get_test_versions(), ids=get_container_type_id)
-def download_test_image(request):
-    return request.param
 
 
 def get_salt_test_commands():
@@ -174,54 +47,6 @@ def get_salt_test_commands():
             "salt-cloud --version",
         ]
     return salt_test_commands
-
-
-@pytest.fixture(scope="module")
-def pkg_container(
-    salt_factories,
-    download_test_image,
-    root_url,
-    salt_release,
-    tmp_path_factory,
-    gpg_key_name,
-):
-    downloads_path = tmp_path_factory.mktemp("downloads")
-    container = salt_factories.get_container(
-        random_string(f"{download_test_image.container_id}_"),
-        download_test_image.name,
-        pull_before_start=True,
-        skip_on_pull_failure=True,
-        skip_if_docker_client_not_connectable=True,
-        container_run_kwargs=dict(
-            volumes={
-                str(downloads_path): {"bind": "/downloads", "mode": "z"},
-            }
-        ),
-    )
-    try:
-        container_setup_func = globals()[f"setup_{download_test_image.os_type}"]
-    except KeyError:
-        raise pytest.skip.Exception(
-            f"Unable to handle {download_test_image.os_type}. Skipping.",
-            _use_item_location=True,
-        )
-    container.before_terminate(shutil.rmtree, str(downloads_path), ignore_errors=True)
-
-    with container.started():
-        download_test_image.container = container
-        try:
-            container_setup_func(
-                container,
-                download_test_image.os_version,
-                download_test_image.os_codename,
-                root_url,
-                salt_release,
-                downloads_path,
-                gpg_key_name,
-            )
-            yield download_test_image
-        except Exception as exc:
-            pytest.fail(f"Failed to setup {pkg_container.os_type}: {exc}")
 
 
 @pytest.fixture(scope="module")
@@ -282,14 +107,74 @@ def salt_release():
     yield get_salt_release()
 
 
+@pytest.fixture(scope="module")
+def setup_system(grains, shell, root_url, salt_release, downloads_path, gpg_key_name):
+    if grains["os_family"] == "Windows":
+        setup_windows(shell, root_url=root_url, salt_release=salt_release)
+    elif grains["os_family"] == "MacOS":
+        setup_macos(shell, root_url=root_url, salt_release=salt_release)
+    elif grains["os"] == "Amazon":
+        setup_redhat_family(
+            shell,
+            os_name=grains["os"].lower(),
+            os_version=grains["osmajorrelease"],
+            root_url=root_url,
+            salt_release=salt_release,
+            downloads_path=downloads_path,
+            gpg_key_name=gpg_key_name,
+        )
+    elif grains["os"] == "Fedora":
+        setup_redhat_family(
+            shell,
+            os_name=grains["os"].lower(),
+            os_version=grains["osmajorrelease"],
+            root_url=root_url,
+            salt_release=salt_release,
+            downloads_path=downloads_path,
+            gpg_key_name=gpg_key_name,
+        )
+    elif grains["os"] == "VMware Photon OS":
+        setup_redhat_family(
+            shell,
+            os_name="photon",
+            os_version=grains["osmajorrelease"],
+            root_url=root_url,
+            salt_release=salt_release,
+            downloads_path=downloads_path,
+            gpg_key_name=gpg_key_name,
+        )
+    elif grains["os_family"] == "RedHat":
+        setup_redhat_family(
+            shell,
+            os_name="redhat",
+            os_version=grains["osmajorrelease"],
+            root_url=root_url,
+            salt_release=salt_release,
+            downloads_path=downloads_path,
+            gpg_key_name=gpg_key_name,
+        )
+    elif grains["os_family"] == "Debian":
+        setup_debian_family(
+            shell,
+            os_name=grains["os"].lower(),
+            os_version=grains["osrelease"],
+            os_codename=grains["oscodename"],
+            root_url=root_url,
+            salt_release=salt_release,
+            downloads_path=downloads_path,
+            gpg_key_name=gpg_key_name,
+        )
+    else:
+        pytest.fail("Don't know how to handle %s", grains["osfinger"])
+
+
 def setup_redhat_family(
-    container,
+    shell,
+    os_name,
     os_version,
-    os_codename,
     root_url,
     salt_release,
     downloads_path,
-    os_name,
     gpg_key_name,
 ):
     arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
@@ -297,13 +182,13 @@ def setup_redhat_family(
         arch = "arm64"
 
     repo_url_base = f"{root_url}/{os_name}/{os_version}/{arch}/minor/{salt_release}"
-    gpg_file_url = f"{repo_url_base}/{gpg_key_name}"
+    gpg_file_url = f"{root_url}/{os_name}/{os_version}/{arch}/{gpg_key_name}"
     try:
         pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_key_name)
     except Exception as exc:
         pytest.fail(f"Failed to download {gpg_file_url}: {exc}")
 
-    ret = container.run("rpm", "--import", f"/downloads/{gpg_key_name}")
+    ret = shell.run("rpm", "--import", str(downloads_path / gpg_key_name), check=False)
     if ret.returncode != 0:
         pytest.fail("Failed to import gpg key")
 
@@ -311,11 +196,9 @@ def setup_redhat_family(
         f"{repo_url_base}.repo", downloads_path / f"salt-{os_name}.repo"
     )
 
-    clean_command = "all" if os_name == "photon" else "expire-cache"
-    install_dmesg = ("yum", "install", "-y", "util-linux")
     commands = [
-        ("mv", f"/downloads/{repo_file.name}", f"/etc/yum.repos.d/salt-{os_name}.repo"),
-        ("yum", "clean", clean_command),
+        ("mv", str(repo_file), "/etc/yum.repos.d/salt.repo"),
+        ("yum", "clean", "all" if os_name == "photon" else "expire-cache"),
         (
             "yum",
             "install",
@@ -331,106 +214,22 @@ def setup_redhat_family(
 
     # For some reason, the centosstream9 container doesn't have dmesg installed
     if os_version == 9 and os_name == "redhat":
-        commands.insert(2, install_dmesg)
+        commands.insert(2, ("yum", "install", "-y", "util-linux"))
 
     for cmd in commands:
-        ret = container.run(*cmd)
+        ret = shell.run(*cmd, check=False)
         if ret.returncode != 0:
-            pytest.fail(f"Failed to run: {' '.join(cmd)!r}")
-
-
-def setup_amazon(
-    container,
-    os_version,
-    os_codename,
-    root_url,
-    salt_release,
-    downloads_path,
-    gpg_key_name,
-):
-    setup_redhat_family(
-        container,
-        os_version,
-        os_codename,
-        root_url,
-        salt_release,
-        downloads_path,
-        "amazon",
-        gpg_key_name,
-    )
-
-
-def setup_redhat(
-    container,
-    os_version,
-    os_codename,
-    root_url,
-    salt_release,
-    downloads_path,
-    gpg_key_name,
-):
-    setup_redhat_family(
-        container,
-        os_version,
-        os_codename,
-        root_url,
-        salt_release,
-        downloads_path,
-        "redhat",
-        gpg_key_name,
-    )
-
-
-def setup_fedora(
-    container,
-    os_version,
-    os_codename,
-    root_url,
-    salt_release,
-    downloads_path,
-    gpg_key_name,
-):
-    setup_redhat_family(
-        container,
-        os_version,
-        os_codename,
-        root_url,
-        salt_release,
-        downloads_path,
-        "fedora",
-        gpg_key_name,
-    )
-
-
-def setup_photon(
-    container,
-    os_version,
-    os_codename,
-    root_url,
-    salt_release,
-    downloads_path,
-    gpg_key_name,
-):
-    setup_redhat_family(
-        container,
-        os_version,
-        os_codename,
-        root_url,
-        salt_release,
-        downloads_path,
-        "photon",
-        gpg_key_name,
-    )
+            pytest.fail(f"Failed to run '{' '.join(cmd)!r}':\n{ret}")
 
 
 def setup_debian_family(
-    container,
+    shell,
+    os_name,
     os_version,
     os_codename,
     root_url,
     salt_release,
     downloads_path,
-    os_name,
     gpg_key_name,
 ):
     arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
@@ -439,12 +238,12 @@ def setup_debian_family(
     elif arch == "x86_64":
         arch = "amd64"
 
-    ret = container.run("apt-get", "update", "-y")
+    ret = shell.run("apt-get", "update", "-y", check=False)
     if ret.returncode != 0:
-        pytest.fail("Failed to run: 'apt-get update -y'")
+        pytest.fail(str(ret))
 
     repo_url_base = f"{root_url}/{os_name}/{os_version}/{arch}/minor/{salt_release}"
-    gpg_file_url = f"{repo_url_base}/{gpg_key_name}"
+    gpg_file_url = f"{root_url}/{os_name}/{os_version}/{arch}/{gpg_key_name}"
     try:
         pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_key_name)
     except Exception as exc:
@@ -455,10 +254,14 @@ def setup_debian_family(
         f"deb [signed-by=/usr/share/keyrings/{gpg_key_name} arch={arch}] {repo_url_base} {os_codename} main\n"
     )
     commands = [
-        ("mv", f"/downloads/{gpg_key_name}", f"/usr/share/keyrings/{gpg_key_name}"),
         (
             "mv",
-            f"/downloads/{salt_sources_path.name}",
+            str(downloads_path / gpg_key_name),
+            f"/usr/share/keyrings/{gpg_key_name}",
+        ),
+        (
+            "mv",
+            str(salt_sources_path),
             "/etc/apt/sources.list.d/salt.list",
         ),
         ("apt-get", "install", "-y", "ca-certificates"),
@@ -477,55 +280,12 @@ def setup_debian_family(
         ),
     ]
     for cmd in commands:
-        ret = container.run(*cmd)
+        ret = shell.run(*cmd)
         if ret.returncode != 0:
-            pytest.fail(f"Failed to run: {' '.join(cmd)!r}\n{ret}")
+            pytest.fail(str(ret))
 
 
-def setup_debian(
-    container,
-    os_version,
-    os_codename,
-    root_url,
-    salt_release,
-    downloads_path,
-    gpg_key_name,
-):
-    setup_debian_family(
-        container,
-        os_version,
-        os_codename,
-        root_url,
-        salt_release,
-        downloads_path,
-        "debian",
-        gpg_key_name,
-    )
-
-
-def setup_ubuntu(
-    container,
-    os_version,
-    os_codename,
-    root_url,
-    salt_release,
-    downloads_path,
-    gpg_key_name,
-):
-    setup_debian_family(
-        container,
-        os_version,
-        os_codename,
-        root_url,
-        salt_release,
-        downloads_path,
-        "ubuntu",
-        gpg_key_name,
-    )
-
-
-@pytest.fixture(scope="module")
-def setup_macos(root_url, salt_release, shell):
+def setup_macos(shell, root_url, salt_release):
 
     arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
     if arch == "aarch64":
@@ -554,8 +314,7 @@ def setup_macos(root_url, salt_release, shell):
     yield
 
 
-@pytest.fixture(scope="module")
-def setup_windows(root_url, salt_release, shell):
+def setup_windows(shell, root_url, salt_release):
 
     root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
 
@@ -594,39 +353,15 @@ def setup_windows(root_url, salt_release, shell):
     assert ret.returncode == 0, ret
 
 
-@pytest.mark.skip_unless_on_linux
+@pytest.mark.usefixtures("setup_system")
 @pytest.mark.parametrize("salt_test_command", get_salt_test_commands())
-@pytest.mark.skip_if_binaries_missing("dockerd")
-def test_download_linux(salt_test_command, pkg_container, root_url, salt_release):
+def test_download(shell, grains, salt_test_command):
     """
-    Test downloading of Salt packages and running various commands on Linux hosts
-    """
-    res = pkg_container.container.run(salt_test_command)
-    assert res.returncode == 0
-
-
-@pytest.mark.skip_unless_on_darwin
-@pytest.mark.usefixtures("setup_macos")
-@pytest.mark.parametrize("salt_test_command", get_salt_test_commands())
-def test_download_macos(salt_test_command, shell):
-    """
-    Test downloading of Salt packages and running various commands on Mac OS hosts
+    Test downloading of Salt packages and running various commands.
     """
     _cmd = salt_test_command.split()
-    ret = shell.run(*_cmd, check=False)
-    assert ret.returncode == 0, ret
-
-
-@pytest.mark.skip_unless_on_windows
-@pytest.mark.usefixtures("setup_windows")
-@pytest.mark.parametrize("salt_test_command", get_salt_test_commands())
-def test_download_windows(salt_test_command, shell):
-    """
-    Test downloading of Salt packages and running various commands on Windows hosts
-    """
-    _cmd = salt_test_command.split()
-    root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
-    _cmd[0] = str(root_dir / _cmd[0])
-
+    if grains["os_family"] == "Windows":
+        root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
+        _cmd[0] = str(root_dir / _cmd[0])
     ret = shell.run(*_cmd, check=False)
     assert ret.returncode == 0, ret
