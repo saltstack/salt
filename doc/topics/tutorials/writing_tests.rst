@@ -455,6 +455,7 @@ can be used
 Test Groups
 ===========
 Salt has four groups
+
 * fast - Tests that are ~10s or faster. Fast tests make up ~75% of tests and can run in 10 to 20 minutes.
 * slow - Tests that are ~10s or slower.
 * core - Tests of any speed that test the root parts of salt.
@@ -462,6 +463,7 @@ Salt has four groups
 
 
 Pytest Decorators
+
 * @pytest.mark.slow_test
 * @pytest.mark.core_test
 * @pytest.mark.flaky_jail
@@ -477,7 +479,9 @@ Pytest Decorators
 You can also mark all the tests in file.
 
 .. code-block:: python
-    pytestmark = [pytest.mark.core_test]
+    pytestmark = [
+        pytest.mark.core_test,
+    ]
 
 
     def test_ping(self):
@@ -495,6 +499,7 @@ You can also mark all the tests in file.
             self.assertTrue(self.run_function("test.ping"))
 
 You can enable or disable test groups locally by passing there respected flag:
+
 * --no-fast-tests
 * --slow-tests
 * --core-tests
@@ -502,6 +507,7 @@ You can enable or disable test groups locally by passing there respected flag:
 
 In Your PR you can enable or disable test groups by setting a label.
 All thought the fast, slow and core tests specified in the change file will always run.
+
 * test:no-fast
 * test:slow
 * test:core
