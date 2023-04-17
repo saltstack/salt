@@ -456,8 +456,8 @@ Test Groups
 ===========
 Salt has four groups
  * fast - Tests that are ~10s or faster. Fast tests make up ~75% of tests and can run in 10 to 20 minutes.
- * core - Tests that are ~10s or slower.
- * slow - Tests of any speed that test the root parts of salt.
+ * slow - Tests that are ~10s or slower.
+ * core - Tests of any speed that test the root parts of salt.
  * flaky-jail - Test that need to be temporarily skipped.
 
 
