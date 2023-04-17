@@ -162,12 +162,26 @@ cp -R $RPM_BUILD_DIR/build/salt %{buildroot}/opt/saltstack/
 
 # Add some directories
 install -d -m 0755 %{buildroot}%{_var}/log/salt
+install -d -m 0755 %{buildroot}%{_var}/run/salt
 install -d -m 0755 %{buildroot}%{_var}/cache/salt
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/minion
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master/jobs
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master/proc
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master/queues
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master/roots
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master/syndics
+install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master/tokens
 install -d -m 0755 %{buildroot}%{_sysconfdir}/salt
 install -d -m 0755 %{buildroot}%{_sysconfdir}/salt/master.d
 install -d -m 0755 %{buildroot}%{_sysconfdir}/salt/minion.d
 install -d -m 0755 %{buildroot}%{_sysconfdir}/salt/pki
 install -d -m 0700 %{buildroot}%{_sysconfdir}/salt/pki/master
+install -Dd -m 0750 %{buildroot}%{_sysconfdir}/salt/pki/master/minions
+install -Dd -m 0750 %{buildroot}%{_sysconfdir}/salt/pki/master/minions_autosign
+install -Dd -m 0750 %{buildroot}%{_sysconfdir}/salt/pki/master/minions_denied
+install -Dd -m 0750 %{buildroot}%{_sysconfdir}/salt/pki/master/minions_pre
+install -Dd -m 0750 %{buildroot}%{_sysconfdir}/salt/pki/master/minions_rejected
 install -d -m 0700 %{buildroot}%{_sysconfdir}/salt/pki/minion
 install -d -m 0700 %{buildroot}%{_sysconfdir}/salt/cloud.conf.d
 install -d -m 0700 %{buildroot}%{_sysconfdir}/salt/cloud.deploy.d
@@ -194,7 +208,7 @@ install -m 0755 %{buildroot}/opt/saltstack/salt/salt-pip %{buildroot}%{_bindir}/
 
 # Add the config files
 install -p -m 0640 %{_salt_src}/conf/minion %{buildroot}%{_sysconfdir}/salt/minion
-install -p -m 0640 %{_salt_src}/conf/master %{buildroot}%{_sysconfdir}/salt/master
+install -p -m 0640 %{_salt_src}/pkg/common/conf/master %{buildroot}%{_sysconfdir}/salt/master
 install -p -m 0640 %{_salt_src}/conf/cloud %{buildroot}%{_sysconfdir}/salt/cloud
 install -p -m 0640 %{_salt_src}/conf/roster %{buildroot}%{_sysconfdir}/salt/roster
 install -p -m 0640 %{_salt_src}/conf/proxy %{buildroot}%{_sysconfdir}/salt/proxy
@@ -250,6 +264,7 @@ rm -rf %{buildroot}
 %{_sysconfdir}/bash_completion.d/salt.bash
 %config(noreplace) %{fish_dir}/salt*.fish
 %dir %{_var}/cache/salt
+%dir %{_var}/run/salt
 %dir %{_var}/log/salt
 %doc %{_mandir}/man1/spm.1*
 %{_bindir}/spm
@@ -278,6 +293,19 @@ rm -rf %{buildroot}
 %config(noreplace) %{_sysconfdir}/salt/master
 %dir %{_sysconfdir}/salt/master.d
 %config(noreplace) %{_sysconfdir}/salt/pki/master
+%dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/
+%dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions/
+%dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions_autosign/
+%dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions_denied/
+%dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions_pre/
+%dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions_rejected/
+%dir %attr(0750, salt, salt) %{_var}/cache/salt/master/
+%dir %attr(0750, salt, salt) %{_var}/cache/salt/master/jobs/
+%dir %attr(0750, salt, salt) %{_var}/cache/salt/master/proc/
+%dir %attr(0750, salt, salt) %{_var}/cache/salt/master/queues/
+%dir %attr(0750, salt, salt) %{_var}/cache/salt/master/roots/
+%dir %attr(0750, salt, salt) %{_var}/cache/salt/master/syndics/
+%dir %attr(0750, salt, salt) %{_var}/cache/salt/master/tokens/
 
 %files minion
 %defattr(-,root,root)
@@ -293,6 +321,7 @@ rm -rf %{buildroot}
 %config(noreplace) %{_sysconfdir}/salt/proxy
 %config(noreplace) %{_sysconfdir}/salt/pki/minion
 %dir %{_sysconfdir}/salt/minion.d
+%dir %attr(0750, root, root) %{_var}/cache/salt/minion/
 
 %files syndic
 %doc %{_mandir}/man1/salt-syndic.1*
@@ -320,6 +349,12 @@ rm -rf %{buildroot}
 %{_bindir}/salt-ssh
 %config(noreplace) %{_sysconfdir}/salt/roster
 
+# Add salt user/group for Salt Master
+%pre master
+getent group salt >/dev/null || groupadd -r salt
+getent passwd salt >/dev/null || \
+    useradd -r -g salt -s /sbin/nologin \
+    -c "Salt user for Salt Master" salt
 
 # assumes systemd for RHEL 7 & 8 & 9
 %preun master
@@ -355,6 +390,7 @@ if [ $1 -lt 2 ]; then
     /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
   fi
 fi
+chown -R salt:salt /etc/salt /var/log/salt /opt/saltstack/salt/ /var/cache/salt/ /var/run/salt/
 
 %post syndic
 %systemd_post salt-syndic.service
