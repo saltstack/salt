@@ -539,7 +539,7 @@ You can enable or disable test groups locally by passing their respected flag:
 * --flaky-jail - Test that need to be temporarily skipped.
 
 In Your PR, you can enable or disable test groups by setting a label.
-All thought the fast, slow, and core tests specified in the change file will always run.
+All fast, slow, and core tests specified in the change file will always run.
 
 * test:no-fast
 * test:core
