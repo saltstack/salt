@@ -166,10 +166,19 @@ jobs:
         run: |
           tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }}
 
+      - name: Define Nox Upload Artifact Name
+        id: nox-artifact-name
+        run: |
+          if [ "${{ contains(inputs.distro-slug, 'windows') }}" != "true" ]; then
+            echo "name=nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "name=nox-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-${{ inputs.nox-session }}" >> "${GITHUB_OUTPUT}"
+          fi
+
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v3
         with:
-          name: nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          name: ${{ steps.nox-artifact-name.outputs.name }}
           path: nox.${{ inputs.distro-slug }}.tar.*
 
   test:
