@@ -469,6 +469,7 @@ Pytest Decorators
 * @pytest.mark.flaky_jail
 
 .. code-block:: python
+
     @pytest.mark.core_test
     def test_ping(self):
         """
@@ -479,6 +480,7 @@ Pytest Decorators
 You can also mark all the tests in file.
 
 .. code-block:: python
+
     pytestmark = [
         pytest.mark.core_test,
     ]
