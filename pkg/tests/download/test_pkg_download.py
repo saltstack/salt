@@ -113,9 +113,19 @@ def setup_system(tmp_path_factory, grains, shell, root_url, salt_release, gpg_ke
     downloads_path = tmp_path_factory.mktemp("downloads")
     try:
         if grains["os_family"] == "Windows":
-            setup_windows(shell, root_url=root_url, salt_release=salt_release)
+            setup_windows(
+                shell,
+                root_url=root_url,
+                salt_release=salt_release,
+                downloads_path=downloads_path,
+            )
         elif grains["os_family"] == "MacOS":
-            setup_macos(shell, root_url=root_url, salt_release=salt_release)
+            setup_macos(
+                shell,
+                root_url=root_url,
+                salt_release=salt_release,
+                downloads_path=downloads_path,
+            )
         elif grains["os"] == "Amazon":
             setup_redhat_family(
                 shell,
@@ -291,7 +301,7 @@ def setup_debian_family(
             pytest.fail(str(ret))
 
 
-def setup_macos(shell, root_url, salt_release):
+def setup_macos(shell, root_url, salt_release, downloads_path):
 
     arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
     if arch == "aarch64":
@@ -304,13 +314,13 @@ def setup_macos(shell, root_url, salt_release):
         mac_pkg_url = f"{root_url}/macos/{salt_release}/{mac_pkg}"
         mac_pkg = f"salt-{salt_release}-macos-{arch}.pkg"
 
-    mac_pkg_path = f"/tmp/{mac_pkg}"
-    pytest.helpers.download_file(mac_pkg_url, f"/tmp/{mac_pkg}")
+    mac_pkg_path = downloads_path / mac_pkg
+    pytest.helpers.download_file(mac_pkg_url, mac_pkg_path)
 
     ret = shell.run(
         "installer",
         "-pkg",
-        mac_pkg_path,
+        str(mac_pkg_path),
         "-target",
         "/",
         check=False,
@@ -320,7 +330,7 @@ def setup_macos(shell, root_url, salt_release):
     yield
 
 
-def setup_windows(shell, root_url, salt_release):
+def setup_windows(shell, root_url, salt_release, downloads_path):
 
     root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
 
@@ -342,8 +352,7 @@ def setup_windows(shell, root_url, salt_release):
         win_pkg_url = f"{root_url}/windows/{salt_release}/{win_pkg}"
         ssm_bin = root_dir / "bin" / "ssm_bin"
 
-    pkg_path = pathlib.Path(r"C:\TEMP", win_pkg)
-    pkg_path.parent.mkdir(exist_ok=True)
+    pkg_path = downloads_path / win_pkg
 
     pytest.helpers.download_file(win_pkg_url, pkg_path)
     if install_type.lower() == "nsis":
