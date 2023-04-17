@@ -513,7 +513,7 @@ Now you can run your tests:
 
 ::
 
-    python -m nox -e "test-3(coverage=False)" -- tests/unit/cli/test_batch.py
+   python -m nox -e "test-3(coverage=False)" -- tests/unit/cli/test_batch.py
 
 It's a good idea to install
 `espeak <https://github.com/espeak-ng/espeak-ng>`__ or use ``say`` on
@@ -522,28 +522,27 @@ this:
 
 ::
 
-    python -m nox -e "test-3(coverage=False)" -- tests/unit/cli/test_batch.py; espeak "Tests done, woohoo!"
+   python -m nox -e "test-3(coverage=False)" -- tests/unit/cli/test_batch.py; espeak "Tests done, woohoo!"
 
 That way you don't have to keep monitoring the actual test run.
 
 
 ::
 
-    python -m nox -e "test-3(coverage=False)" -- --core-tests
+   python -m nox -e "test-3(coverage=False)" -- --core-tests
 
-You can enable or disable test groups locally by passing there respected flag:
- * "--no-fast-tests" - Tests that are ~10s or faster.
-    Fast tests make up ~75% of tests and can run in 10 to 20 minutes.
- * "--slow-tests" - Tests that are ~10s or slower.
- * "--core-tests" - Tests of any speed that test the root parts of salt.
- * "--flaky-jail" - Test that need to be temporarily skipped.
+You can enable or disable test groups locally by passing their respected flag:
+* --no-fast-tests - Tests that are ~10s or faster. Fast tests make up ~75% of tests and can run in 10 to 20 minutes.
+* --slow-tests - Tests that are ~10s or slower.
+* --core-tests - Tests of any speed that test the root parts of salt.
+* --flaky-jail - Test that need to be temporarily skipped.
 
-In Your PR you can enable or disable test groups by setting a label.
-All thought the fast, slow and core tests specified in the change file will always run.
- * 'test:no-fast"
- * "test:core"
- * "test:slow"
- * "test:flaky-jail"
+In Your PR, you can enable or disable test groups by setting a label.
+All thought the fast, slow, and core tests specified in the change file will always run.
+* test:no-fast
+* test:core
+* test:slow
+* test:flaky-jail
 
 
 Changelog and commit!
