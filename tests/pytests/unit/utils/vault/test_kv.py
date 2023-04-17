@@ -1,6 +1,8 @@
 import pytest
 
 import salt.utils.vault as vault
+import salt.utils.vault.cache as vcache
+import salt.utils.vault.client as vclient
 import salt.utils.vault.kv as vkv
 from tests.pytests.unit.utils.vault.conftest import _mock_json_response
 from tests.support.mock import MagicMock, Mock, patch
@@ -20,6 +22,207 @@ def paths():
         "delete_versions": "secret/delete/some/path",
         "destroy": "secret/destroy/some/path",
     }
+
+
+@pytest.fixture
+def kvv1_meta_response():
+    return {
+        "request_id": "b82f2df7-a9b6-920c-0ed2-a3463b996f9e",
+        "lease_id": "",
+        "renewable": False,
+        "lease_duration": 0,
+        "data": {
+            "accessor": "kv_f8731f1b",
+            "config": {
+                "default_lease_ttl": 0,
+                "force_no_cache": False,
+                "max_lease_ttl": 0,
+            },
+            "description": "key/value secret storage",
+            "external_entropy_access": False,
+            "local": False,
+            "options": None,
+            "path": "secret/",
+            "seal_wrap": False,
+            "type": "kv",
+            "uuid": "1d9431ac-060a-9b63-4572-3ca7ffd78347",
+        },
+        "wrap_info": None,
+        "warnings": None,
+        "auth": None,
+    }
+
+
+@pytest.fixture
+def kvv2_meta_response():
+    return {
+        "request_id": "b82f2df7-a9b6-920c-0ed2-a3463b996f9e",
+        "lease_id": "",
+        "renewable": False,
+        "lease_duration": 0,
+        "data": {
+            "accessor": "kv_f8731f1b",
+            "config": {
+                "default_lease_ttl": 0,
+                "force_no_cache": False,
+                "max_lease_ttl": 0,
+            },
+            "description": "key/value secret storage",
+            "external_entropy_access": False,
+            "local": False,
+            "options": {
+                "version": "2",
+            },
+            "path": "secret/",
+            "seal_wrap": False,
+            "type": "kv",
+            "uuid": "1d9431ac-060a-9b63-4572-3ca7ffd78347",
+        },
+        "wrap_info": None,
+        "warnings": None,
+        "auth": None,
+    }
+
+
+@pytest.fixture
+def kvv1_info():
+    return {
+        "v2": False,
+        "data": "secret/some/path",
+        "metadata": "secret/some/path",
+        "delete": "secret/some/path",
+        "type": "kv",
+    }
+
+
+@pytest.fixture
+def kvv2_info():
+    return {
+        "v2": True,
+        "data": "secret/data/some/path",
+        "metadata": "secret/metadata/some/path",
+        "delete": "secret/data/some/path",
+        "delete_versions": "secret/delete/some/path",
+        "destroy": "secret/destroy/some/path",
+        "type": "kv",
+    }
+
+
+@pytest.fixture
+def no_kv_info():
+    return {
+        "v2": False,
+        "data": "secret/some/path",
+        "metadata": "secret/some/path",
+        "delete": "secret/some/path",
+        "type": None,
+    }
+
+
+@pytest.fixture
+def kvv1_response():
+    return {
+        "request_id": "35df4df1-c3d8-b270-0682-ddb0160c7450",
+        "lease_id": "",
+        "renewable": False,
+        "lease_duration": 0,
+        "data": {
+            "foo": "bar",
+        },
+        "wrap_info": None,
+        "warnings": None,
+        "auth": None,
+    }
+
+
+@pytest.fixture
+def kvv2_response():
+    return {
+        "request_id": "35df4df1-c3d8-b270-0682-ddb0160c7450",
+        "lease_id": "",
+        "renewable": False,
+        "lease_duration": 0,
+        "data": {
+            "data": {"foo": "bar"},
+            "metadata": {
+                "created_time": "2020-05-02T07:26:12.180848003Z",
+                "deletion_time": "",
+                "destroyed": False,
+                "version": 1,
+            },
+        },
+        "wrap_info": None,
+        "warnings": None,
+        "auth": None,
+    }
+
+
+@pytest.fixture
+def kv_list_response():
+    return {
+        "request_id": "35df4df1-c3d8-b270-0682-ddb0160c7450",
+        "lease_id": "",
+        "renewable": False,
+        "lease_duration": 0,
+        "data": {
+            "keys": ["foo"],
+        },
+        "wrap_info": None,
+        "warnings": None,
+        "auth": None,
+    }
+
+
+@pytest.fixture
+def metadata_nocache():
+    cache = Mock(spec=vcache.VaultCache)
+    cache.get.return_value = None
+    return cache
+
+
+@pytest.fixture(params=["v1", "v2"])
+def kv_meta(request, metadata_nocache):
+    client = Mock(spec=vclient.AuthenticatedVaultClient)
+    if request.param == "invalid":
+        res = {"wrap_info": {}}
+    else:
+        res = request.getfixturevalue(f"kv{request.param}_meta_response")
+    client.get.return_value = res
+    return vkv.VaultKV(client, metadata_nocache)
+
+
+@pytest.fixture(params=["v1", "v2"])
+def kv_meta_cached(request):
+    cache = Mock(spec=vcache.VaultCache)
+    client = Mock(spec=vclient.AuthenticatedVaultClient)
+    kv_meta_response = request.getfixturevalue(f"kv{request.param}_meta_response")
+    client.get.return_value = kv_meta_response
+    cache.get.return_value = {"secret/some/path": kv_meta_response["data"]}
+    return vkv.VaultKV(client, cache)
+
+
+@pytest.fixture
+def kvv1(kvv1_info, kvv1_response, metadata_nocache, kv_list_response):
+    client = Mock(spec=vclient.AuthenticatedVaultClient)
+    client.get.return_value = kvv1_response
+    client.post.return_value = True
+    client.patch.side_effect = vclient.VaultPermissionDeniedError
+    client.list.return_value = kv_list_response
+    client.delete.return_value = True
+    with patch("salt.utils.vault.kv.VaultKV.is_v2", Mock(return_value=kvv1_info)):
+        yield vkv.VaultKV(client, metadata_nocache)
+
+
+@pytest.fixture
+def kvv2(kvv2_info, kvv2_response, metadata_nocache, kv_list_response):
+    client = Mock(spec=vclient.AuthenticatedVaultClient)
+    client.get.return_value = kvv2_response
+    client.post.return_value = True
+    client.patch.return_value = True
+    client.list.return_value = kv_list_response
+    client.delete.return_value = True
+    with patch("salt.utils.vault.kv.VaultKV.is_v2", Mock(return_value=kvv2_info)):
+        yield vkv.VaultKV(client, metadata_nocache)
 
 
 @pytest.mark.parametrize(
@@ -136,13 +339,34 @@ class TestKVV1:
         kvv1.write(path, data)
         kvv1.client.post.assert_called_once_with(path, payload=data)
 
-    def test_vault_kv_patch(self, kvv1, path):
+    @pytest.mark.parametrize(
+        "existing,data,expected",
+        [
+            ({"foo": "bar"}, {"bar": "baz"}, {"foo": "bar", "bar": "baz"}),
+            ({"foo": "bar"}, {"foo": None}, {}),
+            (
+                {"foo": "bar"},
+                {"foo2": {"bar": {"baz": True}}},
+                {"foo": "bar", "foo2": {"bar": {"baz": True}}},
+            ),
+            (
+                {"foo": {"bar": {"baz": True}}},
+                {"foo": {"bar": {"baz": None}}},
+                {"foo": {"bar": {}}},
+            ),
+        ],
+    )
+    def test_vault_kv_patch(self, kvv1, path, existing, data, expected):
         """
-        Ensure that VaultKV.patch fails for KV v1. This action was introduced
-        in KV v2. It could be simulated in Python though.
+        Ensure that VaultKV.patch works for KV v1.
+        This also tests the internal JSON merge patch implementation.
         """
-        with pytest.raises(vault.VaultInvocationError):
-            kvv1.patch(path, {"bar": "baz"})
+        kvv1.client.get.return_value = {"data": existing}
+        kvv1.patch(path, data)
+        kvv1.client.post.assert_called_once_with(
+            path,
+            payload=expected,
+        )
 
     def test_vault_kv_delete(self, kvv1, path):
         """

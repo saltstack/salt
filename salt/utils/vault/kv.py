@@ -1,6 +1,10 @@
 import logging
 
-from salt.utils.vault.exceptions import VaultException, VaultInvocationError
+from salt.utils.vault.exceptions import (
+    VaultException,
+    VaultInvocationError,
+    VaultPermissionDeniedError,
+)
 
 log = logging.getLogger(__name__)
 
@@ -43,17 +47,47 @@ class VaultKV:
 
     def patch(self, path, data):
         """
-        Patch existing data. Requires kv-v2.
-        This uses JSON Merge Patch format, see
+        Patch existing data.
+        Tries to use a PATCH request, otherwise falls back to updating in memory
+        and writing back the whole secret, thus might consume more than one token use.
+
+        Since this uses JSON Merge Patch format, values set to ``null`` (``None``)
+        will be dropped. For details, see
         https://datatracker.ietf.org/doc/html/draft-ietf-appsawg-json-merge-patch-07
         """
+
+        def apply_json_merge_patch(data, patch):
+            if not patch:
+                return data
+            if not isinstance(data, dict) or not isinstance(patch, dict):
+                raise ValueError("Data and patch must be dictionaries.")
+
+            for key, value in patch.items():
+                if value is None:
+                    data.pop(key, None)
+                elif isinstance(value, dict):
+                    data[key] = apply_json_merge_patch(data.get(key, {}), value)
+                else:
+                    data[key] = value
+            return data
+
+        def patch_in_memory():
+            current = self.read(path)
+            updated = apply_json_merge_patch(current, data)
+            return self.write(path, updated)
+
         v2_info = self.is_v2(path)
         if not v2_info["v2"]:
-            raise VaultInvocationError("Patch operation requires kv-v2.")
+            return patch_in_memory()
         path = v2_info["data"]
         data = {"data": data}
         add_headers = {"Content-Type": "application/merge-patch+json"}
-        return self.client.patch(path, payload=data, add_headers=add_headers)
+        try:
+            return self.client.patch(path, payload=data, add_headers=add_headers)
+        except VaultPermissionDeniedError:
+            log.warning("Failed patching secret, is the `patch` capability set?")
+            # in case the `patch` capability might not have been set
+            return patch_in_memory()
 
     def delete(self, path, versions=None):
         """
