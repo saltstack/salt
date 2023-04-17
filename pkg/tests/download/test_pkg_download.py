@@ -4,6 +4,7 @@ Test Salt Pkg Downloads
 import logging
 import os
 import pathlib
+import shutil
 
 import packaging
 import pytest
@@ -108,64 +109,69 @@ def salt_release():
 
 
 @pytest.fixture(scope="module")
-def setup_system(grains, shell, root_url, salt_release, downloads_path, gpg_key_name):
-    if grains["os_family"] == "Windows":
-        setup_windows(shell, root_url=root_url, salt_release=salt_release)
-    elif grains["os_family"] == "MacOS":
-        setup_macos(shell, root_url=root_url, salt_release=salt_release)
-    elif grains["os"] == "Amazon":
-        setup_redhat_family(
-            shell,
-            os_name=grains["os"].lower(),
-            os_version=grains["osmajorrelease"],
-            root_url=root_url,
-            salt_release=salt_release,
-            downloads_path=downloads_path,
-            gpg_key_name=gpg_key_name,
-        )
-    elif grains["os"] == "Fedora":
-        setup_redhat_family(
-            shell,
-            os_name=grains["os"].lower(),
-            os_version=grains["osmajorrelease"],
-            root_url=root_url,
-            salt_release=salt_release,
-            downloads_path=downloads_path,
-            gpg_key_name=gpg_key_name,
-        )
-    elif grains["os"] == "VMware Photon OS":
-        setup_redhat_family(
-            shell,
-            os_name="photon",
-            os_version=grains["osmajorrelease"],
-            root_url=root_url,
-            salt_release=salt_release,
-            downloads_path=downloads_path,
-            gpg_key_name=gpg_key_name,
-        )
-    elif grains["os_family"] == "RedHat":
-        setup_redhat_family(
-            shell,
-            os_name="redhat",
-            os_version=grains["osmajorrelease"],
-            root_url=root_url,
-            salt_release=salt_release,
-            downloads_path=downloads_path,
-            gpg_key_name=gpg_key_name,
-        )
-    elif grains["os_family"] == "Debian":
-        setup_debian_family(
-            shell,
-            os_name=grains["os"].lower(),
-            os_version=grains["osrelease"],
-            os_codename=grains["oscodename"],
-            root_url=root_url,
-            salt_release=salt_release,
-            downloads_path=downloads_path,
-            gpg_key_name=gpg_key_name,
-        )
-    else:
-        pytest.fail("Don't know how to handle %s", grains["osfinger"])
+def setup_system(tmp_path_factory, grains, shell, root_url, salt_release, gpg_key_name):
+    downloads_path = tmp_path_factory.mktemp("downloads")
+    try:
+        if grains["os_family"] == "Windows":
+            setup_windows(shell, root_url=root_url, salt_release=salt_release)
+        elif grains["os_family"] == "MacOS":
+            setup_macos(shell, root_url=root_url, salt_release=salt_release)
+        elif grains["os"] == "Amazon":
+            setup_redhat_family(
+                shell,
+                os_name=grains["os"].lower(),
+                os_version=grains["osmajorrelease"],
+                root_url=root_url,
+                salt_release=salt_release,
+                downloads_path=downloads_path,
+                gpg_key_name=gpg_key_name,
+            )
+        elif grains["os"] == "Fedora":
+            setup_redhat_family(
+                shell,
+                os_name=grains["os"].lower(),
+                os_version=grains["osmajorrelease"],
+                root_url=root_url,
+                salt_release=salt_release,
+                downloads_path=downloads_path,
+                gpg_key_name=gpg_key_name,
+            )
+        elif grains["os"] == "VMware Photon OS":
+            setup_redhat_family(
+                shell,
+                os_name="photon",
+                os_version=grains["osmajorrelease"],
+                root_url=root_url,
+                salt_release=salt_release,
+                downloads_path=downloads_path,
+                gpg_key_name=gpg_key_name,
+            )
+        elif grains["os_family"] == "RedHat":
+            setup_redhat_family(
+                shell,
+                os_name="redhat",
+                os_version=grains["osmajorrelease"],
+                root_url=root_url,
+                salt_release=salt_release,
+                downloads_path=downloads_path,
+                gpg_key_name=gpg_key_name,
+            )
+        elif grains["os_family"] == "Debian":
+            setup_debian_family(
+                shell,
+                os_name=grains["os"].lower(),
+                os_version=grains["osrelease"],
+                os_codename=grains["oscodename"],
+                root_url=root_url,
+                salt_release=salt_release,
+                downloads_path=downloads_path,
+                gpg_key_name=gpg_key_name,
+            )
+        else:
+            pytest.fail("Don't know how to handle %s", grains["osfinger"])
+        yield
+    finally:
+        shutil.rmtree(downloads_path, ignore_errors=True)
 
 
 def setup_redhat_family(
