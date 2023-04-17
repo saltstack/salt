@@ -532,6 +532,7 @@ That way you don't have to keep monitoring the actual test run.
    python -m nox -e "test-3(coverage=False)" -- --core-tests
 
 You can enable or disable test groups locally by passing their respected flag:
+
 * --no-fast-tests - Tests that are ~10s or faster. Fast tests make up ~75% of tests and can run in 10 to 20 minutes.
 * --slow-tests - Tests that are ~10s or slower.
 * --core-tests - Tests of any speed that test the root parts of salt.
@@ -539,6 +540,7 @@ You can enable or disable test groups locally by passing their respected flag:
 
 In Your PR, you can enable or disable test groups by setting a label.
 All thought the fast, slow, and core tests specified in the change file will always run.
+
 * test:no-fast
 * test:core
 * test:slow
