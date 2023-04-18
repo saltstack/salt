@@ -6,7 +6,7 @@ import logging
 import pytest
 
 import salt.modules.libcloud_compute as libcloud_compute
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -27,9 +27,9 @@ try:
         VolumeSnapshot,
     )
 
-    if hasattr(libcloud, "__version__") and _LooseVersion(
-        libcloud.__version__
-    ) < _LooseVersion(REQUIRED_LIBCLOUD_VERSION):
+    if hasattr(libcloud, "__version__") and Version(libcloud.__version__) < Version(
+        REQUIRED_LIBCLOUD_VERSION
+    ):
         raise ImportError()
     logging.getLogger("libcloud").setLevel(logging.CRITICAL)
     HAS_LIBCLOUD = True

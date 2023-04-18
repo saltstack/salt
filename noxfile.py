@@ -6,12 +6,19 @@ Nox configuration script
 """
 # pylint: disable=resource-leakage,3rd-party-module-not-gated
 
-
 import datetime
+import gzip
+import json
 import os
 import pathlib
+import shutil
+import sqlite3
+import subprocess
 import sys
+import tarfile
 import tempfile
+
+import nox.command
 
 # fmt: off
 if __name__ == "__main__":
@@ -25,6 +32,17 @@ if __name__ == "__main__":
 import nox  # isort:skip
 from nox.command import CommandFailed  # isort:skip
 
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parent
+ENV_FILE = REPO_ROOT / ".ci-env"
+if ENV_FILE.exists():
+    print("Found .ci-env file. Updating environment...", flush=True)
+    for key, value in json.loads(ENV_FILE.read_text()).items():
+        print(f"  {key}={value}", flush=True)
+        os.environ[key] = value
+    print("Deleting .ci-env file", flush=True)
+    ENV_FILE.unlink()
+
 # Be verbose when runing under a CI context
 CI_RUN = (
     os.environ.get("JENKINS_URL")
@@ -32,6 +50,17 @@ CI_RUN = (
     or os.environ.get("DRONE") is not None
 )
 PIP_INSTALL_SILENT = CI_RUN is False
+PRINT_TEST_SELECTION = os.environ.get("PRINT_TEST_SELECTION")
+if PRINT_TEST_SELECTION is None:
+    PRINT_TEST_SELECTION = CI_RUN
+else:
+    PRINT_TEST_SELECTION = PRINT_TEST_SELECTION == "1"
+PRINT_TEST_PLAN_ONLY = os.environ.get("PRINT_TEST_PLAN_ONLY", "0") == "1"
+PRINT_SYSTEM_INFO = os.environ.get("PRINT_SYSTEM_INFO")
+if PRINT_SYSTEM_INFO is None:
+    PRINT_SYSTEM_INFO = CI_RUN
+else:
+    PRINT_SYSTEM_INFO = PRINT_SYSTEM_INFO == "1"
 SKIP_REQUIREMENTS_INSTALL = os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
 EXTRA_REQUIREMENTS_INSTALL = os.environ.get("EXTRA_REQUIREMENTS_INSTALL")
 COVERAGE_REQUIREMENT = os.environ.get("COVERAGE_REQUIREMENT")
@@ -46,14 +75,18 @@ if COVERAGE_FILE is None:
 IS_DARWIN = sys.platform.lower().startswith("darwin")
 IS_WINDOWS = sys.platform.lower().startswith("win")
 IS_FREEBSD = sys.platform.lower().startswith("freebsd")
+IS_LINUX = sys.platform.lower().startswith("linux")
+ONEDIR_ARTIFACT_PATH = ARTIFACTS_DIR / "salt"
+if IS_WINDOWS:
+    ONEDIR_PYTHON_PATH = ONEDIR_ARTIFACT_PATH / "Scripts" / "python.exe"
+else:
+    ONEDIR_PYTHON_PATH = ONEDIR_ARTIFACT_PATH / "bin" / "python3"
 # Python versions to run against
 _PYTHON_VERSIONS = ("3", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10")
 
 # Nox options
 #  Reuse existing virtualenvs
 nox.options.reuse_existing_virtualenvs = True
-#  Don't fail on missing interpreters
-nox.options.error_on_missing_interpreters = False
 
 # Change current directory to REPO_ROOT
 os.chdir(str(REPO_ROOT))
@@ -94,8 +127,11 @@ def session_run_always(session, *command, **kwargs):
             session._runner.global_config.install_only = old_install_only_value
 
 
-def find_session_runner(session, name, python_version, **kwargs):
-    name += "-{}".format(python_version)
+def find_session_runner(session, name, python_version, onedir=False, **kwargs):
+    if onedir:
+        name += "-onedir-{}".format(ONEDIR_PYTHON_PATH)
+    else:
+        name += "-{}".format(python_version)
     for s, _ in session._runner.manifest.list_all_sessions():
         if name not in s.signatures:
             continue
@@ -250,7 +286,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         session.error("Could not find a linux requirements file for {}".format(pydir))
 
 
-def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
+def _upgrade_pip_setuptools_and_wheel(session, upgrade=True, onedir=False):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
@@ -266,21 +302,34 @@ def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
     ]
     if upgrade:
         install_command.append("-U")
-    install_command.extend(
-        [
-            "pip>=20.2.4,<21.2",
-            "setuptools!=50.*,!=51.*,!=52.*,<59",
+    if onedir:
+        requirements = [
+            "pip>=22.3.1,<23.0",
+            # https://github.com/pypa/setuptools/commit/137ab9d684075f772c322f455b0dd1f992ddcd8f
+            "setuptools>=65.6.3,<66",
             "wheel",
         ]
-    )
+    else:
+        requirements = [
+            "pip>=20.2.4,<21.2",
+            "setuptools!=50.*,!=51.*,!=52.*,<59",
+        ]
+    install_command.extend(requirements)
     session_run_always(session, *install_command, silent=PIP_INSTALL_SILENT)
     return True
 
 
 def _install_requirements(
-    session, transport, *extra_requirements, requirements_type="ci"
+    session,
+    transport,
+    *extra_requirements,
+    requirements_type="ci",
+    onedir=False,
 ):
-    if not _upgrade_pip_setuptools_and_wheel(session):
+    if onedir and IS_LINUX:
+        session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
+
+    if not _upgrade_pip_setuptools_and_wheel(session, onedir=onedir):
         return False
 
     # Install requirements
@@ -341,15 +390,15 @@ def _run_with_coverage(session, *test_cmd, env=None):
 
     if sitecustomize_dir:
         try:
-            session.log(
-                "Discovered salt-factories coverage 'sitecustomize.py' path: "
-                f"{sitecustomize_dir.relative_to(REPO_ROOT)}"
-            )
+            relative_sitecustomize_dir = sitecustomize_dir.relative_to(REPO_ROOT)
         except ValueError:
-            session.log(
-                "Discovered salt-factories coverage 'sitecustomize.py' path: "
-                f"{sitecustomize_dir}"
-            )
+            relative_sitecustomize_dir = sitecustomize_dir
+        log_msg = f"Discovered salt-factories coverage 'sitecustomize.py' path: {relative_sitecustomize_dir}"
+        try:
+            session.debug(log_msg)
+        except AttributeError:
+            # Older nox
+            session.log(log_msg)
         python_path_env_var = os.environ.get("PYTHONPATH") or None
         if python_path_env_var is None:
             python_path_env_var = str(sitecustomize_dir)
@@ -377,40 +426,40 @@ def _run_with_coverage(session, *test_cmd, env=None):
     try:
         session.run(*test_cmd, env=env)
     finally:
-        # Always combine and generate the XML coverage report
-        try:
-            session.run("coverage", "combine", env=coverage_base_env)
-        except CommandFailed:
-            # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
-            # exception
-            pass
-        # Generate report for tests code coverage
-        session.run(
-            "coverage",
-            "xml",
-            "-o",
-            str(COVERAGE_OUTPUT_DIR.joinpath("tests.xml").relative_to(REPO_ROOT)),
-            "--omit=salt/*",
-            "--include=tests/*",
-            env=coverage_base_env,
-        )
-        # Generate report for salt code coverage
-        session.run(
-            "coverage",
-            "xml",
-            "-o",
-            str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
-            "--omit=tests/*",
-            "--include=salt/*",
-            env=coverage_base_env,
-        )
+        if os.environ.get("GITHUB_ACTIONS_PIPELINE", "0") == "0":
+            # Always combine and generate the XML coverage report
+            try:
+                session.run(
+                    "coverage", "combine", "--debug=pathmap", env=coverage_base_env
+                )
+            except CommandFailed:
+                # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
+                # exception
+                pass
+            # Generate report for tests code coverage
+            session.run(
+                "coverage",
+                "xml",
+                "-o",
+                str(COVERAGE_OUTPUT_DIR.joinpath("tests.xml").relative_to(REPO_ROOT)),
+                "--omit=salt/*",
+                "--include=tests/*",
+                env=coverage_base_env,
+            )
+            # Generate report for salt code coverage
+            session.run(
+                "coverage",
+                "xml",
+                "-o",
+                str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
+                "--omit=tests/*",
+                "--include=salt/*",
+                env=coverage_base_env,
+            )
 
 
 def _report_coverage(session):
-    if SKIP_REQUIREMENTS_INSTALL is False:
-        session.install(
-            "--progress-bar=off", COVERAGE_REQUIREMENT, silent=PIP_INSTALL_SILENT
-        )
+    _install_coverage_requirement(session)
 
     env = {
         # The full path to the .coverage data file. Makes sure we always write
@@ -436,6 +485,18 @@ def _report_coverage(session):
         # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
         # exception
         pass
+
+    if not IS_WINDOWS:
+        # The coverage file might have come from a windows machine, fix paths
+        with sqlite3.connect(COVERAGE_FILE) as db:
+            res = db.execute(r"SELECT * FROM file WHERE path LIKE '%salt\%'")
+            if res.fetchone():
+                session_warn(
+                    session,
+                    "Replacing backwards slashes with forward slashes on file "
+                    "paths in the coverage database",
+                )
+                db.execute(r"UPDATE OR IGNORE file SET path=replace(path, '\', '/');")
 
     if report_section == "salt":
         json_coverage_file = (
@@ -512,7 +573,7 @@ def test_parametrized(session, coverage, transport, crypto):
     cmd_args = [
         "--transport={}".format(transport),
     ] + session.posargs
-    _pytest(session, coverage, cmd_args)
+    _pytest(session, coverage=coverage, cmd_args=cmd_args)
 
 
 @nox.session(python=_PYTHON_VERSIONS)
@@ -873,7 +934,7 @@ def test_cloud(session, coverage):
         "-k",
         "cloud",
     ] + session.posargs
-    _pytest(session, coverage, cmd_args)
+    _pytest(session, coverage=coverage, cmd_args=cmd_args)
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="pytest-cloud")
@@ -910,7 +971,7 @@ def test_tornado(session, coverage):
         session.install(
             "--progress-bar=off", "pyzmq==17.0.0", silent=PIP_INSTALL_SILENT
         )
-    _pytest(session, coverage, session.posargs)
+    _pytest(session, coverage=coverage, cmd_args=session.posargs)
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="pytest-tornado")
@@ -932,11 +993,14 @@ def pytest_tornado(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
-def _pytest(session, coverage, cmd_args):
+def _pytest(session, coverage, cmd_args, env=None):
     # Create required artifacts directories
     _create_ci_directories()
 
-    env = {"CI_RUN": "1" if CI_RUN else "0"}
+    if env is None:
+        env = {}
+
+    env["CI_RUN"] = "1" if CI_RUN else "0"
 
     args = [
         "--rootdir",
@@ -945,6 +1009,7 @@ def _pytest(session, coverage, cmd_args):
         "--show-capture=no",
         "-ra",
         "-s",
+        "-vv",
         "--showlocals",
     ]
     for arg in cmd_args:
@@ -954,13 +1019,18 @@ def _pytest(session, coverage, cmd_args):
         args.append("--log-file={}".format(RUNTESTS_LOGFILE))
     args.extend(cmd_args)
 
-    if CI_RUN:
+    if PRINT_SYSTEM_INFO and "--sysinfo" not in args:
+        args.append("--sysinfo")
+
+    if PRINT_TEST_SELECTION:
         # We'll print out the collected tests on CI runs.
         # This will show a full list of what tests are going to run, in the right order, which, in case
         # of a test suite hang, helps us pinpoint which test is hanging
         session.run(
             "python", "-m", "pytest", *(args + ["--collect-only", "-qqq"]), env=env
         )
+        if PRINT_TEST_PLAN_ONLY:
+            return
 
     if coverage is True:
         _run_with_coverage(
@@ -978,9 +1048,281 @@ def _pytest(session, coverage, cmd_args):
         session.run("python", "-m", "pytest", *args, env=env)
 
 
+def _ci_test(session, transport, onedir=False):
+    # Install requirements
+    _install_requirements(session, transport, onedir=onedir)
+    env = {}
+    if onedir:
+        env["ONEDIR_TESTRUN"] = "1"
+    chunks = {
+        "unit": [
+            "tests/unit",
+            "tests/pytests/unit",
+        ],
+        "functional": [
+            "tests/pytests/functional",
+        ],
+        "scenarios": ["tests/pytests/scenarios"],
+    }
+
+    if not session.posargs:
+        chunk_cmd = []
+        junit_report_filename = "test-results"
+        runtests_log_filename = "runtests"
+    else:
+        chunk = session.posargs.pop(0)
+        if chunk in ["unit", "functional", "integration", "scenarios", "all"]:
+            if chunk == "all":
+                chunk_cmd = []
+                junit_report_filename = "test-results"
+                runtests_log_filename = "runtests"
+            elif chunk == "integration":
+                chunk_cmd = []
+                for values in chunks.values():
+                    for value in values:
+                        chunk_cmd.append(f"--ignore={value}")
+                junit_report_filename = f"test-results-{chunk}"
+                runtests_log_filename = f"runtests-{chunk}"
+            else:
+                chunk_cmd = chunks[chunk]
+                junit_report_filename = f"test-results-{chunk}"
+                runtests_log_filename = f"runtests-{chunk}"
+            if session.posargs:
+                if session.posargs[0] == "--":
+                    session.posargs.pop(0)
+                chunk_cmd.extend(session.posargs)
+        else:
+            chunk_cmd = [chunk] + session.posargs
+            junit_report_filename = "test-results"
+            runtests_log_filename = "runtests"
+
+    rerun_failures = os.environ.get("RERUN_FAILURES", "0") == "1"
+    track_code_coverage = os.environ.get("SKIP_CODE_COVERAGE", "0") == "0"
+
+    common_pytest_args = [
+        "--color=yes",
+        "--ssh-tests",
+        "--sys-stats",
+        "--run-destructive",
+        f"--output-columns={os.environ.get('OUTPUT_COLUMNS') or 120}",
+    ]
+    try:
+        pytest_args = (
+            common_pytest_args[:]
+            + [
+                f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
+                f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+            ]
+            + chunk_cmd
+        )
+        _pytest(session, coverage=track_code_coverage, cmd_args=pytest_args, env=env)
+    except CommandFailed:
+        if rerun_failures is False:
+            raise
+
+        # Don't print the system information, not the test selection on reruns
+        global PRINT_TEST_SELECTION
+        global PRINT_SYSTEM_INFO
+        PRINT_TEST_SELECTION = False
+        PRINT_SYSTEM_INFO = False
+
+        pytest_args = (
+            common_pytest_args[:]
+            + [
+                "--lf",
+                f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}-rerun.xml",
+                f"--log-file=artifacts/logs/{runtests_log_filename}-rerun.log",
+            ]
+            + chunk_cmd
+        )
+        _pytest(session, coverage=track_code_coverage, cmd_args=pytest_args, env=env)
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="ci-test")
+def ci_test(session):
+    _ci_test(session, "zeromq")
+
+
+@nox.session(python=_PYTHON_VERSIONS, name="ci-test-tcp")
+def ci_test_tcp(session):
+    _ci_test(session, "tcp")
+
+
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="ci-test-onedir",
+    venv_params=["--system-site-packages"],
+)
+def ci_test_onedir(session):
+    if not ONEDIR_ARTIFACT_PATH.exists():
+        session.error(
+            "The salt onedir artifact, expected to be in '{}', was not found".format(
+                ONEDIR_ARTIFACT_PATH.relative_to(REPO_ROOT)
+            )
+        )
+
+    _ci_test(session, "zeromq", onedir=True)
+
+
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="ci-test-onedir-tcp",
+    venv_params=["--system-site-packages"],
+)
+def ci_test_onedir_tcp(session):
+    if not ONEDIR_ARTIFACT_PATH.exists():
+        session.error(
+            "The salt onedir artifact, expected to be in '{}', was not found".format(
+                ONEDIR_ARTIFACT_PATH.relative_to(REPO_ROOT)
+            )
+        )
+
+    _ci_test(session, "tcp", onedir=True)
+
+
 @nox.session(python="3", name="report-coverage")
 def report_coverage(session):
     _report_coverage(session)
+
+
+@nox.session(python=False, name="decompress-dependencies")
+def decompress_dependencies(session):
+    if not session.posargs:
+        session.error(
+            "Please pass the distro-slug to run tests against. "
+            "Check cicd/images.yml for what's available."
+        )
+    distro_slug = session.posargs.pop(0)
+    if IS_WINDOWS:
+        nox_dependencies_tarball = f"nox.{distro_slug}.tar.gz"
+    else:
+        nox_dependencies_tarball = f"nox.{distro_slug}.tar.xz"
+    nox_dependencies_tarball_path = REPO_ROOT / nox_dependencies_tarball
+    if not nox_dependencies_tarball_path.exists():
+        session.error(
+            f"The {nox_dependencies_tarball} file"
+            "does not exist. Not decompressing anything."
+        )
+
+    session_run_always(session, "tar", "xpf", nox_dependencies_tarball)
+    if os.environ.get("DELETE_NOX_ARCHIVE", "0") == "1":
+        nox_dependencies_tarball_path.unlink()
+
+    session.log("Finding broken 'python' symlinks under '.nox/' ...")
+    for dirname in os.scandir(REPO_ROOT / ".nox"):
+        if not IS_WINDOWS:
+            scan_path = REPO_ROOT.joinpath(".nox", dirname, "bin")
+        else:
+            scan_path = REPO_ROOT.joinpath(".nox", dirname, "Scripts")
+        script_paths = {str(p): p for p in os.scandir(scan_path)}
+        for key in sorted(script_paths):
+            path = script_paths[key]
+            if not path.is_symlink():
+                continue
+            broken_link = pathlib.Path(path)
+            resolved_link = os.readlink(path)
+            if not os.path.isabs(resolved_link):
+                # Relative symlinks, resolve them
+                resolved_link = os.path.join(scan_path, resolved_link)
+            if not os.path.exists(resolved_link):
+                session.log("The symlink %r looks to be broken", resolved_link)
+                # This is a broken link, fix it
+                resolved_link_suffix = resolved_link.split(
+                    f"artifacts{os.sep}salt{os.sep}"
+                )[-1]
+                fixed_link = REPO_ROOT.joinpath(
+                    "artifacts", "salt", resolved_link_suffix
+                )
+                session.log(
+                    "Fixing broken symlink in nox virtualenv %r, from %r to %r",
+                    dirname.name,
+                    resolved_link,
+                    str(fixed_link.relative_to(REPO_ROOT)),
+                )
+                broken_link.unlink()
+                broken_link.symlink_to(fixed_link)
+
+
+@nox.session(python=False, name="compress-dependencies")
+def compress_dependencies(session):
+    if not session.posargs:
+        session.error(
+            "Please pass the distro-slug to run tests against. "
+            "Check cicd/images.yml for what's available."
+        )
+    distro_slug = session.posargs.pop(0)
+    if IS_WINDOWS:
+        nox_dependencies_tarball = f"nox.{distro_slug}.tar.gz"
+    else:
+        nox_dependencies_tarball = f"nox.{distro_slug}.tar.xz"
+    nox_dependencies_tarball_path = REPO_ROOT / nox_dependencies_tarball
+    if nox_dependencies_tarball_path.exists():
+        session_warn(
+            session, f"Found existing {nox_dependencies_tarball}. Deleting it."
+        )
+        nox_dependencies_tarball_path.unlink()
+
+    session_run_always(
+        session,
+        "tar",
+        "-caf",
+        nox_dependencies_tarball,
+        "--exclude=.nox/pre-archive-cleanup",
+        ".nox",
+    )
+
+
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="pre-archive-cleanup",
+)
+@nox.parametrize("pkg", [False, True])
+def pre_archive_cleanup(session, pkg):
+    """
+    Call `tools pkg pre-archive-cleanup <path>`
+    """
+    if session.posargs:
+        session.error("No additional arguments can be passed to 'pre-archive-cleanup'")
+    version_info = _get_session_python_version_info(session)
+    if version_info < (3, 10):
+        session.error(
+            "The nox session 'pre-archive-cleanup' needs Python 3.10+ to run."
+        )
+
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "tools.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    cmdline = [
+        "tools",
+        "pkg",
+        "pre-archive-cleanup",
+    ]
+    if pkg:
+        cmdline.append("--pkg")
+    cmdline.append(".nox")
+    session_run_always(session, *cmdline)
+
+
+@nox.session(python="3", name="combine-coverage")
+def combine_coverage(session):
+    _install_coverage_requirement(session)
+    env = {
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        "COVERAGE_FILE": str(COVERAGE_FILE),
+    }
+
+    # Always combine and generate the XML coverage report
+    try:
+        session.run("coverage", "combine", env=env)
+    except CommandFailed:
+        # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
+        # exception
+        pass
 
 
 class Tee:
@@ -1104,6 +1446,7 @@ def lint_salt(session):
     if session.posargs:
         paths = session.posargs
     else:
+        # TBD replace paths entries when implement pyproject.toml
         paths = ["setup.py", "noxfile.py", "salt/", "tasks/"]
     _lint(session, ".pylintrc", flags, paths)
 
@@ -1254,17 +1597,226 @@ def changelog(session, draft, force):
     """
     Generate salt's changelog
     """
+    session_warn(
+        session,
+        "Please stop using this nox session and start using the 'tools' command shown below.",
+    )
     if _upgrade_pip_setuptools_and_wheel(session):
         requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "changelog.txt"
+            "requirements", "static", "ci", _get_pydir(session), "tools.txt"
         )
         install_command = ["--progress-bar=off", "-r", requirements_file]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
-    town_cmd = ["towncrier", "--version={}".format(session.posargs[0])]
+    cmd = ["tools", "changelog", "update-changelog-md"]
     if draft:
-        town_cmd.append("--draft")
-    if force:
-        # Do not ask, just remove news fragments
-        town_cmd.append("--yes")
-    session.run(*town_cmd)
+        cmd.append("--draft")
+    cmd.append(session.posargs[0])
+    session.run(*cmd)
+
+
+class Recompress:
+    """
+    Helper class to re-compress a ``.tag.gz`` file to make it reproducible.
+    """
+
+    def __init__(self, mtime):
+        self.mtime = int(mtime)
+
+    def tar_reset(self, tarinfo):
+        """
+        Reset user, group, mtime, and mode to create reproducible tar.
+        """
+        tarinfo.uid = tarinfo.gid = 0
+        tarinfo.uname = tarinfo.gname = "root"
+        tarinfo.mtime = self.mtime
+        if tarinfo.type == tarfile.DIRTYPE:
+            tarinfo.mode = 0o755
+        else:
+            tarinfo.mode = 0o644
+        if tarinfo.pax_headers:
+            raise ValueError(tarinfo.name, tarinfo.pax_headers)
+        return tarinfo
+
+    def recompress(self, targz):
+        """
+        Re-compress the passed path.
+        """
+        tempd = pathlib.Path(tempfile.mkdtemp()).resolve()
+        d_src = tempd.joinpath("src")
+        d_src.mkdir()
+        d_tar = tempd.joinpath(targz.stem)
+        d_targz = tempd.joinpath(targz.name)
+        with tarfile.open(d_tar, "w|") as wfile:
+            with tarfile.open(targz, "r:gz") as rfile:
+                rfile.extractall(d_src)
+                extracted_dir = next(pathlib.Path(d_src).iterdir())
+                for name in sorted(extracted_dir.rglob("*")):
+                    wfile.add(
+                        str(name),
+                        filter=self.tar_reset,
+                        recursive=False,
+                        arcname=str(name.relative_to(d_src)),
+                    )
+
+        with open(d_tar, "rb") as rfh:
+            with gzip.GzipFile(
+                fileobj=open(d_targz, "wb"), mode="wb", filename="", mtime=self.mtime
+            ) as gz:  # pylint: disable=invalid-name
+                while True:
+                    chunk = rfh.read(1024)
+                    if not chunk:
+                        break
+                    gz.write(chunk)
+        targz.unlink()
+        shutil.move(str(d_targz), str(targz))
+
+
+@nox.session(python="3")
+def build(session):
+    """
+    Build source and binary distributions based off the current commit author date UNIX timestamp.
+
+    The reason being, reproducible packages.
+
+    .. code-block: shell
+
+        git show -s --format=%at HEAD
+    """
+    shutil.rmtree("dist/", ignore_errors=True)
+    if SKIP_REQUIREMENTS_INSTALL is False:
+        session.install(
+            "--progress-bar=off",
+            "-r",
+            "requirements/build.txt",
+            silent=PIP_INSTALL_SILENT,
+        )
+
+    timestamp = session.run(
+        "git",
+        "show",
+        "-s",
+        "--format=%at",
+        "HEAD",
+        silent=True,
+        log=False,
+        stderr=None,
+    ).strip()
+    env = {"SOURCE_DATE_EPOCH": str(timestamp)}
+    session.run(
+        "python",
+        "-m",
+        "build",
+        "--sdist",
+        str(REPO_ROOT),
+        env=env,
+    )
+    # Recreate sdist to be reproducible
+    recompress = Recompress(timestamp)
+    for targz in REPO_ROOT.joinpath("dist").glob("*.tar.gz"):
+        session.log("Re-compressing %s...", targz.relative_to(REPO_ROOT))
+        recompress.recompress(targz)
+
+    sha256sum = shutil.which("sha256sum")
+    if sha256sum:
+        packages = [
+            str(pkg.relative_to(REPO_ROOT))
+            for pkg in REPO_ROOT.joinpath("dist").iterdir()
+        ]
+        session.run("sha256sum", *packages, external=True)
+    session.run("python", "-m", "twine", "check", "dist/*")
+
+
+@nox.session(
+    python=str(ONEDIR_PYTHON_PATH),
+    name="test-pkgs-onedir",
+    venv_params=["--system-site-packages"],
+)
+def test_pkgs_onedir(session):
+    if not ONEDIR_ARTIFACT_PATH.exists():
+        session.error(
+            "The salt onedir artifact, expected to be in '{}', was not found".format(
+                ONEDIR_ARTIFACT_PATH.relative_to(REPO_ROOT)
+            )
+        )
+
+    chunks = {
+        "install": ["pkg/tests/"],
+        "upgrade": [
+            "pkg/tests/upgrade/test_salt_upgrade.py::test_salt_upgrade",
+            "--upgrade",
+            "--no-uninstall",
+        ],
+        "upgrade-classic": [
+            "pkg/tests/upgrade/test_salt_upgrade.py::test_salt_upgrade",
+            "--upgrade",
+            "--no-uninstall",
+        ],
+        "download-pkgs": [
+            "--download-pkgs",
+            "pkg/tests/download/test_pkg_download.py",
+        ],
+    }
+
+    if not session.posargs or session.posargs[0] not in chunks:
+        chunk = "install"
+        session.log("Choosing default 'install' test type")
+    else:
+        chunk = session.posargs.pop(0)
+
+    cmd_args = chunks[chunk]
+    junit_report_filename = f"test-results-{chunk}"
+    runtests_log_filename = f"runtests-{chunk}"
+
+    pydir = _get_pydir(session)
+
+    if IS_LINUX:
+        # Fetch the toolchain
+        session_run_always(session, "python3", "-m", "relenv", "toolchain", "fetch")
+
+    # Install requirements
+    if _upgrade_pip_setuptools_and_wheel(session, onedir=True):
+        if IS_WINDOWS:
+            file_name = "pkgtests-windows.txt"
+        else:
+            file_name = "pkgtests.txt"
+
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", pydir, file_name
+        )
+
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    env = {
+        "ONEDIR_TESTRUN": "1",
+    }
+
+    if chunk == "upgrade-classic":
+        cmd_args.append("--classic")
+        # Workaround for installing and running classic packages from 3005.1
+        # They can only run with importlib-metadata<5.0.0.
+        subprocess.run(["pip3", "install", "importlib-metadata==4.13.0"], check=False)
+
+    pytest_args = (
+        cmd_args[:]
+        + [
+            f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
+            f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+        ]
+        + session.posargs
+    )
+    _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+    if chunk not in ("install", "download-pkgs"):
+        cmd_args = chunks["install"]
+        pytest_args = (
+            cmd_args[:]
+            + [
+                "--no-install",
+                f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
+                f"--log-file=artifacts/logs/{runtests_log_filename}.log",
+            ]
+            + session.posargs
+        )
+        _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+    sys.exit(0)

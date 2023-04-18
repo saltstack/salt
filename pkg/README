@@ -1,0 +1,11 @@
+Salt packaging resources.
+
+
+The contents of this directory are as follows
+
+common/ - Files common to multiple packages.
+debian/ - Debian (apt) based distro packaging.
+rpm/ - Redhat (rpm) based distro packaging.
+macos/ - MacOS packaging.
+windows/ - Windows packaging.
+old/ - Old and deperecated package files.

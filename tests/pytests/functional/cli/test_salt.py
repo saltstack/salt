@@ -1,7 +1,5 @@
-"""
-tests.pytests.functional.cli.test_salt
-~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
+import os
+
 import pytest
 
 import salt.version
@@ -21,6 +19,7 @@ def test_versions_report(salt_cli):
                 section[key] = section[key].strip()
 
     ret = salt_cli.run("--versions-report")
+    assert ret.returncode == 0
     assert ret.stdout
     ret_lines = ret.stdout.split("\n")
 
@@ -53,3 +52,5 @@ def test_versions_report(salt_cli):
             assert key in expected_keys
             expected_keys.remove(key)
     assert not expected_keys
+    if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+        assert "relenv" in ret_dict["Dependency Versions"]

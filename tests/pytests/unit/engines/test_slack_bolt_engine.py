@@ -3,7 +3,6 @@ unit tests for the slack engine
 """
 import pytest
 
-import salt.config
 import salt.engines.slack_bolt_engine as slack_bolt_engine
 from tests.support.mock import MagicMock, call, patch
 
@@ -94,7 +93,6 @@ def configure_loader_modules():
 
 @pytest.fixture
 def slack_client(minion_opts):
-    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
     app_token = "xapp-x-xxxxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     bot_token = "xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx"
     trigger = "!"

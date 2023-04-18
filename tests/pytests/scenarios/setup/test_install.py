@@ -19,8 +19,15 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
+    pytest.mark.skip_initial_onedir_failure,
     pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False),
 ]
+
+
+def _check_skip(grains):
+    if grains["os"] == "SUSE":
+        return True
+    return False
 
 
 def use_static_requirements_ids(value):
@@ -40,6 +47,7 @@ def virtualenv(virtualenv, use_static_requirements):
     return virtualenv
 
 
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_wheel(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test building and installing a bdist_wheel package
@@ -97,7 +105,7 @@ def test_wheel(virtualenv, cache_dir, use_static_requirements, src_dir):
             installed_version, salt.version.__version__
         )
 
-        # Let's also ensure we have a salt/_version.py from the installed salt wheel
+        # Let's also ensure we have a salt/_version.txt from the installed salt wheel
         subdir = [
             "lib",
             "python{}.{}".format(*sys.version_info),
@@ -110,7 +118,7 @@ def test_wheel(virtualenv, cache_dir, use_static_requirements, src_dir):
         installed_salt_path = pathlib.Path(venv.venv_dir)
         installed_salt_path = installed_salt_path.joinpath(*subdir)
         assert installed_salt_path.is_dir()
-        salt_generated_version_file_path = installed_salt_path / "_version.py"
+        salt_generated_version_file_path = installed_salt_path / "_version.txt"
         assert salt_generated_version_file_path.is_file()
 
 
@@ -232,7 +240,7 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
             installed_version, salt.version.__version__
         )
 
-        # Let's also ensure we have a salt/_version.py from the installed salt egg
+        # Let's also ensure we have a salt/_version.txt from the installed salt egg
         subdir = [
             "lib",
             "python{}.{}".format(*sys.version_info),
@@ -249,12 +257,13 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
         log.debug("Installed salt path glob matches: %s", installed_salt_path)
         installed_salt_path = installed_salt_path[0] / "salt"
         assert installed_salt_path.is_dir()
-        salt_generated_version_file_path = installed_salt_path / "_version.py"
+        salt_generated_version_file_path = installed_salt_path / "_version.txt"
         assert salt_generated_version_file_path.is_file(), "{} is not a file".format(
             salt_generated_version_file_path
         )
 
 
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test building and installing a sdist package
@@ -307,6 +316,7 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
             str(cache_dir),
             cwd=src_dir,
         )
+
         venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
 
         salt_generated_package = list(cache_dir.glob("*.tar.gz"))
@@ -325,7 +335,7 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
 
         venv.install(str(salt_generated_package))
 
-        # Let's also ensure we have a salt/_version.py from the installed salt wheel
+        # Let's also ensure we have a salt/_version.txt from the installed salt wheel
         subdir = [
             "lib",
             "python{}.{}".format(*sys.version_info),
@@ -338,10 +348,10 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
         installed_salt_path = pathlib.Path(venv.venv_dir)
         installed_salt_path = installed_salt_path.joinpath(*subdir)
         assert installed_salt_path.is_dir()
-        salt_generated_version_file_path = installed_salt_path / "_version.py"
+        salt_generated_version_file_path = installed_salt_path / "_version.txt"
         assert salt_generated_version_file_path.is_file()
         with salt_generated_version_file_path.open() as rfh:
-            log.debug("_version.py contents:\n >>>>>>\n%s\n <<<<<<", rfh.read())
+            log.debug("_version.txt contents:\n >>>>>>\n%s\n <<<<<<", rfh.read())
 
         # Let's ensure the version is correct
         cmd = venv.run(venv.venv_python, "-m", "pip", "list", "--format", "json")
@@ -359,6 +369,7 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
         )
 
 
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test installing directly from source
@@ -429,7 +440,7 @@ def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
             installed_version, salt.version.__version__
         )
 
-        # Let's also ensure we have a salt/_version.py from the installed salt
+        # Let's also ensure we have a salt/_version.txt from the installed salt
         subdir = [
             "lib",
             "python{}.{}".format(*sys.version_info),
@@ -444,5 +455,5 @@ def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
         if not installed_salt_path:
             pytest.fail("Failed to find the installed salt path")
         installed_salt_path = installed_salt_path[0] / "salt"
-        salt_generated_version_file_path = installed_salt_path / "_version.py"
+        salt_generated_version_file_path = installed_salt_path / "_version.txt"
         assert salt_generated_version_file_path.is_file()

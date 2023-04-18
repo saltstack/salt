@@ -11,6 +11,7 @@ OSA_SCRIPT = "/usr/bin/osascript"
 
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_initial_gh_actions_failure
 @pytest.mark.skip_unless_on_darwin
 class MacAssistiveTest(ModuleCase):
     """

@@ -478,7 +478,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 ``mem_hot_add``
     Boolean value that enables hot-add support for adding memory resources while
     the guest is powered on.
-    
+
 ``nested_hv``
     Boolean value that enables support for nested hardware-assisted virtualization.
 

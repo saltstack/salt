@@ -6,7 +6,6 @@ import psutil  # pylint: disable=3rd-party-module-not-gated
 import pytest
 from pytestshellutils.utils.processes import terminate_process
 
-import salt.config
 import salt.fileserver.hgfs as hgfs
 from tests.support.mock import patch
 
@@ -19,13 +18,9 @@ except ImportError:
 
 
 @pytest.fixture(scope="module")
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MASTER_OPTS.copy()
-    cache = tempfile.TemporaryDirectory(dir="/tmp")
-    opts["cachedir"] = cache.name
-    opts["fileserver_backend"] = ["hgfs"]
-    yield {hgfs: {"__opts__": opts}}
-    cache.cleanup()
+def configure_loader_modules(master_opts):
+    master_opts["fileserver_backend"] = ["hgfs"]
+    yield {hgfs: {"__opts__": master_opts}}
 
 
 @pytest.fixture

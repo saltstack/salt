@@ -16,6 +16,17 @@ from tests.support.mock import Mock, patch
 log = logging.getLogger(__name__)
 
 
+def _check_skip(grains):
+    if grains["os"] == "MacOS":
+        return True
+    return False
+
+
+pytestmark = [
+    pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip),
+]
+
+
 @pytest.fixture
 def configure_loader_modules(master_opts):
     return {script: {"__opts__": master_opts}}

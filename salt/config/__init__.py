@@ -65,9 +65,15 @@ elif salt.utils.platform.is_proxy():
     _DFLT_FQDNS_GRAINS = False
     _MASTER_TRIES = 1
     _MASTER_USER = salt.utils.user.get_user()
+elif salt.utils.platform.is_darwin():
+    _DFLT_IPC_MODE = "ipc"
+    # fqdn resolution can be very slow on macOS, see issue #62168
+    _DFLT_FQDNS_GRAINS = False
+    _MASTER_TRIES = 1
+    _MASTER_USER = salt.utils.user.get_user()
 else:
     _DFLT_IPC_MODE = "ipc"
-    _DFLT_FQDNS_GRAINS = True
+    _DFLT_FQDNS_GRAINS = False
     _MASTER_TRIES = 1
     _MASTER_USER = salt.utils.user.get_user()
 
@@ -366,6 +372,8 @@ VALID_OPTS = immutabletypes.freeze(
         # to the jid. WARNING: A change to the jid format may break external
         # applications that depend on the original format.
         "unique_jid": bool,
+        # Governs whether state runs will queue or fail to run when a state is already running
+        "state_queue": bool,
         # Tells the highstate outputter to show successful states. False will omit successes.
         "state_verbose": bool,
         # Specify the format for state outputs. See highstate outputter for additional details.
@@ -1181,6 +1189,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "state_auto_order": True,
         "state_events": False,
         "state_aggregate": False,
+        "state_queue": False,
         "snapper_states": False,
         "snapper_states_config": "root",
         "acceptance_wait_time": 10,
@@ -3917,6 +3926,18 @@ def apply_master_config(overrides=None, defaults=None):
     _adjust_log_file_override(overrides, defaults["log_file"])
     if overrides:
         opts.update(overrides)
+    # `keep_acl_in_token` will be forced to True when using external authentication
+    # for REST API (`rest` is present under `external_auth`). This is because the REST API
+    # does not store the password, and can therefore not retroactively fetch the ACL, so
+    # the ACL must be stored in the token.
+    if "rest" in opts.get("external_auth", {}):
+        # Check current value and print out warning
+        if opts["keep_acl_in_token"] is False:
+            log.warning(
+                "The 'rest' external_auth backend requires 'keep_acl_in_token' to be True. "
+                "Setting 'keep_acl_in_token' to True."
+            )
+        opts["keep_acl_in_token"] = True
 
     opts["__cli"] = salt.utils.stringutils.to_unicode(os.path.basename(sys.argv[0]))
 

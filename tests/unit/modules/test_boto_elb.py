@@ -8,7 +8,7 @@ import pytest
 import salt.config
 import salt.loader
 import salt.modules.boto_elb as boto_elb
-import salt.utils.versions
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -94,12 +94,10 @@ def _has_required_moto():
     if not HAS_MOTO:
         return False
     else:
-        moto_version = salt.utils.versions.LooseVersion(
-            pkg_resources.get_distribution("moto").version
-        )
-        if moto_version < salt.utils.versions.LooseVersion(required_moto):
+        moto_version = Version(pkg_resources.get_distribution("moto").version)
+        if moto_version < Version(required_moto):
             return False
-        elif moto_version < salt.utils.versions.LooseVersion(required_moto_py3):
+        elif moto_version < Version(required_moto_py3):
             return False
 
     return True

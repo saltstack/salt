@@ -59,10 +59,10 @@ def _has_required_moto():
     if not HAS_MOTO:
         return False
     else:
-        moto_version = salt.utils.versions.LooseVersion(
+        moto_version = salt.utils.versions.Version(
             pkg_resources.get_distribution("moto").version
         )
-        if moto_version < salt.utils.versions.LooseVersion(required_moto):
+        if moto_version < salt.utils.versions.Version(required_moto):
             return False
     return True
 
