@@ -185,8 +185,8 @@ def _render_filenames(path, dest, saltenv, template, **kw):
         pillarenv = kw.get("pillarenv", __opts__.get("pillarenv"))
         kwargs["pillar"] = _gather_pillar(pillarenv, kw.get("pillar"))
     else:
-        kwargs["pillar"] = __pillar__
-    kwargs["grains"] = __grains__
+        kwargs["pillar"] = __pillar__.value()
+    kwargs["grains"] = __grains__.value()
     kwargs["opts"] = __opts__
     kwargs["saltenv"] = saltenv
 
