@@ -214,10 +214,15 @@ def setup_redhat_family(
     if arch == "aarch64":
         arch = "arm64"
 
-    repo_url_base = (
-        f"{root_url}/{os_name}/{os_version}/{arch}/{repo_subpath}/{salt_release}"
-    )
+    if repo_subpath == "minor":
+        repo_url_base = (
+            f"{root_url}/{os_name}/{os_version}/{arch}/{repo_subpath}/{salt_release}"
+        )
+    else:
+        repo_url_base = f"{root_url}/{os_name}/{os_version}/{arch}/{repo_subpath}"
+
     gpg_file_url = f"{root_url}/{os_name}/{os_version}/{arch}/{gpg_key_name}"
+
     try:
         pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_key_name)
     except Exception as exc:
@@ -278,10 +283,14 @@ def setup_debian_family(
     if ret.returncode != 0:
         pytest.fail(str(ret))
 
-    repo_url_base = (
-        f"{root_url}/{os_name}/{os_version}/{arch}/{repo_subpath}/{salt_release}"
-    )
+    if repo_subpath == "minor":
+        repo_url_base = (
+            f"{root_url}/{os_name}/{os_version}/{arch}/{repo_subpath}/{salt_release}"
+        )
+    else:
+        repo_url_base = f"{root_url}/{os_name}/{os_version}/{arch}/{repo_subpath}"
     gpg_file_url = f"{root_url}/{os_name}/{os_version}/{arch}/{gpg_key_name}"
+
     try:
         pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_key_name)
     except Exception as exc:
@@ -330,7 +339,10 @@ def setup_macos(shell, root_url, salt_release, downloads_path, repo_subpath):
 
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
         mac_pkg = f"salt-{salt_release}-py3-{arch}.pkg"
-        mac_pkg_url = f"{root_url}/macos/{repo_subpath}/{salt_release}/{mac_pkg}"
+        if repo_subpath == "minor":
+            mac_pkg_url = f"{root_url}/macos/{repo_subpath}/{salt_release}/{mac_pkg}"
+        else:
+            mac_pkg_url = f"{root_url}/macos/{repo_subpath}/{mac_pkg}"
     else:
         mac_pkg_url = f"{root_url}/macos/{salt_release}/{mac_pkg}"
         mac_pkg = f"salt-{salt_release}-macos-{arch}.pkg"
@@ -363,7 +375,10 @@ def setup_windows(shell, root_url, salt_release, downloads_path, repo_subpath):
             if arch.lower() != "x86":
                 arch = arch.upper()
             win_pkg = f"Salt-Minion-{salt_release}-Py3-{arch}.msi"
-        win_pkg_url = f"{root_url}/windows/{repo_subpath}/{salt_release}/{win_pkg}"
+        if repo_subpath == "minor":
+            win_pkg_url = f"{root_url}/windows/{repo_subpath}/{salt_release}/{win_pkg}"
+        else:
+            win_pkg_url = f"{root_url}/windows/{repo_subpath}/{win_pkg}"
         ssm_bin = root_dir / "ssm.exe"
     else:
         win_pkg = f"salt-{salt_release}-windows-{arch}.exe"
