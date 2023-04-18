@@ -7,6 +7,7 @@ import salt.exceptions
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.json
+import salt.utils.vault.api as vapi
 import salt.utils.vault.auth as vauth
 import salt.utils.vault.cache as vcache
 import salt.utils.vault.client as vclient
@@ -598,6 +599,22 @@ def get_lease_store(opts, context):
         cache_backend=vcache._get_cache_backend(config, opts),
     )
     return vleases.LeaseStore(client, lease_cache)
+
+
+def get_approle_api(opts, context, force_local=False):
+    """
+    Return an instance of AppRoleApi containing an AuthenticatedVaultClient.
+    """
+    client = get_authd_client(opts, context, force_local=force_local)
+    return vapi.AppRoleApi(client)
+
+
+def get_identity_api(opts, context, force_local=False):
+    """
+    Return an instance of IdentityApi containing an AuthenticatedVaultClient.
+    """
+    client = get_authd_client(opts, context, force_local=force_local)
+    return vapi.IdentityApi(client)
 
 
 def parse_config(config, validate=True, opts=None):

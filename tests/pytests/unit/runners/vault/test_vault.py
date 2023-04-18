@@ -3,6 +3,7 @@ import pytest
 import salt.exceptions
 import salt.runners.vault as vault
 import salt.utils.vault as vaultutil
+import salt.utils.vault.api as vapi
 import salt.utils.vault.client as vclient
 from tests.support.mock import ANY, MagicMock, Mock, patch
 
@@ -163,28 +164,6 @@ def secret_id_serialized(secret_id_response):
 
 
 @pytest.fixture
-def secret_id_lookup_accessor_response():
-    return {
-        "request_id": "28f2f9fb-26c0-6022-4970-baeb6366b085",
-        "lease_id": "",
-        "lease_duration": 0,
-        "renewable": False,
-        "data": {
-            "cidr_list": [],
-            "creation_time": "2022-09-09T15:11:28.358490481+00:00",
-            "expiration_time": "2022-10-11T15:11:28.358490481+00:00",
-            "last_updated_time": "2022-09-09T15:11:28.358490481+00:00",
-            "metadata": {},
-            "secret_id_accessor": "0380eb9f-3041-1c1c-234c-fde31a1a1fc1",
-            "secret_id_num_uses": 1,
-            "secret_id_ttl": 9999999999,
-            "token_bound_cidrs": [],
-        },
-        "warnings": None,
-    }
-
-
-@pytest.fixture
 def wrapped_serialized(wrapped_response):
     return {
         "wrap_info": {
@@ -213,51 +192,6 @@ def approle_meta(token_serialized, secret_id_serialized):
         "token_policies": ["default"],
         "token_ttl": 0,
         "token_type": "default",
-    }
-
-
-@pytest.fixture
-def entity_lookup_response():
-    return {
-        "data": {
-            "aliases": [],
-            "creation_time": "2017-11-13T21:01:33.543497Z",
-            "direct_group_ids": [],
-            "group_ids": [],
-            "id": "043fedec-967d-b2c9-d3af-0c467b04e1fd",
-            "inherited_group_ids": [],
-            "last_update_time": "2017-11-13T21:01:33.543497Z",
-            "merged_entity_ids": None,
-            "metadata": None,
-            "name": "test-minion",
-            "policies": None,
-        }
-    }
-
-
-@pytest.fixture
-def entity_fetch_response():
-    return {
-        "data": {
-            "aliases": [],
-            "creation_time": "2018-09-19T17:20:27.705389973Z",
-            "direct_group_ids": [],
-            "disabled": False,
-            "group_ids": [],
-            "id": "test-entity-id",
-            "inherited_group_ids": [],
-            "last_update_time": "2018-09-19T17:20:27.705389973Z",
-            "merged_entity_ids": None,
-            "metadata": {
-                "minion-id": "test-minion",
-            },
-            "name": "salt_minion_test-minion",
-            "policies": [
-                "default",
-                "saltstack/minions",
-                "saltstack/minion/test-minion",
-            ],
-        }
     }
 
 
@@ -302,9 +236,25 @@ def pillar():
 @pytest.fixture
 def client():
     with patch("salt.runners.vault._get_master_client", autospec=True) as get_client:
-        client = Mock(vclient.AuthenticatedVaultClient)
+        client = Mock(spec=vclient.AuthenticatedVaultClient)
         get_client.return_value = client
         yield client
+
+
+@pytest.fixture
+def approle_api():
+    with patch("salt.runners.vault._get_approle_api", autospec=True) as get_api:
+        api = Mock(spec=vapi.AppRoleApi)
+        get_api.return_value = api
+        yield api
+
+
+@pytest.fixture
+def identity_api():
+    with patch("salt.runners.vault._get_identity_api", autospec=True) as get_api:
+        api = Mock(spec=vapi.IdentityApi)
+        get_api.return_value = api
+        yield api
 
 
 @pytest.fixture
@@ -850,8 +800,10 @@ def test_generate_secret_id(
 
         def res_or_wrap(*args, **kwargs):
             if kwargs.get("wrap"):
-                return wrapped_serialized
-            secret_id = Mock()
+                res = Mock(spec=vaultutil.VaultWrappedResponse)
+                res.serialize_for_minion.return_value = wrapped_serialized
+                return res
+            secret_id = Mock(spec=vaultutil.VaultSecretId)
             secret_id.serialize_for_minion.return_value = secret_id_serialized
             return secret_id
 
@@ -912,7 +864,9 @@ def test_generate_secret_id_updates_params(
     ) as manage_approle, patch(
         "salt.runners.vault._lookup_approle_cached", autospec=True
     ) as lookup_approle:
-        gen.return_value = wrapped_serialized
+        res = Mock(spec=vaultutil.VaultWrappedResponse)
+        res.serialize_for_minion.return_value = wrapped_serialized
+        gen.return_value = res
         lookup_approle.return_value = approle_meta
         res = vault.generate_secret_id("test-minion", "sig", issue_params=None)
         validate_signature.assert_called_once_with("test-minion", "sig", False)
@@ -920,17 +874,6 @@ def test_generate_secret_id_updates_params(
         gen.assert_called_once_with("test-minion", wrap=config("issue:wrap"))
         matcher.assert_called_once()
         manage_approle.assert_called_once()
-
-
-@pytest.mark.parametrize("config", [{"issue:type": "approle"}], indirect=True)
-def test_list_approles(client, config):
-    """
-    Ensure list_approles call the API as expected and returns only a list of names
-    """
-    client.list.return_value = {"data": {"keys": ["foo", "bar"]}}
-    res = vault.list_approles()
-    assert res == ["foo", "bar"]
-    client.list.assert_called_once_with("auth/salt-minions/role")
 
 
 @pytest.mark.parametrize("config", [{"issue:type": "token"}], indirect=True)
@@ -1347,279 +1290,173 @@ def test_parse_issue_params_does_not_allow_bind_secret_id_override(
 
 
 @pytest.mark.usefixtures("config", "policies")
-def test_manage_approle(client, policies_default):
+def test_manage_approle(approle_api, policies_default):
     """
     Ensure _manage_approle calls the API as expected.
     """
     vault._manage_approle("test-minion", None)
-    payload = {
-        "explicit_max_ttl": 9999999999,
-        "num_uses": 1,
-        "token_policies": policies_default,
-    }
-    client.post.assert_called_once_with(
-        "auth/salt-minions/role/test-minion", payload=payload
+    approle_api.write_approle.assert_called_once_with(
+        "test-minion",
+        mount="salt-minions",
+        explicit_max_ttl=9999999999,
+        num_uses=1,
+        token_policies=policies_default,
     )
 
 
 @pytest.mark.usefixtures("config")
-def test_delete_approle(client):
+def test_delete_approle(approle_api):
     """
     Ensure _delete_approle calls the API as expected.
     """
     vault._delete_approle("test-minion")
-    client.delete.assert_called_once_with("auth/salt-minions/role/test-minion")
+    approle_api.delete_approle.assert_called_once_with(
+        "test-minion", mount="salt-minions"
+    )
 
 
 @pytest.mark.usefixtures("config")
-def test_lookup_approle(client, approle_meta):
+def test_lookup_approle(approle_api, approle_meta):
     """
     Ensure _lookup_approle calls the API as expected.
     """
-    client.get.return_value = {"data": approle_meta}
+    approle_api.read_approle.return_value = approle_meta
     res = vault._lookup_approle("test-minion")
     assert res == approle_meta
-    client.get.assert_called_once_with("auth/salt-minions/role/test-minion")
+    approle_api.read_approle.assert_called_once_with(
+        "test-minion", mount="salt-minions"
+    )
 
 
 @pytest.mark.usefixtures("config")
-def test_lookup_approle_nonexistent(client):
+def test_lookup_approle_nonexistent(approle_api):
     """
     Ensure _lookup_approle catches VaultNotFoundErrors and returns False.
     """
-    client.get.side_effect = vaultutil.VaultNotFoundError
+    approle_api.read_approle.side_effect = vaultutil.VaultNotFoundError
     res = vault._lookup_approle("test-minion")
     assert res is False
 
 
 @pytest.mark.usefixtures("config")
 @pytest.mark.parametrize("wrap", ["30s", False])
-def test_lookup_role_id(client, wrapped_response, wrap):
+def test_lookup_role_id(approle_api, wrap):
     """
     Ensure _lookup_role_id calls the API as expected.
     """
-
-    def res_or_wrap(*args, **kwargs):
-        if kwargs.get("wrap"):
-            return vaultutil.VaultWrappedResponse(**wrapped_response["wrap_info"])
-        return {"data": {"role_id": "test-role-id"}}
-
-    client.get.side_effect = res_or_wrap
-    res = vault._lookup_role_id("test-minion", wrap=wrap)
-    if wrap:
-        assert res == vaultutil.VaultWrappedResponse(**wrapped_response["wrap_info"])
-    else:
-        assert res == "test-role-id"
-    client.get.assert_called_once_with(
-        "auth/salt-minions/role/test-minion/role-id", wrap=wrap
+    vault._lookup_role_id("test-minion", wrap=wrap)
+    approle_api.read_role_id.assert_called_once_with(
+        "test-minion", mount="salt-minions", wrap=wrap
     )
 
 
 @pytest.mark.usefixtures("config")
-def test_lookup_role_id_nonexistent(client):
+def test_lookup_role_id_nonexistent(approle_api):
     """
     Ensure _lookup_role_id catches VaultNotFoundErrors and returns False.
     """
-    client.get.side_effect = vaultutil.VaultNotFoundError
+    approle_api.read_role_id.side_effect = vaultutil.VaultNotFoundError
     res = vault._lookup_role_id("test-minion", wrap=False)
     assert res is False
 
 
 @pytest.mark.usefixtures("config")
-@pytest.mark.parametrize("wrap", ["30s", False])
-def test_get_secret_id(client, wrapped_response, secret_id_response, wrap):
+@pytest.mark.parametrize("wrap,meta_info", [("30s", True), (False, False)])
+def test_get_secret_id(approle_api, wrap, meta_info):
     """
     Ensure _get_secret_id calls the API as expected.
     """
-
-    def res_or_wrap(*args, **kwargs):
-        if kwargs.get("wrap"):
-            return vaultutil.VaultWrappedResponse(**wrapped_response["wrap_info"])
-        return secret_id_response
-
-    client.post.side_effect = res_or_wrap
-    res = vault._get_secret_id("test-minion", wrap=wrap)
-    if wrap:
-        assert (
-            res
-            == vaultutil.VaultWrappedResponse(
-                **wrapped_response["wrap_info"]
-            ).serialize_for_minion()
-        )
-    else:
-        assert res == vaultutil.VaultSecretId(**secret_id_response["data"])
-    client.post.assert_called_once_with(
-        "auth/salt-minions/role/test-minion/secret-id", payload=ANY, wrap=wrap
+    vault._get_secret_id("test-minion", meta_info=meta_info, wrap=wrap)
+    approle_api.generate_secret_id.assert_called_once_with(
+        "test-minion",
+        meta_info=meta_info,
+        metadata=ANY,
+        wrap=wrap,
+        mount="salt-minions",
     )
 
 
 @pytest.mark.usefixtures("config")
-@pytest.mark.parametrize("wrap", ["30s", False])
-def test_get_secret_id_meta_info(
-    client,
-    wrapped_response,
-    secret_id_response,
-    wrap,
-    secret_id_lookup_accessor_response,
-):
-    """
-    Ensure _get_secret_id calls the API as expected when querying for meta info.
-    """
-
-    def res_or_wrap(*args, **kwargs):
-        if args[0].endswith("lookup"):
-            return secret_id_lookup_accessor_response
-        if kwargs.get("wrap"):
-            return vaultutil.VaultWrappedResponse(**wrapped_response["wrap_info"])
-        return secret_id_response
-
-    client.post.side_effect = res_or_wrap
-    res = vault._get_secret_id("test-minion", wrap=wrap, meta_info=True)
-    if wrap:
-        assert res == (
-            vaultutil.VaultWrappedResponse(
-                **wrapped_response["wrap_info"]
-            ).serialize_for_minion(),
-            secret_id_lookup_accessor_response["data"],
-        )
-    else:
-        assert res == (
-            vaultutil.VaultSecretId(**secret_id_response["data"]),
-            secret_id_lookup_accessor_response["data"],
-        )
-    payload = {"secret_id_accessor": wrapped_response["wrap_info"]["wrapped_accessor"]}
-    client.post.assert_called_with(
-        "auth/salt-minions/role/test-minion/secret-id-accessor/lookup", payload=payload
-    )
-
-
-def test_lookup_mount_accessor(client):
-    """
-    Ensure _lookup_mount_accessor calls the API as expected.
-    """
-    client.get.return_value = MagicMock()
-    vault._lookup_mount_accessor("salt-minions")
-    client.get.assert_called_once_with("sys/auth/salt-minions")
-
-
-@pytest.mark.usefixtures("config")
-def test_lookup_entity_by_alias(client, entity_lookup_response):
+def test_lookup_entity_by_alias(identity_api):
     """
     Ensure _lookup_entity_by_alias calls the API as expected.
     """
-    with patch(
-        "salt.runners.vault._lookup_mount_accessor", return_value="test-accessor"
-    ), patch("salt.runners.vault._lookup_role_id", return_value="test-role-id"):
-        client.post.return_value = entity_lookup_response
-        res = vault._lookup_entity_by_alias("test-minion")
-        assert res == entity_lookup_response["data"]
-        payload = {
-            "alias_name": "test-role-id",
-            "alias_mount_accessor": "test-accessor",
-        }
-        client.post.assert_called_once_with("identity/lookup/entity", payload=payload)
+    with patch("salt.runners.vault._lookup_role_id", return_value="test-role-id"):
+        vault._lookup_entity_by_alias("test-minion")
+        identity_api.read_entity_by_alias.assert_called_once_with(
+            alias="test-role-id", mount="salt-minions"
+        )
 
 
 @pytest.mark.usefixtures("config")
-def test_lookup_entity_by_alias_failed(client):
+def test_lookup_entity_by_alias_failed(identity_api):
     """
     Ensure _lookup_entity_by_alias returns False if the lookup fails.
     """
-    with patch(
-        "salt.runners.vault._lookup_mount_accessor", return_value="test-accessor"
-    ), patch("salt.runners.vault._lookup_role_id", return_value="test-role-id"):
-        client.post.return_value = []
+    with patch("salt.runners.vault._lookup_role_id", return_value="test-role-id"):
+        identity_api.read_entity_by_alias.side_effect = vaultutil.VaultNotFoundError
         res = vault._lookup_entity_by_alias("test-minion")
         assert res is False
 
 
 @pytest.mark.usefixtures("config")
-def test_fetch_entity_by_name(client, entity_fetch_response):
+def test_fetch_entity_by_name(identity_api):
     """
     Ensure _fetch_entity_by_name calls the API as expected.
     """
-    client.get.return_value = entity_fetch_response
-    res = vault._fetch_entity_by_name("test-minion")
-    assert res == entity_fetch_response["data"]
-    client.get.assert_called_once_with("identity/entity/name/salt_minion_test-minion")
+    vault._fetch_entity_by_name("test-minion")
+    identity_api.read_entity.assert_called_once_with(name="salt_minion_test-minion")
 
 
 @pytest.mark.usefixtures("config")
-def test_fetch_entity_by_name_failed(client):
+def test_fetch_entity_by_name_failed(identity_api):
     """
     Ensure _fetch_entity_by_name returns False if the lookup fails.
     """
-    client.get.side_effect = vaultutil.VaultNotFoundError
+    identity_api.read_entity.side_effect = vaultutil.VaultNotFoundError
     res = vault._fetch_entity_by_name("test-minion")
     assert res is False
 
 
 @pytest.mark.usefixtures("config")
-def test_manage_entity(client, metadata, metadata_entity_default):
+def test_manage_entity(identity_api, metadata, metadata_entity_default):
     """
     Ensure _manage_entity calls the API as expected.
     """
     vault._manage_entity("test-minion")
-    payload = {"metadata": metadata_entity_default}
-    client.post.assert_called_with(
-        "identity/entity/name/salt_minion_test-minion", payload=payload
+    identity_api.write_entity.assert_called_with(
+        "salt_minion_test-minion", metadata=metadata_entity_default
     )
 
 
 @pytest.mark.usefixtures("config")
-def test_delete_entity(client):
+def test_delete_entity(identity_api):
     """
     Ensure _delete_entity calls the API as expected.
     """
     vault._delete_entity("test-minion")
-    client.delete.assert_called_with("identity/entity/name/salt_minion_test-minion")
+    identity_api.delete_entity.assert_called_with("salt_minion_test-minion")
 
 
 @pytest.mark.usefixtures("config")
-@pytest.mark.parametrize(
-    "aliases",
-    [
-        [],
-        [
-            {"mount_accessor": "test-accessor", "id": "test-entity-alias-id"},
-            {"mount_accessor": "other-accessor", "id": "other-entity-alias-id"},
-        ],
-    ],
-)
-def test_manage_entity_alias(client, aliases, entity_fetch_response):
+def test_manage_entity_alias(identity_api):
     """
     Ensure _manage_entity_alias calls the API as expected.
     """
-    payload = {
-        "canonical_id": "test-entity-id",
-        "mount_accessor": "test-accessor",
-        "name": "test-role-id",
-    }
-    if aliases:
-        entity_fetch_response["data"]["aliases"] = aliases
-        if aliases[0]["mount_accessor"] == "test-accessor":
-            payload["id"] = aliases[0]["id"]
-
-    with patch(
-        "salt.runners.vault._lookup_mount_accessor", return_value="test-accessor"
-    ), patch("salt.runners.vault._lookup_role_id", return_value="test-role-id"), patch(
-        "salt.runners.vault._fetch_entity_by_name",
-        return_value=entity_fetch_response["data"],
-    ):
+    with patch("salt.runners.vault._lookup_role_id", return_value="test-role-id"):
         vault._manage_entity_alias("test-minion")
-        client.post.assert_called_with("identity/entity-alias", payload=payload)
+        identity_api.write_entity_alias.assert_called_with(
+            "salt_minion_test-minion", alias_name="test-role-id", mount="salt-minions"
+        )
 
 
-@pytest.mark.usefixtures("config", "client")
-def test_manage_entity_alias_raises_errors():
+@pytest.mark.usefixtures("config")
+def test_manage_entity_alias_raises_errors(identity_api):
     """
     Ensure _manage_entity_alias raises exceptions.
     """
-    with patch(
-        "salt.runners.vault._lookup_mount_accessor", return_value="test-accessor"
-    ), patch("salt.runners.vault._lookup_role_id", return_value="test-role-id"), patch(
-        "salt.runners.vault._fetch_entity_by_name", return_value=False
-    ):
+    identity_api.write_entity_alias.side_effect = vaultutil.VaultNotFoundError
+    with patch("salt.runners.vault._lookup_role_id", return_value="test-role-id"):
         with pytest.raises(
             salt.exceptions.SaltRunnerError,
             match="There is no entity to create an alias for.*",
@@ -1644,26 +1481,4 @@ def test_revoke_token_by_accessor(client):
     vault._revoke_token(accessor="test-accessor")
     client.post.assert_called_once_with(
         "auth/token/revoke-accessor", payload={"accessor": "test-accessor"}
-    )
-
-
-def test_destroy_secret_id_by_secret_id(client):
-    """
-    Ensure _revoke_token calls the API as expected.
-    """
-    vault._destroy_secret_id("test-minion", "salt-minions", secret_id="test-secret-id")
-    client.post.assert_called_once_with(
-        "auth/salt-minions/role/test-minion/secret-id/destroy",
-        payload={"secret_id": "test-secret-id"},
-    )
-
-
-def test_destroy_secret_id_by_accessor(client):
-    """
-    Ensure _revoke_token calls the API as expected.
-    """
-    vault._destroy_secret_id("test-minion", "salt-minions", accessor="test-accessor")
-    client.post.assert_called_once_with(
-        "auth/salt-minions/role/test-minion/secret-id-accessor/destroy",
-        payload={"secret_id_accessor": "test-accessor"},
     )

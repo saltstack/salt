@@ -800,7 +800,7 @@ class TestAppRoleIssuance:
     ):
         """
         Test that after a master configuration switch to another server URL,
-        minions with cached configuration detect the mismatchand request a
+        minions with cached configuration detect the mismatch and request a
         new configuration.
         """
         ret = vault_salt_call_cli.run("vault.read_secret", "secret/path/foo")

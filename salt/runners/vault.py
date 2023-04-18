@@ -21,6 +21,7 @@ import salt.utils.data
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.json
 import salt.utils.vault as vault
+import salt.utils.vault.factory as vfactory
 import salt.utils.vault.helpers as vhelpers
 import salt.utils.versions
 from salt.defaults import NOT_SET
@@ -475,7 +476,7 @@ def generate_secret_id(
         secret_id = _get_secret_id(minion_id, wrap=wrap)
 
         if wrap:
-            ret.update(secret_id)
+            ret.update(secret_id.serialize_for_minion())
         else:
             ret["data"] = secret_id.serialize_for_minion()
 
@@ -635,12 +636,19 @@ def list_approles():
     .. code-block:: bash
 
         salt-run vault.list_approles
+
+    Required policy:
+
+    .. code-block:: vaultpolicy
+
+        path "auth/<mount>/role" {
+            capabilities = ["list"]
+        }
     """
     if _config("issue:type") != "approle":
         raise SaltRunnerError("Master does not issue AppRoles to minions.")
-    endpoint = "auth/{}/role".format(_config("issue:approle:mount"))
-    client = _get_master_client()
-    return client.list(endpoint)["data"]["keys"]
+    api = _get_approle_api()
+    return api.list_approles(mount=_config("issue:approle:mount"))
 
 
 def sync_entities(minions=None, up=False, down=False):
@@ -713,12 +721,19 @@ def list_entities():
     .. code-block:: bash
 
         salt-run vault.list_entities
+
+    Required policy:
+
+    .. code-block:: vaultpolicy
+
+        path "identity/entity/name" {
+            capabilities = ["list"]
+        }
     """
     if _config("issue:type") != "approle":
         raise SaltRunnerError("Master does not issue AppRoles to minions.")
-    endpoint = "identity/entity/name"
-    client = _get_master_client()
-    entities = client.list(endpoint)["data"]["keys"]
+    api = _get_identity_api()
+    entities = api.list_entities()
     return [x for x in entities if x.startswith("salt_minion_")]
 
 
@@ -734,9 +749,8 @@ def show_entity(minion_id):
     """
     if _config("issue:type") != "approle":
         raise SaltRunnerError("Master does not issue AppRoles to minions.")
-    endpoint = f"identity/entity/name/salt_minion_{minion_id}"
-    client = _get_master_client()
-    return client.get(endpoint)["data"]["metadata"]
+    api = _get_identity_api()
+    return api.read_entity(f"salt_minion_{minion_id}")["metadata"]
 
 
 def show_approle(minion_id):
@@ -751,9 +765,8 @@ def show_approle(minion_id):
     """
     if _config("issue:type") != "approle":
         raise SaltRunnerError("Master does not issue AppRoles to minions.")
-    endpoint = "auth/{}/role/{}".format(_config("issue:approle:mount"), minion_id)
-    client = _get_master_client()
-    return client.get(endpoint)["data"]
+    api = _get_approle_api()
+    return api.read_approle(minion_id, mount=_config("issue:approle:mount"))
 
 
 def cleanup_auth():
@@ -1007,28 +1020,25 @@ def _parse_issue_params(params, issue_type=None):
 
 
 def _manage_approle(minion_id, issue_params):
-    endpoint = "auth/{}/role/{}".format(_config("issue:approle:mount"), minion_id)
     payload = _parse_issue_params(issue_params)
     # When the entity is managed during the same run, this can result in a duplicate
     # pillar refresh. Potential for optimization.
     payload["token_policies"] = _get_policies(minion_id, refresh_pillar=True)
-    client = _get_master_client()
+    api = _get_approle_api()
     log.debug("Creating/updating AppRole for minion %s.", minion_id)
-    return client.post(endpoint, payload=payload)
+    return api.write_approle(minion_id, **payload, mount=_config("issue:approle:mount"))
 
 
 def _delete_approle(minion_id):
-    endpoint = "auth/{}/role/{}".format(_config("issue:approle:mount"), minion_id)
-    client = _get_master_client()
+    api = _get_approle_api()
     log.debug("Deleting approle for minion %s.", minion_id)
-    return client.delete(endpoint)
+    return api.delete_approle(minion_id, mount=_config("issue:approle:mount"))
 
 
 def _lookup_approle(minion_id, **kwargs):  # pylint: disable=unused-argument
-    endpoint = "auth/{}/role/{}".format(_config("issue:approle:mount"), minion_id)
-    client = _get_master_client()
+    api = _get_approle_api()
     try:
-        return client.get(endpoint)["data"]
+        return api.read_approle(minion_id, mount=_config("issue:approle:mount"))
     except vault.VaultNotFoundError:
         return False
 
@@ -1067,52 +1077,24 @@ def _lookup_approle_cached(minion_id, expire=3600, refresh=False):
 
 
 def _lookup_role_id(minion_id, wrap):
-    client = _get_master_client()
-    endpoint = "auth/{}/role/{}/role-id".format(
-        _config("issue:approle:mount"), minion_id
-    )
+    api = _get_approle_api()
     try:
-        role_id = client.get(endpoint, wrap=wrap)
+        return api.read_role_id(
+            minion_id, mount=_config("issue:approle:mount"), wrap=wrap
+        )
     except vault.VaultNotFoundError:
         return False
-    if wrap:
-        return role_id
-    return role_id["data"]["role_id"]
 
 
 def _get_secret_id(minion_id, wrap, meta_info=False):
-    payload = {
-        "metadata": salt.utils.json.dumps(
-            _get_metadata(minion_id, _config("metadata:secret"))
-        )
-    }
-    client = _get_master_client()
-    endpoint = "auth/{}/role/{}/secret-id".format(
-        _config("issue:approle:mount"), minion_id
+    api = _get_approle_api()
+    return api.generate_secret_id(
+        minion_id,
+        metadata=_get_metadata(minion_id, _config("metadata:secret")),
+        mount=_config("issue:approle:mount"),
+        wrap=wrap,
+        meta_info=meta_info,
     )
-    response = client.post(endpoint, payload=payload, wrap=wrap)
-    if wrap:
-        # Wrapped responses are always VaultWrappedResponse objects
-        secret_id = response.serialize_for_minion()
-        accessor = response.wrapped_accessor
-    else:
-        secret_id = vault.VaultSecretId(**response["data"])
-        accessor = response["data"]["secret_id_accessor"]
-    if not meta_info:
-        return secret_id
-    # Sadly, secret_id_num_uses is not part of the information returned
-    meta_info = client.post(
-        endpoint + "-accessor/lookup", payload={"secret_id_accessor": accessor}
-    )["data"]
-
-    return secret_id, meta_info
-
-
-def _lookup_mount_accessor(mount):
-    log.debug("Looking up mount accessor ID for mount %s.", mount)
-    endpoint = f"sys/auth/{mount}"
-    client = _get_master_client()
-    return client.get(endpoint)["accessor"]
 
 
 def _lookup_entity_by_alias(minion_id):
@@ -1120,75 +1102,66 @@ def _lookup_entity_by_alias(minion_id):
     This issues a lookup for the entity using the role-id and mount accessor,
     thus verifies that an entity and associated entity alias exists.
     """
-    minion_mount_accessor = _lookup_mount_accessor(_config("issue:approle:mount"))
     role_id = _lookup_role_id(minion_id, wrap=False)
-    client = _get_master_client()
-    endpoint = "identity/lookup/entity"
-    payload = {
-        "alias_name": role_id,
-        "alias_mount_accessor": minion_mount_accessor,
-    }
-    entity = client.post(endpoint, payload=payload)
-    if isinstance(entity, dict):
-        return entity["data"]
-    return False
+    api = _get_identity_api()
+    try:
+        return api.read_entity_by_alias(
+            alias=role_id, mount=_config("issue:approle:mount")
+        )
+    except vault.VaultNotFoundError:
+        return False
 
 
 def _fetch_entity_by_name(minion_id):
-    client = _get_master_client()
-    endpoint = f"identity/entity/name/salt_minion_{minion_id}"
+    api = _get_identity_api()
     try:
-        return client.get(endpoint)["data"]
+        return api.read_entity(name=f"salt_minion_{minion_id}")
     except vault.VaultNotFoundError:
         return False
 
 
 def _manage_entity(minion_id):
-    endpoint = f"identity/entity/name/salt_minion_{minion_id}"
     # When the approle is managed during the same run, this can result in a duplicate
     # pillar refresh. Potential for optimization.
-    payload = {
-        "metadata": _get_metadata(
-            minion_id, _config("metadata:entity"), refresh_pillar=True
-        ),
-    }
-    client = _get_master_client()
-    client.post(endpoint, payload=payload)
+    metadata = _get_metadata(minion_id, _config("metadata:entity"), refresh_pillar=True)
+    api = _get_identity_api()
+    return api.write_entity(f"salt_minion_{minion_id}", metadata=metadata)
 
 
 def _delete_entity(minion_id):
-    endpoint = f"identity/entity/name/salt_minion_{minion_id}"
-    client = _get_master_client()
-    client.delete(endpoint)
+    api = _get_identity_api()
+    return api.delete_entity(f"salt_minion_{minion_id}")
 
 
 def _manage_entity_alias(minion_id):
-    log.debug("Creating entity alias for minion %s.", minion_id)
-    minion_mount_accessor = _lookup_mount_accessor(_config("issue:approle:mount"))
     role_id = _lookup_role_id(minion_id, wrap=False)
-    entity = _fetch_entity_by_name(minion_id)
-    if not entity:
+    api = _get_identity_api()
+    log.debug("Creating entity alias for minion %s.", minion_id)
+    try:
+        return api.write_entity_alias(
+            f"salt_minion_{minion_id}",
+            alias_name=role_id,
+            mount=_config("issue:approle:mount"),
+        )
+    except vault.VaultNotFoundError:
         raise SaltRunnerError(
             f"There is no entity to create an alias for for minion {minion_id}."
         )
-    payload = {
-        "canonical_id": entity["id"],
-        "mount_accessor": minion_mount_accessor,
-        "name": str(role_id),
-    }
-    for alias in entity["aliases"]:
-        if alias["mount_accessor"] == minion_mount_accessor:
-            payload["id"] = alias["id"]
-    client = _get_master_client()
-    client.post("identity/entity-alias", payload=payload)
+
+
+def _get_approle_api():
+    return vfactory.get_approle_api(__opts__, __context__, force_local=True)
+
+
+def _get_identity_api():
+    return vfactory.get_identity_api(__opts__, __context__, force_local=True)
 
 
 def _get_master_client():
     # force_local is necessary when issuing credentials while impersonating
     # minions since the opts dict cannot be used to distinguish master from
     # minion in that case
-    client = vault.get_authd_client(__opts__, __context__, force_local=True)
-    return client
+    return vault.get_authd_client(__opts__, __context__, force_local=True)
 
 
 def _revoke_token(token=None, accessor=None):
@@ -1200,21 +1173,6 @@ def _revoke_token(token=None, accessor=None):
     else:
         endpoint += "-accessor"
         payload = {"accessor": accessor}
-    client = _get_master_client()
-    return client.post(endpoint, payload=payload)
-
-
-def _destroy_secret_id(minion_id, mount, secret_id=None, accessor=None):
-    if not secret_id and not accessor:
-        raise SaltInvocationError(
-            "Need either secret_id or accessor to destroy secret ID."
-        )
-    if secret_id:
-        endpoint = f"auth/{mount}/role/{minion_id}/secret-id/destroy"
-        payload = {"secret_id": str(secret_id)}
-    else:
-        endpoint = f"auth/{mount}/role/{minion_id}/secret-id-accessor/destroy"
-        payload = {"secret_id_accessor": accessor}
     client = _get_master_client()
     return client.post(endpoint, payload=payload)
 
