@@ -294,7 +294,7 @@ jobs:
           tools pkg repo restore-previous-releases
 
   publish-pypi:
-    name: Publish to PyPi(test)
+    name: Publish to PyPi
     if: ${{ github.event.repository.fork != true }}
     needs:
       - prepare-workflow
@@ -341,7 +341,7 @@ jobs:
           name: pypi-artifacts
           path: artifacts/release
 
-      - name: Publish to Test PyPi
+      - name: Publish to PyPi
         env:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |
