@@ -579,6 +579,7 @@ jobs:
 
   release:
     name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
+    if: ${{ always() && ! failure() && ! cancelled() }}
     runs-on:
       - self-hosted
       - linux
@@ -706,7 +707,7 @@ jobs:
 
   restore:
     name: Restore Release Bucket From Backup
-    if: ${{ always() }}
+    if: ${{ failure() || cancelled() }}
     runs-on:
       - self-hosted
       - linux
@@ -716,29 +717,25 @@ jobs:
     environment: release
     steps:
       - name: Clone The Salt Repository
-        if: ${{ failure() || cancelled() }}
         uses: actions/checkout@v3
         with:
           ssh-key: ${{ secrets.GHA_SSH_KEY }}
 
       - name: Setup Rclone
-        if: ${{ failure() || cancelled() }}
         uses: AnimMouse/setup-rclone@v1
         with:
           version: v1.61.1
 
       - name: Setup Python Tools Scripts
-        if: ${{ failure() || cancelled() }}
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Restore Release Bucket
-        if: ${{ failure() || cancelled() }}
         run: |
           tools pkg repo restore-previous-releases
 
   publish-pypi:
     name: Publish to PyPi
-    if: ${{ github.event.repository.fork != true }}
+    if: ${{ always() && ! failure() && ! cancelled() && github.event.repository.fork != true }}
     needs:
       - prepare-workflow
       - release
