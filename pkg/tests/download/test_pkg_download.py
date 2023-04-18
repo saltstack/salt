@@ -14,7 +14,6 @@ log = logging.getLogger(__name__)
 
 
 def get_salt_test_commands():
-
     salt_release = get_salt_release()
     if platform.is_windows():
         if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
@@ -96,6 +95,14 @@ def get_salt_release():
     return salt_release
 
 
+@pytest.fixture(
+    scope="module",
+    params=["latest", "minor", packaging.version.parse(get_salt_release()).major],
+)
+def repo_subpath(request):
+    return request.param
+
+
 @pytest.fixture(scope="module")
 def gpg_key_name(salt_release):
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
@@ -110,7 +117,7 @@ def salt_release():
 
 @pytest.fixture(scope="module")
 def _setup_system(
-    tmp_path_factory, grains, shell, root_url, salt_release, gpg_key_name
+    tmp_path_factory, grains, shell, root_url, salt_release, gpg_key_name, repo_subpath
 ):
     downloads_path = tmp_path_factory.mktemp("downloads")
     try:
@@ -120,6 +127,7 @@ def _setup_system(
                 root_url=root_url,
                 salt_release=salt_release,
                 downloads_path=downloads_path,
+                repo_subpath=repo_subpath,
             )
         elif grains["os_family"] == "MacOS":
             setup_macos(
@@ -127,6 +135,7 @@ def _setup_system(
                 root_url=root_url,
                 salt_release=salt_release,
                 downloads_path=downloads_path,
+                repo_subpath=repo_subpath,
             )
         elif grains["os"] == "Amazon":
             setup_redhat_family(
@@ -137,6 +146,7 @@ def _setup_system(
                 salt_release=salt_release,
                 downloads_path=downloads_path,
                 gpg_key_name=gpg_key_name,
+                repo_subpath=repo_subpath,
             )
         elif grains["os"] == "Fedora":
             setup_redhat_family(
@@ -147,6 +157,7 @@ def _setup_system(
                 salt_release=salt_release,
                 downloads_path=downloads_path,
                 gpg_key_name=gpg_key_name,
+                repo_subpath=repo_subpath,
             )
         elif grains["os"] == "VMware Photon OS":
             setup_redhat_family(
@@ -157,6 +168,7 @@ def _setup_system(
                 salt_release=salt_release,
                 downloads_path=downloads_path,
                 gpg_key_name=gpg_key_name,
+                repo_subpath=repo_subpath,
             )
         elif grains["os_family"] == "RedHat":
             setup_redhat_family(
@@ -167,6 +179,7 @@ def _setup_system(
                 salt_release=salt_release,
                 downloads_path=downloads_path,
                 gpg_key_name=gpg_key_name,
+                repo_subpath=repo_subpath,
             )
         elif grains["os_family"] == "Debian":
             setup_debian_family(
@@ -178,6 +191,7 @@ def _setup_system(
                 salt_release=salt_release,
                 downloads_path=downloads_path,
                 gpg_key_name=gpg_key_name,
+                repo_subpath=repo_subpath,
             )
         else:
             pytest.fail("Don't know how to handle %s", grains["osfinger"])
@@ -194,12 +208,15 @@ def setup_redhat_family(
     salt_release,
     downloads_path,
     gpg_key_name,
+    repo_subpath,
 ):
     arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
     if arch == "aarch64":
         arch = "arm64"
 
-    repo_url_base = f"{root_url}/{os_name}/{os_version}/{arch}/minor/{salt_release}"
+    repo_url_base = (
+        f"{root_url}/{os_name}/{os_version}/{arch}/{repo_subpath}/{salt_release}"
+    )
     gpg_file_url = f"{root_url}/{os_name}/{os_version}/{arch}/{gpg_key_name}"
     try:
         pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_key_name)
@@ -249,6 +266,7 @@ def setup_debian_family(
     salt_release,
     downloads_path,
     gpg_key_name,
+    repo_subpath,
 ):
     arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
     if arch == "aarch64":
@@ -260,7 +278,9 @@ def setup_debian_family(
     if ret.returncode != 0:
         pytest.fail(str(ret))
 
-    repo_url_base = f"{root_url}/{os_name}/{os_version}/{arch}/minor/{salt_release}"
+    repo_url_base = (
+        f"{root_url}/{os_name}/{os_version}/{arch}/{repo_subpath}/{salt_release}"
+    )
     gpg_file_url = f"{root_url}/{os_name}/{os_version}/{arch}/{gpg_key_name}"
     try:
         pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_key_name)
@@ -303,15 +323,14 @@ def setup_debian_family(
             pytest.fail(str(ret))
 
 
-def setup_macos(shell, root_url, salt_release, downloads_path):
-
+def setup_macos(shell, root_url, salt_release, downloads_path, repo_subpath):
     arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
     if arch == "aarch64":
         arch = "arm64"
 
     if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
         mac_pkg = f"salt-{salt_release}-py3-{arch}.pkg"
-        mac_pkg_url = f"{root_url}/macos/minor/{salt_release}/{mac_pkg}"
+        mac_pkg_url = f"{root_url}/macos/{repo_subpath}/{salt_release}/{mac_pkg}"
     else:
         mac_pkg_url = f"{root_url}/macos/{salt_release}/{mac_pkg}"
         mac_pkg = f"salt-{salt_release}-macos-{arch}.pkg"
@@ -330,8 +349,7 @@ def setup_macos(shell, root_url, salt_release, downloads_path):
     assert ret.returncode == 0, ret
 
 
-def setup_windows(shell, root_url, salt_release, downloads_path):
-
+def setup_windows(shell, root_url, salt_release, downloads_path, repo_subpath):
     root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
 
     arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
@@ -345,7 +363,7 @@ def setup_windows(shell, root_url, salt_release, downloads_path):
             if arch.lower() != "x86":
                 arch = arch.upper()
             win_pkg = f"Salt-Minion-{salt_release}-Py3-{arch}.msi"
-        win_pkg_url = f"{root_url}/windows/minor/{salt_release}/{win_pkg}"
+        win_pkg_url = f"{root_url}/windows/{repo_subpath}/{salt_release}/{win_pkg}"
         ssm_bin = root_dir / "ssm.exe"
     else:
         win_pkg = f"salt-{salt_release}-windows-{arch}.exe"
