@@ -2101,6 +2101,23 @@ jobs:
       skip-code-coverage: true
     secrets: inherit
 
+  almalinux-8-arm64-pkg-download-tests:
+    name: Test Alma Linux 8 Arm64 Package Downloads
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: almalinux-8-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: staging
+      skip-code-coverage: true
+    secrets: inherit
+
   almalinux-9-pkg-download-tests:
     name: Test Alma Linux 9 Package Downloads
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2112,6 +2129,23 @@ jobs:
       distro-slug: almalinux-9
       platform: linux
       arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: staging
+      skip-code-coverage: true
+    secrets: inherit
+
+  almalinux-9-arm64-pkg-download-tests:
+    name: Test Alma Linux 9 Arm64 Package Downloads
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: almalinux-9-arm64
+      platform: linux
+      arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
@@ -2135,6 +2169,23 @@ jobs:
       skip-code-coverage: true
     secrets: inherit
 
+  amazonlinux-2-arm64-pkg-download-tests:
+    name: Test Amazon Linux 2 Arm64 Package Downloads
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: amazonlinux-2-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: staging
+      skip-code-coverage: true
+    secrets: inherit
+
   centos-7-pkg-download-tests:
     name: Test CentOS 7 Package Downloads
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2146,6 +2197,23 @@ jobs:
       distro-slug: centos-7
       platform: linux
       arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: staging
+      skip-code-coverage: true
+    secrets: inherit
+
+  centos-7-arm64-pkg-download-tests:
+    name: Test CentOS 7 Arm64 Package Downloads
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: centos-7-arm64
+      platform: linux
+      arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
@@ -2169,6 +2237,23 @@ jobs:
       skip-code-coverage: true
     secrets: inherit
 
+  centosstream-8-arm64-pkg-download-tests:
+    name: Test CentOS Stream 8 Arm64 Package Downloads
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: centosstream-8-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: staging
+      skip-code-coverage: true
+    secrets: inherit
+
   centosstream-9-pkg-download-tests:
     name: Test CentOS Stream 9 Package Downloads
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2180,6 +2265,23 @@ jobs:
       distro-slug: centosstream-9
       platform: linux
       arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: staging
+      skip-code-coverage: true
+    secrets: inherit
+
+  centosstream-9-arm64-pkg-download-tests:
+    name: Test CentOS Stream 9 Arm64 Package Downloads
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: centosstream-9-arm64
+      platform: linux
+      arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
@@ -2254,6 +2356,23 @@ jobs:
       skip-code-coverage: true
     secrets: inherit
 
+  fedora-36-arm64-pkg-download-tests:
+    name: Test Fedora 36 Arm64 Package Downloads
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: fedora-36-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: staging
+      skip-code-coverage: true
+    secrets: inherit
+
   fedora-37-pkg-download-tests:
     name: Test Fedora 37 Package Downloads
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2271,6 +2390,23 @@ jobs:
       skip-code-coverage: true
     secrets: inherit
 
+  fedora-37-arm64-pkg-download-tests:
+    name: Test Fedora 37 Arm64 Package Downloads
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: fedora-37-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: staging
+      skip-code-coverage: true
+    secrets: inherit
+
   fedora-38-pkg-download-tests:
     name: Test Fedora 38 Package Downloads
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2282,6 +2418,23 @@ jobs:
       distro-slug: fedora-38
       platform: linux
       arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: staging
+      skip-code-coverage: true
+    secrets: inherit
+
+  fedora-38-arm64-pkg-download-tests:
+    name: Test Fedora 38 Arm64 Package Downloads
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: fedora-38-arm64
+      platform: linux
+      arch: aarch64
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: staging
@@ -2494,17 +2647,26 @@ jobs:
       - windows-2022-nsis-pkg-tests
       - windows-2022-msi-pkg-tests
       - almalinux-8-pkg-download-tests
+      - almalinux-8-arm64-pkg-download-tests
       - almalinux-9-pkg-download-tests
+      - almalinux-9-arm64-pkg-download-tests
       - amazonlinux-2-pkg-download-tests
+      - amazonlinux-2-arm64-pkg-download-tests
       - centos-7-pkg-download-tests
+      - centos-7-arm64-pkg-download-tests
       - centosstream-8-pkg-download-tests
+      - centosstream-8-arm64-pkg-download-tests
       - centosstream-9-pkg-download-tests
+      - centosstream-9-arm64-pkg-download-tests
       - debian-10-pkg-download-tests
       - debian-11-pkg-download-tests
       - debian-11-arm64-pkg-download-tests
       - fedora-36-pkg-download-tests
+      - fedora-36-arm64-pkg-download-tests
       - fedora-37-pkg-download-tests
+      - fedora-37-arm64-pkg-download-tests
       - fedora-38-pkg-download-tests
+      - fedora-38-arm64-pkg-download-tests
       - photonos-3-pkg-download-tests
       - photonos-4-pkg-download-tests
       - ubuntu-2004-pkg-download-tests
