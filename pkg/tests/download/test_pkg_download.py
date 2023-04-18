@@ -109,7 +109,9 @@ def salt_release():
 
 
 @pytest.fixture(scope="module")
-def setup_system(tmp_path_factory, grains, shell, root_url, salt_release, gpg_key_name):
+def _setup_system(
+    tmp_path_factory, grains, shell, root_url, salt_release, gpg_key_name
+):
     downloads_path = tmp_path_factory.mktemp("downloads")
     try:
         if grains["os_family"] == "Windows":
@@ -368,15 +370,35 @@ def setup_windows(shell, root_url, salt_release, downloads_path):
     assert ret.returncode == 0, ret
 
 
-@pytest.mark.usefixtures("setup_system")
+@pytest.fixture(scope="module")
+def environ(_setup_system):
+    env = os.environ.copy()
+    if platform.is_windows():
+        install_dir = pathlib.Path(
+            os.getenv("ProgramFiles"), "Salt Project", "Salt"
+        ).resolve()
+    elif platform.is_darwin():
+        install_dir = pathlib.Path("/opt", "salt")
+    else:
+        install_dir = pathlib.Path("/opt", "saltstack", "salt")
+
+    # Get the defined PATH environment variable
+    path = os.environ.get("PATH")
+    if path is not None:
+        path_items = path.split(os.pathsep)
+    else:
+        path_items = []
+    path_items.insert(0, str(install_dir))
+
+    # Set the PATH environment variable
+    env["PATH"] = os.pathsep.join(path_items)
+    return env
+
+
 @pytest.mark.parametrize("salt_test_command", get_salt_test_commands())
-def test_download(shell, grains, salt_test_command):
+def test_download(shell, environ, salt_test_command):
     """
     Test downloading of Salt packages and running various commands.
     """
-    _cmd = salt_test_command.split()
-    if grains["os_family"] == "Windows":
-        root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
-        _cmd[0] = str(root_dir / _cmd[0])
-    ret = shell.run(*_cmd, check=False)
+    ret = shell.run(*salt_test_command.split(), env=environ, check=False)
     assert ret.returncode == 0, ret
