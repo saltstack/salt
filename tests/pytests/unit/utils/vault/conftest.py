@@ -388,6 +388,36 @@ def token_auth():
 
 
 @pytest.fixture
+def lease_response():
+    return {
+        "request_id": "0e8c388e-2cb6-bcb2-83b7-625127d568bb",
+        "lease_id": "database/creds/testrole/abcd",
+        "lease_duration": 1337,
+        "renewable": True,
+        "data": {
+            "username": "test",
+            "password": "test",
+        },
+    }
+
+
+@pytest.fixture
+def lease():
+    return {
+        "id": "database/creds/testrole/abcd",
+        "lease_id": "database/creds/testrole/abcd",
+        "renewable": True,
+        "duration": 1337,
+        "creation_time": 0,
+        "expire_time": 1337,
+        "data": {
+            "username": "test",
+            "password": "test",
+        },
+    }
+
+
+@pytest.fixture
 def session():
     return Mock(spec=requests.Session)
 

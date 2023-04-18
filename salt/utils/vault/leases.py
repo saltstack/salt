@@ -1,12 +1,17 @@
 import copy
+import fnmatch
+import logging
 import time
 
 from salt.utils.vault.exceptions import (
+    VaultException,
     VaultInvocationError,
     VaultNotFoundError,
     VaultPermissionDeniedError,
 )
 from salt.utils.vault.helpers import iso_to_timestamp, timestring_map
+
+log = logging.getLogger(__name__)
 
 
 class DurationMixin:
@@ -336,6 +341,8 @@ class LeaseStore:
     def __init__(self, client, cache):
         self.client = client
         self.cache = cache
+        # to update cached leases after renewal/revocation, we need a mapping id => ckey
+        self.lease_id_ckey_cache = {}
 
     def get(
         self,
@@ -344,7 +351,7 @@ class LeaseStore:
         renew=True,
         renew_increment=None,
         renew_blur=2,
-        flush=True,
+        revoke=True,
     ):
         """
         Return cached lease or None.
@@ -381,9 +388,10 @@ class LeaseStore:
             and the default validity period is less than ``valid_for``.
             Defaults to 2.
 
-        flush
+        revoke
             If the lease is invalid or not valid for ``valid_for`` and renewals
-            are disabled or impossible, flush the cache. Defaults to true.
+            are disabled or impossible, attempt to revoke the lease if possible
+            and flush the cache. Defaults to true.
         """
         if renew_increment is not None and timestring_map(valid_for) > timestring_map(
             renew_increment
@@ -392,38 +400,29 @@ class LeaseStore:
                 "When renew_increment is set, it must be at least valid_for to make sense"
             )
 
-        def check_flush():
-            if flush:
-                self.cache.flush(ckey)
+        def check_revoke(lease):
+            if revoke:
+                self.revoke(lease)
             return None
 
-        def renew_lease(increment):
-            try:
-                ret = self.renew(lease, increment=increment)
-            except (VaultNotFoundError, VaultPermissionDeniedError):
-                ret = {}
-            # Do not overwrite data of renewed leases!
-            ret.pop("data", None)
-            return lease.with_renewed(**ret)
-
         # Since we can renew leases, do not check for future validity in cache
-        lease = self.cache.get(ckey, flush=flush)
+        lease = self.cache.get(ckey, flush=revoke)
+        if lease is not None:
+            self.lease_id_ckey_cache[str(lease)] = ckey
         if lease is None or lease.is_valid(valid_for):
             return lease
         if not renew:
-            return check_flush()
-        lease = renew_lease(renew_increment)
+            return check_revoke(lease)
+        lease = self.renew(lease, increment=renew_increment, raise_error=False)
         if not lease.is_valid(valid_for, blur=renew_blur):
             if renew_increment is not None:
                 # valid_for cannot possibly be respected
-                return check_flush()
+                return check_revoke(lease)
             # Maybe valid_for is greater than the default validity period, so check if
             # the lease can be renewed by valid_for
-            lease = renew_lease(valid_for)
+            lease = self.renew(lease, increment=valid_for, raise_error=False)
             if not lease.is_valid(valid_for, blur=renew_blur):
-                return check_flush()
-        # Ensure the new validity is cached
-        self.cache.store(ckey, lease)
+                return check_revoke(lease)
         return lease
 
     def list(self):
@@ -443,7 +442,7 @@ class LeaseStore:
         payload = {"lease_id": str(lease)}
         return self.client.post(endpoint, payload=payload)
 
-    def renew(self, lease, increment=None):
+    def renew(self, lease, increment=None, raise_error=True):
         """
         Renew a lease.
 
@@ -455,26 +454,147 @@ class LeaseStore:
             point of time onwards. Can also be used to reduce the validity period.
             The server might not honor this increment.
             Can be an integer (seconds) or a time string like ``1h``. Optional.
+
+        raise_error
+            When ``lease`` is a VaultLease and the renewal does not succeed,
+            do not catch exceptions. If this is false, the lease will be returned
+            unmodified. Defaults to true.
         """
         endpoint = "sys/leases/renew"
         payload = {"lease_id": str(lease)}
         if increment is not None:
             payload["increment"] = int(timestring_map(increment))
-        return self.client.post(endpoint, payload=payload)
+        if not isinstance(lease, VaultLease) and lease in self.lease_id_ckey_cache:
+            lease = self.cache.get(self.lease_id_ckey_cache[lease], flush=False)
+            if lease is None:
+                raise VaultNotFoundError("Lease is already expired")
+        try:
+            ret = self.client.post(endpoint, payload=payload)
+        except VaultException:
+            if raise_error or not isinstance(lease, VaultLease):
+                raise
+            return lease
 
-    def revoke(self, lease, sync=False):
+        if isinstance(lease, VaultLease):
+            # Do not overwrite data of renewed leases!
+            ret.pop("data", None)
+            new_lease = lease.with_renewed(**ret)
+            if str(new_lease) in self.lease_id_ckey_cache:
+                self.store(self.lease_id_ckey_cache[str(new_lease)], new_lease)
+            return new_lease
+        return ret
+
+    def renew_cached(self, match, increment=None):
         """
-        Revoke a lease.
+        Renew cached leases.
+
+        match
+            Only renew cached leases whose ckey matches this glob pattern.
+            Defaults to ``*``.
+
+        increment
+            Request the leases to be valid for this amount of time from the current
+            point of time onwards. Can also be used to reduce the validity period.
+            The server might not honor this increment.
+            Can be an integer (seconds) or a time string like ``1h``. Optional.
+        """
+        failed = []
+        for ckey in self.list():
+            if not fnmatch.fnmatch(ckey, match):
+                continue
+            lease = self.cache.get(ckey, flush=True)
+            if lease is None:
+                continue
+            self.lease_id_ckey_cache[str(lease)] = ckey
+            try:
+                self.renew(lease, increment=increment)
+            except (VaultPermissionDeniedError, VaultNotFoundError) as err:
+                log.warning(f"Failed renewing cached lease: {type(err).__name__}")
+                log.debug(f"Lease ID was: {lease}")
+                failed.append(ckey)
+        if failed:
+            raise VaultException(f"Failed renewing some leases: {list(failed)}")
+        return True
+
+    def revoke(self, lease, sync=False, allow_validity_reduction=True):
+        """
+        Revoke a lease. Will also remove the cached lease,
+        if it has been requested from this LeaseStore before.
 
         lease
             A lease ID or VaultLease object to revoke.
 
         sync
             Only return once the lease has been revoked. Defaults to false.
+
+        allow_validity_reduction
+            If a revocation is denied on the grounds of missing permissions,
+            instead reduce the lease validity to 1 second.
+            The default policy does not include the necessary permissions for
+            revocation, hence this switch. Defaults to true.
         """
-        endpoint = "sys/leases/renew"
+        endpoint = "sys/leases/revoke"
         payload = {"lease_id": str(lease), "sync": sync}
-        return self.client.post(endpoint, payload)
+        try:
+            self.client.post(endpoint, payload=payload)
+        except VaultNotFoundError:
+            pass
+        except VaultPermissionDeniedError:
+            if not allow_validity_reduction:
+                raise
+            self.renew(lease, increment=1)
+
+        if str(lease) in self.lease_id_ckey_cache:
+            self.cache.flush(self.lease_id_ckey_cache.pop(str(lease)))
+        return True
+
+    def revoke_cached(
+        self,
+        match="*",
+        sync=False,
+        allow_validity_reduction=True,
+        flush_on_failure=True,
+    ):
+        """
+        Revoke cached leases.
+
+        match
+            Only revoke cached leases whose ckey matches this glob pattern.
+            Defaults to ``*``.
+
+        sync
+            Wait for revocation success of all leases. Defaults to false.
+
+        allow_validity_reduction
+            If a revocation is denied on the grounds of missing permissions,
+            instead reduce the lease validity to 1 second.
+            The default policy does not include the necessary permissions for
+            revocation, hence this switch. Defaults to true.
+
+        flush_on_failure
+            If a revocation fails, remove the lease from cache anyways.
+            Defaults to true.
+        """
+        failed = []
+        for ckey in self.list():
+            if not fnmatch.fnmatch(ckey, match):
+                continue
+            lease = self.cache.get(ckey, flush=True)
+            if lease is None:
+                continue
+            self.lease_id_ckey_cache[str(lease)] = ckey
+            try:
+                self.revoke(
+                    lease, sync=sync, allow_validity_reduction=allow_validity_reduction
+                )
+            except VaultPermissionDeniedError:
+                failed.append(ckey)
+                if flush_on_failure:
+                    # Forget the lease and let Vault's automatic revocation handle it
+                    self.cache.flush(self.lease_id_ckey_cache.pop(str(lease)))
+        if failed:
+            raise VaultException(f"Failed revoking some leases: {list(failed)}")
+        return True
 
     def store(self, ckey, lease):
         """
@@ -486,4 +606,6 @@ class LeaseStore:
         lease
             A lease ID or VaultLease object to store.
         """
-        return self.cache.store(ckey, lease)
+        self.cache.store(ckey, lease)
+        self.lease_id_ckey_cache[str(lease)] = ckey
+        return True

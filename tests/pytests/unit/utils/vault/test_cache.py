@@ -6,7 +6,7 @@ import pytest
 import salt.cache
 import salt.utils.vault as vault
 import salt.utils.vault.cache as vcache
-from tests.support.mock import Mock, patch
+from tests.support.mock import ANY, Mock, patch
 
 
 @pytest.fixture
@@ -63,6 +63,14 @@ def uncached(cache_factory):
     cache.updated.return_value = None
     cache_factory.return_value = cache
     return cache
+
+
+@pytest.fixture(autouse=True, params=[0])
+def time_stopped(request):
+    with patch(
+        "salt.utils.vault.cache.time.time", autospec=True, return_value=request.param
+    ):
+        yield
 
 
 @pytest.mark.parametrize("ckey", ["token", None])
@@ -402,7 +410,7 @@ class TestVaultAuthCache:
         """
         Ensure that unavailable cached data is reported as None.
         """
-        cache = vcache.VaultAuthCache({}, None, None, vault.VaultToken)
+        cache = vcache.VaultAuthCache({}, "cbank", "ckey", vault.VaultToken)
         res = cache.get()
         assert res is None
 
@@ -411,7 +419,7 @@ class TestVaultAuthCache:
         """
         Ensure that cached data that is still valid is returned.
         """
-        cache = vcache.VaultAuthCache({}, None, None, vault.VaultToken)
+        cache = vcache.VaultAuthCache({}, "cbank", "ckey", vault.VaultToken)
         res = cache.get()
         assert res is not None
         assert res == vault.VaultToken(**token_auth["auth"])
@@ -421,7 +429,7 @@ class TestVaultAuthCache:
         Ensure that cached data that is not valid anymore is flushed
         and None is returned.
         """
-        cache = vcache.VaultAuthCache({}, None, None, vault.VaultToken)
+        cache = vcache.VaultAuthCache({}, "cbank", "ckey", vault.VaultToken)
         res = cache.get()
         assert res is None
         cached_invalid_flush.assert_called_once()
@@ -436,3 +444,85 @@ class TestVaultAuthCache:
         with patch("salt.utils.vault.cache.CommonCache._store_ckey") as store:
             cache.store(token)
             store.assert_called_once_with("ckey", token.to_dict())
+
+
+class TestVaultLeaseCache:
+    @pytest.fixture
+    def uncached(self):
+        with patch(
+            "salt.utils.vault.cache.CommonCache._ckey_exists",
+            return_value=False,
+            autospec=True,
+        ):
+            with patch(
+                "salt.utils.vault.cache.CommonCache._get_ckey",
+                return_value=None,
+                autospec=True,
+            ) as get:
+                yield get
+
+    @pytest.fixture
+    def cached(self, lease):
+        with patch(
+            "salt.utils.vault.cache.CommonCache._ckey_exists",
+            return_value=True,
+            autospec=True,
+        ):
+            with patch(
+                "salt.utils.vault.cache.CommonCache._get_ckey",
+                return_value=lease,
+                autospec=True,
+            ) as get:
+                yield get
+
+    @pytest.mark.usefixtures("uncached")
+    def test_get_uncached(self):
+        """
+        Ensure that unavailable cached data is reported as None.
+        """
+        cache = vcache.VaultLeaseCache({}, "cbank")
+        res = cache.get("testlease")
+        assert res is None
+
+    @pytest.mark.usefixtures("cached")
+    def test_get_cached(self, lease):
+        """
+        Ensure that cached data that is still valid is returned.
+        """
+        cache = vcache.VaultLeaseCache({}, "cbank")
+        res = cache.get("testlease")
+        assert res is not None
+        assert res == vault.VaultLease(**lease)
+
+    @pytest.mark.usefixtures("cached", "time_stopped")
+    @pytest.mark.parametrize("valid_for,expected", ((1, True), (99999999, False)))
+    def test_get_cached_valid_for(self, valid_for, expected, lease):
+        """
+        Ensure that requesting leases with a validity works as expected.
+        The lease should be returned if it is valid, otherwise only
+        the invalid ckey should be flushed and None returned.
+        """
+        cache = vcache.VaultLeaseCache({}, "cbank")
+        with patch(
+            "salt.utils.vault.cache.CommonCache._flush",
+            autospec=True,
+        ) as flush:
+            res = cache.get("testlease", valid_for=valid_for, flush=True)
+            if expected:
+                flush.assert_not_called()
+                assert res is not None
+                assert res == vault.VaultLease(**lease)
+            else:
+                flush.assert_called_once_with(ANY, "testlease")
+                assert res is None
+
+    def test_store(self, lease):
+        """
+        Ensure that storing authentication data sends a dictionary
+        representation to the store implementation of the parent class.
+        """
+        lease_ = vault.VaultLease(**lease)
+        cache = vcache.VaultLeaseCache({}, "cbank")
+        with patch("salt.utils.vault.cache.CommonCache._store_ckey") as store:
+            cache.store("ckey", lease_)
+            store.assert_called_once_with("ckey", lease_.to_dict())

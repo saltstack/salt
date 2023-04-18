@@ -16,22 +16,6 @@ def time_stopped(request):
 
 
 @pytest.fixture
-def lease():
-    return {
-        "id": "database/creds/testrole/abcd",
-        "lease_id": "database/creds/testrole/abcd",
-        "renewable": True,
-        "duration": 1337,
-        "creation_time": 0,
-        "expire_time": 1337,
-        "data": {
-            "username": "test",
-            "password": "test",
-        },
-    }
-
-
-@pytest.fixture
 def lease_renewed_response():
     return {
         "lease_id": "database/creds/testrole/abcd",
@@ -282,11 +266,19 @@ class TestLeaseStore:
         """
         ret = store_valid.get("test", valid_for=2100, renew_increment=3000)
         assert ret is None
-        store_valid.client.post.assert_called_once_with(
-            "sys/leases/renew", payload={"lease_id": lease["id"], "increment": 3000}
+        store_valid.client.post.assert_has_calls(
+            (
+                call(
+                    "sys/leases/renew",
+                    payload={"lease_id": lease["id"], "increment": 3000},
+                ),
+                call(
+                    "sys/leases/revoke",
+                    payload={"lease_id": lease["id"], "sync": False},
+                ),
+            )
         )
         store_valid.cache.flush.assert_called_once_with("test")
-        store_valid.cache.store.assert_not_called()
 
     @pytest.mark.parametrize(
         "valid_for", [3000, pytest.param(3002, id="3002_renewal_leeway")]
@@ -321,25 +313,28 @@ class TestLeaseStore:
             )
         )
         store_valid.cache.flush.assert_not_called()
-        store_valid.cache.store.assert_called_once_with("test", ret)
+        store_valid.cache.store.assert_called_with("test", ret)
 
-    def test_get_valid_not_renew(self, store_valid):
+    def test_get_valid_not_renew(self, store_valid, lease):
         """
         Currently valid leases should not be returned if they undercut
-        valid_for and cache should be flushed by default.
+        valid_for. By default, revocation should be attempted and cache
+        should be flushed.
         """
         ret = store_valid.get("test", valid_for=2000, renew=False)
         assert ret is None
-        store_valid.cache.flush.assert_called_once_with("test")
-        store_valid.client.post.assert_not_called()
         store_valid.cache.store.assert_not_called()
+        store_valid.client.post.assert_called_once_with(
+            "sys/leases/revoke", payload={"lease_id": lease["id"], "sync": False}
+        )
+        store_valid.cache.flush.assert_called_once_with("test")
 
     def test_get_valid_not_flush(self, store_valid):
         """
         Currently valid leases should not be returned if they undercut
-        valid_for and cache should not be flushed if requested so.
+        valid_for and should not be revoked if requested so.
         """
-        ret = store_valid.get("test", valid_for=2000, flush=False, renew=False)
+        ret = store_valid.get("test", valid_for=2000, revoke=False, renew=False)
         assert ret is None
         store_valid.cache.flush.assert_not_called()
         store_valid.client.post.assert_not_called()
