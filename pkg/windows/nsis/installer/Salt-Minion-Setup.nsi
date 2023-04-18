@@ -46,6 +46,13 @@ ${StrStrAdv}
     !define PYTHON_ARCHITECTURE "x64"
 !endif
 
+# Get Estimated Size from CLI argument /DEstimatedSize
+!ifdef PythonArchitecture
+    !define ESTIMATED_SIZE "${EstimatedSize}"
+!else
+    # Default
+    !define ESTIMATED_SIZE 0
+!endif
 
 # x64 and AMD64 are AMD64, all others are x86
 !if "${PYTHON_ARCHITECTURE}" == "x64"
@@ -600,50 +607,44 @@ SectionEnd
 Section -install_vcredist_2013
 
     Var /GLOBAL VcRedistName
-    Var /GLOBAL VcRedistGuid
-    Var /GLOBAL NeedVcRedist
-
-    # GUIDs can be found by installing them and then running the following
-    # command:
-    # wmic product where "Name like '%2013%minimum runtime%'" get Name, Version, IdentifyingNumber
-    !define VCREDIST_X86_NAME "vcredist_x86_2013"
-    !define VCREDIST_X86_GUID "{8122DAB1-ED4D-3676-BB0A-CA368196543E}"
-    !define VCREDIST_X64_NAME "vcredist_x64_2013"
-    !define VCREDIST_X64_GUID "{53CF6934-A98D-3D84-9146-FC4EDF3D5641}"
+    Var /GLOBAL VcRedistReg
 
     # Only install 64bit VCRedist on 64bit machines
     # Use RunningX64 here to get the Architecture for the system running the
     # installer.
     ${If} ${RunningX64}
-        StrCpy $VcRedistName ${VCREDIST_X64_NAME}
-        StrCpy $VcRedistGuid ${VCREDIST_X64_GUID}
+        StrCpy $VcRedistName "vcredist_x64_2013"
+        StrCpy $VcRedistReg "SOFTWARE\WOW6432Node\Microsoft\VisualStudio\12.0\VC\Runtimes\x64"
     ${Else}
-        StrCpy $VcRedistName ${VCREDIST_X86_NAME}
-        StrCpy $VcRedistGuid ${VCREDIST_X86_GUID}
+        StrCpy $VcRedistName "vcredist_x86_2013"
+        StrCpy $VcRedistReg "SOFTWARE\Microsoft\VisualStudio\12.0\VC\Runtimes\x86"
     ${EndIf}
 
     # Detecting VCRedist Installation
-    !define INSTALLSTATE_DEFAULT "5"
-
-    StrCpy $NeedVcRedist "False"
     detailPrint "Checking for $VcRedistName..."
-    System::Call "msi::MsiQueryProductStateA(t '$VcRedistGuid') i.r0"
-    StrCmp $0 ${INSTALLSTATE_DEFAULT} +2 0
-    StrCpy $NeedVcRedist "True"
-
+    ReadRegDword $0 HKLM $VcRedistReg "Installed"
+    StrCmp $0 "1" +2 0
     Call InstallVCRedist
 
 SectionEnd
 
 
 Function InstallVCRedist
-    # Check to see if it's already installed
-    ${If} $NeedVcRedist == "True"
-        detailPrint "System requires $VcRedistName"
-        MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
-            "$VcRedistName is currently not installed. Would you like to \
-            install?" \
-            /SD IDYES IDNO endVCRedist
+    detailPrint "System requires $VcRedistName"
+    MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
+        "$VcRedistName is currently not installed. Would you like to \
+        install?" \
+        /SD IDYES IDYES InstallVcRedist
+
+    detailPrint "$VcRedistName not installed"
+    detailPrint ">>>Installation aborted by user<<<"
+    MessageBox MB_ICONEXCLAMATION \
+        "$VcRedistName not installed. Aborted by user.$\n$\n\
+        Installer will now close." \
+        /SD IDOK
+    Quit
+
+    InstallVcRedist:
 
         # If an output variable is specified ($0 in the case below), ExecWait
         # sets the variable with the exit code (and only sets the error flag if
@@ -659,12 +660,15 @@ Function InstallVCRedist
         detailPrint "An error occurred during installation of $VcRedistName"
         MessageBox MB_OK|MB_ICONEXCLAMATION \
             "$VcRedistName failed to install. Try installing the package \
-            manually." \
+            manually.$\n$\n\
+            The installer will now close." \
             /SD IDOK
+            Quit
 
         CheckVcRedistErrorCode:
         # Check for Reboot Error Code (3010)
         ${If} $0 == 3010
+            detailPrint "$VcRedistName installed but requires a restart to complete."
             detailPrint "Reboot and run Salt install again"
             MessageBox MB_OK|MB_ICONINFORMATION \
                 "$VcRedistName installed but requires a restart to complete." \
@@ -675,14 +679,12 @@ Function InstallVCRedist
             detailPrint "An error occurred during installation of $VcRedistName"
             detailPrint "Error: $0"
             MessageBox MB_OK|MB_ICONEXCLAMATION \
-                "$VcRedistName failed with ErrorCode: $0. Try installing the \
-                package manually." \
+                "$VcRedistName failed to install. Try installing the package \
+                mnually.$\n\
+                ErrorCode: $0$\n\
+                The installer will now close." \
                 /SD IDOK
         ${EndIf}
-
-        endVCRedist:
-
-    ${EndIf}
 
 FunctionEnd
 
@@ -933,8 +935,12 @@ Section -Post
     WriteRegStr HKLM "SYSTEM\CurrentControlSet\services\salt-minion" \
         "DependOnService" "nsi"
 
-    # Set the estimated size
-    ${GetSize} "$INSTDIR" "/S=OK" $0 $1 $2
+    # If ESTIMATED_SIZE is not set, calculated it
+    ${If} ${ESTIMATED_SIZE} == 0
+        ${GetSize} "$INSTDIR" "/S=OK" $0 $1 $2
+    ${Else}
+        StrCpy $0 ${ESTIMATED_SIZE}
+    ${Endif}
     IntFmt $0 "0x%08X" $0
     WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
         "EstimatedSize" "$0"

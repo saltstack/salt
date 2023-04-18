@@ -760,7 +760,7 @@ def _find_install_targets(
             err = "Unable to cache {0}: {1}"
             try:
                 cached_path = __salt__["cp.cache_file"](
-                    version_string, saltenv=kwargs["saltenv"]
+                    version_string, saltenv=kwargs["saltenv"], **kwargs
                 )
             except CommandExecutionError as exc:
                 problems.append(err.format(version_string, exc))
@@ -989,6 +989,61 @@ def _resolve_capabilities(pkgs, refresh=False, **kwargs):
     return ret, False
 
 
+def _get_installable_versions(targets, current=None):
+    """
+    .. versionadded:: 3007.0
+
+    Return a dictionary of changes that will be made to install a version of
+    each target package specified in the ``targets`` dictionary.  If ``current``
+    is specified, it should be a dictionary of package names to currently
+    installed versions. The function returns a dictionary of changes, where the
+    keys are the package names and the values are dictionaries with two keys:
+    "old" and "new". The value for "old" is the currently installed version (if
+    available) or an empty string, and the value for "new" is the latest
+    available version of the package or "installed".
+
+    :param targets: A dictionary where the keys are package names and the
+                    values indicate a specific version or ``None`` if the
+                    latest should be used.
+    :type targets: dict
+    :param current: A dictionary where the keys are package names and the
+                    values are currently installed versions.
+    :type current: dict or None
+    :return: A dictionary of changes to be made to install a version of
+             each package.
+    :rtype: dict
+    """
+    if current is None:
+        current = {}
+    changes = installable_versions = {}
+    latest_targets = [_get_desired_pkg(x, targets) for x, y in targets.items() if not y]
+    latest_versions = __salt__["pkg.latest_version"](*latest_targets)
+    if latest_targets:
+        # single pkg returns str
+        if isinstance(latest_versions, str):
+            installable_versions = {latest_targets[0]: latest_versions}
+        elif isinstance(latest_versions, dict):
+            installable_versions = latest_versions
+    explicit_targets = [
+        _get_desired_pkg(x, targets) for x in targets if x not in latest_targets
+    ]
+    if explicit_targets:
+        explicit_versions = __salt__["pkg.list_repo_pkgs"](*explicit_targets)
+        for tgt, ver_list in explicit_versions.items():
+            if ver_list:
+                installable_versions[tgt] = ver_list[0]
+    changes.update(
+        {
+            x: {
+                "new": installable_versions.get(x) or "installed",
+                "old": current.get(x, ""),
+            }
+            for x in targets
+        }
+    )
+    return changes
+
+
 def installed(
     name,
     version=None,
@@ -1007,6 +1062,8 @@ def installed(
     **kwargs
 ):
     """
+    .. versionchanged:: 3007.0
+
     Ensure that the package is installed, and that it is the correct version
     (if specified).
 
@@ -1805,11 +1862,13 @@ def installed(
     if __opts__["test"]:
         if targets:
             if sources:
-                _targets = targets
+                installable_versions = {
+                    x: {"new": "installed", "old": ""} for x in targets
+                }
             else:
-                _targets = [_get_desired_pkg(x, targets) for x in targets]
+                installable_versions = _get_installable_versions(targets)
+            changes.update(installable_versions)
             summary = ", ".join(targets)
-            changes.update({x: {"new": "installed", "old": ""} for x in targets})
             comment.append(
                 "The following packages would be installed/updated: {}".format(summary)
             )
@@ -2460,6 +2519,8 @@ def latest(
     **kwargs
 ):
     """
+    .. versionchanged:: 3007.0
+
     Ensure that the named package is installed and the latest available
     package. If the package can be updated, this state function will update
     the package. Generally it is better for the
@@ -2738,10 +2799,10 @@ def latest(
                     comments.append(
                         "{} packages are already up-to-date".format(up_to_date_count)
                     )
-
+            changes = _get_installable_versions(targets, cur)
             return {
                 "name": name,
-                "changes": {},
+                "changes": changes,
                 "result": None,
                 "comment": "\n".join(comments),
             }
