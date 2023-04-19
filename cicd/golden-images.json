@@ -107,7 +107,7 @@
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.large",
     "is_windows": "false",
-    "ssh_username": "cloud-user"
+    "ssh_username": "centos"
   },
   "centosstream-9-arm64": {
     "ami": "ami-06fd13f7c7c702fc4",
