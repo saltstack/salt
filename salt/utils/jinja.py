@@ -221,6 +221,24 @@ class SaltCacheLoader(BaseLoader):
         # there is no template file within searchpaths
         raise TemplateNotFound(template)
 
+    def destroy(self):
+        for attr in ("_cached_client", "_cached_pillar_client"):
+            client = getattr(self, attr, None)
+            if client is not None:
+                try:
+                    client.destroy()
+                except AttributeError:
+                    # PillarClient and LocalClient objects do not have a destroy method
+                    pass
+                setattr(self, attr, None)
+
+    def __enter__(self):
+        self.file_client()
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
+
 
 class PrintableDict(OrderedDict):
     """
