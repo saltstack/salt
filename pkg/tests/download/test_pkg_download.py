@@ -19,33 +19,33 @@ def get_salt_test_commands():
     if platform.is_windows():
         if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
             salt_test_commands = [
-                "salt-call.exe --local test.versions",
-                "salt-call.exe --local grains.items",
-                "salt-minion.exe --version",
+                ["salt-call.exe", "--local", "test.versions"],
+                ["salt-call.exe", "--local", "grains.items"],
+                ["salt-minion.exe", "--version"],
             ]
         else:
             salt_test_commands = [
-                "salt-call.bat --local test.versions",
-                "salt-call.bat --local grains.items",
-                "salt.bat --version",
-                "salt-master.bat --version",
-                "salt-minion.bat --version",
-                "salt-ssh.bat --version",
-                "salt-syndic.bat --version",
-                "salt-api.bat --version",
-                "salt-cloud.bat --version",
+                ["salt-call.bat", "--local", "test.versions"],
+                ["salt-call.bat", "--local", "grains.items"],
+                ["salt.bat", "--version"],
+                ["salt-master.bat", "--version"],
+                ["salt-minion.bat", "--version"],
+                ["salt-ssh.bat", "--version"],
+                ["salt-syndic.bat", "--version"],
+                ["salt-api.bat", "--version"],
+                ["salt-cloud.bat", "--version"],
             ]
     else:
         salt_test_commands = [
-            "salt-call --local test.versions",
-            "salt-call --local grains.items",
-            "salt --version",
-            "salt-master --version",
-            "salt-minion --version",
-            "salt-ssh --version",
-            "salt-syndic --version",
-            "salt-api --version",
-            "salt-cloud --version",
+            ["salt-call", "--local", "test.versions"],
+            ["salt-call", "--local", "grains.items"],
+            ["salt", "--version"],
+            ["salt-master", "--version"],
+            ["salt-minion", "--version"],
+            ["salt-ssh", "--version"],
+            ["salt-syndic", "--version"],
+            ["salt-api", "--version"],
+            ["salt-cloud", "--version"],
         ]
     return salt_test_commands
 
@@ -379,12 +379,17 @@ def install_dir(_setup_system):
     return pathlib.Path("/opt", "saltstack", "salt")
 
 
-@pytest.mark.parametrize("salt_test_command", get_salt_test_commands())
-def test_download(shell, install_dir, salt_test_command):
+@pytest.fixture(scope="module")
+def salt_test_command(request, install_dir):
+    command = request.param
+    command[0] = str(install_dir / command[0])
+    return command
+
+
+@pytest.mark.parametrize("salt_test_command", get_salt_test_commands(), indirect=True)
+def test_download(shell, salt_test_command):
     """
     Test downloading of Salt packages and running various commands.
     """
-    _cmd = salt_test_command.split()
-    _cmd[0] = str(install_dir / _cmd[0])
-    ret = shell.run(*_cmd, check=False)
+    ret = shell.run(*salt_test_command, check=False)
     assert ret.returncode == 0, ret
