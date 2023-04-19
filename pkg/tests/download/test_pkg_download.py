@@ -252,10 +252,6 @@ def setup_redhat_family(
         ),
     ]
 
-    # For some reason, the centosstream9 container doesn't have dmesg installed
-    if os_version == 9 and os_name == "redhat":
-        commands.insert(2, ("yum", "install", "-y", "util-linux"))
-
     for cmd in commands:
         ret = shell.run(*cmd, check=False)
         if ret.returncode != 0:
