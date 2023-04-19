@@ -29,11 +29,7 @@ def update_master_cache(states, saltenv="base"):
     # Setup for copying states to gendir
     gendir = tempfile.mkdtemp()
     trans_tar = salt.utils.files.mkstemp()
-    cp_fileclient_ctx_key = "cp.fileclient_{}".format(id(__opts__))
-    if cp_fileclient_ctx_key not in __context__:
-        __context__[cp_fileclient_ctx_key] = salt.fileclient.get_file_client(__opts__)
-
-    with __context__[cp_fileclient_ctx_key] as cp_fileclient:
+    with salt.fileclient.get_file_client(__opts__) as cp_fileclient:
 
         # generate cp.list_states output and save to gendir
         cp_output = salt.utils.json.dumps(__salt__["cp.list_states"]())
