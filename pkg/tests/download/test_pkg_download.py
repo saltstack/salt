@@ -371,34 +371,20 @@ def setup_windows(shell, root_url, salt_release, downloads_path):
 
 
 @pytest.fixture(scope="module")
-def environ(_setup_system):
-    env = os.environ.copy()
+def install_dir(_setup_system):
     if platform.is_windows():
-        install_dir = pathlib.Path(
-            os.getenv("ProgramFiles"), "Salt Project", "Salt"
-        ).resolve()
-    elif platform.is_darwin():
-        install_dir = pathlib.Path("/opt", "salt")
-    else:
-        install_dir = pathlib.Path("/opt", "saltstack", "salt")
-
-    # Get the defined PATH environment variable
-    path = os.environ.get("PATH")
-    if path is not None:
-        path_items = path.split(os.pathsep)
-    else:
-        path_items = []
-    path_items.insert(0, str(install_dir))
-
-    # Set the PATH environment variable
-    env["PATH"] = os.pathsep.join(path_items)
-    return env
+        return pathlib.Path(os.getenv("ProgramFiles"), "Salt Project", "Salt").resolve()
+    if platform.is_darwin():
+        return pathlib.Path("/opt", "salt")
+    return pathlib.Path("/opt", "saltstack", "salt")
 
 
 @pytest.mark.parametrize("salt_test_command", get_salt_test_commands())
-def test_download(shell, environ, salt_test_command):
+def test_download(shell, install_dir, salt_test_command):
     """
     Test downloading of Salt packages and running various commands.
     """
-    ret = shell.run(*salt_test_command.split(), env=environ, check=False)
+    _cmd = salt_test_command.split()
+    _cmd[0] = str(install_dir / _cmd[0])
+    ret = shell.run(*_cmd, check=False)
     assert ret.returncode == 0, ret
