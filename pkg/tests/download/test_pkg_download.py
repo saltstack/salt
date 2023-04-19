@@ -329,8 +329,6 @@ def setup_macos(shell, root_url, salt_release, downloads_path):
     )
     assert ret.returncode == 0, ret
 
-    yield
-
 
 def setup_windows(shell, root_url, salt_release, downloads_path):
 
