@@ -76,6 +76,7 @@ def test_blocktrimming(minion_opts, local_salt):
 """
     )
 
+
 def test_lstrip_blocks_minionconf(minion_opts, local_salt):
     template = """
 #lets count
@@ -128,20 +129,5 @@ def test_no_blocktrimming(minion_opts, local_salt):
     )
 
     assert (
-        rendered
-        == """
-#beware of the whitespace
-
-  
-0
-
-  
-1337
-  
-1
-
-  
-2
-
-"""
+        rendered == "#beware of the whitespace\n\n  \n0\n\n  \n1337\n  \n1\n\n  \n2\n"
     )
