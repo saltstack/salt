@@ -27,6 +27,10 @@ jobs:
       matrix:
         arch:
           - x86_64
+        mode:
+          - existing-onedir
+          - from-src
+
     runs-on:
       - macos-12
     steps:
@@ -93,22 +97,38 @@ jobs:
           rm install-cert.p12
           security set-key-partition-list -S apple-tool:,apple: -k "${{ secrets.MAC_SIGN_DEV_PASSWORD }}" "${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}" &> /dev/null
 
-      - name: Build MacOS Package
+      - name: Build MacOS Package Using Existing Onedir
         env:
           DEV_APP_CERT: "${{ secrets.MAC_SIGN_DEV_APP_CERT }}"
           DEV_INSTALL_CERT: "${{ secrets.MAC_SIGN_DEV_INSTALL_CERT }}"
           APPLE_ACCT: "${{ secrets.MAC_SIGN_APPLE_ACCT }}"
           APP_SPEC_PWD: "${{ secrets.MAC_SIGN_APP_SPEC_PWD }}"
+        if: ${{ matrix.mode == 'existing-onedir' }}
         run: |
           tools pkg build macos --onedir salt-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch }}.tar.xz \
             --salt-version ${{ inputs.salt-version }} ${{
               steps.check-pkg-sign.outputs.sign-pkgs == 'true' && '--sign' || ''
             }}
 
+      - name: Build MacOS Package Without Existing Onedir
+        if: ${{ matrix.mode == 'from-src' }}
+        run: |
+          tools pkg build macos --salt-version ${{ inputs.salt-version }}
+
       - name: Upload ${{ matrix.arch }} Package
         uses: actions/upload-artifact@v3
+        if: ${{ matrix.mode == 'existing-onedir' }}
         with:
           name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos
+          path: pkg/macos/salt-${{ inputs.salt-version }}-py3-*.pkg
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload ${{ matrix.arch }} Package
+        uses: actions/upload-artifact@v3
+        if: ${{ matrix.mode == 'from-src' }}
+        with:
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos-from-src
           path: pkg/macos/salt-${{ inputs.salt-version }}-py3-*.pkg
           retention-days: 7
           if-no-files-found: error

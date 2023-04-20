@@ -108,8 +108,7 @@ jobs:
       - name: Build Windows Packages Without Existing Onedir
         if: ${{ matrix.mode == 'from-src' }}
         run: |
-          tools pkg build windows --onedir salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip `
-            --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }}
+          tools pkg build windows --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }}
 
       - name: Upload ${{ matrix.arch }} Packages
         uses: actions/upload-artifact@v3
