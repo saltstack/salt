@@ -160,7 +160,6 @@ def rpm(
     arguments={
         "onedir": {
             "help": "The name of the onedir artifact, if given it should be under artifacts/",
-            "required": True,
         },
         "salt_version": {
             "help": (
@@ -184,16 +183,31 @@ def macos(
         assert onedir is not None
         assert salt_version is not None
 
-    checkout = pathlib.Path.cwd()
-    onedir_artifact = checkout / "artifacts" / onedir
-    _check_pkg_build_files_exist(ctx, onedir_artifact=onedir_artifact)
+    if onedir:
+        checkout = pathlib.Path.cwd()
+        onedir_artifact = checkout / "artifacts" / onedir
+        ctx.info(f"Building package from existing onedir: {str(onedir_artifact)}")
+        _check_pkg_build_files_exist(ctx, onedir_artifact=onedir_artifact)
 
-    build_root = checkout / "pkg" / "macos" / "build" / "opt"
-    build_root.mkdir(parents=True, exist_ok=True)
-    ctx.info(f"Extracting the onedir artifact to {build_root}")
-    with tarfile.open(str(onedir_artifact)) as tarball:
-        with ctx.chdir(onedir_artifact.parent):
-            tarball.extractall(path=build_root)
+        build_root = checkout / "pkg" / "macos" / "build" / "opt"
+        build_root.mkdir(parents=True, exist_ok=True)
+        ctx.info(f"Extracting the onedir artifact to {build_root}")
+        with tarfile.open(str(onedir_artifact)) as tarball:
+            with ctx.chdir(onedir_artifact.parent):
+                tarball.extractall(path=build_root)
+    else:
+        ctx.info("Building package without an existing onedir")
+
+    if not onedir:
+        # Prep the salt onedir if not building from an existing one
+        shared_constants = _get_shared_constants()
+        py_ver = shared_constants["python_version_macos"]
+        with ctx.chdir(checkout / "pkg" / "macos"):
+            ctx.info("Fetching relenv python")
+            ctx.run("./build_python.sh", "--version", py_ver)
+
+            ctx.info("Installing salt into the relenv python")
+            ctx.run("./install_salt.sh")
 
     if sign:
         ctx.info("Signing binaries")
@@ -263,7 +277,6 @@ def windows(
         "-Version",
         salt_version,
         "-CICD",
-        "-SkipInstall",
     ]
 
     if onedir:
