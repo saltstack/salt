@@ -29,6 +29,10 @@ jobs:
         arch:
           - x86
           - amd64
+        mode:
+          - existing-onedir
+          - from-src
+
     runs-on:
       - windows-latest
     env:
@@ -93,25 +97,52 @@ jobs:
         run: |
           echo "${{ secrets.WIN_SIGN_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
 
-      - name: Build Windows Packages
+      - name: Build Windows Packages Using Existing Onedir
+        if: ${{ matrix.mode == 'existing-onedir' }}
         run: |
           tools pkg build windows --onedir salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip `
             --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }} ${{
               steps.check-pkg-sign.outputs.sign-pkgs == 'true' && '--sign' || ''
             }}
 
+      - name: Build Windows Packages Without Existing Onedir
+        if: ${{ matrix.mode == 'from-src' }}
+        run: |
+          tools pkg build windows --onedir salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip `
+            --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }}
+
       - name: Upload ${{ matrix.arch }} Packages
         uses: actions/upload-artifact@v3
+        if: ${{ matrix.mode == 'existing-onedir' }}
         with:
           name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS
           path: pkg/windows/build/Salt-*.exe
           retention-days: 7
           if-no-files-found: error
 
+      - name: Upload ${{ matrix.arch }} Packages
+        uses: actions/upload-artifact@v3
+        if: ${{ matrix.mode == 'from-src' }}
+        with:
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS-from-src
+          path: pkg/windows/build/Salt-*.exe
+          retention-days: 7
+          if-no-files-found: error
+
       - name: Upload ${{ matrix.arch }} MSI Package
         uses: actions/upload-artifact@v3
+        if: ${{ matrix.mode == 'existing-onedir' }}
         with:
           name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-MSI
+          path: pkg/windows/build/Salt-*.msi
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload ${{ matrix.arch }} MSI Package
+        uses: actions/upload-artifact@v3
+        if: ${{ matrix.mode == 'from-src' }}
+        with:
+          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-MSI-from-src
           path: pkg/windows/build/Salt-*.msi
           retention-days: 7
           if-no-files-found: error
