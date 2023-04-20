@@ -29,6 +29,7 @@ env:
   COLUMNS: 190
   PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
   PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  RELENV_BUILDENV: 1
 
 
 runs:
@@ -41,13 +42,20 @@ runs:
       uses: actions/cache@v3
       with:
         path: artifacts/${{ inputs.package-name }}
-        key: ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt', '.github/actions/build-onedir-deps/action.yml') }}
+        key: >
+          ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|
+          ${{ hashFiles(
+            format('{0}/.relenv/**/*.xz', github.workspace),
+            'requirements/static/pkg/*/*.txt',
+            '.github/actions/build-onedir-deps/action.yml',
+            'cicd/shared-gh-workflows-context.yml'
+          ) }}
 
     - name: Install Salt Onedir Package Dependencies
       shell: bash
       if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
       run: |
-        tools pkg build onedir-dependencies --arch ${{ inputs.arch }} --python-version ${{ inputs.python-version }} --package-name ${{ inputs.package-name }} --platform ${{ inputs.platform }}
+        tools pkg build onedir-dependencies --arch ${{ inputs.arch }} --python-version ${{ inputs.python-version }} --package-name artifacts/${{ inputs.package-name }} --platform ${{ inputs.platform }}
 
     - name: Cleanup Salt Onedir Directory
       shell: bash

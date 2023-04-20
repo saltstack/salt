@@ -482,9 +482,7 @@ linode-python==1.1.1
 looseversion==1.0.2
     # via -r requirements/base.txt
 mako==1.2.2
-    # via
-    #   -r requirements/darwin.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
