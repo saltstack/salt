@@ -222,7 +222,6 @@ def macos(
     arguments={
         "onedir": {
             "help": "The name of the onedir artifact, if given it should be under artifacts/",
-            "required": True,
         },
         "salt_version": {
             "help": (
@@ -237,7 +236,7 @@ def macos(
             "required": True,
         },
         "sign": {
-            "help": "Sign and notorize built package",
+            "help": "Sign and notarize built package",
         },
     },
 )
@@ -252,28 +251,10 @@ def windows(
     Build the Windows package.
     """
     if TYPE_CHECKING:
-        assert onedir is not None
         assert salt_version is not None
         assert arch is not None
 
-    checkout = pathlib.Path.cwd()
-    onedir_artifact = checkout / "artifacts" / onedir
-    _check_pkg_build_files_exist(ctx, onedir_artifact=onedir_artifact)
-
-    unzip_dir = checkout / "pkg" / "windows"
-    ctx.info(f"Unzipping the onedir artifact to {unzip_dir}")
-    with zipfile.ZipFile(onedir_artifact, mode="r") as archive:
-        archive.extractall(unzip_dir)
-
-    move_dir = unzip_dir / "salt"
-    build_env = unzip_dir / "buildenv"
-    _check_pkg_build_files_exist(ctx, move_dir=move_dir)
-
-    ctx.info(f"Moving {move_dir} directory to the build environment in {build_env}")
-    shutil.move(move_dir, build_env)
-
-    ctx.info("Building the windows package")
-    ctx.run(
+    build_cmd = [
         "powershell.exe",
         "&",
         "pkg/windows/build.cmd",
@@ -283,7 +264,32 @@ def windows(
         salt_version,
         "-CICD",
         "-SkipInstall",
-    )
+    ]
+
+    if onedir:
+        build_cmd.append("-SkipInstall")
+        checkout = pathlib.Path.cwd()
+        onedir_artifact = checkout / "artifacts" / onedir
+        ctx.info(f"Building package from existing onedir: {str(onedir_artifact)}")
+        _check_pkg_build_files_exist(ctx, onedir_artifact=onedir_artifact)
+
+        unzip_dir = checkout / "pkg" / "windows"
+        ctx.info(f"Unzipping the onedir artifact to {unzip_dir}")
+        with zipfile.ZipFile(onedir_artifact, mode="r") as archive:
+            archive.extractall(unzip_dir)
+
+        move_dir = unzip_dir / "salt"
+        build_env = unzip_dir / "buildenv"
+        _check_pkg_build_files_exist(ctx, move_dir=move_dir)
+
+        ctx.info(f"Moving {move_dir} directory to the build environment in {build_env}")
+        shutil.move(move_dir, build_env)
+    else:
+        build_cmd.append("-Build")
+        ctx.info("Building package without an existing onedir")
+
+    ctx.info(f"Running: {' '.join(build_cmd)} ...")
+    ctx.run(*build_cmd)
 
     if sign:
         env = os.environ.copy()
