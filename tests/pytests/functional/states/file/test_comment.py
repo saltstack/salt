@@ -10,6 +10,7 @@ from tests.support.helpers import dedent
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.slow_test,
 ]
 
 
