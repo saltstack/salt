@@ -2,12 +2,12 @@
 Template render systems
 """
 import codecs
+import json
 import logging
 import os
 import sys
 import tempfile
 import traceback
-import json
 from pathlib import Path
 
 import jinja2
@@ -446,7 +446,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 opt_jinja_env_helper(jdata, optname)
                 # Add line for removal
                 removelines.append(idx)
-            except:
+            except json.JSONDecodeError:
                 # Should we log more here?
                 log.warning("Unable to parse Jinja2 options string")
 

@@ -39,6 +39,7 @@ def minion_opts(tmp_path, minion_opts):
     )
     return minion_opts
 
+
 @pytest.fixture
 def local_salt():
     return {
@@ -63,7 +64,9 @@ def test_blocktrimming(minion_opts, local_salt):
         template, dict(opts=minion_opts, saltenv="test", salt=local_salt)
     )
 
-    assert rendered == """
+    assert (
+        rendered
+        == """
 #lets count
 0
 1337
@@ -71,6 +74,8 @@ def test_blocktrimming(minion_opts, local_salt):
 2
 
 """
+    )
+
 
 def test_lstrip_blocks_minionconf(minion_opts, local_salt):
     template = """
@@ -87,7 +92,9 @@ def test_lstrip_blocks_minionconf(minion_opts, local_salt):
         template, dict(opts=minion_opts, saltenv="test", salt=local_salt)
     )
 
-    assert rendered == """
+    assert (
+        rendered
+        == """
 #lets count
 
 
@@ -102,6 +109,8 @@ def test_lstrip_blocks_minionconf(minion_opts, local_salt):
 2
 
 """
+    )
+
 
 def test_no_blocktrimming(minion_opts, local_salt):
     template = """
@@ -119,19 +128,6 @@ def test_no_blocktrimming(minion_opts, local_salt):
         template, dict(opts=minion_opts, saltenv="test", salt=local_salt)
     )
 
-    assert rendered == """
-#beware of the whitespace
-
-  
-0
-
-  
-1337
-  
-1
-
-  
-2
-
-"""
-
+    assert (
+        rendered == "#beware of the whitespace\n\n  \n0\n\n  \n1337\n  \n1\n\n  \n2\n"
+    )
