@@ -446,7 +446,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 opt_jinja_env_helper(jdata, optname)
                 # Add line for removal
                 removelines.append(idx)
-            except:
+            except json.JSONDecodeError:
                 # Should we log more here?
                 log.warning("Unable to parse Jinja2 options string")
 
