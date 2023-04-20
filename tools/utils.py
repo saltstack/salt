@@ -19,7 +19,6 @@ from rich.progress import (
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 GPG_KEY_FILENAME = "SALT-PROJECT-GPG-PUBKEY-2023"
 SPB_ENVIRONMENT = os.environ.get("SPB_ENVIRONMENT") or "prod"
-NIGHTLY_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-nightly"
 STAGING_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-staging"
 RELEASE_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-release"
 BACKUP_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-backup"

@@ -122,7 +122,7 @@ _deb_distro_info = {
             ),
             "required": True,
         },
-        "nightly_build": {
+        "nightly_build_from": {
             "help": "Developement repository target",
         },
     },
@@ -136,7 +136,7 @@ def debian(
     repo_path: pathlib.Path = None,
     key_id: str = None,
     distro_arch: str = "amd64",
-    nightly_build: bool = False,
+    nightly_build_from: str = None,
 ):
     """
     Create the debian repository.
@@ -178,7 +178,7 @@ def debian(
         ftp_archive_config_suite = (
             f"""\n    APT::FTPArchive::Release::Suite "{suitename}";\n"""
         )
-    archive_description = f"SaltProject {display_name} Python 3{'' if nightly_build else ' development'} Salt package repo"
+    archive_description = f"SaltProject {display_name} Python 3{'' if not nightly_build_from else ' development'} Salt package repo"
     ftp_archive_config = f"""\
     APT::FTPArchive::Release::Origin "SaltProject";
     APT::FTPArchive::Release::Label "{label}";{ftp_archive_config_suite}
@@ -203,6 +203,7 @@ def debian(
         distro,
         distro_version=distro_version,
         distro_arch=distro_arch,
+        nightly_build_from=nightly_build_from,
     )
     # Export the GPG key in use
     tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
@@ -213,7 +214,7 @@ def debian(
         distro,
         distro_version=distro_version,
         distro_arch=distro_arch,
-        nightly_build=nightly_build,
+        nightly_build_from=nightly_build_from,
     )
     ftp_archive_config_file = create_repo_path / "apt-ftparchive.conf"
     ctx.info(f"Writing {ftp_archive_config_file} ...")
@@ -300,7 +301,7 @@ def debian(
 
     ctx.info(f"Running '{' '.join(cmdline)}' ...")
     ctx.run(*cmdline, cwd=create_repo_path)
-    if nightly_build is False:
+    if not nightly_build_from:
         remote_versions = _get_remote_versions(
             tools.utils.STAGING_BUCKET_NAME,
             create_repo_path.parent.relative_to(repo_path),
@@ -373,7 +374,7 @@ _rpm_distro_info = {
             ),
             "required": True,
         },
-        "nightly_build": {
+        "nightly_build_from": {
             "help": "Developement repository target",
         },
     },
@@ -387,7 +388,7 @@ def rpm(
     repo_path: pathlib.Path = None,
     key_id: str = None,
     distro_arch: str = "amd64",
-    nightly_build: bool = False,
+    nightly_build_from: str = None,
 ):
     """
     Create the redhat repository.
@@ -415,6 +416,7 @@ def rpm(
         distro,
         distro_version=distro_version,
         distro_arch=distro_arch,
+        nightly_build_from=nightly_build_from,
     )
     # Export the GPG key in use
     tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
@@ -425,7 +427,7 @@ def rpm(
         distro,
         distro_version=distro_version,
         distro_arch=distro_arch,
-        nightly_build=nightly_build,
+        nightly_build_from=nightly_build_from,
     )
 
     # Export the GPG key in use
@@ -472,7 +474,7 @@ def rpm(
     else:
         ctx.run("createrepo", ".", cwd=create_repo_path)
 
-    if nightly_build:
+    if nightly_build_from:
         repo_domain = os.environ.get("SALT_REPO_DOMAIN_RELEASE", "repo.saltproject.io")
     else:
         repo_domain = os.environ.get(
@@ -496,8 +498,8 @@ def rpm(
 
     def _create_repo_file(create_repo_path, url_suffix):
         ctx.info(f"Creating '{repo_file_path.relative_to(repo_path)}' file ...")
-        if nightly_build:
-            base_url = "salt-dev/"
+        if nightly_build_from:
+            base_url = f"salt-dev/{nightly_build_from}/"
             repo_file_contents = "[salt-nightly-repo]"
         elif "rc" in salt_version:
             base_url = "salt_rc/"
@@ -532,14 +534,14 @@ def rpm(
         )
         create_repo_path.write_text(repo_file_contents)
 
-    if nightly_build:
+    if nightly_build_from:
         repo_file_path = create_repo_path.parent / "nightly.repo"
     else:
         repo_file_path = create_repo_path.parent / f"{create_repo_path.name}.repo"
 
     _create_repo_file(repo_file_path, f"minor/{salt_version}")
 
-    if nightly_build is False:
+    if not nightly_build_from:
         remote_versions = _get_remote_versions(
             tools.utils.STAGING_BUCKET_NAME,
             create_repo_path.parent.relative_to(repo_path),
@@ -594,7 +596,7 @@ def rpm(
             ),
             "required": True,
         },
-        "nightly_build": {
+        "nightly_build_from": {
             "help": "Developement repository target",
         },
     },
@@ -605,7 +607,7 @@ def windows(
     incoming: pathlib.Path = None,
     repo_path: pathlib.Path = None,
     key_id: str = None,
-    nightly_build: bool = False,
+    nightly_build_from: str = None,
 ):
     """
     Create the windows repository.
@@ -618,7 +620,7 @@ def windows(
     _create_onedir_based_repo(
         ctx,
         salt_version=salt_version,
-        nightly_build=nightly_build,
+        nightly_build_from=nightly_build_from,
         repo_path=repo_path,
         incoming=incoming,
         key_id=key_id,
@@ -650,7 +652,7 @@ def windows(
             ),
             "required": True,
         },
-        "nightly_build": {
+        "nightly_build_from": {
             "help": "Developement repository target",
         },
     },
@@ -661,7 +663,7 @@ def macos(
     incoming: pathlib.Path = None,
     repo_path: pathlib.Path = None,
     key_id: str = None,
-    nightly_build: bool = False,
+    nightly_build_from: str = None,
 ):
     """
     Create the windows repository.
@@ -674,7 +676,7 @@ def macos(
     _create_onedir_based_repo(
         ctx,
         salt_version=salt_version,
-        nightly_build=nightly_build,
+        nightly_build_from=nightly_build_from,
         repo_path=repo_path,
         incoming=incoming,
         key_id=key_id,
@@ -706,7 +708,7 @@ def macos(
             ),
             "required": True,
         },
-        "nightly_build": {
+        "nightly_build_from": {
             "help": "Developement repository target",
         },
     },
@@ -717,7 +719,7 @@ def onedir(
     incoming: pathlib.Path = None,
     repo_path: pathlib.Path = None,
     key_id: str = None,
-    nightly_build: bool = False,
+    nightly_build_from: str = None,
 ):
     """
     Create the onedir repository.
@@ -730,7 +732,7 @@ def onedir(
     _create_onedir_based_repo(
         ctx,
         salt_version=salt_version,
-        nightly_build=nightly_build,
+        nightly_build_from=nightly_build_from,
         repo_path=repo_path,
         incoming=incoming,
         key_id=key_id,
@@ -762,7 +764,7 @@ def onedir(
             ),
             "required": True,
         },
-        "nightly_build": {
+        "nightly_build_from": {
             "help": "Developement repository target",
         },
     },
@@ -773,7 +775,7 @@ def src(
     incoming: pathlib.Path = None,
     repo_path: pathlib.Path = None,
     key_id: str = None,
-    nightly_build: bool = False,
+    nightly_build_from: str = None,
 ):
     """
     Create the onedir repository.
@@ -1458,7 +1460,7 @@ def _get_remote_versions(bucket_name: str, remote_path: str):
 def _create_onedir_based_repo(
     ctx: Context,
     salt_version: str,
-    nightly_build: bool,
+    nightly_build_from: str | None,
     repo_path: pathlib.Path,
     incoming: pathlib.Path,
     key_id: str,
@@ -1470,20 +1472,21 @@ def _create_onedir_based_repo(
         repo_path,
         salt_version,
         distro,
+        nightly_build_from=nightly_build_from,
     )
     # Export the GPG key in use
     tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
 
     create_repo_path = _create_repo_path(
-        repo_path, salt_version, distro, nightly_build=nightly_build
+        repo_path, salt_version, distro, nightly_build_from=nightly_build_from
     )
-    if nightly_build is False:
+    if not nightly_build_from:
         repo_json_path = create_repo_path.parent.parent / "repo.json"
     else:
         repo_json_path = create_repo_path.parent / "repo.json"
 
-    if nightly_build:
-        bucket_name = tools.utils.NIGHTLY_BUCKET_NAME
+    if nightly_build_from:
+        bucket_name = tools.utils.RELEASE_BUCKET_NAME
     else:
         bucket_name = tools.utils.STAGING_BUCKET_NAME
 
@@ -1559,7 +1562,7 @@ def _create_onedir_based_repo(
     repo_json = _get_repo_json_file_contents(
         ctx, bucket_name=bucket_name, repo_path=repo_path, repo_json_path=repo_json_path
     )
-    if nightly_build is True:
+    if nightly_build_from:
         latest_link = create_repo_path.parent / "latest"
         ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
         latest_link.symlink_to(create_repo_path.name)
@@ -1706,7 +1709,7 @@ def _publish_repo(
     Publish packaging repositories.
     """
     if nightly_build:
-        bucket_name = tools.utils.NIGHTLY_BUCKET_NAME
+        bucket_name = tools.utils.RELEASE_BUCKET_NAME
     elif stage:
         bucket_name = tools.utils.STAGING_BUCKET_NAME
     else:
@@ -1821,11 +1824,16 @@ def _create_top_level_repo_path(
     distro: str,
     distro_version: str | None = None,  # pylint: disable=bad-whitespace
     distro_arch: str | None = None,  # pylint: disable=bad-whitespace
-    nightly_build: bool = False,
+    nightly_build_from: str | None = None,  # pylint: disable=bad-whitespace
 ):
     create_repo_path = repo_path
-    if nightly_build:
-        create_repo_path = create_repo_path / "salt-dev"
+    if nightly_build_from:
+        create_repo_path = (
+            create_repo_path
+            / "salt-dev"
+            / nightly_build_from
+            / datetime.utcnow().strftime("%Y-%m-%d")
+        )
     elif "rc" in salt_version:
         create_repo_path = create_repo_path / "salt_rc"
     create_repo_path = create_repo_path / "salt" / "py3" / distro
@@ -1843,15 +1851,18 @@ def _create_repo_path(
     distro: str,
     distro_version: str | None = None,  # pylint: disable=bad-whitespace
     distro_arch: str | None = None,  # pylint: disable=bad-whitespace
-    nightly_build: bool = False,
+    nightly_build_from: str | None = None,  # pylint: disable=bad-whitespace
 ):
     create_repo_path = _create_top_level_repo_path(
-        repo_path, salt_version, distro, distro_version, distro_arch
+        repo_path,
+        salt_version,
+        distro,
+        distro_version,
+        distro_arch,
+        nightly_build_from=nightly_build_from,
     )
-    if nightly_build is False:
+    if not nightly_build_from:
         create_repo_path = create_repo_path / "minor" / salt_version
-    else:
-        create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
     create_repo_path.mkdir(exist_ok=True, parents=True)
     return create_repo_path
 
