@@ -373,7 +373,7 @@ VALID_OPTS = immutabletypes.freeze(
         # applications that depend on the original format.
         "unique_jid": bool,
         # Governs whether state runs will queue or fail to run when a state is already running
-        "state_queue": bool,
+        "state_queue": (bool, int),
         # Tells the highstate outputter to show successful states. False will omit successes.
         "state_verbose": bool,
         # Specify the format for state outputs. See highstate outputter for additional details.
