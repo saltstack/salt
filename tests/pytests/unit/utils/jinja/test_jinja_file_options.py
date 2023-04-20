@@ -76,7 +76,6 @@ def test_blocktrimming(minion_opts, local_salt):
 """
     )
 
-
 def test_lstrip_blocks_minionconf(minion_opts, local_salt):
     template = """
 #lets count
