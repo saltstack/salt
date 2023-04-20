@@ -2407,7 +2407,7 @@ To set the options for sls templates use :conf_master:`jinja_sls_env`.
 
 .. note::
 
-    The `Jinja2 Environment documentation <https://jinja.palletsprojects.com/en/3.0.x/api/#jinja2.Environment`_ is the official source for the default values.
+    The `Jinja2 Environment documentation <https://jinja.palletsprojects.com/en/3.0.x/api/#jinja2.Environment>`_ is the official source for the default values.
     Not all the options listed in the jinja documentation can be overridden using :conf_master:`jinja_env` or :conf_master:`jinja_sls_env`.
 
 .. note::
