@@ -1409,7 +1409,7 @@ jobs:
 
       - name: Create Repository
         run: |
-          tools pkg repo create src --key-id=64CBBC8173D76B3F --nightly-build \
+          tools pkg repo create src --key-id=64CBBC8173D76B3F --nightly-build-from=${{ github.ref_name }} \
             --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
@@ -1530,7 +1530,7 @@ jobs:
 
       - name: Create Repository
         run: |
-          tools pkg repo create deb --key-id=64CBBC8173D76B3F --distro-arch=${{ matrix.arch }} --nightly-build \
+          tools pkg repo create deb --key-id=64CBBC8173D76B3F --distro-arch=${{ matrix.arch }} --nightly-build-from=${{ github.ref_name }} \
             --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
@@ -1674,7 +1674,7 @@ jobs:
           SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
           SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
         run: |
-          tools pkg repo create rpm --key-id=64CBBC8173D76B3F --distro-arch=${{ matrix.arch }} --nightly-build \
+          tools pkg repo create rpm --key-id=64CBBC8173D76B3F --distro-arch=${{ matrix.arch }} --nightly-build-from=${{ github.ref_name }} \
             --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --distro=${{ matrix.distro }} --distro-version=${{ matrix.version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
@@ -1769,7 +1769,7 @@ jobs:
 
       - name: Create Repository
         run: |
-          tools pkg repo create windows --key-id=64CBBC8173D76B3F --nightly-build \
+          tools pkg repo create windows --key-id=64CBBC8173D76B3F --nightly-build-from=${{ github.ref_name }} \
             --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
@@ -1845,7 +1845,7 @@ jobs:
 
       - name: Create Repository
         run: |
-          tools pkg repo create macos --key-id=64CBBC8173D76B3F --nightly-build \
+          tools pkg repo create macos --key-id=64CBBC8173D76B3F --nightly-build-from=${{ github.ref_name }} \
             --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
@@ -1957,7 +1957,7 @@ jobs:
 
       - name: Create Repository
         run: |
-          tools pkg repo create onedir --key-id=64CBBC8173D76B3F --nightly-build \
+          tools pkg repo create onedir --key-id=64CBBC8173D76B3F --nightly-build-from=${{ github.ref_name }} \
             --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 
