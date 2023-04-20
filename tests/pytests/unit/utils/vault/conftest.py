@@ -1,6 +1,7 @@
 import pytest
 import requests
 
+import salt.modules.event
 import salt.utils.vault as vault
 import salt.utils.vault.auth as vauth
 import salt.utils.vault.client as vclient
@@ -48,7 +49,10 @@ def test_config(server_config, request):
         },
         "cache": {
             "backend": "session",
+            "clear_attempt_revocation": 60,
+            "clear_on_unauthorized": True,
             "config": 3600,
+            "expire_events": False,
             "secret": "ttl",
         },
         "issue": {
@@ -131,7 +135,10 @@ def test_remote_config(server_config, request):
         },
         "cache": {
             "backend": "session",
+            "clear_attempt_revocation": 60,
+            "clear_on_unauthorized": True,
             "config": 3600,
+            "expire_events": False,
             "kv_metadata": "connection",
             "secret": "ttl",
         },
@@ -507,6 +514,17 @@ def invalid_token(valid_token):
     valid_token.is_valid.return_value = False
     valid_token.is_renewable.return_value = False
     return valid_token
+
+
+@pytest.fixture
+def cache_factory():
+    with patch("salt.cache.factory", autospec=True) as factory:
+        yield factory
+
+
+@pytest.fixture
+def events():
+    return Mock(spec=salt.modules.event.send)
 
 
 @pytest.fixture(

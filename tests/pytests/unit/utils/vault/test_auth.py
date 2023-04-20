@@ -146,15 +146,17 @@ def test_token_auth_unrenewable_token(token_unrenewable):
 def test_token_auth_used_num_uses(uncached, token, num_uses):
     """
     Ensure that cache writes for use count are only done when
-    num_uses is not 0 (= unlimited)
+    num_uses is not 0 (= unlimited).
+    Single-use tokens still require cache writes for updating
+    ``uses``. The cache cannot be flushed here since
+    exceptions might be used to indicate the token expiry
+    to factory methods.
     """
     token = token.with_renewed(num_uses=num_uses)
     auth = vauth.VaultTokenAuth(cache=uncached, token=token)
     auth.used()
-    if num_uses > 1:
+    if num_uses > 0:
         uncached.store.assert_called_once_with(token)
-    elif num_uses:
-        uncached.flush.assert_called_once()
     else:
         uncached.store.assert_not_called()
 

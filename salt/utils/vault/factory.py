@@ -1,5 +1,8 @@
 import base64
+import copy
 import logging
+
+from requests.exceptions import ConnectionError
 
 import salt.cache
 import salt.crypt
@@ -21,6 +24,7 @@ from salt.utils.vault.exceptions import (
     VaultConfigExpired,
     VaultException,
     VaultPermissionDeniedError,
+    VaultUnwrapException,
 )
 
 log = logging.getLogger(__name__)
@@ -38,6 +42,21 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
     """
     Returns an AuthenticatedVaultClient that is valid for at least one query.
     """
+
+    def try_build():
+        client = config = None
+        retry = False
+        try:
+            client, config = _build_authd_client(opts, context, force_local=force_local)
+        except (VaultConfigExpired, VaultPermissionDeniedError, ConnectionError):
+            clear_cache(opts, context, connection=True, force_local=force_local)
+            retry = True
+        except VaultUnwrapException as err:
+            # ensure to notify about potential intrusion attempt
+            _get_event(opts)(tag="vault/security/unwrapping/error", data=err.event_data)
+            raise
+        return client, config, retry
+
     cbank = vcache._get_cache_bank(opts, force_local=force_local)
     retry = False
     client = config = None
@@ -47,7 +66,7 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
     if cbank in context and CLIENT_CKEY in context[cbank]:
         log.debug("Fetching client instance and config from context")
         client, config = context[cbank][CLIENT_CKEY]
-        if not client.token_valid():
+        if not client.token_valid(remote=False):
             log.debug("Cached client instance was invalid")
             client = config = None
             context[cbank].pop(CLIENT_CKEY)
@@ -55,10 +74,10 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
     # Otherwise, try to build one from possibly cached data
     if client is None or config is None:
         try:
-            client, config = _build_authd_client(opts, context, force_local=force_local)
-        except (VaultAuthExpired, VaultConfigExpired, VaultPermissionDeniedError):
-            # On failure, signal to clear caches and retry
-            retry = True
+            client, config, retry = try_build()
+        except VaultAuthExpired:
+            clear_cache(opts, context, session=True, force_local=force_local)
+            client, config, retry = try_build()
 
     # Check if the token needs to be and can be renewed.
     # Since this needs to check the possibly active session and does not care
@@ -76,26 +95,31 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
             increment=config["auth"]["token_lifecycle"]["renew_increment"]
         )
 
-    # Check if there was a problem with cached data or if
-    # the current token could not be renewed for a sufficient amount of time.
-    if retry or not client.token_valid(
+    # Check if the current token could not be renewed for a sufficient amount of time.
+    if not retry and not client.token_valid(
         config["auth"]["token_lifecycle"]["minimum_ttl"] or 0, remote=False
     ):
-        log.debug("Deleting cache and requesting new authentication credentials")
-        vcache.clear_cache(opts, context, force_local=force_local)
-        client, config = _build_authd_client(opts, context, force_local=force_local)
+        clear_cache(opts, context, session=True, force_local=force_local)
+        client, config, retry = try_build()
+
+    if retry:
+        log.debug("Requesting new authentication credentials")
+        try:
+            client, config = _build_authd_client(opts, context, force_local=force_local)
+        except VaultUnwrapException as err:
+            _get_event(opts)(tag="vault/security/unwrapping/error", data=err.event_data)
+            raise
         if not client.token_valid(
             config["auth"]["token_lifecycle"]["minimum_ttl"] or 0, remote=False
         ):
-            if config["auth"]["token_lifecycle"]["minimum_ttl"]:
-                log.warning(
-                    "Configuration error: auth:token_lifecycle:minimum_ttl cannot be "
-                    "honored because fresh tokens are issued with less ttl. Continuing anyways."
-                )
-            else:
+            if not config["auth"]["token_lifecycle"]["minimum_ttl"]:
                 raise VaultException(
                     "Could not build valid client. This is most likely a bug."
                 )
+            log.warning(
+                "Configuration error: auth:token_lifecycle:minimum_ttl cannot be "
+                "honored because fresh tokens are issued with less ttl. Continuing anyways."
+            )
 
     if cbank not in context:
         context[cbank] = {}
@@ -104,6 +128,102 @@ def get_authd_client(opts, context, force_local=False, get_config=False):
     if get_config:
         return client, config
     return client
+
+
+def clear_cache(
+    opts, context, ckey=None, connection=True, session=False, force_local=False
+):
+    """
+    Clears the Vault cache.
+    Will ensure the current token and associated leases are revoked
+    by default.
+
+    It is organized in a hierarchy: ``/vault/connection/session/leases``.
+    (italics mark data that is only cached when receiving configuration from a master)
+
+    ``connection`` contains KV metadata (by default) and *configuration*.
+    ``session`` contains the currently active token and *auth credentials*.
+    ``leases`` contains issued leases like database credentials.
+
+    A master keeps a separate instance of the above per minion
+    in ``minions/<minion_id>``.
+
+    opts
+        Pass ``__opts__``.
+
+    context
+        Pass ``__context__``.
+
+    ckey
+        Only clear this cache key instead of the whole cache bank.
+
+    connection
+        Only clear the cached data scoped to a connection. This includes
+        configuration, auth credentials and leases. Defaults to true.
+        Set this to false to clear all Vault caches.
+
+    session
+        Only clear the cached data scoped to a session. This only includes
+        leases, not configuration/auth credentials. Defaults to false.
+        Setting this to true will keep the connection cache, regardless
+        of ``connection``.
+
+    force_local
+        Required on the master when the runner is issuing credentials during
+        pillar compilation. Instructs the cache to use the ``/vault`` cache bank,
+        regardless of determined run type. Defaults to false and should not
+        be set by anything other than the runner.
+    """
+    cbank = vcache._get_cache_bank(
+        opts, connection=connection, session=session, force_local=force_local
+    )
+    client, config = _build_revocation_client(opts, context, force_local=force_local)
+    # config and client will both be None if the cached data is invalid
+    if config:
+        try:
+            # Don't revoke the only token that is available to us
+            if config["auth"]["method"] != "token" or not (
+                force_local
+                or hlp._get_salt_run_type(opts)
+                in (hlp.SALT_RUNTYPE_MASTER, hlp.SALT_RUNTYPE_MINION_LOCAL)
+            ):
+                if config["cache"]["clear_attempt_revocation"]:
+                    delta = config["cache"]["clear_attempt_revocation"]
+                    if delta is True:
+                        delta = 1
+                    client.token_revoke(delta)
+                if config["cache"]["expire_events"]:
+                    scope = cbank.split("/")[-1]
+                    _get_event(opts)(tag=f"vault/cache/{scope}/clear")
+        except Exception as err:  # pylint: disable=broad-except
+            log.error(
+                "Failed to revoke token or send event before clearing cache:\n"
+                f"{type(err).__name__}: {err}"
+            )
+
+    if cbank in context:
+        if ckey is None:
+            context.pop(cbank)
+        else:
+            context[cbank].pop(ckey, None)
+            if connection and not session:
+                # Ensure the active client gets recreated after altering the connection cache
+                context[cbank].pop(CLIENT_CKEY, None)
+
+    # also remove sub-banks from context to mimic cache behavior
+    if ckey is None:
+        for bank in list(context):
+            if bank.startswith(cbank):
+                context.pop(bank)
+    cache = salt.cache.factory(opts)
+    if cache.contains(cbank, ckey):
+        return cache.flush(cbank, ckey)
+
+    # In case the cache driver was overridden for the Vault integration
+    local_opts = copy.copy(opts)
+    opts["cache"] = "localfs"
+    cache = salt.cache.factory(local_opts)
+    return cache.flush(cbank, ckey)
 
 
 def _build_authd_client(opts, context, force_local=False):
@@ -123,6 +243,7 @@ def _build_authd_client(opts, context, force_local=False):
         vleases.VaultToken,
         cache_backend=vcache._get_cache_backend(config, opts),
         ttl=cache_ttl,
+        flush_exception=VaultAuthExpired,
     )
 
     client = None
@@ -187,7 +308,41 @@ def _build_authd_client(opts, context, force_local=False):
     raise salt.exceptions.SaltException("Connection configuration is invalid.")
 
 
-def _get_connection_config(cbank, opts, context, force_local=False):
+def _build_revocation_client(opts, context, force_local=False):
+    """
+    Tries to build an AuthenticatedVaultClient solely from caches.
+    This client is used to revoke all leases before forgetting about them.
+    """
+    connection_cbank = vcache._get_cache_bank(opts, force_local=force_local)
+    # Disregard a possibly returned locally configured token since
+    # it is cached with metadata if it has been used. Also, we do not want
+    # to revoke statically configured tokens anyways.
+    config, _, unauthd_client = _get_connection_config(
+        connection_cbank, opts, context, force_local=force_local, pre_flush=True
+    )
+    if config is None:
+        return None, None
+
+    # Tokens are cached in a distinct scope to enable cache per session
+    session_cbank = vcache._get_cache_bank(opts, force_local=force_local, session=True)
+    token_cache = vcache.VaultAuthCache(
+        context,
+        session_cbank,
+        TOKEN_CKEY,
+        vleases.VaultToken,
+        cache_backend=vcache._get_cache_backend(config, opts),
+    )
+
+    token = token_cache.get(flush=False)
+
+    if token is None:
+        return None, None
+    auth = vauth.VaultTokenAuth(token=token, cache=token_cache)
+    client = vclient.AuthenticatedVaultClient(auth, **config["server"])
+    return client, config
+
+
+def _get_connection_config(cbank, opts, context, force_local=False, pre_flush=False):
     if (
         hlp._get_salt_run_type(opts)
         in [hlp.SALT_RUNTYPE_MASTER, hlp.SALT_RUNTYPE_MINION_LOCAL]
@@ -198,13 +353,20 @@ def _get_connection_config(cbank, opts, context, force_local=False):
 
     log.debug("Using Vault server connection configuration from remote.")
     config_cache = vcache._get_config_cache(opts, context, cbank, "config")
-
-    # In case cached data is available, this takes care of resetting
-    # all connection-scoped data if the config is outdated.
+    if pre_flush:
+        # ensure any cached data is tried when building a client for revocation
+        config_cache.ttl = None
+    # In case cached data is available, this takes care of bubbling up
+    # an exception indicating all connection-scoped data should be flushed
+    # if the config is outdated.
     config = config_cache.get()
     if config is not None:
         log.debug("Using cached Vault server connection configuration.")
         return config, None, vclient.VaultClient(**config["server"])
+
+    if pre_flush:
+        # used when building a client that revokes leases before clearing cache
+        return None, None, None
 
     log.debug("Using new Vault server connection configuration.")
     try:
@@ -477,10 +639,14 @@ def _query_master(
                 if not wrapped or "wrap_info" not in wrapped:
                     continue
                 wrapped_response = vleases.VaultWrappedResponse(**wrapped["wrap_info"])
-                unwrapped_response = unwrap_client.unwrap(
-                    wrapped_response,
-                    expected_creation_path=unwrap_expected_creation_path,
-                )
+                try:
+                    unwrapped_response = unwrap_client.unwrap(
+                        wrapped_response,
+                        expected_creation_path=unwrap_expected_creation_path,
+                    )
+                except VaultUnwrapException as err:
+                    err.event_data.update({"func": f"vault.{func}"})
+                    raise
                 if key:
                     salt.utils.dictupdate.set_dict_key_value(
                         result,
@@ -563,7 +729,17 @@ def _query_master(
     )
 
 
-def get_kv(opts, context):
+def _get_event(opts):
+    if opts.get("__role") == "master":
+        return salt.utils.event.get_master_event(opts, opts["sock_dir"]).fire_event
+
+    global __salt__  # pylint: disable=global-statement
+    if not __salt__:
+        __salt__ = salt.loader.minion_mods(opts)
+    return __salt__["event.send"]
+
+
+def get_kv(opts, context, get_config=False):
     """
     Return an instance of VaultKV, which can be used
     to interact with the ``kv`` backend.
@@ -583,22 +759,32 @@ def get_kv(opts, context):
         cache_backend=vcache._get_cache_backend(config, opts),
         ttl=ttl,
     )
-    return vkv.VaultKV(client, metadata_cache)
+    kv = vkv.VaultKV(client, metadata_cache)
+    if get_config:
+        return kv, config
+    return kv
 
 
-def get_lease_store(opts, context):
+def get_lease_store(opts, context, get_config=False):
     """
     Return an instance of LeaseStore, which can be used
     to cache leases and handle operations like renewals and revocations.
     """
     client, config = get_authd_client(opts, context, get_config=True)
     session_cbank = vcache._get_cache_bank(opts, session=True)
+    expire_events = None
+    if config["cache"]["expire_events"]:
+        expire_events = _get_event(opts)
     lease_cache = vcache.VaultLeaseCache(
         context,
         session_cbank + "/leases",
         cache_backend=vcache._get_cache_backend(config, opts),
+        expire_events=expire_events,
     )
-    return vleases.LeaseStore(client, lease_cache)
+    store = vleases.LeaseStore(client, lease_cache, expire_events=expire_events)
+    if get_config:
+        return store, config
+    return store
 
 
 def get_approle_api(opts, context, force_local=False):
@@ -635,7 +821,10 @@ def parse_config(config, validate=True, opts=None):
         },
         "cache": {
             "backend": "session",
+            "clear_attempt_revocation": 60,
+            "clear_on_unauthorized": True,
             "config": 3600,
+            "expire_events": False,
             "kv_metadata": "connection",
             "secret": "ttl",
         },

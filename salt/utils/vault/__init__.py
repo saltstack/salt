@@ -25,7 +25,6 @@ from salt.utils.vault.auth import (
     LocalVaultSecretId,
     VaultAppRole,
 )
-from salt.utils.vault.cache import clear_cache
 from salt.utils.vault.exceptions import (
     VaultAuthExpired,
     VaultConfigExpired,
@@ -40,6 +39,7 @@ from salt.utils.vault.exceptions import (
     VaultUnwrapException,
 )
 from salt.utils.vault.factory import (
+    clear_cache,
     get_authd_client,
     get_kv,
     get_lease_store,
@@ -99,9 +99,9 @@ def query(
         does not deduct a token use. Only relevant for endpoints not found
         in ``sys``. Defaults to False.
     """
-    vault = get_authd_client(opts, context)
+    client, config = get_authd_client(opts, context, get_config=True)
     try:
-        return vault.request(
+        return client.request(
             method,
             endpoint,
             payload=payload,
@@ -111,18 +111,21 @@ def query(
             **kwargs,
         )
     except VaultPermissionDeniedError:
-        # in case cached authentication data was revoked
-        clear_cache(opts, context)
-        vault = get_authd_client(opts, context)
-        return vault.request(
-            method,
-            endpoint,
-            payload=payload,
-            wrap=wrap,
-            raise_error=raise_error,
-            is_unauthd=is_unauthd,
-            **kwargs,
-        )
+        if not _check_clear(config, client):
+            raise
+
+    # in case policies have changed
+    clear_cache(opts, context)
+    client = get_authd_client(opts, context)
+    return client.request(
+        method,
+        endpoint,
+        payload=payload,
+        wrap=wrap,
+        raise_error=raise_error,
+        is_unauthd=is_unauthd,
+        **kwargs,
+    )
 
 
 def query_raw(
@@ -169,8 +172,8 @@ def query_raw(
         does not deduct a token use. Only relevant for endpoints not found
         in ``sys``. Defaults to False.
     """
-    vault = get_authd_client(opts, context)
-    res = vault.request_raw(
+    client, config = get_authd_client(opts, context, get_config=True)
+    res = client.request_raw(
         method, endpoint, payload=payload, wrap=wrap, is_unauthd=is_unauthd, **kwargs
     )
 
@@ -178,10 +181,13 @@ def query_raw(
         return res
 
     if res.status_code == 403:
-        # in case cached authentication data was revoked
+        if not _check_clear(config, client):
+            return res
+
+        # in case policies have changed
         clear_cache(opts, context)
-        vault = get_authd_client(opts, context)
-        res = vault.request_raw(
+        client = get_authd_client(opts, context)
+        res = client.request_raw(
             method,
             endpoint,
             payload=payload,
@@ -213,40 +219,56 @@ def read_kv(path, opts, context, include_metadata=False):
     """
     Read secret at <path>.
     """
-    kv = get_kv(opts, context)
+    kv, config = get_kv(opts, context, get_config=True)
     try:
         return kv.read(path, include_metadata=include_metadata)
     except VaultPermissionDeniedError:
-        # in case cached authentication data was revoked
-        clear_cache(opts, context)
-        kv = get_kv(opts, context)
-        return kv.read(path, include_metadata=include_metadata)
+        if not _check_clear(config, kv.client):
+            raise
+
+    # in case policies have changed
+    clear_cache(opts, context)
+    kv = get_kv(opts, context)
+    return kv.read(path, include_metadata=include_metadata)
 
 
 def write_kv(path, data, opts, context):
     """
     Write secret <data> to <path>.
     """
-    kv = get_kv(opts, context)
+    kv, config = get_kv(opts, context, get_config=True)
     try:
         return kv.write(path, data)
     except VaultPermissionDeniedError:
-        clear_cache(opts, context)
-        kv = get_kv(opts, context)
-        return kv.write(path, data)
+        if not _check_clear(config, kv.client):
+            raise
+
+    # in case policies have changed
+    clear_cache(opts, context)
+    kv = get_kv(opts, context)
+    return kv.write(path, data)
 
 
 def patch_kv(path, data, opts, context):
     """
     Patch secret <data> at <path>.
     """
-    kv = get_kv(opts, context)
+    kv, config = get_kv(opts, context, get_config=True)
     try:
         return kv.patch(path, data)
-    except VaultPermissionDeniedError:
-        clear_cache(opts, context)
+    except VaultAuthExpired:
+        # patching can consume several token uses when
+        # 1) `patch` cap unvailable 2) KV v1 3) KV v2 w/ old Vault versions
         kv = get_kv(opts, context)
         return kv.patch(path, data)
+    except VaultPermissionDeniedError:
+        if not _check_clear(config, kv.client):
+            raise
+
+    # in case policies have changed
+    clear_cache(opts, context)
+    kv = get_kv(opts, context)
+    return kv.patch(path, data)
 
 
 def delete_kv(path, opts, context, versions=None):
@@ -254,26 +276,34 @@ def delete_kv(path, opts, context, versions=None):
     Delete secret at <path>. For KV v2, versions can be specified,
     which will be soft-deleted.
     """
-    kv = get_kv(opts, context)
+    kv, config = get_kv(opts, context, get_config=True)
     try:
         return kv.delete(path, versions=versions)
     except VaultPermissionDeniedError:
-        clear_cache(opts, context)
-        kv = get_kv(opts, context)
-        return kv.delete(path, versions=versions)
+        if not _check_clear(config, kv.client):
+            raise
+
+    # in case policies have changed
+    clear_cache(opts, context)
+    kv = get_kv(opts, context)
+    return kv.delete(path, versions=versions)
 
 
 def destroy_kv(path, versions, opts, context):
     """
     Destroy secret <versions> at <path>. Requires KV v2.
     """
-    kv = get_kv(opts, context)
+    kv, config = get_kv(opts, context, get_config=True)
     try:
         return kv.destroy(path, versions)
     except VaultPermissionDeniedError:
-        clear_cache(opts, context)
-        kv = get_kv(opts, context)
-        return kv.destroy(path, versions)
+        if not _check_clear(config, kv.client):
+            raise
+
+    # in case policies have changed
+    clear_cache(opts, context)
+    kv = get_kv(opts, context)
+    return kv.destroy(path, versions)
 
 
 def list_kv(path, opts, context):
@@ -281,13 +311,32 @@ def list_kv(path, opts, context):
     List secrets at <path>. Returns ``{"keys": []}`` by default
     for backwards-compatibility reasons, unless <keys_only> is True.
     """
-    kv = get_kv(opts, context)
+    kv, config = get_kv(opts, context, get_config=True)
     try:
         return kv.list(path)
     except VaultPermissionDeniedError:
-        clear_cache(opts, context)
-        kv = get_kv(opts, context)
-        return kv.list(path)
+        if not _check_clear(config, kv.client):
+            raise
+
+    # in case policies have changed
+    clear_cache(opts, context)
+    kv = get_kv(opts, context)
+    return kv.list(path)
+
+
+def _check_clear(config, client):
+    """
+    Called when encountering a VaultPermissionDeniedError.
+    Decides whether caches should be cleared to retry with
+    possibly updated token policies.
+    """
+    if config["cache"]["clear_on_unauthorized"]:
+        return True
+    try:
+        # verify the current token is still valid
+        return not client.token_valid(remote=True)
+    except VaultAuthExpired:
+        return True
 
 
 ####################################################################################
@@ -395,7 +444,7 @@ def make_request(
         "Argon",
         "salt.utils.vault.make_request is deprecated, please use "
         "salt.utils.vault.query or salt.utils.vault.query_raw."
-        "To override token/url/namespace, please make use of the"
+        "To override token/url/namespace, please make use of the "
         "provided classes directly.",
     )
 

@@ -34,12 +34,12 @@ def lease_renewed_extended_response():
 
 
 @pytest.fixture
-def store():
+def store(events):
     client = Mock(spec=vclient.AuthenticatedVaultClient)
     cache = Mock(spec=vcache.VaultLeaseCache)
     cache.exists.return_value = False
     cache.get.return_value = None
-    return leases.LeaseStore(client, cache)
+    return leases.LeaseStore(client, cache, expire_events=events)
 
 
 @pytest.fixture
@@ -244,6 +244,7 @@ class TestLeaseStore:
         )
         store_valid.cache.flush.assert_not_called()
         store_valid.cache.store.assert_called_once_with("test", ret)
+        store_valid.expire_events.assert_not_called()
 
     def test_get_valid_renew_increment(self, store_valid, lease):
         """
@@ -257,12 +258,14 @@ class TestLeaseStore:
         )
         store_valid.cache.flush.assert_not_called()
         store_valid.cache.store.assert_called_once_with("test", ret)
+        store_valid.expire_events.assert_not_called()
 
     def test_get_valid_renew_increment_insufficient(self, store_valid, lease):
         """
         Ensure that when renewal_increment is set, valid_for is respected and that
         a second renewal using valid_for as increment is not attempted when the
         Vault server does not allow renewals for at least valid_for.
+        If an event factory was passed, an event should be sent.
         """
         ret = store_valid.get("test", valid_for=2100, renew_increment=3000)
         assert ret is None
@@ -273,12 +276,15 @@ class TestLeaseStore:
                     payload={"lease_id": lease["id"], "increment": 3000},
                 ),
                 call(
-                    "sys/leases/revoke",
-                    payload={"lease_id": lease["id"], "sync": False},
+                    "sys/leases/renew",
+                    payload={"lease_id": lease["id"], "increment": 60},
                 ),
             )
         )
         store_valid.cache.flush.assert_called_once_with("test")
+        store_valid.expire_events.assert_called_once_with(
+            tag="vault/lease/test/expire", data={"valid_for_less": 2100}
+        )
 
     @pytest.mark.parametrize(
         "valid_for", [3000, pytest.param(3002, id="3002_renewal_leeway")]
@@ -314,28 +320,36 @@ class TestLeaseStore:
         )
         store_valid.cache.flush.assert_not_called()
         store_valid.cache.store.assert_called_with("test", ret)
+        store_valid.expire_events.assert_not_called()
 
     def test_get_valid_not_renew(self, store_valid, lease):
         """
         Currently valid leases should not be returned if they undercut
         valid_for. By default, revocation should be attempted and cache
-        should be flushed.
+        should be flushed. If an event factory was passed, an event should be sent.
         """
         ret = store_valid.get("test", valid_for=2000, renew=False)
         assert ret is None
         store_valid.cache.store.assert_not_called()
         store_valid.client.post.assert_called_once_with(
-            "sys/leases/revoke", payload={"lease_id": lease["id"], "sync": False}
+            "sys/leases/renew", payload={"lease_id": lease["id"], "increment": 60}
         )
         store_valid.cache.flush.assert_called_once_with("test")
+        store_valid.expire_events.assert_called_once_with(
+            tag="vault/lease/test/expire", data={"valid_for_less": 2000}
+        )
 
     def test_get_valid_not_flush(self, store_valid):
         """
         Currently valid leases should not be returned if they undercut
         valid_for and should not be revoked if requested so.
+        If an event factory was passed, an event should be sent.
         """
         ret = store_valid.get("test", valid_for=2000, revoke=False, renew=False)
         assert ret is None
         store_valid.cache.flush.assert_not_called()
         store_valid.client.post.assert_not_called()
         store_valid.cache.store.assert_not_called()
+        store_valid.expire_events.assert_called_once_with(
+            tag="vault/lease/test/expire", data={"valid_for_less": 2000}
+        )

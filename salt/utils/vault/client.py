@@ -6,6 +6,7 @@ import requests
 import salt.exceptions
 import salt.utils.vault.leases as leases
 from salt.utils.vault.exceptions import (
+    VaultAuthExpired,
     VaultInvocationError,
     VaultNotFoundError,
     VaultPermissionDeniedError,
@@ -211,15 +212,12 @@ class VaultClient:
                 re.fullmatch(p, wrap_info["creation_path"])
                 for p in expected_creation_path
             ):
-                # TODO: consider firing an event here as well
                 raise VaultUnwrapException(
-                    "Wrapped response was not created from expected Vault path: "
-                    f"`{wrap_info['creation_path']}` is not matched by any of `{expected_creation_path}`.\n"
-                    "This indicates tampering with the wrapping token by a third party "
-                    "and should be taken very seriously! If you changed some authentication-"
-                    "specific configuration on the master recently, especially minion "
-                    "approle mount, you should consider if this error was caused by outdated "
-                    "cached data on this minion instead."
+                    actual=wrap_info["creation_path"],
+                    expected=expected_creation_path,
+                    url=self.url,
+                    namespace=self.namespace,
+                    verify=self.verify,
                 )
         url = self._get_url("sys/wrapping/unwrap")
         headers = self._get_headers()
@@ -426,6 +424,32 @@ class AuthenticatedVaultClient(VaultClient):
         if token is None and accessor is None:
             self.auth.update_token(res["auth"])
         return res["auth"]
+
+    def token_revoke(self, delta=1, token=None, accessor=None):
+        """
+        Revoke a token by setting its TTL to 1s.
+
+        delta
+            The time in seconds to request revocation after.
+            Defaults to 1s.
+
+        token
+            The token that should be revoked. Optional.
+            If token and accessor are unset, revokes the token currently in use
+            by this client.
+
+        accessor
+            The accessor of the token that should be revoked. Optional.
+        """
+        try:
+            self.token_renew(increment=delta, token=token, accessor=accessor)
+        except (VaultPermissionDeniedError, VaultNotFoundError, VaultAuthExpired):
+            # if we're trying to revoke ourselves and this happens,
+            # the token was already invalid
+            if token or accessor:
+                raise
+            return False
+        return True
 
     def request_raw(
         self,

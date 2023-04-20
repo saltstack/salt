@@ -7,16 +7,23 @@ class VaultException(salt.exceptions.SaltException):
     """
 
 
+class VaultLeaseExpired(VaultException):
+    """
+    Raised when a cached lease is reported to be expired locally.
+    """
+
+
 class VaultAuthExpired(VaultException):
     """
-    Raised when authentication data is reported to be outdated locally.
+    Raised when cached authentication data is reported to be outdated locally.
     """
 
 
 class VaultConfigExpired(VaultException):
     """
     Raised when secret authentication data queried from the master reports
-    a different server configuration than locally cached.
+    a different server configuration than locally cached or an explicit
+    cache TTL set in the configuration has been reached.
     """
 
 
@@ -26,6 +33,25 @@ class VaultUnwrapException(VaultException):
     from the reported one.
     This has to be taken seriously as it indicates tampering.
     """
+
+    def __init__(self, expected, actual, url, namespace, verify, *args, **kwargs):
+        msg = (
+            "Wrapped response was not created from expected Vault path: "
+            f"`{actual}` is not matched by any of `{expected}`.\n"
+            "This indicates tampering with the wrapping token by a third party "
+            "and should be taken very seriously! If you changed some authentication-"
+            "specific configuration on the master recently, especially minion "
+            "approle mount, you should consider if this error was caused by outdated "
+            "cached data on this minion instead."
+        )
+        super().__init__(msg, *args, **kwargs)
+        self.event_data = {
+            "expected": expected,
+            "actual": actual,
+            "url": url,
+            "namespace": namespace,
+            "verify": verify,
+        }
 
 
 # https://www.vaultproject.io/api-docs#http-status-codes

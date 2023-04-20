@@ -67,10 +67,10 @@ class VaultTokenAuth:
 
     def _write_cache(self):
         if self.cache is not None:
-            if self.token.is_valid():
-                self.cache.store(self.token)
-            else:
-                self.cache.flush()
+            # Write the token indiscriminately since flushing
+            # raises VaultAuthExpired.
+            # This will be handled as part of the next request.
+            self.cache.store(self.token)
 
 
 class VaultAppRoleAuth:

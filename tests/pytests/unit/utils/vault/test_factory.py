@@ -148,7 +148,7 @@ class TestGetAuthdClient:
 
     @pytest.fixture(autouse=True)
     def clear_cache(self):
-        with patch("salt.utils.vault.cache.clear_cache", autospec=True) as clear:
+        with patch("salt.utils.vault.factory.clear_cache", autospec=True) as clear:
             clear.return_value = True
             yield clear
 
@@ -173,7 +173,7 @@ class TestGetAuthdClient:
 
     @pytest.mark.parametrize("get_config", [False, True])
     def test_get_authd_client_invalid(
-        self, build_invalid_first, clear_cache, get_config
+        self, build_invalid_first, clear_cache, get_config, client_invalid
     ):
         """
         Ensure invalid clients are not returned but rebuilt after
@@ -182,9 +182,9 @@ class TestGetAuthdClient:
         client = vault.get_authd_client({}, {}, get_config=get_config)
         if get_config:
             client, config = client
-        client.token_valid.assert_called_with(10, remote=False)
+        client_invalid.token_valid.assert_called_with(10, remote=False)
         assert client.token_valid()
-        clear_cache.assert_called_once_with({}, ANY, force_local=False)
+        clear_cache.assert_called_once_with({}, ANY, force_local=False, session=True)
         assert build_invalid_first.call_count == 2
         if get_config:
             assert config == {
@@ -194,8 +194,17 @@ class TestGetAuthdClient:
             }
 
     @pytest.mark.parametrize("get_config", [False, True])
+    @pytest.mark.parametrize(
+        "build_exception_first,session",
+        (
+            ("VaultAuthExpired", True),
+            ("VaultConfigExpired", False),
+            ("VaultPermissionDeniedError", False),
+        ),
+        indirect=["build_exception_first"],
+    )
     def test_get_authd_client_exception(
-        self, build_exception_first, clear_cache, get_config
+        self, build_exception_first, session, clear_cache, get_config
     ):
         """
         Ensure relevant exceptions are caught, cache is cleared and
@@ -206,7 +215,14 @@ class TestGetAuthdClient:
             client, config = client
         client.token_valid.assert_called_with(10, remote=False)
         assert client.token_valid()
-        clear_cache.assert_called_once_with({}, ANY, force_local=False)
+        if session:
+            clear_cache.assert_called_once_with(
+                {}, ANY, force_local=False, session=session
+            )
+        else:
+            clear_cache.assert_called_once_with(
+                {}, ANY, force_local=False, connection=True
+            )
         assert build_exception_first.call_count == 2
         if get_config:
             assert config == {
@@ -214,6 +230,37 @@ class TestGetAuthdClient:
                     "token_lifecycle": {"minimum_ttl": 10, "renew_increment": False}
                 }
             }
+
+    def test_get_authd_client_unwrap_exception(self, events):
+        """
+        Ensure unwrap exceptions are re-raised, but an event is sent
+        warning about the potential tampering
+        """
+
+        def raise_unwrap(*args, **kwargs):
+            raise factory.VaultUnwrapException(
+                "foo", "bar", "vaulturl", "namespace", "verify"
+            )
+
+        with patch(
+            "salt.utils.vault.factory._get_event", autospec=True, return_value=events
+        ):
+            with patch(
+                "salt.utils.vault.factory._build_authd_client", autospec=True
+            ) as build:
+                build.side_effect = raise_unwrap
+                with pytest.raises(factory.VaultUnwrapException):
+                    vault.get_authd_client({}, {})
+            events.assert_called_once_with(
+                data={
+                    "expected": "foo",
+                    "actual": "bar",
+                    "url": "vaulturl",
+                    "namespace": "namespace",
+                    "verify": "verify",
+                },
+                tag="vault/security/unwrapping/error",
+            )
 
     def test_get_authd_client_fails(self, build_fails, clear_cache):
         """
@@ -1219,6 +1266,103 @@ class TestQueryMaster:
             assert out[key]["nested"][nested_key] == "merged"
 
 
+class TestBuildRevocationClient:
+    @pytest.fixture(params=[False, True], autouse=True)
+    def config(self, test_remote_config, request):
+        cache = Mock(spec=vcache.VaultConfigCache)
+        if request.param:
+            cache.get.return_value = test_remote_config
+        else:
+            cache.get.return_value = None
+        with patch(
+            "salt.utils.vault.cache._get_config_cache", autospec=True
+        ) as cfactory:
+            cfactory.return_value = cache
+            yield cache
+
+    @pytest.fixture(params=[False, None, True])
+    def token(self, token_auth, request):
+        with patch("salt.utils.vault.cache.VaultAuthCache", autospec=True) as cache:
+            if request.param:
+                cache.return_value.get.return_value = vault.VaultToken(
+                    **token_auth["auth"]
+                )
+            else:
+                cache.return_value.get.return_value = None
+            yield cache
+
+    def test_build_revocation_client_never_calls_master_for_config(self):
+        with patch("salt.utils.vault.factory._query_master") as query:
+            factory._build_revocation_client({}, {})
+            query.assert_not_called()
+
+    @pytest.mark.parametrize("config", [True], indirect=True)
+    def test_build_revocation_client_never_calls_master_for_token(
+        self, token, test_remote_config
+    ):
+        with patch("salt.utils.vault.factory._query_master") as query:
+            res = factory._build_revocation_client({}, {})
+            query.assert_not_called()
+            if token.return_value.get.return_value is not None:
+                assert isinstance(res[0], vclient.AuthenticatedVaultClient)
+                assert res[1] == test_remote_config
+            else:
+                assert res == (None, None)
+
+
+@pytest.mark.parametrize("ckey", ["token", None])
+@pytest.mark.parametrize("connection", [True, False])
+@pytest.mark.parametrize("session", [True, False])
+def test_clear_cache(ckey, connection, session, cache_factory):
+    """
+    Make sure clearing cache works as expected, allowing for
+    connection-scoped cache and global cache that survives
+    a configuration refresh
+    """
+    cbank = "vault"
+    if connection or session:
+        cbank += "/connection"
+    if session:
+        cbank += "/session"
+    context = {cbank: {"token": "fake_token"}}
+    with patch(
+        "salt.utils.vault.factory._build_revocation_client", autospec=True
+    ) as revoc:
+        revoc.return_value = (None, None)
+        vault.clear_cache(
+            {}, context, ckey=ckey, connection=connection, session=session
+        )
+    cache_factory.return_value.flush.assert_called_once_with(cbank, ckey)
+    if ckey:
+        assert ckey not in context[cbank]
+    else:
+        assert cbank not in context
+
+
+@pytest.mark.parametrize("ckey", ["token", None])
+@pytest.mark.parametrize("connection", [True, False])
+@pytest.mark.parametrize("session", [True, False])
+def test_clear_cache_clears_client_from_context(
+    ckey, connection, session, cache_factory
+):
+    """
+    Ensure the cached client is removed when the connection cache is altered only
+    """
+    cbank = "vault/connection"
+    context = {cbank: {factory.CLIENT_CKEY: "foo"}}
+    with patch(
+        "salt.utils.vault.factory._build_revocation_client", autospec=True
+    ) as revoc:
+        revoc.return_value = (None, None)
+        vault.clear_cache(
+            {}, context, ckey=ckey, connection=connection, session=session
+        )
+    if session or (not connection and ckey):
+        assert factory.CLIENT_CKEY in context.get(cbank, {})
+    else:
+        assert factory.CLIENT_CKEY not in context.get(cbank, {})
+
+
 @pytest.mark.parametrize(
     "test_config,expected_config,expected_token",
     [
@@ -1237,7 +1381,10 @@ class TestQueryMaster:
                 },
                 "cache": {
                     "backend": "session",
+                    "clear_attempt_revocation": 60,
+                    "clear_on_unauthorized": True,
                     "config": 3600,
+                    "expire_events": False,
                     "secret": "ttl",
                 },
                 "server": {
@@ -1264,7 +1411,10 @@ class TestQueryMaster:
                 },
                 "cache": {
                     "backend": "session",
+                    "clear_attempt_revocation": 60,
+                    "clear_on_unauthorized": True,
                     "config": 3600,
+                    "expire_events": False,
                     "secret": "ttl",
                 },
                 "server": {

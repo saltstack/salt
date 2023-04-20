@@ -356,8 +356,8 @@ token_lifecycle
 
 ``cache``
 ~~~~~~~~~
-Configures configuration cache on minions and secret cache on all hosts as well
-as metadata cache for KV secrets.
+Configures secret/lease and metadata cache (for KV secrets) on all hosts
+as well as configuration cache on minions that receive issued credentials.
 
 backend
     .. versionchanged:: 3007.0
@@ -365,12 +365,28 @@ backend
         This used to be found in ``auth:token_backend``.
 
     The cache backend in use. Defaults to ``session``, which will store the
-    vault information in memory only for that session.
+    Vault configuration in memory only for that session.
     ``disk``/``file``/``localfs`` will force using the localfs driver, regardless
     of configured minion data cache.
     Setting this to anything else will use the default configured cache for
     minion data (:conf_master:`cache <cache>`), by default the local filesystem
     as well.
+
+clear_attempt_revocation
+    .. versionadded:: 3007.0
+
+    When flushing still valid cached tokens and leases, attempt to have them
+    revoked after a (short) delay. Defaults to ``60``.
+    Set this to false to disable revocation (not recommended).
+
+clear_on_unauthorized
+    .. versionadded:: 3007.0
+
+    When encountering an ``Unauthorized`` response with an otherwise valid token,
+    flush the cache and request new credentials. Defaults to true.
+    If your policies are relatively stable, disabling this will prevent
+    a lot of unnecessary overhead, with the tradeoff that once they change,
+    you might have to clear the cache manually or wait for the token to expire.
 
 config
     .. versionadded:: 3007.0
@@ -385,6 +401,15 @@ config
 
         Expiring the configuration will also clear cached authentication
         credentials and leases.
+
+expire_events
+    .. versionadded:: 3007.0
+
+    Fire an event when the session cache containing leases is cleared
+    (``vault/cache/<scope>/clear``) or cached leases have expired
+    (``vault/lease/<cache_key>/expire``).
+    A reactor can be employed to ensure fresh leases are issued.
+    Defaults to false.
 
 kv_metadata
     .. versionadded:: 3007.0

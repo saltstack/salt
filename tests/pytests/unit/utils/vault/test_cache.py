@@ -30,12 +30,6 @@ def context(cbank, ckey, data):
 
 
 @pytest.fixture
-def cache_factory():
-    with patch("salt.cache.factory", autospec=True) as factory:
-        yield factory
-
-
-@pytest.fixture
 def cached(cache_factory, data):
     cache = Mock(spec=salt.cache.Cache)
     cache.contains.return_value = True
@@ -71,47 +65,6 @@ def time_stopped(request):
         "salt.utils.vault.cache.time.time", autospec=True, return_value=request.param
     ):
         yield
-
-
-@pytest.mark.parametrize("ckey", ["token", None])
-@pytest.mark.parametrize("connection", [True, False])
-@pytest.mark.parametrize("session", [True, False])
-def test_clear_cache(ckey, connection, session, cache_factory):
-    """
-    Make sure clearing cache works as expected, allowing for
-    connection-scoped cache and global cache that survives
-    a configuration refresh
-    """
-    cbank = "vault"
-    if connection or session:
-        cbank += "/connection"
-    if session:
-        cbank += "/session"
-    context = {cbank: {"token": "fake_token"}}
-    vault.clear_cache({}, context, ckey=ckey, connection=connection, session=session)
-    cache_factory.return_value.flush.assert_called_once_with(cbank, ckey)
-    if ckey:
-        assert ckey not in context[cbank]
-    else:
-        assert cbank not in context
-
-
-@pytest.mark.parametrize("ckey", ["token", None])
-@pytest.mark.parametrize("connection", [True, False])
-@pytest.mark.parametrize("session", [True, False])
-def test_clear_cache_clears_client_from_context(
-    ckey, connection, session, cache_factory
-):
-    """
-    Ensure the cached client is removed when the connection cache is altered only
-    """
-    cbank = "vault/connection"
-    context = {cbank: {vcache.CLIENT_CKEY: "foo"}}
-    vault.clear_cache({}, context, ckey=ckey, connection=connection, session=session)
-    if session or (not connection and ckey):
-        assert vcache.CLIENT_CKEY in context.get(cbank, {})
-    else:
-        assert vcache.CLIENT_CKEY not in context.get(cbank, {})
 
 
 @pytest.mark.parametrize("connection", [True, False])
@@ -367,6 +320,42 @@ class TestVaultConfigCache:
                 rld.assert_called_once_with(data)
                 store.assert_called_once()
 
+    @pytest.mark.parametrize("config", ["other"], indirect=True)
+    def test_flush_exceptions_with_flush(self, config, cached, cbank, ckey):
+        """
+        Ensure internal flushing is disabled when the object is initialized
+        with a reference to an exception class.
+        """
+        cache = vcache.VaultConfigCache(
+            {},
+            cbank,
+            ckey,
+            {},
+            cache_backend_factory=lambda *args: cached,
+            flush_exception=vault.VaultConfigExpired,
+            init_config=config,
+        )
+        with pytest.raises(vault.VaultConfigExpired):
+            cache.flush()
+
+    @pytest.mark.parametrize("config", ["other"], indirect=True)
+    def test_flush_exceptions_with_get(self, config, cached_outdated, cbank, ckey):
+        """
+        Ensure internal flushing is disabled when the object is initialized
+        with a reference to an exception class.
+        """
+        cache = vcache.VaultConfigCache(
+            {},
+            cbank,
+            ckey,
+            {},
+            cache_backend_factory=lambda *args: cached_outdated,
+            flush_exception=vault.VaultConfigExpired,
+            init_config=config,
+        )
+        with pytest.raises(vault.VaultConfigExpired):
+            cache.get()
+
 
 class TestVaultAuthCache:
     @pytest.fixture
@@ -390,6 +379,22 @@ class TestVaultAuthCache:
             return_value=True,
             autospec=True,
         ):
+            with patch(
+                "salt.utils.vault.cache.CommonCache._get_ckey",
+                return_value=token_auth["auth"],
+                autospec=True,
+            ) as get:
+                yield get
+
+    @pytest.fixture
+    def cached_outdated(self, token_auth):
+        with patch(
+            "salt.utils.vault.cache.CommonCache._ckey_exists",
+            return_value=True,
+            autospec=True,
+        ):
+            token_auth["auth"]["creation_time"] = 0
+            token_auth["auth"]["lease_duration"] = 1
             with patch(
                 "salt.utils.vault.cache.CommonCache._get_ckey",
                 return_value=token_auth["auth"],
@@ -445,6 +450,33 @@ class TestVaultAuthCache:
             cache.store(token)
             store.assert_called_once_with("ckey", token.to_dict())
 
+    def test_flush_exceptions_with_flush(self, cached, cbank, ckey):
+        """
+        Ensure internal flushing is disabled when the object is initialized
+        with a reference to an exception class.
+        """
+        cache = vcache.VaultAuthCache(
+            {},
+            cbank,
+            ckey,
+            vault.VaultToken,
+            cache_backend=cached,
+            flush_exception=vault.VaultAuthExpired,
+        )
+        with pytest.raises(vault.VaultAuthExpired):
+            cache.flush()
+
+    def test_flush_exceptions_with_get(self, cached_outdated, cbank, ckey):
+        """
+        Ensure internal flushing is disabled when the object is initialized
+        with a reference to an exception class.
+        """
+        cache = vcache.VaultAuthCache(
+            {}, cbank, ckey, vault.VaultToken, flush_exception=vault.VaultAuthExpired
+        )
+        with pytest.raises(vault.VaultAuthExpired):
+            cache.get(10)
+
 
 class TestVaultLeaseCache:
     @pytest.fixture
@@ -468,6 +500,22 @@ class TestVaultLeaseCache:
             return_value=True,
             autospec=True,
         ):
+            with patch(
+                "salt.utils.vault.cache.CommonCache._get_ckey",
+                return_value=lease,
+                autospec=True,
+            ) as get:
+                yield get
+
+    @pytest.fixture
+    def cached_outdated(self, lease):
+        with patch(
+            "salt.utils.vault.cache.CommonCache._ckey_exists",
+            return_value=True,
+            autospec=True,
+        ):
+            lease["duration"] = 6
+            lease["expire_time"] = 6
             with patch(
                 "salt.utils.vault.cache.CommonCache._get_ckey",
                 return_value=lease,
@@ -526,3 +574,15 @@ class TestVaultLeaseCache:
         with patch("salt.utils.vault.cache.CommonCache._store_ckey") as store:
             cache.store("ckey", lease_)
             store.assert_called_once_with("ckey", lease_.to_dict())
+
+    def test_expire_events_with_get(self, events, cached_outdated, cbank, ckey, lease):
+        """
+        Ensure internal flushing is disabled when the object is initialized
+        with a reference to an exception class.
+        """
+        cache = vcache.VaultLeaseCache({}, "cbank", expire_events=events)
+        ret = cache.get("ckey", 10)
+        assert ret is None
+        events.assert_called_once_with(
+            tag="vault/lease/ckey/expire", data={"valid_for_less": 10}
+        )

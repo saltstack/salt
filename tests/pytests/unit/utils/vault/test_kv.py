@@ -236,26 +236,72 @@ def kvv2(kvv2_info, kvv2_response, metadata_nocache, kv_list_response):
         ("list_kv", None, ["foo"]),
     ],
 )
-@pytest.mark.parametrize("exception", ["VaultPermissionDeniedError"])
-def test_kv_wrapper_handles_auth_exceptions(wrapper, param, result, exception):
+@pytest.mark.parametrize("test_remote_config", ["token"], indirect=True)
+@pytest.mark.parametrize(
+    "clear_unauthd,token_valid", [(False, False), (True, False), (True, True)]
+)
+def test_kv_wrapper_handles_perm_exceptions(
+    wrapper, param, result, test_remote_config, clear_unauthd, token_valid
+):
     """
-    Test that *_kv wrappers retry with a new client if the authentication might
-    be outdated.
+    Test that *_kv wrappers retry with a new client if
+      a) the current configuration might be invalid
+      b) the current token might not have all policies and
+         `cache:clear_on_unauthorized` is True
     """
     func = getattr(vault, wrapper)
-    exc = getattr(vault, exception)
+    exc = vault.VaultPermissionDeniedError
     args = ["secret/some/path"]
     if param:
         args.append(param)
     args += [{}, {}]
+    test_remote_config["cache"]["clear_on_unauthorized"] = clear_unauthd
     with patch("salt.utils.vault.get_kv", autospec=True) as getkv:
         with patch("salt.utils.vault.clear_cache", autospec=True) as cache:
             kv = Mock(spec=vkv.VaultKV)
+            kv.client = Mock(spec=vclient.AuthenticatedVaultClient)
+            kv.client.token_valid.return_value = token_valid
             getattr(kv, wrapper.rstrip("_kv")).side_effect = (exc, result)
-            getkv.return_value = kv
+            getkv.side_effect = ((kv, test_remote_config), kv)
             res = func(*args)
             assert res == result
             cache.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "wrapper,param",
+    [
+        ("read_kv", None),
+        ("write_kv", {"foo": "bar"}),
+        ("patch_kv", {"foo": "bar"}),
+        ("delete_kv", None),
+        ("destroy_kv", [0]),
+        ("list_kv", None),
+    ],
+)
+@pytest.mark.parametrize("test_remote_config", ["token"], indirect=True)
+def test_kv_wrapper_raises_perm_exceptions_when_configured(
+    wrapper, param, test_remote_config
+):
+    """
+    Test that *_kv wrappers do not retry with a new client when `cache:clear_on_unauthorized` is False.
+    """
+    func = getattr(vault, wrapper)
+    exc = vault.VaultPermissionDeniedError
+    args = ["secret/some/path"]
+    if param:
+        args.append(param)
+    args += [{}, {}]
+    test_remote_config["cache"]["clear_on_unauthorized"] = False
+    with patch("salt.utils.vault.get_kv", autospec=True) as getkv:
+        with patch("salt.utils.vault.clear_cache", autospec=True):
+            kv = Mock(spec=vkv.VaultKV)
+            kv.client = Mock(spec=vclient.AuthenticatedVaultClient)
+            kv.client.token_valid.return_value = True
+            getattr(kv, wrapper.rstrip("_kv")).side_effect = exc
+            getkv.return_value = (kv, test_remote_config)
+            with pytest.raises(exc):
+                func(*args)
 
 
 @pytest.mark.parametrize(

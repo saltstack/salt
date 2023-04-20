@@ -5,72 +5,9 @@ import time
 import salt.cache
 import salt.utils.vault.helpers as hlp
 import salt.utils.vault.leases as leases
-from salt.utils.vault.factory import CLIENT_CKEY
+from salt.utils.vault.exceptions import VaultConfigExpired, VaultLeaseExpired
 
 log = logging.getLogger(__name__)
-
-
-def clear_cache(
-    opts, context, ckey=None, connection=True, session=False, force_local=False
-):
-    """
-    Clears the Vault cache.
-
-    It is organized in a hierarchy: ``/vault/connection/session``
-    The master keeps a separate copy of the above per minion
-    in ``minions/<minion_id>``.
-
-    opts
-        Pass ``__opts__``.
-
-    context
-        Pass ``__context__``.
-
-    ckey
-        Only clear this cache key instead of the whole cache bank.
-
-    connection
-        Only clear the cached data scoped to a connection. This includes
-        configuration, auth credentials and leases. Defaults to true.
-
-    session
-        Only clear the cached data scoped to a session. This only includes
-        leases, not configuration/auth credentials. Defaults to false.
-        Setting this to true will keep the connection cache, regardless
-        of ``connection``.
-
-    force_local
-        Required on the master when the runner is issuing credentials during
-        pillar compilation. Instructs the cache to use the ``/vault`` cache bank,
-        regardless of determined run type. Defaults to false and should not
-        be set by anything other than the runner.
-    """
-    cbank = _get_cache_bank(
-        opts, connection=connection, session=session, force_local=force_local
-    )
-    if cbank in context:
-        if ckey is None:
-            context.pop(cbank)
-        else:
-            context[cbank].pop(ckey, None)
-            if connection and not session:
-                # Ensure the active client gets recreated after altering the connection cache
-                context[cbank].pop(CLIENT_CKEY, None)
-
-    # also remove sub-banks from context to mimic cache behavior
-    if ckey is None:
-        for bank in list(context):
-            if bank.startswith(cbank):
-                context.pop(bank)
-    cache = salt.cache.factory(opts)
-    if cache.contains(cbank, ckey):
-        return cache.flush(cbank, ckey)
-
-    # In case the cache driver was overridden for the Vault integration
-    local_opts = copy.copy(opts)
-    opts["cache"] = "localfs"
-    cache = salt.cache.factory(local_opts)
-    return cache.flush(cbank, ckey)
 
 
 def _get_config_cache(opts, context, cbank, ckey):
@@ -94,7 +31,14 @@ def _get_config_cache(opts, context, cbank, ckey):
                 # expiration check is done inside the class
                 config = cache.fetch(cbank, ckey)
 
-    return VaultConfigCache(context, cbank, ckey, opts, init_config=config)
+    return VaultConfigCache(
+        context,
+        cbank,
+        ckey,
+        opts,
+        init_config=config,
+        flush_exception=VaultConfigExpired,
+    )
 
 
 def _get_cache_backend(config, opts):
@@ -132,11 +76,14 @@ class CommonCache:
     Base class that unifies context and other cache backends.
     """
 
-    def __init__(self, context, cbank, cache_backend=None, ttl=None):
+    def __init__(
+        self, context, cbank, cache_backend=None, ttl=None, flush_exception=None
+    ):
         self.context = context
         self.cbank = cbank
         self.cache = cache_backend
         self.ttl = ttl
+        self.flush_exception = flush_exception
 
     def _ckey_exists(self, ckey, flush=True):
         if self.cbank in self.context and ckey in self.context[self.cbank]:
@@ -175,6 +122,10 @@ class CommonCache:
         self.context[self.cbank][ckey] = value
 
     def _flush(self, ckey=None):
+        if not ckey and self.flush_exception is not None:
+            # Flushing caches in Vault often requires an orchestrated effort
+            # to ensure leases/sessions are terminated instead of left open.
+            raise self.flush_exception()
         if self.cache is not None:
             self.cache.flush(self.cbank, ckey)
         if self.cbank in self.context:
@@ -203,8 +154,16 @@ class VaultCache(CommonCache):
     like secret path metadata. Uses a single cache key.
     """
 
-    def __init__(self, context, cbank, ckey, cache_backend=None, ttl=None):
-        super().__init__(context, cbank, cache_backend=cache_backend, ttl=ttl)
+    def __init__(
+        self, context, cbank, ckey, cache_backend=None, ttl=None, flush_exception=None
+    ):
+        super().__init__(
+            context,
+            cbank,
+            cache_backend=cache_backend,
+            ttl=ttl,
+            flush_exception=flush_exception,
+        )
         self.ckey = ckey
 
     def exists(self, flush=True):
@@ -245,6 +204,7 @@ class VaultConfigCache(VaultCache):
         opts,
         cache_backend_factory=_get_cache_backend,
         init_config=None,
+        flush_exception=None,
     ):  # pylint: disable=super-init-not-called
         self.context = context
         self.cbank = cbank
@@ -254,6 +214,7 @@ class VaultConfigCache(VaultCache):
         self.cache = None
         self.ttl = None
         self.cache_backend_factory = cache_backend_factory
+        self.flush_exception = flush_exception
         if init_config is not None:
             self._load(init_config)
 
@@ -316,6 +277,7 @@ class LeaseCacheMixin:
 
     def __init__(self, *args, **kwargs):
         self.lease_cls = kwargs.pop("lease_cls", leases.VaultLease)
+        self.expire_events = kwargs.pop("expire_events", None)
         super().__init__(*args, **kwargs)
 
     def _check_validity(self, lease_data, valid_for=0):
@@ -323,6 +285,8 @@ class LeaseCacheMixin:
         if lease.is_valid(valid_for):
             log.debug("Using cached lease.")
             return lease
+        if self.expire_events is not None:
+            raise VaultLeaseExpired()
         return None
 
 
@@ -340,7 +304,13 @@ class VaultLeaseCache(LeaseCacheMixin, CommonCache):
         data = self._get_ckey(ckey, flush=flush)
         if data is None:
             return data
-        ret = self._check_validity(data, valid_for=valid_for)
+        try:
+            ret = self._check_validity(data, valid_for=valid_for)
+        except VaultLeaseExpired:
+            self.expire_events(
+                tag=f"vault/lease/{ckey}/expire", data={"valid_for_less": valid_for}
+            )
+            ret = None
         if ret is None and flush:
             log.debug("Cached lease not valid anymore. Flushing cache.")
             self._flush(ckey)
@@ -358,7 +328,8 @@ class VaultLeaseCache(LeaseCacheMixin, CommonCache):
 
     def exists(self, ckey, flush=True):
         """
-        Check whether a named lease exists in cache
+        Check whether a named lease exists in cache. Does not filter invalid ones,
+        so fetching a reported one might still return None.
         """
         return self._ckey_exists(ckey, flush=flush)
 
@@ -382,11 +353,26 @@ class VaultAuthCache(LeaseCacheMixin, CommonCache):
     the cached secrets are still valid before returning.
     """
 
-    def __init__(self, context, cbank, ckey, auth_cls, cache_backend=None, ttl=None):
+    def __init__(
+        self,
+        context,
+        cbank,
+        ckey,
+        auth_cls,
+        cache_backend=None,
+        ttl=None,
+        flush_exception=None,
+    ):
         super().__init__(
-            context, cbank, lease_cls=auth_cls, cache_backend=cache_backend, ttl=ttl
+            context,
+            cbank,
+            lease_cls=auth_cls,
+            cache_backend=cache_backend,
+            ttl=ttl,
+            flush_exception=flush_exception,
         )
         self.ckey = ckey
+        self.flush_exception = flush_exception
 
     def exists(self, flush=True):
         """
@@ -421,11 +407,11 @@ class VaultAuthCache(LeaseCacheMixin, CommonCache):
     def flush(self, cbank=None):
         """
         Flush the cached auth credentials. If this is a token cache,
-        flushing it will delete the whole session-scoped cache bank by default.
+        flushing it will delete the whole session-scoped cache bank.
         """
-        if cbank is None:
-            # flush the whole cbank (session-scope) if this is a token cache by default
-            ckey = None if self.lease_cls is leases.VaultToken else self.ckey
+        if self.lease_cls is leases.VaultToken:
+            # flush the whole cbank (session-scope) if this is a token cache
+            ckey = None
         else:
             ckey = None if cbank else self.ckey
         return self._flush(ckey)
