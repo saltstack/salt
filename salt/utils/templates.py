@@ -515,10 +515,6 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         raise SaltRenderError(
             "Jinja error: {}{}".format(exc, out), line, tmplstr, trace=tracestr
         )
-    finally:
-        if loader and hasattr(loader, "_file_client"):
-            if hasattr(loader._file_client, "destroy"):
-                loader._file_client.destroy()
 
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)
