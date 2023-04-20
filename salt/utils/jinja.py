@@ -972,10 +972,10 @@ class SerializerExtension(Extension):
     to change your global `jinja2_env <../../configuration/master.html#jinja-env>`_
     or `jinja_sls_env <../../configuration/master.html#jinja-sls-env>`_ settings,
     which can result in breaking existing states/templates or the
-    `formula <../../topics/development/conventions/formulas.html>`_ecosystem.
+    `formula <../../topics/development/conventions/formulas.html>`_ ecosystem.
 
     .. _`import tag`: https://jinja.palletsprojects.com/en/3.0.x/templates/#import
-    .. _`jinja_api tag`: https://jinja.palletsprojects.com/en/3.0.x/api/#high-level-api
+    .. _`jinja_api tag`: https://jinja.palletsprojects.com/en/3.0.x/api/#jinja2.Environment
     '''
 
     tags = {

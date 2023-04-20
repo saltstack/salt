@@ -2407,8 +2407,13 @@ To set the options for sls templates use :conf_master:`jinja_sls_env`.
 
 .. note::
 
-    The `Jinja2 Environment documentation <https://jinja.palletsprojects.com/en/2.11.x/api/#jinja2.Environment>`_ is the official source for the default values.
+    The `Jinja2 Environment documentation <https://jinja.palletsprojects.com/en/3.0.x/api/#jinja2.Environment`_ is the official source for the default values.
     Not all the options listed in the jinja documentation can be overridden using :conf_master:`jinja_env` or :conf_master:`jinja_sls_env`.
+
+.. note::
+
+    These values can be overridden on a per-file basis using
+    `Jinja Environment Configuration Override <../renderers/all/salt.renderers.jinja.html#salt.utils.jinja.SerializerExtension>`_.
 
 The default options are:
 
@@ -2440,6 +2445,11 @@ Default: ``{}``
 jinja_sls_env sets the Jinja environment options for **sls templates**.
 The defaults and accepted options are exactly the same as they are
 for :conf_master:`jinja_env`.
+
+.. note::
+
+    These values can be overridden on a per-file basis using
+    `Jinja Environment Configuration Override <../renderers/all/salt.renderers.jinja.html#salt.utils.jinja.SerializerExtension>`_.
 
 The default options are:
 
