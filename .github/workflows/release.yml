@@ -149,6 +149,8 @@ jobs:
     needs:
       - prepare-workflow
     environment: release
+    outputs:
+      backup-complete: ${{ steps.backup.outputs.backup-complete }}
 
     steps:
       - name: Clone The Salt Repository
@@ -163,6 +165,7 @@ jobs:
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Backup Previous Releases
+        id: backup
         run: |
           tools pkg repo backup-previous-releases
 
@@ -878,12 +881,13 @@ jobs:
 
   restore:
     name: Restore Release Bucket From Backup
-    if: ${{ always() && (failure() || cancelled()) }}
+    if: ${{ always() && needs.backup.outputs.backup-complete == 'true' && (failure() || cancelled()) }}
     runs-on:
       - self-hosted
       - linux
       - repo-release
     needs:
+      - backup
       - release
     environment: release
     steps:

@@ -870,6 +870,10 @@ def restore_previous_releases(ctx: Context):
     Restore release bucket from backup.
     """
     _rclone(ctx, tools.utils.BACKUP_BUCKET_NAME, tools.utils.RELEASE_BUCKET_NAME)
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"backup-complete=true\n")
     ctx.info("Done")
 
 
