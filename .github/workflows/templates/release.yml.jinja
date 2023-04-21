@@ -350,7 +350,7 @@ permissions:
   restore:
     <%- do conclusion_needs.append('restore') %>
     name: Restore Release Bucket From Backup
-    if: ${{ failure() || cancelled() }}
+    if: ${{ always() && (failure() || cancelled()) }}
     runs-on:
       - self-hosted
       - linux
