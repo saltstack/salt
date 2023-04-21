@@ -877,7 +877,7 @@ smbprotocol==1.10.1
     #   pypsexec
 smmap==4.0.0
     # via gitdb
-sqlparse==0.4.2
+sqlparse==0.4.4
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
