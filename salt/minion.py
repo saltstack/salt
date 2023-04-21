@@ -1805,7 +1805,11 @@ class Minion(MinionBase):
 
     @classmethod
     def _target(cls, minion_instance, opts, data, connected):
-        if not minion_instance:
+        # Quick fix for https://github.com/saltstack/salt/issues/29835
+        # added 'or not hasattr(minion_instance, "functions")'
+        # Allows masterless minion to run highsate on startup when
+        # master_type set to disabled
+        if not minion_instance or not hasattr(minion_instance, "functions"):
             minion_instance = cls(opts, load_grains=False)
             minion_instance.connected = connected
             if not hasattr(minion_instance, "functions"):
