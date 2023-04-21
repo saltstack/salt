@@ -3,4 +3,4 @@
 
 pyzmq>=20.0.0 ; python_version < '3.11'
 pyzmq>=24.0.0 ; python_version >= '3.11'
-pyzmq==25.0.0 ; sys_platform == "win32"
+pyzmq==25.0.2 ; sys_platform == "win32"

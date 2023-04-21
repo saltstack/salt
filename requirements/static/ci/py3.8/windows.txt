@@ -167,9 +167,7 @@ looseversion==1.0.2
 lxml==4.9.1
     # via -r requirements/windows.txt
 mako==1.2.2
-    # via
-    #   -r requirements/static/ci/common.in
-    #   -r requirements/windows.txt
+    # via -r requirements/static/ci/common.in
 markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
@@ -320,7 +318,7 @@ pyyaml==5.4.1
     #   clustershell
     #   kubernetes
     #   yamllint
-pyzmq==25.0.0 ; sys_platform == "win32"
+pyzmq==25.0.2 ; sys_platform == "win32"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories

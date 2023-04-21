@@ -21,6 +21,7 @@ from tests.support.helpers import VirtualEnv
     ),
 )
 @pytest.mark.requires_network
+@pytest.mark.slow_test
 def test_list_available_packages(modules, pip_version, tmp_path):
     with VirtualEnv(venv_dir=tmp_path, pip_requirement=pip_version) as virtualenv:
         virtualenv.install("-U", pip_version)

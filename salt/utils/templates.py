@@ -561,6 +561,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         raise SaltRenderError(
             "Jinja error: {}{}".format(exc, out), line, tmplstr, trace=tracestr
         )
+    finally:
+        if loader and hasattr(loader, "_file_client"):
+            if hasattr(loader._file_client, "destroy"):
+                loader._file_client.destroy()
 
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)
@@ -610,6 +614,10 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
         ).render(**context)
     except Exception:  # pylint: disable=broad-except
         raise SaltRenderError(mako.exceptions.text_error_template().render())
+    finally:
+        if lookup and hasattr(lookup, "_file_client"):
+            if hasattr(lookup._file_client, "destroy"):
+                lookup._file_client.destroy()
 
 
 def render_wempy_tmpl(tmplstr, context, tmplpath=None):
