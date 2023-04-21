@@ -60,7 +60,10 @@ def host_docker_network_ip_address(network):
             ipam_pools=[{"subnet": network_subnet, "gateway": network_gateway}],
         )
         assert isinstance(ret, dict), ret
-        assert ret["result"], "Failed to create docker network: {}".format(ret)
+        try:
+            assert ret["result"]
+        except AssertionError:
+            pytest.skip("Failed to create docker network: {}".format(ret))
         yield network_gateway
     finally:
         sminion.states.docker_network.absent(network_name)

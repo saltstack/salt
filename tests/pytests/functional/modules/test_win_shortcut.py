@@ -21,6 +21,7 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
     pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries"),
+    pytest.mark.slow_test,
 ]
 
 
