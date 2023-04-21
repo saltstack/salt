@@ -183,6 +183,8 @@ permissions:
     needs:
       - prepare-workflow
     environment: <{ gh_environment }>
+    outputs:
+      backup-complete: ${{ steps.backup.outputs.backup-complete }}
 
     steps:
       - name: Clone The Salt Repository
@@ -197,6 +199,7 @@ permissions:
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Backup Previous Releases
+        id: backup
         run: |
           tools pkg repo backup-previous-releases
 
@@ -350,12 +353,13 @@ permissions:
   restore:
     <%- do conclusion_needs.append('restore') %>
     name: Restore Release Bucket From Backup
-    if: ${{ always() && (failure() || cancelled()) }}
+    if: ${{ always() && needs.backup.outputs.backup-complete == 'true' && (failure() || cancelled()) }}
     runs-on:
       - self-hosted
       - linux
       - repo-<{ gh_environment }>
     needs:
+      - backup
       - release
       <%- for need in test_repo_needs.iter(consume=True) %>
       - <{ need }>
