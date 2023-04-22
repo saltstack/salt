@@ -198,6 +198,7 @@ def debian(
     """
     ctx.info("Creating repository directory structure ...")
     create_repo_path = _create_top_level_repo_path(
+        ctx,
         repo_path,
         salt_version,
         distro,
@@ -209,6 +210,7 @@ def debian(
     tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
 
     create_repo_path = _create_repo_path(
+        ctx,
         repo_path,
         salt_version,
         distro,
@@ -411,6 +413,7 @@ def rpm(
 
     ctx.info("Creating repository directory structure ...")
     create_repo_path = _create_top_level_repo_path(
+        ctx,
         repo_path,
         salt_version,
         distro,
@@ -422,6 +425,7 @@ def rpm(
     tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
 
     create_repo_path = _create_repo_path(
+        ctx,
         repo_path,
         salt_version,
         distro,
@@ -1059,6 +1063,7 @@ def release(ctx: Context, salt_version: str):
         for distro in ("windows", "macos", "onedir"):
 
             create_repo_path = _create_repo_path(
+                ctx,
                 repo_path,
                 salt_version,
                 distro=distro,
@@ -1473,6 +1478,7 @@ def _create_onedir_based_repo(
 ):
     ctx.info("Creating repository directory structure ...")
     create_repo_path = _create_top_level_repo_path(
+        ctx,
         repo_path,
         salt_version,
         distro,
@@ -1482,7 +1488,11 @@ def _create_onedir_based_repo(
     tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
 
     create_repo_path = _create_repo_path(
-        repo_path, salt_version, distro, nightly_build_from=nightly_build_from
+        ctx,
+        repo_path,
+        salt_version,
+        distro,
+        nightly_build_from=nightly_build_from,
     )
     if not nightly_build_from:
         repo_json_path = create_repo_path.parent.parent / "repo.json"
@@ -1823,6 +1833,7 @@ def _publish_repo(
 
 
 def _create_top_level_repo_path(
+    ctx: Context,
     repo_path: pathlib.Path,
     salt_version: str,
     distro: str,
@@ -1838,6 +1849,16 @@ def _create_top_level_repo_path(
             / nightly_build_from
             / datetime.utcnow().strftime("%Y-%m-%d")
         )
+        create_repo_path.mkdir(exist_ok=True, parents=True)
+        with ctx.chdir(create_repo_path.parent):
+            latest_nightly_symlink = pathlib.Path("latest")
+            if not latest_nightly_symlink.exists():
+                ctx.info(
+                    f"Creating 'latest' symlink to '{create_repo_path.relative_to(repo_path)}' ..."
+                )
+                latest_nightly_symlink.symlink_to(
+                    create_repo_path.name, target_is_directory=True
+                )
     elif "rc" in salt_version:
         create_repo_path = create_repo_path / "salt_rc"
     create_repo_path = create_repo_path / "salt" / "py3" / distro
@@ -1850,6 +1871,7 @@ def _create_top_level_repo_path(
 
 
 def _create_repo_path(
+    ctx: Context,
     repo_path: pathlib.Path,
     salt_version: str,
     distro: str,
@@ -1858,6 +1880,7 @@ def _create_repo_path(
     nightly_build_from: str | None = None,  # pylint: disable=bad-whitespace
 ):
     create_repo_path = _create_top_level_repo_path(
+        ctx,
         repo_path,
         salt_version,
         distro,
