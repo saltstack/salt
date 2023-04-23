@@ -438,12 +438,12 @@ class TestGetConnectionConfig:
         factory._get_connection_config("vault", {}, {}, force_local=force_local)
         local.assert_called_once()
 
-    def test_get_connection_config_cached(self, cached, remote):
+    def test_get_connection_config_cached(self, cached, remote, test_remote_config):
         """
         Ensure cache is respected
         """
         res, embedded_token, _ = factory._get_connection_config("vault", {}, {})
-        assert res == cached.get()
+        assert res == test_remote_config
         assert embedded_token is None
         cached.store.assert_not_called()
         remote.assert_not_called()
@@ -485,6 +485,118 @@ class TestGetConnectionConfig:
                 remote.assert_called()
             else:
                 remote.assert_not_called()
+
+    def test_get_connection_config_update(self, cached, remote, test_remote_config):
+        """
+        Ensure updating connection config works without clearing the session
+        """
+        updated_remote_config = copy.deepcopy(test_remote_config)
+        updated_remote_config["cache"]["clear_on_unauthorized"] = False
+        remote.return_value = (updated_remote_config, remote.return_value[1])
+        res, embedded_token, _ = factory._get_connection_config(
+            "vault", {}, {}, update=True
+        )
+        assert res == updated_remote_config
+        assert embedded_token is None
+        remote.assert_called_once_with(
+            "get_config", {}, issue_params=None, config_only=True
+        )
+        cached.flush.assert_called_once_with(cbank=False)
+        cached.store.assert_called_once_with(updated_remote_config)
+
+    @pytest.mark.parametrize("test_remote_config", ["token"], indirect=True)
+    def test_get_connection_config_update_server(
+        self, cached, remote, test_remote_config
+    ):
+        """
+        Ensure updating connection config does not work without clearing
+        the session if fundamental details have changed
+        """
+        updated_remote_config = copy.deepcopy(test_remote_config)
+        updated_remote_config["server"]["url"] = "https://vault.new-url.com"
+        remote.return_value = (updated_remote_config, remote.return_value[1])
+        with pytest.raises(vault.VaultConfigExpired):
+            res, embedded_token, _ = factory._get_connection_config(
+                "vault", {}, {}, update=True
+            )
+        self._assert_not_updated(remote, cached)
+
+    @pytest.mark.parametrize("test_remote_config", ["token"], indirect=True)
+    def test_get_connection_config_update_auth_method(
+        self, cached, remote, test_remote_config
+    ):
+        """
+        Ensure updating connection config does not work without clearing
+        the session if fundamental details have changed
+        """
+        updated_remote_config = copy.deepcopy(test_remote_config)
+        updated_remote_config["auth"]["method"] = "approle"
+        updated_remote_config["auth"]["role_id"] = "test-role-id"
+        remote.return_value = (updated_remote_config, remote.return_value[1])
+        with pytest.raises(vault.VaultConfigExpired):
+            res, embedded_token, _ = factory._get_connection_config(
+                "vault", {}, {}, update=True
+            )
+        self._assert_not_updated(remote, cached)
+
+    @pytest.mark.parametrize("test_remote_config", ["token"], indirect=True)
+    def test_get_connection_config_update_cache_backend(
+        self, cached, remote, test_remote_config
+    ):
+        """
+        Ensure updating connection config does not work without clearing
+        the session if fundamental details have changed
+        """
+        updated_remote_config = copy.deepcopy(test_remote_config)
+        updated_remote_config["cache"]["backend"] = "disk"
+        remote.return_value = (updated_remote_config, remote.return_value[1])
+        with pytest.raises(vault.VaultConfigExpired):
+            res, embedded_token, _ = factory._get_connection_config(
+                "vault", {}, {}, update=True
+            )
+        self._assert_not_updated(remote, cached)
+
+    @pytest.mark.parametrize("test_remote_config", ["approle"], indirect=True)
+    def test_get_connection_config_update_role_id(
+        self, cached, remote, test_remote_config
+    ):
+        """
+        Ensure updating connection config does not work without clearing
+        the session if fundamental details have changed
+        """
+        updated_remote_config = copy.deepcopy(test_remote_config)
+        updated_remote_config["auth"]["role_id"] = "new_role"
+        remote.return_value = (updated_remote_config, remote.return_value[1])
+        with pytest.raises(vault.VaultConfigExpired):
+            res, embedded_token, _ = factory._get_connection_config(
+                "vault", {}, {}, update=True
+            )
+        self._assert_not_updated(remote, cached)
+
+    @pytest.mark.parametrize("test_remote_config", ["approle"], indirect=True)
+    def test_get_connection_config_update_bind_secret_id(
+        self, cached, remote, test_remote_config
+    ):
+        """
+        Ensure updating connection config does not work without clearing
+        the session if fundamental details have changed
+        """
+        test_remote_config["auth"]["secret_id"] = True
+        updated_remote_config = copy.deepcopy(test_remote_config)
+        updated_remote_config["auth"]["secret_id"] = False
+        remote.return_value = (updated_remote_config, remote.return_value[1])
+        with pytest.raises(vault.VaultConfigExpired):
+            res, embedded_token, _ = factory._get_connection_config(
+                "vault", {}, {}, update=True
+            )
+        self._assert_not_updated(remote, cached)
+
+    def _assert_not_updated(self, remote, cached):
+        remote.assert_called_once_with(
+            "get_config", {}, issue_params=None, config_only=True
+        )
+        cached.flush.assert_not_called()
+        cached.store.assert_not_called()
 
 
 class TestFetchSecretId:

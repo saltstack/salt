@@ -395,7 +395,8 @@ config
     Defaults to ``3600`` (one hour). Set this to ``null`` to disable
     cache expiration. Changed ``server`` configuration on the master will
     still be recognized, but changes in ``auth`` and ``cache`` will need
-    a manual cache clearance using ``vault.clear_token_cache``.
+    a manual update using ``vault.update_config`` or cache clearance
+    using ``vault.clear_token_cache``.
 
     .. note::
 
@@ -1211,3 +1212,27 @@ def query(method, endpoint, payload=None):
         return vault.query(method, endpoint, __opts__, __context__, payload=payload)
     except SaltException as err:
         raise CommandExecutionError("{}: {}".format(type(err).__name__, err)) from err
+
+
+def update_config(keep_session=False):
+    """
+    .. versionadded:: 3007.0
+
+    Attempt to update the cached configuration without clearing the
+    currently active Vault session.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vault.update_config
+
+    keep_session
+        Only update configuration that can be updated without
+        creating a new login session.
+        If this is false, still tries to keep the active session,
+        but might clear it if the server configuration has changed
+        significantly.
+        Defaults to False.
+    """
+    return vault.update_config(__opts__, __context__, keep_session=keep_session)
