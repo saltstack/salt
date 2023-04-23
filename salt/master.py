@@ -186,6 +186,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         # Track key rotation intervals
         self.rotate = int(time.time())
         # A serializer for general maint operations
+        self.restart_interval = int(self.opts["maintenance_interval"])
 
     def _post_fork_init(self):
         """
@@ -243,21 +244,28 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         # init things that need to be done after the process is forked
         self._post_fork_init()
 
-        # Make Start Times
-        last = int(time.time())
+        # Start of process for maintenance process restart interval
+        start = time.time()
+
+        # Unset last value will cause the interval items to run on the first
+        # loop iteration. This ensurs we always run them even if
+        # maintenance_interval happens to be less than loop_interval or
+        # git_update_interval
+        last = None
+
         # update git_pillar on first loop
         last_git_pillar_update = 0
+        now = int(time.time())
 
         git_pillar_update_interval = self.opts.get("git_pillar_update_interval", 0)
         old_present = set()
-        while True:
-            now = int(time.time())
+        while time.time() - start < self.restart_interval:
             log.trace("Running maintenance routines")
-            if (now - last) >= self.loop_interval:
+            if not last or (now - last) >= self.loop_interval:
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
-            if (now - last_git_pillar_update) >= git_pillar_update_interval:
+            if not last or (now - last_git_pillar_update) >= git_pillar_update_interval:
                 last_git_pillar_update = now
                 self.handle_git_pillar()
             self.handle_schedule()
@@ -266,6 +274,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.handle_key_rotate(now)
             salt.utils.verify.check_max_open_files(self.opts)
             last = now
+            now = int(time.time())
             time.sleep(self.loop_interval)
 
     def handle_key_cache(self):
@@ -462,7 +471,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
                 )
 
     @classmethod
-    def update(cls, interval, backends, timeout=300):
+    def update(cls, interval, backends, timeout):
         """
         Threading target which handles all updates for a given wait interval
         """
@@ -503,7 +512,11 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
         for interval in self.buckets:
             self.update_threads[interval] = threading.Thread(
                 target=self.update,
-                args=(interval, self.buckets[interval]),
+                args=(
+                    interval,
+                    self.buckets[interval],
+                    self.opts["fileserver_interval"],
+                ),
             )
             self.update_threads[interval].start()
 

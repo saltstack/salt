@@ -42,6 +42,11 @@ on:
         type: string
         description: The onedir package name to use
         default: salt
+      pull-labels:
+        required: false
+        type: string
+        description: List of all the pull labels
+        default: '["test:slow", "test:core"]'
       skip-code-coverage:
         required: false
         type: boolean
@@ -262,9 +267,36 @@ jobs:
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- -k "mac or darwin"
 
-      - name: Run Slow/Changed Tests
-        id: run-slow-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+      - name: Get Test Flags
+        id: get-test-flags
+        shell: bash
+        env:
+          PULL_LABELS: ${{ inputs.pull-labels }}
+        run: |
+          echo "$PULL_LABELS"
+          # shellcheck disable=SC2086
+          no_fast_tests="$(jq -c '. | any(index("test:no-fast"))' <<< $PULL_LABELS)"
+          # shellcheck disable=SC2086
+          slow_tests="$(jq -c '. | any(index("test:slow"))' <<< $PULL_LABELS)"
+          # shellcheck disable=SC2086
+          core_tests="$(jq -c '. | any(index("test:core"))' <<< $PULL_LABELS)"
+          # shellcheck disable=SC2086
+          flaky_jail_tests="$(jq -c '. | any(index("test:flaky-jail"))' <<< $PULL_LABELS)"
+          echo "$no_fast_tests"
+          echo "$slow_tests"
+          echo "$core_tests"
+          echo "$flaky_jail_tests"
+          # shellcheck disable=SC2086
+          {
+          echo "no_fast_tests=$no_fast_tests";
+          echo "slow_tests=$slow_tests";
+          echo "core_tests=$core_tests";
+          echo "flaky_jail_tests=$flaky_jail_tests";
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run Fast/Changed Tests
+        id: run-fast-changed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.no_fast_tests == 'true' }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -276,11 +308,46 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
-            -k "mac or darwin" --suppress-no-test-exit-code --run-slow --from-filenames=testrun-changed-files.txt
+            -k "mac or darwin" --suppress-no-test-exit-code \
+            --from-filenames=testrun-changed-files.txt
+
+      - name: Run Slow/Changed Tests
+        id: run-slow-changed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.slow_tests == 'false' }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --slow-tests \
+            --from-filenames=testrun-changed-files.txt
+
+      - name: Run Core/Changed Tests
+        id: run-core-changed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.core_tests == 'false' }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --core-tests \
+            --from-filenames=testrun-changed-files.txt
 
       - name: Run Fast Tests
         id: run-fast-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.no_fast_tests == 'false' }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -292,7 +359,55 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
-            -k "mac or darwin"
+            -k "mac or darwin" --suppress-no-test-exit-code
+
+      - name: Run Slow Tests
+        id: run-slow-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.slow_tests == 'true' }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --slow-tests
+
+      - name: Run Core Tests
+        id: run-core-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.core_tests == 'true' }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --core-tests
+
+      - name: Run Flaky Tests
+        id: run-flaky-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.flaky_jail_tests == 'false' }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
 
       - name: Run Full Tests
         id: run-full-tests
@@ -308,7 +423,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
-            --run-slow -k "mac or darwin"
+            --slow-tests --core-tests -k "mac or darwin"
 
       - name: Fix file ownership
         run: |

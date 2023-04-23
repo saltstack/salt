@@ -14,10 +14,14 @@ on:
         description: >
           The Salt version to get from staging to publish the release.
           (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+      skip-salt-pkg-download-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages download test suite.
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-1  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-3  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
 
 permissions:
@@ -151,54 +155,6 @@ jobs:
         run: |
           tools pkg repo publish release ${{ needs.prepare-workflow.outputs.salt-version }}
 
-  test-linux-pkg-downloads:
-    name: Test Linux Package Downloads
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-linux.yml
-    with:
-      distro-slug: ubuntu-latest
-      platform: linux
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: release
-      skip-code-coverage: true
-      artifacts-from-workflow: staging.yml
-    secrets: inherit
-
-  test-macos-pkg-downloads:
-    name: Test macOS Package Downloads
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-macos.yml
-    with:
-      distro-slug: macos-12
-      platform: darwin
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: release
-      skip-code-coverage: true
-      artifacts-from-workflow: staging.yml
-    secrets: inherit
-
-  test-windows-pkg-downloads:
-    name: Test Windows Package Downloads
-    needs:
-      - prepare-workflow
-      - publish-repositories
-    uses: ./.github/workflows/test-package-downloads-action-windows.yml
-    with:
-      distro-slug: windows-2022
-      platform: windows
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.10
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      environment: release
-      skip-code-coverage: true
-      artifacts-from-workflow: staging.yml
-    secrets: inherit
-
   release:
     name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
     runs-on:
@@ -209,9 +165,6 @@ jobs:
       - prepare-workflow
       - backup
       - publish-repositories
-      - test-linux-pkg-downloads
-      - test-macos-pkg-downloads
-      - test-windows-pkg-downloads
     environment: release
     steps:
       - name: Clone The Salt Repository
@@ -310,7 +263,7 @@ jobs:
 
   restore:
     name: Restore Release Bucket From Backup
-    if: ${{ failure() || cancelled() }}
+    if: ${{ always() }}
     runs-on:
       - self-hosted
       - linux
@@ -320,24 +273,28 @@ jobs:
     environment: release
     steps:
       - name: Clone The Salt Repository
+        if: ${{ failure() || cancelled() }}
         uses: actions/checkout@v3
         with:
           ssh-key: ${{ secrets.GHA_SSH_KEY }}
 
       - name: Setup Rclone
+        if: ${{ failure() || cancelled() }}
         uses: AnimMouse/setup-rclone@v1
         with:
           version: v1.61.1
 
       - name: Setup Python Tools Scripts
+        if: ${{ failure() || cancelled() }}
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Restore Release Bucket
+        if: ${{ failure() || cancelled() }}
         run: |
           tools pkg repo restore-previous-releases
 
   publish-pypi:
-    name: Publish to PyPi(test)
+    name: Publish to PyPi
     if: ${{ github.event.repository.fork != true }}
     needs:
       - prepare-workflow
@@ -384,7 +341,7 @@ jobs:
           name: pypi-artifacts
           path: artifacts/release
 
-      - name: Publish to Test PyPi
+      - name: Publish to PyPi
         env:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |
