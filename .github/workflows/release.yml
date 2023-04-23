@@ -886,42 +886,12 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-  restore:
-    name: Restore Release Bucket From Backup
-    if: ${{ always() && needs.backup.outputs.backup-complete == 'true' && (failure() || cancelled()) }}
-    runs-on:
-      - self-hosted
-      - linux
-      - repo-release
-    needs:
-      - backup
-      - release
-    environment: release
-    steps:
-      - name: Clone The Salt Repository
-        uses: actions/checkout@v3
-        with:
-          ssh-key: ${{ secrets.GHA_SSH_KEY }}
-
-      - name: Setup Rclone
-        uses: AnimMouse/setup-rclone@v1
-        with:
-          version: v1.61.1
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Restore Release Bucket
-        run: |
-          tools pkg repo restore-previous-releases
-
   publish-pypi:
     name: Publish to PyPi
     if: ${{ always() && ! failure() && ! cancelled() && github.event.repository.fork != true }}
     needs:
       - prepare-workflow
       - release
-      - restore
     environment: release
     runs-on:
       - self-hosted
@@ -980,12 +950,20 @@ jobs:
       - prepare-workflow
       - publish-repositories
       - release
-      - restore
       - publish-pypi
     steps:
       - name: Get workflow information
         id: get-workflow-info
         uses: technote-space/workflow-conclusion-action@v3
+
+      - run: |
+          # shellcheck disable=SC2129
+          if [ "${{ steps.get-workflow-info.outputs.conclusion }}" != "success" ]; then
+            echo 'To restore the release bucket run:' >> "${GITHUB_STEP_SUMMARY}"
+            echo '```' >> "${GITHUB_STEP_SUMMARY}"
+            echo 'tools pkg repo restore-previous-releases' >> "${GITHUB_STEP_SUMMARY}"
+            echo '```' >> "${GITHUB_STEP_SUMMARY}"
+          fi
 
       - name: Set Pipeline Exit Status
         shell: bash
