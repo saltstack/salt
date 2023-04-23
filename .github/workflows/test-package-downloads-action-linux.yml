@@ -146,7 +146,7 @@ jobs:
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v3
         with:
-          name: nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-download
+          name: nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-download-${{ inputs.arch }}
           path: nox.${{ inputs.distro-slug }}.tar.*
 
   test:
