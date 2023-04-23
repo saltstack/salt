@@ -170,9 +170,9 @@ jobs:
         id: nox-artifact-name
         run: |
           if [ "${{ contains(inputs.distro-slug, 'windows') }}" != "true" ]; then
-            echo "name=nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}" >> "${GITHUB_OUTPUT}"
+            echo "name=nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ inputs.arch }}" >> "${GITHUB_OUTPUT}"
           else
-            echo "name=nox-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-${{ inputs.nox-session }}" >> "${GITHUB_OUTPUT}"
+            echo "name=nox-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-${{ inputs.nox-session }}-${{ inputs.arch }}" >> "${GITHUB_OUTPUT}"
           fi
 
       - name: Upload Nox Requirements Tarball
