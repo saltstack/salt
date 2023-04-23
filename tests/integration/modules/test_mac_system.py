@@ -21,6 +21,7 @@ SET_SUBNET_NAME = random_string("RS-", lowercase=False)
 @pytest.mark.usefixtures("salt_sub_minion")
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_if_binaries_missing("systemsetup")
+@pytest.mark.slow_test
 class MacSystemModuleTest(ModuleCase):
     """
     Validate the mac_system module
@@ -128,6 +129,7 @@ class MacSystemModuleTest(ModuleCase):
         self.assertEqual(self.run_function("system.get_subnet_name"), SET_SUBNET_NAME)
 
     @pytest.mark.slow_test
+    @pytest.mark.skip_initial_gh_actions_failure
     def test_get_list_startup_disk(self):
         """
         Test system.get_startup_disk

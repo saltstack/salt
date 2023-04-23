@@ -68,9 +68,7 @@ import string
 import sys
 
 import pytest
-from distro import linux_distribution
 
-from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.utils.gitfs import (
     GITPYTHON_MINVER,
     GITPYTHON_VERSION,
@@ -114,11 +112,12 @@ def _rand_key_name(length):
     )
 
 
-def _centos_stream_9():
-    (osname, osrelease, oscodename) = (
-        x.strip('"').strip("'") for x in linux_distribution()
-    )
-    return osname in ("CentOS Stream", "AlmaLinux") and osrelease == "9"
+def _check_skip(grains):
+    if grains["os"] == "CentOS Stream" and grains["osmajorrelease"] == 9:
+        return True
+    if grains["os"] == "AlmaLinux" and grains["osmajorrelease"] == 9:
+        return True
+    return False
 
 
 class GitPythonMixin:
@@ -708,9 +707,6 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
 )
 @pytest.mark.usefixtures("webserver_pillar_tests_prep")
-@pytest.mark.skip_if_not_root
-@pytest.mark.skip_if_binaries_missing("nginx")
-@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
 class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
     """
     Test git_pillar with GitPython using unauthenticated HTTP
@@ -721,9 +717,6 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
     not HAS_GITPYTHON, reason="GitPython >= {} required".format(GITPYTHON_MINVER)
 )
 @pytest.mark.usefixtures("webserver_pillar_tests_prep_authenticated")
-@pytest.mark.skip_if_not_root
-@pytest.mark.skip_if_binaries_missing("nginx")
-@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
 class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
     """
     Test git_pillar with GitPython using authenticated HTTP
@@ -735,16 +728,19 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 
 @pytest.mark.skip_on_aarch64(reason="Test is broken on aarch64")
 @pytest.mark.skipif(
-    _centos_stream_9(),
-    reason="AlmaLinux/CentOS Stream 9 has RSA keys disabled by default",
-)
-@pytest.mark.skipif(
     not HAS_PYGIT2,
     reason="pygit2 >= {} and libgit2 >= {} required".format(
         PYGIT2_MINVER, LIBGIT2_MINVER
     ),
 )
 @pytest.mark.usefixtures("ssh_pillar_tests_prep")
+@pytest.mark.skip_initial_gh_actions_failure(
+    skip=_check_skip,
+    reason="AlmaLinux/CentOS Stream 9 has RSA keys disabled by default",
+)
+@pytest.mark.skipif(
+    'grains["os"] in ("AlmaLinux", "CentOS Stream") and grains["osmajorrelease"] == 9'
+)
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 @pytest.mark.skipif(
@@ -2361,9 +2357,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
     ),
 )
 @pytest.mark.usefixtures("webserver_pillar_tests_prep")
-@pytest.mark.skip_if_not_root
-@pytest.mark.skip_if_binaries_missing("nginx")
-@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
 class TestPygit2HTTP(GitPillarHTTPTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
@@ -2927,9 +2920,6 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
     ),
 )
 @pytest.mark.usefixtures("webserver_pillar_tests_prep_authenticated")
-@pytest.mark.skip_if_not_root
-@pytest.mark.skip_if_binaries_missing("nginx")
-@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
 class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication

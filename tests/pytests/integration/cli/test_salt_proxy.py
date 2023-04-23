@@ -25,7 +25,7 @@ def proxy_minion_id(salt_master):
         pytest.helpers.remove_stale_minion_key(salt_master, _proxy_minion_id)
 
 
-@pytest.mark.slow_test
+@pytest.mark.core_test
 def test_exit_status_no_proxyid(salt_master, proxy_minion_id):
     """
     Ensure correct exit status when --proxyid argument is missing.
@@ -42,6 +42,7 @@ def test_exit_status_no_proxyid(salt_master, proxy_minion_id):
 
 
 @pytest.mark.skip_on_windows(reason="Windows does not do user checks")
+@pytest.mark.core_test
 def test_exit_status_unknown_user(salt_master, proxy_minion_id):
     """
     Ensure correct exit status when the proxy is configured to run as an
@@ -57,7 +58,7 @@ def test_exit_status_unknown_user(salt_master, proxy_minion_id):
     assert "The user is not available." in exc.value.process_result.stderr
 
 
-@pytest.mark.slow_test
+@pytest.mark.core_test
 def test_exit_status_unknown_argument(salt_master, proxy_minion_id):
     """
     Ensure correct exit status when an unknown argument is passed to
@@ -83,7 +84,7 @@ def test_exit_status_correct_usage(salt_master, proxy_minion_id, salt_cli):
     """
     factory = salt_master.salt_proxy_minion_daemon(
         proxy_minion_id,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         defaults={"transport": salt_master.config["transport"]},
     )
     factory.start()

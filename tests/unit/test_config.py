@@ -1846,6 +1846,12 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertNotIn("environment", ret)
             self.assertEqual(ret["saltenv"], "foo")
 
+            # Test config to verify that `keep_acl_in_token` is forced to True
+            # when `rest` is present as driver in the `external_auth` config.
+            overrides = {"external_auth": {"rest": {"^url": "http://test_url/rest"}}}
+            ret = salt.config.apply_master_config(overrides=overrides)
+            self.assertTrue(ret["keep_acl_in_token"])
+
             # MINION CONFIG
 
             # Ensure that environment overrides saltenv when saltenv not

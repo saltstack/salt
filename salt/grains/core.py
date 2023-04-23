@@ -23,8 +23,6 @@ import time
 import uuid
 from errno import EACCES, EPERM
 
-import distro
-
 import salt.exceptions
 
 # Solve the Chicken and egg problem where grains need to run before any
@@ -41,6 +39,7 @@ import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.utils.network import _clear_interfaces, _get_interfaces
+from salt.utils.platform import linux_distribution as _linux_distribution
 
 try:
     # pylint: disable=no-name-in-module
@@ -88,15 +87,6 @@ except ImportError:  # Define freedesktop_os_release for Python < 3.10
 
     def _freedesktop_os_release():
         return _parse_os_release("/etc/os-release", "/usr/lib/os-release")
-
-
-# rewrite distro.linux_distribution to allow best=True kwarg in version(), needed to get the minor version numbers in CentOS
-def _linux_distribution():
-    return (
-        distro.id(),
-        distro.version(best=True),
-        distro.codename(),
-    )
 
 
 def __init__(opts):
@@ -2806,6 +2796,7 @@ def fqdns():
         or salt.utils.platform.is_sunos()
         or salt.utils.platform.is_aix()
         or salt.utils.platform.is_junos()
+        or salt.utils.platform.is_darwin()
         else True,
     ):
         opt = __salt__["network.fqdns"]()

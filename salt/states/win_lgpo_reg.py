@@ -2,7 +2,7 @@
 LGPO - Registry.pol
 ===================
 
-.. versionadded:: 3006
+.. versionadded:: 3006.0
 
 A state module for working with registry based policies in Windows Local Group
 Policy (LGPO). This module contains functions for working with the
@@ -56,7 +56,7 @@ configure that policy.
 import salt.utils.data
 import salt.utils.platform
 
-__virtualname__ = "lgpo"
+__virtualname__ = "lgpo_reg"
 
 
 def __virtual__():
@@ -70,6 +70,23 @@ def __virtual__():
         return False, "LGPO_REG State: lgpo_reg module not available"
 
     return __virtualname__
+
+
+def _format_changes(changes, key, v_name):
+    """
+    Reformat the changes dictionary to group new and old together.
+    """
+    new_changes = {"new": {}, "old": {}}
+    for item in changes:
+        if changes[item]["new"]:
+            new_changes["new"][item] = changes[item]["new"]
+            new_changes["new"]["key"] = key
+            new_changes["new"]["name"] = v_name
+        if changes[item]["old"]:
+            new_changes["old"][item] = changes[item]["old"]
+            new_changes["old"]["key"] = key
+            new_changes["old"]["name"] = v_name
+    return new_changes
 
 
 def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine"):
@@ -110,7 +127,7 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
 
         # Using the name parameter in the definition
         set_reg_pol_value:
-          lgpo_reg.present:
+          lgpo_reg.value_present:
             - key: SOFTWARE\MyKey
             - name: MyValue
             - v_type: REG_SZ
@@ -120,7 +137,7 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
 
         # Using the name as the parameter and modifying the User policy
         MyValue:
-          lgpo_reg.present:
+          lgpo_reg.value_present:
             - key: SOFTWARE\MyKey
             - v_type: REG_SZ
             - v_data: "some string data"
@@ -133,6 +150,7 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
     )
     if old.get("data", "") == v_data and old.get("type", "") == v_type:
         ret["comment"] = "Registry.pol value already present"
+        ret["result"] = True
         return ret
 
     if __opts__["test"]:
@@ -156,7 +174,7 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
 
     if changes:
         ret["comment"] = "Registry.pol value has been set"
-        ret["changes"] = changes
+        ret["changes"] = _format_changes(changes, key, name)
         ret["result"] = True
 
     return ret
@@ -187,7 +205,7 @@ def value_disabled(name, key, policy_class="Machine"):
 
         # Using the name parameter in the definition
         set_reg_pol_value:
-          lgpo_reg.disabled:
+          lgpo_reg.value_disabled:
             - key: SOFTWARE\MyKey
             - name: MyValue
             - policy_class: Machine
@@ -195,7 +213,7 @@ def value_disabled(name, key, policy_class="Machine"):
 
         # Using the name as the parameter and modifying the User policy
         MyValue:
-          lgpo_reg.disabled:
+          lgpo_reg.value_disabled:
             - key: SOFTWARE\MyKey
             - policy_class: User
     """
@@ -206,6 +224,7 @@ def value_disabled(name, key, policy_class="Machine"):
     )
     if old.get("data", "") == "**del.{}".format(name):
         ret["comment"] = "Registry.pol value already disabled"
+        ret["result"] = True
         return ret
 
     if __opts__["test"]:
@@ -223,7 +242,7 @@ def value_disabled(name, key, policy_class="Machine"):
 
     if changes:
         ret["comment"] = "Registry.pol value enabled"
-        ret["changes"] = changes
+        ret["changes"] = _format_changes(changes, key, name)
         ret["result"] = True
 
     return ret
@@ -254,7 +273,7 @@ def value_absent(name, key, policy_class="Machine"):
 
         # Using the name parameter in the definition
         set_reg_pol_value:
-          lgpo_reg.absent:
+          lgpo_reg.value_absent:
             - key: SOFTWARE\MyKey
             - name: MyValue
             - policy_class: Machine
@@ -262,7 +281,7 @@ def value_absent(name, key, policy_class="Machine"):
 
         # Using the name as the parameter and modifying the User policy
         MyValue:
-          lgpo_reg.absent:
+          lgpo_reg.value_absent:
             - key: SOFTWARE\MyKey
             - policy_class: User
     """
@@ -273,6 +292,7 @@ def value_absent(name, key, policy_class="Machine"):
     )
     if not old:
         ret["comment"] = "Registry.pol value already absent"
+        ret["result"] = True
         return ret
 
     if __opts__["test"]:
@@ -293,7 +313,7 @@ def value_absent(name, key, policy_class="Machine"):
 
     if changes:
         ret["comment"] = "Registry.pol value deleted"
-        ret["changes"] = changes
+        ret["changes"] = _format_changes(changes, key, name)
         ret["result"] = True
 
     return ret

@@ -130,7 +130,7 @@ Functions to interact with Hashicorp Vault.
         values, eg ``my-policies/{grains[os]}``. ``{minion}`` is shorthand for
         ``grains[id]``, eg ``saltstack/minion/{minion}``.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3006.0
 
             Policies can be templated with pillar values as well: ``salt_role_{pillar[roles]}``
             Make sure to only reference pillars that are not sourced from Vault since the latter
@@ -199,7 +199,7 @@ Functions to interact with Hashicorp Vault.
         will force vault to use the connection details from the master or the
         local config. Can only be either ``master`` or ``local``.
 
-          .. versionadded:: 3006
+          .. versionadded:: 3006.0
 
     Add this segment to the master configuration file, or
     /etc/salt/master.d/peer_run.conf:

@@ -66,6 +66,8 @@ VERIFY_TRUST_LEVELS = {
     "4": "Ultimate",
 }
 
+_DEFAULT_KEY_SERVER = "keys.openpgp.org"
+
 try:
     import gnupg
 
@@ -216,7 +218,7 @@ def search_keys(text, keyserver=None, user=None):
         Text to search the keyserver for, e.g. email address, keyID or fingerprint.
 
     keyserver
-        Keyserver to use for searching for GPG keys, defaults to pgp.mit.edu.
+        Keyserver to use for searching for GPG keys, defaults to keys.openpgp.org.
 
     user
         Which user's keychain to access, defaults to user Salt is running as.
@@ -235,7 +237,7 @@ def search_keys(text, keyserver=None, user=None):
 
     """
     if not keyserver:
-        keyserver = "pgp.mit.edu"
+        keyserver = _DEFAULT_KEY_SERVER
 
     _keys = []
     for _key in _search_keys(text, keyserver, user):
@@ -881,7 +883,7 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
     Receive key(s) from keyserver and add them to keychain
 
     keyserver
-        Keyserver to use for searching for GPG keys, defaults to pgp.mit.edu
+        Keyserver to use for searching for GPG keys, defaults to keys.openpgp.org
 
     keys
         The keyID(s) to retrieve from the keyserver.  Can be specified as a comma
@@ -911,7 +913,7 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
     gpg = _create_gpg(user, gnupghome)
 
     if not keyserver:
-        keyserver = "pgp.mit.edu"
+        keyserver = _DEFAULT_KEY_SERVER
 
     if isinstance(keys, str):
         keys = keys.split(",")
@@ -1146,7 +1148,7 @@ def verify(
         salt '*' gpg.verify filename='/path/to/important.file' trustmodel=direct
 
     """
-    gpg = _create_gpg(user)
+    gpg = _create_gpg(user, gnupghome)
     trustmodels = ("pgp", "classic", "tofu", "tofu+pgp", "direct", "always", "auto")
 
     if trustmodel and trustmodel not in trustmodels:

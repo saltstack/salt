@@ -33,7 +33,11 @@ def configure_loader_modules():
         "salt.runners.vault._get_token_create_url",
         MagicMock(return_value="http://fake_url"),
     )
-    with sig_valid_mock, token_url_mock:
+    cached_policies = patch(
+        "salt.runners.vault._get_policies_cached",
+        Mock(return_value=["saltstack/minion/test-minion", "saltstack/minions"]),
+    )
+    with sig_valid_mock, token_url_mock, cached_policies:
         yield {
             vault: {
                 "__opts__": {
@@ -50,10 +54,6 @@ def configure_loader_modules():
         }
 
 
-@patch(
-    "salt.runners.vault._get_policies_cached",
-    Mock(return_value=["saltstack/minion/test-minion", "saltstack/minions"]),
-)
 def test_generate_token():
     """
     Basic tests for test_generate_token: all exits
@@ -128,10 +128,6 @@ def test_generate_token():
         assert result["error"] == "Test Exception Reason"
 
 
-@patch(
-    "salt.runners.vault._get_policies_cached",
-    Mock(return_value=["saltstack/minion/test-minion", "saltstack/minions"]),
-)
 def test_generate_token_with_namespace():
     """
     Basic tests for test_generate_token: all exits

@@ -6,8 +6,7 @@ import time
 import pytest
 
 pytestmark = [
-    pytest.mark.slow_test,
-    pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
     pytest.mark.skip_on_freebsd(reason="Processes are not properly killed on FreeBSD"),
 ]
 
@@ -42,7 +41,7 @@ def test_pki(salt_mm_failover_master_1, salt_mm_failover_master_2, caplog):
         "mm-failover-pki-minion-1",
         defaults=config_defaults,
         overrides=config_overrides,
-        # extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     # Need to grab the public signing key from the master, either will do
     shutil.copyfile(

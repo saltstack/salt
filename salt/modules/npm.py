@@ -11,7 +11,7 @@ import salt.utils.json
 import salt.utils.path
 import salt.utils.user
 from salt.exceptions import CommandExecutionError
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +50,8 @@ def _check_valid_version():
     res = salt.modules.cmdmod.run(
         "{npm} --version".format(npm=npm_path), output_loglevel="quiet"
     )
-    npm_version, valid_version = _LooseVersion(res), _LooseVersion("1.2")
+    npm_version = Version(res)
+    valid_version = Version("1.2")
     # pylint: enable=no-member
     if npm_version < valid_version:
         raise CommandExecutionError(

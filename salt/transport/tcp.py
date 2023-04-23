@@ -938,7 +938,7 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
                 "Subscriber at %s has disconnected from publisher", client.address
             )
             client.close()
-            self._remove_client_present(client)
+            self.remove_presence_callback(client)
             self.clients.discard(client)
         log.trace("TCP PubServer finished publishing payload")
 

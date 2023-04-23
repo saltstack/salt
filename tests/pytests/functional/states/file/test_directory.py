@@ -329,6 +329,13 @@ def test_directory_broken_symlink(file, tmp_path):
     assert ret.result is True
 
 
+def _check_skip(grains):
+    if grains["os"] == "MacOS":
+        return True
+    return False
+
+
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_on_windows(
     reason="Windows fails to enforce group ownership, and test was previously skipped on windows"

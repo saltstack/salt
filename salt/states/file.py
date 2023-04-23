@@ -286,6 +286,7 @@ import os
 import posixpath
 import re
 import shutil
+import stat
 import sys
 import time
 import traceback
@@ -2073,15 +2074,18 @@ def tidied(
 
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    if age_size_logical_operator.upper() not in ["AND", "OR"]:
+    age_size_logical_operator = age_size_logical_operator.upper()
+    if age_size_logical_operator not in ["AND", "OR"]:
         age_size_logical_operator = "OR"
         log.warning("Logical operator must be 'AND' or 'OR'. Defaulting to 'OR'...")
 
-    if age_size_only and age_size_only.lower() not in ["age", "size"]:
-        age_size_only = None
-        log.warning(
-            "age_size_only parameter must be 'age' or 'size' if set. Defaulting to 'None'..."
-        )
+    if age_size_only:
+        age_size_only = age_size_only.lower()
+        if age_size_only not in ["age", "size"]:
+            age_size_only = None
+            log.warning(
+                "age_size_only parameter must be 'age' or 'size' if set. Defaulting to 'None'..."
+            )
 
     # Check preconditions
     if not os.path.isabs(name):
@@ -2134,44 +2138,41 @@ def tidied(
             path = os.path.join(root, elem)
             try:
                 if os.path.islink(path):
-                    # Get timestamp of symlink (not symlinked file)
-                    if time_comparison == "ctime":
-                        mytimestamp = os.lstat(path).st_ctime
-                    elif time_comparison == "mtime":
-                        mytimestamp = os.lstat(path).st_mtime
-                    else:
-                        mytimestamp = os.lstat(path).st_atime
                     if not rmlinks:
                         deleteme = False
+                    # Get info of symlink (not symlinked file)
+                    mystat = os.lstat(path)
                 else:
-                    # Get timestamp of file or directory
-                    if time_comparison == "ctime":
-                        mytimestamp = os.path.getctime(path)
-                    elif time_comparison == "mtime":
-                        mytimestamp = os.path.getmtime(path)
-                    else:
-                        mytimestamp = os.path.getatime(path)
+                    mystat = os.stat(path)
 
-                    if elem in dirs:
+                    if stat.S_ISDIR(mystat.st_mode):
                         # Check if directories should be deleted at all
                         deleteme = rmdirs
                     else:
                         # Get size of regular file
-                        mysize = os.path.getsize(path)
+                        mysize = mystat.st_size
+
+                if time_comparison == "ctime":
+                    mytimestamp = mystat.st_ctime
+                elif time_comparison == "mtime":
+                    mytimestamp = mystat.st_mtime
+                else:
+                    mytimestamp = mystat.st_atime
 
                 # Calculate the age and set the name to match
                 myage = abs(today - date.fromtimestamp(mytimestamp))
+
                 filename = elem
                 if full_path_match:
                     filename = path
 
                 # Verify against given criteria, collect all elements that should be removed
-                if age_size_only and age_size_only.lower() in ["age", "size"]:
-                    if age_size_only.lower() == "age":
+                if age_size_only and age_size_only in {"age", "size"}:
+                    if age_size_only == "age":
                         compare_age_size = myage.days >= age
                     else:
                         compare_age_size = mysize >= size
-                elif age_size_logical_operator.upper() == "AND":
+                elif age_size_logical_operator == "AND":
                     compare_age_size = mysize >= size and myage.days >= age
                 else:
                     compare_age_size = mysize >= size or myage.days >= age
@@ -2180,6 +2181,8 @@ def tidied(
                     todelete.append(path)
             except FileNotFoundError:
                 continue
+            except PermissionError:
+                log.warning("Unable to read %s due to permissions error.", path)
 
     # Now delete the stuff
     if todelete:
@@ -2192,7 +2195,7 @@ def tidied(
         # Iterate over collected items
         try:
             for path in todelete:
-                __salt__["file.remove"](path, force=True)
+                __salt__["file.remove"](path)
                 ret["changes"]["removed"].append(path)
         except CommandExecutionError as exc:
             return _error(ret, "{}".format(exc))
@@ -7431,7 +7434,7 @@ def copy_(
         process. For existing files and directories it's not enforced.
 
     dir_mode
-        .. versionadded:: 3006
+        .. versionadded:: 3006.0
 
         If directories are to be created, passing this option specifies the
         permissions for those directories. If this is not set, directories

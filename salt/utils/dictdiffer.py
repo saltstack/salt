@@ -330,12 +330,12 @@ class RecursiveDictDiffer(DictDiffer):
             If an added key contains a dictionary, include its
             keys in dot notation as well. Defaults to false.
 
-            .. versionadded:: 3006
+            .. versionadded:: 3006.0
 
         separator
             Separator used to indicate nested keys. Defaults to ``.``.
 
-            .. versionadded:: 3006
+            .. versionadded:: 3006.0
         """
         return sorted(self._it_addrm("old", "new", include_nested, separator=separator))
 
@@ -349,12 +349,12 @@ class RecursiveDictDiffer(DictDiffer):
             If an added key contains a dictionary, include its
             keys in dot notation as well. Defaults to false.
 
-            .. versionadded:: 3006
+            .. versionadded:: 3006.0
 
         separator
             Separator used to indicate nested keys. Defaults to ``.``.
 
-            .. versionadded:: 3006
+            .. versionadded:: 3006.0
         """
         return sorted(self._it_addrm("new", "old", include_nested, separator=separator))
 
@@ -365,7 +365,7 @@ class RecursiveDictDiffer(DictDiffer):
         separator
             Separator used to indicate nested keys. Defaults to ``.``.
 
-            .. versionadded:: 3006
+            .. versionadded:: 3006.0
         """
 
         def _changed(diffs, prefix, separator):
@@ -440,7 +440,7 @@ class RecursiveDictDiffer(DictDiffer):
         separator
             Separator used to indicate nested keys. Defaults to ``.``.
 
-            .. versionadded:: 3006
+            .. versionadded:: 3006.0
         """
 
         def _unchanged(current_dict, diffs, prefix, separator):

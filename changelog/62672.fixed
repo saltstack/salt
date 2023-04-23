@@ -1,1 +1,0 @@
-Fix depenency on legacy boto module in boto3 modules

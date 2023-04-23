@@ -93,12 +93,12 @@ Wildcard matching is supported for state identifiers.
 
 * ``*`` matches zero or more characters
 * ``?`` matches a single character
-* ``[]`` matches a single character from the enclosed set 
+* ``[]`` matches a single character from the enclosed set
 
-Note that this does not follow glob rules - dots and slashes are not special, 
+Note that this does not follow glob rules - dots and slashes are not special,
 and it is matching against state identifiers, not file paths.
 
-In the example below, a change in any state managing an apache config file 
+In the example below, a change in any state managing an apache config file
 will reload/restart the service:
 
 .. code-block:: yaml
@@ -795,7 +795,6 @@ In this example, `cmd.run` would be run only if either of the `file.managed`
 states generated changes and at least one of the watched state's "result" is
 ``True``.
 
-.. _requisites-fire-event:
 
 Altering States
 ---------------
@@ -918,6 +917,29 @@ In the above case, ``some_check`` will be run prior to _each_ name -- once for
               key:  not-existing
               get_return: res
 
+.. versionchanged:: 3006.0
+
+    Since the ``unless`` requisite utilizes ``cmd.retcode``, certain parameters
+    included in the state are passed along to ``cmd.retcode``.  On occasion this
+    can cause issues, particularly if the ``shell`` option in a ``user.present``
+    is set to /sbin/nologin and this shell is passed along to ``cmd.retcode``.
+    This would cause ``cmd.retcode`` to run the command using that shell which
+    would fail regardless of the result of the command.
+
+    By including ``shell`` in ``cmd_opts_exclude``, that parameter would not be
+    passed along to the call to ``cmd.retcode``.
+
+    .. code-block:: yaml
+
+      jim_nologin:
+        user.present:
+          - name: jim
+          - shell: /sbin/nologin
+          - unless:
+            - echo hello world
+          - cmd_opts_exclude:
+            - shell
+
 .. _onlyif-requisite:
 
 onlyif
@@ -1006,6 +1028,28 @@ if the gluster commands return a 0 ret value.
               key:  does-exist
               get_return: res
 
+.. versionchanged:: 3006.0
+
+    Since the ``onlyif`` requisite utilizes ``cmd.retcode``, certain parameters
+    included in the state are passed along to ``cmd.retcode``.  On occasion this
+    can cause issues, particularly if the ``shell`` option in a ``user.present``
+    is set to /sbin/nologin and this shell is passed along to ``cmd.retcode``.
+    This would cause ``cmd.retcode`` to run the command using that shell which
+    would fail regardless of the result of the command.
+
+    By including ``shell`` in ``cmd_opts_exclude``, that parameter would not be
+    passed along to the call to ``cmd.retcode``.
+
+    .. code-block:: yaml
+
+      jim_nologin:
+        user.present:
+          - name: jim
+          - shell: /sbin/nologin
+          - onlyif:
+            - echo hello world
+          - cmd_opts_exclude:
+            - shell
 
 .. _creates-requisite:
 
@@ -1124,6 +1168,8 @@ salt/states/ file.
 
 ``mod_run_check_cmd`` is used to check for the check_cmd options. To override
 this one, include a ``mod_run_check_cmd`` in the states file for the state.
+
+.. _requisites-fire-event:
 
 Fire Event Notifications
 ========================

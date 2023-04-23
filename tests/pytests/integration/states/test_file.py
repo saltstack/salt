@@ -13,7 +13,7 @@ from pytestshellutils.utils import ports
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -239,7 +239,7 @@ def salt_secondary_master(request, salt_factories):
         "secondary-master",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     with factory.started(start_timeout=120):
         yield factory
@@ -261,7 +261,7 @@ def salt_secondary_minion(salt_secondary_master):
         "secondary-minion",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     with factory.started(start_timeout=120):
         yield factory
@@ -487,7 +487,7 @@ def _check_min_patch_version(shell):
     ret = shell.run("patch", "--version")
     assert ret.returncode == 0
     version = ret.stdout.strip().split()[2]
-    if _LooseVersion(version) < _LooseVersion(min_patch_ver):
+    if Version(version) < Version(min_patch_ver):
         pytest.xfail(
             "Minimum version of patch not found, expecting {}, found {}".format(
                 min_patch_ver, version
@@ -1278,3 +1278,32 @@ def test_issue_62611(
         state_run = next(iter(ret.data.values()))
         assert state_run["name"] == "echo MEEP MOOP"
         assert state_run["result"] is True
+
+
+def test_contents_file(salt_master, salt_call_cli, tmp_path):
+    """
+    test calling file.managed multiple times
+    with salt-call
+    """
+    target_path = tmp_path / "add-contents-file.txt"
+    sls_name = "file-contents"
+    sls_contents = """
+    add_contents_file_sls:
+      file.managed:
+        - name: {}
+        - contents: 1234
+    """.format(
+        target_path
+    )
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+    with sls_tempfile:
+        for i in range(1, 4):
+            ret = salt_call_cli.run("state.sls", sls_name)
+            assert ret.returncode == 0
+            assert ret.data
+            state_run = next(iter(ret.data.values()))
+            assert state_run["result"] is True
+            # Check to make sure the file was created
+            assert target_path.is_file()

@@ -5,6 +5,7 @@
     Test the salt cache objects
 """
 
+import logging
 import pathlib
 import time
 
@@ -221,7 +222,7 @@ def test_everything(cache_dir):
         b"\xc3\x83\xc2\xa6\xc3\x83\xc2\xb8\xc3\x83\xc2\xa5",
     ],
 )
-def test_unicode_error(cache_dir, data):
+def test_unicode_error(cache_dir, data, caplog):
     """
     Test when the data in the cache raises a UnicodeDecodeError
     we do not raise an error.
@@ -240,9 +241,17 @@ def test_unicode_error(cache_dir, data):
             }
         }
     }
-    with patch.object(salt.utils.msgpack, "load", return_value=cache_data):
+    with patch.object(
+        salt.utils.msgpack, "load", return_value=cache_data
+    ), caplog.at_level(logging.DEBUG):
         cd = cache.CacheDisk(0.3, str(path))
-        assert cd._dict == cache_data
+        # this test used to rely on msgpack throwing errors if attempt to read an empty file
+        # code now checks if file empty and returns, so we should never attempt msgpack load
+        assert cd._dict == {}
+        assert not (
+            f"Error reading cache file at '{path}': Unpack failed: incomplete input"
+            in caplog.messages
+        )
 
 
 def test_cache_corruption(cache_dir):

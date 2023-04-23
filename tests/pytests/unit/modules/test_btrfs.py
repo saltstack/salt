@@ -384,26 +384,25 @@ def test_subvolume_create_fails_parameters():
         btrfs.subvolume_create("var", qgroupids="1")
 
 
-@patch("salt.modules.btrfs.subvolume_exists")
-def test_subvolume_create_already_exists(subvolume_exists):
+def test_subvolume_create_already_exists():
     """
     Test btrfs subvolume create
     """
-    subvolume_exists.return_value = True
-    assert not btrfs.subvolume_create("var", dest="/mnt")
+    with patch("salt.modules.btrfs.subvolume_exists", return_value=True):
+        assert not btrfs.subvolume_create("var", dest="/mnt")
 
 
-@patch("salt.modules.btrfs.subvolume_exists")
-def test_subvolume_create(subvolume_exists):
+def test_subvolume_create():
     """
     Test btrfs subvolume create
     """
-    subvolume_exists.return_value = False
     salt_mock = {
         "cmd.run_all": MagicMock(return_value={"recode": 0}),
     }
     expected_path = os.path.join("/mnt", "var")
-    with patch.dict(btrfs.__salt__, salt_mock):
+    with patch(
+        "salt.modules.btrfs.subvolume_exists", return_value=False
+    ) as subvolume_exists, patch.dict(btrfs.__salt__, salt_mock):
         assert btrfs.subvolume_create("var", dest="/mnt")
         subvolume_exists.assert_called_once()
         salt_mock["cmd.run_all"].assert_called_once()
@@ -433,43 +432,40 @@ def test_subvolume_delete_fails_parameter_commit():
         btrfs.subvolume_delete(name="var", commit="maybe")
 
 
-@patch("salt.modules.btrfs.subvolume_exists")
-def test_subvolume_delete_already_missing(subvolume_exists):
+def test_subvolume_delete_already_missing():
     """
     Test btrfs subvolume delete
     """
-    subvolume_exists.return_value = False
-    assert not btrfs.subvolume_delete(name="var", names=["tmp"])
+    with patch("salt.modules.btrfs.subvolume_exists", return_value=False):
+        assert not btrfs.subvolume_delete(name="var", names=["tmp"])
 
 
-@patch("salt.modules.btrfs.subvolume_exists")
-def test_subvolume_delete_already_missing_name(subvolume_exists):
+def test_subvolume_delete_already_missing_name():
     """
     Test btrfs subvolume delete
     """
-    subvolume_exists.return_value = False
-    assert not btrfs.subvolume_delete(name="var")
+    with patch("salt.modules.btrfs.subvolume_exists", return_value=False):
+        assert not btrfs.subvolume_delete(name="var")
 
 
-@patch("salt.modules.btrfs.subvolume_exists")
-def test_subvolume_delete_already_missing_names(subvolume_exists):
+def test_subvolume_delete_already_missing_names():
     """
     Test btrfs subvolume delete
     """
-    subvolume_exists.return_value = False
-    assert not btrfs.subvolume_delete(names=["tmp"])
+    with patch("salt.modules.btrfs.subvolume_exists", return_value=False):
+        assert not btrfs.subvolume_delete(names=["tmp"])
 
 
-@patch("salt.modules.btrfs.subvolume_exists")
-def test_subvolume_delete(subvolume_exists):
+def test_subvolume_delete():
     """
     Test btrfs subvolume delete
     """
-    subvolume_exists.return_value = True
     salt_mock = {
         "cmd.run_all": MagicMock(return_value={"recode": 0}),
     }
-    with patch.dict(btrfs.__salt__, salt_mock):
+    with patch("salt.modules.btrfs.subvolume_exists", return_value=True), patch.dict(
+        btrfs.__salt__, salt_mock
+    ):
         assert btrfs.subvolume_delete("var", names=["tmp"])
         salt_mock["cmd.run_all"].assert_called_once()
         salt_mock["cmd.run_all"].assert_called_with(
