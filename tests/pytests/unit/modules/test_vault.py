@@ -313,14 +313,13 @@ def test_destroy_secret_err(caplog, args):
         )
 
 
-@pytest.mark.parametrize("connection_only", [True, False])
-def test_clear_token_cache(connection_only):
+def test_clear_token_cache():
     """
     Ensure clear_token_cache wraps the utility function properly
     """
     with patch("salt.utils.vault.clear_cache") as cache:
-        vault.clear_token_cache(connection_only=connection_only)
-        cache.assert_called_once_with(ANY, ANY, connection=connection_only)
+        vault.clear_token_cache()
+        cache.assert_called_once_with(ANY, ANY, connection=True, session=False)
 
 
 def test_policy_fetch(query, policy_response):

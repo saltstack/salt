@@ -139,11 +139,11 @@ def clear_cache(
     by default.
 
     It is organized in a hierarchy: ``/vault/connection/session/leases``.
-    (italics mark data that is only cached when receiving configuration from a master)
+    (*italics* mark data that is only cached when receiving configuration from a master)
 
-    ``connection`` contains KV metadata (by default) and *configuration*.
-    ``session`` contains the currently active token and *auth credentials*.
-    ``leases`` contains issued leases like database credentials.
+    ``connection`` contains KV metadata (by default), *configuration* and *(AppRole) auth credentials*.
+    ``session`` contains the currently active token.
+    ``leases`` contains leases issued to the currently active token like database credentials.
 
     A master keeps a separate instance of the above per minion
     in ``minions/<minion_id>``.
@@ -159,12 +159,14 @@ def clear_cache(
 
     connection
         Only clear the cached data scoped to a connection. This includes
-        configuration, auth credentials and leases. Defaults to true.
+        configuration, auth credentials, the currently active auth token
+        as well as leases and KV metadata (by default). Defaults to true.
         Set this to false to clear all Vault caches.
 
     session
         Only clear the cached data scoped to a session. This only includes
-        leases, not configuration/auth credentials. Defaults to false.
+        leases and the currently active auth token, but not configuration
+        or (AppRole) auth credentials. Defaults to false.
         Setting this to true will keep the connection cache, regardless
         of ``connection``.
 
@@ -178,28 +180,37 @@ def clear_cache(
         opts, connection=connection, session=session, force_local=force_local
     )
     client, config = _build_revocation_client(opts, context, force_local=force_local)
-    # config and client will both be None if the cached data is invalid
-    if config:
-        try:
-            # Don't revoke the only token that is available to us
-            if config["auth"]["method"] != "token" or not (
-                force_local
-                or hlp._get_salt_run_type(opts)
-                in (hlp.SALT_RUNTYPE_MASTER, hlp.SALT_RUNTYPE_MINION_LOCAL)
-            ):
-                if config["cache"]["clear_attempt_revocation"]:
-                    delta = config["cache"]["clear_attempt_revocation"]
-                    if delta is True:
-                        delta = 1
-                    client.token_revoke(delta)
-                if config["cache"]["expire_events"]:
-                    scope = cbank.split("/")[-1]
-                    _get_event(opts)(tag=f"vault/cache/{scope}/clear")
-        except Exception as err:  # pylint: disable=broad-except
-            log.error(
-                "Failed to revoke token or send event before clearing cache:\n"
-                f"{type(err).__name__}: {err}"
-            )
+    if (
+        not ckey
+        or (not (connection or session) and ckey == "connection")
+        or (session and ckey == TOKEN_CKEY)
+        or ((connection and not session) and ckey == "config")
+    ):
+        client, config = _build_revocation_client(
+            opts, context, force_local=force_local
+        )
+        # config and client will both be None if the cached data is invalid
+        if config:
+            try:
+                # Don't revoke the only token that is available to us
+                if config["auth"]["method"] != "token" or not (
+                    force_local
+                    or hlp._get_salt_run_type(opts)
+                    in (hlp.SALT_RUNTYPE_MASTER, hlp.SALT_RUNTYPE_MINION_LOCAL)
+                ):
+                    if config["cache"]["clear_attempt_revocation"]:
+                        delta = config["cache"]["clear_attempt_revocation"]
+                        if delta is True:
+                            delta = 1
+                        client.token_revoke(delta)
+                    if config["cache"]["expire_events"]:
+                        scope = cbank.split("/")[-1]
+                        _get_event(opts)(tag=f"vault/cache/{scope}/clear")
+            except Exception as err:  # pylint: disable=broad-except
+                log.error(
+                    "Failed to revoke token or send event before clearing cache:\n"
+                    f"{type(err).__name__}: {err}"
+                )
 
     if cbank in context:
         if ckey is None:
@@ -847,20 +858,30 @@ def get_lease_store(opts, context, get_config=False):
     return store
 
 
-def get_approle_api(opts, context, force_local=False):
+def get_approle_api(opts, context, force_local=False, get_config=False):
     """
     Return an instance of AppRoleApi containing an AuthenticatedVaultClient.
     """
-    client = get_authd_client(opts, context, force_local=force_local)
-    return vapi.AppRoleApi(client)
+    client, config = get_authd_client(
+        opts, context, force_local=force_local, get_config=True
+    )
+    api = vapi.AppRoleApi(client)
+    if get_config:
+        return api, config
+    return api
 
 
-def get_identity_api(opts, context, force_local=False):
+def get_identity_api(opts, context, force_local=False, get_config=False):
     """
     Return an instance of IdentityApi containing an AuthenticatedVaultClient.
     """
-    client = get_authd_client(opts, context, force_local=force_local)
-    return vapi.IdentityApi(client)
+    client, config = get_authd_client(
+        opts, context, force_local=force_local, get_config=True
+    )
+    api = vapi.IdentityApi(client)
+    if get_config:
+        return api, config
+    return api
 
 
 def parse_config(config, validate=True, opts=None, require_token=True):

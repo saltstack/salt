@@ -116,9 +116,13 @@ class AccessorMixin:
     Mixin that manages accessor information relevant for tokens/secret IDs
     """
 
-    def __init__(self, accessor=None, wrapped_accessor=None, **kwargs):
-        self.accessor = accessor if wrapped_accessor is None else wrapped_accessor
-        self.wrapping_accessor = accessor if wrapped_accessor is not None else None
+    def __init__(self, accessor=None, wrapping_accessor=None, **kwargs):
+        # ensure the accessor always points to the actual entity
+        if "wrapped_accessor" in kwargs:
+            wrapping_accessor = accessor
+            accessor = kwargs.pop("wrapped_accessor")
+        self.accessor = accessor
+        self.wrapping_accessor = wrapping_accessor
         super().__init__(**kwargs)
 
     def accessor_payload(self):
@@ -308,15 +312,19 @@ class VaultWrappedResponse(AccessorMixin, BaseLease):
 
     def __init__(
         self,
-        token,
-        ttl,
         creation_path,
-        wrapped_accessor=None,
         **kwargs,
     ):
-        super().__init__(lease_id=token, lease_duration=ttl, renewable=False, **kwargs)
+        if "token" in kwargs:
+            # Ensure response data from Vault is accepted as well
+            kwargs["lease_id"] = kwargs.pop("token")
+            kwargs["lease_duration"] = kwargs.pop("ttl")
+        if "renewable" not in kwargs:
+            # Not renewable might be incorrect, wrapped tokens are,
+            # but we cannot know what was wrapped here.
+            kwargs["renewable"] = False
+        super().__init__(**kwargs)
         self.creation_path = creation_path
-        self.wrapped_accessor = wrapped_accessor
 
     def serialize_for_minion(self):
         """

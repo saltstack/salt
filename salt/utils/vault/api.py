@@ -95,17 +95,29 @@ class AppRoleApi:
         response = self.client.post(endpoint, payload=payload, wrap=wrap)
         if wrap:
             secret_id = response
-            accessor = response.wrapped_accessor
         else:
             secret_id = vleases.VaultSecretId(**response["data"])
-            accessor = secret_id.accessor
         if not meta_info:
             return secret_id
         # Sadly, secret_id_num_uses is not part of the information returned
         meta_info = self.client.post(
-            endpoint + "-accessor/lookup", payload={"secret_id_accessor": accessor}
+            endpoint + "-accessor/lookup",
+            payload={"secret_id_accessor": secret_id.accessor},
         )["data"]
         return secret_id, meta_info
+
+    def read_secret_id(self, name, secret_id=None, accessor=None, mount="approle"):
+        if not secret_id and not accessor:
+            raise VaultInvocationError(
+                "Need either secret_id or accessor to read secret ID."
+            )
+        if secret_id:
+            endpoint = f"auth/{mount}/role/{name}/secret-id/lookup"
+            payload = {"secret_id": str(secret_id)}
+        else:
+            endpoint = f"auth/{mount}/role/{name}/secret-id-accessor/lookup"
+            payload = {"secret_id_accessor": accessor}
+        return self.client.post(endpoint, payload=payload)["data"]
 
     def destroy_secret_id(self, name, secret_id=None, accessor=None, mount="approle"):
         if not secret_id and not accessor:

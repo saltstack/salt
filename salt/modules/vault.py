@@ -177,6 +177,13 @@ This enables you to write templated ACL policies like:
         capabilities = ["read"]
     }
 
+.. note::
+
+    AppRole policies and entity metadata are generally not updated
+    automatically. After a change, you will need to synchronize
+    them by running :py:func:`vault.sync_approles <salt.runners.vault.sync_approles>`
+    or :py:func:`vault.sync_entities <salt.runners.vault.sync_entities>` respectively.
+
 All possible master configuration options with defaults:
 
 .. code-block:: yaml
@@ -266,7 +273,7 @@ method
     Currently only ``token`` and ``approle`` auth types are supported.
     Defaults to ``token``.
 
-    Approle is the preferred way to authenticate with Vault as it provides
+    AppRole is the preferred way to authenticate with Vault as it provides
     some advanced options to control the authentication process.
     Please see the `Vault documentation <https://www.vaultproject.io/docs/auth/approle.html>`_
     for more information.
@@ -343,11 +350,11 @@ token_lifecycle
 
         Since leases like database credentials are tied to a token, setting this to
         a much higher value than the default can be necessary, depending on your
-        specific use case.
+        specific use case and configuration.
 
     ``renew_increment`` specifies the amount of time the token's validity should
     be requested to be renewed for when renewing a token. When unset, will extend
-    the token's validity by its initial ttl.
+    the token's validity by its default ttl.
     Set this to ``false`` to disable token renewals.
 
     .. note::
@@ -356,7 +363,7 @@ token_lifecycle
 
 ``cache``
 ~~~~~~~~~
-Configures secret/lease and metadata cache (for KV secrets) on all hosts
+Configures token/lease and metadata cache (for KV secrets) on all hosts
 as well as configuration cache on minions that receive issued credentials.
 
 backend
@@ -365,7 +372,7 @@ backend
         This used to be found in ``auth:token_backend``.
 
     The cache backend in use. Defaults to ``session``, which will store the
-    Vault configuration in memory only for that session.
+    Vault configuration in memory only for that specific Salt run.
     ``disk``/``file``/``localfs`` will force using the localfs driver, regardless
     of configured minion data cache.
     Setting this to anything else will use the default configured cache for
@@ -396,7 +403,7 @@ config
     cache expiration. Changed ``server`` configuration on the master will
     still be recognized, but changes in ``auth`` and ``cache`` will need
     a manual update using ``vault.update_config`` or cache clearance
-    using ``vault.clear_token_cache``.
+    using ``vault.clear_cache``.
 
     .. note::
 
@@ -418,8 +425,9 @@ kv_metadata
     The time in seconds to cache KV metadata used to determine if a path
     is using version 1/2 for. Defaults to ``connection``, which will clear
     the metadata cache once a new configuration is requested from the
-    master. Setting this to ``None``/``null`` will keep the information
-    indefinitely until the cache is cleared manually.
+    master. Setting this to ``null`` will keep the information
+    indefinitely until the cache is cleared manually using
+    ``vault.clear_cache`` with ``connection=false``.
 
 secret
     .. versionadded:: 3007.0
@@ -479,10 +487,15 @@ token
     .. versionchanged:: 3007.0
 
         This used to be found in ``auth:ttl`` and ``auth:uses``.
+        The possible parameters were synchronized with the Vault nomenclature:
+
+          * ``ttl`` previously was mapped to ``explicit_max_ttl`` on Vault, not ``ttl``.
+            For the same behavior as before, you will need to set ``explicit_max_ttl`` now.
+          * ``uses`` is now called ``num_uses``.
 
     See the `Vault token API docs <https://developer.hashicorp.com/vault/api-docs/auth/token#create-token>`_
     for details. To make full use of multi-use tokens, you should configure a cache
-    that survives a single session.
+    that survives a single session (e.g. ``disk``).
 
     .. note::
 
@@ -494,16 +507,8 @@ allow_minion_override_params
 
         This used to be found in ``auth:allow_minion_override``.
 
-    Whether to allow minions to request to override parameters for issuing credentials,
-    especially ``ttl`` and ``num_uses``. Defaults to False.
-
-    .. note::
-
-        Minion override parameters can be specified in the minion configuration
-        under ``vault:issue_params``. ``ttl`` and ``uses`` always refer to
-        issued token lifecycle settings. For AppRoles specifically, there
-        are more parameters, such as ``secret_id_num_uses`` and ``secret_id_ttl``.
-        ``bind_secret_id`` can not be overridden.
+    Whether to allow minions to request to override parameters for issuing credentials.
+    See ``issue_params`` below.
 
 wrap
     .. versionadded:: 3007.0
@@ -595,7 +600,7 @@ cache_time
 
     .. note::
 
-        Only effective (and sensible) when issuing tokens to minions. Token policies
+        Only effective when issuing tokens to minions. Token policies
         need to be compiled every time a token is requested, while AppRole-associated
         policies are written to Vault configuration the first time authentication data
         is requested (they can be refreshed on demand by running
@@ -689,6 +694,8 @@ Minion configuration (optional):
     .. versionchanged:: 3007.0
 
         For token issuance, this used to be found in ``auth:ttl`` and ``auth:uses``.
+        Mind that the parameter names have been synchronized with Vault, see notes
+        above (TLDR: ``ttl`` => ``explicit_max_ttl``, ``uses`` => ``num_uses``.
 
 .. note::
 
@@ -865,8 +872,6 @@ def patch_secret(path, **kwargs):
     path
         The path to the secret, including mount.
     """
-    # TODO: patch can be emulated as read, local update and write
-    # -> catch VaultPermissionDeniedError and try that way
     log.debug("Patching vault secrets for %s at %s", __grains__.get("id"), path)
     data = {x: y for x, y in kwargs.items() if not x.startswith("__")}
     try:
@@ -1024,9 +1029,51 @@ def list_secrets(path, default=NOT_SET, keys_only=False):
         return default
 
 
-def clear_token_cache(connection_only=True):
+def clear_cache(connection=True, session=False):
+    """
+    .. versionadded:: 3007.0
+
+    Delete Vault caches. Will ensure the current token and associated leases
+    are revoked by default.
+
+    The cache is organized in a hierarchy: ``/vault/connection/session/leases``.
+    (*italics* mark data that is only cached when receiving configuration from a master)
+
+    ``connection`` contains KV metadata (by default), *configuration* and *(AppRole) auth credentials*.
+    ``session`` contains the currently active token.
+    ``leases`` contains leases issued to the currently active token like database credentials.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vault.clear_cache
+        salt '*' vault.clear_cache session=True
+
+    connection
+        Only clear the cached data scoped to a connection. This includes
+        configuration, auth credentials, the currently active auth token
+        as well as leases and KV metadata (by default). Defaults to true.
+        Set this to false to clear all Vault caches.
+
+    session
+        Only clear the cached data scoped to a session. This only includes
+        leases and the currently active auth token, but not configuration
+        or (AppRole) auth credentials. Defaults to false.
+        Setting this to true will keep the connection cache, regardless
+        of ``connection``.
+    """
+    return vault.clear_cache(
+        __opts__, __context__, connection=connection, session=session
+    )
+
+
+def clear_token_cache():
     """
     .. versionchanged:: 3001
+    .. versionchanged:: 3007.0
+
+        This is now an alias for ``vault.clear_cache`` with ``connection=True``.
 
     Delete minion Vault token cache.
 
@@ -1035,18 +1082,9 @@ def clear_token_cache(connection_only=True):
     .. code-block:: bash
 
         salt '*' vault.clear_token_cache
-
-    connection_only
-        .. versionadded:: 3007.0
-
-        Only delete cache data scoped to a connection configuration.
-        This includes config and secret cache always and KV metadata
-        cache, depending on if ``vault:cache:kv_metadata`` is set to
-        ``connection``, which is the default value.
-        Defaults to True.
     """
     log.debug("Deleting vault connection cache.")
-    return vault.clear_cache(__opts__, __context__, connection=connection_only)
+    return clear_cache(connection=True, session=False)
 
 
 def policy_fetch(policy):
