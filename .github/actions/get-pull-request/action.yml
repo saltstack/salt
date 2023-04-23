@@ -1,0 +1,30 @@
+
+---
+name: get-pull-request
+description: Get Pull Request
+inputs:
+  owner:
+    type: string
+  repo:
+    type: string
+  pull-number:
+    type: number
+
+outputs:
+  pull-request:
+    value: ${{ steps.get-pull-request.outputs.request }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get Pull Request
+      id: get-pull-request
+      shell: bash
+      env:
+        GITHUB_OWNER: ${{ inputs.owner }}
+        GITHUB_REPO: ${{ inputs.repo }}
+        GITHUB_PULL_NUMBER: ${{ inputs.pull-number }}
+      run: |
+        pull=$(gh api repos/$GITHUB_OWNER/$GITHUB_REPO/pulls/$GITHUB_PULL_NUMBER)
+        echo $pull
+        echo "request=$pull" >> "$GITHUB_OUTPUT"

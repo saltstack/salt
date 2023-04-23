@@ -37,6 +37,11 @@ on:
         type: string
         description: The onedir package name to use
         default: salt
+      pull-labels:
+        required: false
+        type: string
+        description: List of all the pull labels
+        default: '["test:slow", "test:core"]'
       skip-code-coverage:
         required: false
         type: boolean
@@ -194,7 +199,7 @@ jobs:
       - name: Destroy VM
         if: always() && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools --timestamps vm destroy ${{ inputs.distro-slug }}
+          tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }}
 
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v3
@@ -296,22 +301,91 @@ jobs:
             --nox-session=${{ env.NOX_SESSION }} ${{ inputs.distro-slug }} \
             ${{ matrix.tests-chunk }}
 
-      - name: Run Slow/Changed Tests
-        id: run-slow-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+      - name: Get Test Flags
+        id: get-test-flags
+        shell: bash
+        env:
+          PULL_LABELS: ${{ inputs.pull-labels }}
+        run: |
+          echo "$PULL_LABELS"
+          # shellcheck disable=SC2086
+          no_fast_tests="$(jq -c '. | any(index("test:no-fast"))' <<< $PULL_LABELS)"
+          # shellcheck disable=SC2086
+          slow_tests="$(jq -c '. | any(index("test:slow"))' <<< $PULL_LABELS)"
+          # shellcheck disable=SC2086
+          core_tests="$(jq -c '. | any(index("test:core"))' <<< $PULL_LABELS)"
+          # shellcheck disable=SC2086
+          flaky_jail_tests="$(jq -c '. | any(index("test:flaky-jail"))' <<< $PULL_LABELS)"
+          echo "$no_fast_tests"
+          echo "$slow_tests"
+          echo "$core_tests"
+          echo "$flaky_jail_tests"
+          # shellcheck disable=SC2086
+          {
+          echo "no_fast_tests=$no_fast_tests";
+          echo "slow_tests=$slow_tests";
+          echo "core_tests=$core_tests";
+          echo "flaky_jail_tests=$flaky_jail_tests";
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run Fast/Changed Tests
+        id: run-fast-changed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.no_fast_tests == 'true' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
-            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
-            ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- \
-            --run-slow --suppress-no-test-exit-code --from-filenames=testrun-changed-files.txt
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            ${{ matrix.tests-chunk }} -- --suppress-no-test-exit-code \
+            --from-filenames=testrun-changed-files.txt
+
+      - name: Run Slow/Changed Tests
+        id: run-slow-changed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.slow_tests == 'false' }}
+        run: |
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            ${{ matrix.tests-chunk }} -- --no-fast-tests --slow-tests --suppress-no-test-exit-code \
+            --from-filenames=testrun-changed-files.txt
+
+      - name: Run Core/Changed Tests
+        id: run-core-changed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.core_tests == 'false' }}
+        run: |
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            ${{ matrix.tests-chunk }} -- --no-fast-tests --core-tests --suppress-no-test-exit-code \
+            --from-filenames=testrun-changed-files.txt
 
       - name: Run Fast Tests
         id: run-fast-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.no_fast_tests == 'false' }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
             ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }}
+
+      - name: Run Slow Tests
+        id: run-slow-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.slow_tests == 'true' }}
+        run: |
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            ${{ matrix.tests-chunk }} -- --no-fast-tests --slow-tests
+
+      - name: Run Core Tests
+        id: run-core-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.core_tests == 'true' }}
+        run: |
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            ${{ matrix.tests-chunk }} -- --no-fast-tests --core-tests
+
+      - name: Run Flaky Tests
+        id: run-flaky-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && steps.get-test-flags.outputs.flaky_jail_tests == 'false' }}
+        run: |
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+            --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ inputs.distro-slug }} \
+            ${{ matrix.tests-chunk }} -- --no-fast-tests --flaky-jail
 
       - name: Run Full Tests
         id: run-full-tests
@@ -319,7 +393,7 @@ jobs:
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
             --nox-session=${{ env.NOX_SESSION }} --rerun-failures ${{ (inputs.skip-code-coverage && matrix.tests-chunk != 'unit') && '--skip-code-coverage' || '' }} \
-            ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --run-slow
+            ${{ inputs.distro-slug }} ${{ matrix.tests-chunk }} -- --slow-tests --core-tests
 
       - name: Combine Coverage Reports
         if: always() && inputs.skip-code-coverage == false && steps.spin-up-vm.outcome == 'success' && job.status != 'cancelled'
@@ -343,7 +417,7 @@ jobs:
       - name: Destroy VM
         if: always()
         run: |
-          tools --timestamps vm destroy ${{ inputs.distro-slug }} || true
+          tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }} || true
 
       - name: Upload Code Coverage Test Run Artifacts
         if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'

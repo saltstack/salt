@@ -3,6 +3,11 @@
   <{ job_name }>:
     <%- do test_repo_needs.append(job_name) %>
     name: Test Linux Package Downloads
+    <%- if gh_environment == "staging" %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    <%- else %>
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    <%- endif %>
     needs:
       - prepare-workflow
       - publish-repositories
@@ -25,6 +30,11 @@
   <{ job_name }>:
     <%- do test_repo_needs.append(job_name) %>
     name: Test macOS Package Downloads
+    <%- if gh_environment == "staging" %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    <%- else %>
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    <%- endif %>
     needs:
       - prepare-workflow
       - publish-repositories
@@ -46,6 +56,11 @@
 
   <{ job_name }>:
     <%- do test_repo_needs.append(job_name) %>
+    <%- if gh_environment == "staging" %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    <%- else %>
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    <%- endif %>
     name: Test Windows Package Downloads
     needs:
       - prepare-workflow

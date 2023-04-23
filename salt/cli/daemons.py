@@ -563,7 +563,6 @@ class Syndic(
                 verify_env(
                     [
                         self.config["pki_dir"],
-                        self.config["cachedir"],
                         self.config["sock_dir"],
                         self.config["extension_modules"],
                     ],
