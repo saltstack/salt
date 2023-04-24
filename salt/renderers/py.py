@@ -52,6 +52,7 @@ data will typically be injected into the script as one or more global
 variables:
 
 .. code-block:: jinja
+
     /etc/http/conf/http.conf:
       file.managed:
         - source: salt://apache/generate_http_conf.py
