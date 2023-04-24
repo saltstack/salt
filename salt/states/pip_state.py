@@ -565,11 +565,6 @@ def installed(
     process_dependency_links
         Enable the processing of dependency links
 
-    bin_env : None
-        Absolute path to a virtual environment directory or absolute path to
-        a pip executable. The example below assumes a virtual environment
-        has been created at ``/foo/.virtualenvs/bar``.
-
     env_vars
         Add or modify environment variables. Useful for tweaking build steps,
         such as specifying INCLUDE or LIBRARY paths in Makefiles, build scripts or
@@ -593,29 +588,34 @@ def installed(
         Mark this host as trusted, even though it does not have valid or any
         HTTPS.
 
-    Example:
+    bin_env : None
+        Absolute path to a virtual environment directory or absolute path to
+        a pip executable. The example below assumes a virtual environment
+        has been created at ``/foo/.virtualenvs/bar``.
 
-    .. code-block:: yaml
+        Example:
 
-        django:
-          pip.installed:
-            - name: django >= 1.6, <= 1.7
-            - bin_env: /foo/.virtualenvs/bar
-            - require:
-              - pkg: python-pip
+        .. code-block:: yaml
 
-    Or
+            django:
+            pip.installed:
+                - name: django >= 1.6, <= 1.7
+                - bin_env: /foo/.virtualenvs/bar
+                - require:
+                - pkg: python-pip
 
-    Example:
+        Or
 
-    .. code-block:: yaml
+        Example:
 
-        django:
-          pip.installed:
-            - name: django >= 1.6, <= 1.7
-            - bin_env: /foo/.virtualenvs/bar/bin/pip
-            - require:
-              - pkg: python-pip
+        .. code-block:: yaml
+
+            django:
+            pip.installed:
+                - name: django >= 1.6, <= 1.7
+                - bin_env: /foo/.virtualenvs/bar/bin/pip
+                - require:
+                - pkg: python-pip
 
     .. admonition:: Attention
 
@@ -845,9 +845,11 @@ def installed(
     # No requirements case.
     # Check pre-existence of the requested packages.
     else:
-        # Attempt to pre-cache a the current pip list
+        # Attempt to pre-cache the current pip list
         try:
-            pip_list = __salt__["pip.list"](bin_env=bin_env, user=user, cwd=cwd)
+            pip_list = __salt__["pip.list"](
+                bin_env=bin_env, user=user, cwd=cwd, env_vars=env_vars
+            )
         # If we fail, then just send False, and we'll try again in the next function call
         except Exception as exc:  # pylint: disable=broad-except
             log.exception(exc)

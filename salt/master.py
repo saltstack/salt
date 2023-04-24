@@ -186,6 +186,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         # Track key rotation intervals
         self.rotate = int(time.time())
         # A serializer for general maint operations
+        self.restart_interval = int(self.opts["maintenance_interval"])
 
     def _post_fork_init(self):
         """
@@ -243,21 +244,28 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         # init things that need to be done after the process is forked
         self._post_fork_init()
 
-        # Make Start Times
-        last = int(time.time())
+        # Start of process for maintenance process restart interval
+        start = time.time()
+
+        # Unset last value will cause the interval items to run on the first
+        # loop iteration. This ensurs we always run them even if
+        # maintenance_interval happens to be less than loop_interval or
+        # git_update_interval
+        last = None
+
         # update git_pillar on first loop
         last_git_pillar_update = 0
+        now = int(time.time())
 
         git_pillar_update_interval = self.opts.get("git_pillar_update_interval", 0)
         old_present = set()
-        while True:
-            now = int(time.time())
+        while time.time() - start < self.restart_interval:
             log.trace("Running maintenance routines")
-            if (now - last) >= self.loop_interval:
+            if not last or (now - last) >= self.loop_interval:
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
-            if (now - last_git_pillar_update) >= git_pillar_update_interval:
+            if not last or (now - last_git_pillar_update) >= git_pillar_update_interval:
                 last_git_pillar_update = now
                 self.handle_git_pillar()
             self.handle_schedule()
@@ -266,6 +274,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.handle_key_rotate(now)
             salt.utils.verify.check_max_open_files(self.opts)
             last = now
+            now = int(time.time())
             time.sleep(self.loop_interval)
 
     def handle_key_cache(self):
@@ -462,7 +471,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
                 )
 
     @classmethod
-    def update(cls, interval, backends, timeout=300):
+    def update(cls, interval, backends, timeout):
         """
         Threading target which handles all updates for a given wait interval
         """
@@ -503,7 +512,11 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
         for interval in self.buckets:
             self.update_threads[interval] = threading.Thread(
                 target=self.update,
-                args=(interval, self.buckets[interval]),
+                args=(
+                    interval,
+                    self.buckets[interval],
+                    self.opts["fileserver_interval"],
+                ),
             )
             self.update_threads[interval].start()
 
@@ -1198,7 +1211,6 @@ class AESFuncs(TransportMethods):
         "_dir_list",
         "_symlink_list",
         "_file_envs",
-        "_ext_nodes",  # To be removed in 3006 (Sulfur) #60980
     )
 
     def __init__(self, opts):
@@ -1396,10 +1408,6 @@ class AESFuncs(TransportMethods):
         if load is False:
             return {}
         return self.masterapi._master_tops(load, skip_verify=True)
-
-    # Needed so older minions can request master_tops
-    # To be removed in 3006 (Sulfur) #60980
-    _ext_nodes = _master_tops
 
     def _master_opts(self, load):
         """
@@ -1725,7 +1733,7 @@ class AESFuncs(TransportMethods):
             if any(key not in load for key in ("return", "jid", "id")):
                 continue
             # if we have a load, save it
-            if load.get("load"):
+            if load.get("load") and self.opts["master_job_cache"]:
                 fstr = "{}.save_load".format(self.opts["master_job_cache"])
                 self.mminion.returners[fstr](load["jid"], load["load"])
 
@@ -1748,8 +1756,8 @@ class AESFuncs(TransportMethods):
                     ret["master_id"] = load["master_id"]
                 if "fun" in load:
                     ret["fun"] = load["fun"]
-                if "arg" in load:
-                    ret["fun_args"] = load["arg"]
+                if "fun_args" in load:
+                    ret["fun_args"] = load["fun_args"]
                 if "out" in load:
                     ret["out"] = load["out"]
                 if "sig" in load:
@@ -2172,13 +2180,16 @@ class ClearFuncs(TransportMethods):
             }
 
         # Retrieve the minions list
-        delimiter = clear_load.get("kwargs", {}).get("delimiter", DEFAULT_TARGET_DELIM)
+        delimiter = extra.get("delimiter", DEFAULT_TARGET_DELIM)
+
         _res = self.ckminions.check_minions(
             clear_load["tgt"], clear_load.get("tgt_type", "glob"), delimiter
         )
         minions = _res.get("minions", list())
         missing = _res.get("missing", list())
         ssh_minions = _res.get("ssh_minions", False)
+
+        auth_key = clear_load.get("key", None)
 
         # Check for external auth calls and authenticate
         auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(extra)
@@ -2189,20 +2200,36 @@ class ClearFuncs(TransportMethods):
         else:
             auth_check = self.loadauth.check_authentication(extra, auth_type)
 
-        # Setup authorization list variable and error information
-        auth_list = auth_check.get("auth_list", [])
+        # Setup authorization list
+        syndic_auth_list = None
+        if "auth_list" in extra:
+            syndic_auth_list = extra.pop("auth_list", [])
+        # An auth_list was provided by the syndic and we're running as the same
+        # user as the salt master process.
+        if (
+            syndic_auth_list is not None
+            and auth_key == key[self.opts.get("user", "root")]
+        ):
+            auth_list = syndic_auth_list
+        else:
+            auth_list = auth_check.get("auth_list", [])
+
         err_msg = 'Authentication failure of type "{}" occurred.'.format(auth_type)
 
         if auth_check.get("error"):
             # Authentication error occurred: do not continue.
             log.warning(err_msg)
-            return {
+            err = {
                 "error": {
                     "name": "AuthenticationError",
                     "message": "Authentication error occurred.",
                 }
             }
-
+            if "jid" in clear_load:
+                self.event.fire_event(
+                    {**clear_load, **err}, tagify([clear_load["jid"], "error"], "job")
+                )
+            return err
         # All Token, Eauth, and non-root users must pass the authorization check
         if auth_type != "user" or (auth_type == "user" and auth_list):
             # Authorize the request
@@ -2231,12 +2258,18 @@ class ClearFuncs(TransportMethods):
                         extra["username"],
                     )
                 log.warning(err_msg)
-                return {
+                err = {
                     "error": {
                         "name": "AuthorizationError",
                         "message": "Authorization error occurred.",
                     }
                 }
+                if "jid" in clear_load:
+                    self.event.fire_event(
+                        {**clear_load, **err},
+                        tagify([clear_load["jid"], "error"], "job"),
+                    )
+                return err
 
             # Perform some specific auth_type tasks after the authorization check
             if auth_type == "token":
@@ -2268,6 +2301,9 @@ class ClearFuncs(TransportMethods):
         if jid is None:
             return {"enc": "clear", "load": {"error": "Master failed to assign jid"}}
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
+
+        if self.opts.get("order_masters"):
+            payload["auth_list"] = auth_list
 
         # Send it!
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)

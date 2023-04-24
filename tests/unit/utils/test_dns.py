@@ -22,7 +22,7 @@ from salt.utils.dns import (
 )
 from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -319,7 +319,9 @@ class DNSlookupsCase(TestCase):
                         msg="Error parsing DNSSEC'd {} returns".format(rec_t),
                     )
 
-    @skipIf(not salt.utils.dns.HAS_NSLOOKUP, "nslookup is not available")
+    @pytest.mark.skipif(
+        not salt.utils.dns.HAS_NSLOOKUP, reason="nslookup is not available"
+    )
     @pytest.mark.requires_network
     def test_lookup_with_servers(self):
         rights = {
@@ -362,7 +364,7 @@ class DNSlookupsCase(TestCase):
                         test_res,
                     )
 
-    @skipIf(not salt.utils.dns.HAS_DIG, "dig is not available")
+    @pytest.mark.skipif(not salt.utils.dns.HAS_DIG, reason="dig is not available")
     def test_dig_options(self):
         cmd = "dig {} -v".format(salt.utils.dns.DIG_OPTIONS)
         cmd = salt.modules.cmdmod.retcode(

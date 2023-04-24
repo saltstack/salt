@@ -1,6 +1,6 @@
 """
 Grains from cloud metadata servers at 169.254.169.254 in
-google cloud engine
+google compute engine
 
 .. versionadded:: 3005.0
 
@@ -16,20 +16,17 @@ metadata server set `metadata_server_grains: True` in the minion config.
 """
 
 import logging
-import os
 
-import salt.utils.data
 import salt.utils.http as http
 import salt.utils.json
-import salt.utils.stringutils
 
-# metadata server information
-HOST = "http://169.254.169.254/"
-
+HOST = "http://169.254.169.254"
+URL = f"{HOST}/computeMetadata/v1/?alt=json&recursive=true"
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
+    # Check if metadata_server_grains minion option is enabled
     if __opts__.get("metadata_server_grains", False) is False:
         return False
     googletest = http.query(HOST, status=True, headers=True)
@@ -41,46 +38,10 @@ def __virtual__():
     return True
 
 
-def _search(prefix="computeMetadata/v1/"):
-    """
-    Recursively look up all grains in the metadata server
-    """
-    ret = {}
-    heads = ["Metadata-Flavor: Google"]
-    linedata = http.query(os.path.join(HOST, prefix), headers=True, header_list=heads)
-    if "body" not in linedata:
-        return ret
-    body = salt.utils.stringutils.to_unicode(linedata["body"])
-    if (
-        linedata["headers"].get("Content-Type", "text/plain")
-        == "application/octet-stream"
-    ):
-        return body
-    for line in body.split("\n"):
-        # Block list, null bytes are causing oddities. and project contains ssh keys used to login to the system.
-        # so keeping both from showing up in the grains.
-        if line in ["", "project/"]:
-            continue
-        if line.endswith("/"):
-            ret[line[:-1]] = _search(prefix=os.path.join(prefix, line))
-        else:
-            retdata = http.query(
-                os.path.join(HOST, prefix, line), header_list=heads
-            ).get("body", None)
-            if isinstance(retdata, bytes):
-                try:
-                    ret[line] = salt.utils.json.loads(
-                        salt.utils.stringutils.to_unicode(retdata)
-                    )
-                except ValueError:
-                    ret[line] = salt.utils.stringutils.to_unicode(retdata)
-            else:
-                ret[line] = retdata
-    return salt.utils.data.decode(ret)
-
-
 def metadata():
-    """
-    main function to output grains into loader
-    """
-    return _search()
+    """Takes no arguments, returns a dictionary of metadata values from Google."""
+    log.debug("All checks true - loading gce metadata")
+    result = http.query(URL, headers=True, header_list=["Metadata-Flavor: Google"])
+    metadata = salt.utils.json.loads(result.get("body", {}))
+
+    return metadata

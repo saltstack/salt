@@ -38,7 +38,7 @@ def preserve_rhel_yum_conf():
     os.remove(tmp_file)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def refresh_db(ctx, grains, modules):
     if "refresh" not in ctx:
         modules.pkg.refresh_db()
@@ -72,7 +72,7 @@ def test_pkg(grains):
 
 @pytest.mark.requires_salt_modules("pkg.list_pkgs")
 @pytest.mark.slow_test
-def test_list(modules):
+def test_list(modules, refresh_db):
     """
     verify that packages are installed
     """
@@ -108,7 +108,7 @@ def test_version_cmp(grains, modules):
 @pytest.mark.requires_salt_modules("pkg.mod_repo", "pkg.del_repo", "pkg.get_repo")
 @pytest.mark.slow_test
 @pytest.mark.requires_network
-def test_mod_del_repo(grains, modules):
+def test_mod_del_repo(grains, modules, refresh_db):
     """
     test modifying and deleting a software repository
     """
@@ -158,7 +158,7 @@ def test_mod_del_repo(grains, modules):
 
 
 @pytest.mark.slow_test
-def test_mod_del_repo_multiline_values(modules):
+def test_mod_del_repo_multiline_values(modules, refresh_db):
     """
     test modifying and deleting a software repository defined with multiline values
     """
@@ -210,16 +210,12 @@ def test_owner(modules):
     """
     test finding the package owning a file
     """
-    func = "pkg.owner"
     ret = modules.pkg.owner("/bin/ls")
     assert len(ret) != 0
 
 
 # Similar to pkg.owner, but for FreeBSD's pkgng
-@pytest.mark.skipif(
-    not salt.utils.platform.is_freebsd(),
-    reason="test for new package manager for FreeBSD",
-)
+@pytest.mark.skip_on_freebsd(reason="test for new package manager for FreeBSD")
 @pytest.mark.requires_salt_modules("pkg.which")
 def test_which(modules):
     """
@@ -234,7 +230,7 @@ def test_which(modules):
 @pytest.mark.requires_salt_modules("pkg.version", "pkg.install", "pkg.remove")
 @pytest.mark.slow_test
 @pytest.mark.requires_network
-def test_install_remove(modules, test_pkg):
+def test_install_remove(modules, test_pkg, refresh_db):
     """
     successfully install and uninstall a package
     """
@@ -260,8 +256,7 @@ def test_install_remove(modules, test_pkg):
 
 
 @pytest.mark.destructive_test
-@pytest.mark.skipif(
-    salt.utils.platform.is_photonos(),
+@pytest.mark.skip_on_photonos(
     reason="package hold/unhold unsupported on Photon OS",
 )
 @pytest.mark.requires_salt_modules(
@@ -275,7 +270,7 @@ def test_install_remove(modules, test_pkg):
 @pytest.mark.slow_test
 @pytest.mark.requires_network
 @pytest.mark.requires_salt_states("pkg.installed")
-def test_hold_unhold(grains, modules, states, test_pkg):
+def test_hold_unhold(grains, modules, states, test_pkg, refresh_db):
     """
     test holding and unholding a package
     """
@@ -321,7 +316,7 @@ def test_hold_unhold(grains, modules, states, test_pkg):
 @pytest.mark.requires_salt_modules("pkg.refresh_db")
 @pytest.mark.slow_test
 @pytest.mark.requires_network
-def test_refresh_db(grains, tmp_path, minion_opts):
+def test_refresh_db(grains, tmp_path, minion_opts, refresh_db):
     """
     test refreshing the package database
     """
@@ -348,7 +343,7 @@ def test_refresh_db(grains, tmp_path, minion_opts):
 
 @pytest.mark.requires_salt_modules("pkg.info_installed")
 @pytest.mark.slow_test
-def test_pkg_info(grains, modules, test_pkg):
+def test_pkg_info(grains, modules, test_pkg, refresh_db):
     """
     Test returning useful information on Ubuntu systems.
     """
@@ -384,7 +379,7 @@ def test_pkg_info(grains, modules, test_pkg):
 )
 @pytest.mark.slow_test
 @pytest.mark.requires_network
-def test_pkg_upgrade_has_pending_upgrades(grains, modules, test_pkg):
+def test_pkg_upgrade_has_pending_upgrades(grains, modules, test_pkg, refresh_db):
     """
     Test running a system upgrade when there are packages that need upgrading
     """
@@ -455,15 +450,13 @@ def test_pkg_upgrade_has_pending_upgrades(grains, modules, test_pkg):
 
 
 @pytest.mark.destructive_test
-@pytest.mark.skipif(
-    salt.utils.platform.is_darwin() is True,
-    reason="The jenkins user is equivalent to root on mac, causing the test to be"
-    " unrunnable",
+@pytest.mark.skip_on_darwin(
+    reason="The jenkins user is equivalent to root on mac, causing the test to be unrunnable"
 )
 @pytest.mark.requires_salt_modules("pkg.remove", "pkg.latest_version")
 @pytest.mark.slow_test
 @pytest.mark.requires_salt_states("pkg.removed")
-def test_pkg_latest_version(grains, modules, states, test_pkg):
+def test_pkg_latest_version(grains, modules, states, test_pkg, refresh_db):
     """
     Check that pkg.latest_version returns the latest version of the uninstalled package.
     The package is not installed. Only the package version is checked.

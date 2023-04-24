@@ -376,8 +376,10 @@ def run(**kwargs):
     legacy_run = False
 
     keys = list(kwargs)
-    if "name" in keys:
-        keys.remove("name")
+    ignored_kwargs = ["name", "__reqs__", "sfun"]
+    for item in ignored_kwargs:
+        if item in keys:
+            keys.remove(item)
 
     # The rest of the keys should be function names for new-style syntax
     for name in keys:

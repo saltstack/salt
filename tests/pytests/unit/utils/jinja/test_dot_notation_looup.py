@@ -2,7 +2,6 @@
 Tests for salt.utils.jinja
 """
 
-import salt.config
 import salt.loader
 
 # dateutils is needed so that the strftime jinja filter is loaded
@@ -15,13 +14,11 @@ from salt.utils.jinja import SaltCacheLoader
 from tests.support.mock import Mock, patch
 
 
-def render(tmpl_str, context=None):
+def render(tmpl_str, minion_opts, context=None):
     functions = {
         "mocktest.ping": lambda: True,
         "mockgrains.get": lambda x: "jerry",
     }
-
-    minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
 
     _render = salt.loader.render(minion_opts, functions)
 
@@ -30,29 +27,29 @@ def render(tmpl_str, context=None):
     return jinja(tmpl_str, context=context or {}, argline="-s").read()
 
 
-def test_normlookup():
+def test_normlookup(minion_opts):
     """
     Sanity-check the normal dictionary-lookup syntax for our stub function
     """
     tmpl_str = """Hello, {{ salt['mocktest.ping']() }}."""
 
     with patch.object(SaltCacheLoader, "file_client", Mock()):
-        ret = render(tmpl_str)
+        ret = render(tmpl_str, minion_opts)
     assert ret == "Hello, True."
 
 
-def test_dotlookup():
+def test_dotlookup(minion_opts):
     """
     Check calling a stub function using awesome dot-notation
     """
     tmpl_str = """Hello, {{ salt.mocktest.ping() }}."""
 
     with patch.object(SaltCacheLoader, "file_client", Mock()):
-        ret = render(tmpl_str)
+        ret = render(tmpl_str, minion_opts)
     assert ret == "Hello, True."
 
 
-def test_shadowed_dict_method():
+def test_shadowed_dict_method(minion_opts):
     """
     Check calling a stub function with a name that shadows a ``dict``
     method name
@@ -60,5 +57,5 @@ def test_shadowed_dict_method():
     tmpl_str = """Hello, {{ salt.mockgrains.get('id') }}."""
 
     with patch.object(SaltCacheLoader, "file_client", Mock()):
-        ret = render(tmpl_str)
+        ret = render(tmpl_str, minion_opts)
     assert ret == "Hello, jerry."

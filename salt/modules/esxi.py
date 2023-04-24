@@ -2,7 +2,15 @@
 Glues the VMware vSphere Execution Module to the VMware ESXi Proxy Minions to the
 :mod:`esxi proxymodule <salt.proxy.esxi>`.
 
-.. versionadded:: 2015.8.4
+.. Warning::
+    This module will be deprecated in a future release of Salt. VMware strongly
+    recommends using the
+    `VMware Salt extensions <https://docs.saltproject.io/salt/extensions/salt-ext-modules-vmware/en/latest/all.html>`_
+    instead of the ESXi module. Because the Salt extensions are newer and
+    actively supported by VMware, they are more compatible with current versions
+    of ESXi and they work well with the latest features in the VMware product
+    line.
+
 
 Depends: :mod:`vSphere Remote Execution Module (salt.modules.vsphere)
 <salt.modules.vsphere>`
@@ -28,6 +36,7 @@ type manor.
 
 
 import logging
+from functools import wraps
 
 import salt.utils.platform
 
@@ -49,6 +58,28 @@ def __virtual__():
     )
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Argon",
+            "The 'esxi' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3008 in favor of the "
+            "saltext.vmware Salt Extension. "
+            "(https://github.com/saltstack/salt-ext-modules-vmware)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def cmd(command, *args, **kwargs):
     proxy_prefix = __opts__["proxy"]["proxytype"]
     proxy_cmd = proxy_prefix + ".ch_config"
@@ -56,5 +87,6 @@ def cmd(command, *args, **kwargs):
     return __proxy__[proxy_cmd](command, *args, **kwargs)
 
 
+@_deprecation_message
 def get_details():
     return __proxy__["esxi.get_details"]()

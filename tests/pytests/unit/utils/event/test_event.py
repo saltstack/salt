@@ -1,20 +1,24 @@
 import hashlib
+import os
+import stat
 import time
+from pathlib import Path
 
 import pytest
-import zmq
 import zmq.eventloop.ioloop
 
 import salt.config
 import salt.ext.tornado.ioloop
+import salt.ext.tornado.iostream
 import salt.utils.event
 import salt.utils.stringutils
+from salt.utils.event import SaltEvent
 from tests.support.events import eventpublisher_process, eventsender_process
+from tests.support.mock import patch
 
 NO_LONG_IPC = False
 if getattr(zmq, "IPC_PATH_MAX_LEN", 103) <= 103:
     NO_LONG_IPC = True
-
 
 pytestmark = [
     pytest.mark.skipif(
@@ -290,3 +294,49 @@ def test_send_master_event(sock_dir):
                     "pretag": None,
                 },
             )
+
+
+def test_connect_pull_should_debug_log_on_StreamClosedError():
+    event = SaltEvent(node=None)
+    with patch.object(event, "pusher") as mock_pusher:
+        with patch.object(
+            salt.utils.event.log, "debug", auto_spec=True
+        ) as mock_log_debug:
+            mock_pusher.connect.side_effect = (
+                salt.ext.tornado.iostream.StreamClosedError
+            )
+            event.connect_pull()
+            call = mock_log_debug.mock_calls[0]
+            assert call.args[0] == "Unable to connect pusher: %s"
+            assert isinstance(call.args[1], salt.ext.tornado.iostream.StreamClosedError)
+            assert call.args[1].args[0] == "Stream is closed"
+
+
+@pytest.mark.parametrize("error", [Exception, KeyError, IOError])
+def test_connect_pull_should_error_log_on_other_errors(error):
+    event = SaltEvent(node=None)
+    with patch.object(event, "pusher") as mock_pusher:
+        with patch.object(
+            salt.utils.event.log, "debug", auto_spec=True
+        ) as mock_log_debug:
+            with patch.object(
+                salt.utils.event.log, "error", auto_spec=True
+            ) as mock_log_error:
+                mock_pusher.connect.side_effect = error
+                event.connect_pull()
+                mock_log_debug.assert_not_called()
+                call = mock_log_error.mock_calls[0]
+                assert call.args[0] == "Unable to connect pusher: %s"
+                assert not isinstance(
+                    call.args[1], salt.ext.tornado.iostream.StreamClosedError
+                )
+
+
+@pytest.mark.slow_test
+def test_master_pub_permissions(sock_dir):
+    with eventpublisher_process(str(sock_dir)):
+        p = Path(str(sock_dir)) / "master_event_pub.ipc"
+        mode = os.lstat(p).st_mode
+        assert bool(os.lstat(p).st_mode & stat.S_IRUSR)
+        assert not bool(os.lstat(p).st_mode & stat.S_IRGRP)
+        assert not bool(os.lstat(p).st_mode & stat.S_IROTH)

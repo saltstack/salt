@@ -8,23 +8,19 @@ import os
 import pytest
 from jinja2 import Environment, exceptions
 
-import salt.config
-import salt.loader
-
 # dateutils is needed so that the strftime jinja filter is loaded
 import salt.utils.dateutils  # pylint: disable=unused-import
-import salt.utils.files
-import salt.utils.json
-import salt.utils.stringutils
-import salt.utils.yaml
+import salt.utils.files  # pylint: disable=unused-import
+import salt.utils.json  # pylint: disable=unused-import
+import salt.utils.stringutils  # pylint: disable=unused-import
+import salt.utils.yaml  # pylint: disable=unused-import
 from salt.utils.jinja import SaltCacheLoader
 from tests.support.mock import Mock, patch
 
 
 @pytest.fixture
-def minion_opts(tmp_path):
-    _opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    _opts.update(
+def minion_opts(tmp_path, minion_opts):
+    minion_opts.update(
         {
             "file_buffer_size": 1048576,
             "cachedir": str(tmp_path),
@@ -35,7 +31,7 @@ def minion_opts(tmp_path):
             ),
         }
     )
-    return _opts
+    return minion_opts
 
 
 @pytest.fixture

@@ -155,6 +155,11 @@ The following dunder dictionaries are always defined, but may be empty
 __opts__
 --------
 
+..versionchanged:: 3006.0
+
+    The ``__opts__`` dictionary can now be accessed via
+    :py:mod:`~salt.loader.context``.
+
 Defined in: All modules
 
 The ``__opts__`` dictionary contains all of the options passed in the

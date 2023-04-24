@@ -15,7 +15,6 @@ import os
 
 import salt.utils.data
 import salt.utils.files
-import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -340,16 +339,7 @@ def unlock_password(name, root=None):
 def set_password(name, password, use_usermod=False, root=None):
     """
     Set the password for a named user. The password must be a properly defined
-    hash. The password hash can be generated with this command:
-
-    ``python -c "import crypt; print crypt.crypt('password',
-    '\\$6\\$SALTsalt')"``
-
-    ``SALTsalt`` is the 8-character crpytographic salt. Valid characters in the
-    salt are ``.``, ``/``, and any alphanumeric character.
-
-    Keep in mind that the $6 represents a sha512 hash, if your OS is using a
-    different hashing algorithm this needs to be changed accordingly
+    hash. A password hash can be generated with :py:func:`gen_password`.
 
     name
         User to set the password
@@ -390,11 +380,15 @@ def set_password(name, password, use_usermod=False, root=None):
         lines = []
         user_found = False
         lstchg = str((datetime.datetime.today() - datetime.datetime(1970, 1, 1)).days)
-        with salt.utils.files.fopen(s_file, "rb") as fp_:
+        with salt.utils.files.fopen(s_file, "r") as fp_:
             for line in fp_:
-                line = salt.utils.stringutils.to_unicode(line)
-                comps = line.strip().split(":")
+                # Fix malformed entry by first ignoring extra fields, then
+                # adding missing fields.
+                comps = line.strip().split(":")[:9]
                 if comps[0] == name:
+                    num_missing = 9 - len(comps)
+                    if num_missing:
+                        comps.extend([""] * num_missing)
                     user_found = True
                     comps[1] = password
                     comps[2] = lstchg
@@ -410,7 +404,6 @@ def set_password(name, password, use_usermod=False, root=None):
                 )
         else:
             with salt.utils.files.fopen(s_file, "w+") as fp_:
-                lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
                 fp_.writelines(lines)
         uinfo = info(name, root=root)
         return uinfo["passwd"] == password
@@ -531,7 +524,6 @@ def _getspnam(name, root=None):
     passwd = os.path.join(root, "etc/shadow")
     with salt.utils.files.fopen(passwd) as fp_:
         for line in fp_:
-            line = salt.utils.stringutils.to_unicode(line)
             comps = line.strip().split(":")
             if comps[0] == name:
                 # Generate a getspnam compatible output
@@ -549,7 +541,6 @@ def _getspall(root=None):
     passwd = os.path.join(root, "etc/shadow")
     with salt.utils.files.fopen(passwd) as fp_:
         for line in fp_:
-            line = salt.utils.stringutils.to_unicode(line)
             comps = line.strip().split(":")
             # Generate a getspall compatible output
             for i in range(2, 9):

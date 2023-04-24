@@ -1,8 +1,5 @@
 import json
 import logging
-import os
-import shutil
-import tempfile
 import threading
 from copy import copy
 
@@ -16,12 +13,10 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def tmp_cache():
-    tmp_cache = tempfile.mkdtemp()
-    try:
-        yield tmp_cache
-    finally:
-        shutil.rmtree(tmp_cache)
+def tmp_cache(tmp_path):
+    cachedir = tmp_path / "cachedir"
+    cachedir.mkdir()
+    return cachedir
 
 
 @pytest.fixture
@@ -39,7 +34,7 @@ def configure_loader_modules(tmp_cache):
                     },
                 },
                 "file_client": "local",
-                "cachedir": tmp_cache,
+                "cachedir": str(tmp_cache),
             },
             "__grains__": {"id": "test-minion"},
             "__context__": {},
@@ -198,7 +193,7 @@ def test_write_cache_multi_use_token(cache_uses, tmp_cache):
     }
     function_response = vault.write_cache(cache_uses)
     assert function_response is True
-    with salt.utils.files.fopen(os.path.join(tmp_cache, "salt_vault_token"), "r") as fp:
+    with salt.utils.files.fopen(str(tmp_cache / "salt_vault_token"), "r") as fp:
         token_data = json.loads(fp.read())
     assert token_data == expected_write
 
@@ -227,7 +222,7 @@ def test_write_cache_unlimited_token(cache_uses, tmp_cache):
         "unlimited_use_token": True,
     }
     function_response = vault.write_cache(write_data)
-    with salt.utils.files.fopen(os.path.join(tmp_cache, "salt_vault_token"), "r") as fp:
+    with salt.utils.files.fopen(str(tmp_cache / "salt_vault_token"), "r") as fp:
         token_data = json.loads(fp.read())
     assert token_data == expected_write
 
@@ -283,7 +278,7 @@ def test_write_cache_issue_59361(cache_uses, tmp_cache):
     thread1.join()
     thread2.join()
 
-    with salt.utils.files.fopen(os.path.join(tmp_cache, "salt_vault_token"), "r") as fp:
+    with salt.utils.files.fopen(str(tmp_cache / "salt_vault_token"), "r") as fp:
         try:
             token_data = json.loads(fp.read())
         except json.decoder.JSONDecodeError:
@@ -544,3 +539,83 @@ def test_get_secret_path_metadata_no_cache(metadata_v2, cache_uses, cache_secret
                 assert function_result == metadata_v2
                 mock_write_cache.assert_called_with(cache_object)
                 assert cache_object == expected_cache_object
+
+
+def test_expand_pattern_lists():
+    """
+    Ensure expand_pattern_lists works as intended:
+    - Expand list-valued patterns
+    - Do not change non-list-valued tokens
+    """
+    cases = {
+        "no-tokens-to-replace": ["no-tokens-to-replace"],
+        "single-dict:{minion}": ["single-dict:{minion}"],
+        "single-list:{grains[roles]}": ["single-list:web", "single-list:database"],
+        "multiple-lists:{grains[roles]}+{grains[aux]}": [
+            "multiple-lists:web+foo",
+            "multiple-lists:web+bar",
+            "multiple-lists:database+foo",
+            "multiple-lists:database+bar",
+        ],
+        "single-list-with-dicts:{grains[id]}+{grains[roles]}+{grains[id]}": [
+            "single-list-with-dicts:{grains[id]}+web+{grains[id]}",
+            "single-list-with-dicts:{grains[id]}+database+{grains[id]}",
+        ],
+        "deeply-nested-list:{grains[deep][foo][bar][baz]}": [
+            "deeply-nested-list:hello",
+            "deeply-nested-list:world",
+        ],
+    }
+
+    pattern_vars = {
+        "id": "test-minion",
+        "roles": ["web", "database"],
+        "aux": ["foo", "bar"],
+        "deep": {"foo": {"bar": {"baz": ["hello", "world"]}}},
+    }
+
+    mappings = {"minion": "test-minion", "grains": pattern_vars}
+    for case, correct_output in cases.items():
+        output = vault.expand_pattern_lists(case, **mappings)
+        assert output == correct_output
+
+
+@pytest.mark.parametrize(
+    "conf_location,called",
+    [("local", False), ("master", True), (None, False), ("doesnotexist", False)],
+)
+def test_get_vault_connection_config_location(tmp_path, conf_location, called, caplog):
+    """
+    test the get_vault_connection function when
+    config_location is set in opts
+    """
+    token_url = {
+        "url": "http://127.0.0.1",
+        "namespace": None,
+        "token": "test",
+        "verify": None,
+        "issued": 1666100373,
+        "ttl": 3600,
+    }
+
+    opts = {"config_location": conf_location, "pki_dir": tmp_path / "pki"}
+    with patch.object(vault, "_get_token_and_url_from_master") as patch_token:
+        patch_token.return_vaule = token_url
+        with patch.dict(vault.__opts__["vault"], opts):
+            vault.get_vault_connection()
+
+    if called:
+        patch_token.assert_called()
+    else:
+        patch_token.assert_not_called()
+    if conf_location == "doesnotexist":
+        assert "config_location must be either local or master" in caplog.text
+
+
+def test_del_cache(tmp_cache):
+    token_file = tmp_cache / "salt_vault_token"
+    token_file.touch()
+    with patch.dict(vault.__context__, {"vault_token": "fake_token"}):
+        vault.del_cache()
+        assert "vault_token" not in vault.__context__
+    assert not token_file.exists()

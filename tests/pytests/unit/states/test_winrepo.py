@@ -44,8 +44,8 @@ class MockRunnerClient:
 @pytest.fixture
 def configure_loader_modules():
     patcher = patch("salt.states.winrepo.salt.runner", MockRunnerClient)
-    patcher.start()
-    return {winrepo: {}}
+    with patcher:
+        yield {winrepo: {}}
 
 
 def test_genrepo():

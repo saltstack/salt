@@ -99,7 +99,8 @@ def capability_removed(name, image=None, restart=False):
         image (Optional[str]): The path to the root directory of an offline
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the install
+        restart (Optional[bool]): Reboot the machine if required by the
+            uninstall
 
     Example:
         Run ``dism.installed_capabilities`` to get a list of installed
@@ -223,7 +224,8 @@ def feature_removed(name, remove_payload=False, image=None, restart=False):
         image (Optional[str]): The path to the root directory of an offline
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the install
+        restart (Optional[bool]): Reboot the machine if required by the
+            uninstall
 
     Example:
         Run ``dism.installed_features`` to get a list of installed features.
@@ -352,7 +354,8 @@ def package_removed(name, image=None, restart=False):
         image (Optional[str]): The path to the root directory of an offline
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the install
+        restart (Optional[bool]): Reboot the machine if required by the
+            uninstall
 
     Example:
 
@@ -404,6 +407,71 @@ def package_removed(name, image=None, restart=False):
     if status["retcode"] not in [0, 1641, 3010]:
         ret["comment"] = "Failed to remove {}: {}".format(name, status["stdout"])
         ret["result"] = False
+
+    new = __salt__["dism.installed_packages"]()
+    changes = salt.utils.data.compare_lists(old, new)
+
+    if changes:
+        ret["comment"] = "Removed {}".format(name)
+        ret["changes"] = status
+        ret["changes"]["package"] = changes
+
+    return ret
+
+
+def kb_removed(name, image=None, restart=False):
+    """
+    Uninstall a KB package
+
+    .. versionadded:: 3006.0
+
+    Args:
+        name (str): The name of the KB. Can be with or without the KB at the
+            beginning.
+        image (Optional[str]): The path to the root directory of an offline
+            Windows image. If `None` is passed, the running operating system is
+            targeted. Default is None.
+        restart (Optional[bool]): Reboot the machine if required by the
+            uninstall
+
+    Example:
+
+        .. code-block:: yaml
+
+            # Example using full KB name
+            remove_KB1231231:
+              dism.package_installed:
+                - name: KB1231231
+
+            # Example using just he KB number
+            remove_KB1231231:
+              dism.package_installed:
+                - name: 1231231
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+
+    pkg_name = __salt__["dism.get_kb_package_name"](kb=name, image=image)
+
+    # If pkg_name is None, the package is not installed
+    if pkg_name is None:
+        ret["comment"] = "{} is not installed".format(name)
+        return ret
+
+    if __opts__["test"]:
+        ret["changes"]["package"] = "{} will be removed".format(name)
+        ret["result"] = None
+        return ret
+
+    # Fail if using a non-existent package path
+    old = __salt__["dism.installed_packages"]()
+
+    # Remove the package
+    status = __salt__["dism.remove_kb"](kb=name, image=image, restart=restart)
+
+    if status["retcode"] not in [0, 1641, 3010]:
+        ret["comment"] = "Failed to remove {}: {}".format(name, status["stdout"])
+        ret["result"] = False
+        return ret
 
     new = __salt__["dism.installed_packages"]()
     changes = salt.utils.data.compare_lists(old, new)

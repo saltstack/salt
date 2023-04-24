@@ -26,7 +26,7 @@ def configure_loader_modules():
         None,
     ],
 )
-def test_gen_xml_for_xen_default_profile(loader):
+def test_gen_xml_for_xen_default_profile(loader, minion_opts):
     """
     Test virt._gen_xml(), XEN PV default profile case
     """
@@ -68,7 +68,7 @@ def test_gen_xml_for_xen_default_profile(loader):
                 disks = root.findall(".//disk")
                 assert len(disks) == 1
                 disk = disks[0]
-                root_dir = salt.config.DEFAULT_MINION_OPTS.get("root_dir")
+                root_dir = salt.syspaths.ROOT_DIR
                 assert disk.find("source").attrib["file"].startswith(root_dir)
                 assert "hello_system" in disk.find("source").attrib["file"]
                 assert disk.find("target").attrib["dev"] == "xvda"
@@ -1269,6 +1269,15 @@ def test_update_cpu_simple(make_mock_vm):
     setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
     assert setxml.find("vcpu").text == "2"
     assert domain_mock.setVcpusFlags.call_args[0][0] == 2
+
+
+def test_update_autostart(make_mock_vm):
+    """
+    Test virt.update(), simple autostart update
+    """
+    domain_mock = make_mock_vm()
+    virt.update("my_vm", autostart=True)
+    domain_mock.setAutostart.assert_called_with(1)
 
 
 def test_update_add_cpu_topology(make_mock_vm):

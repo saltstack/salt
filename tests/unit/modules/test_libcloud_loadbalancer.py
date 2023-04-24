@@ -1,12 +1,12 @@
 """
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 """
-
+import pytest
 
 import salt.modules.libcloud_loadbalancer as libcloud_loadbalancer
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     from libcloud.loadbalancer.base import Algorithm, BaseDriver, LoadBalancer, Member
@@ -85,7 +85,7 @@ def get_mock_driver():
     return MockLBDriver()
 
 
-@skipIf(not HAS_LIBCLOUD, "No libcloud package")
+@pytest.mark.skipif(not HAS_LIBCLOUD, reason="No libcloud package")
 @patch(
     "salt.modules.libcloud_loadbalancer._get_driver",
     MagicMock(return_value=MockLBDriver()),

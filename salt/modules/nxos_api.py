@@ -254,7 +254,8 @@ def show(commands, raw_text=True, **kwargs):
     Execute one or more show (non-configuration) commands.
 
     commands
-        The commands to be executed.
+        The commands to be executed.  Multiple commands should
+        be specified as a list.
 
     raw_text: ``True``
         Whether to return raw text or structured data.
@@ -290,7 +291,7 @@ def show(commands, raw_text=True, **kwargs):
     .. code-block:: bash
 
         salt-call --local nxos_api.show 'show version'
-        salt '*' nxos_api.show 'show bgp sessions' 'show processes' raw_text=False
+        salt '*' nxos_api.show "['show bgp sessions','show processes']" raw_text=False
         salt 'regular-minion' nxos_api.show 'show interfaces' host=sw01.example.com username=test password=test
     """
     ret = []

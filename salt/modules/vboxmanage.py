@@ -592,7 +592,7 @@ def list_items(item, details=False, group_by="UUID"):
         if not line.strip():
             continue
         comps = line.split(":")
-        if len(comps) < 1:
+        if not comps:
             continue
         if tmp_id is not None:
             ret[tmp_id] = tmp_dict

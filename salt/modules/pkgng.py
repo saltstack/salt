@@ -285,7 +285,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name> jail=<jail name or id>
         salt '*' pkg.latest_version <package name> chroot=/path/to/chroot
     """
-    if len(names) == 0:
+    if not names:
         return ""
     ret = {}
 
@@ -826,7 +826,7 @@ def install(
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     env = {}

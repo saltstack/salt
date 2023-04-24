@@ -26,7 +26,7 @@ def salt_mm_master_1(request, salt_factories):
         "mm-master-1",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     with factory.started(start_timeout=120):
         yield factory
@@ -60,7 +60,7 @@ def salt_mm_master_2(salt_factories, salt_mm_master_1):
         "mm-master-2",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
 
     # The secondary salt master depends on the primarily salt master fixture
@@ -100,7 +100,7 @@ def salt_mm_minion_1(salt_mm_master_1, salt_mm_master_2):
         "mm-minion-1",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     with factory.started(start_timeout=120):
         yield factory
@@ -127,7 +127,7 @@ def salt_mm_minion_2(salt_mm_master_1, salt_mm_master_2):
         "mm-minion-2",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     with factory.started(start_timeout=120):
         yield factory

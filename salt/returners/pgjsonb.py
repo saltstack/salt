@@ -59,7 +59,7 @@ optional. The following ssl options are simply for illustration purposes:
     alternative.pgjsonb.ssl_key: '/etc/pki/mysql/certs/localhost.key'
 
 Should you wish the returner data to be cleaned out every so often, set
-``keep_jobs`` to the number of hours for the jobs to live in the tables.
+``keep_jobs_seconds`` to the number of seconds for the jobs to live in the tables.
 Setting it to ``0`` or leaving it unset will cause the data to stay in the tables.
 
 Should you wish to archive jobs in a different table for later processing,
@@ -70,7 +70,7 @@ set ``archive_jobs`` to True.  Salt will create 3 archive tables;
 - ``salt_events_archive``
 
 and move the contents of ``jids``, ``salt_returns``, and ``salt_events`` that are
-more than ``keep_jobs`` hours old to these tables.
+more than ``keep_jobs_seconds`` seconds old to these tables.
 
 .. versionadded:: 2019.2.0
 
@@ -167,7 +167,8 @@ from contextlib import contextmanager
 
 import salt.exceptions
 import salt.returners
-import salt.utils.jid
+import salt.utils.data
+import salt.utils.job
 
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
@@ -300,15 +301,16 @@ def returner(ret):
                     (fun, jid, return, id, success, full_ret, alter_time)
                     VALUES (%s, %s, %s, %s, %s, %s, to_timestamp(%s))"""
 
+            cleaned_return = salt.utils.data.decode(ret)
             cur.execute(
                 sql,
                 (
                     ret["fun"],
                     ret["jid"],
-                    psycopg2.extras.Json(ret["return"]),
+                    psycopg2.extras.Json(cleaned_return["return"]),
                     ret["id"],
                     ret.get("success", False),
-                    psycopg2.extras.Json(ret),
+                    psycopg2.extras.Json(cleaned_return),
                     time.time(),
                 ),
             )
@@ -342,6 +344,7 @@ def save_load(jid, load, minions=None):
     Save the load to the specified jid id
     """
     with _get_serv(commit=True) as cur:
+        load = salt.utils.data.decode(load)
         try:
             cur.execute(
                 PG_SAVE_LOAD_SQL, {"jid": jid, "load": psycopg2.extras.Json(load)}
@@ -575,11 +578,12 @@ def clean_old_jobs():
     deletes the events and job details from the database.
     :return:
     """
-    if __opts__.get("keep_jobs", False) and int(__opts__.get("keep_jobs", 0)) > 0:
+    keep_jobs_seconds = int(salt.utils.job.get_keep_jobs_seconds(__opts__))
+    if keep_jobs_seconds > 0:
         try:
             with _get_serv() as cur:
-                sql = "select (NOW() -  interval '{}' hour) as stamp;".format(
-                    __opts__["keep_jobs"]
+                sql = "select (NOW() -  interval '{}' second) as stamp;".format(
+                    keep_jobs_seconds
                 )
                 cur.execute(sql)
                 rows = cur.fetchall()

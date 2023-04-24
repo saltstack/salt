@@ -53,7 +53,7 @@ def present(
             ret["comment"] = " {} is absent and will be created".format(name)
             return ret
         if __salt__["influxdb.create_continuous_query"](
-            database, name, query, resample_time, coverage_period
+            database, name, query, resample_time, coverage_period, **client_args
         ):
             ret["comment"] = "continuous query {} has been created".format(name)
             ret["changes"][name] = "Present"

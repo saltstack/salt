@@ -1102,7 +1102,7 @@ Name of existing container.
 
 signed_identifiers
 ``````````````````
-SignedIdentifers instance
+SignedIdentifiers instance
 
 blob_public_access
 ``````````````````

@@ -1,6 +1,16 @@
 """
 Manage VMware ESXi Clusters.
 
+.. Warning::
+    This module will be deprecated in a future release of Salt. VMware strongly
+    recommends using the
+    `VMware Salt extensions <https://docs.saltproject.io/salt/extensions/salt-ext-modules-vmware/en/latest/all.html>`_
+    instead of the ESX cluster module. Because the Salt extensions are newer and
+    actively supported by VMware, they are more compatible with current versions
+    of ESXi and they work well with the latest features in the VMware product
+    line.
+
+
 Dependencies
 ============
 
@@ -41,6 +51,7 @@ Module was developed against.
 
 import logging
 import sys
+from functools import wraps
 
 import salt.exceptions
 from salt.config.schemas.esxcluster import ESXClusterConfigSchema, LicenseSchema
@@ -88,6 +99,28 @@ def __virtual__():
     return True
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            "Argon",
+            "The 'esxcluster' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3008 in favor of the "
+            "saltext.vmware Salt Extension. "
+            "(https://github.com/saltstack/salt-ext-modules-vmware)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def mod_init(low):
     """
     Retrieves and adapt the login credentials from the proxy connection module
@@ -112,6 +145,7 @@ def _get_vsan_datastore(si, cluster_name):
     return vsan_datastores[0]
 
 
+@_deprecation_message
 def cluster_configured(name, cluster_config):
     """
     Configures a cluster. Creates a new cluster, if it doesn't exist on the
@@ -307,6 +341,7 @@ def cluster_configured(name, cluster_config):
         return ret
 
 
+@_deprecation_message
 def vsan_datastore_configured(name, datastore_name):
     """
     Configures the cluster's VSAN datastore
@@ -391,6 +426,7 @@ def vsan_datastore_configured(name, datastore_name):
         return ret
 
 
+@_deprecation_message
 def licenses_configured(name, licenses=None):
     """
     Configures licenses on the cluster entity

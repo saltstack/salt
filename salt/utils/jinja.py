@@ -33,20 +33,20 @@ import salt.utils.yaml
 from salt.exceptions import TemplateError
 from salt.utils.decorators.jinja import jinja_filter, jinja_global, jinja_test
 from salt.utils.odict import OrderedDict
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 try:
     from markupsafe import Markup
 except ImportError:
     # jinja < 3.1
-    from jinja2 import Markup
+    from jinja2 import Markup  # pylint: disable=no-name-in-module
 
 log = logging.getLogger(__name__)
 
 __all__ = ["SaltCacheLoader", "SerializerExtension"]
 
 GLOBAL_UUID = uuid.UUID("91633EBF-1C86-5E33-935A-28061F4B480E")
-JINJA_VERSION = LooseVersion(jinja2.__version__)
+JINJA_VERSION = Version(jinja2.__version__)
 
 
 class SaltCacheLoader(BaseLoader):
@@ -197,7 +197,7 @@ class SaltCacheLoader(BaseLoader):
             }
             environment.globals.update(tpldata)
 
-        if _template in self.cached:
+        if _template in self.cached or os.path.exists(_template):
             # pylint: disable=cell-var-from-loop
             for spath in self.searchpath:
                 filepath = os.path.join(spath, _template)
@@ -728,12 +728,13 @@ def method_call(obj, f_name, *f_args, **f_kwargs):
 
 
 try:
-    contextfunction = jinja2.contextfunction
+    pass_context = jinja2.pass_context
 except AttributeError:
-    contextfunction = jinja2.pass_context
+    # Old and deprecated method
+    pass_context = jinja2.contextfunction
 
 
-@contextfunction
+@pass_context
 def show_full_context(ctx):
     return salt.utils.data.simple_types_filter(
         {key: value for key, value in ctx.items()}
@@ -804,7 +805,7 @@ class SerializerExtension(Extension):
     .. code-block:: jinja
 
         {%- set yaml_src = "{foo: it works}"|load_yaml %}
-        {%- set json_src = "{'bar': 'for real'}"|load_json %}
+        {%- set json_src = '{"bar": "for real"}'|load_json %}
         Dude, {{ yaml_src.foo }} {{ json_src.bar }}!
 
     will be rendered as::

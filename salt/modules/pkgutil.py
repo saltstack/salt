@@ -288,7 +288,7 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     if pkgs is None and version and len(pkg_params) == 1:

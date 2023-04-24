@@ -76,6 +76,7 @@ def existing_account():
         yield _account
 
 
+@pytest.mark.slow_test
 def test_user_absent(states):
     """
     Test user.absent with a non existing account
@@ -190,13 +191,21 @@ def test_user_present_usergroup_true(modules, states, username, user_home, group
     assert group_name == group_1.name
 
 
+def _check_skip(grains):
+    if grains["os"] == "MacOS":
+        return True
+    return False
+
+
 @pytest.mark.skipif(
     ANSI_FILESYSTEM_ENCODING,
     reason=(
-        "A system encoding which supports Unicode characters must be set. Current setting is: {}. "
-        "Try setting $LANG='en_US.UTF-8'".format(ANSI_FILESYSTEM_ENCODING)
+        "A system encoding which supports Unicode characters must be set. "
+        f"Current setting is: {sys.getfilesystemencoding()}. "
+        "Try setting $LANG='en_US.UTF-8'"
     ),
 )
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_user_present_unicode(states, username, subtests):
     """
     It ensures that unicode GECOS data will be properly handled, without

@@ -161,7 +161,7 @@ def delete(name, **kwargs):
             )
             return False
     else:
-        log.warning("The group %s does not exists.", name)
+        log.warning("The group %s does not exist.", name)
         return False
 
     return True

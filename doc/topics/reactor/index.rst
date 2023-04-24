@@ -99,7 +99,7 @@ API and the runner system.  In this example, a command is published to the
           - mods: orchestrate.runit
     {% endif %}
 
-This example will execute the state.orchestrate runner and intiate an execution
+This example will execute the state.orchestrate runner and initiate an execution
 of the ``runit`` orchestrator located at ``/srv/salt/orchestrate/runit.sls``.
 
 Types of Reactions
@@ -762,4 +762,4 @@ performance are a concern, you may also increase the value for
 which are pulling jobs from the queue and executing them. Obviously, this
 bears a relationship to the speed at which the queue itself will fill up.
 The price to pay for this value is that each thread will contain a copy of
-Salt code needed to perform the requested action. 
+Salt code needed to perform the requested action.

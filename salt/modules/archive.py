@@ -1093,6 +1093,12 @@ def unzip(
                             source = zfile.read(target)
                             os.symlink(source, os.path.join(dest, target))
                             continue
+                    # file.extract is expecting the password to be a bytestring
+                    if password:
+                        if isinstance(password, int):
+                            password = str(password)
+                        if isinstance(password, str):
+                            password = password.encode()
                     zfile.extract(target, dest, password)
                     if extract_perms:
                         if not salt.utils.platform.is_windows():

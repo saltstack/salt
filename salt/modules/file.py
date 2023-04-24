@@ -16,7 +16,6 @@ import hashlib
 import itertools
 import logging
 import mmap
-import operator
 import os
 import re
 import shutil
@@ -28,7 +27,6 @@ import time
 import urllib.parse
 from collections import namedtuple
 from collections.abc import Iterable, Mapping
-from functools import reduce
 
 import salt.utils.args
 import salt.utils.atomicfile
@@ -46,10 +44,10 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.user
-import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 from salt.exceptions import get_error_message as _get_error_message
 from salt.utils.files import HASHES, HASHES_REVMAP
+from salt.utils.versions import Version
 
 try:
     import grp
@@ -194,8 +192,8 @@ def _chattr_has_extended_attrs():
     if ver is None:
         return False
 
-    needed_version = salt.utils.versions.LooseVersion("1.41.12")
-    chattr_version = salt.utils.versions.LooseVersion(ver)
+    needed_version = Version("1.41.12")
+    chattr_version = Version(ver)
     return chattr_version > needed_version
 
 
@@ -1622,38 +1620,38 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
 
 def _get_flags(flags):
     """
-    Return an integer appropriate for use as a flag for the re module from a
-    list of human-readable strings
+    Return the names of the Regex flags that correspond to flags
 
     .. code-block:: python
 
-        >>> _get_flags(['MULTILINE', 'IGNORECASE'])
-        10
+        >>> _get_flags(['IGNORECASE', 'MULTILINE'])
+        re.IGNORECASE|re.MULTILINE
         >>> _get_flags('MULTILINE')
-        8
-        >>> _get_flags(2)
-        2
+        re.MULTILINE
+        >>> _get_flags(8)
+        re.MULTILINE
+        >>> _get_flags(re.IGNORECASE)
+        re.IGNORECASE
     """
-    if isinstance(flags, str):
+    if isinstance(flags, re.RegexFlag):
+        return flags
+    elif isinstance(flags, int):
+        return re.RegexFlag(flags)
+    elif isinstance(flags, str):
         flags = [flags]
 
     if isinstance(flags, Iterable) and not isinstance(flags, Mapping):
-        _flags_acc = [0]  # An initial 0 avoids resucing on empty list, an error
+        _flags = re.RegexFlag(0)
         for flag in flags:
-            _flag = getattr(re, str(flag).upper())
-
-            if not isinstance(_flag, int):
-                raise SaltInvocationError("Invalid re flag given: {}".format(flag))
-
-            _flags_acc.append(_flag)
-
-        return reduce(operator.__or__, _flags_acc)
-    elif isinstance(flags, int):
-        return flags
+            _flag = getattr(re.RegexFlag, str(flag).upper(), None)
+            if not _flag:
+                raise CommandExecutionError(f"Invalid re flag given: {flag}")
+            _flags |= _flag
+        return _flags
     else:
-        raise SaltInvocationError(
-            'Invalid re flags: "{}", must be given either as a single flag '
-            "string, a list of strings, or as an integer".format(flags)
+        raise CommandExecutionError(
+            f'Invalid re flags: "{flags}", must be given either as a single flag '
+            "string, a list of strings, as an integer, or as an re flag"
         )
 
 
@@ -2513,8 +2511,8 @@ def replace(
             "Only one of append and prepend_if_not_found is permitted"
         )
 
-    flags_num = _get_flags(flags)
-    cpattern = re.compile(salt.utils.stringutils.to_bytes(pattern), flags_num)
+    re_flags = _get_flags(flags)
+    cpattern = re.compile(salt.utils.stringutils.to_bytes(pattern), re_flags)
     filesize = os.path.getsize(path)
     if bufsize == "file":
         bufsize = filesize
@@ -2582,7 +2580,7 @@ def replace(
                             "^{}($|(?=\r\n))".format(re.escape(content))
                         ),
                         r_data,
-                        flags=flags_num,
+                        flags=re_flags,
                     ):
                         # Content was found, so set found.
                         found = True
@@ -3132,7 +3130,11 @@ def search(path, pattern, flags=8, bufsize=1, ignore_if_missing=False, multiline
         salt '*' file.search /etc/crontab 'mymaintenance.sh'
     """
     if multiline:
-        flags = _add_flags(flags, "MULTILINE")
+        re_flags = _add_flags(flags, "MULTILINE")
+    else:
+        re_flags = _get_flags(flags)
+
+    if re.RegexFlag.MULTILINE in re_flags:
         bufsize = "file"
 
     # This function wraps file.replace on purpose in order to enforce
@@ -3142,7 +3144,7 @@ def search(path, pattern, flags=8, bufsize=1, ignore_if_missing=False, multiline
         path,
         pattern,
         "",
-        flags=flags,
+        flags=re_flags,
         bufsize=bufsize,
         dry_run=True,
         search_only=True,
@@ -3523,9 +3525,13 @@ def touch(name, atime=None, mtime=None):
     simply update the atime and mtime if it already does.
 
     atime:
-        Access time in Unix epoch time
+        Access time in Unix epoch time. Set it to 0 to set atime of the
+        file with Unix date of birth. If this parameter isn't set, atime
+        will be set with current time.
     mtime:
-        Last modification in Unix epoch time
+        Last modification in Unix epoch time. Set it to 0 to set mtime of
+        the file with Unix date of birth. If this parameter isn't set,
+        mtime will be set with current time.
 
     CLI Example:
 
@@ -3535,20 +3541,20 @@ def touch(name, atime=None, mtime=None):
     """
     name = os.path.expanduser(name)
 
-    if atime and atime.isdigit():
+    if atime and str(atime).isdigit():
         atime = int(atime)
-    if mtime and mtime.isdigit():
+    if mtime and str(mtime).isdigit():
         mtime = int(mtime)
     try:
         if not os.path.exists(name):
             with salt.utils.files.fopen(name, "a"):
                 pass
 
-        if not atime and not mtime:
+        if atime is None and mtime is None:
             times = None
-        elif not mtime and atime:
+        elif mtime is None and atime is not None:
             times = (atime, time.time())
-        elif not atime and mtime:
+        elif atime is None and mtime is not None:
             times = (time.time(), mtime)
         else:
             times = (atime, mtime)
@@ -3709,7 +3715,7 @@ def is_link(path):
     return os.path.islink(os.path.expanduser(path))
 
 
-def symlink(src, path, force=False):
+def symlink(src, path, force=False, atomic=False):
     """
     Create a symbolic link (symlink, soft link) to a file
 
@@ -3723,8 +3729,12 @@ def symlink(src, path, force=False):
             Overwrite an existing symlink with the same name
             .. versionadded:: 3005
 
+        atomic (bool):
+            Use atomic file operations to create the symlink
+            .. versionadded:: 3006.0
+
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise raises ``CommandExecutionError``
 
     CLI Example:
 
@@ -3733,6 +3743,9 @@ def symlink(src, path, force=False):
         salt '*' file.symlink /path/to/file /path/to/link
     """
     path = os.path.expanduser(path)
+
+    if not os.path.isabs(path):
+        raise SaltInvocationError("Link path must be absolute: {}".format(path))
 
     if os.path.islink(path):
         try:
@@ -3744,18 +3757,32 @@ def symlink(src, path, force=False):
         except OSError:
             pass
 
-        if force:
-            os.unlink(path)
-        else:
+        if not force and not atomic:
             msg = "Found existing symlink: {}".format(path)
             raise CommandExecutionError(msg)
 
-    if os.path.exists(path):
+    if os.path.exists(path) and not force and not atomic:
         msg = "Existing path is not a symlink: {}".format(path)
         raise CommandExecutionError(msg)
 
-    if not os.path.isabs(path):
-        raise SaltInvocationError("Link path must be absolute: {}".format(path))
+    if (os.path.islink(path) or os.path.exists(path)) and force and not atomic:
+        os.unlink(path)
+    elif atomic:
+        link_dir = os.path.dirname(path)
+        retry = 0
+        while retry < 5:
+            temp_link = tempfile.mktemp(dir=link_dir)
+            try:
+                os.symlink(src, temp_link)
+                break
+            except FileExistsError:
+                retry += 1
+        try:
+            os.replace(temp_link, path)
+            return True
+        except OSError:
+            os.remove(temp_link)
+            raise CommandExecutionError("Could not create '{}'".format(path))
 
     try:
         os.symlink(src, path)
@@ -4215,7 +4242,7 @@ def rmdir(path, recurse=False, verbose=False, older_than=None):
         return ret
 
 
-def remove(path):
+def remove(path, **kwargs):
     """
     Remove the named file. If a directory is supplied, it will be recursively
     deleted.
@@ -4576,7 +4603,7 @@ def get_managed(
     skip_verify=False,
     verify_ssl=True,
     use_etag=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Return the managed file data for file.managed
@@ -4784,7 +4811,7 @@ def get_managed(
                     pillar=__pillar__,
                     grains=__opts__["grains"],
                     opts=__opts__,
-                    **kwargs
+                    **kwargs,
                 )
             else:
                 return (
@@ -5078,6 +5105,7 @@ def check_perms(
         ``follow_symlinks`` option added
     """
     name = os.path.expanduser(name)
+    mode = salt.utils.files.normalize_mode(mode)
 
     if not ret:
         ret = {"name": name, "changes": {}, "comment": [], "result": True}
@@ -5086,123 +5114,125 @@ def check_perms(
         orig_comment = ret["comment"]
         ret["comment"] = []
 
-    # Check permissions
-    perms = {}
+    # Check current permissions
     cur = stats(name, follow_symlinks=follow_symlinks)
-    perms["luser"] = cur["user"]
-    perms["lgroup"] = cur["group"]
-    perms["lmode"] = salt.utils.files.normalize_mode(cur["mode"])
+
+    # Record initial stat for return later. Check whether we're receiving IDs
+    # or names so luser == cuser comparison makes sense.
+    perms = {}
+    perms["luser"] = cur["uid"] if isinstance(user, int) else cur["user"]
+    perms["lgroup"] = cur["gid"] if isinstance(group, int) else cur["group"]
+    perms["lmode"] = cur["mode"]
 
     is_dir = os.path.isdir(name)
     is_link = os.path.islink(name)
 
-    # user/group changes if needed, then check if it worked
+    # Check and make user/group/mode changes, then verify they were successful
     if user:
-        if isinstance(user, int):
-            user = uid_to_user(user)
         if (
-            salt.utils.platform.is_windows()
-            and user_to_uid(user) != user_to_uid(perms["luser"])
-        ) or (not salt.utils.platform.is_windows() and user != perms["luser"]):
+            salt.utils.platform.is_windows() and not user_to_uid(user) == cur["uid"]
+        ) or (
+            not salt.utils.platform.is_windows()
+            and not user == cur["user"]
+            and not user == cur["uid"]
+        ):
             perms["cuser"] = user
 
     if group:
-        if isinstance(group, int):
-            group = gid_to_group(group)
         if (
-            salt.utils.platform.is_windows()
-            and group_to_gid(group) != group_to_gid(perms["lgroup"])
-        ) or (not salt.utils.platform.is_windows() and group != perms["lgroup"]):
+            salt.utils.platform.is_windows() and not group_to_gid(group) == cur["gid"]
+        ) or (
+            not salt.utils.platform.is_windows()
+            and not group == cur["group"]
+            and not group == cur["gid"]
+        ):
             perms["cgroup"] = group
 
     if "cuser" in perms or "cgroup" in perms:
         if not __opts__["test"]:
-            if os.path.islink(name) and not follow_symlinks:
+            if is_link and not follow_symlinks:
                 chown_func = lchown
             else:
                 chown_func = chown
             if user is None:
-                user = perms["luser"]
+                user = cur["user"]
             if group is None:
-                group = perms["lgroup"]
+                group = cur["group"]
             try:
-                chown_func(name, user, group)
-                # Python os.chown() does reset the suid and sgid,
-                # that's why setting the right mode again is needed here.
-                set_mode(name, mode)
+                err = chown_func(name, user, group)
+                if err:
+                    ret["result"] = False
+                    ret["comment"].append(err)
+                else:
+                    # Python os.chown() resets the suid and sgid, hence we
+                    # setting the previous mode again. Pending mode changes
+                    # will be applied later.
+                    set_mode(name, cur["mode"])
             except OSError:
                 ret["result"] = False
 
+    # Mode changes if needed
+    if mode is not None:
+        if not __opts__["test"] is True:
+            # File is a symlink, ignore the mode setting
+            # if follow_symlinks is False
+            if not (is_link and not follow_symlinks):
+                if not mode == cur["mode"]:
+                    perms["cmode"] = mode
+                    set_mode(name, mode)
+
+    # verify user/group/mode changes
+    post = stats(name, follow_symlinks=follow_symlinks)
     if user:
-        if isinstance(user, int):
-            user = uid_to_user(user)
         if (
-            salt.utils.platform.is_windows()
-            and user_to_uid(user)
-            != user_to_uid(get_user(name, follow_symlinks=follow_symlinks))
-            and user != ""
+            salt.utils.platform.is_windows() and not user_to_uid(user) == post["uid"]
         ) or (
             not salt.utils.platform.is_windows()
-            and user != get_user(name, follow_symlinks=follow_symlinks)
-            and user != ""
+            and not user == post["user"]
+            and not user == post["uid"]
         ):
             if __opts__["test"] is True:
                 ret["changes"]["user"] = user
             else:
                 ret["result"] = False
                 ret["comment"].append("Failed to change user to {}".format(user))
-        elif "cuser" in perms and user != "":
+        elif "cuser" in perms:
             ret["changes"]["user"] = user
 
     if group:
-        if isinstance(group, int):
-            group = gid_to_group(group)
         if (
-            salt.utils.platform.is_windows()
-            and group_to_gid(group)
-            != group_to_gid(get_group(name, follow_symlinks=follow_symlinks))
-            and user != ""
+            salt.utils.platform.is_windows() and not group_to_gid(group) == post["gid"]
         ) or (
             not salt.utils.platform.is_windows()
-            and group != get_group(name, follow_symlinks=follow_symlinks)
-            and user != ""
+            and not group == post["group"]
+            and not group == post["gid"]
         ):
             if __opts__["test"] is True:
                 ret["changes"]["group"] = group
             else:
                 ret["result"] = False
                 ret["comment"].append("Failed to change group to {}".format(group))
-        elif "cgroup" in perms and user != "":
+        elif "cgroup" in perms:
             ret["changes"]["group"] = group
 
-    # Mode changes if needed
     if mode is not None:
         # File is a symlink, ignore the mode setting
         # if follow_symlinks is False
-        if os.path.islink(name) and not follow_symlinks:
-            pass
-        else:
-            mode = salt.utils.files.normalize_mode(mode)
-            if mode != perms["lmode"]:
+        if not (is_link and not follow_symlinks):
+            if not mode == post["mode"]:
                 if __opts__["test"] is True:
                     ret["changes"]["mode"] = mode
                 else:
-                    set_mode(name, mode)
-                    if mode != salt.utils.files.normalize_mode(get_mode(name)):
-                        ret["result"] = False
-                        ret["comment"].append(
-                            "Failed to change mode to {}".format(mode)
-                        )
-                    else:
-                        ret["changes"]["mode"] = mode
+                    ret["result"] = False
+                    ret["comment"].append("Failed to change mode to {}".format(mode))
+            elif "cmode" in perms:
+                ret["changes"]["mode"] = mode
 
     # Modify attributes of file if needed
     if attrs is not None and not is_dir:
         # File is a symlink, ignore the mode setting
         # if follow_symlinks is False
-        if os.path.islink(name) and not follow_symlinks:
-            pass
-        else:
+        if not (is_link and not follow_symlinks):
             diff_attrs = _cmp_attrs(name, attrs)
             if diff_attrs and any(attr for attr in diff_attrs):
                 changes = {
@@ -5396,7 +5426,7 @@ def check_managed(
     setype=None,
     serange=None,
     follow_symlinks=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Check to see what changes need to be made for a file
@@ -5437,7 +5467,7 @@ def check_managed(
             context,
             defaults,
             skip_verify,
-            **kwargs
+            **kwargs,
         )
         if comments:
             __clean_tmp(sfn)
@@ -5495,7 +5525,7 @@ def check_managed_changes(
     serange=None,
     verify_ssl=True,
     follow_symlinks=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Return a dictionary of what changes need to be made for a file
@@ -5547,7 +5577,7 @@ def check_managed_changes(
             defaults,
             skip_verify,
             verify_ssl=verify_ssl,
-            **kwargs
+            **kwargs,
         )
 
         # Ensure that user-provided hash string is lowercase
@@ -5960,7 +5990,7 @@ def manage_file(
     serange=None,
     verify_ssl=True,
     use_etag=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Checks the destination against what was retrieved with get_managed and
@@ -7130,6 +7160,8 @@ def grep(path, pattern, *opts):
         This function's return value is slated for refinement in future
         versions of Salt
 
+        Windows does not support the ``grep`` functionality.
+
     path
         Path to the file to be searched
 
@@ -7388,9 +7420,19 @@ def join(*args):
     return os.path.join(*args)
 
 
-def move(src, dst):
+def move(src, dst, disallow_copy_and_unlink=False):
     """
     Move a file or directory
+
+    disallow_copy_and_unlink
+        If ``True``, the operation is offloaded to the ``file.rename`` execution
+        module function. This will use ``os.rename`` underneath, which will fail
+        in the event that ``src`` and ``dst`` are on different filesystems. If
+        ``False`` (the default), ``shutil.move`` will be used in order to fall
+        back on a "copy then unlink" approach, which is required for moving
+        across filesystems.
+
+        .. versionadded:: 3006.0
 
     CLI Example:
 
@@ -7398,6 +7440,9 @@ def move(src, dst):
 
         salt '*' file.move /path/to/src /path/to/dst
     """
+    if disallow_copy_and_unlink:
+        return rename(src, dst)
+
     src = os.path.expanduser(src)
     dst = os.path.expanduser(dst)
 

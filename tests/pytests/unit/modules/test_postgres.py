@@ -1,5 +1,6 @@
 import pytest
 
+import salt.modules.config as configmod
 import salt.modules.postgres as postgres
 from tests.support.mock import MagicMock, patch
 
@@ -28,7 +29,8 @@ def configure_loader_modules():
                 "file.chown": MagicMock(),
                 "file.remove": MagicMock(),
             },
-        }
+        },
+        configmod: {},
     }
 
 
@@ -132,3 +134,50 @@ def test_has_privileges_with_function():
             user="testuser",
             runas="user",
         )
+
+
+def test__runpsql_with_timeout():
+    cmd_run_mock = MagicMock()
+    postgres_opts = {
+        "config.option": configmod.option,
+        "cmd.run_all": cmd_run_mock,
+    }
+    kwargs = {
+        "reset_system_locale": False,
+        "clean_env": True,
+        "runas": "saltuser",
+        "python_shell": False,
+    }
+    with patch.dict(postgres.__salt__, postgres_opts):
+        with patch.dict(
+            configmod.__opts__, {"postgres.timeout": 60, "postgres.pass": None}
+        ):
+            postgres._run_psql("fakecmd", runas="saltuser")
+            cmd_run_mock.assert_called_with("fakecmd", timeout=60, **kwargs)
+        with patch.dict(configmod.__opts__, {"postgres.pass": None}):
+            postgres._run_psql("fakecmd", runas="saltuser")
+            cmd_run_mock.assert_called_with("fakecmd", timeout=0, **kwargs)
+
+
+def test__run_initdb_with_timeout():
+    cmd_run_mock = MagicMock(return_value={})
+    postgres_opts = {
+        "config.option": configmod.option,
+        "cmd.run_all": cmd_run_mock,
+    }
+    kwargs = {
+        "clean_env": True,
+        "runas": "saltuser",
+        "python_shell": False,
+    }
+    cmd_str = "/fake/path --pgdata=fakename --username=saltuser --auth=password --encoding=UTF8"
+    with patch.dict(postgres.__salt__, postgres_opts):
+        with patch.object(postgres, "_find_pg_binary", return_value="/fake/path"):
+            with patch.dict(
+                configmod.__opts__, {"postgres.timeout": 60, "postgres.pass": None}
+            ):
+                postgres._run_initdb("fakename", runas="saltuser")
+                cmd_run_mock.assert_called_with(cmd_str, timeout=60, **kwargs)
+            with patch.dict(configmod.__opts__, {"postgres.pass": None}):
+                postgres._run_initdb("fakename", runas="saltuser")
+                cmd_run_mock.assert_called_with(cmd_str, timeout=0, **kwargs)

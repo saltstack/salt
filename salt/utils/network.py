@@ -26,7 +26,7 @@ import salt.utils.stringutils
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 try:
     import salt.utils.win_network
@@ -1096,7 +1096,7 @@ def netbsd_interfaces():
     address)
     """
     # NetBSD versions prior to 8.0 can still use linux_interfaces()
-    if LooseVersion(os.uname()[2]) < LooseVersion("8.0"):
+    if Version(os.uname()[2]) < Version("8.0"):
         return linux_interfaces()
 
     ifconfig_path = salt.utils.path.which("ifconfig")
@@ -2341,6 +2341,25 @@ def filter_by_networks(values, networks):
             raise ValueError("Do not know how to filter a {}".format(type(values)))
     else:
         return values
+
+
+@jinja_filter("ipwrap")
+def ipwrap(data):
+    """
+    Returns any input (string, list, tuple) as a string or a list with any IPv6 addresses wrapped in square brackets ([]).
+    """
+
+    if isinstance(data, (list, tuple)):
+        ret = []
+        for element in data:
+            if _is_ipv(element, 6, options=None):
+                element = ip_bracket(element)
+            ret.append(element)
+    else:
+        if _is_ipv(data, 6, options=None):
+            data = ip_bracket(data)
+        ret = data
+    return ret
 
 
 def ip_bracket(addr, strip=False):

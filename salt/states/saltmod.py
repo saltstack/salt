@@ -32,6 +32,8 @@ import salt.output
 import salt.syspaths
 import salt.utils.data
 import salt.utils.event
+import salt.utils.versions
+from salt.features import features
 
 log = logging.getLogger(__name__)
 
@@ -123,7 +125,7 @@ def state(
     subset=None,
     orchestration_jid=None,
     failhard=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Invoke a state run on a given target
@@ -452,7 +454,7 @@ def function(
     batch=None,
     subset=None,
     failhard=None,
-    **kwargs
+    **kwargs,
 ):  # pylint: disable=unused-argument
     """
     Execute a single module function on a remote minion via salt or salt-ssh
@@ -689,26 +691,50 @@ def wait_for_event(name, id_list, event_id="id", timeout=300, node="master"):
                     val = event["data"]["data"].get(event_id)
 
                 if val is not None:
-                    try:
-                        val_idx = id_list.index(val)
-                    except ValueError:
-                        log.trace(
-                            "wait_for_event: Event identifier '%s' not in "
-                            "id_list; skipping.",
-                            event_id,
-                        )
-                    else:
-                        del id_list[val_idx]
-                        del_counter += 1
-                        minions_seen = ret["changes"].setdefault("minions_seen", [])
-                        minions_seen.append(val)
+                    if isinstance(val, list):
 
-                        log.debug(
-                            "wait_for_event: Event identifier '%s' removed "
-                            "from id_list; %s items remaining.",
-                            val,
-                            len(id_list),
-                        )
+                        val_list = [id for id in id_list if id in val]
+
+                        if not val_list:
+                            log.trace(
+                                "wait_for_event: Event identifier '%s' not in "
+                                "id_list; skipping",
+                                event_id,
+                            )
+                        elif val_list:
+                            minions_seen = ret["changes"].setdefault("minions_seen", [])
+                            for found_val in val_list:
+                                id_list.remove(found_val)
+                                del_counter += 1
+                                minions_seen.append(found_val)
+                                log.debug(
+                                    "wait_for_event: Event identifier '%s' removed "
+                                    "from id_list; %s items remaining.",
+                                    found_val,
+                                    len(id_list),
+                                )
+
+                    else:
+                        try:
+                            val_idx = id_list.index(val)
+                        except ValueError:
+                            log.trace(
+                                "wait_for_event: Event identifier '%s' not in "
+                                "id_list; skipping.",
+                                event_id,
+                            )
+                        else:
+                            del id_list[val_idx]
+                            del_counter += 1
+                            minions_seen = ret["changes"].setdefault("minions_seen", [])
+                            minions_seen.append(val)
+
+                            log.debug(
+                                "wait_for_event: Event identifier '%s' removed "
+                                "from id_list; %s items remaining.",
+                                val,
+                                len(id_list),
+                            )
                 else:
                     log.trace(
                         "wait_for_event: Event identifier '%s' not in event "
@@ -754,6 +780,14 @@ def runner(name, **kwargs):
         log.debug("Unable to fire args event due to missing __orchestration_jid__")
         jid = None
 
+    try:
+        kwargs["__pub_user"] = __user__
+        log.debug(
+            f"added __pub_user to kwargs using dunder user '{__user__}', kwargs '{kwargs}'"
+        )
+    except NameError:
+        log.warning("unable to find user for fire args event due to missing __user__")
+
     if __opts__.get("test", False):
         ret = {
             "name": name,
@@ -778,7 +812,14 @@ def runner(name, **kwargs):
         "executed" if success else "failed",
     )
 
-    ret["__orchestration__"] = True
+    if features.get("enable_deprecated_orchestration_flag", False):
+        ret["__orchestration__"] = True
+        salt.utils.versions.warn_until(
+            "Argon",
+            "The __orchestration__ return flag will be removed in Salt Argon. "
+            "For more information see https://github.com/saltstack/salt/pull/59917.",
+        )
+
     if "jid" in out:
         ret["__jid__"] = out["jid"]
 
@@ -866,7 +907,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
             __orchestration_jid__=jid,
             __env__=__env__,
             full_return=True,
-            **(runner_config.get("kwarg", {}))
+            **(runner_config.get("kwarg", {})),
         )
 
     try:
@@ -1020,7 +1061,14 @@ def wheel(name, **kwargs):
         "executed" if success else "failed",
     )
 
-    ret["__orchestration__"] = True
+    if features.get("enable_deprecated_orchestration_flag", False):
+        ret["__orchestration__"] = True
+        salt.utils.versions.warn_until(
+            "Argon",
+            "The __orchestration__ return flag will be removed in Salt Argon. "
+            "For more information see https://github.com/saltstack/salt/pull/59917.",
+        )
+
     if "jid" in out:
         ret["__jid__"] = out["jid"]
 

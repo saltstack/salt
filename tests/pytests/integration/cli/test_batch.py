@@ -8,7 +8,7 @@ import salt.utils.platform
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
-    #    pytest.mark.slow_test,
+    pytest.mark.core_test,
 ]
 
 
@@ -179,6 +179,10 @@ def test_batch_retcode(salt_cli, salt_minion, salt_sub_minion, run_timeout):
     )
 
     assert cmd.returncode == 23
+    # TODO: Certain platforms will have a warning related to jinja. But
+    # that's an issue with dependency versions that may be due to the versions
+    # installed on the test images. When those issues are sorted, this can
+    # simply `not cmd.stderr`.
     assert not cmd.stderr
     assert "true" in cmd.stdout
 
@@ -198,6 +202,10 @@ def test_multiple_modules_in_batch(salt_cli, salt_minion, salt_sub_minion, run_t
     )
 
     assert cmd.returncode == 23
+    # TODO: Certain platforms will have a warning related to setproctitle. But
+    # that's an issue with dependency versions that may be due to the versions
+    # installed on the test images. When those issues are sorted, this can
+    # simply `not cmd.stderr`.
     assert not cmd.stderr
 
 

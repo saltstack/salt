@@ -10,7 +10,6 @@ import salt.channel.server
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
-import salt.log.setup
 import salt.master
 import salt.transport.client
 import salt.transport.server
@@ -24,7 +23,8 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.skip_on_spawning_platform(
         reason="These tests are currently broken on spawning platforms. Need to be rewritten.",
-    )
+    ),
+    pytest.mark.slow_test,
 ]
 
 

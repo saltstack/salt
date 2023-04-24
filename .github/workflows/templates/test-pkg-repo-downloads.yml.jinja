@@ -1,0 +1,79 @@
+  <%- set job_name = "test-linux-pkg-downloads" %>
+
+  <{ job_name }>:
+    <%- do test_repo_needs.append(job_name) %>
+    name: Test Linux Package Downloads
+    <%- if gh_environment == "staging" %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    <%- else %>
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    <%- endif %>
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-latest
+      platform: linux
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: <{ gh_environment }>
+      skip-code-coverage: true
+      <%- if gh_environment == "release" %>
+      artifacts-from-workflow: staging.yml
+      <%- endif %>
+    secrets: inherit
+
+
+  <%- set job_name = "test-macos-pkg-downloads" %>
+
+  <{ job_name }>:
+    <%- do test_repo_needs.append(job_name) %>
+    name: Test macOS Package Downloads
+    <%- if gh_environment == "staging" %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    <%- else %>
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    <%- endif %>
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-macos.yml
+    with:
+      distro-slug: macos-12
+      platform: darwin
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_macos }>
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: <{ gh_environment }>
+      skip-code-coverage: true
+      <%- if gh_environment == "release" %>
+      artifacts-from-workflow: staging.yml
+      <%- endif %>
+    secrets: inherit
+
+
+  <%- set job_name = "test-windows-pkg-downloads" %>
+
+  <{ job_name }>:
+    <%- do test_repo_needs.append(job_name) %>
+    <%- if gh_environment == "staging" %>
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    <%- else %>
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    <%- endif %>
+    name: Test Windows Package Downloads
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-windows.yml
+    with:
+      distro-slug: windows-2022
+      platform: windows
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_windows }>
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: <{ gh_environment }>
+      skip-code-coverage: true
+      <%- if gh_environment == "release" %>
+      artifacts-from-workflow: staging.yml
+      <%- endif %>
+    secrets: inherit

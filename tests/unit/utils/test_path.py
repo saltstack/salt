@@ -1,8 +1,3 @@
-"""
-Tests for salt.utils.path
-"""
-
-
 import ntpath
 import os
 import platform
@@ -10,12 +5,14 @@ import posixpath
 import sys
 import tempfile
 
+import pytest
+
 import salt.utils.compat
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandNotFoundError
 from tests.support.mock import patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class PathJoinTestCase(TestCase):
@@ -38,45 +35,33 @@ class PathJoinTestCase(TestCase):
         (("c:", r"\temp", r"\foo\bar"), "c:\\temp\\foo\\bar"),
     )
 
-    @skipIf(True, "Skipped until properly mocked")
+    @pytest.mark.skip(reason="Skipped until properly mocked")
+    @pytest.mark.skip_on_windows
     def test_nix_paths(self):
-        if platform.system().lower() == "windows":
-            self.skipTest(
-                "Windows platform found. not running *nix salt.utils.path.join tests"
-            )
         for idx, (parts, expected) in enumerate(self.NIX_PATHS):
             path = salt.utils.path.join(*parts)
-            self.assertEqual("{}: {}".format(idx, path), "{}: {}".format(idx, expected))
+            assert "{}: {}".format(idx, path) == "{}: {}".format(idx, expected)
 
-    @skipIf(True, "Skipped until properly mocked")
+    @pytest.mark.skip(reason="Skipped until properly mocked")
+    @pytest.mark.skip_unless_on_windows
     def test_windows_paths(self):
-        if platform.system().lower() != "windows":
-            self.skipTest(
-                "Non windows platform found. not running non patched os.path "
-                "salt.utils.path.join tests"
-            )
-
         for idx, (parts, expected) in enumerate(self.WIN_PATHS):
             path = salt.utils.path.join(*parts)
-            self.assertEqual("{}: {}".format(idx, path), "{}: {}".format(idx, expected))
+            assert "{}: {}".format(idx, path) == "{}: {}".format(idx, expected)
 
-    @skipIf(True, "Skipped until properly mocked")
+    @pytest.mark.skip(reason="Skipped until properly mocked")
+    @pytest.mark.skip_on_windows
     def test_windows_paths_patched_path_module(self):
-        if platform.system().lower() == "windows":
-            self.skipTest(
-                "Windows platform found. not running patched os.path "
-                "salt.utils.path.join tests"
-            )
-
         self.__patch_path()
 
-        for idx, (parts, expected) in enumerate(self.WIN_PATHS):
-            path = salt.utils.path.join(*parts)
-            self.assertEqual("{}: {}".format(idx, path), "{}: {}".format(idx, expected))
+        try:
+            for idx, (parts, expected) in enumerate(self.WIN_PATHS):
+                path = salt.utils.path.join(*parts)
+                assert "{}: {}".format(idx, path) == "{}: {}".format(idx, expected)
+        finally:
+            self.__unpatch_path()
 
-        self.__unpatch_path()
-
-    @skipIf(salt.utils.platform.is_windows(), "*nix-only test")
+    @pytest.mark.skip_on_windows(reason="*nix-only test")
     def test_mixed_unicode_and_binary(self):
         """
         This tests joining paths that contain a mix of components with unicode
@@ -91,7 +76,7 @@ class PathJoinTestCase(TestCase):
         b = "Д"
         expected = "/foo/bar/\u0414"
         actual = salt.utils.path.join(a, b)
-        self.assertEqual(actual, expected)
+        assert actual == expected
 
     def __patch_path(self):
         import imp
@@ -123,46 +108,46 @@ class PathJoinTestCase(TestCase):
 class PathTestCase(TestCase):
     def test_which_bin(self):
         ret = salt.utils.path.which_bin("str")
-        self.assertIs(None, ret)
+        assert ret is None
 
         test_exes = ["ls", "echo"]
         with patch("salt.utils.path.which", return_value="/tmp/dummy_path"):
             ret = salt.utils.path.which_bin(test_exes)
-            self.assertEqual(ret, "/tmp/dummy_path")
+            assert ret == "/tmp/dummy_path"
 
             ret = salt.utils.path.which_bin([])
-            self.assertIs(None, ret)
+            assert ret is None
 
         with patch("salt.utils.path.which", return_value=""):
             ret = salt.utils.path.which_bin(test_exes)
-            self.assertIs(None, ret)
+            assert ret is None
 
     def test_sanitize_win_path(self):
-        p = "\\windows\\system"
-        self.assertEqual(
-            salt.utils.path.sanitize_win_path("\\windows\\system"), "\\windows\\system"
+        assert (
+            salt.utils.path.sanitize_win_path("\\windows\\system")
+            == "\\windows\\system"
         )
-        self.assertEqual(
-            salt.utils.path.sanitize_win_path("\\bo:g|us\\p?at*h>"),
-            "\\bo_g_us\\p_at_h_",
+        assert (
+            salt.utils.path.sanitize_win_path("\\bo:g|us\\p?at*h>")
+            == "\\bo_g_us\\p_at_h_"
         )
 
     def test_check_or_die(self):
-        self.assertRaises(CommandNotFoundError, salt.utils.path.check_or_die, None)
+        with pytest.raises(CommandNotFoundError):
+            salt.utils.path.check_or_die(None)
 
         with patch("salt.utils.path.which", return_value=False):
-            self.assertRaises(
-                CommandNotFoundError, salt.utils.path.check_or_die, "FAKE COMMAND"
-            )
+            with pytest.raises(CommandNotFoundError):
+                salt.utils.path.check_or_die("FAKE COMMAND")
 
     def test_join(self):
         with patch(
             "salt.utils.platform.is_windows", return_value=False
         ) as is_windows_mock:
-            self.assertFalse(is_windows_mock.return_value)
+            assert not is_windows_mock.return_value
             expected_path = os.path.join(os.sep + "a", "b", "c", "d")
             ret = salt.utils.path.join("/a/b/c", "d")
-            self.assertEqual(ret, expected_path)
+            assert ret == expected_path
 
 
 class TestWhich(TestCase):
@@ -177,9 +162,7 @@ class TestWhich(TestCase):
         # salt.utils.path.which uses platform.is_windows to determine the platform, so we're using linux here
         with patch("salt.utils.platform.is_windows", lambda: False):
             with patch("salt.utils.path.which", lambda exe: None):
-                self.assertTrue(
-                    salt.utils.path.which("this-binary-does-not-exist") is None
-                )
+                assert salt.utils.path.which("this-binary-does-not-exist") is None
 
     # The mock patch below will make sure that ALL calls to the which function
     # return whatever is sent to it
@@ -187,7 +170,7 @@ class TestWhich(TestCase):
         # salt.utils.path.which uses platform.is_windows to determine the platform, so we're using linux here
         with patch("salt.utils.platform.is_windows", lambda: False):
             with patch("salt.utils.path.which", lambda exe: exe):
-                self.assertTrue(salt.utils.path.which("this-binary-exists-under-linux"))
+                assert salt.utils.path.which("this-binary-exists-under-linux")
 
     def test_existing_binary_in_windows(self):
         with patch("os.path.isfile") as isfile:
@@ -217,14 +200,11 @@ class TestWhich(TestCase):
                         ):
                             # Let's also patch is_windows to return True
                             with patch("salt.utils.platform.is_windows", lambda: True):
-                                self.assertEqual(
-                                    salt.utils.path.which(
-                                        "this-binary-exists-under-windows"
-                                    ),
-                                    os.path.join(
-                                        os.sep + "bin",
-                                        "this-binary-exists-under-windows.EXE",
-                                    ),
+                                assert salt.utils.path.which(
+                                    "this-binary-exists-under-windows"
+                                ) == os.path.join(
+                                    os.sep + "bin",
+                                    "this-binary-exists-under-windows.EXE",
                                 )
 
     def test_missing_binary_in_windows(self):
@@ -248,13 +228,11 @@ class TestWhich(TestCase):
                 with patch.dict(os.environ, {"PATH": os.sep + "bin"}):
                     # Let's also patch is_widows to return True
                     with patch("salt.utils.platform.is_windows", lambda: True):
-                        self.assertEqual(
-                            # Since we're passing the .exe suffix, the last True above
-                            # will not matter. The result will be None
+                        assert (
                             salt.utils.path.which(
                                 "this-binary-is-missing-in-windows.exe"
-                            ),
-                            None,
+                            )
+                            is None
                         )
 
     def test_existing_binary_in_windows_pathext(self):
@@ -297,12 +275,9 @@ class TestWhich(TestCase):
 
                             # Let's also patch is_windows to return True
                             with patch("salt.utils.platform.is_windows", lambda: True):
-                                self.assertEqual(
-                                    salt.utils.path.which(
-                                        "this-binary-exists-under-windows"
-                                    ),
-                                    os.path.join(
-                                        os.sep + "bin",
-                                        "this-binary-exists-under-windows.CMD",
-                                    ),
+                                assert salt.utils.path.which(
+                                    "this-binary-exists-under-windows"
+                                ) == os.path.join(
+                                    os.sep + "bin",
+                                    "this-binary-exists-under-windows.CMD",
                                 )

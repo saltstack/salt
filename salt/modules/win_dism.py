@@ -11,6 +11,7 @@ import re
 
 import salt.utils.platform
 import salt.utils.versions
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 __virtualname__ = "dism"
@@ -517,12 +518,13 @@ def remove_package(package, image=None, restart=False):
     Args:
         package (str): The full path to the package. Can be either a .cab file
             or a folder. Should point to the original source of the package, not
-            to where the file is installed. This can also be the name of a package as listed in
-            ``dism.installed_packages``
+            to where the file is installed. This can also be the name of a
+            package as listed in ``dism.installed_packages``
         image (Optional[str]): The path to the root directory of an offline
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the install
+        restart (Optional[bool]): Reboot the machine if required by the
+            uninstall
 
     Returns:
         dict: A dictionary containing the results of the command
@@ -555,6 +557,77 @@ def remove_package(package, image=None, restart=False):
     return __salt__["cmd.run_all"](cmd)
 
 
+def get_kb_package_name(kb, image=None):
+    """
+    Get the actual package name on the system based on the KB name
+
+    .. versionadded:: 3006.0
+
+    Args:
+        kb (str): The name of the KB to remove. Can also be just the KB number
+        image (Optional[str]): The path to the root directory of an offline
+            Windows image. If `None` is passed, the running operating system is
+            targeted. Default is None.
+
+    Returns:
+        str: The name of the package found on the system
+        None: If the package is not installed on the system
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Get the package name for KB1231231
+        salt '*' dism.get_kb_package_name KB1231231
+
+        # Get the package name for KB1231231 using just the number
+        salt '*' dism.get_kb_package_name 1231231
+    """
+    packages = installed_packages(image=image)
+    search = kb.upper() if kb.lower().startswith("kb") else "KB{}".format(kb)
+    for package in packages:
+        if "_{}~".format(search) in package:
+            return package
+    return None
+
+
+def remove_kb(kb, image=None, restart=False):
+    """
+    Remove a package by passing a KB number. This searches the installed
+    packages to get the full package name of the KB. It then calls the
+    ``dism.remove_package`` function to remove the package.
+
+    .. versionadded:: 3006.0
+
+    Args:
+        kb (str): The name of the KB to remove. Can also be just the KB number
+        image (Optional[str]): The path to the root directory of an offline
+            Windows image. If `None` is passed, the running operating system is
+            targeted. Default is None.
+        restart (Optional[bool]): Reboot the machine if required by the
+            uninstall
+
+    Returns:
+        dict: A dictionary containing the results of the command
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Remove the KB5007575 just passing the number
+        salt '*' dism.remove_kb 5007575
+
+        # Remove the KB5007575 just passing the full name
+        salt '*' dism.remove_kb KB5007575
+    """
+    pkg_name = get_kb_package_name(kb=kb, image=image)
+    if pkg_name is None:
+        msg = "{} not installed".format(kb)
+        raise CommandExecutionError(msg)
+    log.debug("Found: %s", pkg_name)
+    return remove_package(package=pkg_name, image=image, restart=restart)
+
+
 def installed_packages(image=None):
     """
     List the packages installed on the system
@@ -573,7 +646,12 @@ def installed_packages(image=None):
 
         salt '*' dism.installed_packages
     """
-    return _get_components("Package Identity", "Packages", "Installed")
+    return _get_components(
+        type_regex="Package Identity",
+        plural_type="Packages",
+        install_value="Installed",
+        image=image,
+    )
 
 
 def package_info(package, image=None):

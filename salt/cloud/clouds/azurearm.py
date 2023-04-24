@@ -241,7 +241,6 @@ def get_resource_by_id(resource_id, api_version, extract_value=None):
     return ret
 
 
-@_deprecation_message
 def get_configured_provider():
     """
     Return the first configured provider instance.

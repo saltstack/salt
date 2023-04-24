@@ -1,0 +1,1 @@
+properties START_MINION="" CONFIG_TYPE=Custom CUSTOM_CONFIG=tests\config_tests\remove_config_custom_config.conf REMOVE_CONFIG=1

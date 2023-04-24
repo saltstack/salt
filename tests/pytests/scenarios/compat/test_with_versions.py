@@ -78,7 +78,7 @@ def salt_minion(
         minion_id,
         overrides=config_overrides,
         factory_class=SaltMinion,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         # SaltMinion kwargs
         name=minion_id,
         image="ghcr.io/saltstack/salt-ci-containers/salt:{}".format(

@@ -49,6 +49,21 @@ def test_thin_dir(salt_ssh_cli):
     assert thin_dir.joinpath("running_data").exists()
 
 
+def test_wipe(salt_ssh_cli):
+    """
+    Ensure --wipe is respected by the state module wrapper
+    issue #61083
+    """
+    ret = salt_ssh_cli.run("config.get", "thin_dir")
+    assert ret.returncode == 0
+    thin_dir = pathlib.Path(ret.data)
+    assert thin_dir.exists()
+    # only few modules (state and cp) will actually respect --wipe
+    # (see commit #8a414d53284ec04940540ebd823306ab5119e105)
+    salt_ssh_cli.run("--wipe", "state.apply")
+    assert not thin_dir.exists()
+
+
 def test_set_path(salt_ssh_cli, tmp_path, salt_ssh_roster_file):
     """
     test setting the path env variable

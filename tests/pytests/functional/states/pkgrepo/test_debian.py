@@ -4,6 +4,7 @@ import os
 import pathlib
 import shutil
 import sys
+from sysconfig import get_path
 
 import _pytest._version
 import attr
@@ -11,11 +12,6 @@ import pytest
 
 import salt.utils.files
 from tests.conftest import CODE_DIR
-
-try:
-    from sysconfig import get_python_lib  # pylint: disable=no-name-in-module
-except ImportError:
-    from distutils.sysconfig import get_python_lib
 
 PYTEST_GE_7 = getattr(_pytest._version, "version_tuple", (-1, -1)) >= (7, 0)
 
@@ -25,6 +21,7 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.destructive_test,
     pytest.mark.skip_if_not_root,
+    pytest.mark.slow_test,
 ]
 
 
@@ -54,7 +51,7 @@ def test_adding_repo_file(pkgrepo, tmp_path):
 
 
 @pytest.mark.requires_salt_states("pkgrepo.managed")
-def test_adding_repo_file_arch(pkgrepo, tmp_path):
+def test_adding_repo_file_arch(pkgrepo, tmp_path, subtests):
     """
     test adding a repo file using pkgrepo.managed
     and setting architecture
@@ -67,6 +64,35 @@ def test_adding_repo_file_arch(pkgrepo, tmp_path):
         assert (
             file_content.strip()
             == "deb [arch=amd64] http://www.deb-multimedia.org stable main"
+        )
+    with subtests.test("With multiple archs"):
+        repo_content = (
+            "deb [arch=amd64,i386  ] http://www.deb-multimedia.org stable main"
+        )
+        pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
+        with salt.utils.files.fopen(repo_file, "r") as fp:
+            file_content = fp.read()
+            assert (
+                file_content.strip()
+                == "deb [arch=amd64,i386] http://www.deb-multimedia.org stable main"
+            )
+
+
+@pytest.mark.requires_salt_states("pkgrepo.managed")
+def test_adding_repo_file_cdrom(pkgrepo, tmp_path):
+    """
+    test adding a repo file using pkgrepo.managed
+    The issue is that CDROM installs often have [] in the line, and we
+    should still add the repo even though it's not setting arch(for example)
+    """
+    repo_file = str(tmp_path / "cdrom.list")
+    repo_content = "deb cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ stable main"
+    pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
+    with salt.utils.files.fopen(repo_file, "r") as fp:
+        file_content = fp.read()
+        assert (
+            file_content.strip()
+            == "deb cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ stable main"
         )
 
 
@@ -110,7 +136,9 @@ def system_aptsources(request, grains):
                     "{}".format(*sys.version_info),
                     "{}.{}".format(*sys.version_info),
                 ]
-                session_site_packages_dir = get_python_lib()
+                session_site_packages_dir = get_path(
+                    "purelib"
+                )  # note: platlib and purelib could differ
                 session_site_packages_dir = os.path.relpath(
                     session_site_packages_dir, str(CODE_DIR)
                 )
@@ -576,7 +604,7 @@ class Repo:
     fullname = attr.ib()
     alt_repo = attr.ib(init=False)
     key_file = attr.ib()
-    tmp_path = attr.ib()
+    sources_list_file = attr.ib()
     repo_file = attr.ib()
     repo_content = attr.ib()
     key_url = attr.ib()
@@ -593,7 +621,7 @@ class Repo:
         """
         if (
             self.grains["osfullname"] == "Ubuntu"
-            and self.grains["lsb_distrib_release"] == "22.04"
+            and self.grains["osrelease"] == "22.04"
         ):
             return True
         return False
@@ -609,7 +637,7 @@ class Repo:
 
     @repo_file.default
     def _default_repo_file(self):
-        return self.tmp_path / "stable-binary.list"
+        return self.sources_list_file
 
     @repo_content.default
     def _default_repo_content(self):
@@ -630,7 +658,7 @@ class Repo:
                 )
             repo_content = "deb {opts} https://repo.saltproject.io/py3/{}/{}/{arch}/latest {} main".format(
                 self.fullname,
-                self.grains["lsb_distrib_release"],
+                self.grains["osrelease"],
                 self.grains["oscodename"],
                 arch=self.grains["osarch"],
                 opts=opts,
@@ -640,7 +668,7 @@ class Repo:
     @key_url.default
     def _default_key_url(self):
         key_url = "https://repo.saltproject.io/py3/{}/{}/{}/latest/salt-archive-keyring.gpg".format(
-            self.fullname, self.grains["lsb_distrib_release"], self.grains["osarch"]
+            self.fullname, self.grains["osrelease"], self.grains["osarch"]
         )
 
         if self.alt_repo:
@@ -649,35 +677,43 @@ class Repo:
 
 
 @pytest.fixture
-def repo(request, grains, tmp_path):
+def repo(request, grains, sources_list_file):
     signedby = False
     if "signedby" in request.node.name:
         signedby = True
-    repo = Repo(grains=grains, tmp_path=tmp_path, signedby=signedby)
+    repo = Repo(grains=grains, sources_list_file=sources_list_file, signedby=signedby)
     yield repo
     for key in [repo.key_file, repo.key_file.parent / "salt-alt-key.gpg"]:
         if key.is_file():
             key.unlink()
 
 
-def test_adding_repo_file_signedby(pkgrepo, states, repo):
+def test_adding_repo_file_signedby(pkgrepo, states, repo, subtests):
     """
     Test adding a repo file using pkgrepo.managed
     and setting signedby
     """
-    ret = states.pkgrepo.managed(
-        name=repo.repo_content,
-        file=str(repo.repo_file),
-        clean_file=True,
-        signedby=str(repo.key_file),
-        key_url=repo.key_url,
-        aptkey=False,
-    )
+
+    def _run(test=False):
+        return states.pkgrepo.managed(
+            name=repo.repo_content,
+            file=str(repo.repo_file),
+            clean_file=True,
+            signedby=str(repo.key_file),
+            key_url=repo.key_url,
+            aptkey=False,
+            test=test,
+        )
+
+    ret = _run()
     with salt.utils.files.fopen(str(repo.repo_file), "r") as fp:
         file_content = fp.read()
         assert file_content.strip() == repo.repo_content
     assert repo.key_file.is_file()
     assert repo.repo_content in ret.comment
+    with subtests.test("test=True"):
+        ret = _run(test=True)
+        assert ret.changes == {}
 
 
 def test_adding_repo_file_signedby_keyserver(pkgrepo, states, repo):

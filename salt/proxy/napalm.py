@@ -194,10 +194,11 @@ def init(opts):
     """
     Opens the connection with the network device.
     """
+    napalm_device = salt.utils.napalm.get_device(opts)
     __context__["napalm_device"] = {
         "opts": opts,
         "id": opts["id"],
-        "network_device": salt.utils.napalm.get_device(opts),
+        "network_device": napalm_device,
         "details": {"initialized": True},
     }
     return True
@@ -234,21 +235,27 @@ def ping():
     """
     Connection open successfully?
     """
-    return __context__["napalm_device"]["network_device"].get("UP", False)
+    return (
+        __context__.get("napalm_device", {}).get("network_device", {}).get("UP", False)
+    )
 
 
 def initialized():
     """
     Connection finished initializing?
     """
-    return __context__["napalm_device"]["details"].get("initialized", False)
+    return (
+        __context__.get("napalm_device", {})
+        .get("details", {})
+        .get("initialized", False)
+    )
 
 
 def get_device():
     """
     Returns the network device object.
     """
-    return __context__["napalm_device"]["network_device"]
+    return __context__.get("napalm_device", {}).get("network_device", {})
 
 
 def get_grains():
@@ -344,6 +351,9 @@ def call(method, *args, **kwargs):
         # thus the NAPALM methods will be called with their defaults
         if warg is None:
             kwargs.pop(karg)
-    return salt.utils.napalm.call(
-        __context__["napalm_device"]["network_device"], method, *args, **kwargs
-    )
+    if "napalm_device" in __context__:
+        return salt.utils.napalm.call(
+            __context__["napalm_device"]["network_device"], method, *args, **kwargs
+        )
+    else:
+        return {"result": False, "comment": "Not initialised yet", "out": None}

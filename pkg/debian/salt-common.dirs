@@ -1,0 +1,5 @@
+/var/cache/salt
+/var/log/salt
+/var/run/salt
+/usr/share/fish/vendor_completions.d
+/opt/saltstack/salt

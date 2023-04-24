@@ -27,10 +27,21 @@ def _repack_pkgs(pkgs, normalize=True):
         _normalize_name = __salt__["pkg.normalize_name"]
     else:
         _normalize_name = lambda pkgname: pkgname
-    return {
+
+    repacked_pkgs = {
         _normalize_name(str(x)): str(y) if y is not None else y
         for x, y in salt.utils.data.repack_dictlist(pkgs).items()
     }
+
+    # Check if there were collisions in names
+    if len(pkgs) != len(repacked_pkgs):
+        raise SaltInvocationError(
+            "You are passing a list of packages that contains duplicated packages names: {}. This cannot be processed. In case you are targeting different versions of the same package, please target them individually".format(
+                pkgs
+            )
+        )
+
+    return repacked_pkgs
 
 
 def pack_sources(sources, normalize=True):
@@ -184,7 +195,7 @@ def version(*names, **kwargs):
     ret = {}
     versions_as_list = salt.utils.data.is_true(kwargs.pop("versions_as_list", False))
     pkg_glob = False
-    if len(names) != 0:
+    if names:
         pkgs = __salt__["pkg.list_pkgs"](versions_as_list=True, **kwargs)
         for name in names:
             if "*" in name:

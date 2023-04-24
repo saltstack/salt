@@ -1,3 +1,4 @@
+import functools
 import os
 import socket
 
@@ -10,6 +11,10 @@ import salt.exceptions
 import salt.ext.tornado
 import salt.transport.tcp
 from tests.support.mock import MagicMock, PropertyMock, patch
+
+pytestmark = [
+    pytest.mark.core_test,
+]
 
 
 @pytest.fixture
@@ -430,3 +435,51 @@ async def test_mixin_should_use_correct_path_when_syndic(
     with patch("salt.crypt.verify_signature") as mock:
         client._verify_master_signature(payload)
         assert mock.call_args_list[0][0][0] == expected_pubkey_path
+
+
+def test_presence_events_callback_passed(temp_salt_master, salt_message_client):
+    opts = dict(temp_salt_master.config.copy(), transport="tcp", presence_events=True)
+    channel = salt.channel.server.PubServerChannel.factory(opts)
+    channel.transport = salt.transport.tcp.TCPPublishServer(opts)
+    mock_publish_daemon = MagicMock()
+    with patch(
+        "salt.transport.tcp.TCPPublishServer.publish_daemon", mock_publish_daemon
+    ):
+        channel._publish_daemon()
+        mock_publish_daemon.assert_called_with(
+            channel.publish_payload,
+            channel.presence_callback,
+            channel.remove_presence_callback,
+        )
+
+
+def test_presence_removed_on_stream_closed():
+    opts = {"presence_events": True}
+
+    io_loop_mock = MagicMock(spec=salt.ext.tornado.ioloop.IOLoop)
+
+    with patch("salt.master.AESFuncs.__init__", return_value=None):
+        server = salt.transport.tcp.PubServer(opts, io_loop=io_loop_mock)
+        server._closing = True
+        server.remove_presence_callback = MagicMock()
+
+    client = salt.transport.tcp.Subscriber(
+        salt.ext.tornado.iostream.IOStream, "1.2.3.4"
+    )
+    client._closing = True
+    server.clients = {client}
+
+    io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+    package = {
+        "topic_lst": [],
+        "payload": "test-payload",
+    }
+
+    with patch("salt.transport.frame.frame_msg", return_value="framed-payload"):
+        with patch(
+            "salt.ext.tornado.iostream.BaseIOStream.write",
+            side_effect=salt.ext.tornado.iostream.StreamClosedError(),
+        ):
+            io_loop.run_sync(functools.partial(server.publish_payload, package, None))
+
+            server.remove_presence_callback.assert_called_with(client)

@@ -305,7 +305,9 @@ def _runlevel():
     contextkey = "systemd._runlevel"
     if contextkey in __context__:
         return __context__[contextkey]
-    out = __salt__["cmd.run"]("runlevel", python_shell=False, ignore_retcode=True)
+    out = __salt__["cmd.run"](
+        salt.utils.path.which("runlevel"), python_shell=False, ignore_retcode=True
+    )
     try:
         ret = out.split()[1]
     except IndexError:
@@ -338,8 +340,8 @@ def _systemctl_cmd(action, name=None, systemd_scope=False, no_block=False, root=
         and salt.utils.systemd.has_scope(__context__)
         and __salt__["config.get"]("systemd.scope", True)
     ):
-        ret.extend(["systemd-run", "--scope"])
-    ret.append("systemctl")
+        ret.extend([salt.utils.path.which("systemd-run"), "--scope"])
+    ret.append(salt.utils.path.which("systemctl"))
     if no_block:
         ret.append("--no-block")
     if root:
@@ -1440,7 +1442,7 @@ def firstboot(
         salt '*' service.firstboot keymap=jp locale=en_US.UTF-8
 
     """
-    cmd = ["systemd-firstboot"]
+    cmd = [salt.utils.path.which("systemd-firstboot")]
     parameters = [
         ("locale", locale),
         ("locale-message", locale_message),

@@ -772,3 +772,56 @@ def psaux(name):
     ret = []
     ret.extend([sanitize_name, found_infos, pid_count])
     return ret
+
+
+def status(status):
+    """
+    .. versionadded:: 3006.0
+
+    Returns a list of processes according to their state.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.status STATUS
+
+    where ``STATUS`` is one of
+
+    * running
+    * sleeping
+    * disk_sleep
+    * stopped
+    * tracing_stop
+    * zombie
+    * dead
+    * wake_kill
+    * waking
+    * parked (Linux)
+    * idle (Linux, macOS, FreeBSD)
+    * locked (FreeBSD)
+    * waiting (FreeBSD)
+    * suspended (NetBSD)
+
+    See https://psutil.readthedocs.io/en/latest/index.html\
+?highlight=status#process-status-constants
+
+    """
+    ret = []
+    if not status:
+        raise SaltInvocationError("Filter is required for ps.status")
+    else:
+        try:
+            list_of_processes = psutil.process_iter(["pid", "name", "status"])
+            ret = [
+                proc.as_dict(("pid", "name"))
+                for proc in list_of_processes
+                # It's possible in the future we may want to filter by `in`
+                # instead - which will allow the user to request a number of
+                # statuses. But for now this is how it was originally written.
+                if proc.info["status"] == status
+            ]
+        except (psutil.AccessDenied, psutil.NoSuchProcess):
+            # AccessDenied may be returned from old versions of psutil on Windows systems
+            raise CommandExecutionError("Psutil did not return a list of processes")
+    return ret

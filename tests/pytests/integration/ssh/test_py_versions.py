@@ -2,6 +2,8 @@
 Integration tests for salt-ssh py_versions
 """
 import logging
+import socket
+import time
 
 import pytest
 from saltfactories.utils import random_string
@@ -17,6 +19,27 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
 ]
+
+
+def check_container_started(timeout_at, container):
+    sleeptime = 2
+    while time.time() <= timeout_at:
+        time.sleep(sleeptime)
+        try:
+            if not container.is_running():
+                return False
+            sock = socket.socket()
+            sock.connect(("localhost", container.get_check_ports()[22]))
+            return True
+        except Exception as err:  # pylint: disable=broad-except
+            break
+        finally:
+            sock.close()
+        time.sleep(sleeptime)
+        sleeptime *= 2
+    else:
+        return False
+    return False
 
 
 @pytest.fixture(scope="module")
@@ -35,7 +58,7 @@ def ssh_docker_container(salt_factories, ssh_keys):
     """
     container = salt_factories.get_container(
         random_string("ssh-py_versions-"),
-        "dwoz1/cicd:ssh",
+        "ghcr.io/saltstack/salt-ci-containers/ssh-minion:latest",
         container_run_kwargs={
             "ports": {
                 "22/tcp": None,
@@ -50,6 +73,7 @@ def ssh_docker_container(salt_factories, ssh_keys):
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
     )
+    container.container_start_check(check_container_started, container)
     with container.started() as factory:
         yield factory
 

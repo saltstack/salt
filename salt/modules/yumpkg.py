@@ -41,7 +41,7 @@ import salt.utils.pkg.rpm
 import salt.utils.systemd
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import LooseVersion
 
 try:
     import yum
@@ -49,7 +49,6 @@ try:
     HAS_YUM = True
 except ImportError:
     HAS_YUM = False
-
 
 log = logging.getLogger(__name__)
 
@@ -527,7 +526,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     """
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", True))
-    if len(names) == 0:
+    if not names:
         return ""
 
     options = _get_options(**kwargs)
@@ -560,7 +559,7 @@ def latest_version(*names, **kwargs):
         # Sort by version number (highest to lowest) for loop below
         updates = sorted(
             _yum_pkginfo(out["stdout"]),
-            key=lambda pkginfo: _LooseVersion(pkginfo.version),
+            key=lambda pkginfo: LooseVersion(pkginfo.version),
             reverse=True,
         )
 
@@ -735,7 +734,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         return {}
 
     attr = kwargs.get("attr")
-    if attr is not None:
+    if attr is not None and attr != "all":
         attr = salt.utils.args.split_input(attr)
 
     contextkey = "pkg.list_pkgs"
@@ -964,14 +963,14 @@ def list_repo_pkgs(*args, **kwargs):
     yum_version = (
         None
         if _yum() != "yum"
-        else _LooseVersion(
+        else LooseVersion(
             __salt__["cmd.run"](["yum", "--version"], python_shell=False)
             .splitlines()[0]
             .strip()
         )
     )
     # Really old version of yum; does not even have --showduplicates option
-    if yum_version and yum_version < _LooseVersion("3.2.13"):
+    if yum_version and yum_version < LooseVersion("3.2.13"):
         cmd_prefix = ["--quiet"]
         if cacheonly:
             cmd_prefix.append("-C")
@@ -983,7 +982,7 @@ def list_repo_pkgs(*args, **kwargs):
                 _parse_output(out["stdout"], strict=True)
     # The --showduplicates option is added in 3.2.13, but the
     # repository-packages subcommand is only in 3.4.3 and newer
-    elif yum_version and yum_version < _LooseVersion("3.4.3"):
+    elif yum_version and yum_version < LooseVersion("3.4.3"):
         cmd_prefix = ["--quiet", "--showduplicates"]
         if cacheonly:
             cmd_prefix.append("-C")
@@ -1019,7 +1018,7 @@ def list_repo_pkgs(*args, **kwargs):
             # Sort versions newest to oldest
             for pkgname in ret[reponame]:
                 sorted_versions = sorted(
-                    (_LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
+                    (LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
                 )
                 ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
         return ret
@@ -1030,7 +1029,7 @@ def list_repo_pkgs(*args, **kwargs):
                 byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
         for pkgname in byrepo_ret:
             sorted_versions = sorted(
-                (_LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
+                (LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
             )
             byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
         return byrepo_ret
@@ -1411,6 +1410,12 @@ def install(
 
         .. versionadded:: 2014.7.0
 
+    split_arch : True
+        If set to False it prevents package name normalization more strict way
+        than ``normalize`` set to ``False`` does.
+
+        .. versionadded:: 3006.0
+
     diff_attr:
         If a list of package attributes is specified, returned value will
         contain them, eg.::
@@ -1458,12 +1463,17 @@ def install(
 
     try:
         pkg_params, pkg_type = __salt__["pkg_resource.parse_targets"](
-            name, pkgs, sources, saltenv=saltenv, normalize=normalize, **kwargs
+            name,
+            pkgs,
+            sources,
+            saltenv=saltenv,
+            normalize=normalize and kwargs.get("split_arch", True),
+            **kwargs
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     diff_attr = kwargs.get("diff_attr")
@@ -1610,7 +1620,10 @@ def install(
                 except ValueError:
                     pass
                 else:
-                    if archpart in salt.utils.pkg.rpm.ARCHES:
+                    if archpart in salt.utils.pkg.rpm.ARCHES and (
+                        archpart != __grains__["osarch"]
+                        or kwargs.get("split_arch", True)
+                    ):
                         arch = "." + archpart
                         pkgname = namepart
 
@@ -1834,6 +1847,7 @@ def upgrade(
     normalize=True,
     minimal=False,
     obsoletes=True,
+    diff_attr=None,
     **kwargs
 ):
     """
@@ -1968,6 +1982,26 @@ def upgrade(
 
         .. versionadded:: 2019.2.0
 
+    diff_attr:
+        If a list of package attributes is specified, returned value will
+        contain them, eg.::
+
+            {'<package>': {
+                'old': {
+                    'version': '<old-version>',
+                    'arch': '<old-arch>'},
+
+                'new': {
+                    'version': '<new-version>',
+                    'arch': '<new-arch>'}}}
+
+        Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
+        ``install_date``, ``install_date_time_t``.
+
+        If ``all`` is specified, all valid attributes will be returned.
+
+        .. versionadded:: 3006.0
+
     .. note::
         To add extra arguments to the ``yum upgrade`` command, pass them as key
         word arguments. For arguments without assignments, pass ``True``
@@ -1990,7 +2024,7 @@ def upgrade(
     if salt.utils.data.is_true(refresh):
         refresh_db(**kwargs)
 
-    old = list_pkgs()
+    old = list_pkgs(attr=diff_attr)
 
     targets = []
     if name or pkgs:
@@ -2022,7 +2056,7 @@ def upgrade(
     cmd.extend(targets)
     result = _call_yum(cmd)
     __context__.pop("pkg.list_pkgs", None)
-    new = list_pkgs()
+    new = list_pkgs(attr=diff_attr)
     ret = salt.utils.data.compare_dicts(old, new)
 
     if result["retcode"] != 0:
@@ -2093,6 +2127,11 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     .. versionadded:: 0.16.0
 
+    split_arch : True
+        If set to False it prevents package name normalization by removing arch.
+
+        .. versionadded:: 3006.0
+
 
     Returns a dict containing the changes.
 
@@ -2141,11 +2180,13 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
             arch = ""
             pkgname = target
             try:
-                namepart, archpart = target.rsplit(".", 1)
+                namepart, archpart = pkgname.rsplit(".", 1)
             except ValueError:
                 pass
             else:
-                if archpart in salt.utils.pkg.rpm.ARCHES:
+                if archpart in salt.utils.pkg.rpm.ARCHES and (
+                    archpart != __grains__["osarch"] or kwargs.get("split_arch", True)
+                ):
                     arch = "." + archpart
                     pkgname = namepart
             # Since we don't always have the arch info, epoch information has to parsed out. But

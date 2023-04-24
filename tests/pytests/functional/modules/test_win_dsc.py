@@ -10,12 +10,20 @@ import salt.exceptions
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
+    pytest.mark.slow_test,
 ]
 
 
 @pytest.fixture(scope="module")
 def dsc(modules):
-    return modules.dsc
+    # We seem to be hitting an issue where there is a consistency check in
+    # progress during some of the tests. When this happens, the test fails
+    # This should disabled background refreshes
+    # https://github.com/saltstack/salt/issues/62714
+    existing_config_mode = modules.dsc.get_lcm_config()["ConfigurationMode"]
+    modules.dsc.set_lcm_config(config_mode="ApplyOnly")
+    yield modules.dsc
+    modules.dsc.set_lcm_config(config_mode=existing_config_mode)
 
 
 @pytest.fixture(scope="function")
@@ -71,7 +79,7 @@ def ps1_file_multiple():
                 Ensure          = "Present"
                 Contents        = "Hello World from DSC!"
             }
-            
+
             # The File resource can ensure the state of files, or copy them from a source to a destination with persistent updates.
             File HelloWorld2 {
                 DestinationPath = "C:\Temp\HelloWorld2.txt"

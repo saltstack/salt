@@ -140,7 +140,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     """
     This state manages software package repositories. Currently, :mod:`yum
     <salt.modules.yumpkg>`, :mod:`apt <salt.modules.aptpkg>`, and :mod:`zypper
-    <salt.modules.zypper>` repositories are supported.
+    <salt.modules.zypperpkg>` repositories are supported.
 
     **YUM/DNF/ZYPPER-BASED SYSTEMS**
 
@@ -276,74 +276,82 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         purposes of this, ``comps`` should be a comma-separated list.
 
     file
-       The filename for the ``*.list`` that the repository is configured in.
-       It is important to include the full-path AND make sure it is in
-       a directory that APT will look in when handling packages
+        The filename for the ``*.list`` that the repository is configured in.
+        It is important to include the full-path AND make sure it is in
+        a directory that APT will look in when handling packages
 
     dist
-       This dictates the release of the distro the packages should be built
-       for.  (e.g. ``unstable``). This option is rarely needed.
+        This dictates the release of the distro the packages should be built
+        for.  (e.g. ``unstable``). This option is rarely needed.
 
     keyid
-       The KeyID or a list of KeyIDs of the GPG key to install.
-       This option also requires the ``keyserver`` option to be set.
+        The KeyID or a list of KeyIDs of the GPG key to install.
+        This option also requires the ``keyserver`` option to be set.
 
     keyserver
-       This is the name of the keyserver to retrieve GPG keys from. The
-       ``keyid`` option must also be set for this option to work.
+        This is the name of the keyserver to retrieve GPG keys from. The
+        ``keyid`` option must also be set for this option to work.
 
     key_url
-       URL to retrieve a GPG key from. Allows the usage of ``http://``,
-       ``https://`` as well as ``salt://``.
+        URL to retrieve a GPG key from. Allows the usage of
+        ``https://`` as well as ``salt://``.  If ``allow_insecure_key`` is True,
+        this also allows ``http://``.
 
-       .. note::
+        .. note::
 
-           Use either ``keyid``/``keyserver`` or ``key_url``, but not both.
+            Use either ``keyid``/``keyserver`` or ``key_url``, but not both.
 
     key_text
-       The string representation of the GPG key to install.
+        The string representation of the GPG key to install.
 
-       .. versionadded:: 2018.3.0
+        .. versionadded:: 2018.3.0
 
-       .. note::
+        .. note::
 
-           Use either ``keyid``/``keyserver``, ``key_url``, or ``key_text`` but
-           not more than one method.
+            Use either ``keyid``/``keyserver``, ``key_url``, or ``key_text`` but
+            not more than one method.
 
     consolidate : False
-       If set to ``True``, this will consolidate all sources definitions to the
-       ``sources.list`` file, cleanup the now unused files, consolidate components
-       (e.g. ``main``) for the same URI, type, and architecture to a single line,
-       and finally remove comments from the ``sources.list`` file.  The consolidation
-       will run every time the state is processed. The option only needs to be
-       set on one repo managed by Salt to take effect.
+        If set to ``True``, this will consolidate all sources definitions to the
+        ``sources.list`` file, cleanup the now unused files, consolidate components
+        (e.g. ``main``) for the same URI, type, and architecture to a single line,
+        and finally remove comments from the ``sources.list`` file.  The consolidation
+        will run every time the state is processed. The option only needs to be
+        set on one repo managed by Salt to take effect.
 
     clean_file : False
-       If set to ``True``, empty the file before configuring the defined repository
+        If set to ``True``, empty the file before configuring the defined repository
 
-       .. note::
-           Use with care. This can be dangerous if multiple sources are
-           configured in the same file.
+        .. note::
+            Use with care. This can be dangerous if multiple sources are
+            configured in the same file.
 
-       .. versionadded:: 2015.8.0
+        .. versionadded:: 2015.8.0
 
     refresh : True
-       If set to ``False`` this will skip refreshing the apt package database
-       on Debian based systems.
+        If set to ``False`` this will skip refreshing the apt package database
+        on Debian based systems.
 
     refresh_db : True
-       .. deprecated:: 2018.3.0
-           Use ``refresh`` instead.
+        .. deprecated:: 2018.3.0
+            Use ``refresh`` instead.
 
     require_in
-       Set this to a list of :mod:`pkg.installed <salt.states.pkg.installed>` or
-       :mod:`pkg.latest <salt.states.pkg.latest>` to trigger the
-       running of ``apt-get update`` prior to attempting to install these
-       packages. Setting a require in the pkg state will not work for this.
+        Set this to a list of :mod:`pkg.installed <salt.states.pkg.installed>` or
+        :mod:`pkg.latest <salt.states.pkg.latest>` to trigger the
+        running of ``apt-get update`` prior to attempting to install these
+        packages. Setting a require in the pkg state will not work for this.
 
-    aptkey: Use the binary apt-key. If the command ``apt-key`` is not found
-       in the path, aptkey will be False, regardless of what is passed into
-       this argument.
+    aptkey:
+        Use the binary apt-key. If the command ``apt-key`` is not found
+        in the path, aptkey will be False, regardless of what is passed into
+        this argument.
+
+
+    allow_insecure_key : True
+        Whether to allow an insecure (e.g. http vs. https) key_url.
+
+        .. versionadded:: 3006.0
     """
     if not salt.utils.path.which("apt-key"):
         aptkey = False
@@ -389,6 +397,22 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     elif enabled is None and disabled is None:
         # If neither argument was passed we assume the repo will be enabled
         enabled = True
+
+    # To be changed in version 3008: default to False and still log a warning
+    allow_insecure_key = kwargs.pop("allow_insecure_key", True)
+    key_is_insecure = kwargs.get("key_url", "").strip().startswith("http:")
+    if key_is_insecure:
+        if allow_insecure_key:
+            salt.utils.versions.warn_until(
+                3008,
+                "allow_insecure_key will default to False starting in salt 3008.",
+            )
+        else:
+            ret["result"] = False
+            ret[
+                "comment"
+            ] = "Cannot have 'key_url' using http with 'allow_insecure_key' set to True"
+            return ret
 
     repo = name
     if __grains__["os"] in ("Ubuntu", "Mint"):
@@ -446,8 +470,15 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     # out of the state itself and into a module that it makes more sense
     # to use. Most package providers will simply return the data provided
     # it doesn't require any "specialized" data massaging.
-    if "pkg.expand_repo_def" in __salt__:
-        sanitizedkwargs = __salt__["pkg.expand_repo_def"](repo=repo, **kwargs)
+    if __grains__.get("os_family") == "Debian":
+        from salt.modules.aptpkg import _expand_repo_def
+
+        os_name = __grains__["os"]
+        os_codename = __grains__["oscodename"]
+
+        sanitizedkwargs = _expand_repo_def(
+            os_name=os_name, os_codename=os_codename, repo=repo, **kwargs
+        )
     else:
         sanitizedkwargs = kwargs
 

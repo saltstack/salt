@@ -23,8 +23,11 @@ SSH_PRIVATE_KEY_PASSWORD_PROMPT_RE = re.compile(r"Enter passphrase for key", re.
 
 # sudo prompt is used to recognize sudo prompting for a password and should
 # therefore be fairly recognizable and unique
-SUDO_PROMPT = r"[salt:sudo:d11bd4221135c33324a6bdc09674146fbfdf519989847491e34a689369bbce23]passwd:"
-SUDO_PROMPT_RE = re.compile(SUDO_PROMPT, re.M)
+SUDO_PROMPT = "[salt:sudo:d11bd4221135c33324a6bdc09674146fbfdf519989847491e34a689369bbce23]passwd:"
+SUDO_PROMPT_RE = re.compile(
+    r"\[salt:sudo:d11bd4221135c33324a6bdc09674146fbfdf519989847491e34a689369bbce23\]passwd:",
+    re.M,
+)
 
 # Keep these in sync with ./__init__.py
 RSTR = "_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878"
@@ -379,12 +382,16 @@ class Shell:
         if not cmd:
             return "", "No command or passphrase", 245
 
+        log_sanitize = None
+        if self.passwd:
+            log_sanitize = self.passwd
         term = salt.utils.vt.Terminal(
             self._split_cmd(cmd),
             log_stdout=True,
             log_stdout_level="trace",
             log_stderr=True,
             log_stderr_level="trace",
+            log_sanitize=log_sanitize,
             stream_stdout=False,
             stream_stderr=False,
         )
@@ -398,11 +405,15 @@ class Shell:
             while term.has_unread_data:
                 stdout, stderr = term.recv()
                 if stdout:
+                    if self.passwd:
+                        stdout = stdout.replace(self.passwd, ("*" * 6))
                     ret_stdout += stdout
                     buff = old_stdout + stdout
                 else:
                     buff = stdout
                 if stderr:
+                    if self.passwd:
+                        stderr = stderr.replace(self.passwd, ("*" * 6))
                     ret_stderr += stderr
                 if buff and RSTR_RE.search(buff):
                     # We're getting results back, don't try to send passwords
