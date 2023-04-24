@@ -171,7 +171,8 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
     }
     if git_repo:
         if not isinstance(rundir, str) or not os.path.isdir(rundir):
-            rundir = _client()._extrn_path(git_repo, "base")
+            with _client() as client:
+                rundir = client._extrn_path(git_repo, "base")
             log.trace("rundir set to %s", rundir)
         if not isinstance(git_kwargs, dict):
             log.debug("Setting git_kwargs to empty dict: %s", git_kwargs)

@@ -1,0 +1,3 @@
+adduser --system salt --group
+chown -R salt:salt /etc/salt /var/log/salt /opt/saltstack/salt/ /var/cache/salt/ /var/run/salt
+if command -v systemctl; then systemctl enable salt-master; fi

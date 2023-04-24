@@ -188,7 +188,7 @@ jobs:
       - name: Destroy VM
         if: always() && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools --timestamps vm destroy ${{ inputs.distro-slug }}
+          tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }}
 
       - name: Upload Onedir Tarball as an Artifact
         uses: actions/upload-artifact@v3
@@ -321,7 +321,7 @@ jobs:
       - name: Destroy VM
         if: always()
         run: |
-          tools --timestamps vm destroy ${{ inputs.distro-slug }} || true
+          tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }} || true
 
       - name: Fix file ownership
         run: |
