@@ -95,7 +95,6 @@
 
   <%- for slug, display_name, arch in (
                                         ("windows-2022", "Windows 2022", "amd64"),
-                                        ("windows-2022", "Windows 2022", "x86"),
                                       ) %>
     <%- for pkg_type in ("NSIS", "MSI") %>
     <%- set job_name = "{}-{}-{}-pkg-download-tests".format(slug.replace(".", ""), pkg_type.lower(), arch.lower()) %>
