@@ -10,6 +10,8 @@ log = logging.getLogger(__name__)
 
 @pytest.mark.slow_test
 def test_issue_64111(salt_master, salt_minion, salt_call_cli):
+    # This needs to be an integration test. A functional test does not trigger
+    # the issue fixed.
 
     macros_jinja = """
     {% macro a_jinja_macro(arg) -%}
