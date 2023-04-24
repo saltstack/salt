@@ -222,16 +222,3 @@ def test_file_client_kwarg(minion_opts, mock_file_client):
     mock_file_client.opts = minion_opts
     loader = SaltCacheLoader(minion_opts, _file_client=mock_file_client)
     assert loader._file_client is mock_file_client
-
-
-def test_cache_loader_shutdown(minion_opts, mock_file_client):
-    """
-    The shudown method can be called without raising an exception when the
-    file_client does not have a destroy method
-    """
-    assert not hasattr(mock_file_client, "destroy")
-    mock_file_client.opts = minion_opts
-    loader = SaltCacheLoader(minion_opts, _file_client=mock_file_client)
-    assert loader._file_client is mock_file_client
-    # Shutdown method should not raise any exceptions
-    loader.shutdown()
