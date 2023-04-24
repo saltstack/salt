@@ -61,7 +61,9 @@
   <%- endfor %>
 
 
-  <%- for slug, display_name, arch in (("macos-12", "macOS 12", "x86_64"),) %>
+  <%- for slug, display_name, arch in (
+                                        ("macos-12", "macOS 12", "x86_64"),
+                                      ) %>
     <%- set job_name = "{}-pkg-download-tests".format(slug.replace(".", "")) %>
 
   <{ job_name }>:
@@ -93,9 +95,10 @@
 
   <%- for slug, display_name, arch in (
                                         ("windows-2022", "Windows 2022", "amd64"),
+                                        ("windows-2022", "Windows 2022", "x86"),
                                       ) %>
     <%- for pkg_type in ("NSIS", "MSI") %>
-    <%- set job_name = "{}-{}-pkg-download-tests".format(slug.replace(".", ""), pkg_type.lower()) %>
+    <%- set job_name = "{}-{}-{}-pkg-download-tests".format(slug.replace(".", ""), pkg_type.lower(), arch.lower()) %>
 
   <{ job_name }>:
     <%- do test_repo_needs.append(job_name) %>
@@ -104,7 +107,7 @@
     <%- else %>
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     <%- endif %>
-    name: Test <{ display_name }> <{ pkg_type }> Package Downloads
+    name: Test <{ display_name }> <{ arch }> <{ pkg_type }> Package Downloads
     needs:
       - prepare-workflow
       - publish-repositories
