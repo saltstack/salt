@@ -180,23 +180,6 @@ class VaultLease(BaseLease):
         self.data = data
         super().__init__(lease_id, **kwargs)
 
-    def is_valid(self, valid_for=0, blur=0):
-        """
-        Checks whether the lease is valid for an amount of time
-
-        valid_for
-            Check whether the token will still be valid in the future.
-            This can be an integer, which will be interpreted as seconds, or a
-            time string using the same format as Vault does:
-            Suffix ``s`` for seconds, ``m`` for minutes, ``h`` for hours, ``d`` for days.
-            Defaults to 0.
-
-        blur
-            Allow undercutting ``valid_for`` for this amount of seconds.
-            Defaults to 0.
-        """
-        return self.is_valid_for(valid_for, blur=blur)
-
 
 class VaultToken(UseCountMixin, AccessorMixin, BaseLease):
     """
@@ -422,7 +405,7 @@ class LeaseStore:
         lease = self.cache.get(ckey, flush=bool(revoke))
         if lease is not None:
             self.lease_id_ckey_cache[str(lease)] = ckey
-        if lease is None or lease.is_valid(valid_for):
+        if lease is None or lease.is_valid_for(valid_for):
             return lease
         if not renew:
             return check_revoke(lease)
@@ -431,7 +414,7 @@ class LeaseStore:
         except VaultNotFoundError:
             # The cached lease was already revoked
             return check_revoke(lease)
-        if not lease.is_valid(valid_for, blur=renew_blur):
+        if not lease.is_valid_for(valid_for, blur=renew_blur):
             if renew_increment is not None:
                 # valid_for cannot possibly be respected
                 return check_revoke(lease)
@@ -442,7 +425,7 @@ class LeaseStore:
             except VaultNotFoundError:
                 # The cached lease was already revoked
                 return check_revoke(lease)
-            if not lease.is_valid(valid_for, blur=renew_blur):
+            if not lease.is_valid_for(valid_for, blur=renew_blur):
                 return check_revoke(lease)
         return lease
 

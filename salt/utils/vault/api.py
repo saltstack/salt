@@ -26,7 +26,6 @@ class AppRoleApi:
         token_ttl=None,
         token_max_ttl=None,
         token_policies=None,
-        policies=None,
         token_bound_cidrs=None,
         token_explicit_max_ttl=None,
         token_no_default_policy=None,
@@ -46,7 +45,6 @@ class AppRoleApi:
                 "token_ttl": token_ttl,
                 "token_max_ttl": token_max_ttl,
                 "token_policies": token_policies,
-                "policies": policies,
                 "token_bound_cidrs": token_bound_cidrs,
                 "token_explicit_max_ttl": token_explicit_max_ttl,
                 "token_no_default_policy": token_no_default_policy,
@@ -117,7 +115,11 @@ class AppRoleApi:
         else:
             endpoint = f"auth/{mount}/role/{name}/secret-id-accessor/lookup"
             payload = {"secret_id_accessor": accessor}
-        return self.client.post(endpoint, payload=payload)["data"]
+        try:
+            return self.client.post(endpoint, payload=payload)["data"]
+        except TypeError:
+            # lookup does not raise exceptions, only returns True
+            raise VaultNotFoundError()
 
     def destroy_secret_id(self, name, secret_id=None, accessor=None, mount="approle"):
         if not secret_id and not accessor:

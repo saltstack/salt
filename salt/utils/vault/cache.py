@@ -282,9 +282,15 @@ class LeaseCacheMixin:
 
     def _check_validity(self, lease_data, valid_for=0):
         lease = self.lease_cls(**lease_data)
-        if lease.is_valid(valid_for):
-            log.debug("Using cached lease.")
-            return lease
+        try:
+            # is_valid on auth classes accounts for duration and uses
+            if lease.is_valid(valid_for):
+                log.debug("Using cached lease.")
+                return lease
+        except AttributeError:
+            if lease.is_valid_for(valid_for):
+                log.debug("Using cached lease.")
+                return lease
         if self.expire_events is not None:
             raise VaultLeaseExpired()
         return None

@@ -107,7 +107,7 @@ def test_vault_lease_is_valid_accounts_for_time(duration, offset, expected):
         "data": None,
     }
     res = leases.VaultLease(**data)
-    assert res.is_valid(offset) is expected
+    assert res.is_valid_for(offset) is expected
 
 
 @pytest.mark.parametrize(
@@ -133,7 +133,7 @@ def test_vault_token_is_valid_accounts_for_time(duration, offset, expected):
         "expire_time": duration,
     }
     res = vault.VaultToken(**data)
-    assert res.is_valid(offset) is expected
+    assert res.is_valid_for(offset) is expected
 
 
 @pytest.mark.parametrize(
@@ -152,7 +152,11 @@ def test_vault_token_is_valid_accounts_for_num_uses(num_uses, uses, expected):
         "creation_time": 0,
         "use_count": uses,
     }
-    with patch("salt.utils.vault.leases.VaultLease.is_valid", Mock(return_value=True)):
+    with patch(
+        "salt.utils.vault.leases.BaseLease.is_valid_for",
+        autospec=True,
+        return_value=True,
+    ):
         res = vault.VaultToken(**data)
         assert res.is_valid() is expected
 
@@ -201,7 +205,11 @@ def test_vault_approle_secret_id_is_valid_accounts_for_num_uses(
         "secret_id_num_uses": num_uses,
         "use_count": uses,
     }
-    with patch("salt.utils.vault.leases.VaultLease.is_valid", Mock(return_value=True)):
+    with patch(
+        "salt.utils.vault.leases.BaseLease.is_valid_for",
+        autospec=True,
+        return_value=True,
+    ):
         res = vault.VaultSecretId(**data)
         assert res.is_valid() is expected
 
