@@ -197,6 +197,16 @@ def debian(
     }}
     """
     ctx.info("Creating repository directory structure ...")
+    create_repo_path = _create_top_level_repo_path(
+        repo_path,
+        salt_version,
+        distro,
+        distro_version=distro_version,
+        distro_arch=distro_arch,
+    )
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
+
     create_repo_path = _create_repo_path(
         repo_path,
         salt_version,
@@ -205,7 +215,6 @@ def debian(
         distro_arch=distro_arch,
         nightly_build=nightly_build,
     )
-
     ftp_archive_config_file = create_repo_path / "apt-ftparchive.conf"
     ctx.info(f"Writing {ftp_archive_config_file} ...")
     ftp_archive_config_file.write_text(textwrap.dedent(ftp_archive_config))
@@ -302,11 +311,11 @@ def debian(
             if version.major == major_version:
                 matching_major = version
                 break
-        if not matching_major or matching_major < salt_version:
+        if not matching_major or matching_major <= salt_version:
             major_link = create_repo_path.parent.parent / str(major_version)
             ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
             major_link.symlink_to(f"minor/{salt_version}")
-        if not remote_versions or remote_versions[0] < salt_version:
+        if not remote_versions or remote_versions[0] <= salt_version:
             latest_link = create_repo_path.parent.parent / "latest"
             ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
             latest_link.symlink_to(f"minor/{salt_version}")
@@ -322,6 +331,7 @@ _rpm_distro_info = {
     "amazon": ["2"],
     "redhat": ["7", "8", "9"],
     "fedora": ["36", "37", "38"],
+    "photon": ["3", "4"],
 }
 
 
@@ -399,6 +409,16 @@ def rpm(
         distro_arch = "arm64"
 
     ctx.info("Creating repository directory structure ...")
+    create_repo_path = _create_top_level_repo_path(
+        repo_path,
+        salt_version,
+        distro,
+        distro_version=distro_version,
+        distro_arch=distro_arch,
+    )
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
+
     create_repo_path = _create_repo_path(
         repo_path,
         salt_version,
@@ -493,7 +513,7 @@ def rpm(
         else:
             distro_name = distro.capitalize()
 
-        if int(distro_version) < 8:
+        if distro != "photon" and int(distro_version) < 8:
             failovermethod = "\n            failovermethod=priority"
         else:
             failovermethod = ""
@@ -530,13 +550,13 @@ def rpm(
             if version.major == major_version:
                 matching_major = version
                 break
-        if not matching_major or matching_major < salt_version:
+        if not matching_major or matching_major <= salt_version:
             major_link = create_repo_path.parent.parent / str(major_version)
             ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
             major_link.symlink_to(f"minor/{salt_version}")
             repo_file_path = create_repo_path.parent.parent / f"{major_version}.repo"
             _create_repo_file(repo_file_path, str(major_version))
-        if not remote_versions or remote_versions[0] < salt_version:
+        if not remote_versions or remote_versions[0] <= salt_version:
             latest_link = create_repo_path.parent.parent / "latest"
             ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
             latest_link.symlink_to(f"minor/{salt_version}")
@@ -934,11 +954,11 @@ def release(ctx: Context, salt_version: str):
                 log.exception(f"Error downloading {repo_release_files_path}: {exc}")
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "404":
-                ctx.error(f"Cloud not find {repo_release_files_path} in bucket.")
+                ctx.error(f"Could not find {repo_release_files_path} in bucket.")
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "400":
                 ctx.error(
-                    f"Cloud not download {repo_release_files_path} from bucket: {exc}"
+                    f"Could not download {repo_release_files_path} from bucket: {exc}"
                 )
                 ctx.exit(1)
             log.exception(f"Error downloading {repo_release_files_path}: {exc}")
@@ -960,11 +980,11 @@ def release(ctx: Context, salt_version: str):
                 log.exception(f"Error downloading {repo_release_symlinks_path}: {exc}")
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "404":
-                ctx.error(f"Cloud not find {repo_release_symlinks_path} in bucket.")
+                ctx.error(f"Could not find {repo_release_symlinks_path} in bucket.")
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "400":
                 ctx.error(
-                    f"Cloud not download {repo_release_symlinks_path} from bucket: {exc}"
+                    f"Could not download {repo_release_symlinks_path} from bucket: {exc}"
                 )
                 ctx.exit(1)
             log.exception(f"Error downloading {repo_release_symlinks_path}: {exc}")
@@ -1146,7 +1166,7 @@ def release(ctx: Context, salt_version: str):
                     raise
                 if exc.response["Error"]["Code"] != "404":
                     raise
-                ctx.info(f"Cloud not find {repo_file_path} in bucket {bucket_name}")
+                ctx.info(f"Could not find {repo_file_path} in bucket {bucket_name}")
 
         for dirpath, dirnames, filenames in os.walk(repo_path, followlinks=True):
             for path in filenames:
@@ -1431,7 +1451,7 @@ def _get_remote_versions(bucket_name: str, remote_path: str):
             continue
         versions.append(Version(version))
     versions.sort(reverse=True)
-    log.info("Remove versions collected: %s", versions)
+    log.info("Remote versions collected: %s", versions)
     return versions
 
 
@@ -1446,6 +1466,14 @@ def _create_onedir_based_repo(
     pkg_suffixes: tuple[str, ...],
 ):
     ctx.info("Creating repository directory structure ...")
+    create_repo_path = _create_top_level_repo_path(
+        repo_path,
+        salt_version,
+        distro,
+    )
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
+
     create_repo_path = _create_repo_path(
         repo_path, salt_version, distro, nightly_build=nightly_build
     )
@@ -1642,7 +1670,7 @@ def _get_repo_json_file_contents(
             raise
         if exc.response["Error"]["Code"] != "404":
             raise
-        ctx.info(f"Cloud not find {repo_json_path} in bucket {bucket_name}")
+        ctx.info(f"Could not find {repo_json_path} in bucket {bucket_name}")
     if repo_json:
         ctx.print(repo_json, soft_wrap=True)
     return repo_json
@@ -1787,7 +1815,7 @@ def _publish_repo(
         pass
 
 
-def _create_repo_path(
+def _create_top_level_repo_path(
     repo_path: pathlib.Path,
     salt_version: str,
     distro: str,
@@ -1805,6 +1833,21 @@ def _create_repo_path(
         create_repo_path = create_repo_path / distro_version
     if distro_arch:
         create_repo_path = create_repo_path / distro_arch
+    create_repo_path.mkdir(exist_ok=True, parents=True)
+    return create_repo_path
+
+
+def _create_repo_path(
+    repo_path: pathlib.Path,
+    salt_version: str,
+    distro: str,
+    distro_version: str | None = None,  # pylint: disable=bad-whitespace
+    distro_arch: str | None = None,  # pylint: disable=bad-whitespace
+    nightly_build: bool = False,
+):
+    create_repo_path = _create_top_level_repo_path(
+        repo_path, salt_version, distro, distro_version, distro_arch
+    )
     if nightly_build is False:
         create_repo_path = create_repo_path / "minor" / salt_version
     else:

@@ -588,14 +588,37 @@ def salt_unity():
     s_fun()
 
 
+def _pip_args(args, target):
+    new_args = args[:]
+    target_in_args = False
+    for arg in args:
+        if "--target" in arg:
+            target_in_args = True
+    if "install" in args and not target_in_args:
+        new_args.append(f"--target={target}")
+    return new_args
+
+
+def _pip_environment(env, extras):
+    new_env = env.copy()
+    if "PYTHONPATH" in env:
+        new_env["PYTHONPATH"] = f"{extras}{os.pathsep}{env['PYTHONPATH']}"
+    else:
+        new_env["PYTHONPATH"] = extras
+    return new_env
+
+
 def salt_pip():
     """
     Proxy to current python's pip
     """
+    extras = str(sys.RELENV / "extras-{}.{}".format(*sys.version_info))
+    env = _pip_environment(os.environ.copy(), extras)
+    args = _pip_args(sys.argv[1:], extras)
     command = [
         sys.executable,
         "-m",
         "pip",
-    ] + sys.argv[1:]
-    ret = subprocess.run(command, shell=False, check=False)
+    ] + _pip_args(sys.argv[1:], extras)
+    ret = subprocess.run(command, shell=False, check=False, env=env)
     sys.exit(ret.returncode)

@@ -1137,12 +1137,6 @@ class RemoteClient(Client):
         self.channel = salt.channel.client.ReqChannel.factory(self.opts)
         return self.channel
 
-    # pylint: disable=no-dunder-del
-    def __del__(self):
-        self.destroy()
-
-    # pylint: enable=no-dunder-del
-
     def destroy(self):
         if self._closing:
             return
@@ -1465,6 +1459,12 @@ class RemoteClient(Client):
         if self.auth:
             load["tok"] = self.auth.gen_token(b"salt")
         return self.channel.send(load)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
 
 class FSClient(RemoteClient):
