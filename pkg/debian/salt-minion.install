@@ -1,2 +1,3 @@
 conf/minion /etc/salt
+conf/proxy /etc/salt
 pkg/common/salt-minion.service /lib/systemd/system
