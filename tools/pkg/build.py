@@ -183,8 +183,8 @@ def macos(
         assert onedir is not None
         assert salt_version is not None
 
+    checkout = pathlib.Path.cwd()
     if onedir:
-        checkout = pathlib.Path.cwd()
         onedir_artifact = checkout / "artifacts" / onedir
         ctx.info(f"Building package from existing onedir: {str(onedir_artifact)}")
         _check_pkg_build_files_exist(ctx, onedir_artifact=onedir_artifact)
@@ -279,9 +279,9 @@ def windows(
         "-CICD",
     ]
 
+    checkout = pathlib.Path.cwd()
     if onedir:
         build_cmd.append("-SkipInstall")
-        checkout = pathlib.Path.cwd()
         onedir_artifact = checkout / "artifacts" / onedir
         ctx.info(f"Building package from existing onedir: {str(onedir_artifact)}")
         _check_pkg_build_files_exist(ctx, onedir_artifact=onedir_artifact)
