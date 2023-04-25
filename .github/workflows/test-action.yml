@@ -492,11 +492,6 @@ jobs:
         run: |
           tree -a artifacts
 
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
-
       - name: Install Nox
         run: |
           python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
