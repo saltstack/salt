@@ -322,10 +322,6 @@ def debian(
             latest_link = create_repo_path.parent.parent / "latest"
             ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
             latest_link.symlink_to(f"minor/{salt_version}")
-    else:
-        latest_link = create_repo_path.parent / "latest"
-        ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
-        latest_link.symlink_to(create_repo_path.name)
 
     ctx.info("Done")
 
@@ -568,12 +564,6 @@ def rpm(
             latest_link.symlink_to(f"minor/{salt_version}")
             repo_file_path = create_repo_path.parent.parent / "latest.repo"
             _create_repo_file(repo_file_path, "latest")
-    else:
-        latest_link = create_repo_path.parent / "latest"
-        ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
-        latest_link.symlink_to(create_repo_path.name)
-        repo_file_path = create_repo_path.parent.parent / "latest.repo"
-        _create_repo_file(repo_file_path, "latest")
 
     ctx.info("Done")
 
@@ -791,7 +781,16 @@ def src(
         assert key_id is not None
 
     ctx.info("Creating repository directory structure ...")
-    create_repo_path = repo_path / "salt" / "py3" / "src" / salt_version
+    create_repo_path = _create_top_level_repo_path(
+        ctx,
+        repo_path,
+        salt_version,
+        distro="src",
+        nightly_build_from=nightly_build_from,
+    )
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
+    create_repo_path = create_repo_path / salt_version
     create_repo_path.mkdir(exist_ok=True, parents=True)
     hashes_base_path = create_repo_path / f"salt-{salt_version}"
     for fpath in incoming.iterdir():
@@ -810,6 +809,8 @@ def src(
                 wfh.write(f"{hexdigest} {dpath.name}\n")
 
     for fpath in create_repo_path.iterdir():
+        if fpath.suffix in (".pub", ".gpg"):
+            continue
         tools.utils.gpg_sign(ctx, key_id, fpath)
 
     # Export the GPG key in use
@@ -1577,10 +1578,6 @@ def _create_onedir_based_repo(
         ctx, bucket_name=bucket_name, repo_path=repo_path, repo_json_path=repo_json_path
     )
     if nightly_build_from:
-        latest_link = create_repo_path.parent / "latest"
-        ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
-        latest_link.symlink_to(create_repo_path.name)
-
         ctx.info(f"Writing {repo_json_path} ...")
         repo_json_path.write_text(json.dumps(repo_json, sort_keys=True))
         return
@@ -1888,8 +1885,7 @@ def _create_repo_path(
         distro_arch,
         nightly_build_from=nightly_build_from,
     )
-    if not nightly_build_from:
-        create_repo_path = create_repo_path / "minor" / salt_version
+    create_repo_path = create_repo_path / "minor" / salt_version
     create_repo_path.mkdir(exist_ok=True, parents=True)
     return create_repo_path
 

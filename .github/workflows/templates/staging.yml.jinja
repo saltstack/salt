@@ -132,6 +132,10 @@ concurrency:
           name: Salt-${{ needs.prepare-workflow.outputs.salt-version }}.epub
           path: artifacts/release
 
+      - name: Show Release Artifacts
+        run: |
+          tree -a artifacts/release
+
       {#-
 
       - name: Download Release Documentation (PDF)
