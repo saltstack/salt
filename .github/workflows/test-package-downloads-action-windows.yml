@@ -31,6 +31,10 @@ on:
         required: true
         type: string
         description: The environment to run tests against
+      latest-release:
+        required: true
+        type: string
+        description: The latest salt release
       package-name:
         required: false
         type: string
@@ -220,6 +224,7 @@ jobs:
           INSTALL_TYPE: ${{ inputs.pkg-type }}
           SALT_RELEASE: "${{ inputs.salt-version }}"
           SALT_REPO_ARCH: ${{ inputs.arch }}
+          LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
           SALT_REPO_TYPE: ${{ inputs.environment }}
           SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
           SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
@@ -237,6 +242,7 @@ jobs:
           INSTALL_TYPE: ${{ inputs.pkg-type }}
           SALT_RELEASE: "${{ inputs.salt-version }}"
           SALT_REPO_ARCH: ${{ inputs.arch }}
+          LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
           SALT_REPO_TYPE: ${{ inputs.environment }}
           SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
           SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}

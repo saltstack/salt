@@ -95,9 +95,23 @@ def get_salt_release():
     return salt_release
 
 
+def get_repo_subpath_params():
+    current_release = packaging.version.parse(get_salt_release())
+    params = ["minor", current_release.major]
+    latest_env_var = os.environ.get("LATEST_SALT_RELEASE")
+    if latest_env_var is not None:
+        latest_release = packaging.version.parse(get_salt_release())
+        if current_release >= latest_release:
+            log.debug(
+                f"Running the tests for the latest release since {str(current_release)} >= {str(latest_release)}"
+            )
+            params.append("latest")
+    return params
+
+
 @pytest.fixture(
     scope="module",
-    params=["latest", "minor", packaging.version.parse(get_salt_release()).major],
+    params=[get_repo_subpath_params()],
 )
 def repo_subpath(request):
     return request.param

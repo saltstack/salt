@@ -27,6 +27,10 @@ on:
         required: true
         type: string
         description: The environment to run tests against
+      latest-release:
+        required: true
+        type: string
+        description: The latest salt release
       package-name:
         required: false
         type: string
@@ -216,6 +220,7 @@ jobs:
           SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
           SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
         run: |
           tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
           -E INSTALL_TYPE -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
@@ -232,6 +237,7 @@ jobs:
           SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
           SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
           -E INSTALL_TYPE -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
