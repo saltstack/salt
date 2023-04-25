@@ -1980,6 +1980,7 @@ jobs:
 
   publish-repositories:
     name: Publish Repositories
+    if: ${{ always() && ! failure() && ! cancelled() }}
     runs-on:
       - self-hosted
       - linux

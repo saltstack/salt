@@ -1,6 +1,8 @@
 <%- set gh_environment = gh_environment|default("nightly") %>
 <%- set skip_test_coverage_check = skip_test_coverage_check|default("false") %>
 <%- set skip_junit_reports_check = skip_junit_reports_check|default("false") %>
+<%- set prepare_workflow_skip_test_suite = "${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}" %>
+<%- set prepare_workflow_skip_pkg_test_suite = "${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}" %>
 <%- set prepare_workflow_if_check = prepare_workflow_if_check|default("${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}") %>
 <%- extends 'ci.yml.jinja' %>
 
@@ -14,7 +16,16 @@ run-name: "<{ workflow_name }> (branch: ${{ github.ref_name }})"
 <%- block on %>
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      skip-salt-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt test suite.
+      skip-salt-pkg-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages test suite.
   schedule:
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
     - cron: '0 1 * * *'  # Every day at 1AM
@@ -53,6 +64,7 @@ concurrency:
   publish-repositories:
     <%- do conclusion_needs.append('publish-repositories') %>
     name: Publish Repositories
+    if: ${{ always() && ! failure() && ! cancelled() }}
     runs-on:
       - self-hosted
       - linux
