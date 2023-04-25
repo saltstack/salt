@@ -167,7 +167,7 @@ if ( ! $SkipInstall ) {
       Architecture = $Architecture
   }
   if ( $Build ) {
-      $KeywordArguments["Build"] = $true
+      $KeywordArguments["Build"] = $false
   }
   if ( $CICD ) {
       $KeywordArguments["CICD"] = $true
