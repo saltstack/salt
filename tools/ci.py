@@ -645,3 +645,29 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"matrix={json.dumps(matrix)}\n")
     ctx.exit(0)
+
+
+@ci.command(
+    name="get-releases",
+    arguments={
+        "repository": {
+            "help": "The repository to query for releases, e.g. saltstack/salt",
+        },
+    },
+)
+def get_releases(ctx: Context, repository: str = "saltstack/salt"):
+    """
+    Generate the latest salt release.
+    """
+    github_output = os.environ.get("GITHUB_OUTPUT")
+
+    if github_output is None:
+        ctx.exit(1, "The 'GITHUB_OUTPUT' variable is not set.")
+    else:
+        releases = tools.utils.get_salt_releases(ctx, repository)
+        latest = releases[-1]
+
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"latest-release={latest}\n")
+            wfh.write(f"releases={json.dumps(releases)}\n")
+        ctx.exit(0)

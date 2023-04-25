@@ -23,7 +23,7 @@ from ptscripts import Context, command_group
 
 import tools.pkg
 import tools.utils
-from tools.utils import Version
+from tools.utils import Version, get_salt_releases
 
 try:
     import boto3
@@ -1302,7 +1302,7 @@ def github(
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"release-messsage-file={release_message_path.resolve()}\n")
 
-    releases = _get_salt_releases(ctx, repository)
+    releases = get_salt_releases(ctx, repository)
     if Version(salt_version) >= releases[-1]:
         make_latest = True
     else:
@@ -1343,7 +1343,7 @@ def confirm_unreleased(
     """
     Confirm that the passed version is not yet tagged and/or released.
     """
-    releases = _get_salt_releases(ctx, repository)
+    releases = get_salt_releases(ctx, repository)
     if Version(salt_version) in releases:
         ctx.error(f"There's already a '{salt_version}' tag or github release.")
         ctx.exit(1)
@@ -1400,57 +1400,6 @@ def confirm_staged(ctx: Context, salt_version: str, repository: str = "saltstack
             ctx.exit(1)
     ctx.info(f"Version {salt_version} has been staged for release")
     ctx.exit(0)
-
-
-def _get_salt_releases(ctx: Context, repository: str) -> list[Version]:
-    """
-    Return a list of salt versions
-    """
-    versions = set()
-    with ctx.web as web:
-        headers = {
-            "Accept": "application/vnd.github+json",
-        }
-        if "GITHUB_TOKEN" in os.environ:
-            headers["Authorization"] = f"Bearer {os.environ['GITHUB_TOKEN']}"
-        web.headers.update(headers)
-        ret = web.get(f"https://api.github.com/repos/{repository}/tags")
-        if ret.status_code != 200:
-            ctx.error(
-                f"Failed to get the tags for repository {repository!r}: {ret.reason}"
-            )
-            ctx.exit(1)
-        for tag in ret.json():
-            name = tag["name"]
-            if name.startswith("v"):
-                name = name[1:]
-            if "-" in name:
-                # We're not going to parse dash tags
-                continue
-            if "docs" in name:
-                # We're not going to consider doc tags
-                continue
-            versions.add(Version(name))
-
-        # Now let's go through the github releases
-        ret = web.get(f"https://api.github.com/repos/{repository}/releases")
-        if ret.status_code != 200:
-            ctx.error(
-                f"Failed to get the releases for repository {repository!r}: {ret.reason}"
-            )
-            ctx.exit(1)
-        for release in ret.json():
-            name = release["name"]
-            if name.startswith("v"):
-                name = name[1:]
-            if name and "-" not in name and "docs" not in name:
-                # We're not going to parse dash or docs releases
-                versions.add(Version(name))
-            name = release["tag_name"]
-            if "-" not in name and "docs" not in name:
-                # We're not going to parse dash or docs releases
-                versions.add(Version(name))
-    return sorted(versions)
 
 
 def _get_repo_detailed_file_list(

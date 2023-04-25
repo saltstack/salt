@@ -27,6 +27,10 @@ on:
         required: true
         type: string
         description: The environment to run tests against
+      latest-release:
+        required: true
+        type: string
+        description: The latest salt release
       python-version:
         required: false
         type: string
@@ -194,6 +198,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- download-pkgs
 
@@ -209,6 +214,7 @@ jobs:
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           SALT_RELEASE: "${{ inputs.salt-version }}"
           SALT_REPO_ARCH: ${{ inputs.arch }}
+          LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
           SALT_REPO_TYPE: ${{ inputs.environment }}
           SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
           SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
