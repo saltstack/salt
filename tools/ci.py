@@ -665,9 +665,10 @@ def get_releases(ctx: Context, repository: str = "saltstack/salt"):
         ctx.exit(1, "The 'GITHUB_OUTPUT' variable is not set.")
     else:
         releases = tools.utils.get_salt_releases(ctx, repository)
-        latest = releases[-1]
+        str_releases = [str(version) for version in releases]
+        latest = str_releases[-1]
 
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"latest-release={latest}\n")
-            wfh.write(f"releases={json.dumps(releases)}\n")
+            wfh.write(f"releases={json.dumps(str_releases)}\n")
         ctx.exit(0)
