@@ -27,11 +27,6 @@ on:
         required: true
         type: string
         description: The environment to run tests against
-      python-version:
-        required: false
-        type: string
-        description: The python version to run tests with
-        default: "3.10"
       package-name:
         required: false
         type: string
@@ -279,7 +274,10 @@ jobs:
 
   report:
     name: Reports for ${{ inputs.distro-slug }}(${{ inputs.arch }})
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - linux
+      - x86_64
     environment: ${{ inputs.environment }}
     if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     needs:
@@ -300,11 +298,6 @@ jobs:
         if: always() && steps.download-test-run-artifacts.outcome == 'success'
         run: |
           tree -a artifacts
-
-      - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: "${{ inputs.python-version }}"
 
       - name: Install Nox
         run: |
