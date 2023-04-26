@@ -545,6 +545,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: nightly
+      sign-packages: false
     secrets: inherit
 
   build-macos-pkgs:
@@ -557,6 +558,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: nightly
+      sign-packages: false
     secrets: inherit
 
   amazonlinux-2-pkg-tests:
