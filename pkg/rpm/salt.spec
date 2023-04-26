@@ -14,6 +14,10 @@
 %global __requires_exclude_from ^.*\\.so.*$
 %define _source_payload w2.gzdio
 %define _binary_payload w2.gzdio
+%define _SALT_GROUP salt
+%define _SALT_USER salt
+%define _SALT_NAME Salt
+%define _SALT_HOME /opt/saltstack/salt
 
 # Disable python bytecompile for MANY reasons
 %global __os_install_post %(echo '%{__os_install_post}' | sed -e 's!/usr/lib[^[:space:]]*/brp-python-bytecompile[[:space:]].*$!!g')
@@ -278,8 +282,6 @@ rm -rf %{buildroot}
 %dir %{_sysconfdir}/salt/pki
 
 
-
-
 %files master
 %defattr(-,root,root)
 %doc %{_mandir}/man7/salt.7*
@@ -311,6 +313,7 @@ rm -rf %{buildroot}
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/syndics/
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/tokens/
 
+
 %files minion
 %defattr(-,root,root)
 %doc %{_mandir}/man1/salt-call.1*
@@ -327,16 +330,19 @@ rm -rf %{buildroot}
 %dir %{_sysconfdir}/salt/minion.d
 %dir %attr(0750, root, root) %{_var}/cache/salt/minion/
 
+
 %files syndic
 %doc %{_mandir}/man1/salt-syndic.1*
 %{_bindir}/salt-syndic
 %{_unitdir}/salt-syndic.service
+
 
 %files api
 %defattr(-,root,root)
 %doc %{_mandir}/man1/salt-api.1*
 %{_bindir}/salt-api
 %{_unitdir}/salt-api.service
+
 
 %files cloud
 %doc %{_mandir}/man1/salt-cloud.1*
@@ -348,35 +354,63 @@ rm -rf %{buildroot}
 %{_sysconfdir}/salt/cloud.providers.d
 %config(noreplace) %{_sysconfdir}/salt/cloud
 
+
 %files ssh
 %doc %{_mandir}/man1/salt-ssh.1*
 %{_bindir}/salt-ssh
 %config(noreplace) %{_sysconfdir}/salt/roster
 
-# Add salt user/group for Salt Master
-%pre master
-getent group salt >/dev/null || groupadd -r salt
-getent passwd salt >/dev/null || \
-    useradd -r -g salt -s /sbin/nologin \
-    -c "Salt user for Salt Master" salt
+
+%pre
+# create user to avoid running server as root
+# 1. create group if not existing
+if ! getent group | grep -q "^%{_SALT_GROUP}:" ; then
+   addgroup --quiet --system %{_SALT_GROUP} 2>/dev/null ||true
+fi
+# 2. create homedir if not existing
+test -d %{_SALT_HOME} || mkdir %{_SALT_HOME}
+# 3. create user if not existing
+if ! getent passwd | grep -q "^%{_SALT_USER}:"; then
+  adduser --quiet \
+          --system \
+          --ingroup %{_SALT_USER} \
+          --no-create-home \
+          --disabled-password \
+          -s /sbin/nlogin \
+          %{_SALT_USER} 2>/dev/null || true
+fi
+# 4. adjust passwd entry
+usermod -c "%{_SALT_NAME}" \
+        -d %{_SALT_HOME}   \
+        -g %{_SALT_GROUP}  \
+         %{_SALT_USER}
+# 5. adjust file and directory permissions
+chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
+chmod u=rwx,g=rxs,o= %{_SALT_HOME}
+
 
 # assumes systemd for RHEL 7 & 8 & 9
 %preun master
 # RHEL 9 is giving warning msg if syndic is not installed, supress it
 %systemd_preun salt-syndic.service > /dev/null 2>&1
 
+
 %preun minion
 %systemd_preun salt-minion.service
 
+
 %preun api
 %systemd_preun salt-api.service
+
 
 %post
 ln -s -f /opt/saltstack/salt/spm %{_bindir}/spm
 ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
 
+
 %post cloud
 ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
+
 
 %post master
 %systemd_post salt-master.service
