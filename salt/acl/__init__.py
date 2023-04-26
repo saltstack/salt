@@ -11,6 +11,8 @@ found by reading the salt documentation:
 
 import salt.utils.stringutils
 
+X = None
+
 
 class PublisherACL:
     """
