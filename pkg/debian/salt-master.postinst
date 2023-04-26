@@ -1,3 +1,9 @@
-adduser --system salt --group
-chown -R salt:salt /etc/salt /var/log/salt /opt/saltstack/salt/ /var/cache/salt/ /var/run/salt
-if command -v systemctl; then systemctl enable salt-master; fi
+case "$1" in
+  install)
+    if command -v systemctl; then systemctl enable salt-master; fi
+    chown -R salt:salt /etc/salt /var/log/salt /opt/saltstack/salt/ /var/cache/salt/ /var/run/salt
+  ;;
+  upgrade)
+    chown -R salt:salt /etc/salt /var/log/salt /opt/saltstack/salt/ /var/cache/salt/ /var/run/salt
+  ;;
+esac

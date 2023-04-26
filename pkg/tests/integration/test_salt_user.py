@@ -1,3 +1,5 @@
+import subprocess
+
 import psutil
 import pytest
 import yaml
@@ -20,3 +22,33 @@ def test_salt_user_master(salt_master, install_salt):
         match = True
 
     assert match
+
+
+def test_salt_user_home(install_salt):
+    """
+    Test the correct user is running the Salt Master
+    """
+    proc = subprocess.run(["getent", "salt"], check=False, capture=True)
+    assert proc.exitcode() == 0
+    home = ""
+    try:
+        home = proc.stdout.decode().split(":")[5]
+    except:
+        pass
+    assert home == "/opt/saltstack/salt"
+
+
+def test_salt_user_group(install_salt):
+    """
+    Test the salt user is the salt group
+    """
+    proc = subprocess.run(["id", "salt"], check=False, capture=True)
+    assert proc.exitcode() == 0
+    in_group = False
+    try:
+        for group in proc.stdout.decode().split(" "):
+            if group == "salt":
+                in_group = True
+    except:
+        pass
+    assert in_group is True
