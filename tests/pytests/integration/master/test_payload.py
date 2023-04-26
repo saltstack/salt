@@ -1,11 +1,7 @@
 """
 Tests for payload
 """
-import logging
-
 import pytest
-
-log = logging.getLogger(__name__)
 
 
 @pytest.mark.slow_test
@@ -38,5 +34,4 @@ def test_payload_no_exception(salt_cli, salt_master, salt_minion):
             pillar={"hostname": "test"},
             minion_tgt=salt_minion.id,
         )
-        log.warning(f"DGM output '{ret}'")
-        ## assert not ret.stdout.startswith("Authentication failure")
+        assert "AttributeError:" not in ret.stdout
