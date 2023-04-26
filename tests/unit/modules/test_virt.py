@@ -2635,6 +2635,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
               </os>
               <on_reboot>restart</on_reboot>
+              <on_crash>restart</on_crash>
+              <on_poweroff>restart</on_poweroff>
+              <on_lockfailure>restart</on_lockfailure>
             </domain>
         """
         domain_mock = self.set_mock_vm("vm_with_numatune_param", xml_numatune)
@@ -3662,6 +3665,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
               </os>
               <on_reboot>restart</on_reboot>
+              <on_crash>restart</on_crash>
+              <on_poweroff>restart</on_poweroff>
+              <on_lockfailure>restart</on_lockfailure>
             </domain>
         """
         domain_mock = self.set_mock_vm("vm_with_memback_param", xml_with_memback_params)
