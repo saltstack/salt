@@ -311,11 +311,11 @@ def debian(
             if version.major == major_version:
                 matching_major = version
                 break
-        if not matching_major or matching_major < salt_version:
+        if not matching_major or matching_major <= salt_version:
             major_link = create_repo_path.parent.parent / str(major_version)
             ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
             major_link.symlink_to(f"minor/{salt_version}")
-        if not remote_versions or remote_versions[0] < salt_version:
+        if not remote_versions or remote_versions[0] <= salt_version:
             latest_link = create_repo_path.parent.parent / "latest"
             ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
             latest_link.symlink_to(f"minor/{salt_version}")
@@ -550,13 +550,13 @@ def rpm(
             if version.major == major_version:
                 matching_major = version
                 break
-        if not matching_major or matching_major < salt_version:
+        if not matching_major or matching_major <= salt_version:
             major_link = create_repo_path.parent.parent / str(major_version)
             ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
             major_link.symlink_to(f"minor/{salt_version}")
             repo_file_path = create_repo_path.parent.parent / f"{major_version}.repo"
             _create_repo_file(repo_file_path, str(major_version))
-        if not remote_versions or remote_versions[0] < salt_version:
+        if not remote_versions or remote_versions[0] <= salt_version:
             latest_link = create_repo_path.parent.parent / "latest"
             ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
             latest_link.symlink_to(f"minor/{salt_version}")
@@ -1451,7 +1451,7 @@ def _get_remote_versions(bucket_name: str, remote_path: str):
             continue
         versions.append(Version(version))
     versions.sort(reverse=True)
-    log.info("Remove versions collected: %s", versions)
+    log.info("Remote versions collected: %s", versions)
     return versions
 
 

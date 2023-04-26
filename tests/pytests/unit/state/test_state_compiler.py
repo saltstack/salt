@@ -17,6 +17,11 @@ from tests.support.mock import MagicMock, patch
 log = logging.getLogger(__name__)
 
 
+pytestmark = [
+    pytest.mark.core_test,
+]
+
+
 def test_format_log_non_ascii_character():
     """
     Tests running a non-ascii character through the state.format_log

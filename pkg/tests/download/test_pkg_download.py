@@ -257,13 +257,16 @@ def root_url(salt_release):
 
 def get_salt_release():
     salt_release = os.environ.get("SALT_RELEASE")
+    pkg_test_type = os.environ.get("PKG_TEST_TYPE", "install")
     if salt_release is None:
-        log.warning(
-            "Setting salt release to 3006.0rc2 which is probably not what you want."
-        )
+        if pkg_test_type == "download-pkgs":
+            log.warning(
+                "Setting salt release to 3006.0rc2 which is probably not what you want."
+            )
         salt_release = "3006.0rc2"
-    if packaging.version.parse(salt_release) < packaging.version.parse("3006.0rc1"):
-        log.warning(f"The salt release being tested, {salt_release!r} looks off.")
+    if pkg_test_type == "download-pkgs":
+        if packaging.version.parse(salt_release) < packaging.version.parse("3006.0rc1"):
+            log.warning(f"The salt release being tested, {salt_release!r} looks off.")
     return salt_release
 
 
