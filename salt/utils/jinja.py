@@ -97,6 +97,7 @@ class SaltCacheLoader(BaseLoader):
             self._file_client = salt.fileclient.get_file_client(
                 self.opts, self.pillar_rend
             )
+            self._close_file_client = True
         return self._file_client
 
     def cache_file(self, template):
