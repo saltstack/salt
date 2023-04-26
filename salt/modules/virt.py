@@ -3963,8 +3963,8 @@ def update(
             "convert": lambda v: "destroy" if v else "restart",
         },
         {
-            "path": "stop_on_poweroff",
-            "xpath": "on_poweroff",
+            "path": "stop_on_lockfailure",
+            "xpath": "on_lockfailure",
             "convert": lambda v: "destroy" if v else "restart",
         },
         {"path": "boot:kernel", "xpath": "os/kernel"},
