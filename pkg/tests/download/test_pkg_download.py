@@ -100,7 +100,7 @@ def get_repo_subpath_params():
     params = ["minor", current_release.major]
     latest_env_var = os.environ.get("LATEST_SALT_RELEASE")
     if latest_env_var is not None:
-        latest_release = packaging.version.parse(get_salt_release())
+        latest_release = packaging.version.parse(latest_env_var)
         if current_release >= latest_release:
             log.debug(
                 f"Running the tests for the latest release since {str(current_release)} >= {str(latest_release)}"
