@@ -1351,6 +1351,57 @@ def confirm_unreleased(
     ctx.exit(0)
 
 
+@repo.command(
+    name="confirm-staged",
+    arguments={
+        "salt_version": {
+            "help": "The salt version to check",
+        },
+        "repository": {
+            "help": (
+                "The full repository name, ie, 'saltstack/salt' on GitHub "
+                "to run the checks against."
+            )
+        },
+    },
+)
+def confirm_staged(ctx: Context, salt_version: str, repository: str = "saltstack/salt"):
+    """
+    Confirm that the passed version has been staged for release.
+    """
+    s3 = boto3.client("s3")
+    repo_release_files_path = pathlib.Path(
+        f"release-artifacts/{salt_version}/.release-files.json"
+    )
+    repo_release_symlinks_path = pathlib.Path(
+        f"release-artifacts/{salt_version}/.release-symlinks.json"
+    )
+    for remote_path in (repo_release_files_path, repo_release_symlinks_path):
+        try:
+            bucket_name = tools.utils.STAGING_BUCKET_NAME
+            ctx.info(
+                f"Checking for the presence of {remote_path} on bucket {bucket_name} ..."
+            )
+            s3.head_object(
+                Bucket=bucket_name,
+                Key=str(remote_path),
+            )
+        except ClientError as exc:
+            if "Error" not in exc.response:
+                log.exception(f"Could not get information about {remote_path}: {exc}")
+                ctx.exit(1)
+            if exc.response["Error"]["Code"] == "404":
+                ctx.error(f"Could not find {remote_path} in bucket.")
+                ctx.exit(1)
+            if exc.response["Error"]["Code"] == "400":
+                ctx.error(f"Could get information about {remote_path}: {exc}")
+                ctx.exit(1)
+            log.exception(f"Error getting information about {remote_path}: {exc}")
+            ctx.exit(1)
+    ctx.info(f"Version {salt_version} has been staged for release")
+    ctx.exit(0)
+
+
 def _get_salt_releases(ctx: Context, repository: str) -> list[Version]:
     """
     Return a list of salt versions
