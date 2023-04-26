@@ -952,10 +952,13 @@ def release(ctx: Context, salt_version: str):
     with tempfile.TemporaryDirectory(prefix=f"{salt_version}_release_") as tsd:
         local_release_files_path = pathlib.Path(tsd) / repo_release_files_path.name
         try:
+            bucket_name = tools.utils.STAGING_BUCKET_NAME
             with local_release_files_path.open("wb") as wfh:
-                ctx.info(f"Downloading {repo_release_files_path} ...")
+                ctx.info(
+                    f"Downloading {repo_release_files_path} from bucket {bucket_name} ..."
+                )
                 s3.download_fileobj(
-                    Bucket=tools.utils.STAGING_BUCKET_NAME,
+                    Bucket=bucket_name,
                     Key=str(repo_release_files_path),
                     Fileobj=wfh,
                 )
@@ -979,9 +982,11 @@ def release(ctx: Context, salt_version: str):
         )
         try:
             with local_release_symlinks_path.open("wb") as wfh:
-                ctx.info(f"Downloading {repo_release_symlinks_path} ...")
+                ctx.info(
+                    f"Downloading {repo_release_symlinks_path} from bucket {bucket_name} ..."
+                )
                 s3.download_fileobj(
-                    Bucket=tools.utils.STAGING_BUCKET_NAME,
+                    Bucket=bucket_name,
                     Key=str(repo_release_symlinks_path),
                     Fileobj=wfh,
                 )
