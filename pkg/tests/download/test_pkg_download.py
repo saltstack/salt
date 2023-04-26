@@ -111,7 +111,7 @@ def get_repo_subpath_params():
 
 @pytest.fixture(
     scope="module",
-    params=[get_repo_subpath_params()],
+    params=get_repo_subpath_params(),
 )
 def repo_subpath(request):
     return request.param
