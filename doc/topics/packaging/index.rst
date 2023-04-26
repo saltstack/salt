@@ -36,19 +36,19 @@ How to build onedir only
 
     .. code-block:: bash
 
-       relenv fetch --python=<pythonversion>
+       relenv fetch --python=<python-version>
 
 #. Create relenv environment:
 
     .. code-block:: bash
 
-       relenv create --python=3.10.10 <relenv name>
+       relenv create --python=<python-version> <relenv-package-path>
 
 #. Add Salt into onedir.
 
     .. code-block:: bash
 
-       path/to/<relenv-name>/bin/pip install /path/to/salt
+       <relenv-package-path>/bin/pip install /path/to/salt
 
 
 How to build rpm packages
@@ -57,13 +57,16 @@ How to build rpm packages
 
     .. code-block:: bash
 
-       yum -y install python3 python3-pip openssl git rpmdevtools rpmlint systemd-units libxcrypt-compat git
-
-#. (Optional) To build a specific Salt version, you will need to install tools and changelog dependencies:
+       yum -y install python3 python3-pip openssl git rpmdevtools rpmlint systemd-units libxcrypt-compat git gnupg2 jq createrepo rpm-sign rustc cargo epel-release
+       yum -y install patchelf
+       pip install awscli
 
     .. code-block:: bash
 
        pip install -r requirements/static/ci/py{python_version}/tools.txt
+
+#. (Optional) To build a specific Salt version, you will need to install tools and changelog dependencies:
+
 
     .. code-block:: bash
 
@@ -73,19 +76,22 @@ How to build rpm packages
 
     .. code-block:: bash
 
-       cd salt
+       cd <path-to-salt-repo>
 
 #. (Optional) To build a specific Salt version, run tools and set Salt version:
 
     .. code-block:: bash
 
-       tools changelog update-rpm <salt version>
+       tools changelog update-rpm <salt-version>
 
-#. Run rpmbuild in the Salt repo:
+#. Build the RPM:
+
+    Only the arch argument is required, the rest are optional.
 
     .. code-block:: bash
 
-        rpmbuild -bb --define="_salt_src $(pwd)" $(pwd)/pkg/rpm/salt.spec
+       tools pkg build rpm --relenv-version <relenv-version> --python-version <python-version> --arch <arch>
+
 
 
 How to build deb packages
@@ -95,13 +101,13 @@ How to build deb packages
 
     .. code-block:: bash
 
-       apt install -y bash-completion build-essential debhelper devscripts git patchelf python3 python3-pip python3-venv rustc
-
-#. (Optional) To build a specific Salt version, you will need to install tools and changelog dependencies:
+       apt install -y apt-utils gnupg jq awscli python3 python3-venv python3-pip build-essential devscripts debhelper bash-completion git patchelf rustc
 
     .. code-block:: bash
 
        pip install -r requirements/static/ci/py{python_version}/tools.txt
+
+#. (Optional) To build a specific Salt version, you will need to install changelog dependencies:
 
     .. code-block:: bash
 
@@ -111,21 +117,22 @@ How to build deb packages
 
     .. code-block:: bash
 
-       cd salt
+       cd <path-to-salt-repo>
 
 #. (Optional) To build a specific Salt version, run tools and set Salt version:
 
     .. code-block:: bash
 
-       tools changelog update-deb <salt version>
+       tools changelog update-deb <salt-version>
 
 
-#. Add a symlink and run debuild in the Salt repo:
+#. Build the deb package:
+
+    Only the arch argument is required, the rest are optional.
 
     .. code-block:: bash
 
-        ln -sf pkg/debian/ .
-        debuild -uc -us
+       tools pkg build deb --relenv-version <relenv-version> --python-version <python-version> --arch <arch>
 
 
 How to access python binary

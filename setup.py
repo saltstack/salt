@@ -5,10 +5,10 @@ The setup script for salt
 
 # pylint: disable=file-perms,resource-leakage
 import setuptools  # isort:skip
-
 import distutils.dist
 import glob
 import os
+import subprocess
 import sys
 import warnings
 from datetime import datetime
@@ -170,8 +170,9 @@ if os.path.exists(SALT_VERSION_HARDCODED):
     with open(SALT_VERSION_HARDCODED, encoding="utf-8") as rfh:
         SALT_VERSION = rfh.read().strip()
 else:
-    exec(compile(open(SALT_VERSION_MODULE).read(), SALT_VERSION_MODULE, "exec"))
-    SALT_VERSION = str(__saltstack_version__)  # pylint: disable=undefined-variable
+    SALT_VERSION = (
+        subprocess.check_output([sys.executable, SALT_VERSION_MODULE]).decode().strip()
+    )
 # pylint: enable=W0122
 
 
