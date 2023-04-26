@@ -27,6 +27,10 @@ on:
         description: >
           The Salt version to set prior to building packages and staging the release.
           (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+      sign-packages:
+        type: boolean
+        default: false
+        description: Sign Windows and MacOS Packages
       skip-salt-test-suite:
         type: boolean
         default: false
