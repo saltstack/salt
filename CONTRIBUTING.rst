@@ -538,7 +538,7 @@ You can enable or disable test groups locally by passing their respected flag:
 * --core-tests - Tests of any speed that test the root parts of salt.
 * --flaky-jail - Test that need to be temporarily skipped.
 
-In Your PR, you can enable or disable test groups by setting a label.
+In your PR, you can enable or disable test groups by setting a label.
 All fast, slow, and core tests specified in the change file will always run.
 
 * test:no-fast
