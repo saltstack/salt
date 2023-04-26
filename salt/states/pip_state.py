@@ -852,7 +852,7 @@ def installed(
             )
         # If we fail, then just send False, and we'll try again in the next function call
         except Exception as exc:  # pylint: disable=broad-except
-            log.exception(exc)
+            globals().get("log").exception(exc)
             pip_list = False
 
         for prefix, state_pkg_name, version_spec in pkgs_details:
