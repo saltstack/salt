@@ -40,6 +40,12 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+
+pytestmark = [
+    pytest.mark.core_test,
+]
+
+
 MASTER_PRIV_KEY = """
 -----BEGIN RSA PRIVATE KEY-----
 MIIEogIBAAKCAQEAoAsMPt+4kuIG6vKyw9r3+OuZrVBee/2vDdVetW+Js5dTlgrJ

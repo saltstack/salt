@@ -17,6 +17,7 @@ from tests.support.mock import Mock, patch
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("apt-cache", "grep"),
+    pytest.mark.slow_test,
 ]
 
 KEY_FILES = (
