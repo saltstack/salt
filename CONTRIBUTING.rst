@@ -563,7 +563,7 @@ But that advice is backwards for the changelog. We follow the
 our changelog, and use towncrier to generate it for each release. As a
 contributor, all that means is that you need to add a file to the
 ``salt/changelog`` directory, using the ``<issue #>.<type>`` format. For
-instanch, if you fixed issue 123, you would do:
+instance, if you fixed issue 123, you would do:
 
 ::
 

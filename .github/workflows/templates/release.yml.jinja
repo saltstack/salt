@@ -1,4 +1,5 @@
 <%- set prepare_workflow_salt_version_input = "${{ inputs.salt-version }}" %>
+<%- set prepare_workflow_skip_pkg_download_test_suite = "${{ inputs.skip-salt-pkg-download-test-suite && ' --skip-pkg-download-tests' || '' }}" %>
 <%- set gh_environment = "release" %>
 <%- extends 'layout.yml.jinja' %>
 
@@ -22,6 +23,10 @@ on:
         description: >
           The Salt version to get from staging to publish the release.
           (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+      skip-salt-pkg-download-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages download test suite.
 
 <%- endblock on %>
 
@@ -302,7 +307,7 @@ permissions:
   restore:
     <%- do conclusion_needs.append('restore') %>
     name: Restore Release Bucket From Backup
-    if: ${{ failure() || cancelled() }}
+    if: ${{ always() }}
     runs-on:
       - self-hosted
       - linux
@@ -315,25 +320,29 @@ permissions:
     environment: <{ gh_environment }>
     steps:
       - name: Clone The Salt Repository
+        if: ${{ failure() || cancelled() }}
         uses: actions/checkout@v3
         with:
           ssh-key: ${{ secrets.GHA_SSH_KEY }}
 
       - name: Setup Rclone
+        if: ${{ failure() || cancelled() }}
         uses: AnimMouse/setup-rclone@v1
         with:
           version: v1.61.1
 
       - name: Setup Python Tools Scripts
+        if: ${{ failure() || cancelled() }}
         uses: ./.github/actions/setup-python-tools-scripts
 
       - name: Restore Release Bucket
+        if: ${{ failure() || cancelled() }}
         run: |
           tools pkg repo restore-previous-releases
 
   publish-pypi:
     <%- do conclusion_needs.append('publish-pypi') %>
-    name: Publish to PyPi(test)
+    name: Publish to PyPi
     if: ${{ github.event.repository.fork != true }}
     needs:
       - prepare-workflow
@@ -380,7 +389,7 @@ permissions:
           name: pypi-artifacts
           path: artifacts/release
 
-      - name: Publish to Test PyPi
+      - name: Publish to PyPi
         env:
           TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
         run: |
