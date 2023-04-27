@@ -583,35 +583,35 @@ def defined(
 
     :param stop_on_reboot:
         If set to ``True`` the guest will stop instead of rebooting.
-        This is specially useful when creating a virtual machine with an installation cdrom or
-        an autoinstallation needing a special first boot configuration.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
         Defaults to ``False``
 
         .. versionadded:: 3003
 
     :param stop_on_crash:
         If set to ``True`` the guest will stop instead of rebooting.
-        This is specially useful when creating a virtual machine with an installation cdrom or
-        an autoinstallation needing a special first boot configuration.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
         Defaults to ``False``
 
-        .. versionadded:: ?
+        .. versionadded:: 3007
 
     :param stop_on_poweroff:
         If set to ``True`` the guest will stop instead of rebooting.
-        This is specially useful when creating a virtual machine with an installation cdrom or
-        an autoinstallation needing a special first boot configuration.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
         Defaults to ``False``
 
-        .. versionadded:: ?
+        .. versionadded:: 3007
 
     :param stop_on_lockfailure:
         If set to ``True`` the guest will stop instead of rebooting.
-        This is specially useful when creating a virtual machine with an installation cdrom or
-        an autoinstallation needing a special first boot configuration.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
         Defaults to ``False``
 
-        .. versionadded:: ?
+        .. versionadded:: 3007
 
     :param live:
         If set to ``False`` the changes will not be applied live to the running instance, but will
@@ -937,35 +937,35 @@ def running(
 
     :param stop_on_reboot:
         If set to ``True`` the guest will stop instead of rebooting.
-        This is specially useful when creating a virtual machine with an installation cdrom or
-        an autoinstallation needing a special first boot configuration.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
         Defaults to ``False``
 
         .. versionadded:: 3003
 
     :param stop_on_crash:
         If set to ``True`` the guest will stop instead of rebooting.
-        This is specially useful when creating a virtual machine with an installation cdrom or
-        an autoinstallation needing a special first boot configuration.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
         Defaults to ``False``
 
-        .. versionadded:: ?
+        .. versionadded:: 3007
 
     :param stop_on_poweroff:
         If set to ``True`` the guest will stop instead of rebooting.
-        This is specially useful when creating a virtual machine with an installation cdrom or
-        an autoinstallation needing a special first boot configuration.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
         Defaults to ``False``
 
-        .. versionadded:: ?
+        .. versionadded:: 3007
 
     :param stop_on_lockfailure:
         If set to ``True`` the guest will stop instead of rebooting.
-        This is specially useful when creating a virtual machine with an installation cdrom or
-        an autoinstallation needing a special first boot configuration.
+        This is especially useful when creating a virtual machine with an installation cdrom or
+        an auto-installation needing a special first boot configuration.
         Defaults to ``False``
 
-        .. versionadded:: ?
+        .. versionadded:: 3007
 
     :param hypervisor_features:
         Enable or disable hypervisor-specific features on the virtual machine.
