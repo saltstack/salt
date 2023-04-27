@@ -152,12 +152,16 @@ def test_get_key_invalid_policy_class():
 
 
 def test_set_value(empty_reg_pol):
-    expected = {"data": 1, "type": "REG_DWORD"}
     key = "SOFTWARE\\MyKey"
     v_name = "MyValue"
-    lgpo_reg.set_value(key=key, v_name=v_name, v_data="1")
+    # Test command return
+    result = lgpo_reg.set_value(key=key, v_name=v_name, v_data="1")
+    assert result is True
+    # Test value actually set in Registry.pol
+    expected = {"data": 1, "type": "REG_DWORD"}
     result = lgpo_reg.get_value(key=key, v_name=v_name)
     assert result == expected
+    # Test that the registry value has been set
     expected = {
         "hive": "HKLM",
         "key": key,
@@ -249,14 +253,18 @@ def test_set_value_invalid_reg_dword():
 
 
 def test_disable_value(reg_pol):
+    key = "SOFTWARE\\MyKey1"
+    # Test that the command completed successfully
+    result = lgpo_reg.disable_value(key=key, v_name="MyValue1")
+    assert result is True
+    # Test that the value was actually set in Registry.pol
     expected = {
         "**del.MyValue1": {"data": " ", "type": "REG_SZ"},
         "**del.MyValue2": {"data": " ", "type": "REG_SZ"},
     }
-    key = "SOFTWARE\\MyKey1"
-    lgpo_reg.disable_value(key=key, v_name="MyValue1")
     result = lgpo_reg.get_key(key=key)
     assert result == expected
+    # Test that the registry value has been removed
     result = salt.utils.win_reg.value_exists(hive="HKLM", key=key, vname="MyValue1")
     assert result is False
 
@@ -283,16 +291,20 @@ def test_disable_value_invalid_policy_class():
 
 
 def test_delete_value_existing(reg_pol):
+    key = "SOFTWARE\\MyKey1"
+    # Test that the command completes successfully
+    result = lgpo_reg.delete_value(key=key, v_name="MyValue1")
+    assert result is True
+    # Test that the value is actually removed from Registry.pol
     expected = {
         "**del.MyValue2": {
             "data": " ",
             "type": "REG_SZ",
         },
     }
-    key = "SOFTWARE\\MyKey1"
-    lgpo_reg.delete_value(key=key, v_name="MyValue1")
     result = lgpo_reg.get_key(key=key)
     assert result == expected
+    # Test that the registry entry has been removed
     result = salt.utils.win_reg.value_exists(hive="HKLM", key=key, vname="MyValue2")
     assert result is False
 
