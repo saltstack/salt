@@ -3,6 +3,7 @@ import logging
 import pytest
 
 import salt.modules.beacons as beaconmod
+import salt.modules.cp as cp
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.yumpkg as yumpkg
 import salt.states.beacon as beaconstate
@@ -15,19 +16,28 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def configure_loader_modules():
+def configure_loader_modules(minion_opts):
     return {
+        cp: {
+            "__opts__": minion_opts,
+        },
         pkg: {
             "__env__": "base",
             "__salt__": {},
             "__grains__": {"os": "CentOS", "os_family": "RedHat"},
-            "__opts__": {"test": False, "cachedir": ""},
+            "__opts__": minion_opts,
             "__instance_id__": "",
             "__low__": {},
             "__utils__": {"state.gen_tag": state_utils.gen_tag},
         },
-        beaconstate: {"__salt__": {}, "__opts__": {}},
-        beaconmod: {"__salt__": {}, "__opts__": {}},
+        beaconstate: {
+            "__salt__": {},
+            "__opts__": minion_opts,
+        },
+        beaconmod: {
+            "__salt__": {},
+            "__opts__": minion_opts,
+        },
         pkg_resource: {
             "__salt__": {},
             "__grains__": {"os": "CentOS", "os_family": "RedHat"},
@@ -35,7 +45,7 @@ def configure_loader_modules():
         yumpkg: {
             "__salt__": {},
             "__grains__": {"osarch": "x86_64", "osmajorrelease": 7},
-            "__opts__": {},
+            "__opts__": minion_opts,
         },
     }
 
@@ -561,6 +571,32 @@ def test_installed_with_changes_test_true(list_pkgs):
             ret = pkg.installed("dummy", test=True)
             assert ret["result"] is None
             assert ret["changes"] == expected
+
+
+def test_installed_with_sources(list_pkgs, tmp_path):
+    """
+    Test pkg.installed with passing `sources`
+    """
+
+    list_pkgs = MagicMock(return_value=list_pkgs)
+    pkg_source = tmp_path / "pkga-package-0.3.0.deb"
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "cp.cache_file": cp.cache_file,
+            "pkg.list_pkgs": list_pkgs,
+            "pkg_resource.pack_sources": pkg_resource.pack_sources,
+            "lowpkg.bin_pkg_info": MagicMock(),
+        },
+    ), patch("salt.fileclient.get_file_client", return_value=MagicMock()):
+        try:
+            ret = pkg.installed("install-pkgd", sources=[{"pkga": str(pkg_source)}])
+            assert ret["result"] is False
+        except TypeError as exc:
+            if "got multiple values for keyword argument 'saltenv'" in str(exc):
+                pytest.fail(f"TypeError should have not been raised: {exc}")
+            raise exc from None
 
 
 @pytest.mark.parametrize("action", ["removed", "purged"])
