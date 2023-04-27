@@ -381,6 +381,9 @@ def refresh_grains(**kwargs):
     refresh_pillar : True
         Set to ``False`` to keep pillar data from being refreshed.
 
+    clean_pillar_cache : True
+        Set to ``False`` to keep pillar cache from being refreshed.
+
     CLI Examples:
 
     .. code-block:: bash
@@ -389,6 +392,7 @@ def refresh_grains(**kwargs):
     """
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     _refresh_pillar = kwargs.pop("refresh_pillar", True)
+    clean_pillar_cache = kwargs.pop("clean_pillar_cache", True)
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
     # Modules and pillar need to be refreshed in case grains changes affected
@@ -396,7 +400,7 @@ def refresh_grains(**kwargs):
     # newly-reloaded grains to each execution module's __grains__ dunder.
     if _refresh_pillar:
         # we don't need to call refresh_modules here because it's done by refresh_pillar
-        refresh_pillar()
+        refresh_pillar(clean_cache=clean_pillar_cache)
     else:
         refresh_modules()
     return True
