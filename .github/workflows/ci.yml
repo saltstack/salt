@@ -320,8 +320,13 @@ jobs:
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools changelog update-release-notes --draft
-          tools changelog update-release-notes
+          if [ "${{ contains(fromJSON('["master"]'), github.ref_name) }}" == "true" ]; then
+              tools changelog update-release-notes --draft --next-release
+              tools changelog update-release-notes --next-release
+          else
+              tools changelog update-release-notes --draft
+              tools changelog update-release-notes
+          fi
 
       - name: Generate MAN Pages
         shell: bash
