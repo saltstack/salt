@@ -213,8 +213,8 @@ user-friendly. Therefore, the new config schema is recommended if the master
 is running a supported release.
 
 .. note::
-  state ids of reactors for runners and wheel should all be unique. they can
-  overwrite each other when added to the async queue. causing lost reactions
+  State ids of reactors for runners and wheels should all be unique.Tthey can
+  overwrite each other when added to the async queue causing lost reactions
 
 The below two examples are equivalent:
 
@@ -253,8 +253,8 @@ wheel reactions to have arguments passed directly under the name of the
 :ref:`wheel function <all-salt.wheel>` (or in ``arg`` or ``kwarg`` parameters).
 
 .. note::
-  state ids of reactors for runners and wheel should all be unique. they can
-  overwrite each other when added to the async queue. causing lost reactions
+  State ids of reactors for runners and wheels should all be unique. They can
+  overwrite each other when added to the async queue causing lost reactions
 
 The below two examples are equivalent:
 
