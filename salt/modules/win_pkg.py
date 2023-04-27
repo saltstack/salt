@@ -1298,7 +1298,7 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
         successful_verbose[short_path_name] = []
 
 
-def _get_source_sum(source_hash, file_path, saltenv, **kwargs):
+def _get_source_sum(source_hash, file_path, saltenv, verify_ssl=True):
     """
     Extract the hash sum, whether it is in a remote hash file, or just a string.
     """
@@ -1315,7 +1315,7 @@ def _get_source_sum(source_hash, file_path, saltenv, **kwargs):
         # The source_hash is a file on a server
         try:
             cached_hash_file = __salt__["cp.cache_file"](
-                source_hash, saltenv, verify_ssl=kwargs.get("verify_ssl", True)
+                source_hash, saltenv=saltenv, verify_ssl=verify_ssl
             )
         except MinionError as exc:
             log.exception("Failed to cache %s", source_hash, exc_info=exc)
@@ -1671,7 +1671,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     try:
                         cached_file = __salt__["cp.cache_file"](
                             cache_file,
-                            saltenv,
+                            saltenv=saltenv,
                             verify_ssl=kwargs.get("verify_ssl", True),
                         )
                     except MinionError as exc:
@@ -1686,7 +1686,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     try:
                         cached_file = __salt__["cp.cache_file"](
                             cache_file,
-                            saltenv,
+                            saltenv=saltenv,
                             verify_ssl=kwargs.get("verify_ssl", True),
                         )
                     except MinionError as exc:
@@ -1706,7 +1706,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 # It's not cached. Cache it, mate.
                 try:
                     cached_pkg = __salt__["cp.cache_file"](
-                        installer, saltenv, verify_ssl=kwargs.get("verify_ssl", True)
+                        installer,
+                        saltenv=saltenv,
+                        verify_ssl=kwargs.get("verify_ssl", True),
                     )
                 except MinionError as exc:
                     msg = "Failed to cache {}".format(installer)
@@ -1730,7 +1732,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     try:
                         cached_pkg = __salt__["cp.cache_file"](
                             installer,
-                            saltenv,
+                            saltenv=saltenv,
                             verify_ssl=kwargs.get("verify_ssl", True),
                         )
                     except MinionError as exc:
@@ -1754,7 +1756,12 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         # Compare the hash sums
         source_hash = pkginfo[version_num].get("source_hash", False)
         if source_hash:
-            source_sum = _get_source_sum(source_hash, cached_pkg, saltenv, **kwargs)
+            source_sum = _get_source_sum(
+                source_hash,
+                cached_pkg,
+                saltenv=saltenv,
+                verify_ssl=kwargs.get("verify_ssl", True),
+            )
             log.debug(
                 "pkg.install: Source %s hash: %s",
                 source_sum["hash_type"],
@@ -2126,7 +2133,7 @@ def remove(name=None, pkgs=None, **kwargs):
                     try:
                         cached_pkg = __salt__["cp.cache_file"](
                             uninstaller,
-                            saltenv,
+                            saltenv=saltenv,
                             verify_ssl=kwargs.get("verify_ssl", True),
                         )
                     except MinionError as exc:
@@ -2150,7 +2157,7 @@ def remove(name=None, pkgs=None, **kwargs):
                         try:
                             cached_pkg = __salt__["cp.cache_file"](
                                 uninstaller,
-                                saltenv,
+                                saltenv=saltenv,
                                 verify_ssl=kwargs.get("verify_ssl", True),
                             )
                         except MinionError as exc:
