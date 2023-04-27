@@ -116,7 +116,6 @@ on:
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          <%- if gh_environment == 'nightly' %>
           if [ "${{ contains(fromJSON('["master"]'), github.ref_name) }}" == "true" ]; then
               tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %> --next-release
               tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %> --next-release
@@ -124,10 +123,6 @@ on:
               tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %>
               tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %>
           fi
-          <%- else %>
-          tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %>
-          tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %>
-          <%- endif %>
 
       - name: Generate MAN Pages
         shell: bash
