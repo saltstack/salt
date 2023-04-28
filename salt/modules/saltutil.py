@@ -381,8 +381,8 @@ def refresh_grains(**kwargs):
     refresh_pillar : True
         Set to ``False`` to keep pillar data from being refreshed.
 
-    clean_pillar_cache : True
-        Set to ``False`` to keep pillar cache from being refreshed.
+    clean_pillar_cache : False
+        Set to ``True`` to refresh pillar cache.
 
     CLI Examples:
 
@@ -392,7 +392,7 @@ def refresh_grains(**kwargs):
     """
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     _refresh_pillar = kwargs.pop("refresh_pillar", True)
-    clean_pillar_cache = kwargs.pop("clean_pillar_cache", True)
+    clean_pillar_cache = kwargs.pop("clean_pillar_cache", False)
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
     # Modules and pillar need to be refreshed in case grains changes affected
@@ -411,7 +411,7 @@ def sync_grains(
     refresh=True,
     extmod_whitelist=None,
     extmod_blacklist=None,
-    clean_pillar_cache=True,
+    clean_pillar_cache=False,
 ):
     """
     .. versionadded:: 0.10.0
@@ -438,8 +438,8 @@ def sync_grains(
     extmod_blacklist : None
         comma-separated list of modules to blacklist based on type
 
-    clean_pillar_cache : True
-        Set to ``False`` to keep pillar cache from being refreshed.
+    clean_pillar_cache : False
+        Set to ``True`` to refresh pillar cache.
 
     CLI Examples:
 
@@ -930,7 +930,7 @@ def sync_pillar(
     refresh=True,
     extmod_whitelist=None,
     extmod_blacklist=None,
-    clean_pillar_cache=True,
+    clean_pillar_cache=False,
 ):
     """
     .. versionadded:: 2015.8.11,2016.3.2
@@ -950,8 +950,8 @@ def sync_pillar(
     extmod_blacklist : None
         comma-separated list of modules to blacklist based on type
 
-    clean_pillar_cache : True
-        Set to ``False`` to keep pillar cache from being refreshed.
+    clean_pillar_cache : False
+        Set to ``True`` to refresh pillar cache.
 
     .. note::
         This function will raise an error if executed on a traditional (i.e.
@@ -1021,7 +1021,7 @@ def sync_all(
     refresh=True,
     extmod_whitelist=None,
     extmod_blacklist=None,
-    clean_pillar_cache=True,
+    clean_pillar_cache=False,
 ):
     """
     .. versionchanged:: 2015.8.11,2016.3.2
@@ -1060,8 +1060,8 @@ def sync_all(
     extmod_blacklist : None
         dictionary of modules to blacklist based on type
 
-    clean_pillar_cache : True
-        Set to ``False`` to keep pillar cache from being refreshed.
+    clean_pillar_cache : False
+        Set to ``True`` to refresh pillar cache.
 
     CLI Examples:
 
