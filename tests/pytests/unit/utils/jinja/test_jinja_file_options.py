@@ -128,6 +128,4 @@ def test_no_blocktrimming(minion_opts, local_salt):
         template, dict(opts=minion_opts, saltenv="test", salt=local_salt)
     )
 
-    assert (
-        rendered == "#beware of the whitespace\n\n  \n0\n\n  \n1337\n  \n1\n\n  \n2\n"
-    )
+    assert rendered == "\n#beware of the whitespace\n  \n0\n  \n1337\n  \n1\n  \n2\n"
