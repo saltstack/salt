@@ -407,7 +407,11 @@ def refresh_grains(**kwargs):
 
 
 def sync_grains(
-    saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None
+    saltenv=None,
+    refresh=True,
+    extmod_whitelist=None,
+    extmod_blacklist=None,
+    clean_pillar_cache=True,
 ):
     """
     .. versionadded:: 0.10.0
@@ -434,6 +438,9 @@ def sync_grains(
     extmod_blacklist : None
         comma-separated list of modules to blacklist based on type
 
+    clean_pillar_cache : True
+        Set to ``False`` to keep pillar cache from being refreshed.
+
     CLI Examples:
 
     .. code-block:: bash
@@ -445,7 +452,7 @@ def sync_grains(
     ret = _sync("grains", saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         # we don't need to call refresh_modules here because it's done by refresh_pillar
-        refresh_pillar()
+        refresh_pillar(clean_cache=clean_pillar_cache)
     return ret
 
 
@@ -919,7 +926,11 @@ def sync_log_handlers(
 
 
 def sync_pillar(
-    saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None
+    saltenv=None,
+    refresh=True,
+    extmod_whitelist=None,
+    extmod_blacklist=None,
+    clean_pillar_cache=True,
 ):
     """
     .. versionadded:: 2015.8.11,2016.3.2
@@ -939,6 +950,9 @@ def sync_pillar(
     extmod_blacklist : None
         comma-separated list of modules to blacklist based on type
 
+    clean_pillar_cache : True
+        Set to ``False`` to keep pillar cache from being refreshed.
+
     .. note::
         This function will raise an error if executed on a traditional (i.e.
         not masterless) minion
@@ -957,7 +971,7 @@ def sync_pillar(
     ret = _sync("pillar", saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         # we don't need to call refresh_modules here because it's done by refresh_pillar
-        refresh_pillar()
+        refresh_pillar(clean_cache=clean_pillar_cache)
     return ret
 
 
@@ -1002,7 +1016,13 @@ def sync_executors(
     return ret
 
 
-def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
+def sync_all(
+    saltenv=None,
+    refresh=True,
+    extmod_whitelist=None,
+    extmod_blacklist=None,
+    clean_pillar_cache=True,
+):
     """
     .. versionchanged:: 2015.8.11,2016.3.2
         On masterless minions, pillar modules are now synced, and refreshed
@@ -1039,6 +1059,9 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist
 
     extmod_blacklist : None
         dictionary of modules to blacklist based on type
+
+    clean_pillar_cache : True
+        Set to ``False`` to keep pillar cache from being refreshed.
 
     CLI Examples:
 
@@ -1084,7 +1107,7 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist
         ret["pillar"] = sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
     if refresh:
         # we don't need to call refresh_modules here because it's done by refresh_pillar
-        refresh_pillar()
+        refresh_pillar(clean_cache=clean_pillar_cache)
     return ret
 
 
