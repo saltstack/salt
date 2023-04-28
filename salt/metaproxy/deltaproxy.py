@@ -356,9 +356,9 @@ def post_master_init(self, master):
             except Exception as exc:  # pylint: disable=broad-except
                 _id = futures[future]
                 log.info(
-                    "An exception %s occured during initialization for %s, skipping.",
-                    exc,
+                    "An exception occured during initialization for %s, skipping: %s",
                     _id,
+                    exc,
                 )
                 _failed.append(_id)
                 continue
@@ -383,9 +383,9 @@ def post_master_init(self, master):
                 )
             except Exception as exc:  # pylint: disable=broad-except
                 log.info(
-                    "An exception %s occured during initialization for %s, skipping.",
-                    exc,
+                    "An exception occured during initialization for %s, skipping: %s",
                     _id,
+                    exc,
                 )
                 _failed.append(_id)
                 continue
