@@ -185,8 +185,6 @@ def _timeout_decorator_cleankwargs(function):
         # Run the function
         try:
             result = function(*args, **kwargs)
-        except:
-            raise
         finally:
             # Set back the old kwargs and reset timeout if it has changed
             kwargs = old_kwargs
