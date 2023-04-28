@@ -403,7 +403,7 @@ def run(
 
     .. code-block:: bash
 
-        salt myminion nspawn.run mycontainer 'ifconfig -a'
+        salt myminion nspawn.run mycontainer 'ip addr show'
     """
     return _run(
         name,
@@ -469,7 +469,7 @@ def run_stdout(
 
     .. code-block:: bash
 
-        salt myminion nspawn.run_stdout mycontainer 'ifconfig -a'
+        salt myminion nspawn.run_stdout mycontainer 'ip addr show'
     """
     return _run(
         name,
