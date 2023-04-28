@@ -84,8 +84,6 @@ def test_value_present(empty_reg_pol):
     expected = {
         "changes": {
             "new": {
-                "name": "MyValue",
-                "key": "SOFTWARE\\MyKey",
                 "data": 1,
                 "type": "REG_DWORD",
             },
@@ -111,14 +109,10 @@ def test_value_present_existing_change(reg_pol):
     expected = {
         "changes": {
             "new": {
-                "name": "MyValue1",
-                "key": "SOFTWARE\\MyKey1",
                 "data": 2,
                 "type": "REG_DWORD",
             },
             "old": {
-                "name": "MyValue1",
-                "key": "SOFTWARE\\MyKey1",
                 "data": "squidward",
                 "type": "REG_SZ",
             },
@@ -183,14 +177,10 @@ def test_value_present_existing_disabled(reg_pol):
         "changes": {
             "new": {
                 "data": 2,
-                "key": "SOFTWARE\\MyKey1",
-                "name": "MyValue2",
                 "type": "REG_DWORD",
             },
             "old": {
                 "data": "**del.MyValue2",
-                "key": "SOFTWARE\\MyKey1",
-                "name": "MyValue2",
                 "type": "REG_SZ",
             },
         },
@@ -213,13 +203,11 @@ def test_value_disabled(empty_reg_pol):
         "changes": {
             "new": {
                 "data": "**del.MyValue1",
-                "key": "SOFTWARE\\MyKey1",
-                "name": "MyValue1",
                 "type": "REG_SZ",
             },
             "old": {},
         },
-        "comment": "Registry.pol value enabled",
+        "comment": "Registry.pol value disabled",
         "name": "MyValue1",
         "result": True,
     }
@@ -238,16 +226,12 @@ def test_value_disabled_existing_change(reg_pol):
         "changes": {
             "new": {
                 "data": "**del.MyValue1",
-                "key": "SOFTWARE\\MyKey1",
-                "name": "MyValue1",
             },
             "old": {
                 "data": "squidward",
-                "key": "SOFTWARE\\MyKey1",
-                "name": "MyValue1",
             },
         },
-        "comment": "Registry.pol value enabled",
+        "comment": "Registry.pol value disabled",
         "name": "MyValue1",
         "result": True,
     }
@@ -299,8 +283,6 @@ def test_value_absent(reg_pol):
             "new": {},
             "old": {
                 "data": "squidward",
-                "key": "SOFTWARE\\MyKey1",
-                "name": "MyValue1",
                 "type": "REG_SZ",
             },
         },
@@ -335,8 +317,6 @@ def test_value_absent_disabled(reg_pol):
             "new": {},
             "old": {
                 "data": "**del.MyValue2",
-                "key": "SOFTWARE\\MyKey1",
-                "name": "MyValue2",
                 "type": "REG_SZ",
             },
         },
