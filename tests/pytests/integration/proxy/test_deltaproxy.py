@@ -2,6 +2,7 @@
 Simple Smoke Tests for Connected Proxy Minion
 """
 import logging
+import random
 
 import pytest
 
@@ -21,7 +22,7 @@ def skip_on_tcp_transport(request):
         pytest.skip("Deltaproxy under the TPC transport is not working. See #61367")
 
 
-@pytest.fixture(params=pytest.helpers.proxy.delta_proxy_minion_ids())
+@pytest.fixture(params=random.sample(pytest.helpers.proxy.delta_proxy_minion_ids(), 4))
 def proxy_id(request, salt_delta_proxy, skip_on_tcp_transport):
     return request.param
 
