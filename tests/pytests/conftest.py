@@ -631,12 +631,46 @@ def io_loop():
 # ----- Helpers ----------------------------------------------------------------------------------------------------->
 @pytest.helpers.proxy.register
 def delta_proxy_minion_ids():
-    return [
-        "dummy_proxy_one",
-        "dummy_proxy_two",
-        "dummy_proxy_three",
-        "dummy_proxy_four",
-    ]
+
+    number_words = {
+        1: "one",
+        2: "two",
+        3: "three",
+        4: "four",
+        5: "five",
+        6: "six",
+        7: "seven",
+        8: "eight",
+        9: "nine",
+        10: "ten",
+        11: "eleven",
+        12: "twelve",
+        13: "thirteen",
+        14: "fourteen",
+        15: "fifteen",
+        16: "sixteen",
+        17: "seventeen",
+        18: "eighteen",
+        19: "nineteen",
+        20: "twenty",
+        21: "twenty_one",
+        22: "twenty_two",
+        23: "twenty_three",
+        24: "twenty_four",
+        25: "twenty_five",
+        26: "twenty_six",
+        27: "twenty_seven",
+        28: "twenty_eight",
+        29: "twenty_nine",
+        30: "thirty",
+        31: "thirty_one",
+    }
+
+    sub_proxies = []
+    for i in range(1, 32):
+        sub_proxies.append("dummy_proxy_{}".format(number_words[i]))
+
+    return sub_proxies
 
 
 # <---- Helpers ------------------------------------------------------------------------------------------------------
