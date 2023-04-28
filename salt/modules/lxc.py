@@ -3820,7 +3820,7 @@ def run(
 
     .. code-block:: bash
 
-        salt myminion lxc.run mycontainer 'ifconfig -a'
+        salt myminion lxc.run mycontainer 'ip addr show'
     """
     return _run(
         name,
@@ -3912,7 +3912,7 @@ def run_stdout(
 
     .. code-block:: bash
 
-        salt myminion lxc.run_stdout mycontainer 'ifconfig -a'
+        salt myminion lxc.run_stdout mycontainer 'ip addr show'
     """
     return _run(
         name,
