@@ -2438,7 +2438,7 @@ enabled and can be disabled by changing this value to ``False``.
     ``saltenv`` will take its value. If both are used, ``environment`` will be
     ignored and ``saltenv`` will be used.
 
-The default fileserver environment to use when copy files and applying states.
+The default fileserver environment to use when copying files and applying states.
 
 .. code-block:: yaml
 
