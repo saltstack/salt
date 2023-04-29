@@ -428,6 +428,7 @@ chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
 chmod u=rwx,g=rwx,o=rx %{_SALT_HOME}
 ln -s -f /opt/saltstack/salt/spm %{_bindir}/spm
 ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
+/opt/saltstack/salt/bin/python3 -m compileall -qq /opt/saltstack/salt/lib
 
 
 %post cloud
@@ -452,7 +453,7 @@ if [ $1 -lt 2 ]; then
     /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
   fi
 fi
-chown -R salt:salt /etc/salt /var/log/salt /opt/saltstack/salt/ /var/cache/salt/ /var/run/salt/
+chown -R salt:salt /etc/salt /var/log/salt /var/cache/salt/ /var/run/salt/
 
 %post syndic
 %systemd_post salt-syndic.service
@@ -479,6 +480,10 @@ ln -s -f /opt/saltstack/salt/salt-ssh %{_bindir}/salt-ssh
 %post api
 %systemd_post salt-api.service
 ln -s -f /opt/saltstack/salt/salt-api %{_bindir}/salt-api
+
+%preun
+find /opt/saltstack/salt -type f -name \*\.pyc -print0 | xargs --null --no-run-if-empty rm
+find /opt/saltstack/salt -type d -name __pycache__ -empty -print0 | xargs --null --no-run-if-empty rmdir
 
 %postun master
 %systemd_postun_with_restart salt-master.service
