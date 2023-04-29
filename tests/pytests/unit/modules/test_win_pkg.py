@@ -262,7 +262,7 @@ def test_pkg_install_verify_ssl_false():
         result = win_pkg.install(name="nsis", version="3.02", verify_ssl=False)
         mock_cp.assert_called_once_with(
             "http://download.sourceforge.net/project/nsis/NSIS%203/3.02/nsis-3.02-setup.exe",
-            "base",
+            saltenv="base",
             verify_ssl=False,
         )
         assert expected == result
