@@ -13,7 +13,7 @@ case "$1" in
        echo "..done"
     fi
     # 2. create homedir if not existing
-    test -d $SALT_HOME || mkdir $SALT_HOME
+    test -d $SALT_HOME || mkdir -p $SALT_HOME
     # 3. create user if not existing
     if ! getent passwd | grep -q "^$SALT_USER:"; then
       echo -n "Adding system user $SALT_USER.."
