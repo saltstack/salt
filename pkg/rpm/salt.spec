@@ -364,19 +364,18 @@ rm -rf %{buildroot}
 %pre
 # create user to avoid running server as root
 # 1. create group if not existing
-if ! getent group | grep -q "^%{_SALT_GROUP}:" ; then
-   addgroup --quiet --system %{_SALT_GROUP} 2>/dev/null ||true
+if ! getent group %{_SALT_GROUP}; then
+   groupadd --system %{_SALT_GROUP} 2>/dev/null ||true
 fi
 # 2. create homedir if not existing
-test -d %{_SALT_HOME} || mkdir %{_SALT_HOME}
+test -d %{_SALT_HOME} || mkdir -p %{_SALT_HOME}
 # 3. create user if not existing
+#         -g %{_SALT_GROUP} \
 if ! getent passwd | grep -q "^%{_SALT_USER}:"; then
-  adduser --quiet \
-          --system \
-          --ingroup %{_SALT_USER} \
+  adduser --system \
           --no-create-home \
-          --disabled-password \
           -s /sbin/nlogin \
+          -g %{_SALT_GROUP} \
           %{_SALT_USER} 2>/dev/null || true
 fi
 # 4. adjust passwd entry
@@ -386,8 +385,6 @@ usermod -c "%{_SALT_NAME}" \
          %{_SALT_USER}
 # 5. adjust file and directory permissions
 chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
-chmod u=rwx,g=rxs,o= %{_SALT_HOME}
-
 
 # assumes systemd for RHEL 7 & 8 & 9
 %preun master
@@ -404,6 +401,7 @@ chmod u=rwx,g=rxs,o= %{_SALT_HOME}
 
 
 %post
+chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
 ln -s -f /opt/saltstack/salt/spm %{_bindir}/spm
 ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
 
