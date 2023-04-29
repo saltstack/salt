@@ -406,8 +406,6 @@ usermod -c "%{_SALT_NAME}" \
         -d %{_SALT_HOME}   \
         -g %{_SALT_GROUP}  \
          %{_SALT_USER}
-# 5. adjust file and directory permissions
-chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
 
 # assumes systemd for RHEL 7 & 8 & 9
 %preun master
@@ -424,16 +422,17 @@ chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
 
 
 %post
-chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
-chmod u=rwx,g=rwx,o=rx %{_SALT_HOME}
 ln -s -f /opt/saltstack/salt/spm %{_bindir}/spm
 ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
 /opt/saltstack/salt/bin/python3 -m compileall -qq /opt/saltstack/salt/lib
 
 
 %post cloud
-chown -R salt:salt /etc/salt/cloud.deploy.d
-chown -R salt:salt /opt/saltstack/salt/lib/python3.10/site-packages/salt/cloud/deploy
+if [ ! -e "/var/log/salt/cloud" ]; then
+  touch /var/log/salt/cloud
+  chmod 640 /var/log/salt/cloud
+fi
+chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python3.10/site-packages/salt/cloud/deploy
 ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
 
 
@@ -453,7 +452,11 @@ if [ $1 -lt 2 ]; then
     /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
   fi
 fi
-chown -R salt:salt /etc/salt /var/log/salt /var/cache/salt/ /var/run/salt/
+if [ ! -e "/var/log/salt/master" ]; then
+  touch /var/log/salt/master
+  chmod 640 /var/log/salt/master
+fi
+chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/cache/salt/master /var/run/salt/master
 
 %post syndic
 %systemd_post salt-syndic.service

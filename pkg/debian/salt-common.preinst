@@ -31,11 +31,5 @@ case "$1" in
             -s $SALT_SHELL  \
             -g $SALT_GROUP  \
              $SALT_USER
-    # 5. adjust file and directory permissions
-    if ! dpkg-statoverride --list $SALT_HOME >/dev/null
-    then
-        chown -R $SALT_USER:$SALT_GROUP $SALT_HOME
-        chmod u=rwx,g=rwx,o=rx $SALT_HOME
-    fi
   ;;
 esac
