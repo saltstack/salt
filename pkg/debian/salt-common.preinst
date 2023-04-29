@@ -34,7 +34,7 @@ case "$1" in
     if ! dpkg-statoverride --list $SALT_HOME >/dev/null
     then
         chown -R $SALT_USER:$SALT_GROUP $SALT_HOME
-        chmod u=rwx,g=rxs,o= $SALT_HOME
+        chmod u=rwx,g=rwx,o= $SALT_HOME
     fi
   ;;
 esac
