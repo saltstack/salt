@@ -1,6 +1,10 @@
 case "$1" in
   configure)
-    chown -R salt:salt /etc/salt /var/log/salt /var/cache/salt/ /var/run/salt
+    if [ ! -e "/var/log/salt/master" ]; then
+      touch /var/log/salt/master
+      chmod 640 /var/log/salt/master
+    fi
+    chown -R salt:salt /etc/salt/pki/master /etc/salt/master.d /etc/salt/minion.d /var/log/salt/master /var/cache/salt/master /var/run/salt/master
     if command -v systemctl; then systemctl enable salt-master; fi
   ;;
 esac
