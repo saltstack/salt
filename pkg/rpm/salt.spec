@@ -402,6 +402,7 @@ chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
 
 %post
 chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
+chmod u=rwx,g=rwx,o=rx %{_SALT_HOME}
 ln -s -f /opt/saltstack/salt/spm %{_bindir}/spm
 ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
 
