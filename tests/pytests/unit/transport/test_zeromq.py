@@ -40,6 +40,12 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+
+pytestmark = [
+    pytest.mark.core_test,
+]
+
+
 MASTER_PRIV_KEY = """
 -----BEGIN RSA PRIVATE KEY-----
 MIIEogIBAAKCAQEAoAsMPt+4kuIG6vKyw9r3+OuZrVBee/2vDdVetW+Js5dTlgrJ
@@ -384,18 +390,23 @@ class MockSaltMinionMaster:
         )
         self.server_thread.start()
         minion_opts = temp_salt_minion.config.copy()
-        minion_opts.update({"master_ip": "127.0.0.1"})
-        minion_opts.update({"transport": "zeromq"})
+        minion_opts.update(
+            {
+                "master_ip": "127.0.0.1",
+                "transport": "zeromq",
+            }
+        )
         self.channel = salt.channel.client.ReqChannel.factory(
             minion_opts, crypt="clear"
         )
 
     def __enter__(self):
+        self.channel.__enter__()
         self.evt.wait()
         return self
 
     def __exit__(self, *args, **kwargs):
-        self.channel.close()
+        self.channel.__exit__(*args, **kwargs)
         del self.channel
         # Attempting to kill the children hangs the test suite.
         # Let the test suite handle this instead.
@@ -451,7 +462,7 @@ def test_serverside_exception(temp_salt_minion, temp_salt_master):
     with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
         with patch.object(minion_master.mock, "_handle_payload_hook") as _mock:
             _mock.side_effect = salt.ext.tornado.gen.Return(({}, {"fun": "madeup-fun"}))
-            ret = minion_master.channel.send({}, timeout=2, tries=1)
+            ret = minion_master.channel.send({}, timeout=5, tries=1)
             assert ret == "Server-side exception handling payload"
 
 
@@ -666,6 +677,8 @@ def test_req_chan_decode_data_dict_entry_v1(pki_dir):
         "id": "minion",
         "__role": "minion",
         "keysize": 4096,
+        "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     master_opts = dict(opts, pki_dir=str(pki_dir.joinpath("master")))
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
@@ -697,6 +710,8 @@ async def test_req_chan_decode_data_dict_entry_v2(pki_dir):
         "id": "minion",
         "__role": "minion",
         "keysize": 4096,
+        "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     master_opts = dict(opts, pki_dir=str(pki_dir.joinpath("master")))
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
@@ -761,6 +776,8 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(pki_dir):
         "id": "minion",
         "__role": "minion",
         "keysize": 4096,
+        "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     master_opts = dict(opts, pki_dir=str(pki_dir.joinpath("master")))
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
@@ -825,6 +842,8 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(pki_dir):
         "id": "minion",
         "__role": "minion",
         "keysize": 4096,
+        "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     master_opts = dict(opts, pki_dir=str(pki_dir.joinpath("master")))
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
@@ -905,6 +924,8 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(pki_dir):
         "id": "minion",
         "__role": "minion",
         "keysize": 4096,
+        "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     master_opts = dict(opts, pki_dir=str(pki_dir.joinpath("master")))
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
@@ -973,7 +994,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(pki_dir):
     }
 
     with pytest.raises(salt.crypt.AuthenticationError) as excinfo:
-        ret = await client.crypted_transfer_decode_dictentry(
+        await client.crypted_transfer_decode_dictentry(
             load,
             dictkey="pillar",
         )
@@ -981,7 +1002,6 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(pki_dir):
 
 
 async def test_req_serv_auth_v1(pki_dir):
-    mockloop = MagicMock()
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
         "interface": "127.0.0.1",
@@ -1035,7 +1055,6 @@ async def test_req_serv_auth_v1(pki_dir):
 
 
 async def test_req_serv_auth_v2(pki_dir):
-    mockloop = MagicMock()
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
         "interface": "127.0.0.1",
@@ -1091,7 +1110,6 @@ async def test_req_serv_auth_v2(pki_dir):
 
 
 async def test_req_chan_auth_v2(pki_dir, io_loop):
-    mockloop = MagicMock()
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
         "interface": "127.0.0.1",
@@ -1108,6 +1126,8 @@ async def test_req_chan_auth_v2(pki_dir, io_loop):
         "key_pass": None,
         "publish_port": 4505,
         "auth_mode": 1,
+        "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     SMaster.secrets["aes"] = {
         "secret": multiprocessing.Array(
@@ -1139,7 +1159,6 @@ async def test_req_chan_auth_v2(pki_dir, io_loop):
 
 
 async def test_req_chan_auth_v2_with_master_signing(pki_dir, io_loop):
-    mockloop = MagicMock()
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
         "interface": "127.0.0.1",
@@ -1156,6 +1175,8 @@ async def test_req_chan_auth_v2_with_master_signing(pki_dir, io_loop):
         "key_pass": None,
         "publish_port": 4505,
         "auth_mode": 1,
+        "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     SMaster.secrets["aes"] = {
         "secret": multiprocessing.Array(
@@ -1231,7 +1252,6 @@ async def test_req_chan_auth_v2_with_master_signing(pki_dir, io_loop):
 async def test_req_chan_auth_v2_new_minion_with_master_pub(pki_dir, io_loop):
 
     pki_dir.joinpath("master", "minions", "minion").unlink()
-    mockloop = MagicMock()
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
         "interface": "127.0.0.1",
@@ -1249,6 +1269,7 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub(pki_dir, io_loop):
         "publish_port": 4505,
         "auth_mode": 1,
         "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     SMaster.secrets["aes"] = {
         "secret": multiprocessing.Array(
@@ -1289,7 +1310,6 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub_bad_sig(pki_dir, io_l
     mapub.unlink()
     mapub.write_text(MASTER2_PUB_KEY.strip())
 
-    mockloop = MagicMock()
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
         "interface": "127.0.0.1",
@@ -1307,6 +1327,7 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub_bad_sig(pki_dir, io_l
         "publish_port": 4505,
         "auth_mode": 1,
         "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     SMaster.secrets["aes"] = {
         "secret": multiprocessing.Array(
@@ -1339,7 +1360,6 @@ async def test_req_chan_auth_v2_new_minion_without_master_pub(pki_dir, io_loop):
 
     pki_dir.joinpath("master", "minions", "minion").unlink()
     pki_dir.joinpath("minion", "minion_master.pub").unlink()
-    mockloop = MagicMock()
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
         "interface": "127.0.0.1",
@@ -1357,6 +1377,7 @@ async def test_req_chan_auth_v2_new_minion_without_master_pub(pki_dir, io_loop):
         "publish_port": 4505,
         "auth_mode": 1,
         "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     SMaster.secrets["aes"] = {
         "secret": multiprocessing.Array(

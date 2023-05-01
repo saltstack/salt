@@ -18,6 +18,29 @@ on:
         required: true
         type: string
         description: Seed used to invalidate caches
+      relenv-version:
+        required: false
+        type: string
+        default: 0.10.2
+        description: The version of relenv to use
+      python-version-linux:
+        required: false
+        type: string
+        default: 3.10.9
+        description: The version of python to use with relenv
+      python-version-macos:
+        required: false
+        type: string
+        default: 3.10.9
+        description: The version of python to use with relenv
+      python-version-windows:
+        required: false
+        type: string
+        description: The version of python to use with relenv on Windows
+        default: 3.10.9
+
+env:
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
 
 jobs:
 
@@ -26,7 +49,6 @@ jobs:
     if: ${{ inputs.self-hosted-runners }}
     strategy:
       fail-fast: false
-      max-parallel: 2
       matrix:
         arch:
           - x86_64
@@ -49,18 +71,22 @@ jobs:
 
       - name: Setup Relenv
         uses: ./.github/actions/setup-relenv
+        id: setup-relenv
         with:
           platform: linux
           arch: ${{ matrix.arch }}
+          version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
+          python-version: ${{ inputs.python-version-linux }}
 
       - name: Install Salt into Relenv Onedir
         uses: ./.github/actions/build-onedir-salt
         with:
           platform: linux
           arch: ${{ matrix.arch }}
-          cache-seed: ${{ inputs.cache-seed }}
           salt-version: "${{ inputs.salt-version }}"
+          python-version: "${{ inputs.python-version-linux }}"
+          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
 
 
   build-salt-windows:
@@ -82,11 +108,14 @@ jobs:
           python-version: "3.10"
 
       - name: Setup Relenv
+        id: setup-relenv
         uses: ./.github/actions/setup-relenv
         with:
           platform: windows
           arch: ${{ matrix.arch }}
+          version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
+          python-version: ${{ inputs.python-version-windows }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -102,8 +131,9 @@ jobs:
         with:
           platform: windows
           arch: ${{ matrix.arch }}
-          cache-seed: ${{ inputs.cache-seed }}
           salt-version: "${{ inputs.salt-version }}"
+          python-version: "${{ inputs.python-version-windows }}"
+          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
 
 
   build-salt-macos:
@@ -122,12 +152,16 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+
       - name: Setup Relenv
+        id: setup-relenv
         uses: ./.github/actions/setup-relenv
         with:
           platform: darwin
           arch: ${{ matrix.arch }}
+          version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
+          python-version: ${{ inputs.python-version-macos }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -143,5 +177,6 @@ jobs:
         with:
           platform: darwin
           arch: ${{ matrix.arch }}
-          cache-seed: ${{ inputs.cache-seed }}
           salt-version: "${{ inputs.salt-version }}"
+          python-version: "${{ inputs.python-version-macos }}"
+          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}

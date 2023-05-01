@@ -120,6 +120,96 @@ if ( Test-Path -Path "$NSIS_BIN" ) {
 }
 
 #-------------------------------------------------------------------------------
+# Copy the icon file to the build_env directory
+#-------------------------------------------------------------------------------
+
+Write-Host "Copying icon file to build env: " -NoNewline
+Copy-Item "$INSTALLER_DIR\salt.ico" "$BUILDENV_DIR" | Out-Null
+if ( Test-Path -Path "$INSTALLER_DIR\salt.ico" ) {
+    Write-Result "Success" -ForegroundColor Green
+} else {
+    Write-Result "Failed" -ForegroundColor Red
+    Write-Host "Failed to find salt.ico in build_env directory"
+    exit 1
+}
+
+#-------------------------------------------------------------------------------
+# Remove compiled files
+#-------------------------------------------------------------------------------
+# We have to do this again because we use the Relenv Python to get the build
+# architecture. This recreates some of the pycache files that were removed
+# in the prep_salt script
+Write-Host "Removing __pycache__ directories: " -NoNewline
+$found = Get-ChildItem -Path "$BUILDENV_DIR" -Filter "__pycache__" -Recurse
+$found | ForEach-Object {
+    Remove-Item -Path "$($_.FullName)" -Recurse -Force
+    if ( Test-Path -Path "$($_.FullName)" ) {
+        Write-Result "Failed" -ForegroundColor Red
+        Write-Host "Failed to remove: $($_.FullName)"
+        exit 1
+    }
+}
+Write-Result "Success" -ForegroundColor Green
+
+# If we try to remove *.pyc with the same Get-ChildItem that we used to remove
+# __pycache__ directories, it won't be able to find them because they are no
+# longer present
+# This probably won't find any *.pyc files, but just in case
+$remove = "*.pyc",
+"*.chm"
+$remove | ForEach-Object {
+    Write-Host "Removing unneeded $_ files: " -NoNewline
+    $found = Get-ChildItem -Path "$BUILDENV_DIR" -Filter $_ -Recurse
+    $found | ForEach-Object {
+        Remove-Item -Path "$($_.FullName)" -Recurse -Force
+        if ( Test-Path -Path "$($_.FullName)" ) {
+            Write-Result "Failed" -ForegroundColor Red
+            Write-Host "Failed to remove: $($_.FullName)"
+            exit 1
+        }
+    }
+    Write-Result "Success" -ForegroundColor Green
+}
+
+#-------------------------------------------------------------------------------
+# Set timestamps on Files
+#-------------------------------------------------------------------------------
+
+# We're doing this again in this script because we use python above to get the
+# build architecture and that adds back some __pycache__ and *.pyc files
+Write-Host "Getting commit time stamp: " -NoNewline
+[DateTime]$origin = "1970-01-01 00:00:00"
+$hash_time = $(git show -s --format=%at)
+$time_stamp = $origin.AddSeconds($hash_time)
+if ( $hash_time ) {
+    Write-Result "Success" -ForegroundColor Green
+} else {
+    Write-Result "Failed" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "Setting time stamp on all files: " -NoNewline
+$found = Get-ChildItem -Path $BUILDENV_DIR -Recurse
+$found | ForEach-Object {
+    $_.CreationTime = $time_stamp
+    $_.LastAccessTime = $time_stamp
+    $_.LastWriteTime = $time_stamp
+}
+Write-Result "Success" -ForegroundColor Green
+
+#-------------------------------------------------------------------------------
+# Get the estimated size of the installation
+#-------------------------------------------------------------------------------
+Write-Host "Getting Estimated Installation Size: " -NoNewLine
+$estimated_size = [math]::Round(((Get-ChildItem "$BUILDENV_DIR" -Recurse -Force | Measure-Object -Sum Length).Sum / 1kb))
+if ( $estimated_size -gt 0 ) {
+    Write-Result "Success" -ForegroundColor Green
+} else {
+    Write-Result "Failed" -ForegroundColor Red
+    exit 1
+}
+
+#-------------------------------------------------------------------------------
 # Build the Installer
 #-------------------------------------------------------------------------------
 
@@ -128,6 +218,7 @@ $installer_name = "Salt-Minion-$Version-Py$($PY_VERSION.Split(".")[0])-$ARCH-Set
 Start-Process -FilePath $NSIS_BIN `
               -ArgumentList "/DSaltVersion=$Version", `
                             "/DPythonArchitecture=$ARCH", `
+                            "/DEstimatedSize=$estimated_size", `
                             "$INSTALLER_DIR\Salt-Minion-Setup.nsi" `
               -Wait -WindowStyle Hidden
 if ( Test-Path -Path "$INSTALLER_DIR\$installer_name" ) {

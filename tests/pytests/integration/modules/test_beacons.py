@@ -10,7 +10,7 @@ import pytest
 from tests.support.helpers import PRE_PYTEST_SKIP_OR_NOT
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
 ]
 

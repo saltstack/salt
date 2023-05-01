@@ -36,7 +36,7 @@ python-etcd>0.4.2
 pyvmomi
 requests
 rfc3987
-sqlparse>=0.4.2
+sqlparse>=0.4.4
 strict_rfc3339>=0.7
 toml
 vcert~=0.7.0; sys_platform != 'win32'

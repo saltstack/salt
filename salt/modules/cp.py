@@ -41,7 +41,7 @@ def _gather_pillar(pillarenv, pillar_override):
     """
     pillar = salt.pillar.get_pillar(
         __opts__,
-        __grains__,
+        __grains__.value(),
         __opts__["id"],
         __opts__["saltenv"],
         pillar_override=pillar_override,
@@ -157,26 +157,11 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
             pass
 
 
-def _mk_client():
-    """
-    Create a file client and add it to the context.
-
-    Each file client needs to correspond to a unique copy
-    of the opts dictionary, therefore it's hashed by the
-    id of the __opts__ dict
-    """
-    if "cp.fileclient_{}".format(id(__opts__)) not in __context__:
-        __context__[
-            "cp.fileclient_{}".format(id(__opts__))
-        ] = salt.fileclient.get_file_client(__opts__)
-
-
 def _client():
     """
     Return a client, hashed by the list of masters
     """
-    _mk_client()
-    return __context__["cp.fileclient_{}".format(id(__opts__))]
+    return salt.fileclient.get_file_client(__opts__)
 
 
 def _render_filenames(path, dest, saltenv, template, **kw):
@@ -294,7 +279,8 @@ def get_file(
     if not hash_file(path, saltenv):
         return ""
     else:
-        return _client().get_file(path, dest, makedirs, saltenv, gzip)
+        with _client() as client:
+            return client.get_file(path, dest, makedirs, saltenv, gzip)
 
 
 def envs():
@@ -307,7 +293,8 @@ def envs():
 
         salt '*' cp.envs
     """
-    return _client().envs()
+    with _client() as client:
+        return client.envs()
 
 
 def get_template(path, dest, template="jinja", saltenv=None, makedirs=False, **kwargs):
@@ -336,7 +323,8 @@ def get_template(path, dest, template="jinja", saltenv=None, makedirs=False, **k
         kwargs["grains"] = __grains__
     if "opts" not in kwargs:
         kwargs["opts"] = __opts__
-    return _client().get_template(path, dest, template, makedirs, saltenv, **kwargs)
+    with _client() as client:
+        return client.get_template(path, dest, template, makedirs, saltenv, **kwargs)
 
 
 def get_dir(path, dest, saltenv=None, template=None, gzip=None, **kwargs):
@@ -359,7 +347,8 @@ def get_dir(path, dest, saltenv=None, template=None, gzip=None, **kwargs):
 
     (path, dest) = _render_filenames(path, dest, saltenv, template, **kwargs)
 
-    return _client().get_dir(path, dest, saltenv, gzip)
+    with _client() as client:
+        return client.get_dir(path, dest, saltenv, gzip)
 
 
 def get_url(path, dest="", saltenv=None, makedirs=False, source_hash=None):
@@ -417,13 +406,16 @@ def get_url(path, dest="", saltenv=None, makedirs=False, source_hash=None):
         saltenv = __opts__["saltenv"] or "base"
 
     if isinstance(dest, str):
-        result = _client().get_url(
-            path, dest, makedirs, saltenv, source_hash=source_hash
-        )
+        with _client() as client:
+            result = client.get_url(
+                path, dest, makedirs, saltenv, source_hash=source_hash
+            )
     else:
-        result = _client().get_url(
-            path, None, makedirs, saltenv, no_cache=True, source_hash=source_hash
-        )
+
+        with _client() as client:
+            result = client.get_url(
+                path, None, makedirs, saltenv, no_cache=True, source_hash=source_hash
+            )
     if not result:
         log.error(
             "Unable to fetch file %s from saltenv %s.",
@@ -550,9 +542,14 @@ def cache_file(path, saltenv=None, source_hash=None, verify_ssl=True, use_etag=F
     if senv:
         saltenv = senv
 
-    result = _client().cache_file(
-        path, saltenv, source_hash=source_hash, verify_ssl=verify_ssl, use_etag=use_etag
-    )
+    with _client() as client:
+        result = client.cache_file(
+            path,
+            saltenv,
+            source_hash=source_hash,
+            verify_ssl=verify_ssl,
+            use_etag=use_etag,
+        )
     if not result and not use_etag:
         log.error("Unable to cache file '%s' from saltenv '%s'.", path, saltenv)
     if path_is_remote:
@@ -587,7 +584,8 @@ def cache_dest(url, saltenv=None):
     """
     if not saltenv:
         saltenv = __opts__["saltenv"] or "base"
-    return _client().cache_dest(url, saltenv)
+    with _client() as client:
+        return client.cache_dest(url, saltenv)
 
 
 def cache_files(paths, saltenv=None):
@@ -631,7 +629,8 @@ def cache_files(paths, saltenv=None):
     """
     if not saltenv:
         saltenv = __opts__["saltenv"] or "base"
-    return _client().cache_files(paths, saltenv)
+    with _client() as client:
+        return client.cache_files(paths, saltenv)
 
 
 def cache_dir(
@@ -672,7 +671,8 @@ def cache_dir(
     """
     if not saltenv:
         saltenv = __opts__["saltenv"] or "base"
-    return _client().cache_dir(path, saltenv, include_empty, include_pat, exclude_pat)
+    with _client() as client:
+        return client.cache_dir(path, saltenv, include_empty, include_pat, exclude_pat)
 
 
 def cache_master(saltenv=None):
@@ -690,7 +690,8 @@ def cache_master(saltenv=None):
     """
     if not saltenv:
         saltenv = __opts__["saltenv"] or "base"
-    return _client().cache_master(saltenv)
+    with _client() as client:
+        return client.cache_master(saltenv)
 
 
 def cache_local_file(path):
@@ -717,7 +718,8 @@ def cache_local_file(path):
             return path_cached
 
     # The file hasn't been cached or has changed; cache it
-    return _client().cache_local_file(path)
+    with _client() as client:
+        return client.cache_local_file(path)
 
 
 def list_states(saltenv=None):
@@ -735,7 +737,8 @@ def list_states(saltenv=None):
     """
     if not saltenv:
         saltenv = __opts__["saltenv"] or "base"
-    return _client().list_states(saltenv)
+    with _client() as client:
+        return client.list_states(saltenv)
 
 
 def list_master(saltenv=None, prefix=""):
@@ -753,7 +756,8 @@ def list_master(saltenv=None, prefix=""):
     """
     if not saltenv:
         saltenv = __opts__["saltenv"] or "base"
-    return _client().file_list(saltenv, prefix)
+    with _client() as client:
+        return client.file_list(saltenv, prefix)
 
 
 def list_master_dirs(saltenv=None, prefix=""):
@@ -771,7 +775,8 @@ def list_master_dirs(saltenv=None, prefix=""):
     """
     if not saltenv:
         saltenv = __opts__["saltenv"] or "base"
-    return _client().dir_list(saltenv, prefix)
+    with _client() as client:
+        return client.dir_list(saltenv, prefix)
 
 
 def list_master_symlinks(saltenv=None, prefix=""):
@@ -789,7 +794,8 @@ def list_master_symlinks(saltenv=None, prefix=""):
     """
     if not saltenv:
         saltenv = __opts__["saltenv"] or "base"
-    return _client().symlink_list(saltenv, prefix)
+    with _client() as client:
+        return client.symlink_list(saltenv, prefix)
 
 
 def list_minion(saltenv=None):
@@ -807,7 +813,8 @@ def list_minion(saltenv=None):
     """
     if not saltenv:
         saltenv = __opts__["saltenv"] or "base"
-    return _client().file_local_list(saltenv)
+    with _client() as client:
+        return client.file_local_list(saltenv)
 
 
 def is_cached(path, saltenv=None):
@@ -831,7 +838,8 @@ def is_cached(path, saltenv=None):
     if senv:
         saltenv = senv
 
-    return _client().is_cached(path, saltenv)
+    with _client() as client:
+        return client.is_cached(path, saltenv)
 
 
 def hash_file(path, saltenv=None):
@@ -856,7 +864,8 @@ def hash_file(path, saltenv=None):
     if senv:
         saltenv = senv
 
-    return _client().hash_file(path, saltenv)
+    with _client() as client:
+        return client.hash_file(path, saltenv)
 
 
 def stat_file(path, saltenv=None, octal=True):
@@ -881,7 +890,8 @@ def stat_file(path, saltenv=None, octal=True):
     if senv:
         saltenv = senv
 
-    stat = _client().hash_and_stat_file(path, saltenv)[1]
+    with _client() as client:
+        stat = client.hash_and_stat_file(path, saltenv)[1]
     if stat is None:
         return stat
     return salt.utils.files.st_mode_to_octal(stat[0]) if octal is True else stat[0]

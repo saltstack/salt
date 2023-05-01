@@ -390,8 +390,9 @@ contextvars==2.4
     # via -r requirements/base.txt
 croniter==1.0.15 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-cryptography==3.3.2
+cryptography==39.0.2
     # via
+    #   -r requirements/static/pkg/linux.in
     #   adal
     #   azure-cosmosdb-table
     #   azure-keyvault
@@ -400,6 +401,7 @@ cryptography==3.3.2
     #   moto
     #   paramiko
     #   pyopenssl
+    #   pyspnego
     #   requests-ntlm
     #   smbprotocol
     #   vcert
@@ -509,12 +511,13 @@ lxml==4.9.1
     #   ncclient
 mako==1.2.2
     # via -r requirements/static/ci/common.in
-markupsafe==2.0.1
+markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
     #   mako
     #   moto
+    #   werkzeug
 mock==4.0.3
     # via -r requirements/pytest.txt
 more-itertools==8.8.0
@@ -644,10 +647,8 @@ ntc-templates==2.3.2
     #   junos-eznc
     #   netmiko
 ntlm-auth==1.3.0
-    # via
-    #   requests-ntlm
-    #   smbprotocol
-oauthlib==3.2.1
+    # via requests-ntlm
+oauthlib==3.2.2
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
@@ -687,7 +688,6 @@ pyasn1==0.4.8
     # via
     #   pyasn1-modules
     #   rsa
-    #   smbprotocol
 pycparser==2.21 ; python_version >= "3.9"
     # via
     #   -r requirements/static/ci/common.in
@@ -703,7 +703,7 @@ pyjwt==2.4.0
     # via adal
 pynacl==1.4.0
     # via paramiko
-pyopenssl==20.0.1
+pyopenssl==23.0.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
@@ -719,6 +719,10 @@ pyserial==3.5
     # via
     #   junos-eznc
     #   netmiko
+pyspnego==0.8.0
+    # via
+    #   -r requirements/static/ci/cloud.in
+    #   smbprotocol
 pytest-custom-exit-code==0.3.0
     # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
@@ -790,7 +794,7 @@ pyyaml==5.4.1
     #   kubernetes
     #   napalm
     #   yamlordereddictloader
-pyzmq==23.2.0 ; python_version >= "3.9"
+pyzmq==23.2.0 ; python_version < "3.11"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -847,7 +851,6 @@ six==1.16.0
     #   bcrypt
     #   cassandra-driver
     #   cheroot
-    #   cryptography
     #   etcd3-py
     #   genshi
     #   geomet
@@ -861,23 +864,23 @@ six==1.16.0
     #   paramiko
     #   profitbricks
     #   pynacl
-    #   pyopenssl
     #   pypsexec
     #   python-dateutil
     #   pyvmomi
     #   pywinrm
     #   responses
-    #   smbprotocol
     #   textfsm
     #   transitions
     #   vcert
     #   virtualenv
     #   websocket-client
-smbprotocol==0.1.1
-    # via pypsexec
+smbprotocol==1.10.1
+    # via
+    #   -r requirements/static/ci/cloud.in
+    #   pypsexec
 smmap==4.0.0
     # via gitdb
-sqlparse==0.4.2
+sqlparse==0.4.4
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
@@ -920,7 +923,7 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
-werkzeug==2.0.1
+werkzeug==2.2.3
     # via
     #   moto
     #   pytest-httpserver

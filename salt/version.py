@@ -1,6 +1,7 @@
 """
 Set up the version of Salt
 """
+import argparse
 import operator
 import os
 import platform
@@ -77,7 +78,7 @@ class SaltVersionsInfo(type):
     ALUMINIUM     = SaltVersion("Aluminium"    , info=3003,       released=True)
     SILICON       = SaltVersion("Silicon"      , info=3004,       released=True)
     PHOSPHORUS    = SaltVersion("Phosphorus"   , info=3005,       released=True)
-    SULFUR        = SaltVersion("Sulfur"       , info=(3006, 0))
+    SULFUR        = SaltVersion("Sulfur"       , info=(3006, 0),  released=True)
     CHLORINE      = SaltVersion("Chlorine"     , info=(3007, 0))
     ARGON         = SaltVersion("Argon"        , info=(3008, 0))
     POTASSIUM     = SaltVersion("Potassium"    , info=(3009, 0))
@@ -554,7 +555,7 @@ class SaltStackVersion:
         parts.extend(["major={}".format(self.major), "minor={}".format(self.minor)])
 
         if self.new_version(self.major):
-            if not self.minor:
+            if not self.can_have_dot_zero(self.major) and not self.minor:
                 parts.remove("".join([x for x in parts if re.search("^minor*", x)]))
         else:
             parts.extend(["bugfix={}".format(self.bugfix)])
@@ -689,7 +690,6 @@ def dependency_information(include_salt_cloud=False):
     Report versions of library dependencies.
     """
     libs = [
-        ("Python", None, sys.version.rsplit("\n")[0].strip()),
         ("Jinja2", "jinja2", "__version__"),
         ("M2Crypto", "M2Crypto", "version"),
         ("msgpack", "msgpack", "version"),
@@ -716,6 +716,7 @@ def dependency_information(include_salt_cloud=False):
         ("docker-py", "docker", "__version__"),
         ("packaging", "packaging", "__version__"),
         ("looseversion", "looseversion", None),
+        ("relenv", "relenv", "__version__"),
     ]
 
     if include_salt_cloud:
@@ -723,7 +724,10 @@ def dependency_information(include_salt_cloud=False):
             ("Apache Libcloud", "libcloud", "__version__"),
         )
 
-    for name, imp, attr in libs:
+    def _sort_by_lowercased_name(entry):
+        return entry[0].lower()
+
+    for name, imp, attr in sorted(libs, key=_sort_by_lowercased_name):
         if imp is None:
             yield name, attr
             continue
@@ -752,7 +756,7 @@ def system_information():
     Report system versions.
     """
     # Late import so that when getting called from setup.py does not break
-    from distro import linux_distribution
+    from salt.utils.platform import linux_distribution
 
     def system_version():
         """
@@ -857,12 +861,16 @@ def versions_information(include_salt_cloud=False, include_extensions=True):
     """
     Report the versions of dependent software.
     """
+    py_info = [
+        ("Python", sys.version.rsplit("\n")[0].strip()),
+    ]
     salt_info = list(salt_information())
     lib_info = list(dependency_information(include_salt_cloud))
     sys_info = list(system_information())
 
     info = {
         "Salt Version": dict(salt_info),
+        "Python Version": dict(py_info),
         "Dependency Versions": dict(lib_info),
         "System Versions": dict(sys_info),
     }
@@ -894,6 +902,7 @@ def versions_report(include_salt_cloud=False, include_extensions=True):
     info = []
     for ver_type in (
         "Salt Version",
+        "Python Version",
         "Dependency Versions",
         "Salt Extensions",
         "System Versions",
@@ -913,5 +922,20 @@ def versions_report(include_salt_cloud=False, include_extensions=True):
     yield from info
 
 
+def _parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--next-release", help="Return the next release", action="store_true"
+    )
+    # When pip installing we pass in other args to this script.
+    # This allows us to catch those args but not use them
+    parser.add_argument("unknown", nargs=argparse.REMAINDER)
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    print(__version__)
+    args = _parser()
+    if args.next_release:
+        print(__saltstack_version__.next_release())
+    else:
+        print(__version__)
