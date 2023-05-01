@@ -53,22 +53,19 @@ def test_issue_64169(caplog):
                     log=None             # Regression will cause this function call to throw
                                          # an AttributeError
                 )
-            except AttributeError:
+            except AttributeError as exc:
                 # Observed behavior in #64169
-                assert False
+                pytest.fail(
+                    'Regression on #64169: pip_state.installed seems to be throwing an unexpected AttributeException: '
+                    f'{exc}'
+                )
             except:
                 # Something went wrong, but it isn't what's being tested for here.
                 return
 
             # Take 64169 further and actually confirm that the exception from pip.list got logged.
-            exc_msg_present = False
-            for log_line in caplog.messages:
-                # The exception must be somewhere in the log, but may optionally not be on a line by itself.
-                if exception_message in log_line:
-                    exc_msg_present = True
-                    break
-
-            assert exc_msg_present
+            assert 'Pre-caching of PIP packages during states.pip.installed failed by exception ' \
+                   f'from pip.list: {exception_message}' in caplog.messages
 
         # Confirm that the state continued to install the package as expected.
         # Only check the 'pkgs' parameter of pip.install
