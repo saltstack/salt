@@ -44,15 +44,11 @@ def empty_reg_pol_mach():
     class_info = salt.utils.win_lgpo_reg.CLASS_INFO
     reg_pol_file = pathlib.Path(class_info["Machine"]["policy_path"])
     reg_pol_file.parent.mkdir(parents=True, exist_ok=True)
-    reg_pol_file.write_bytes(
-        salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le")
-    )
+    reg_pol_file.write_bytes(salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le"))
     yield
     salt.utils.win_reg.delete_key_recursive(hive="HKLM", key="SOFTWARE\\MyKey1")
     salt.utils.win_reg.delete_key_recursive(hive="HKLM", key="SOFTWARE\\MyKey2")
-    reg_pol_file.write_bytes(
-        salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le")
-    )
+    reg_pol_file.write_bytes(salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le"))
 
 
 @pytest.fixture
@@ -60,17 +56,11 @@ def empty_reg_pol_user():
     class_info = salt.utils.win_lgpo_reg.CLASS_INFO
     reg_pol_file = pathlib.Path(class_info["User"]["policy_path"])
     reg_pol_file.parent.mkdir(parents=True, exist_ok=True)
-    reg_pol_file.write_bytes(
-        salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le")
-    )
-    with salt.utils.files.fopen(reg_pol_file, "wb") as f:
-        f.write(salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le"))
+    reg_pol_file.write_bytes(salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le"))
     yield
     salt.utils.win_reg.delete_key_recursive(hive="HKCU", key="SOFTWARE\\MyKey1")
     salt.utils.win_reg.delete_key_recursive(hive="HKCU", key="SOFTWARE\\MyKey2")
-    reg_pol_file.write_bytes(
-        salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le")
-    )
+    reg_pol_file.write_bytes(salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le"))
 
 
 @pytest.fixture
@@ -600,9 +590,7 @@ def test_user_value_disabled(empty_reg_pol_user):
     Test value.disabled in User policy
     """
     result = lgpo_reg.value_disabled(
-        name="MyValue1",
-        key="SOFTWARE\\MyKey1",
-        policy_class="User"
+        name="MyValue1", key="SOFTWARE\\MyKey1", policy_class="User"
     )
     expected = {
         "changes": {
