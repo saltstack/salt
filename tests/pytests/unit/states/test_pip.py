@@ -59,9 +59,6 @@ def test_issue_64169(caplog):
                     'Regression on #64169: pip_state.installed seems to be throwing an unexpected AttributeException: '
                     f'{exc}'
                 )
-            except:
-                # Something went wrong, but it isn't what's being tested for here.
-                return
 
             # Take 64169 further and actually confirm that the exception from pip.list got logged.
             assert 'Pre-caching of PIP packages during states.pip.installed failed by exception ' \
