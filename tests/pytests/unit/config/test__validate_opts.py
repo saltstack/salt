@@ -418,9 +418,9 @@ def test_dict_bool_none_types(option_value, expected):
 )
 def test_bool_int_types(option_value, expected):
     """
-    Some config settings have three types, dict, bool, and None which should
-    evaluate as True. All others should return False.
-    ssl is a dict, bool type config option
+    Some config settings have two types, bool and int. In that case, bool and
+    int should evaluate as True. All others should return False.
+    state_queue is a bool/int config option
     """
     result = salt.config._validate_opts({"state_queue": option_value})
     assert result is expected
