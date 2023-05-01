@@ -114,7 +114,7 @@ if HAS_PIP is True:
 
 # pylint: enable=import-error
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = "pip"
@@ -189,10 +189,10 @@ def _check_pkg_version_format(pkg):
             # vcs+URL urls are not properly parsed.
             # The next line is meant to trigger an AttributeError and
             # handle lower pip versions
-            log.debug("Installed pip version: %s", pip.__version__)
+            logger.debug("Installed pip version: %s", pip.__version__)
             install_req = _from_line(pkg)
         except AttributeError:
-            log.debug("Installed pip version is lower than 1.2")
+            logger.debug("Installed pip version is lower than 1.2")
             supported_vcs = ("git", "svn", "hg", "bzr")
             if pkg.startswith(supported_vcs):
                 for vcs in supported_vcs:
@@ -351,7 +351,7 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
     making the comparison.
     """
     if HAS_PKG_RESOURCES is False:
-        log.warning(
+        logger.warning(
             "The pkg_resources packages was not loaded. Please install setuptools."
         )
         return None
@@ -367,7 +367,7 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
         if pkg_resources.parse_version(pkg1) > pkg_resources.parse_version(pkg2):
             return 1
     except Exception as exc:  # pylint: disable=broad-except
-        log.exception(exc)
+        logger.exception(f'Comparison of package versions "{pkg1}" and "{pkg2}" failed: {exc}')
     return None
 
 
@@ -852,7 +852,9 @@ def installed(
             )
         # If we fail, then just send False, and we'll try again in the next function call
         except Exception as exc:  # pylint: disable=broad-except
-            globals().get("log").exception(exc)
+            logger.exception(
+                f'Pre-caching of PIP packages during states.pip.installed failed by exception from pip.list: {exc}'
+            )
             pip_list = False
 
         for prefix, state_pkg_name, version_spec in pkgs_details:

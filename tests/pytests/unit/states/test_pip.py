@@ -60,8 +60,15 @@ def test_issue_64169(caplog):
                 # Something went wrong, but it isn't what's being tested for here.
                 return
 
-            # Take 64169 further and actually confirm that the targeted exception from pip.list got logged.
-            assert exception_message in caplog.messages
+            # Take 64169 further and actually confirm that the exception from pip.list got logged.
+            exc_msg_present = False
+            for log_line in caplog.messages:
+                # The exception must be somewhere in the log, but may optionally not be on a line by itself.
+                if exception_message in log_line:
+                    exc_msg_present = True
+                    break
+
+            assert exc_msg_present
 
         # Confirm that the state continued to install the package as expected.
         # Only check the 'pkgs' parameter of pip.install
