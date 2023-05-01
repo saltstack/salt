@@ -106,7 +106,8 @@ jobs:
               inputs.salt-version,
               matrix.arch,
               steps.check-pkg-sign.outputs.sign-pkgs == 'true' && '--sign' || ''
-            ) ||
+            )
+            ||
             format('--salt-version {0} --arch {1}', inputs.salt-version, matrix.arch)
           }}
 
@@ -118,7 +119,7 @@ jobs:
             echo "artifact-name-msi=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-MSI" >> "$GITHUB_OUTPUT"
           else
             echo "artifact-name-nsis=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS-from-src" >> "$GITHUB_OUTPUT"
-            echo "artifact-name-msi=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-MSI"-from-src >> "$GITHUB_OUTPUT"
+            echo "artifact-name-msi=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-MSI-from-src" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Upload ${{ matrix.arch }} NSIS Packages
