@@ -3371,6 +3371,7 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
         "softlayer",
         "oneandone",
         "profitbricks",
+        "proxmox",
     ]
 
     # Most drivers need a size, but some do not.
