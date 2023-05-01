@@ -54,11 +54,11 @@ def empty_reg_pol_user():
         reg_pol_file.parent.mkdir(parents=True)
     with salt.utils.files.fopen(str(reg_pol_file), "wb") as f:
         f.write(salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le"))
-    salt.utils.win_reg.delete_key_recursive(hive="HKLM", key="SOFTWARE\\MyKey1")
-    salt.utils.win_reg.delete_key_recursive(hive="HKLM", key="SOFTWARE\\MyKey2")
+    salt.utils.win_reg.delete_key_recursive(hive="HKCU", key="SOFTWARE\\MyKey1")
+    salt.utils.win_reg.delete_key_recursive(hive="HKCU", key="SOFTWARE\\MyKey2")
     yield
-    salt.utils.win_reg.delete_key_recursive(hive="HKLM", key="SOFTWARE\\MyKey1")
-    salt.utils.win_reg.delete_key_recursive(hive="HKLM", key="SOFTWARE\\MyKey2")
+    salt.utils.win_reg.delete_key_recursive(hive="HKCU", key="SOFTWARE\\MyKey1")
+    salt.utils.win_reg.delete_key_recursive(hive="HKCU", key="SOFTWARE\\MyKey2")
     with salt.utils.files.fopen(str(reg_pol_file), "wb") as f:
         f.write(salt.utils.win_lgpo_reg.REG_POL_HEADER.encode("utf-16-le"))
 
