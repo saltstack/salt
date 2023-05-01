@@ -768,21 +768,6 @@ def test_exit_status_correct_usage_large_number_of_minions(
         "proxy_fourteen",
         "proxy_fifteen",
         "proxy_sixteen",
-        "proxy_seventeen",
-        "proxy_eighteen",
-        "proxy_nineteen",
-        "proxy_twenty",
-        "proxy_twenty_one",
-        "proxy_twenty_two",
-        "proxy_twenty_three",
-        "proxy_twenty_four",
-        "proxy_twenty_five",
-        "proxy_twenty_six",
-        "proxy_twenty_seven",
-        "proxy_twenty_eight",
-        "proxy_twenty_nine",
-        "proxy_thirty",
-        "proxy_thirty_one",
     ]
 
     top_file = """
@@ -850,9 +835,9 @@ def test_exit_status_correct_usage_large_number_of_minions(
             assert factory.is_running()
 
             # Let's issue a ping the control proxy
-            # ret = salt_cli.run("test.ping", minion_tgt=proxy_minion_id)
-            # assert ret.returncode == 0
-            # assert ret.data is True
+            ret = salt_cli.run("test.ping", minion_tgt=proxy_minion_id)
+            assert ret.returncode == 0
+            assert ret.data is True
 
             for minion_id in random.sample(sub_proxies, 4):
                 # Let's issue a ping to one of the controlled proxies
