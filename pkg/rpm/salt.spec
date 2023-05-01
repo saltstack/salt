@@ -148,8 +148,13 @@ cd $RPM_BUILD_DIR
   # the <onedir>/bin directory
   find $RPM_BUILD_DIR/build/salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$(dirname $(readlink -f $0))/python3" "$0" "$@":g' {} \;
 
-	$RPM_BUILD_DIR/build/venv/bin/tools pkg build salt-onedir . --package-name $RPM_BUILD_DIR/build/salt --platform linux
+  $RPM_BUILD_DIR/build/venv/bin/tools pkg build salt-onedir . --package-name $RPM_BUILD_DIR/build/salt --platform linux
   $RPM_BUILD_DIR/build/venv/bin/tools pkg pre-archive-cleanup --pkg $RPM_BUILD_DIR/build/salt
+
+  # Generate master and minion configs
+  sed 's/#user: root/user: salt/g' %{_salt_src}/conf/master > $RPM_BUILD_DIR/build/master
+  sed 's/#group: root/group: salt/g' %{_salt_src}/conf/minion > $RPM_BUILD_DIR/build/minion
+
 %else
   # The relenv onedir is being provided, all setup up until Salt is installed
   # is expected to be done
@@ -158,6 +163,10 @@ cd $RPM_BUILD_DIR
 
   # Fix any hardcoded paths to the relenv python binary on any of the scripts installed in the <onedir>/bin directory
   find salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$$(dirname $$(readlink -f $$0))/python3" "$$0" "$$@":g' {} \;
+
+  # Generate master and minion configs
+  sed 's/#user: root/user: salt/g' %{_salt_src}/conf/master > $RPM_BUILD_DIR/build/master
+  sed 's/#group: root/group: salt/g' %{_salt_src}/conf/minion > $RPM_BUILD_DIR/build/minion
 
   cd $RPM_BUILD_DIR
 %endif
@@ -215,8 +224,8 @@ install -m 0755 %{buildroot}/opt/saltstack/salt/spm %{buildroot}%{_bindir}/spm
 install -m 0755 %{buildroot}/opt/saltstack/salt/salt-pip %{buildroot}%{_bindir}/salt-pip
 
 # Add the config files
-install -p -m 0640 %{_salt_src}/conf/minion %{buildroot}%{_sysconfdir}/salt/minion
-install -p -m 0640 %{_salt_src}/pkg/common/conf/master %{buildroot}%{_sysconfdir}/salt/master
+install -p -m 0640 $RPM_BUILD_DIR/build/minion %{buildroot}%{_sysconfdir}/salt/minion
+install -p -m 0640 $RPM_BUILD_DIR/build/master %{buildroot}%{_sysconfdir}/salt/master
 install -p -m 0640 %{_salt_src}/conf/cloud %{buildroot}%{_sysconfdir}/salt/cloud
 install -p -m 0640 %{_salt_src}/conf/roster %{buildroot}%{_sysconfdir}/salt/roster
 install -p -m 0640 %{_salt_src}/conf/proxy %{buildroot}%{_sysconfdir}/salt/proxy
