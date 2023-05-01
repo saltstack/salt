@@ -43,8 +43,12 @@ BuildRequires: python3
 BuildRequires: python3-pip
 BuildRequires: openssl
 BuildRequires: git
+
+# rhel is not defined on all rpm based distros.
+%if %{?rhel:1}%{!?rhel:0}
 %if %{rhel} >= 9
 BuildRequires: libxcrypt-compat
+%endif
 %endif
 
 %description
