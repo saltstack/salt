@@ -27,9 +27,9 @@ jobs:
       matrix:
         arch:
           - x86_64
-        mode:
-          - existing-onedir
-          - from-src
+        source:
+          - onedir
+          - src
 
     runs-on:
       - macos-12
@@ -103,32 +103,32 @@ jobs:
           DEV_INSTALL_CERT: "${{ secrets.MAC_SIGN_DEV_INSTALL_CERT }}"
           APPLE_ACCT: "${{ secrets.MAC_SIGN_APPLE_ACCT }}"
           APP_SPEC_PWD: "${{ secrets.MAC_SIGN_APP_SPEC_PWD }}"
-        if: ${{ matrix.mode == 'existing-onedir' }}
         run: |
-          tools pkg build macos --onedir salt-${{ inputs.salt-version }}-onedir-darwin-${{ matrix.arch }}.tar.xz \
-            --salt-version ${{ inputs.salt-version }} ${{
-              steps.check-pkg-sign.outputs.sign-pkgs == 'true' && '--sign' || ''
-            }}
+          tools pkg build macos ${{
+              matrix.source == 'onedir' &&
+              format(
+                '--onedir salt-{0}-onedir-darwin-{1}.tar.xz --salt-version {0} {2}',
+                inputs.salt-version,
+                matrix.arch,
+                steps.check-pkg-sign.outputs.sign-pkgs == 'true' && '--sign' || ''
+              )
+              ||
+              format('--salt-version {0}', inputs.salt-version)
+          }}
 
-      - name: Build MacOS Package Without Existing Onedir
-        if: ${{ matrix.mode == 'from-src' }}
+      - name: Set Artifact Name
+        id: set-artifact-name
         run: |
-          tools pkg build macos --salt-version ${{ inputs.salt-version }}
+          if [ "${{ matrix.source }}" != "src" ]; then
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos-from-src" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Upload ${{ matrix.arch }} Package
         uses: actions/upload-artifact@v3
-        if: ${{ matrix.mode == 'existing-onedir' }}
         with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos
-          path: pkg/macos/salt-${{ inputs.salt-version }}-py3-*.pkg
-          retention-days: 7
-          if-no-files-found: error
-
-      - name: Upload ${{ matrix.arch }} Package
-        uses: actions/upload-artifact@v3
-        if: ${{ matrix.mode == 'from-src' }}
-        with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos-from-src
+          name: ${{ steps.set-artifact-name.outputs.artifact-name }}
           path: pkg/macos/salt-${{ inputs.salt-version }}-py3-*.pkg
           retention-days: 7
           if-no-files-found: error
