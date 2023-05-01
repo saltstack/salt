@@ -247,6 +247,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   almalinux-8-arm64-pkg-download-tests:
@@ -265,6 +266,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   almalinux-9-pkg-download-tests:
@@ -283,6 +285,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   almalinux-9-arm64-pkg-download-tests:
@@ -301,6 +304,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   amazonlinux-2-pkg-download-tests:
@@ -319,6 +323,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   amazonlinux-2-arm64-pkg-download-tests:
@@ -337,6 +342,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   centos-7-pkg-download-tests:
@@ -355,6 +361,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   centos-7-arm64-pkg-download-tests:
@@ -373,6 +380,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   centosstream-8-pkg-download-tests:
@@ -391,6 +399,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   centosstream-8-arm64-pkg-download-tests:
@@ -409,6 +418,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   centosstream-9-pkg-download-tests:
@@ -427,6 +437,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   centosstream-9-arm64-pkg-download-tests:
@@ -445,6 +456,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   debian-10-pkg-download-tests:
@@ -463,6 +475,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   debian-11-pkg-download-tests:
@@ -481,6 +494,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   debian-11-arm64-pkg-download-tests:
@@ -499,6 +513,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   fedora-36-pkg-download-tests:
@@ -517,6 +532,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   fedora-36-arm64-pkg-download-tests:
@@ -535,6 +551,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   fedora-37-pkg-download-tests:
@@ -553,6 +570,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   fedora-37-arm64-pkg-download-tests:
@@ -571,6 +589,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   fedora-38-pkg-download-tests:
@@ -589,6 +608,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   fedora-38-arm64-pkg-download-tests:
@@ -607,6 +627,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   photonos-3-pkg-download-tests:
@@ -625,6 +646,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   photonos-4-pkg-download-tests:
@@ -643,6 +665,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   ubuntu-2004-pkg-download-tests:
@@ -661,6 +684,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   ubuntu-2004-arm64-pkg-download-tests:
@@ -679,6 +703,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   ubuntu-2204-pkg-download-tests:
@@ -697,6 +722,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   ubuntu-2204-arm64-pkg-download-tests:
@@ -715,6 +741,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   macos-12-pkg-download-tests:
@@ -733,6 +760,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   windows-2022-nsis-amd64-pkg-download-tests:
@@ -752,6 +780,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   windows-2022-msi-amd64-pkg-download-tests:
@@ -771,6 +800,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
     secrets: inherit
 
   release:
