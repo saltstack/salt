@@ -153,7 +153,7 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
         key=key, v_name=name, policy_class=policy_class
     )
 
-    if str(new["data"]) == v_data and new["type"] == v_type:
+    if str(new["data"]) == str(v_data) and new["type"] == v_type:
         ret["comment"] = "Registry.pol value has been set"
         ret["result"] = True
     else:
