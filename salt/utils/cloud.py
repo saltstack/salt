@@ -1202,6 +1202,16 @@ def wait_for_passwd(
             time.sleep(trysleep)
 
 
+def _format_master_param(master):
+    """
+    If the master is a list, we need to convert it to a comma delimited string
+    Otherwise, we just return master
+    """
+    if isinstance(master, list):
+        return ",".join(master)
+    return master
+
+
 def deploy_windows(
     host,
     port=445,
@@ -1337,17 +1347,18 @@ def deploy_windows(
             conn=smb_conn,
         )
 
+        cmd = "c:\\salttemp\\{}".format(installer)
+        args = [
+            "/S",
+            "/master={}".format(_format_master_param(master)),
+            "/minion-name={}".format(name),
+        ]
+
         if use_winrm:
-            winrm_cmd(
-                winrm_session,
-                "c:\\salttemp\\{}".format(installer),
-                ["/S", "/master={}".format(master), "/minion-name={}".format(name)],
-            )
+            winrm_cmd(winrm_session, cmd, args)
         else:
-            cmd = "c:\\salttemp\\{}".format(installer)
-            args = "/S /master={} /minion-name={}".format(master, name)
             stdout, stderr, ret_code = run_psexec_command(
-                cmd, args, host, username, password
+                cmd, " ".join(args), host, username, password
             )
 
             if ret_code != 0:
