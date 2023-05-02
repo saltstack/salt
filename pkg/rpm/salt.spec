@@ -381,9 +381,9 @@ test -d %{_SALT_HOME} || mkdir -p %{_SALT_HOME}
 # 3. create user if not existing
 #         -g %{_SALT_GROUP} \
 if ! getent passwd | grep -q "^%{_SALT_USER}:"; then
-  adduser --system \
+  useradd --system \
           --no-create-home \
-          -s /sbin/nlogin \
+          -s /sbin/nologin \
           -g %{_SALT_GROUP} \
           %{_SALT_USER} 2>/dev/null || true
 fi

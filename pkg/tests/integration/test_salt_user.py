@@ -28,7 +28,9 @@ def test_salt_user_home(install_salt):
     """
     Test the correct user is running the Salt Master
     """
-    proc = subprocess.run(["getent", "salt"], check=False, capture_output=True)
+    proc = subprocess.run(
+        ["getent", "passwd", "salt"], check=False, capture_output=True
+    )
     assert proc.returncode == 0
     home = ""
     try:
@@ -47,7 +49,7 @@ def test_salt_user_group(install_salt):
     in_group = False
     try:
         for group in proc.stdout.decode().split(" "):
-            if group == "salt":
+            if "salt" in group:
                 in_group = True
     except:
         pass
