@@ -474,12 +474,17 @@ def extras_pypath():
     extras_dir = "extras-{}.{}".format(*sys.version_info)
     if platform.is_windows():
         return pathlib.Path(
-            os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir, "bin"
+            os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir
         )
     elif platform.is_darwin():
-        return pathlib.Path(f"/opt", "salt", extras_dir, "bin")
+        return pathlib.Path("/opt", "salt", extras_dir)
     else:
-        return pathlib.Path(f"/opt", "saltstack", "salt", extras_dir, "bin")
+        return pathlib.Path("/opt", "saltstack", "salt", extras_dir)
+
+
+@pytest.fixture(scope="module")
+def extras_pypath_bin(extras_pypath):
+    return extras_pypath / "bin"
 
 
 @pytest.fixture(scope="module")
@@ -487,7 +492,7 @@ def salt_api(salt_master, install_salt, extras_pypath):
     """
     start up and configure salt_api
     """
-    shutil.rmtree(str(extras_pypath.parent), ignore_errors=True)
+    shutil.rmtree(str(extras_pypath), ignore_errors=True)
     start_timeout = None
     if platform.is_windows() and install_salt.singlebin:
         start_timeout = 240
