@@ -72,23 +72,6 @@ def __virtual__():
     return __virtualname__
 
 
-def _format_changes(changes, key, v_name):
-    """
-    Reformat the changes dictionary to group new and old together.
-    """
-    new_changes = {"new": {}, "old": {}}
-    for item in changes:
-        if changes[item]["new"]:
-            new_changes["new"][item] = changes[item]["new"]
-            new_changes["new"]["key"] = key
-            new_changes["new"]["name"] = v_name
-        if changes[item]["old"]:
-            new_changes["old"][item] = changes[item]["old"]
-            new_changes["old"]["key"] = key
-            new_changes["old"]["name"] = v_name
-    return new_changes
-
-
 def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine"):
     r"""
     Ensure a registry setting is present in the Registry.pol file.
@@ -170,12 +153,16 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
         key=key, v_name=name, policy_class=policy_class
     )
 
-    changes = salt.utils.data.compare_dicts(old, new)
+    if str(new["data"]) == str(v_data) and new["type"] == v_type:
+        ret["comment"] = "Registry.pol value has been set"
+        ret["result"] = True
+    else:
+        ret["comment"] = "Failed to set Registry.pol value"
+
+    changes = salt.utils.data.recursive_diff(old, new)
 
     if changes:
-        ret["comment"] = "Registry.pol value has been set"
-        ret["changes"] = _format_changes(changes, key, name)
-        ret["result"] = True
+        ret["changes"] = changes
 
     return ret
 
@@ -238,12 +225,16 @@ def value_disabled(name, key, policy_class="Machine"):
         key=key, v_name=name, policy_class=policy_class
     )
 
-    changes = salt.utils.data.compare_dicts(old, new)
+    if "**del." in str(new["data"]) and new["type"] == "REG_SZ":
+        ret["comment"] = "Registry.pol value disabled"
+        ret["result"] = True
+    else:
+        ret["comment"] = "Failed to disable Registry.pol value"
+
+    changes = salt.utils.data.recursive_diff(old, new)
 
     if changes:
-        ret["comment"] = "Registry.pol value enabled"
-        ret["changes"] = _format_changes(changes, key, name)
-        ret["result"] = True
+        ret["changes"] = changes
 
     return ret
 
@@ -306,14 +297,17 @@ def value_absent(name, key, policy_class="Machine"):
         key=key, v_name=name, policy_class=policy_class
     )
 
-    if new is None:
+    if not new:
+        ret["comment"] = "Registry.pol value deleted"
+        ret["result"] = True
+        # We're setting this here in case new is None
         new = {}
+    else:
+        ret["comment"] = "Failed to delete Registry.pol value"
 
-    changes = salt.utils.data.compare_dicts(old, new)
+    changes = salt.utils.data.recursive_diff(old, new)
 
     if changes:
-        ret["comment"] = "Registry.pol value deleted"
-        ret["changes"] = _format_changes(changes, key, name)
-        ret["result"] = True
+        ret["changes"] = changes
 
     return ret

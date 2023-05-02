@@ -11,6 +11,10 @@ on:
         required: true
         type: string
         description: The platform being tested
+      arch:
+        required: true
+        type: string
+        description: The platform arch being tested
       salt-version:
         type: string
         required: true
@@ -23,6 +27,10 @@ on:
         required: true
         type: string
         description: The environment to run tests against
+      latest-release:
+        required: true
+        type: string
+        description: The latest salt release
       python-version:
         required: false
         type: string
@@ -43,13 +51,6 @@ on:
         type: string
         description: The nox session to run
         default: test-pkgs-onedir
-      artifacts-from-workflow:
-        required: false
-        type: string
-        description: >
-          Which workflow to download artifacts from. An empty string means the
-          current workflow run.
-        default: ""
 
 
 env:
@@ -62,34 +63,10 @@ env:
 
 jobs:
 
-  generate-matrix:
-    name: Generate Package Test Matrix
-    runs-on: ubuntu-latest
-    outputs:
-      arch-matrix-include: ${{ steps.generate-pkg-matrix.outputs.arch }}
-      test-matrix-include: ${{ steps.generate-pkg-matrix.outputs.tests }}
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v3
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-
-      - name: Generate Package Test Matrix
-        id: generate-pkg-matrix
-        run: |
-          tools ci pkg-download-matrix macos
-
   dependencies:
     name: Setup Test Dependencies
-    needs:
-      - generate-matrix
     runs-on: ${{ inputs.distro-slug }}
     timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.arch-matrix-include) }}
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
@@ -99,24 +76,12 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ matrix.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
 
       - name: Download Onedir Tarball as an Artifact
-        if: inputs.artifacts-from-workflow == ''
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ matrix.arch }}.tar.xz
-          path: artifacts/
-
-      - name: Download Onedir Tarball as an Artifact(from a different workflow)
-        if: inputs.artifacts-from-workflow != ''
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          workflow: ${{ inputs.artifacts-from-workflow }}
-          workflow_conclusion: ""
-          branch: ${{ github.event.ref }}
-          if_no_artifact_found: fail
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ matrix.arch }}.tar.xz
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
           path: artifacts/
 
       - name: Decompress Onedir Tarball
@@ -125,7 +90,7 @@ jobs:
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ matrix.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
 
       - name: Set up Python ${{ inputs.python-version }}
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -166,18 +131,10 @@ jobs:
         run: |
           nox --force-color -e compress-dependencies -- ${{ inputs.distro-slug }}
 
-      - name: Upload Onedir Tarball as an Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ matrix.arch }}.tar.xz
-          path: artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ matrix.arch }}.tar.xz*
-          retention-days: 7
-          if-no-files-found: error
-
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v3
         with:
-          name: nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          name: nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-download-${{ inputs.arch }}
           path: nox.${{ inputs.distro-slug }}.tar.*
 
   test:
@@ -187,11 +144,6 @@ jobs:
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
     needs:
       - dependencies
-      - generate-matrix
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.test-matrix-include) }}
 
     steps:
       - name: Checkout Source Code
@@ -200,8 +152,8 @@ jobs:
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
         with:
-          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ matrix.arch }}.tar.xz
-          path: artifacts
+          name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+          path: artifacts/
 
       - name: Install System Dependencies
         run: |
@@ -212,7 +164,7 @@ jobs:
         run: |
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
-          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ matrix.arch }}.tar.xz
+          tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
 
       - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v4
@@ -228,7 +180,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ matrix.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          # If we get a cache miss here it means the dependencies step failed to save the cache
+          fail-on-cache-miss: true
 
       - name: Decompress .nox Directory
         run: |
@@ -236,6 +190,7 @@ jobs:
 
       - name: Show System Info & Test Plan
         env:
+          SALT_RELEASE: "${{ inputs.salt-version }}"
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "1"
           PRINT_TEST_PLAN_ONLY: "1"
@@ -243,6 +198,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- download-pkgs
 
@@ -257,7 +213,8 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           SALT_RELEASE: "${{ inputs.salt-version }}"
-          SALT_REPO_ARCH: ${{ matrix.arch }}
+          SALT_REPO_ARCH: ${{ inputs.arch }}
+          LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
           SALT_REPO_TYPE: ${{ inputs.environment }}
           SALT_REPO_USER: ${{ secrets.SALT_REPO_USER }}
           SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
@@ -288,24 +245,19 @@ jobs:
         if: always() && job.status != 'cancelled'
         uses: actions/upload-artifact@v3
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.arch }}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.arch }}
           path: |
             artifacts
             !artifacts/salt/*
             !artifacts/salt-*.tar.*
 
   report:
-    name: Reports for ${{ inputs.distro-slug }}(${{ matrix.arch }})
+    name: Reports for ${{ inputs.distro-slug }}(${{ inputs.arch }})
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     needs:
       - test
-      - generate-matrix
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.generate-matrix.outputs.test-matrix-include) }}
 
     steps:
       - name: Checkout Source Code
@@ -315,7 +267,7 @@ jobs:
         id: download-test-run-artifacts
         uses: actions/download-artifact@v3
         with:
-          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ matrix.arch }}
+          name: pkg-testrun-artifacts-${{ inputs.distro-slug }}-${{ inputs.arch }}
           path: artifacts
 
       - name: Show Test Run Artifacts
@@ -337,6 +289,6 @@ jobs:
         # always run even if the previous steps fails
         if: always() && github.event_name == 'push' && steps.download-test-run-artifacts.outcome == 'success'
         with:
-          check_name: Overall Test Results(${{ inputs.distro-slug }} ${{ matrix.arch }})
+          check_name: Overall Test Results(${{ inputs.distro-slug }} ${{ inputs.arch }})
           report_paths: 'artifacts/xml-unittests-output/*.xml'
           annotate_only: true

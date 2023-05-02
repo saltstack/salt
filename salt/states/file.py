@@ -8937,6 +8937,25 @@ def cached(
     else:
         source_sum = {}
 
+    if __opts__["test"]:
+        local_copy = __salt__["cp.is_cached"](name, saltenv=saltenv)
+        if local_copy:
+            if source_sum:
+                hash = __salt__["file.get_hash"](local_copy, __opts__["hash_type"])
+                if hash == source_sum["hsum"]:
+                    ret["comment"] = "File already cached: {}".format(name)
+                else:
+                    ret[
+                        "comment"
+                    ] = "Hashes don't match.\nFile will be cached: {}".format(name)
+            else:
+                ret["comment"] = "No hash found. File will be cached: {}".format(name)
+        else:
+            ret["comment"] = "File will be cached: {}".format(name)
+        ret["changes"] = {}
+        ret["result"] = None
+        return ret
+
     if parsed.scheme in salt.utils.files.LOCAL_PROTOS:
         # Source is a local file path
         full_path = os.path.realpath(os.path.expanduser(parsed.path))

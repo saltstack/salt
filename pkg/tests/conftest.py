@@ -21,6 +21,7 @@ from tests.support.helpers import (
     SaltPkgInstall,
     TestUser,
 )
+from tests.support.sminion import create_sminion
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +32,16 @@ def version(install_salt):
     get version number from artifact
     """
     return install_salt.get_version(version_only=True)
+
+
+@pytest.fixture(scope="session")
+def sminion():
+    return create_sminion()
+
+
+@pytest.fixture(scope="session")
+def grains(sminion):
+    return sminion.opts["grains"].copy()
 
 
 def pytest_addoption(parser):
