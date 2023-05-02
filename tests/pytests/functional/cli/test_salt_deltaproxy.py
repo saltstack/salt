@@ -131,6 +131,7 @@ def test_exit_status_correct_usage_large_number_of_minions(
         "proxy_twenty_nine",
         "proxy_thirty",
         "proxy_thirty_one",
+        "proxy_thirty_two",
     ]
 
     top_file = """
