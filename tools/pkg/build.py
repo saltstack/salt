@@ -4,6 +4,7 @@ These commands are used to build the salt onedir and system packages.
 # pylint: disable=resource-leakage,broad-except
 from __future__ import annotations
 
+import json
 import logging
 import os
 import pathlib
@@ -525,10 +526,28 @@ def salt_onedir(
             "-CICD",
             env=env,
         )
+        python_executable = str(onedir_env / "Scripts" / "python.exe")
+        ret = ctx.run(
+            python_executable,
+            "-c",
+            "import json, sys, site, pathlib; sys.stdout.write(json.dumps([pathlib.Path(p).as_posix() for p in site.getsitepackages()]))",
+            capture=True,
+        )
+        if ret.returncode:
+            ctx.error(f"Failed to get the path to `site-packages`: {ret}")
+            ctx.exit(1)
+        site_packages_json = json.loads(ret.stdout.strip().decode())
+        ctx.info(f"Discovered 'site-packages' paths: {site_packages_json}")
     else:
         env["RELENV_PIP_DIR"] = "1"
         pip_bin = onedir_env / "bin" / "pip3"
-        ctx.run(str(pip_bin), "install", str(salt_archive), env=env)
+        ctx.run(
+            str(pip_bin),
+            "install",
+            "--no-warn-script-location",
+            str(salt_archive),
+            env=env,
+        )
         if platform == "darwin":
 
             def errfn(fn, path, err):
@@ -539,10 +558,31 @@ def salt_onedir(
                 if path.exists():
                     shutil.rmtree(path, onerror=errfn)
 
-    # TODO: Fix hardcoded 3.10
-    dest_path = onedir_env / "lib" / "python3.10" / "site-packages" / "extras.pth"
-    ctx.info(f"Writing '{dest_path}' ...")
-    dest_path.write_text(
+        python_executable = str(onedir_env / "bin" / "python3")
+        ret = ctx.run(
+            python_executable,
+            "-c",
+            "import json, sys, site, pathlib; sys.stdout.write(json.dumps(site.getsitepackages()))",
+            capture=True,
+        )
+        if ret.returncode:
+            ctx.error(f"Failed to get the path to `site-packages`: {ret}")
+            ctx.exit(1)
+        site_packages_json = json.loads(ret.stdout.strip().decode())
+        ctx.info(f"Discovered 'site-packages' paths: {site_packages_json}")
+
+    site_packages: str
+    for site_packages_path in site_packages_json:
+        if "site-packages" in site_packages_path:
+            site_packages = site_packages_path
+            break
+    else:
+        ctx.error("Cloud not find a site-packages path with 'site-packages' in it?!")
+        ctx.exit(1)
+
+    pth_path = pathlib.Path(site_packages) / "salt-extras.pth"
+    ctx.info(f"Writing '{pth_path}' ...")
+    pth_path.write_text(
         'import sys, pathlib; extras = str(pathlib.Path(__file__).parent.parent.parent / "extras-{}.{}".format(*sys.version_info)); '
         "extras not in sys.path and sys.path.insert(0, extras)\n"
     )
