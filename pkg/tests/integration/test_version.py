@@ -62,7 +62,11 @@ def test_compare_versions(version, binary, install_salt):
         ret = install_salt.proc.run(*install_salt.binary_paths[binary], "--version")
         ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
     else:
-        pytest.skip(f"Binary not available: {binary}")
+        if platform.is_windows():
+            pytest.skip(f"Binary not available on windows: {binary}")
+        pytest.fail(
+            f"Platform is not Windows and yet the binary {binary!r} is not available"
+        )
 
 
 @pytest.mark.skip_unless_on_darwin()

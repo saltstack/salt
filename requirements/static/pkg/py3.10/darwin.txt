@@ -55,13 +55,10 @@ linode-python==1.1.1
     # via -r requirements/darwin.txt
 looseversion==1.0.2
     # via -r requirements/base.txt
-mako==1.2.2
-    # via -r requirements/darwin.txt
 markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
-    #   mako
 more-itertools==8.2.0
     # via
     #   cheroot
@@ -94,7 +91,7 @@ pytz==2022.1
     # via tempora
 pyyaml==5.4.1
     # via -r requirements/base.txt
-pyzmq==23.2.0
+pyzmq==23.2.0 ; python_version < "3.11"
     # via -r requirements/zeromq.txt
 requests==2.25.1
     # via

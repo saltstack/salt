@@ -509,9 +509,7 @@ lxml==4.9.1
     #   napalm
     #   ncclient
 mako==1.2.2
-    # via
-    #   -r requirements/darwin.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
@@ -785,7 +783,7 @@ pyyaml==5.4.1
     #   napalm
     #   yamllint
     #   yamlordereddictloader
-pyzmq==23.2.0
+pyzmq==23.2.0 ; python_version < "3.11"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -859,7 +857,7 @@ six==1.16.0
     #   websocket-client
 smmap==3.0.2
     # via gitdb
-sqlparse==0.4.2
+sqlparse==0.4.4
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in

@@ -396,6 +396,7 @@ cryptography==39.0.2
     #   moto
     #   paramiko
     #   pyopenssl
+    #   pyspnego
     #   requests-ntlm
     #   smbprotocol
     #   vcert
@@ -618,9 +619,7 @@ netaddr==0.7.19
     #   -r requirements/static/ci/cloud.in
     #   junos-eznc
 ntlm-auth==1.3.0
-    # via
-    #   requests-ntlm
-    #   smbprotocol
+    # via requests-ntlm
 oauthlib==3.2.2
     # via requests-oauthlib
 oscrypto==1.2.1
@@ -657,7 +656,6 @@ pyasn1==0.4.8
     # via
     #   pyasn1-modules
     #   rsa
-    #   smbprotocol
 pycparser==2.21 ; python_version >= "3.9"
     # via
     #   -r requirements/static/ci/common.in
@@ -685,6 +683,10 @@ pyrsistent==0.18.0
     # via jsonschema
 pyserial==3.5
     # via junos-eznc
+pyspnego==0.8.0
+    # via
+    #   -r requirements/static/ci/cloud.in
+    #   smbprotocol
 pytest-custom-exit-code==0.3.0
     # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
@@ -755,7 +757,7 @@ pyyaml==5.4.1
     #   junos-eznc
     #   kubernetes
     #   yamlordereddictloader
-pyzmq==23.2.0
+pyzmq==23.2.0 ; python_version < "3.11"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -826,16 +828,17 @@ six==1.16.0
     #   pyvmomi
     #   pywinrm
     #   responses
-    #   smbprotocol
     #   transitions
     #   vcert
     #   virtualenv
     #   websocket-client
-smbprotocol==0.1.1
-    # via pypsexec
+smbprotocol==1.10.1
+    # via
+    #   -r requirements/static/ci/cloud.in
+    #   pypsexec
 smmap==4.0.0
     # via gitdb
-sqlparse==0.4.2
+sqlparse==0.4.4
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in

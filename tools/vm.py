@@ -175,14 +175,20 @@ def create(
             "help": "The VM Name",
             "metavar": "VM_NAME",
         },
+        "no_wait": {
+            "help": (
+                "Don't wait for the destroy process to complete. "
+                "Just confirm it started and exit."
+            )
+        },
     }
 )
-def destroy(ctx: Context, name: str):
+def destroy(ctx: Context, name: str, no_wait: bool = False):
     """
     Destroy VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    vm.destroy()
+    vm.destroy(no_wait=no_wait)
 
 
 @vm.command(
@@ -1029,13 +1035,13 @@ class VM:
                 return error
             return True
 
-    def destroy(self):
+    def destroy(self, no_wait: bool = False):
         try:
             if not self.is_running:
                 log.info(f"{self!r} is not running...")
                 return
             timeout = self.config.terminate_timeout
-            timeout_progress = 0
+            timeout_progress = 0.0
             progress = create_progress_bar()
             task = progress.add_task(f"Terminatting {self!r}...", total=timeout)
             self.instance.terminate()
@@ -1044,6 +1050,12 @@ class VM:
                     while timeout_progress <= timeout:
                         start = time.time()
                         time.sleep(1)
+                        if no_wait and not self.is_running:
+                            log.info(
+                                f"{self!r} started the destroy process. "
+                                "Not waiting for completion of that process."
+                            )
+                            break
                         if self.state == "terminated":
                             progress.update(
                                 task,

@@ -1212,7 +1212,7 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
                 ):
                     os.chmod(  # nosec
                         os.path.join(self.opts["sock_dir"], "master_event_pub.ipc"),
-                        0o666,
+                        0o660,
                     )
 
             atexit.register(self.close)

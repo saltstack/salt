@@ -125,7 +125,7 @@ def state(
     subset=None,
     orchestration_jid=None,
     failhard=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Invoke a state run on a given target
@@ -454,7 +454,7 @@ def function(
     batch=None,
     subset=None,
     failhard=None,
-    **kwargs
+    **kwargs,
 ):  # pylint: disable=unused-argument
     """
     Execute a single module function on a remote minion via salt or salt-ssh
@@ -780,6 +780,14 @@ def runner(name, **kwargs):
         log.debug("Unable to fire args event due to missing __orchestration_jid__")
         jid = None
 
+    try:
+        kwargs["__pub_user"] = __user__
+        log.debug(
+            f"added __pub_user to kwargs using dunder user '{__user__}', kwargs '{kwargs}'"
+        )
+    except NameError:
+        log.warning("unable to find user for fire args event due to missing __user__")
+
     if __opts__.get("test", False):
         ret = {
             "name": name,
@@ -899,7 +907,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
             __orchestration_jid__=jid,
             __env__=__env__,
             full_return=True,
-            **(runner_config.get("kwarg", {}))
+            **(runner_config.get("kwarg", {})),
         )
 
     try:
