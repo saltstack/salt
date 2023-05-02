@@ -251,7 +251,7 @@ def _check_if_installed(
     index_url,
     extra_index_url,
     pip_list=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Takes a package name and version specification (if any) and checks it is
@@ -367,7 +367,9 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
         if pkg_resources.parse_version(pkg1) > pkg_resources.parse_version(pkg2):
             return 1
     except Exception as exc:  # pylint: disable=broad-except
-        logger.exception(f'Comparison of package versions "{pkg1}" and "{pkg2}" failed: {exc}')
+        logger.exception(
+            f'Comparison of package versions "{pkg1}" and "{pkg2}" failed: {exc}'
+        )
     return None
 
 
@@ -418,7 +420,7 @@ def installed(
     cache_dir=None,
     no_binary=None,
     extra_args=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Make sure the package is installed
@@ -853,7 +855,7 @@ def installed(
         # If we fail, then just send False, and we'll try again in the next function call
         except Exception as exc:  # pylint: disable=broad-except
             logger.exception(
-                f'Pre-caching of PIP packages during states.pip.installed failed by exception from pip.list: {exc}'
+                f"Pre-caching of PIP packages during states.pip.installed failed by exception from pip.list: {exc}"
             )
             pip_list = False
 
@@ -874,7 +876,7 @@ def installed(
                     index_url,
                     extra_index_url,
                     pip_list,
-                    **kwargs
+                    **kwargs,
                 )
                 # If _check_if_installed result is None, something went wrong with
                 # the command running. This way we keep stateful output.
@@ -980,7 +982,7 @@ def installed(
         no_cache_dir=no_cache_dir,
         extra_args=extra_args,
         disable_version_check=True,
-        **kwargs
+        **kwargs,
     )
 
     if pip_install_call and pip_install_call.get("retcode", 1) == 0:
@@ -1045,7 +1047,7 @@ def installed(
                             user=user,
                             cwd=cwd,
                             env_vars=env_vars,
-                            **kwargs
+                            **kwargs,
                         )
                     )
 
