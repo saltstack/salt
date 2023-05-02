@@ -153,7 +153,7 @@ cd $RPM_BUILD_DIR
 
   # Generate master and minion configs
   sed 's/#user: root/user: salt/g' %{_salt_src}/conf/master > $RPM_BUILD_DIR/build/master
-  sed 's/#group: root/group: salt/g' %{_salt_src}/conf/minion > $RPM_BUILD_DIR/build/minion
+  sed 's/#group: root/#user: root\ngroup: salt/g' %{_salt_src}/conf/minion > $RPM_BUILD_DIR/build/minion
 
 %else
   # The relenv onedir is being provided, all setup up until Salt is installed
@@ -166,7 +166,7 @@ cd $RPM_BUILD_DIR
 
   # Generate master and minion configs
   sed 's/#user: root/user: salt/g' %{_salt_src}/conf/master > $RPM_BUILD_DIR/build/master
-  sed 's/#group: root/group: salt/g' %{_salt_src}/conf/minion > $RPM_BUILD_DIR/build/minion
+  sed 's/#group: root/#user: root\ngroup: salt/g' %{_salt_src}/conf/minion > $RPM_BUILD_DIR/build/minion
 
   cd $RPM_BUILD_DIR
 %endif
