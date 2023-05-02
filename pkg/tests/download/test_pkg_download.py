@@ -1,6 +1,7 @@
 """
 Test Salt Pkg Downloads
 """
+import contextlib
 import logging
 import os
 import pathlib
@@ -135,81 +136,84 @@ def _setup_system(
 ):
     downloads_path = tmp_path_factory.mktemp("downloads")
     try:
+        # Windows is a special case, because sometimes we need to uninstall the packages
         if grains["os_family"] == "Windows":
-            setup_windows(
+            with setup_windows(
                 shell,
                 root_url=root_url,
                 salt_release=salt_release,
                 downloads_path=downloads_path,
                 repo_subpath=repo_subpath,
-            )
-        elif grains["os_family"] == "MacOS":
-            setup_macos(
-                shell,
-                root_url=root_url,
-                salt_release=salt_release,
-                downloads_path=downloads_path,
-                repo_subpath=repo_subpath,
-            )
-        elif grains["os"] == "Amazon":
-            setup_redhat_family(
-                shell,
-                os_name=grains["os"].lower(),
-                os_version=grains["osmajorrelease"],
-                root_url=root_url,
-                salt_release=salt_release,
-                downloads_path=downloads_path,
-                gpg_key_name=gpg_key_name,
-                repo_subpath=repo_subpath,
-            )
-        elif grains["os"] == "Fedora":
-            setup_redhat_family(
-                shell,
-                os_name=grains["os"].lower(),
-                os_version=grains["osmajorrelease"],
-                root_url=root_url,
-                salt_release=salt_release,
-                downloads_path=downloads_path,
-                gpg_key_name=gpg_key_name,
-                repo_subpath=repo_subpath,
-            )
-        elif grains["os"] == "VMware Photon OS":
-            setup_redhat_family(
-                shell,
-                os_name="photon",
-                os_version=grains["osmajorrelease"],
-                root_url=root_url,
-                salt_release=salt_release,
-                downloads_path=downloads_path,
-                gpg_key_name=gpg_key_name,
-                repo_subpath=repo_subpath,
-            )
-        elif grains["os_family"] == "RedHat":
-            setup_redhat_family(
-                shell,
-                os_name="redhat",
-                os_version=grains["osmajorrelease"],
-                root_url=root_url,
-                salt_release=salt_release,
-                downloads_path=downloads_path,
-                gpg_key_name=gpg_key_name,
-                repo_subpath=repo_subpath,
-            )
-        elif grains["os_family"] == "Debian":
-            setup_debian_family(
-                shell,
-                os_name=grains["os"].lower(),
-                os_version=grains["osrelease"],
-                os_codename=grains["oscodename"],
-                root_url=root_url,
-                salt_release=salt_release,
-                downloads_path=downloads_path,
-                gpg_key_name=gpg_key_name,
-                repo_subpath=repo_subpath,
-            )
+            ):
+                yield
         else:
-            pytest.fail("Don't know how to handle %s", grains["osfinger"])
-        yield
+            if grains["os_family"] == "MacOS":
+                setup_macos(
+                    shell,
+                    root_url=root_url,
+                    salt_release=salt_release,
+                    downloads_path=downloads_path,
+                    repo_subpath=repo_subpath,
+                )
+            elif grains["os"] == "Amazon":
+                setup_redhat_family(
+                    shell,
+                    os_name=grains["os"].lower(),
+                    os_version=grains["osmajorrelease"],
+                    root_url=root_url,
+                    salt_release=salt_release,
+                    downloads_path=downloads_path,
+                    gpg_key_name=gpg_key_name,
+                    repo_subpath=repo_subpath,
+                )
+            elif grains["os"] == "Fedora":
+                setup_redhat_family(
+                    shell,
+                    os_name=grains["os"].lower(),
+                    os_version=grains["osmajorrelease"],
+                    root_url=root_url,
+                    salt_release=salt_release,
+                    downloads_path=downloads_path,
+                    gpg_key_name=gpg_key_name,
+                    repo_subpath=repo_subpath,
+                )
+            elif grains["os"] == "VMware Photon OS":
+                setup_redhat_family(
+                    shell,
+                    os_name="photon",
+                    os_version=grains["osmajorrelease"],
+                    root_url=root_url,
+                    salt_release=salt_release,
+                    downloads_path=downloads_path,
+                    gpg_key_name=gpg_key_name,
+                    repo_subpath=repo_subpath,
+                )
+            elif grains["os_family"] == "RedHat":
+                setup_redhat_family(
+                    shell,
+                    os_name="redhat",
+                    os_version=grains["osmajorrelease"],
+                    root_url=root_url,
+                    salt_release=salt_release,
+                    downloads_path=downloads_path,
+                    gpg_key_name=gpg_key_name,
+                    repo_subpath=repo_subpath,
+                )
+            elif grains["os_family"] == "Debian":
+                setup_debian_family(
+                    shell,
+                    os_name=grains["os"].lower(),
+                    os_version=grains["osrelease"],
+                    os_codename=grains["oscodename"],
+                    root_url=root_url,
+                    salt_release=salt_release,
+                    downloads_path=downloads_path,
+                    gpg_key_name=gpg_key_name,
+                    repo_subpath=repo_subpath,
+                )
+            else:
+                pytest.fail("Don't know how to handle %s", grains["osfinger"])
+            yield
     finally:
         shutil.rmtree(downloads_path, ignore_errors=True)
 
@@ -371,44 +375,54 @@ def setup_macos(shell, root_url, salt_release, downloads_path, repo_subpath):
     assert ret.returncode == 0, ret
 
 
+@contextlib.contextmanager
 def setup_windows(shell, root_url, salt_release, downloads_path, repo_subpath):
-    root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
+    try:
+        root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
 
-    arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
-    install_type = os.environ.get("INSTALL_TYPE") or "msi"
-    if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
+        arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
+        install_type = os.environ.get("INSTALL_TYPE") or "msi"
+        if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
+            if install_type.lower() == "nsis":
+                if arch.lower() != "x86":
+                    arch = arch.upper()
+                win_pkg = f"Salt-Minion-{salt_release}-Py3-{arch}-Setup.exe"
+            else:
+                if arch.lower() != "x86":
+                    arch = arch.upper()
+                win_pkg = f"Salt-Minion-{salt_release}-Py3-{arch}.msi"
+            if repo_subpath == "minor":
+                win_pkg_url = (
+                    f"{root_url}/windows/{repo_subpath}/{salt_release}/{win_pkg}"
+                )
+            else:
+                win_pkg_url = f"{root_url}/windows/{repo_subpath}/{win_pkg}"
+            ssm_bin = root_dir / "ssm.exe"
+        else:
+            win_pkg = f"salt-{salt_release}-windows-{arch}.exe"
+            win_pkg_url = f"{root_url}/windows/{salt_release}/{win_pkg}"
+            ssm_bin = root_dir / "bin" / "ssm_bin"
+
+        pkg_path = downloads_path / win_pkg
+
+        pytest.helpers.download_file(win_pkg_url, pkg_path)
         if install_type.lower() == "nsis":
-            if arch.lower() != "x86":
-                arch = arch.upper()
-            win_pkg = f"Salt-Minion-{salt_release}-Py3-{arch}-Setup.exe"
+            ret = shell.run(str(pkg_path), "/start-minion=0", "/S", check=False)
         else:
-            if arch.lower() != "x86":
-                arch = arch.upper()
-            win_pkg = f"Salt-Minion-{salt_release}-Py3-{arch}.msi"
-        if repo_subpath == "minor":
-            win_pkg_url = f"{root_url}/windows/{repo_subpath}/{salt_release}/{win_pkg}"
-        else:
-            win_pkg_url = f"{root_url}/windows/{repo_subpath}/{win_pkg}"
-        ssm_bin = root_dir / "ssm.exe"
-    else:
-        win_pkg = f"salt-{salt_release}-windows-{arch}.exe"
-        win_pkg_url = f"{root_url}/windows/{salt_release}/{win_pkg}"
-        ssm_bin = root_dir / "bin" / "ssm_bin"
+            ret = shell.run("msiexec", "/qn", "/i", str(pkg_path), 'START_MINION=""')
+        assert ret.returncode == 0, ret
 
-    pkg_path = downloads_path / win_pkg
-
-    pytest.helpers.download_file(win_pkg_url, pkg_path)
-    if install_type.lower() == "nsis":
-        ret = shell.run(str(pkg_path), "/start-minion=0", "/S", check=False)
-    else:
-        ret = shell.run("msiexec", "/qn", "/i", str(pkg_path), 'START_MINION=""')
-    assert ret.returncode == 0, ret
-
-    log.debug("Removing installed salt-minion service")
-    ret = shell.run(
-        "cmd", "/c", str(ssm_bin), "remove", "salt-minion", "confirm", check=False
-    )
-    assert ret.returncode == 0, ret
+        log.debug("Removing installed salt-minion service")
+        ret = shell.run(
+            "cmd", "/c", str(ssm_bin), "remove", "salt-minion", "confirm", check=False
+        )
+        assert ret.returncode == 0, ret
+        yield
+    finally:
+        # We need to uninstall the MSI packages, otherwise they will not install correctly
+        if install_type.lower() == "msi":
+            ret = shell.run("msiexec", "/qn", "/x", str(pkg_path))
+            assert ret.returncode == 0, ret
 
 
 @pytest.fixture(scope="module")
