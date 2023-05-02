@@ -538,6 +538,14 @@ def salt_onedir(
             shutil.rmtree(onedir_env / "etc", onerror=errfn)
             shutil.rmtree(onedir_env / "Library", onerror=errfn)
 
+    # TODO: Fix hardcoded 3.10
+    dest_path = onedir_env / "lib" / "python3.10" / "site-packages" / "extras.pth"
+    ctx.info(f"Writing '{dest_path}' ...")
+    dest_path.write_text(
+        'import sys, pathlib; extras = str(pathlib.Path(__file__).parent.parent.parent / "extras-{}.{}".format(*sys.version_info)); '
+        "extras not in sys.path and sys.path.insert(0, extras)\n"
+    )
+
 
 def _check_pkg_build_files_exist(ctx: Context, **kwargs):
     for name, path in kwargs.items():
