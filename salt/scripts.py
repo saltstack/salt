@@ -444,21 +444,6 @@ def salt_call():
     client.run()
 
 
-def salt_call_local():
-    """
-    Directly call a salt command in the modules, does not require a running
-    salt minion to run.
-    """
-    import salt.cli.call
-
-    if "" in sys.path:
-        sys.path.remove("")
-    client = salt.cli.call.SaltCall()
-    client.set_default("local", True)
-    _install_signal_handlers(client)
-    client.run()
-
-
 def salt_run():
     """
     Execute a salt convenience routine.
