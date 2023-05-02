@@ -380,6 +380,7 @@ class SaltPkgInstall:
                     "minion": ["salt-minion.exe"],
                     "pip": ["salt-pip.exe"],
                     "python": [python_bin],
+                    "ssm": [self.ssm_bin],
                 }
             else:
                 if os.path.exists(self.install_dir / "bin" / "salt"):
@@ -412,6 +413,7 @@ class SaltPkgInstall:
                         "minion": [str(self.run_root), "minion"],
                         "pip": [str(self.run_root), "pip"],
                         "python": [python_bin],
+                        "ssm": [self.ssm_bin],
                     }
                 else:
                     self.binary_paths = {
@@ -439,6 +441,7 @@ class SaltPkgInstall:
                         "minion": [self.install_dir / "salt-minion.exe"],
                         "pip": [self.install_dir / "salt-pip.exe"],
                         "python": [python_bin],
+                        "ssm": [self.ssm_bin],
                     }
                 else:
                     self.binary_paths = {
