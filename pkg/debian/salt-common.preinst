@@ -17,11 +17,11 @@ case "$1" in
     # 3. create user if not existing
     if ! getent passwd | grep -q "^$SALT_USER:"; then
       echo -n "Adding system user $SALT_USER.."
-      adduser --quiet \
+      useradd --quiet \
               --system \
-              --ingroup $SALT_GROUP \
               --no-create-home \
-              --disabled-password \
+              -s /sbin/nologin
+              -g $SALT_GROUP \
               $SALT_USER 2>/dev/null || true
       echo "..done"
     fi
