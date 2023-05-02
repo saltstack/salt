@@ -347,7 +347,7 @@ def post_master_init(self, master):
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
                     self.deltaproxy_objs[
                         minion_id
-                    ].req_channel = salt.transport.client.AsyncReqChannel.factory(
+                    ].req_channel = salt.channel.client.AsyncReqChannel.factory(
                         sub_proxy_data["proxy_opts"], io_loop=self.io_loop
                     )
     else:
@@ -366,7 +366,7 @@ def post_master_init(self, master):
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
                     self.deltaproxy_objs[
                         minion_id
-                    ].req_channel = salt.transport.client.AsyncReqChannel.factory(
+                    ].req_channel = salt.channel.client.AsyncReqChannel.factory(
                         sub_proxy_data["proxy_opts"], io_loop=self.io_loop
                     )
 
