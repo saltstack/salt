@@ -113,6 +113,7 @@ jobs:
 
       - name: Set Artifact Name
         id: set-artifact-name
+        shell: bash
         run: |
           if [ "${{ matrix.source }}" != "src" ]; then
             echo "artifact-name-nsis=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS" >> "$GITHUB_OUTPUT"
