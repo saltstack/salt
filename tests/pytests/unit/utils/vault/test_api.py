@@ -354,46 +354,6 @@ def test_generate_secret_id(
 
 
 @pytest.mark.parametrize("wrap", ["30s", False])
-def test_generate_secret_id_meta_info(
-    client,
-    wrapped_response,
-    secret_id_response,
-    wrap,
-    secret_id_lookup_accessor_response,
-    approle_api,
-):
-    """
-    Ensure generate_secret_id calls the API as expected when querying for meta info.
-    """
-
-    def res_or_wrap(*args, **kwargs):
-        if args[0].endswith("lookup"):
-            return secret_id_lookup_accessor_response
-        if kwargs.get("wrap"):
-            return vaultutil.VaultWrappedResponse(**wrapped_response["wrap_info"])
-        return secret_id_response
-
-    client.post.side_effect = res_or_wrap
-    res = approle_api.generate_secret_id(
-        "test-minion", mount="salt-minions", wrap=wrap, meta_info=True
-    )
-    if wrap:
-        assert res == (
-            vaultutil.VaultWrappedResponse(**wrapped_response["wrap_info"]),
-            secret_id_lookup_accessor_response["data"],
-        )
-    else:
-        assert res == (
-            vaultutil.VaultSecretId(**secret_id_response["data"]),
-            secret_id_lookup_accessor_response["data"],
-        )
-    payload = {"secret_id_accessor": wrapped_response["wrap_info"]["wrapped_accessor"]}
-    client.post.assert_called_with(
-        "auth/salt-minions/role/test-minion/secret-id-accessor/lookup", payload=payload
-    )
-
-
-@pytest.mark.parametrize("wrap", ["30s", False])
 def test_read_role_id(client, wrapped_response, wrap, approle_api):
     """
     Ensure read_role_id calls the API as expected.

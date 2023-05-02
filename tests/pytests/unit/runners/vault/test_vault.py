@@ -1361,15 +1361,14 @@ def test_lookup_role_id_nonexistent(approle_api):
 
 
 @pytest.mark.usefixtures("config")
-@pytest.mark.parametrize("wrap,meta_info", [("30s", True), (False, False)])
-def test_get_secret_id(approle_api, wrap, meta_info):
+@pytest.mark.parametrize("wrap", ["30s", False])
+def test_get_secret_id(approle_api, wrap):
     """
     Ensure _get_secret_id calls the API as expected.
     """
-    vault._get_secret_id("test-minion", meta_info=meta_info, wrap=wrap)
+    vault._get_secret_id("test-minion", wrap=wrap)
     approle_api.generate_secret_id.assert_called_once_with(
         "test-minion",
-        meta_info=meta_info,
         metadata=ANY,
         wrap=wrap,
         mount="salt-minions",
@@ -1459,7 +1458,7 @@ def test_manage_entity_alias_raises_errors(identity_api):
     with patch("salt.runners.vault._lookup_role_id", return_value="test-role-id"):
         with pytest.raises(
             salt.exceptions.SaltRunnerError,
-            match="There is no entity to create an alias for.*",
+            match="Cannot create alias.* no entity found.",
         ):
             vault._manage_entity_alias("test-minion")
 

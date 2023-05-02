@@ -68,7 +68,7 @@ def query(
     **kwargs,
 ):
     """
-    Query the Vault API. Supplemental arguments to ``requestes.request``
+    Query the Vault API. Supplemental arguments to ``requests.request``
     can be passed as kwargs.
 
     method
@@ -141,7 +141,7 @@ def query_raw(
 ):
     """
     Query the Vault API, returning the raw response object. Supplemental
-    arguments to ``requestes.request`` can be passed as kwargs.
+    arguments to ``requests.request`` can be passed as kwargs.
 
     method
         HTTP verb to use.

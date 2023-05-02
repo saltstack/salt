@@ -1098,14 +1098,13 @@ def _lookup_role_id(minion_id, wrap):
         return False
 
 
-def _get_secret_id(minion_id, wrap, meta_info=False):
+def _get_secret_id(minion_id, wrap):
     api = _get_approle_api()
     return api.generate_secret_id(
         minion_id,
         metadata=_get_metadata(minion_id, _config("metadata:secret")),
         mount=_config("issue:approle:mount"),
         wrap=wrap,
-        meta_info=meta_info,
     )
 
 
@@ -1157,7 +1156,7 @@ def _manage_entity_alias(minion_id):
         )
     except vault.VaultNotFoundError:
         raise SaltRunnerError(
-            f"There is no entity to create an alias for for minion {minion_id}."
+            f"Cannot create alias for minion {minion_id}: no entity found."
         )
 
 
