@@ -97,7 +97,7 @@ jobs:
           rm install-cert.p12
           security set-key-partition-list -S apple-tool:,apple: -k "${{ secrets.MAC_SIGN_DEV_PASSWORD }}" "${{ secrets.MAC_SIGN_DEV_KEYCHAIN }}" &> /dev/null
 
-      - name: Build MacOS Package Using Existing Onedir
+      - name: Build MacOS Package
         env:
           DEV_APP_CERT: "${{ secrets.MAC_SIGN_DEV_APP_CERT }}"
           DEV_INSTALL_CERT: "${{ secrets.MAC_SIGN_DEV_INSTALL_CERT }}"

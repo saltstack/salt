@@ -97,7 +97,7 @@ jobs:
         run: |
           echo "${{ secrets.WIN_SIGN_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
 
-      - name: Build Windows Packages Using Existing Onedir
+      - name: Build Windows Packages
         run: |
           tools pkg build windows ${{
             matrix.source == 'onedir' &&
