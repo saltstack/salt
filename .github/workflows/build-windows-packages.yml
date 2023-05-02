@@ -102,7 +102,7 @@ jobs:
           tools pkg build windows ${{
             matrix.source == 'onedir' &&
             format(
-              '--onedir=salt-{0}-onedir-linux-{1}.tar.xz --salt-version {0} --arch {1} {2}',
+              '--onedir salt-{0}-onedir-windows-{1}.zip --salt-version {0} --arch {1} {2}',
               inputs.salt-version,
               matrix.arch,
               steps.check-pkg-sign.outputs.sign-pkgs == 'true' && '--sign' || ''
