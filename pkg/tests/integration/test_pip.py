@@ -143,3 +143,44 @@ def test_pip_non_root(shell, install_salt, test_account, extras_pypath_bin):
     assert check_path.exists()
 
     assert ret.returncode == 0, ret.stderr
+
+
+def test_pip_install_salt_extension_in_extras(install_salt, extras_pypath, shell):
+    """
+    Test salt-pip installs into the correct directory and the salt extension
+    is properly loaded.
+    """
+    dep = "salt-analytics-framework"
+    dep_version = "0.1.0"
+
+    install_ret = shell.run(
+        *(install_salt.binary_paths["pip"] + ["install", f"{dep}=={dep_version}"]),
+    )
+    assert install_ret.returncode == 0
+
+    ret = shell.run(
+        *(install_salt.binary_paths["pip"] + ["list", "--format=json"]),
+    )
+    assert ret.returncode == 0
+    pkgs_installed = json.loads(ret.stdout.strip())
+    for pkg in pkgs_installed:
+        if pkg["name"] == dep:
+            break
+    else:
+        pytest.fail(
+            f"The {dep!r} package was not found installed. Packages Installed: {pkgs_installed}"
+        )
+
+    show_ret = shell.run(
+        *(install_salt.binary_paths["pip"] + ["show", dep]),
+    )
+    assert show_ret.returncode == 0
+
+    assert extras_pypath.joinpath("saf").is_dir()
+
+    ret = shell.run(
+        *(install_salt.binary_paths["minion"] + ["--versions-report"]),
+    )
+    assert show_ret.returncode == 0
+    assert "Salt Extensions" in ret.stdout
+    assert f"{dep}: {dep_version}" in ret.stdout
