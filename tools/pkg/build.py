@@ -394,20 +394,47 @@ def onedir_dependencies(
 
     # We import relenv here because it is not a hard requirement for the rest of the tools commands
     try:
-        from relenv.create import create
+        import relenv.create
     except ImportError:
         ctx.exit(1, "Relenv not installed in the current environment.")
 
     dest = pathlib.Path(package_name).resolve()
-    create(dest, arch=arch, version=python_version)
+    relenv.create.create(dest, arch=arch, version=python_version)
+
+    # Validate that we're using the relenv version we really want to
+    if platform == "windows":
+        env_scripts_dir = dest / "Scripts"
+    else:
+        env_scripts_dir = dest / "bin"
+
+    ret = ctx.run(
+        str(env_scripts_dir / "relenv"), "--version", capture=True, check=False
+    )
+    if ret.returncode:
+        ctx.error(f"Failed to get the relenv version: {ret}")
+        ctx.exit(1)
+
+    target_relenv_version = _get_shared_constants()["relenv_version"]
+    env_relenv_version = ret.stdout.strip().decode()
+    if env_relenv_version != target_relenv_version:
+        ctx.error(
+            f"The onedir installed relenv version({env_relenv_version}) is not "
+            f"the relenv version which should be used({target_relenv_version})."
+        )
+        ctx.exit(1)
+
+    ctx.info(
+        f"The relenv version installed in the onedir env({env_relenv_version}) "
+        f"matches the version which must be used."
+    )
 
     env = os.environ.copy()
     install_args = ["-v"]
     if platform == "windows":
-        python_bin = dest / "Scripts" / "python"
+        python_bin = env_scripts_dir / "python"
     else:
         env["RELENV_BUILDENV"] = "1"
-        python_bin = dest / "bin" / "python3"
+        python_bin = env_scripts_dir / "python3"
         install_args.extend(
             [
                 "--use-pep517",
@@ -502,6 +529,33 @@ def salt_onedir(
     onedir_env = pathlib.Path(package_name).resolve()
     _check_pkg_build_files_exist(ctx, onedir_env=onedir_env, salt_archive=salt_archive)
 
+    # Validate that we're using the relenv version we really want to
+    if platform == "windows":
+        env_scripts_dir = onedir_env / "Scripts"
+    else:
+        env_scripts_dir = onedir_env / "bin"
+
+    ret = ctx.run(
+        str(env_scripts_dir / "relenv"), "--version", capture=True, check=False
+    )
+    if ret.returncode:
+        ctx.error(f"Failed to get the relenv version: {ret}")
+        ctx.exit(1)
+
+    target_relenv_version = _get_shared_constants()["relenv_version"]
+    env_relenv_version = ret.stdout.strip().decode()
+    if env_relenv_version != target_relenv_version:
+        ctx.error(
+            f"The onedir installed relenv version({env_relenv_version}) is not "
+            f"the relenv version which should be used({target_relenv_version})."
+        )
+        ctx.exit(1)
+
+    ctx.info(
+        f"The relenv version installed in the onedir env({env_relenv_version}) "
+        f"matches the version which must be used."
+    )
+
     env = os.environ.copy()
     env["USE_STATIC_REQUIREMENTS"] = "1"
     env["RELENV_BUILDENV"] = "1"
@@ -524,7 +578,7 @@ def salt_onedir(
             "-CICD",
             env=env,
         )
-        python_executable = str(onedir_env / "Scripts" / "python.exe")
+        python_executable = str(env_scripts_dir / "python.exe")
         ret = ctx.run(
             python_executable,
             "-c",
@@ -538,7 +592,7 @@ def salt_onedir(
         ctx.info(f"Discovered 'site-packages' paths: {site_packages_json}")
     else:
         env["RELENV_PIP_DIR"] = "1"
-        pip_bin = onedir_env / "bin" / "pip3"
+        pip_bin = env_scripts_dir / "pip3"
         ctx.run(
             str(pip_bin),
             "install",
@@ -556,7 +610,7 @@ def salt_onedir(
                 if path.exists():
                     shutil.rmtree(path, onerror=errfn)
 
-        python_executable = str(onedir_env / "bin" / "python3")
+        python_executable = str(env_scripts_dir / "python3")
         ret = ctx.run(
             python_executable,
             "-c",
