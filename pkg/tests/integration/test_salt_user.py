@@ -60,8 +60,6 @@ def test_salt_cloud_dirs(install_salt):
     """
     Test the correct user is running the Salt Master
     """
-    if platform.is_windows() or platform.is_darwin():
-        pytest.skip("Package does not have user set. Not testing user")
     paths = [
         "/opt/saltstack/salt/lib/python3.10/site-packages/salt/cloud/deploy",
         "/etc/salt/cloud.deploy.d",
