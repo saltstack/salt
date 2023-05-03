@@ -415,6 +415,8 @@ ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
 
 
 %post cloud
+chown -R salt:salt /etc/salt/cloud.deploy.d
+chown -R salt:salt /opt/saltstack/salt/lib/python3.10/site-packages/salt/cloud/deploy
 ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
 
 
