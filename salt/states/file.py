@@ -2414,6 +2414,8 @@ def managed(
                     - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
                     - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
 
+            source_hash is ignored if the file hosted is not on a HTTP or FTP server.
+
         Known issues:
             If the remote server URL has the hash file as an apparent
             sub-directory of the source file, the module will discover that it
@@ -2945,6 +2947,13 @@ def managed(
             "Only one of 'contents', 'contents_pillar', and "
             "'contents_grains' is permitted",
         )
+
+    if (
+        source is not None
+        and not source.lower().startswith(("http:", "ftp:"))
+        and source_hash
+    ):
+        return _error(ret, "source_hash can only be used with 'http' or 'ftp'")
 
     # If no source is specified, set replace to False, as there is nothing
     # with which to replace the file.
@@ -5998,6 +6007,13 @@ def blockreplace(
     if not name:
         return _error(ret, "Must provide name to file.blockreplace")
 
+    if (
+        source is not None
+        and not source.lower().startswith(("http:", "ftp:"))
+        and source_hash
+    ):
+        return _error(ret, "source_hash can only be used with 'http' or 'ftp'")
+
     if sources is None:
         sources = []
     if source_hashes is None:
@@ -6434,6 +6450,13 @@ def append(
     if not name:
         return _error(ret, "Must provide name to file.append")
 
+    if (
+        source is not None
+        and not source.lower().startswith(("http:", "ftp:"))
+        and source_hash
+    ):
+        return _error(ret, "source_hash can only be used with 'http' or 'ftp'")
+
     name = os.path.expanduser(name)
 
     if sources is None:
@@ -6717,6 +6740,13 @@ def prepend(
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
     if not name:
         return _error(ret, "Must provide name to file.prepend")
+
+    if (
+        source is not None
+        and not source.lower().startswith(("http:", "ftp:"))
+        and source_hash
+    ):
+        return _error(ret, "source_hash can only be used with 'http' or 'ftp'")
 
     if sources is None:
         sources = []
