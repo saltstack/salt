@@ -6644,14 +6644,6 @@ def script_retcode(
     )["retcode"]
 
 
-def _mk_fileclient():
-    """
-    Create a file client and add it to the context.
-    """
-    if "cp.fileclient" not in __context__:
-        __context__["cp.fileclient"] = salt.fileclient.get_file_client(__opts__)
-
-
 def _generate_tmp_path():
     return os.path.join("/tmp", "salt.docker.{}".format(uuid.uuid4().hex[:6]))
 
@@ -6665,11 +6657,10 @@ def _prepare_trans_tar(name, sls_opts, mods=None, pillar=None, extra_filerefs=""
     # reuse it from salt.ssh, however this function should
     # be somewhere else
     refs = salt.client.ssh.state.lowstate_file_refs(chunks, extra_filerefs)
-    _mk_fileclient()
-    trans_tar = salt.client.ssh.state.prep_trans_tar(
-        __context__["cp.fileclient"], chunks, refs, pillar, name
-    )
-    return trans_tar
+    with salt.fileclient.get_file_client(__opts__) as fileclient:
+        return salt.client.ssh.state.prep_trans_tar(
+            fileclient, chunks, refs, pillar, name
+        )
 
 
 def _compile_state(sls_opts, mods=None):

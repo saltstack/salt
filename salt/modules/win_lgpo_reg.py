@@ -137,9 +137,10 @@ def write_reg_pol(data, policy_class="Machine"):
 
     Raises:
         SaltInvocationError: Invalid policy class
+        CommandExecutionError: On failure
 
     Returns:
-        None
+        bool: True if successful
 
     CLI Example:
 
@@ -175,7 +176,6 @@ def get_value(key, v_name, policy_class="Machine"):
     file.
 
     Args:
-
         key (str): The registry key where the value name resides
 
         v_name (str): The value name to retrieve
@@ -228,7 +228,6 @@ def get_key(key, policy_class="Machine"):
     Get all the values set in a key in the ``Registry.pol`` file.
 
     Args:
-
         key (str): The registry key where the values reside
 
         policy_class (str): The registry class to read from. Can be one of the
@@ -278,7 +277,6 @@ def set_value(
     style policies. This is the equivalent of setting a policy to ``Enabled``
 
     Args:
-
         key (str): The registry key path
 
         v_name (str): The registry value name within the key
@@ -305,13 +303,13 @@ def set_value(
 
             Default is ``Machine``
 
-    Returns:
-        bool: ``True`` if successful, otherwise ``False``
-
     Raises:
         SaltInvocationError: Invalid policy_class
         SaltInvocationError: Invalid v_type
         SaltInvocationError: v_data doesn't match v_type
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -385,7 +383,7 @@ def set_value(
 
     write_reg_pol(pol_data)
 
-    salt.utils.win_reg.set_value(
+    return salt.utils.win_reg.set_value(
         hive=hive,
         key=key,
         vname=v_name,
@@ -401,7 +399,6 @@ def disable_value(key, v_name, policy_class="machine"):
     to ``Disabled`` in the Group Policy editor (``gpedit.msc``)
 
     Args:
-
         key (str): The registry key path
 
         v_name (str): The registry value name within the key
@@ -415,12 +412,13 @@ def disable_value(key, v_name, policy_class="machine"):
 
             Default is ``Machine``
 
+    Raises:
+        SaltInvocationError: Invalid policy_class
+        CommandExecutionError: On failure
+
     Returns:
         bool: ``True`` if successful, otherwise ``False``
         None: If already disabled
-
-    Raises:
-        SaltInvocationError: Invalid policy_class
 
     CLI Example:
 
@@ -468,7 +466,7 @@ def disable_value(key, v_name, policy_class="machine"):
 
     write_reg_pol(pol_data)
 
-    salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
+    return salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
 
 
 def delete_value(key, v_name, policy_class="Machine"):
@@ -478,7 +476,6 @@ def delete_value(key, v_name, policy_class="Machine"):
     ``Not Configured``.
 
     Args:
-
         key (str): The registry key path
 
         v_name (str): The registry value name within the key
@@ -492,12 +489,13 @@ def delete_value(key, v_name, policy_class="Machine"):
 
             Default is ``Machine``
 
+    Raises:
+        SaltInvocationError: Invalid policy_class
+        CommandExecutionError: On failure
+
     Returns:
         bool: ``True`` if successful, otherwise ``False``
         None: Key/value not present
-
-    Raises:
-        SaltInvocationError: Invalid policy_class
 
     CLI Example:
 
@@ -538,7 +536,7 @@ def delete_value(key, v_name, policy_class="Machine"):
 
     write_reg_pol(pol_data)
 
-    salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
+    return salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
 
 
 # This is for testing different settings and verifying that we are writing the
