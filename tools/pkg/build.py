@@ -534,9 +534,10 @@ def salt_onedir(
             def errfn(fn, path, err):
                 ctx.info(f"Removing {path} failed: {err}")
 
-            shutil.rmtree(onedir_env / "opt", onerror=errfn)
-            shutil.rmtree(onedir_env / "etc", onerror=errfn)
-            shutil.rmtree(onedir_env / "Library", onerror=errfn)
+            for subdir in ("opt", "etc", "Library"):
+                path = onedir_env / subdir
+                if path.exists():
+                    shutil.rmtree(path, onerror=errfn)
 
     # TODO: Fix hardcoded 3.10
     dest_path = onedir_env / "lib" / "python3.10" / "site-packages" / "extras.pth"
