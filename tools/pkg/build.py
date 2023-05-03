@@ -467,8 +467,6 @@ def onedir_dependencies(
         str(requirements_file),
         env=env,
     )
-    extras_dir = dest / f"extras-{requirements_version}"
-    extras_dir.mkdir()
 
 
 @build.command(
@@ -579,6 +577,17 @@ def salt_onedir(
     else:
         ctx.error("Cloud not find a site-packages path with 'site-packages' in it?!")
         ctx.exit(1)
+
+    ret = ctx.run(
+        str(python_executable),
+        "-c",
+        "import sys; print('{}.{}'.format(*sys.version_info))",
+        capture=True,
+    )
+    python_version_info = ret.stdout.strip().decode()
+    extras_dir = onedir_env / f"extras-{python_version_info}"
+    ctx.info(f"Creating Salt's extras path: {extras_dir}")
+    extras_dir.mkdir(exist_ok=True)
 
     pth_path = pathlib.Path(site_packages) / "salt-extras.pth"
     ctx.info(f"Writing '{pth_path}' ...")
