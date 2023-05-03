@@ -2953,7 +2953,7 @@ def managed(
         and not source.lower().startswith(("http:", "ftp:"))
         and source_hash
     ):
-        return _error(ret, "source_hash can only be used with 'http' or 'ftp'")
+        log.warning("source_hash is only used with 'http' or 'ftp'")
 
     # If no source is specified, set replace to False, as there is nothing
     # with which to replace the file.
@@ -6012,7 +6012,7 @@ def blockreplace(
         and not source.lower().startswith(("http:", "ftp:"))
         and source_hash
     ):
-        return _error(ret, "source_hash can only be used with 'http' or 'ftp'")
+        log.warning("source_hash is only used with 'http' or 'ftp'")
 
     if sources is None:
         sources = []
@@ -6455,7 +6455,7 @@ def append(
         and not source.lower().startswith(("http:", "ftp:"))
         and source_hash
     ):
-        return _error(ret, "source_hash can only be used with 'http' or 'ftp'")
+        log.warning("source_hash is only used with 'http' or 'ftp'")
 
     name = os.path.expanduser(name)
 
@@ -6746,7 +6746,7 @@ def prepend(
         and not source.lower().startswith(("http:", "ftp:"))
         and source_hash
     ):
-        return _error(ret, "source_hash can only be used with 'http' or 'ftp'")
+        log.warning("source_hash is only used with 'http' or 'ftp'")
 
     if sources is None:
         sources = []
