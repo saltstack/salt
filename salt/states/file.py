@@ -336,7 +336,7 @@ __func_alias__ = {
 
 def _http_ftp_check(source):
     """
-    Check if source or sources
+    Check if source or sources is http or ftp.
     """
     if isinstance(source, str):
         return source.lower().startswith(("http:", "ftp:"))
