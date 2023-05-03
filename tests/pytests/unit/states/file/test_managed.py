@@ -405,3 +405,31 @@ def test_managed_test_mode_user_group_not_present():
         )
         assert ret["result"] is not False
         assert "is not available" not in ret["comment"]
+
+
+def test_http_ftp_check_pass():
+    assert filestate._http_ftp_check("http://@$@dead_link@$@/src.tar.gz") is True
+    assert filestate._http_ftp_check("ftp://@$@dead_link@$@/src.tar.gz") is True
+
+
+def test_http_ftp_check_fail():
+    assert filestate._http_ftp_check("salt://@$@dead_link@$@/src.tar.gz") is False
+    assert filestate._http_ftp_check("https://@$@dead_link@$@/src.tar.gz") is False
+
+
+def test_http_ftp_check_list_pass():
+    assert (
+        filestate._http_ftp_check(
+            ["http://@$@dead_link@$@/src.tar.gz", "ftp://@$@dead_link@$@/src.tar.gz"]
+        )
+        is True
+    )
+
+
+def test_http_ftp_check_list_fail():
+    assert (
+        filestate._http_ftp_check(
+            ["salt://@$@dead_link@$@/src.tar.gz", "https://@$@dead_link@$@/src.tar.gz"]
+        )
+        is False
+    )
