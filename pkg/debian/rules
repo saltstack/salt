@@ -50,10 +50,8 @@ override_dh_install:
 	mkdir -p debian/salt-common/opt/saltstack
 	cp -R build/onedir/salt debian/salt-common/opt/saltstack/
 
-        # Generate master and minion configs
+        # Generate master config
 	mkdir -p debian/salt-master/etc/salt
 	sed 's/#user: root/user: salt/g' conf/master > debian/salt-master/etc/salt/master
-	mkdir -p debian/salt-minion/etc/salt
-	sed 's/#user: root/#user: root\ngroup: salt/g' conf/minion > debian/salt-minion/etc/salt/minion
 
 	dh_install
