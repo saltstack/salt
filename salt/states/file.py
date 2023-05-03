@@ -334,6 +334,15 @@ __func_alias__ = {
 }
 
 
+def _http_ftp_check(source):
+    """
+    Check if source or sources
+    """
+    if isinstance(source, str):
+        return source.lower().startswith(("http:", "ftp:"))
+    return all([s.lower().startswith(("http:", "ftp:")) for s in source])
+
+
 def _get_accumulator_filepath():
     """
     Return accumulator data path.
@@ -2948,11 +2957,7 @@ def managed(
             "'contents_grains' is permitted",
         )
 
-    if (
-        source is not None
-        and not source.lower().startswith(("http:", "ftp:"))
-        and source_hash
-    ):
+    if source is not None and not _http_ftp_check(source) and source_hash:
         log.warning("source_hash is only used with 'http' or 'ftp'")
 
     # If no source is specified, set replace to False, as there is nothing
@@ -6007,11 +6012,7 @@ def blockreplace(
     if not name:
         return _error(ret, "Must provide name to file.blockreplace")
 
-    if (
-        source is not None
-        and not source.lower().startswith(("http:", "ftp:"))
-        and source_hash
-    ):
+    if source is not None and not _http_ftp_check(source) and source_hash:
         log.warning("source_hash is only used with 'http' or 'ftp'")
 
     if sources is None:
@@ -6450,11 +6451,7 @@ def append(
     if not name:
         return _error(ret, "Must provide name to file.append")
 
-    if (
-        source is not None
-        and not source.lower().startswith(("http:", "ftp:"))
-        and source_hash
-    ):
+    if source is not None and not _http_ftp_check(source) and source_hash:
         log.warning("source_hash is only used with 'http' or 'ftp'")
 
     name = os.path.expanduser(name)
@@ -6741,11 +6738,7 @@ def prepend(
     if not name:
         return _error(ret, "Must provide name to file.prepend")
 
-    if (
-        source is not None
-        and not source.lower().startswith(("http:", "ftp:"))
-        and source_hash
-    ):
+    if source is not None and not _http_ftp_check(source) and source_hash:
         log.warning("source_hash is only used with 'http' or 'ftp'")
 
     if sources is None:
