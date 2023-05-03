@@ -72,6 +72,27 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_current(key, name, policy_class):
+    """
+    Helper function to get the current state of the policy
+    """
+    hive = "HKLM"
+    if policy_class == "User":
+        hive = "HKCU"
+    pol = __salt__["lgpo_reg.get_value"](
+        key=key, v_name=name, policy_class=policy_class
+    )
+    reg_raw = __utils__["reg.read_value"](hive=hive, key=key, vname=name)
+
+    reg = {}
+    if reg_raw["vdata"] is not None:
+        reg["data"] = reg_raw["vdata"]
+    if reg_raw["vtype"] is not None:
+        reg["type"] = reg_raw["vtype"]
+
+    return {"pol": pol, "reg": reg}
+
+
 def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine"):
     r"""
     Ensure a registry setting is present in the Registry.pol file.
@@ -128,16 +149,29 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    old = __salt__["lgpo_reg.get_value"](
-        key=key, v_name=name, policy_class=policy_class
+    old = _get_current(key=key, name=name, policy_class=policy_class)
+
+    pol_correct = (
+        str(old["pol"].get("data", "")) == str(v_data)
+        and old["pol"].get("type", "") == v_type
     )
-    if old.get("data", "") == v_data and old.get("type", "") == v_type:
-        ret["comment"] = "Registry.pol value already present"
+    reg_correct = (
+        str(old["reg"].get("data", "")) == str(v_data)
+        and old["reg"].get("type", "") == v_type
+    )
+
+    if pol_correct and reg_correct:
+        ret["comment"] = "Policy value already present\nRegistry value already present"
         ret["result"] = True
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Registry.pol value will be set"
+        if not pol_correct:
+            ret["comment"] = "Policy value will be set"
+        if not reg_correct:
+            if ret["comment"]:
+                ret["comment"] += "\n"
+            ret["comment"] += "Registry value will be set"
         ret["result"] = None
         return ret
 
@@ -149,15 +183,24 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
         policy_class=policy_class,
     )
 
-    new = __salt__["lgpo_reg.get_value"](
-        key=key, v_name=name, policy_class=policy_class
+    new = _get_current(key=key, name=name, policy_class=policy_class)
+
+    pol_correct = (
+        str(new["pol"]["data"]) == str(v_data) and new["pol"]["type"] == v_type
+    )
+    reg_correct = (
+        str(new["reg"]["data"]) == str(v_data) and new["reg"]["type"] == v_type
     )
 
-    if str(new["data"]) == str(v_data) and new["type"] == v_type:
-        ret["comment"] = "Registry.pol value has been set"
+    if pol_correct and reg_correct:
+        ret["comment"] = "Registry policy value has been set"
         ret["result"] = True
-    else:
-        ret["comment"] = "Failed to set Registry.pol value"
+    elif not pol_correct:
+        ret["comment"] = "Failed to set policy value"
+    elif not reg_correct:
+        if ret["comment"]:
+            ret["comment"] += "\n"
+        ret["comment"] += "Failed to set registry value"
 
     changes = salt.utils.data.recursive_diff(old, new)
 
@@ -206,30 +249,42 @@ def value_disabled(name, key, policy_class="Machine"):
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    old = __salt__["lgpo_reg.get_value"](
-        key=key, v_name=name, policy_class=policy_class
-    )
-    if old.get("data", "") == "**del.{}".format(name):
-        ret["comment"] = "Registry.pol value already disabled"
+    old = _get_current(key=key, name=name, policy_class=policy_class)
+
+    pol_correct = old["pol"].get("data", "") == "**del.{}".format(name)
+    reg_correct = old["reg"] == {}
+
+    if pol_correct and reg_correct:
+        ret["comment"] = "Registry policy value already disabled"
         ret["result"] = True
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Registry.pol value will be disabled"
+        if not pol_correct:
+            ret["comment"] = "Policy value will be disabled"
+        if not reg_correct:
+            if ret["comment"]:
+                ret["comment"] += "\n"
+            ret["comment"] += "Registry value will be removed"
         ret["result"] = None
         return ret
 
     __salt__["lgpo_reg.disable_value"](key=key, v_name=name, policy_class=policy_class)
 
-    new = __salt__["lgpo_reg.get_value"](
-        key=key, v_name=name, policy_class=policy_class
-    )
+    new = _get_current(key=key, name=name, policy_class=policy_class)
 
-    if "**del." in str(new["data"]) and new["type"] == "REG_SZ":
-        ret["comment"] = "Registry.pol value disabled"
+    pol_correct = new["pol"].get("data", "") == "**del.{}".format(name)
+    reg_correct = new["reg"] == {}
+
+    if pol_correct and reg_correct:
+        ret["comment"] = "Registry policy value disabled"
         ret["result"] = True
-    else:
-        ret["comment"] = "Failed to disable Registry.pol value"
+    elif not pol_correct:
+        ret["comment"] = "Failed to disable policy value"
+    elif not reg_correct:
+        if ret["comment"]:
+            ret["comment"] += "\n"
+        ret["comment"] += "Failed to remove registry value"
 
     changes = salt.utils.data.recursive_diff(old, new)
 
@@ -278,32 +333,42 @@ def value_absent(name, key, policy_class="Machine"):
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    old = __salt__["lgpo_reg.get_value"](
-        key=key, v_name=name, policy_class=policy_class
-    )
-    if not old:
-        ret["comment"] = "Registry.pol value already absent"
+    old = _get_current(key=key, name=name, policy_class=policy_class)
+
+    pol_correct = old["pol"] == {}
+    reg_correct = old["reg"] == {}
+
+    if pol_correct and reg_correct:
+        ret["comment"] = "Registry policy value already deleted"
         ret["result"] = True
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Registry.pol value will be deleted"
+        if not pol_correct:
+            ret["comment"] = "Policy value will be deleted"
+        if not reg_correct:
+            if ret["comment"]:
+                ret["comment"] += "\n"
+            ret["comment"] += "Registry value will be deleted"
         ret["result"] = None
         return ret
 
     __salt__["lgpo_reg.delete_value"](key=key, v_name=name, policy_class=policy_class)
 
-    new = __salt__["lgpo_reg.get_value"](
-        key=key, v_name=name, policy_class=policy_class
-    )
+    new = _get_current(key=key, name=name, policy_class=policy_class)
 
-    if not new:
-        ret["comment"] = "Registry.pol value deleted"
+    pol_correct = new["pol"] == {}
+    reg_correct = new["reg"] == {}
+
+    if pol_correct and reg_correct:
+        ret["comment"] = "Registry policy value deleted"
         ret["result"] = True
-        # We're setting this here in case new is None
-        new = {}
-    else:
-        ret["comment"] = "Failed to delete Registry.pol value"
+    elif not pol_correct:
+        ret["comment"] = "Failed to delete policy value"
+    elif not reg_correct:
+        if ret["comment"]:
+            ret["comment"] += "\n"
+        ret["comment"] += "Failed to delete registry value"
 
     changes = salt.utils.data.recursive_diff(old, new)
 
