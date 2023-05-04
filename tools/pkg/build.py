@@ -646,7 +646,8 @@ def salt_onedir(
     pth_path = pathlib.Path(site_packages) / "salt-extras.pth"
     ctx.info(f"Writing '{pth_path}' ...")
     pth_path.write_text(
-        'import sys, pathlib; extras = str(pathlib.Path(__file__).parent.parent.parent / "extras-{}.{}".format(*sys.version_info)); '
+        'import sys, pathlib; extras = str(pathlib.Path(__file__).parent.parent.parent / "extras-{}.{}".format(*sys.version_info)) '
+        'if sys.platform != "win32" else str(pathlib.Path(__file__).parent.parent / "extras-{}.{}".format(*sys.version_info))} ; '
         "extras not in sys.path and sys.path.insert(0, extras)\n"
     )
 
