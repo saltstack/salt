@@ -407,29 +407,27 @@ def test_managed_test_mode_user_group_not_present():
         assert "is not available" not in ret["comment"]
 
 
-def test_http_ftp_check_pass():
-    assert filestate._http_ftp_check("http://@$@dead_link@$@/src.tar.gz") is True
-    assert filestate._http_ftp_check("ftp://@$@dead_link@$@/src.tar.gz") is True
-
-
-def test_http_ftp_check_fail():
-    assert filestate._http_ftp_check("salt://@$@dead_link@$@/src.tar.gz") is False
-    assert filestate._http_ftp_check("https://@$@dead_link@$@/src.tar.gz") is False
-
-
-def test_http_ftp_check_list_pass():
-    assert (
-        filestate._http_ftp_check(
-            ["http://@$@dead_link@$@/src.tar.gz", "ftp://@$@dead_link@$@/src.tar.gz"]
-        )
-        is True
-    )
-
-
-def test_http_ftp_check_list_fail():
-    assert (
-        filestate._http_ftp_check(
-            ["salt://@$@dead_link@$@/src.tar.gz", "https://@$@dead_link@$@/src.tar.gz"]
-        )
-        is False
-    )
+@pytest.mark.parametrize(
+    "source,check_result",
+    [
+        ("http://@$@dead_link@$@/src.tar.gz", True),
+        ("https://@$@dead_link@$@/src.tar.gz", True),
+        ("ftp://@$@dead_link@$@/src.tar.gz", True),
+        ("salt://@$@dead_link@$@/src.tar.gz", False),
+        ("file://@$@dead_link@$@/src.tar.gz", False),
+        (
+            ["http://@$@dead_link@$@/src.tar.gz", "https://@$@dead_link@$@/src.tar.gz"],
+            True,
+        ),
+        (
+            ["salt://@$@dead_link@$@/src.tar.gz", "file://@$@dead_link@$@/src.tar.gz"],
+            False,
+        ),
+        (
+            ["http://@$@dead_link@$@/src.tar.gz", "file://@$@dead_link@$@/src.tar.gz"],
+            True,
+        ),
+    ],
+)
+def test_sources_source_hash_check(source, check_result):
+    assert filestate._http_ftp_check(source) is check_result

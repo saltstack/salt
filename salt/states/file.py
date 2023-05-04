@@ -336,11 +336,11 @@ __func_alias__ = {
 
 def _http_ftp_check(source):
     """
-    Check if source or sources is http or ftp.
+    Check if source or sources is http, https or ftp.
     """
     if isinstance(source, str):
-        return source.lower().startswith(("http:", "ftp:"))
-    return all([s.lower().startswith(("http:", "ftp:")) for s in source])
+        return source.lower().startswith(("http:", "https:", "ftp:"))
+    return any([s.lower().startswith(("http:", "https:", "ftp:")) for s in source])
 
 
 def _get_accumulator_filepath():
@@ -2423,7 +2423,7 @@ def managed(
                     - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
                     - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
 
-            source_hash is ignored if the file hosted is not on a HTTP or FTP server.
+            source_hash is ignored if the file hosted is not on a HTTP, HTTPS or FTP server.
 
         Known issues:
             If the remote server URL has the hash file as an apparent
@@ -2958,7 +2958,7 @@ def managed(
         )
 
     if source is not None and not _http_ftp_check(source) and source_hash:
-        log.warning("source_hash is only used with 'http' or 'ftp'")
+        log.warning("source_hash is only used with 'http', 'https' or 'ftp'")
 
     # If no source is specified, set replace to False, as there is nothing
     # with which to replace the file.
@@ -6013,7 +6013,7 @@ def blockreplace(
         return _error(ret, "Must provide name to file.blockreplace")
 
     if source is not None and not _http_ftp_check(source) and source_hash:
-        log.warning("source_hash is only used with 'http' or 'ftp'")
+        log.warning("source_hash is only used with 'http', 'https' or 'ftp'")
 
     if sources is None:
         sources = []
@@ -6452,7 +6452,7 @@ def append(
         return _error(ret, "Must provide name to file.append")
 
     if source is not None and not _http_ftp_check(source) and source_hash:
-        log.warning("source_hash is only used with 'http' or 'ftp'")
+        log.warning("source_hash is only used with 'http', 'https' or 'ftp'")
 
     name = os.path.expanduser(name)
 
@@ -6739,7 +6739,7 @@ def prepend(
         return _error(ret, "Must provide name to file.prepend")
 
     if source is not None and not _http_ftp_check(source) and source_hash:
-        log.warning("source_hash is only used with 'http' or 'ftp'")
+        log.warning("source_hash is only used with 'http', 'https' or 'ftp'")
 
     if sources is None:
         sources = []
