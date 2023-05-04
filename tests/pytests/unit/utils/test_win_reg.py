@@ -338,6 +338,7 @@ def test_read_value_non_existing():
             "Windows\\CurrentVersion"
         ),
         "vdata": None,
+        "vtype": None,
         "vname": "fake_name",
         "success": False,
         "hive": "HKLM",
@@ -360,6 +361,7 @@ def test_read_value_non_existing_key(fake_key):
     expected = {
         "comment": "Cannot find key: HKLM\\{}".format(fake_key),
         "vdata": None,
+        "vtype": None,
         "vname": "fake_name",
         "success": False,
         "hive": "HKLM",
@@ -375,6 +377,7 @@ def test_read_value_access_denied(fake_key):
     expected = {
         "comment": "Access is denied: HKLM\\{}".format(fake_key),
         "vdata": None,
+        "vtype": None,
         "vname": "fake_name",
         "success": False,
         "hive": "HKLM",

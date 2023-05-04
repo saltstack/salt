@@ -362,163 +362,169 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     elif tmplstr.endswith("\n"):
         newline = "\n"
 
-    if not saltenv:
-        if tmplpath:
-            loader = jinja2.FileSystemLoader(os.path.dirname(tmplpath))
-    else:
-        loader = salt.utils.jinja.SaltCacheLoader(
-            opts,
-            saltenv,
-            pillar_rend=context.get("_pillar_rend", False),
-            _file_client=file_client,
-        )
-
-    env_args = {"extensions": [], "loader": loader}
-
-    if hasattr(jinja2.ext, "with_"):
-        env_args["extensions"].append("jinja2.ext.with_")
-    if hasattr(jinja2.ext, "do"):
-        env_args["extensions"].append("jinja2.ext.do")
-    if hasattr(jinja2.ext, "loopcontrols"):
-        env_args["extensions"].append("jinja2.ext.loopcontrols")
-    env_args["extensions"].append(salt.utils.jinja.SerializerExtension)
-
-    opt_jinja_env = opts.get("jinja_env", {})
-    opt_jinja_sls_env = opts.get("jinja_sls_env", {})
-
-    opt_jinja_env = opt_jinja_env if isinstance(opt_jinja_env, dict) else {}
-    opt_jinja_sls_env = opt_jinja_sls_env if isinstance(opt_jinja_sls_env, dict) else {}
-
-    # Pass through trim_blocks and lstrip_blocks Jinja parameters
-    # trim_blocks removes newlines around Jinja blocks
-    # lstrip_blocks strips tabs and spaces from the beginning of
-    # line to the start of a block.
-    if opts.get("jinja_trim_blocks", False):
-        log.debug("Jinja2 trim_blocks is enabled")
-        log.warning(
-            "jinja_trim_blocks is deprecated and will be removed in a future release,"
-            " please use jinja_env and/or jinja_sls_env instead"
-        )
-        opt_jinja_env["trim_blocks"] = True
-        opt_jinja_sls_env["trim_blocks"] = True
-    if opts.get("jinja_lstrip_blocks", False):
-        log.debug("Jinja2 lstrip_blocks is enabled")
-        log.warning(
-            "jinja_lstrip_blocks is deprecated and will be removed in a future release,"
-            " please use jinja_env and/or jinja_sls_env instead"
-        )
-        opt_jinja_env["lstrip_blocks"] = True
-        opt_jinja_sls_env["lstrip_blocks"] = True
-
-    def opt_jinja_env_helper(opts, optname):
-        for k, v in opts.items():
-            k = k.lower()
-            if hasattr(jinja2.defaults, k.upper()):
-                log.debug("Jinja2 environment %s was set to %s by %s", k, v, optname)
-                env_args[k] = v
-            else:
-                log.warning("Jinja2 environment %s is not recognized", k)
-
-    if "sls" in context and context["sls"] != "":
-        opt_jinja_env_helper(opt_jinja_sls_env, "jinja_sls_env")
-    else:
-        opt_jinja_env_helper(opt_jinja_env, "jinja_env")
-
-    if opts.get("allow_undefined", False):
-        jinja_env = jinja2.sandbox.SandboxedEnvironment(**env_args)
-    else:
-        jinja_env = jinja2.sandbox.SandboxedEnvironment(
-            undefined=jinja2.StrictUndefined, **env_args
-        )
-
-    indent_filter = jinja_env.filters.get("indent")
-    jinja_env.tests.update(JinjaTest.salt_jinja_tests)
-    jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
-    if salt.utils.jinja.JINJA_VERSION >= Version("2.11"):
-        # Use the existing indent filter on Jinja versions where it's not broken
-        jinja_env.filters["indent"] = indent_filter
-    jinja_env.globals.update(JinjaGlobal.salt_jinja_globals)
-
-    # globals
-    jinja_env.globals["odict"] = OrderedDict
-    jinja_env.globals["show_full_context"] = salt.utils.jinja.show_full_context
-
-    jinja_env.tests["list"] = salt.utils.data.is_list
-
-    decoded_context = {}
-    for key, value in context.items():
-        if not isinstance(value, str):
-            if isinstance(value, NamedLoaderContext):
-                decoded_context[key] = value.value()
-            else:
-                decoded_context[key] = value
-            continue
-
-        try:
-            decoded_context[key] = salt.utils.stringutils.to_unicode(
-                value, encoding=SLS_ENCODING
-            )
-        except UnicodeDecodeError as ex:
-            log.debug(
-                "Failed to decode using default encoding (%s), trying system encoding",
-                SLS_ENCODING,
-            )
-            decoded_context[key] = salt.utils.data.decode(value)
-
-    jinja_env.globals.update(decoded_context)
     try:
-        template = jinja_env.from_string(tmplstr)
-        output = template.render(**decoded_context)
-    except jinja2.exceptions.UndefinedError as exc:
-        trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=decoded_context)
-        if not line:
-            tmplstr = ""
-        raise SaltRenderError("Jinja variable {}{}".format(exc, out), line, tmplstr)
-    except (
-        jinja2.exceptions.TemplateRuntimeError,
-        jinja2.exceptions.TemplateSyntaxError,
-        jinja2.exceptions.SecurityError,
-    ) as exc:
-        trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=decoded_context)
-        if not line:
-            tmplstr = ""
-        raise SaltRenderError(
-            "Jinja syntax error: {}{}".format(exc, out), line, tmplstr
-        )
-    except (SaltInvocationError, CommandExecutionError) as exc:
-        trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=decoded_context)
-        if not line:
-            tmplstr = ""
-        raise SaltRenderError(
-            "Problem running salt function in Jinja template: {}{}".format(exc, out),
-            line,
-            tmplstr,
-        )
-    except Exception as exc:  # pylint: disable=broad-except
-        tracestr = traceback.format_exc()
-        trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=decoded_context)
-        if not line:
-            tmplstr = ""
+        if not saltenv:
+            if tmplpath:
+                loader = jinja2.FileSystemLoader(os.path.dirname(tmplpath))
         else:
-            tmplstr += "\n{}".format(tracestr)
-        log.debug("Jinja Error")
-        log.debug("Exception:", exc_info=True)
-        log.debug("Out: %s", out)
-        log.debug("Line: %s", line)
-        log.debug("TmplStr: %s", tmplstr)
-        log.debug("TraceStr: %s", tracestr)
+            loader = salt.utils.jinja.SaltCacheLoader(
+                opts,
+                saltenv,
+                pillar_rend=context.get("_pillar_rend", False),
+                _file_client=file_client,
+            )
 
-        raise SaltRenderError(
-            "Jinja error: {}{}".format(exc, out), line, tmplstr, trace=tracestr
+        env_args = {"extensions": [], "loader": loader}
+
+        if hasattr(jinja2.ext, "with_"):
+            env_args["extensions"].append("jinja2.ext.with_")
+        if hasattr(jinja2.ext, "do"):
+            env_args["extensions"].append("jinja2.ext.do")
+        if hasattr(jinja2.ext, "loopcontrols"):
+            env_args["extensions"].append("jinja2.ext.loopcontrols")
+        env_args["extensions"].append(salt.utils.jinja.SerializerExtension)
+
+        opt_jinja_env = opts.get("jinja_env", {})
+        opt_jinja_sls_env = opts.get("jinja_sls_env", {})
+
+        opt_jinja_env = opt_jinja_env if isinstance(opt_jinja_env, dict) else {}
+        opt_jinja_sls_env = (
+            opt_jinja_sls_env if isinstance(opt_jinja_sls_env, dict) else {}
         )
+
+        # Pass through trim_blocks and lstrip_blocks Jinja parameters
+        # trim_blocks removes newlines around Jinja blocks
+        # lstrip_blocks strips tabs and spaces from the beginning of
+        # line to the start of a block.
+        if opts.get("jinja_trim_blocks", False):
+            log.debug("Jinja2 trim_blocks is enabled")
+            log.warning(
+                "jinja_trim_blocks is deprecated and will be removed in a future release,"
+                " please use jinja_env and/or jinja_sls_env instead"
+            )
+            opt_jinja_env["trim_blocks"] = True
+            opt_jinja_sls_env["trim_blocks"] = True
+        if opts.get("jinja_lstrip_blocks", False):
+            log.debug("Jinja2 lstrip_blocks is enabled")
+            log.warning(
+                "jinja_lstrip_blocks is deprecated and will be removed in a future release,"
+                " please use jinja_env and/or jinja_sls_env instead"
+            )
+            opt_jinja_env["lstrip_blocks"] = True
+            opt_jinja_sls_env["lstrip_blocks"] = True
+
+        def opt_jinja_env_helper(opts, optname):
+            for k, v in opts.items():
+                k = k.lower()
+                if hasattr(jinja2.defaults, k.upper()):
+                    log.debug(
+                        "Jinja2 environment %s was set to %s by %s", k, v, optname
+                    )
+                    env_args[k] = v
+                else:
+                    log.warning("Jinja2 environment %s is not recognized", k)
+
+        if "sls" in context and context["sls"] != "":
+            opt_jinja_env_helper(opt_jinja_sls_env, "jinja_sls_env")
+        else:
+            opt_jinja_env_helper(opt_jinja_env, "jinja_env")
+
+        if opts.get("allow_undefined", False):
+            jinja_env = jinja2.sandbox.SandboxedEnvironment(**env_args)
+        else:
+            jinja_env = jinja2.sandbox.SandboxedEnvironment(
+                undefined=jinja2.StrictUndefined, **env_args
+            )
+
+        indent_filter = jinja_env.filters.get("indent")
+        jinja_env.tests.update(JinjaTest.salt_jinja_tests)
+        jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
+        if salt.utils.jinja.JINJA_VERSION >= Version("2.11"):
+            # Use the existing indent filter on Jinja versions where it's not broken
+            jinja_env.filters["indent"] = indent_filter
+        jinja_env.globals.update(JinjaGlobal.salt_jinja_globals)
+
+        # globals
+        jinja_env.globals["odict"] = OrderedDict
+        jinja_env.globals["show_full_context"] = salt.utils.jinja.show_full_context
+
+        jinja_env.tests["list"] = salt.utils.data.is_list
+
+        decoded_context = {}
+        for key, value in context.items():
+            if not isinstance(value, str):
+                if isinstance(value, NamedLoaderContext):
+                    decoded_context[key] = value.value()
+                else:
+                    decoded_context[key] = value
+                continue
+
+            try:
+                decoded_context[key] = salt.utils.stringutils.to_unicode(
+                    value, encoding=SLS_ENCODING
+                )
+            except UnicodeDecodeError:
+                log.debug(
+                    "Failed to decode using default encoding (%s), trying system encoding",
+                    SLS_ENCODING,
+                )
+                decoded_context[key] = salt.utils.data.decode(value)
+
+        jinja_env.globals.update(decoded_context)
+        try:
+            template = jinja_env.from_string(tmplstr)
+            output = template.render(**decoded_context)
+        except jinja2.exceptions.UndefinedError as exc:
+            trace = traceback.extract_tb(sys.exc_info()[2])
+            line, out = _get_jinja_error(trace, context=decoded_context)
+            if not line:
+                tmplstr = ""
+            raise SaltRenderError("Jinja variable {}{}".format(exc, out), line, tmplstr)
+        except (
+            jinja2.exceptions.TemplateRuntimeError,
+            jinja2.exceptions.TemplateSyntaxError,
+            jinja2.exceptions.SecurityError,
+        ) as exc:
+            trace = traceback.extract_tb(sys.exc_info()[2])
+            line, out = _get_jinja_error(trace, context=decoded_context)
+            if not line:
+                tmplstr = ""
+            raise SaltRenderError(
+                "Jinja syntax error: {}{}".format(exc, out), line, tmplstr
+            )
+        except (SaltInvocationError, CommandExecutionError) as exc:
+            trace = traceback.extract_tb(sys.exc_info()[2])
+            line, out = _get_jinja_error(trace, context=decoded_context)
+            if not line:
+                tmplstr = ""
+            raise SaltRenderError(
+                "Problem running salt function in Jinja template: {}{}".format(
+                    exc, out
+                ),
+                line,
+                tmplstr,
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            tracestr = traceback.format_exc()
+            trace = traceback.extract_tb(sys.exc_info()[2])
+            line, out = _get_jinja_error(trace, context=decoded_context)
+            if not line:
+                tmplstr = ""
+            else:
+                tmplstr += "\n{}".format(tracestr)
+            log.debug("Jinja Error")
+            log.debug("Exception:", exc_info=True)
+            log.debug("Out: %s", out)
+            log.debug("Line: %s", line)
+            log.debug("TmplStr: %s", tmplstr)
+            log.debug("TraceStr: %s", tracestr)
+
+            raise SaltRenderError(
+                "Jinja error: {}{}".format(exc, out), line, tmplstr, trace=tracestr
+            )
     finally:
-        if loader and hasattr(loader, "_file_client"):
-            if hasattr(loader._file_client, "destroy"):
-                loader._file_client.destroy()
+        if loader and isinstance(loader, salt.utils.jinja.SaltCacheLoader):
+            loader.destroy()
 
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)
@@ -569,9 +575,8 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
     except Exception:  # pylint: disable=broad-except
         raise SaltRenderError(mako.exceptions.text_error_template().render())
     finally:
-        if lookup and hasattr(lookup, "_file_client"):
-            if hasattr(lookup._file_client, "destroy"):
-                lookup._file_client.destroy()
+        if lookup and isinstance(lookup, SaltMakoTemplateLookup):
+            lookup.destroy()
 
 
 def render_wempy_tmpl(tmplstr, context, tmplpath=None):

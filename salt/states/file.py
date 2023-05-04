@@ -336,6 +336,15 @@ __func_alias__ = {
 X = None
 
 
+def _http_ftp_check(source):
+    """
+    Check if source or sources is http, https or ftp.
+    """
+    if isinstance(source, str):
+        return source.lower().startswith(("http:", "https:", "ftp:"))
+    return any([s.lower().startswith(("http:", "https:", "ftp:")) for s in source])
+
+
 def _get_accumulator_filepath():
     """
     Return accumulator data path.
@@ -2416,6 +2425,8 @@ def managed(
                     - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
                     - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
 
+            source_hash is ignored if the file hosted is not on a HTTP, HTTPS or FTP server.
+
         Known issues:
             If the remote server URL has the hash file as an apparent
             sub-directory of the source file, the module will discover that it
@@ -2947,6 +2958,9 @@ def managed(
             "Only one of 'contents', 'contents_pillar', and "
             "'contents_grains' is permitted",
         )
+
+    if source is not None and not _http_ftp_check(source) and source_hash:
+        log.warning("source_hash is only used with 'http', 'https' or 'ftp'")
 
     # If no source is specified, set replace to False, as there is nothing
     # with which to replace the file.
@@ -6000,6 +6014,9 @@ def blockreplace(
     if not name:
         return _error(ret, "Must provide name to file.blockreplace")
 
+    if source is not None and not _http_ftp_check(source) and source_hash:
+        log.warning("source_hash is only used with 'http', 'https' or 'ftp'")
+
     if sources is None:
         sources = []
     if source_hashes is None:
@@ -6436,6 +6453,9 @@ def append(
     if not name:
         return _error(ret, "Must provide name to file.append")
 
+    if source is not None and not _http_ftp_check(source) and source_hash:
+        log.warning("source_hash is only used with 'http', 'https' or 'ftp'")
+
     name = os.path.expanduser(name)
 
     if sources is None:
@@ -6719,6 +6739,9 @@ def prepend(
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
     if not name:
         return _error(ret, "Must provide name to file.prepend")
+
+    if source is not None and not _http_ftp_check(source) and source_hash:
+        log.warning("source_hash is only used with 'http', 'https' or 'ftp'")
 
     if sources is None:
         sources = []
@@ -8938,6 +8961,25 @@ def cached(
                 return ret
     else:
         source_sum = {}
+
+    if __opts__["test"]:
+        local_copy = __salt__["cp.is_cached"](name, saltenv=saltenv)
+        if local_copy:
+            if source_sum:
+                hash = __salt__["file.get_hash"](local_copy, __opts__["hash_type"])
+                if hash == source_sum["hsum"]:
+                    ret["comment"] = "File already cached: {}".format(name)
+                else:
+                    ret[
+                        "comment"
+                    ] = "Hashes don't match.\nFile will be cached: {}".format(name)
+            else:
+                ret["comment"] = "No hash found. File will be cached: {}".format(name)
+        else:
+            ret["comment"] = "File will be cached: {}".format(name)
+        ret["changes"] = {}
+        ret["result"] = None
+        return ret
 
     if parsed.scheme in salt.utils.files.LOCAL_PROTOS:
         # Source is a local file path

@@ -1,0 +1,5 @@
+case "$1" in
+  configure)
+    chown -R salt:salt /etc/salt/cloud.deploy.d /opt/saltstack/salt/lib/python3.10/site-packages/salt/cloud/deploy
+  ;;
+esac

@@ -1363,7 +1363,7 @@ class Minion(MinionBase):
         )
 
         # a long-running req channel
-        self.req_channel = salt.transport.client.AsyncReqChannel.factory(
+        self.req_channel = salt.channel.client.AsyncReqChannel.factory(
             self.opts, io_loop=self.io_loop
         )
 
@@ -2817,10 +2817,8 @@ class Minion(MinionBase):
                             self.opts["master"],
                         )
 
-                        self.req_channel = (
-                            salt.transport.client.AsyncReqChannel.factory(
-                                self.opts, io_loop=self.io_loop
-                            )
+                        self.req_channel = salt.channel.client.AsyncReqChannel.factory(
+                            self.opts, io_loop=self.io_loop
                         )
 
                         # put the current schedule into the new loaders

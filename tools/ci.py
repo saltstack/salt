@@ -648,41 +648,27 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
 
 
 @ci.command(
-    name="pkg-download-matrix",
+    name="get-releases",
     arguments={
-        "platform": {
-            "help": "The OS platform to generate the matrix for",
-            "choices": ("linux", "windows", "macos", "darwin"),
+        "repository": {
+            "help": "The repository to query for releases, e.g. saltstack/salt",
         },
     },
 )
-def pkg_download_matrix(ctx: Context, platform: str):
+def get_releases(ctx: Context, repository: str = "saltstack/salt"):
     """
-    Generate the test matrix.
+    Generate the latest salt release.
     """
     github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output is None:
-        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
 
-    tests = []
-    arches = []
-    if platform == "windows":
-        for arch in ("amd64", "x86"):
-            arches.append({"arch": arch})
-            for install_type in ("msi", "nsis"):
-                tests.append({"arch": arch, "install_type": install_type})
+    if github_output is None:
+        ctx.exit(1, "The 'GITHUB_OUTPUT' variable is not set.")
     else:
-        for arch in ("x86_64", "aarch64"):
-            if platform in ("macos", "darwin") and arch == "aarch64":
-                continue
-            arches.append({"arch": arch})
-            tests.append({"arch": arch})
-    ctx.info("Generated arch matrix:")
-    ctx.print(arches, soft_wrap=True)
-    ctx.info("Generated test matrix:")
-    ctx.print(tests, soft_wrap=True)
-    if github_output is not None:
+        releases = tools.utils.get_salt_releases(ctx, repository)
+        str_releases = [str(version) for version in releases]
+        latest = str_releases[-1]
+
         with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"arch={json.dumps(arches)}\n")
-            wfh.write(f"tests={json.dumps(tests)}\n")
-    ctx.exit(0)
+            wfh.write(f"latest-release={latest}\n")
+            wfh.write(f"releases={json.dumps(str_releases)}\n")
+        ctx.exit(0)

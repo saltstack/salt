@@ -507,7 +507,7 @@ You can enable or disable test groups locally by passing there respected flag:
 * --core-tests
 * --flaky-jail
 
-In Your PR you can enable or disable test groups by setting a label.
+In your PR you can enable or disable test groups by setting a label.
 All thought the fast, slow and core tests specified in the change file will always run.
 
 * test:no-fast

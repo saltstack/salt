@@ -25,10 +25,8 @@ import salt.ext.tornado.tcpclient
 import salt.ext.tornado.tcpserver
 import salt.master
 import salt.payload
-import salt.transport.client
 import salt.transport.frame
 import salt.transport.ipc
-import salt.transport.server
 import salt.utils.asynchronous
 import salt.utils.files
 import salt.utils.msgpack

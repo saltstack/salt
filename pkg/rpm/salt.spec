@@ -14,6 +14,10 @@
 %global __requires_exclude_from ^.*\\.so.*$
 %define _source_payload w2.gzdio
 %define _binary_payload w2.gzdio
+%define _SALT_GROUP salt
+%define _SALT_USER salt
+%define _SALT_NAME Salt
+%define _SALT_HOME /opt/saltstack/salt
 
 # Disable python bytecompile for MANY reasons
 %global __os_install_post %(echo '%{__os_install_post}' | sed -e 's!/usr/lib[^[:space:]]*/brp-python-bytecompile[[:space:]].*$!!g')
@@ -43,8 +47,12 @@ BuildRequires: python3
 BuildRequires: python3-pip
 BuildRequires: openssl
 BuildRequires: git
+
+# rhel is not defined on all rpm based distros.
+%if %{?rhel:1}%{!?rhel:0}
 %if %{rhel} >= 9
 BuildRequires: libxcrypt-compat
+%endif
 %endif
 
 %description
@@ -140,8 +148,12 @@ cd $RPM_BUILD_DIR
   # the <onedir>/bin directory
   find $RPM_BUILD_DIR/build/salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$(dirname $(readlink -f $0))/python3" "$0" "$@":g' {} \;
 
-	$RPM_BUILD_DIR/build/venv/bin/tools pkg build salt-onedir . --package-name $RPM_BUILD_DIR/build/salt --platform linux
+  $RPM_BUILD_DIR/build/venv/bin/tools pkg build salt-onedir . --package-name $RPM_BUILD_DIR/build/salt --platform linux
   $RPM_BUILD_DIR/build/venv/bin/tools pkg pre-archive-cleanup --pkg $RPM_BUILD_DIR/build/salt
+
+  # Generate master config
+  sed 's/#user: root/user: salt/g' %{_salt_src}/conf/master > $RPM_BUILD_DIR/build/master
+
 %else
   # The relenv onedir is being provided, all setup up until Salt is installed
   # is expected to be done
@@ -150,6 +162,9 @@ cd $RPM_BUILD_DIR
 
   # Fix any hardcoded paths to the relenv python binary on any of the scripts installed in the <onedir>/bin directory
   find salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$$(dirname $$(readlink -f $$0))/python3" "$$0" "$$@":g' {} \;
+
+  # Generate master config
+  sed 's/#user: root/user: salt/g' %{_salt_src}/conf/master > $RPM_BUILD_DIR/build/master
 
   cd $RPM_BUILD_DIR
 %endif
@@ -208,7 +223,7 @@ install -m 0755 %{buildroot}/opt/saltstack/salt/salt-pip %{buildroot}%{_bindir}/
 
 # Add the config files
 install -p -m 0640 %{_salt_src}/conf/minion %{buildroot}%{_sysconfdir}/salt/minion
-install -p -m 0640 %{_salt_src}/pkg/common/conf/master %{buildroot}%{_sysconfdir}/salt/master
+install -p -m 0640 $RPM_BUILD_DIR/build/master %{buildroot}%{_sysconfdir}/salt/master
 install -p -m 0640 %{_salt_src}/conf/cloud %{buildroot}%{_sysconfdir}/salt/cloud
 install -p -m 0640 %{_salt_src}/conf/roster %{buildroot}%{_sysconfdir}/salt/roster
 install -p -m 0640 %{_salt_src}/conf/proxy %{buildroot}%{_sysconfdir}/salt/proxy
@@ -274,8 +289,6 @@ rm -rf %{buildroot}
 %dir %{_sysconfdir}/salt/pki
 
 
-
-
 %files master
 %defattr(-,root,root)
 %doc %{_mandir}/man7/salt.7*
@@ -307,6 +320,7 @@ rm -rf %{buildroot}
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/syndics/
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/tokens/
 
+
 %files minion
 %defattr(-,root,root)
 %doc %{_mandir}/man1/salt-call.1*
@@ -323,16 +337,19 @@ rm -rf %{buildroot}
 %dir %{_sysconfdir}/salt/minion.d
 %dir %attr(0750, root, root) %{_var}/cache/salt/minion/
 
+
 %files syndic
 %doc %{_mandir}/man1/salt-syndic.1*
 %{_bindir}/salt-syndic
 %{_unitdir}/salt-syndic.service
+
 
 %files api
 %defattr(-,root,root)
 %doc %{_mandir}/man1/salt-api.1*
 %{_bindir}/salt-api
 %{_unitdir}/salt-api.service
+
 
 %files cloud
 %doc %{_mandir}/man1/salt-cloud.1*
@@ -344,35 +361,64 @@ rm -rf %{buildroot}
 %{_sysconfdir}/salt/cloud.providers.d
 %config(noreplace) %{_sysconfdir}/salt/cloud
 
+
 %files ssh
 %doc %{_mandir}/man1/salt-ssh.1*
 %{_bindir}/salt-ssh
 %config(noreplace) %{_sysconfdir}/salt/roster
 
-# Add salt user/group for Salt Master
-%pre master
-getent group salt >/dev/null || groupadd -r salt
-getent passwd salt >/dev/null || \
-    useradd -r -g salt -s /sbin/nologin \
-    -c "Salt user for Salt Master" salt
+
+%pre
+# create user to avoid running server as root
+# 1. create group if not existing
+if ! getent group %{_SALT_GROUP}; then
+   groupadd --system %{_SALT_GROUP} 2>/dev/null ||true
+fi
+# 2. create homedir if not existing
+test -d %{_SALT_HOME} || mkdir -p %{_SALT_HOME}
+# 3. create user if not existing
+#         -g %{_SALT_GROUP} \
+if ! getent passwd | grep -q "^%{_SALT_USER}:"; then
+  useradd --system \
+          --no-create-home \
+          -s /sbin/nologin \
+          -g %{_SALT_GROUP} \
+          %{_SALT_USER} 2>/dev/null || true
+fi
+# 4. adjust passwd entry
+usermod -c "%{_SALT_NAME}" \
+        -d %{_SALT_HOME}   \
+        -g %{_SALT_GROUP}  \
+         %{_SALT_USER}
+# 5. adjust file and directory permissions
+chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
 
 # assumes systemd for RHEL 7 & 8 & 9
 %preun master
 # RHEL 9 is giving warning msg if syndic is not installed, supress it
 %systemd_preun salt-syndic.service > /dev/null 2>&1
 
+
 %preun minion
 %systemd_preun salt-minion.service
+
 
 %preun api
 %systemd_preun salt-api.service
 
+
 %post
+chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
+chmod u=rwx,g=rwx,o=rx %{_SALT_HOME}
 ln -s -f /opt/saltstack/salt/spm %{_bindir}/spm
 ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
 
+
 %post cloud
+chown -R salt:salt /etc/salt/cloud.deploy.d
+chown -R salt:salt /opt/saltstack/salt/lib/python3.10/site-packages/salt/cloud/deploy
 ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
+
 
 %post master
 %systemd_post salt-master.service
