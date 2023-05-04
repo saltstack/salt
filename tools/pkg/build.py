@@ -643,13 +643,11 @@ def salt_onedir(
     ctx.info(f"Creating Salt's extras path: {extras_dir}")
     extras_dir.mkdir(exist_ok=True)
 
-    pth_path = pathlib.Path(site_packages) / "salt-extras.pth"
-    ctx.info(f"Writing '{pth_path}' ...")
-    pth_path.write_text(
-        'import sys, pathlib; extras = str(pathlib.Path(__file__).parent.parent.parent / "extras-{}.{}".format(*sys.version_info)) '
-        'if sys.platform != "win32" else str(pathlib.Path(__file__).parent.parent / "extras-{}.{}".format(*sys.version_info)); '
-        "extras not in sys.path and sys.path.insert(0, extras)\n"
-    )
+    for fname in ("_salt_onedir_extras.py", "_salt_onedir_extras.pth"):
+        src = tools.utils.REPO_ROOT / "pkg" / "common" / "onedir" / fname
+        dst = pathlib.Path(site_packages) / fname
+        ctx.info(f"Copying '{src.relative_to(tools.utils.REPO_ROOT)}' to '{dst}' ...")
+        shutil.copyfile(src, dst)
 
 
 def _check_pkg_build_files_exist(ctx: Context, **kwargs):
