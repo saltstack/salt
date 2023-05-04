@@ -333,6 +333,8 @@ __func_alias__ = {
     "copy_": "copy",
 }
 
+X = None
+
 
 def _get_accumulator_filepath():
     """
