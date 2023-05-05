@@ -9,6 +9,7 @@ import salt.utils.path
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.slow_test,
 ]
 
 

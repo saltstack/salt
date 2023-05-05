@@ -1790,6 +1790,7 @@ def test_pkgs_onedir(session):
 
     env = {
         "ONEDIR_TESTRUN": "1",
+        "PKG_TEST_TYPE": chunk,
     }
 
     if chunk == "upgrade-classic":

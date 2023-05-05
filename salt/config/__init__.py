@@ -373,7 +373,7 @@ VALID_OPTS = immutabletypes.freeze(
         # applications that depend on the original format.
         "unique_jid": bool,
         # Governs whether state runs will queue or fail to run when a state is already running
-        "state_queue": bool,
+        "state_queue": (bool, int),
         # Tells the highstate outputter to show successful states. False will omit successes.
         "state_verbose": bool,
         # Specify the format for state outputs. See highstate outputter for additional details.
@@ -987,6 +987,10 @@ VALID_OPTS = immutabletypes.freeze(
         "pass_gnupghome": str,
         # pass renderer: Set PASSWORD_STORE_DIR env for Pass
         "pass_dir": str,
+        # Maintenence process restart interval
+        "maintenance_interval": int,
+        # Fileserver process restart interval
+        "fileserver_interval": int,
     }
 )
 
@@ -1635,6 +1639,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pass_gnupghome": "",
         "pass_dir": "",
         "netapi_enable_clients": [],
+        "maintenance_interval": 3600,
+        "fileserver_interval": 3600,
     }
 )
 
