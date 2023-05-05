@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
 Script for setting up an additional salt-minion on a machine with Salt installed
 
