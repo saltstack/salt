@@ -8,6 +8,10 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages.
+      sign-packages:
+        type: boolean
+        default: false
+        description: Sign Packages
       environment:
         type: string
         description: The GitHub Environment where this workflow should run
@@ -31,12 +35,23 @@ jobs:
         shell: bash
         id: check-pkg-sign
         run: |
-          if [ "${{ (secrets.MAC_SIGN_APPLE_ACCT != '' && contains(fromJSON('["nightly", "staging"]'), inputs.environment)) && 'true' || 'false' }}" != "true" ]; then
-            echo "The packages created will NOT be signed"
-            echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
+          if [ "${{ inputs.sign-packages }}" == "true" ]; then
+            if [ "${{ (secrets.MAC_SIGN_APPLE_ACCT != '' && contains(fromJSON('["nightly", "staging"]'), inputs.environment)) && 'true' || 'false' }}" != "true" ]; then
+              MSG="Secrets for signing packages are not available. The packages created will NOT be signed."
+              echo "${MSG}"
+              echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+              echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
+            else
+              MSG="The packages created WILL be signed."
+              echo "${MSG}"
+              echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+              echo "sign-pkgs=true" >> "$GITHUB_OUTPUT"
+            fi
           else
-            echo "The packages created WILL be signed"
-            echo "sign-pkgs=true" >> "$GITHUB_OUTPUT"
+            MSG="The sign-packages input is false. The packages created will NOT be signed."
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: actions/checkout@v3

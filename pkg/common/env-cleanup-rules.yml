@@ -148,7 +148,6 @@ ci:
       - "**/site-packages/salt/modules/runit.py*"
       - "**/site-packages/salt/modules/s6.py*"
       - "**/site-packages/salt/modules/scsi.py*"
-      - "**/site-packages/salt/modules/seed.py*"
       - "**/site-packages/salt/modules/sensors.py*"
       - "**/site-packages/salt/modules/service.py*"
       - "**/site-packages/salt/modules/shadow.py*"

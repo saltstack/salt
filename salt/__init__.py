@@ -140,9 +140,3 @@ del __define_global_system_encoding_variable__
 import salt._logging  # isort:skip
 
 # pylint: enable=unused-import
-
-
-# When we are running in a 'onedir' environment, setup the path for user
-# installed packages.
-if hasattr(sys, "RELENV"):
-    sys.path.insert(0, str(sys.RELENV / "extras-{}.{}".format(*sys.version_info)))

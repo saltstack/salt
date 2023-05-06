@@ -80,6 +80,8 @@ jobs:
       testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
+      latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
+      releases: ${{ steps.get-salt-releases.outputs.releases }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -246,6 +248,18 @@ jobs:
       - name: Check Defined Jobs
         run: |
           echo '${{ steps.define-jobs.outputs.jobs }}' | jq -C '.'
+
+      - name: Get Salt Releases
+        id: get-salt-releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci get-releases
+
+      - name: Check Salt Releases
+        run: |
+          echo '${{ steps.get-salt-releases.outputs.latest-release }}' | jq -C '.'
+          echo '${{ steps.get-salt-releases.outputs.releases }}' | jq -C '.'
 
       - name: Define Testrun
         id: define-testrun
@@ -477,7 +491,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.11.2"
+      relenv-version: "0.12.3"
       python-version-linux: "3.10.11"
       python-version-macos: "3.10.11"
       python-version-windows: "3.10.11"
@@ -495,7 +509,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.11.2"
+      relenv-version: "0.12.3"
       python-version-linux: "3.10.11"
       python-version-macos: "3.10.11"
       python-version-windows: "3.10.11"

@@ -13,8 +13,6 @@ from salt.utils.versions import warn_until
 
 log = logging.getLogger(__name__)
 
-# XXX: Add depreication warnings to start using salt.channel.client
-
 
 class ReqChannel:
     """

@@ -248,6 +248,8 @@ jobs:
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
           key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          # If we get a cache miss here it means the dependencies step failed to save the cache
+          fail-on-cache-miss: true
 
       - name: PyPi Proxy
         run: |
@@ -489,11 +491,6 @@ jobs:
       - name: Show Downloaded Test Run Artifacts
         run: |
           tree -a artifacts
-
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
 
       - name: Install Nox
         run: |
