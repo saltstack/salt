@@ -1,5 +1,5 @@
 """
-These commands are used to build the pacakge repository files.
+These commands are used to build the package repository files.
 """
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
@@ -55,7 +55,7 @@ publish = command_group(
             "help": "Local path for the repository that shall be published.",
         },
         "salt_version": {
-            "help": "The salt version for which to build the repository",
+            "help": "The salt version of the repository to publish",
             "required": True,
         },
     }
@@ -77,7 +77,7 @@ def nightly(ctx: Context, repo_path: pathlib.Path, salt_version: str = None):
             "help": "Local path for the repository that shall be published.",
         },
         "salt_version": {
-            "help": "The salt version for which to build the repository",
+            "help": "The salt version of the repository to publish",
             "required": True,
         },
     }
