@@ -1,5 +1,5 @@
 """
-These commands are used to build the pacakge repository files.
+These commands are used to build the package repository files.
 """
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
