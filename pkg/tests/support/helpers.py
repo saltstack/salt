@@ -96,6 +96,7 @@ class SaltPkgInstall:
     minor: str = attr.ib(init=False)
     relenv: bool = attr.ib(default=True)
     file_ext: bool = attr.ib(default=None)
+    config_path: str = attr.ib(init=False)
 
     @proc.default
     def _default_proc(self):
@@ -128,7 +129,7 @@ class SaltPkgInstall:
 
     @pkg_mngr.default
     def _default_pkg_mngr(self):
-        if self.distro_id in ("centos", "redhat", "amzn", "fedora"):
+        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
             return "yum"
         elif self.distro_id in ("ubuntu", "debian"):
             ret = self.proc.run("apt-get", "update")
@@ -137,7 +138,7 @@ class SaltPkgInstall:
 
     @rm_pkg.default
     def _default_rm_pkg(self):
-        if self.distro_id in ("centos", "redhat", "amzn", "fedora"):
+        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
             return "remove"
         elif self.distro_id in ("ubuntu", "debian"):
             return "purge"
@@ -152,7 +153,7 @@ class SaltPkgInstall:
             "salt-cloud",
             "salt-minion",
         ]
-        if self.distro_id in ("centos", "redhat", "amzn", "fedora"):
+        if self.distro_id in ("centos", "redhat", "amzn", "fedora", "photon"):
             salt_pkgs.append("salt")
         elif self.distro_id in ("ubuntu", "debian"):
             salt_pkgs.append("salt-common")
@@ -170,6 +171,17 @@ class SaltPkgInstall:
         else:
             install_dir = pathlib.Path("/opt", "saltstack", "salt")
         return install_dir
+
+    @config_path.default
+    def _default_config_path(self):
+        """
+        Default location for salt configurations
+        """
+        if platform.is_windows():
+            config_path = pathlib.Path("C://salt", "etc", "salt")
+        else:
+            config_path = pathlib.Path("/etc", "salt")
+        return config_path
 
     @repo_data.default
     def _default_repo_data(self):
@@ -589,7 +601,7 @@ class SaltPkgInstall:
         else:
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
             ret = self.proc.run(self.pkg_mngr, "install", "-y", *self.pkgs)
-        if not (platform.is_darwin() or platform.is_windows()):
+        if not platform.is_darwin() and not platform.is_windows():
             # Make sure we don't have any trailing references to old package file locations
             assert "No such file or directory" not in ret.stdout
             assert "/saltstack/salt/run" not in ret.stdout
@@ -640,7 +652,7 @@ class SaltPkgInstall:
         if self.classic:
             root_url = "py3/"
 
-        if self.distro_name in ["redhat", "centos", "amazon", "fedora"]:
+        if self.distro_name in ["redhat", "centos", "amazon", "fedora", "vmware"]:
             for fp in pathlib.Path("/etc", "yum.repos.d").glob("epel*"):
                 fp.unlink()
             gpg_key = "SALTSTACK-GPG-KEY.pub"

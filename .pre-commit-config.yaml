@@ -59,10 +59,11 @@ repos:
           - pyyaml==6.0
           - jinja2==3.1.2
           - packaging==23.0
+          - virustotal3==1.0.8
       - id: tools
         alias: generate-workflows
         name: Generate GitHub Workflow Templates
-        files: ^(tools/pre_commit\.py|.github/workflows/templates/.*)$
+        files: ^(cicd/shared-gh-workflows-context\.yml|tools/pre_commit\.py|.github/workflows/templates/.*)$
         pass_filenames: false
         args:
           - pre-commit
@@ -72,6 +73,7 @@ repos:
           - pyyaml==6.0
           - jinja2==3.1.2
           - packaging==23.0
+          - virustotal3==1.0.8
       - id: tools
         alias: actionlint
         name: Lint GitHub Actions Workflows

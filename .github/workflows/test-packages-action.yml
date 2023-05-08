@@ -164,12 +164,21 @@ jobs:
       - name: Destroy VM
         if: always() && steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          tools --timestamps vm destroy ${{ inputs.distro-slug }}
+          tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }}
+
+      - name: Define Nox Upload Artifact Name
+        id: nox-artifact-name
+        run: |
+          if [ "${{ contains(inputs.distro-slug, 'windows') }}" != "true" ]; then
+            echo "name=nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}-${{ inputs.arch }}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "name=nox-${{ inputs.distro-slug }}-${{ inputs.pkg-type }}-${{ inputs.nox-session }}-${{ inputs.arch }}" >> "${GITHUB_OUTPUT}"
+          fi
 
       - name: Upload Nox Requirements Tarball
         uses: actions/upload-artifact@v3
         with:
-          name: nox-${{ inputs.distro-slug }}-${{ inputs.nox-session }}
+          name: ${{ steps.nox-artifact-name.outputs.name }}
           path: nox.${{ inputs.distro-slug }}.tar.*
 
   test:
@@ -219,6 +228,8 @@ jobs:
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
           key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          # If we get a cache miss here it means the dependencies step failed to save the cache
+          fail-on-cache-miss: true
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -269,7 +280,7 @@ jobs:
       - name: Destroy VM
         if: always()
         run: |
-          tools --timestamps vm destroy ${{ inputs.distro-slug }} || true
+          tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }} || true
 
       - name: Upload Test Run Artifacts
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'

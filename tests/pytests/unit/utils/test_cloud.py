@@ -605,3 +605,55 @@ def test_deploy_script_ssh_timeout():
         ssh_kwargs = root_cmd.call_args.kwargs
         assert "ssh_timeout" in ssh_kwargs
         assert ssh_kwargs["ssh_timeout"] == 34
+
+
+@pytest.mark.parametrize(
+    "master,expected",
+    [
+        (None, None),
+        ("single_master", "single_master"),
+        (["master1", "master2", "master3"], "master1,master2,master3"),
+    ],
+)
+def test__format_master_param(master, expected):
+    result = cloud._format_master_param(master)
+    assert result == expected
+
+
+@pytest.mark.skip_unless_on_windows(reason="Only applicable for Windows.")
+@pytest.mark.parametrize(
+    "master,expected",
+    [
+        (None, None),
+        ("single_master", "single_master"),
+        (["master1", "master2", "master3"], "master1,master2,master3"),
+    ],
+)
+def test_deploy_windows_master(master, expected):
+    """
+    Test deploy_windows with master parameter
+    """
+    mock_true = MagicMock(return_value=True)
+    mock_tuple = MagicMock(return_value=(0, 0, 0))
+    with patch("salt.utils.smb.get_conn", MagicMock()), patch(
+        "salt.utils.smb.mkdirs", MagicMock()
+    ), patch("salt.utils.smb.put_file", MagicMock()), patch(
+        "salt.utils.smb.delete_file", MagicMock()
+    ), patch(
+        "salt.utils.smb.delete_directory", MagicMock()
+    ), patch(
+        "time.sleep", MagicMock()
+    ), patch.object(
+        cloud, "wait_for_port", mock_true
+    ), patch.object(
+        cloud, "fire_event", MagicMock()
+    ), patch.object(
+        cloud, "wait_for_psexecsvc", mock_true
+    ), patch.object(
+        cloud, "run_psexec_command", mock_tuple
+    ) as mock:
+        cloud.deploy_windows(host="test", win_installer="install.exe", master=master)
+        expected_cmd = "c:\\salttemp\\install.exe"
+        expected_args = "/S /master={} /minion-name=None".format(expected)
+        assert mock.call_args_list[0].args[0] == expected_cmd
+        assert mock.call_args_list[0].args[1] == expected_args
