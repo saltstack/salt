@@ -363,7 +363,7 @@ jobs:
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          if [ "${{ contains(fromJSON('["master"]'), github.ref_name) }}" == "true" ]; then
+          if [ "${{ github.base_ref || github.ref_name }}" == "master" ]; then
             tools changelog update-release-notes --next-release --template-only
           else
             tools changelog update-release-notes --template-only
@@ -373,7 +373,7 @@ jobs:
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          if [ "${{ contains(fromJSON('["master"]'), github.ref_name) }}" == "true" ]; then
+          if [ "${{ github.base_ref || github.ref_name }}" == "master" ]; then
               tools changelog update-release-notes --draft --release --next-release
               tools changelog update-release-notes --release --next-release
           else
