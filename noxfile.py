@@ -363,7 +363,7 @@ def _install_coverage_requirement(session):
     if SKIP_REQUIREMENTS_INSTALL is False:
         coverage_requirement = COVERAGE_REQUIREMENT
         if coverage_requirement is None:
-            coverage_requirement = "coverage==5.2"
+            coverage_requirement = "coverage==7.3.1"
         session.install(
             "--progress-bar=off", coverage_requirement, silent=PIP_INSTALL_SILENT
         )
