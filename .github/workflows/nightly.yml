@@ -369,6 +369,16 @@ jobs:
           tools changelog update-rpm --draft
           tools changelog update-rpm
 
+      - name: Create Release Notes Template
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          if [ "${{ contains(fromJSON('["master"]'), github.ref_name) }}" == "true" ]; then
+            tools changelog update-release-notes --next-release --template-only
+          else
+            tools changelog update-release-notes --template-only
+          fi
+
       - name: Update Release Notes
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
