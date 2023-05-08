@@ -1,7 +1,7 @@
 """
 Run matchers from the master context.
 
-.. versionadded:: 3006.0
+.. versionadded:: 3007.0
 """
 import logging
 
