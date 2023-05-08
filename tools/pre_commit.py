@@ -77,7 +77,7 @@ def generate_workflows(ctx: Context):
                 "lint": False,
                 "pkg-tests": False,
                 "salt-tests": False,
-                "test-pkg-downloads": False,
+                "test-pkg-downloads": True,
             },
         },
     }

@@ -29,6 +29,7 @@ override_dh_auto_build:
 
 	build/onedir/venv/bin/tools pkg build salt-onedir . --package-name build/onedir/salt --platform linux
 	build/onedir/venv/bin/tools pkg pre-archive-cleanup --pkg build/onedir/salt
+
 else
 override_dh_auto_build:
 	# The relenv onedir is being provided, all setup up until Salt is installed
@@ -38,6 +39,7 @@ override_dh_auto_build:
 
 	# Fix any hardcoded paths to the relenv python binary on any of the scripts installed in the <onedir>/bin directory
 	find build/onedir/salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$$(dirname $$(readlink -f $$0))/python3" "$$0" "$$@":g' {} \;
+
 endif
 
 # dh_auto_install tries to invoke distutils causing failures.
@@ -47,4 +49,9 @@ override_dh_auto_install:
 override_dh_install:
 	mkdir -p debian/salt-common/opt/saltstack
 	cp -R build/onedir/salt debian/salt-common/opt/saltstack/
+
+        # Generate master config
+	mkdir -p debian/salt-master/etc/salt
+	sed 's/#user: root/user: salt/g' conf/master > debian/salt-master/etc/salt/master
+
 	dh_install

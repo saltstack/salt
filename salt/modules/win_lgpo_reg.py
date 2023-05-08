@@ -381,7 +381,7 @@ def set_value(
     else:
         pol_data[key] = {v_name: {"data": v_data, "type": v_type}}
 
-    write_reg_pol(pol_data)
+    write_reg_pol(pol_data, policy_class=policy_class)
 
     return salt.utils.win_reg.set_value(
         hive=hive,
@@ -464,7 +464,7 @@ def disable_value(key, v_name, policy_class="machine"):
     else:
         pol_data[key] = {"**del.{}".format(v_name): {"data": " ", "type": "REG_SZ"}}
 
-    write_reg_pol(pol_data)
+    write_reg_pol(pol_data, policy_class=policy_class)
 
     return salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
 
@@ -534,7 +534,7 @@ def delete_value(key, v_name, policy_class="Machine"):
     else:
         return None
 
-    write_reg_pol(pol_data)
+    write_reg_pol(pol_data, policy_class=policy_class)
 
     return salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
 

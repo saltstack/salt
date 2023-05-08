@@ -527,6 +527,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         "key": local_key,
         "vname": local_vname,
         "vdata": None,
+        "vtype": None,
         "success": True,
     }
 

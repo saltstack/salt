@@ -9,7 +9,6 @@
 <%- set skip_junit_reports_check = skip_junit_reports_check|default("${{ github.event_name == 'pull_request' }}") %>
 <%- set gpg_key_id = "64CBBC8173D76B3F" %>
 <%- set prepare_actual_release = prepare_actual_release | default(False) %>
-<%- set release_branches = ["master", "3006.x"] %>
 ---
 <%- block name %>
 name: <{ workflow_name }>
@@ -90,6 +89,8 @@ jobs:
       testrun: ${{ steps.define-testrun.outputs.testrun }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
+      latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
+      releases: ${{ steps.get-salt-releases.outputs.releases }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -267,6 +268,18 @@ jobs:
         run: |
           echo '${{ steps.define-jobs.outputs.jobs }}' | jq -C '.'
 
+      - name: Get Salt Releases
+        id: get-salt-releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci get-releases
+
+      - name: Check Salt Releases
+        run: |
+          echo '${{ steps.get-salt-releases.outputs.latest-release }}' | jq -C '.'
+          echo '${{ steps.get-salt-releases.outputs.releases }}' | jq -C '.'
+
       - name: Define Testrun
         id: define-testrun
         run: |
@@ -323,6 +336,9 @@ jobs:
       - name: Get workflow information
         id: get-workflow-info
         uses: technote-space/workflow-conclusion-action@v3
+
+      <%- block set_pipeline_exit_status_extra_steps %>
+      <%- endblock set_pipeline_exit_status_extra_steps %>
 
       - name: Set Pipeline Exit Status
         shell: bash
