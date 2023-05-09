@@ -39,7 +39,7 @@ from salt.exceptions import FileserverConfigError, GitLockError, get_error_messa
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running as pid_exists
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 VALID_REF_TYPES = _DEFAULT_MASTER_OPTS["gitfs_ref_types"]
 
@@ -95,7 +95,7 @@ try:
     import git
     import gitdb
 
-    GITPYTHON_VERSION = _LooseVersion(git.__version__)
+    GITPYTHON_VERSION = Version(git.__version__)
 except Exception:  # pylint: disable=broad-except
     GITPYTHON_VERSION = None
 
@@ -106,13 +106,13 @@ try:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         import pygit2
-    PYGIT2_VERSION = _LooseVersion(pygit2.__version__)
-    LIBGIT2_VERSION = _LooseVersion(pygit2.LIBGIT2_VERSION)
+    PYGIT2_VERSION = Version(pygit2.__version__)
+    LIBGIT2_VERSION = Version(pygit2.LIBGIT2_VERSION)
 
     # Work around upstream bug where bytestrings were being decoded using the
     # default encoding (which is usually ascii on Python 2). This was fixed
     # on 2 Feb 2018, so releases prior to 0.26.3 will need a workaround.
-    if PYGIT2_VERSION <= _LooseVersion("0.26.3"):
+    if PYGIT2_VERSION <= Version("0.26.3"):
         try:
             import pygit2.ffi
             import pygit2.remote
@@ -150,9 +150,9 @@ except Exception as exc:  # pylint: disable=broad-except
 # pylint: enable=import-error
 
 # Minimum versions for backend providers
-GITPYTHON_MINVER = _LooseVersion("0.3")
-PYGIT2_MINVER = _LooseVersion("0.20.3")
-LIBGIT2_MINVER = _LooseVersion("0.20.0")
+GITPYTHON_MINVER = Version("0.3")
+PYGIT2_MINVER = Version("0.20.3")
+LIBGIT2_MINVER = Version("0.20.0")
 
 
 def enforce_types(key, val):
@@ -1780,7 +1780,7 @@ class Pygit2(GitProvider):
         self.gitdir = salt.utils.path.join(self.repo.workdir, ".git")
         self.enforce_git_config()
         git_config = os.path.join(self.gitdir, "config")
-        if os.path.exists(git_config) and PYGIT2_VERSION >= _LooseVersion("0.28.0"):
+        if os.path.exists(git_config) and PYGIT2_VERSION >= Version("0.28.0"):
             self.repo.config.add_file(git_config)
 
         return new
@@ -2057,7 +2057,7 @@ class Pygit2(GitProvider):
         """
         Assign attributes for pygit2 callbacks
         """
-        if PYGIT2_VERSION >= _LooseVersion("0.23.2"):
+        if PYGIT2_VERSION >= Version("0.23.2"):
             self.remotecallbacks = pygit2.RemoteCallbacks(credentials=self.credentials)
             if not self.ssl_verify:
                 # Override the certificate_check function with a lambda that

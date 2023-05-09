@@ -2,7 +2,6 @@ import logging
 
 import pytest
 
-import salt.config
 import salt.renderers.pyobjects as pyobjects
 from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock
@@ -10,28 +9,14 @@ from tests.support.mock import MagicMock
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture
-def cache_dir(tmp_path):
-    cachedir = tmp_path / "cachedir"
-    cachedir.mkdir()
-    return cachedir
-
-
-@pytest.fixture
-def minion_config(cache_dir):
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    opts["cachedir"] = str(cache_dir)
-    opts["file_client"] = "local"
-    opts["id"] = "testminion"
-    return opts
-
-
 @pytest.fixture()
-def configure_loader_modules(minion_config):
+def configure_loader_modules(minion_opts):
+    minion_opts["file_client"] = "local"
+    minion_opts["id"] = "testminion"
     pillar = MagicMock(return_value={})
     return {
         pyobjects: {
-            "__opts__": minion_config,
+            "__opts__": minion_opts,
             "__pillar__": pillar,
             "__salt__": {
                 "config.get": MagicMock(),

@@ -1,0 +1,1384 @@
+# Do not edit these workflows directly as the changes made will be overwritten.
+# Instead, edit the template '.github/workflows/templates/ci.yml.jinja'
+---
+name: CI
+run-name: "CI (${{ github.event_name == 'pull_request' && format('pr: #{0}', github.event.number) || format('{0}: {1}', startsWith(github.event.ref, 'refs/tags') && 'tag' || 'branch', github.ref_name) }})"
+on:
+  push: {}
+  pull_request: {}
+
+env:
+  COLUMNS: 190
+  CACHE_SEED: SEED-3  # Bump the number to invalidate all caches
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
+
+permissions:
+  contents: read  # for dorny/paths-filter to fetch a list of changed files
+  pull-requests: read  # for dorny/paths-filter to read pull requests
+
+concurrency:
+  # Concurrency is defined in a way that concurrent builds against branches do
+  # not cancel previous builds.
+  # However, for every new build against the same pull request source branch,
+  # all older builds against that same branch get canceled.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+
+  prepare-workflow:
+    name: Prepare Workflow Run
+    runs-on: ubuntu-latest
+    outputs:
+      jobs: ${{ steps.define-jobs.outputs.jobs }}
+      runners: ${{ steps.runner-types.outputs.runners }}
+      changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
+      pull-labels: ${{ steps.get-pull-labels.outputs.labels }}
+      testrun: ${{ steps.define-testrun.outputs.testrun }}
+      salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
+      cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
+      latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
+      releases: ${{ steps.get-salt-releases.outputs.releases }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full clone to also get the tags to get the right salt version
+
+      - name: Get Changed Files
+        if: ${{ github.event_name == 'pull_request'}}
+        id: changed-files
+        uses: dorny/paths-filter@v2
+        with:
+          token: ${{ github.token }}
+          list-files: json
+          filters: |
+            repo:
+              - added|modified:
+                - '**'
+            doc-requirements:
+              - added|modified: &doc_requirements
+                - requirements/static/ci/py3.*/docs.txt
+            lint-requirements:
+              - added|modified: &lint_requirements
+                - requirements/static/ci/py3.*/lint.txt
+            pkg_requirements:
+              - added|modified: &pkg_requirements
+                - requirements/static/pkg/py3.*/darwin.txt
+                - requirements/static/pkg/py3.*/linux.txt
+                - requirements/static/pkg/py3.*/freebsd.txt
+                - requirements/static/pkg/py3.*/windows.txt
+            test_requirements:
+              - added|modified: &test_requirements
+                - requirements/static/ci/py3.*/darwin.txt
+                - requirements/static/ci/py3.*/linux.txt
+                - requirements/static/ci/py3.*/freebsd.txt
+                - requirements/static/ci/py3.*/windows.txt
+                - requirements/static/ci/py3.*/darwin-crypto.txt
+                - requirements/static/ci/py3.*/linux-crypto.txt
+                - requirements/static/ci/py3.*/freebsd-crypto.txt
+                - requirements/static/ci/py3.*/windows-crypto.txt
+            deleted:
+              - deleted:
+                - '**'
+            docs:
+              - added|modified:
+                - doc/**
+                - *doc_requirements
+            workflows:
+              - added|modified:
+                - cicd/shared-gh-workflows-context.yml
+                - .github/actions/**/action.yml
+                - .github/workflows/*.yml
+                - .github/workflows/templates/*.yml.jinja2
+            salt:
+              - added|modified: &salt_added_modified
+                - setup.py
+                - noxfile.py
+                - salt/**/*.py
+                - tasks/**/*.py
+                - tools/**/*.py
+            tests:
+              - added|modified: &tests_added_modified
+                - tests/**/*.py
+            lint:
+              - added|modified:
+                - .pylintrc
+                - *lint_requirements
+            golden_images:
+              - added|modified:
+                - cicd/golden-images.json
+            pkg_tests:
+              - added|modified: &pkg_tests_added_modified
+                - pkg/**
+                - *pkg_requirements
+                - *salt_added_modified
+            testrun:
+              - added|modified:
+                - *pkg_requirements
+                - *test_requirements
+                - *salt_added_modified
+                - *tests_added_modified
+                - *pkg_tests_added_modified
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Pretty Print The GH Actions Event
+        run:
+          tools ci print-gh-event
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: ""
+          validate-version: true
+
+      - name: Get Pull Number
+        if: ${{ github.event_name == 'pull_request' }}
+        id: get-pull-number
+        uses: ./.github/actions/get-pull-number
+        with:
+          owner: ${{ github.repository_owner }}
+          repo: ${{ github.event.repository.name }}
+          sha: ${{ github.sha }}
+          pull-number: ${{ github.event.pull_request.number }}
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get Pull Request
+        if: ${{ github.event_name == 'pull_request' }}
+        id: get-pull-request
+        uses: ./.github/actions/get-pull-request
+        with:
+          owner: ${{ github.repository_owner }}
+          repo: ${{ github.event.repository.name }}
+          pull-number: ${{ steps.get-pull-number.outputs.number }}
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get Pull Labels
+        if: ${{ github.event_name == 'pull_request' }}
+        id: get-pull-labels
+        uses: ./.github/actions/get-pull-labels
+        with:
+          pull-request: ${{ steps.get-pull-request.outputs.pull-request }}
+
+      - name: Write Changed Files To A Local File
+        run:
+          echo '${{ toJSON(steps.changed-files.outputs) }}' > changed-files.json
+
+      - name: Check Local Changed Files Contents
+        if: ${{ github.event_name == 'pull_request' }}
+        run:
+          cat changed-files.json
+
+      - name: Process Changed Files
+        id: process-changed-files
+        run: |
+          tools ci process-changed-files ${{ github.event_name }} changed-files.json
+
+      - name: Check Collected Changed Files
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          echo '${{ steps.process-changed-files.outputs.changed-files }}' | jq -C '.'
+
+      - name: Define Runner Types
+        id: runner-types
+        run: |
+          tools ci runner-types ${{ github.event_name }}
+
+      - name: Check Defined Runners
+        run: |
+          echo '${{ steps.runner-types.outputs.runners }}' | jq -C '.'
+
+      - name: Define Jobs
+        id: define-jobs
+        run: |
+          tools ci define-jobs ${{ github.event_name }} changed-files.json
+
+      - name: Check Defined Jobs
+        run: |
+          echo '${{ steps.define-jobs.outputs.jobs }}' | jq -C '.'
+
+      - name: Get Salt Releases
+        id: get-salt-releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci get-releases
+
+      - name: Check Salt Releases
+        run: |
+          echo '${{ steps.get-salt-releases.outputs.latest-release }}' | jq -C '.'
+          echo '${{ steps.get-salt-releases.outputs.releases }}' | jq -C '.'
+
+      - name: Define Testrun
+        id: define-testrun
+        run: |
+          tools ci define-testrun ${{ github.event_name }} changed-files.json
+
+      - name: Check Defined Test Run
+        run: |
+          echo '${{ steps.define-testrun.outputs.testrun }}' | jq -C '.'
+
+      - name: Check Contents of generated testrun-changed-files.txt
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
+        run: |
+          cat testrun-changed-files.txt || true
+
+      - name: Upload testrun-changed-files.txt
+        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['type'] != 'full' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: testrun-changed-files.txt
+          path: testrun-changed-files.txt
+
+      - name: Set Cache Seed Output
+        id: set-cache-seed
+        run: |
+          echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
+  pre-commit:
+    name: Pre-Commit
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    uses: ./.github/workflows/pre-commit-action.yml
+    needs:
+      - prepare-workflow
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+      pre-commit-version: "3.0.4"
+
+  lint:
+    name: Lint
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['lint'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    uses: ./.github/workflows/lint-action.yml
+    needs:
+      - prepare-workflow
+    with:
+      changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
+
+  prepare-release:
+    name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['prepare-release'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    runs-on:
+      - ubuntu-latest
+    needs:
+      - prepare-workflow
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Get Python Version
+        id: get-python-version
+        uses: ./.github/actions/get-python-version
+        with:
+          python-binary: python3
+
+      - name: Setup Python Tools Scripts
+        id: python-tools-scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Cache Python Tools Docs Virtualenv
+        uses: actions/cache@v3
+        with:
+          path: .tools-venvs/docs
+          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|docs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/docs.txt') }}
+
+      - name: Cache Python Tools Changelog Virtualenv
+        uses: actions/cache@v3
+        with:
+          path: .tools-venvs/changelog
+          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|changelog|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/changelog.txt') }}
+
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+      - name: Update Debian changelog
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools changelog update-deb --draft
+          tools changelog update-deb
+
+      - name: Update RPM changelog
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools changelog update-rpm --draft
+          tools changelog update-rpm
+
+      - name: Update Release Notes
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools changelog update-release-notes --draft
+          tools changelog update-release-notes
+
+      - name: Generate MAN Pages
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        env:
+          LATEST_RELEASE: "${{ needs.prepare-workflow.outputs.salt-version }}"
+          SALT_ON_SALTSTACK: "1"
+        run: |
+          tools docs man
+
+      - name: Update Changelog
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools changelog update-changelog-md --draft
+          tools changelog update-changelog-md
+
+      - name: Show Changes Diff
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          git diff --color
+
+      - name: Configure Git
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          git config --global user.name "Salt Project Packaging"
+          git config --global user.email saltproject-packaging@vmware.com
+
+      - name: Setup Pre-Commit
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        uses: ./.github/actions/setup-pre-commit
+        with:
+          version: "3.0.4"
+          cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+      - name: Commit Changes
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        env:
+          SKIP: lint-salt,lint-tests
+        run: |
+          # Run it twice so that pre-commit can fix anything that can be automatically fixed.
+          git commit -am "Release v${{ needs.prepare-workflow.outputs.salt-version }}" || \
+            git commit -am "Release v${{ needs.prepare-workflow.outputs.salt-version }}"
+
+      - name: Create release changes patch
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          git format-patch --keep-subject --binary --stdout HEAD^ > salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+
+      - name: Upload Changes Diff Artifact
+        uses: actions/upload-artifact@v3
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          path: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          retention-days: 7
+          if-no-files-found: error
+
+  build-docs:
+    name: Documentation
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-docs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-source-tarball
+    uses: ./.github/workflows/build-docs.yml
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+  build-source-tarball:
+    name: Build Source Tarball
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-source-tarball'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    needs:
+      - prepare-workflow
+      - prepare-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Get Python Version
+        id: get-python-version
+        uses: ./.github/actions/get-python-version
+        with:
+          python-binary: python3
+
+      - name: Setup Python Tools Scripts
+        id: python-tools-scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+      - name: Cache Python Tools Build Virtualenv
+        uses: actions/cache@v3
+        with:
+          path: .tools-venvs/build
+          key: ${{ needs.prepare-workflow.outputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|build|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/build.txt') }}
+
+      - name: Build Source Tarball
+        uses: ./.github/actions/build-source-tarball
+        with:
+          salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+  build-deps-onedir:
+    name: Build Dependencies Onedir
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-onedir'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+    uses: ./.github/workflows/build-deps-onedir.yml
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+      relenv-version: "0.12.3"
+      python-version-linux: "3.10.11"
+      python-version-macos: "3.10.11"
+      python-version-windows: "3.10.11"
+
+  build-salt-onedir:
+    name: Build Salt Onedir
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-salt-onedir'] }}
+    needs:
+      - prepare-workflow
+      - build-deps-onedir
+      - build-source-tarball
+    uses: ./.github/workflows/build-salt-onedir.yml
+    with:
+      cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+      github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+      relenv-version: "0.12.3"
+      python-version-linux: "3.10.11"
+      python-version-macos: "3.10.11"
+      python-version-windows: "3.10.11"
+
+  build-rpm-pkgs:
+    name: Build RPM Packages
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/build-rpm-packages.yml
+    with:
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+  build-deb-pkgs:
+    name: Build DEB Packages
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/build-deb-packages.yml
+    with:
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+  build-windows-pkgs:
+    name: Build Windows Packages
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/build-windows-packages.yml
+    with:
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+  build-macos-pkgs:
+    name: Build macOS Packages
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/build-macos-packages.yml
+    with:
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+  amazonlinux-2-pkg-tests:
+    name: Amazon Linux 2 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: amazonlinux-2
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  centos-7-pkg-tests:
+    name: CentOS 7 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: centos-7
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  centosstream-8-pkg-tests:
+    name: CentOS Stream 8 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: centosstream-8
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  centosstream-9-pkg-tests:
+    name: CentOS Stream 9 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: centosstream-9
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  debian-10-pkg-tests:
+    name: Debian 10 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-deb-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: debian-10
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  debian-11-pkg-tests:
+    name: Debian 11 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-deb-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: debian-11
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  debian-11-arm64-pkg-tests:
+    name: Debian 11 Arm64 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-deb-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: debian-11-arm64
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  photonos-3-pkg-tests:
+    name: Photon OS 3 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: photonos-3
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  photonos-4-pkg-tests:
+    name: Photon OS 4 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-rpm-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: photonos-4
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: rpm
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  ubuntu-2004-pkg-tests:
+    name: Ubuntu 20.04 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-deb-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: ubuntu-20.04
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  ubuntu-2004-arm64-pkg-tests:
+    name: Ubuntu 20.04 Arm64 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-deb-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: ubuntu-20.04-arm64
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  ubuntu-2204-pkg-tests:
+    name: Ubuntu 22.04 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-deb-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: ubuntu-22.04
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  ubuntu-2204-arm64-pkg-tests:
+    name: Ubuntu 22.04 Arm64 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-deb-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: ubuntu-22.04-arm64
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  macos-12-pkg-tests:
+    name: macOS 12 Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-macos-pkgs
+    uses: ./.github/workflows/test-packages-action-macos.yml
+    with:
+      distro-slug: macos-12
+      platform: darwin
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: macos
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  windows-2016-nsis-pkg-tests:
+    name: Windows 2016 NSIS Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-windows-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2016
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: NSIS
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  windows-2016-msi-pkg-tests:
+    name: Windows 2016 MSI Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-windows-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2016
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: MSI
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  windows-2019-nsis-pkg-tests:
+    name: Windows 2019 NSIS Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-windows-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2019
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: NSIS
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  windows-2019-msi-pkg-tests:
+    name: Windows 2019 MSI Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-windows-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2019
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: MSI
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  windows-2022-nsis-pkg-tests:
+    name: Windows 2022 NSIS Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-windows-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2022
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: NSIS
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  windows-2022-msi-pkg-tests:
+    name: Windows 2022 MSI Package Tests
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-windows-pkgs
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: windows-2022
+      platform: windows
+      arch: amd64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: MSI
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  windows-2016:
+    name: Windows 2016
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: windows-2016
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  windows-2019:
+    name: Windows 2019
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: windows-2019
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  windows-2022:
+    name: Windows 2022
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: windows-2022
+      nox-session: ci-test-onedir
+      platform: windows
+      arch: amd64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  macos-12:
+    name: macOS 12
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action-macos.yml
+    with:
+      distro-slug: macos-12
+      nox-session: ci-test-onedir
+      platform: darwin
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  almalinux-8:
+    name: Alma Linux 8
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: almalinux-8
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  almalinux-9:
+    name: Alma Linux 9
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: almalinux-9
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  amazonlinux-2:
+    name: Amazon Linux 2
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: amazonlinux-2
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  archlinux-lts:
+    name: Arch Linux LTS
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: archlinux-lts
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  centos-7:
+    name: CentOS 7
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: centos-7
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  centosstream-8:
+    name: CentOS Stream 8
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: centosstream-8
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  centosstream-9:
+    name: CentOS Stream 9
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: centosstream-9
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  debian-10:
+    name: Debian 10
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-10
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  debian-11:
+    name: Debian 11
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-11
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  debian-11-arm64:
+    name: Debian 11 Arm64
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-11-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  fedora-36:
+    name: Fedora 36
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: fedora-36
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  fedora-37:
+    name: Fedora 37
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: fedora-37
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  fedora-38:
+    name: Fedora 38
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: fedora-38
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  opensuse-15:
+    name: Opensuse 15
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: opensuse-15
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  photonos-3:
+    name: Photon OS 3
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: photonos-3
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  photonos-4:
+    name: Photon OS 4
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: photonos-4
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  ubuntu-2004:
+    name: Ubuntu 20.04
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-20.04
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  ubuntu-2004-arm64:
+    name: Ubuntu 20.04 Arm64
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-20.04-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  ubuntu-2204:
+    name: Ubuntu 22.04
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-22.04
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  ubuntu-2204-arm64:
+    name: Ubuntu 22.04 Arm64
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: ubuntu-22.04-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: ${{ github.event_name == 'pull_request' }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  set-pipeline-exit-status:
+    # This step is just so we can make github require this step, to pass checks
+    # on a pull request instead of requiring all
+    name: Set the ${{ github.workflow }} Pipeline Exit Status
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      - prepare-workflow
+      - pre-commit
+      - lint
+      - build-docs
+      - build-deps-onedir
+      - build-salt-onedir
+      - windows-2016
+      - windows-2019
+      - windows-2022
+      - macos-12
+      - almalinux-8
+      - almalinux-9
+      - amazonlinux-2
+      - archlinux-lts
+      - centos-7
+      - centosstream-8
+      - centosstream-9
+      - debian-10
+      - debian-11
+      - debian-11-arm64
+      - fedora-36
+      - fedora-37
+      - fedora-38
+      - opensuse-15
+      - photonos-3
+      - photonos-4
+      - ubuntu-2004
+      - ubuntu-2004-arm64
+      - ubuntu-2204
+      - ubuntu-2204-arm64
+      - amazonlinux-2-pkg-tests
+      - centos-7-pkg-tests
+      - centosstream-8-pkg-tests
+      - centosstream-9-pkg-tests
+      - debian-10-pkg-tests
+      - debian-11-pkg-tests
+      - debian-11-arm64-pkg-tests
+      - photonos-3-pkg-tests
+      - photonos-4-pkg-tests
+      - ubuntu-2004-pkg-tests
+      - ubuntu-2004-arm64-pkg-tests
+      - ubuntu-2204-pkg-tests
+      - ubuntu-2204-arm64-pkg-tests
+      - macos-12-pkg-tests
+      - windows-2016-nsis-pkg-tests
+      - windows-2016-msi-pkg-tests
+      - windows-2019-nsis-pkg-tests
+      - windows-2019-msi-pkg-tests
+      - windows-2022-nsis-pkg-tests
+      - windows-2022-msi-pkg-tests
+    steps:
+      - name: Get workflow information
+        id: get-workflow-info
+        uses: technote-space/workflow-conclusion-action@v3
+
+      - name: Set Pipeline Exit Status
+        shell: bash
+        run: |
+          if [ "${{ steps.get-workflow-info.outputs.conclusion }}" != "success" ]; then
+            exit 1
+          else
+            exit 0
+          fi
+
+      - name: Done
+        if: always()
+        run:
+          echo "All worflows finished"

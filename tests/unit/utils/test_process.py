@@ -4,7 +4,6 @@ import logging
 import multiprocessing
 import os
 import signal
-import sys
 import tempfile
 import threading
 import time
@@ -15,7 +14,7 @@ import salt._logging
 import salt.utils.platform
 import salt.utils.process
 from tests.support.mock import patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 HAS_PSUTIL = False
 try:
@@ -258,7 +257,7 @@ class TestProcessCallbacks(TestCase):
         ls3.assert_called()
 
 
-@skipIf(not HAS_PSUTIL, "Missing psutil")
+@pytest.mark.skipif(not HAS_PSUTIL, reason="Missing psutil")
 class TestSignalHandlingProcess(TestCase):
     @classmethod
     def Process(cls, pid):
@@ -315,7 +314,7 @@ class TestSignalHandlingProcess(TestCase):
         except KeyboardInterrupt:
             pass
 
-    @skipIf(sys.platform.startswith("win"), "No os.fork on Windows")
+    @pytest.mark.skip_on_windows(reason="No os.fork on Windows")
     @pytest.mark.slow_test
     def test_signal_processing_regression_test(self):
         evt = multiprocessing.Event()
@@ -345,7 +344,7 @@ class TestSignalHandlingProcess(TestCase):
         p.start()
         p.join()
 
-    @skipIf(sys.platform.startswith("win"), "Required signals not supported on windows")
+    @pytest.mark.skip_on_windows(reason="Required signals not supported on windows")
     @pytest.mark.slow_test
     def test_signal_processing_handle_signals_called(self):
         "Validate SignalHandlingProcess handles signals"
@@ -586,7 +585,7 @@ class CMORProcessHelper:
                 return
 
 
-@skipIf(not HAS_PSUTIL, "Missing psutil")
+@pytest.mark.skipif(not HAS_PSUTIL, reason="Missing psutil")
 class TestGetProcessInfo(TestCase):
     def setUp(self):
         handle, self.cmor_test_file_path = tempfile.mkstemp()
@@ -619,7 +618,7 @@ class TestGetProcessInfo(TestCase):
             self.assertIsNone(salt.utils.process.get_process_info(pid))
 
 
-@skipIf(not HAS_PSUTIL, "Missing psutil")
+@pytest.mark.skipif(not HAS_PSUTIL, reason="Missing psutil")
 class TestClaimMantleOfResponsibility(TestCase):
     def setUp(self):
         handle, self.cmor_test_file_path = tempfile.mkstemp()
@@ -663,7 +662,7 @@ class TestClaimMantleOfResponsibility(TestCase):
         )
 
 
-@skipIf(not HAS_PSUTIL, "Missing psutil")
+@pytest.mark.skipif(not HAS_PSUTIL, reason="Missing psutil")
 class TestCheckMantleOfResponsibility(TestCase):
     def setUp(self):
         handle, self.cmor_test_file_path = tempfile.mkstemp()

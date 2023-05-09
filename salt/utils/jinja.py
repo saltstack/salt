@@ -33,20 +33,20 @@ import salt.utils.yaml
 from salt.exceptions import TemplateError
 from salt.utils.decorators.jinja import jinja_filter, jinja_global, jinja_test
 from salt.utils.odict import OrderedDict
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 
 try:
     from markupsafe import Markup
 except ImportError:
     # jinja < 3.1
-    from jinja2 import Markup
+    from jinja2 import Markup  # pylint: disable=no-name-in-module
 
 log = logging.getLogger(__name__)
 
 __all__ = ["SaltCacheLoader", "SerializerExtension"]
 
 GLOBAL_UUID = uuid.UUID("91633EBF-1C86-5E33-935A-28061F4B480E")
-JINJA_VERSION = LooseVersion(jinja2.__version__)
+JINJA_VERSION = Version(jinja2.__version__)
 
 
 class SaltCacheLoader(BaseLoader):
@@ -57,19 +57,6 @@ class SaltCacheLoader(BaseLoader):
     Templates are cached like regular salt states
     and only loaded once per loader instance.
     """
-
-    _cached_pillar_client = None
-    _cached_client = None
-
-    @classmethod
-    def shutdown(cls):
-        for attr in ("_cached_client", "_cached_pillar_client"):
-            client = getattr(cls, attr, None)
-            if client is not None:
-                # PillarClient and LocalClient objects do not have a destroy method
-                if hasattr(client, "destroy"):
-                    client.destroy()
-                setattr(cls, attr, None)
 
     def __init__(
         self,
@@ -93,8 +80,7 @@ class SaltCacheLoader(BaseLoader):
         log.debug("Jinja search path: %s", self.searchpath)
         self.cached = []
         self._file_client = _file_client
-        # Instantiate the fileclient
-        self.file_client()
+        self._close_file_client = _file_client is None
 
     def file_client(self):
         """
@@ -108,18 +94,10 @@ class SaltCacheLoader(BaseLoader):
             or not hasattr(self._file_client, "opts")
             or self._file_client.opts["file_roots"] != self.opts["file_roots"]
         ):
-            attr = "_cached_pillar_client" if self.pillar_rend else "_cached_client"
-            cached_client = getattr(self, attr, None)
-            if (
-                cached_client is None
-                or not hasattr(cached_client, "opts")
-                or cached_client.opts["file_roots"] != self.opts["file_roots"]
-            ):
-                cached_client = salt.fileclient.get_file_client(
-                    self.opts, self.pillar_rend
-                )
-                setattr(SaltCacheLoader, attr, cached_client)
-            self._file_client = cached_client
+            self._file_client = salt.fileclient.get_file_client(
+                self.opts, self.pillar_rend
+            )
+            self._close_file_client = True
         return self._file_client
 
     def cache_file(self, template):
@@ -220,6 +198,27 @@ class SaltCacheLoader(BaseLoader):
 
         # there is no template file within searchpaths
         raise TemplateNotFound(template)
+
+    def destroy(self):
+        if self._close_file_client is False:
+            return
+        if self._file_client is None:
+            return
+        file_client = self._file_client
+        self._file_client = None
+
+        try:
+            file_client.destroy()
+        except AttributeError:
+            # PillarClient and LocalClient objects do not have a destroy method
+            pass
+
+    def __enter__(self):
+        self.file_client()
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
 
 class PrintableDict(OrderedDict):
@@ -728,12 +727,13 @@ def method_call(obj, f_name, *f_args, **f_kwargs):
 
 
 try:
-    contextfunction = jinja2.contextfunction
+    pass_context = jinja2.pass_context
 except AttributeError:
-    contextfunction = jinja2.pass_context
+    # Old and deprecated method
+    pass_context = jinja2.contextfunction
 
 
-@contextfunction
+@pass_context
 def show_full_context(ctx):
     return salt.utils.data.simple_types_filter(
         {key: value for key, value in ctx.items()}

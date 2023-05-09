@@ -863,10 +863,12 @@ def hypermedia_handler(*args, **kwargs):
         salt.exceptions.AuthorizationError,
         salt.exceptions.EauthAuthenticationError,
         salt.exceptions.TokenAuthenticationError,
-    ):
-        raise cherrypy.HTTPError(401)
-    except salt.exceptions.SaltInvocationError:
-        raise cherrypy.HTTPError(400)
+    ) as e:
+        logger.error(e.message)
+        raise cherrypy.HTTPError(401, e.message)
+    except salt.exceptions.SaltInvocationError as e:
+        logger.error(e.message)
+        raise cherrypy.HTTPError(400, e.message)
     except (
         salt.exceptions.SaltDaemonNotRunning,
         salt.exceptions.SaltReqTimeoutError,
@@ -1903,6 +1905,8 @@ class Login(LowDataAdapter):
             eauth = self.opts.get("external_auth", {}).get(token["eauth"], {})
 
             if token["eauth"] == "django" and "^model" in eauth:
+                perms = token["auth_list"]
+            elif token["eauth"] == "rest" and "auth_list" in token:
                 perms = token["auth_list"]
             else:
                 perms = salt.netapi.sum_permissions(token, eauth)

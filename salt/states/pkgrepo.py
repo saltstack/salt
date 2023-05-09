@@ -351,7 +351,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     allow_insecure_key : True
         Whether to allow an insecure (e.g. http vs. https) key_url.
 
-        .. versionadded:: 3006
+        .. versionadded:: 3006.0
     """
     if not salt.utils.path.which("apt-key"):
         aptkey = False
@@ -474,13 +474,10 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         from salt.modules.aptpkg import _expand_repo_def
 
         os_name = __grains__["os"]
-        lsb_distrib_codename = __grains__["lsb_distrib_codename"]
+        os_codename = __grains__["oscodename"]
 
         sanitizedkwargs = _expand_repo_def(
-            os_name=os_name,
-            lsb_distrib_codename=lsb_distrib_codename,
-            repo=repo,
-            **kwargs
+            os_name=os_name, os_codename=os_codename, repo=repo, **kwargs
         )
     else:
         sanitizedkwargs = kwargs

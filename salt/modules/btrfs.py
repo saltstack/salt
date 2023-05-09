@@ -1222,6 +1222,9 @@ def subvolume_snapshot(source, dest=None, name=None, read_only=False):
     cmd = ["btrfs", "subvolume", "snapshot"]
     if read_only:
         cmd.append("-r")
+
+    cmd.append(source)
+
     if dest and not name:
         cmd.append(dest)
     if dest and name:

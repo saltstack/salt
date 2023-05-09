@@ -1,7 +1,6 @@
 import logging
 import os
 from datetime import datetime, timedelta
-from types import SimpleNamespace
 
 import pytest
 
@@ -11,7 +10,7 @@ import salt.utils.json
 import salt.utils.platform
 import salt.utils.win_functions
 import salt.utils.yaml
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, PropertyMock, patch
 
 log = logging.getLogger(__name__)
 
@@ -33,11 +32,33 @@ def test__tidied():
     ]
     today_delta = datetime.today() - datetime.utcfromtimestamp(0)
     remove = MagicMock(name="file.remove")
+
+    mystat = MagicMock()
+    mystat.st_atime = today_delta.total_seconds()
+    # dir = 16877
+    # file = 33188
+    mock_st_mode = PropertyMock(
+        side_effect=[
+            33188,
+            33188,
+            16877,
+            33188,
+            16877,
+            16877,
+            33188,
+            33188,
+            16877,
+            33188,
+            16877,
+            16877,
+        ]
+    )
+    type(mystat).st_mode = mock_st_mode
+    mystat.st_size = 10
+
     with patch("os.walk", return_value=walker), patch(
         "os.path.islink", return_value=False
-    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
-        "os.path.getsize", return_value=10
-    ), patch.dict(
+    ), patch("os.stat", return_value=mystat), patch.dict(
         filestate.__opts__, {"test": False}
     ), patch.dict(
         filestate.__salt__, {"file.remove": remove}
@@ -57,15 +78,15 @@ def test__tidied():
         "result": True,
         "comment": "Removed 3 files or directories from directory {}".format(name),
     }
-    assert exp == ret
+    assert ret == exp
     assert remove.call_count == 3
 
     remove.reset_mock()
+    mock_st_mode.reset_mock()
+
     with patch("os.walk", return_value=walker), patch(
         "os.path.islink", return_value=False
-    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
-        "os.path.getsize", return_value=10
-    ), patch.dict(
+    ), patch("os.stat", return_value=mystat), patch.dict(
         filestate.__opts__, {"test": False}
     ), patch.dict(
         filestate.__salt__, {"file.remove": remove}
@@ -88,7 +109,7 @@ def test__tidied():
         "result": True,
         "comment": "Removed 6 files or directories from directory {}".format(name),
     }
-    assert exp == ret
+    assert ret == exp
     assert remove.call_count == 6
 
 
@@ -120,12 +141,41 @@ def test_tidied_with_exclude():
         ("test", ["test1", "test2"], ["file3"]),
     ]
     today_delta = datetime.today() - datetime.utcfromtimestamp(0)
+
+    mystat = MagicMock()
+    mystat.st_atime = today_delta.total_seconds()
+    # dir = 16877
+    # file = 33188
+    mock_st_mode = PropertyMock(
+        side_effect=[
+            33188,
+            33188,
+            16877,
+            33188,
+            16877,
+            16877,
+            33188,
+            33188,
+            16877,
+            33188,
+            16877,
+            16877,
+            33188,
+            33188,
+            16877,
+            33188,
+            16877,
+            16877,
+        ]
+    )
+    type(mystat).st_mode = mock_st_mode
+    mystat.st_size = 10
+
     remove = MagicMock(name="file.remove")
+
     with patch("os.walk", return_value=walker), patch(
         "os.path.islink", return_value=False
-    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
-        "os.path.getsize", return_value=10
-    ), patch.dict(
+    ), patch("os.stat", return_value=mystat), patch.dict(
         filestate.__opts__, {"test": False}
     ), patch.dict(
         filestate.__salt__, {"file.remove": remove}
@@ -144,15 +194,13 @@ def test_tidied_with_exclude():
         "result": True,
         "comment": "Removed 2 files or directories from directory {}".format(name),
     }
-    assert exp == ret
+    assert ret == exp
     assert remove.call_count == 2
 
     remove.reset_mock()
     with patch("os.walk", return_value=walker), patch(
         "os.path.islink", return_value=False
-    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
-        "os.path.getsize", return_value=10
-    ), patch.dict(
+    ), patch("os.stat", return_value=mystat), patch.dict(
         filestate.__opts__, {"test": False}
     ), patch.dict(
         filestate.__salt__, {"file.remove": remove}
@@ -174,15 +222,13 @@ def test_tidied_with_exclude():
         "result": True,
         "comment": "Removed 5 files or directories from directory {}".format(name),
     }
-    assert exp == ret
+    assert ret == exp
     assert remove.call_count == 5
 
     remove.reset_mock()
     with patch("os.walk", return_value=walker), patch(
         "os.path.islink", return_value=False
-    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
-        "os.path.getsize", return_value=10
-    ), patch.dict(
+    ), patch("os.stat", return_value=mystat), patch.dict(
         filestate.__opts__, {"test": False}
     ), patch.dict(
         filestate.__salt__, {"file.remove": remove}
@@ -212,7 +258,7 @@ def test_tidied_with_exclude():
         "result": True,
         "comment": "Removed 6 files or directories from directory {}".format(name),
     }
-    assert exp == ret
+    assert ret == exp
     assert remove.call_count == 6
 
 
@@ -227,12 +273,41 @@ def test_tidied_with_full_path_exclude():
         ("test", ["test1", "test2"], ["file3"]),
     ]
     today_delta = datetime.today() - datetime.utcfromtimestamp(0)
+
+    mystat = MagicMock()
+    mystat.st_atime = today_delta.total_seconds()
+    # dir = 16877
+    # file = 33188
+    mock_st_mode = PropertyMock(
+        side_effect=[
+            33188,
+            33188,
+            16877,
+            33188,
+            16877,
+            16877,
+            33188,
+            33188,
+            16877,
+            33188,
+            16877,
+            16877,
+            33188,
+            33188,
+            16877,
+            33188,
+            16877,
+            16877,
+        ]
+    )
+    type(mystat).st_mode = mock_st_mode
+    mystat.st_size = 10
+
     remove = MagicMock(name="file.remove")
+
     with patch("os.walk", return_value=walker), patch(
         "os.path.islink", return_value=False
-    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
-        "os.path.getsize", return_value=10
-    ), patch.dict(
+    ), patch("os.stat", return_value=mystat), patch.dict(
         filestate.__opts__, {"test": False}
     ), patch.dict(
         filestate.__salt__, {"file.remove": remove}
@@ -255,15 +330,13 @@ def test_tidied_with_full_path_exclude():
         "result": True,
         "comment": "Removed 2 files or directories from directory {}".format(name),
     }
-    assert exp == ret
+    assert ret == exp
     assert remove.call_count == 2
 
     remove.reset_mock()
     with patch("os.walk", return_value=walker), patch(
         "os.path.islink", return_value=False
-    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
-        "os.path.getsize", return_value=10
-    ), patch.dict(
+    ), patch("os.stat", return_value=mystat), patch.dict(
         filestate.__opts__, {"test": False}
     ), patch.dict(
         filestate.__salt__, {"file.remove": remove}
@@ -290,15 +363,13 @@ def test_tidied_with_full_path_exclude():
         "result": True,
         "comment": "Removed 5 files or directories from directory {}".format(name),
     }
-    assert exp == ret
+    assert ret == exp
     assert remove.call_count == 5
 
     remove.reset_mock()
     with patch("os.walk", return_value=walker), patch(
         "os.path.islink", return_value=False
-    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
-        "os.path.getsize", return_value=10
-    ), patch.dict(
+    ), patch("os.stat", return_value=mystat), patch.dict(
         filestate.__opts__, {"test": False}
     ), patch.dict(
         filestate.__salt__, {"file.remove": remove}
@@ -326,7 +397,7 @@ def test_tidied_with_full_path_exclude():
         "result": True,
         "comment": "Removed 6 files or directories from directory {}".format(name),
     }
-    assert exp == ret
+    assert ret == exp
     assert remove.call_count == 6
 
 
@@ -382,12 +453,29 @@ def test_tidied_age_size_args_AND_operator_age_not_size_age_only():
         ("test", ["test1", "test2"], ["file3"]),
     ]
     today_delta = (datetime.today() - timedelta(days=14)) - datetime.utcfromtimestamp(0)
+
+    mystat = MagicMock()
+    mystat.st_atime = today_delta.total_seconds()
+    # dir = 16877
+    # file = 33188
+    mock_st_mode = PropertyMock(
+        side_effect=[
+            33188,
+            33188,
+            16877,
+            33188,
+            16877,
+            16877,
+        ]
+    )
+    type(mystat).st_mode = mock_st_mode
+    mystat.st_size = 10
+
     remove = MagicMock(name="file.remove")
+
     with patch("os.walk", return_value=walker), patch(
         "os.path.islink", return_value=False
-    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
-        "os.path.getsize", return_value=10
-    ), patch.dict(
+    ), patch("os.stat", return_value=mystat), patch.dict(
         filestate.__opts__, {"test": False}
     ), patch.dict(
         filestate.__salt__, {"file.remove": remove}
@@ -470,12 +558,29 @@ def test_tidied_age_size_args_AND_operator_size_not_age_size_only():
         ("test", ["test1", "test2"], ["file3"]),
     ]
     today_delta = (datetime.today() - timedelta(days=14)) - datetime.utcfromtimestamp(0)
+
+    mystat = MagicMock()
+    mystat.st_atime = today_delta.total_seconds()
+    # dir = 16877
+    # file = 33188
+    mock_st_mode = PropertyMock(
+        side_effect=[
+            33188,
+            33188,
+            16877,
+            33188,
+            16877,
+            16877,
+        ]
+    )
+    type(mystat).st_mode = mock_st_mode
+    mystat.st_size = 10
+
     remove = MagicMock(name="file.remove")
+
     with patch("os.walk", return_value=walker), patch(
         "os.path.islink", return_value=False
-    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
-        "os.path.getsize", return_value=10
-    ), patch.dict(
+    ), patch("os.stat", return_value=mystat), patch.dict(
         filestate.__opts__, {"test": False}
     ), patch.dict(
         filestate.__salt__, {"file.remove": remove}
@@ -517,12 +622,29 @@ def test_tidied_age_size_args_AND_operator_size_and_age():
         ("test", ["test1", "test2"], ["file3"]),
     ]
     today_delta = (datetime.today() - timedelta(days=14)) - datetime.utcfromtimestamp(0)
+
+    mystat = MagicMock()
+    mystat.st_atime = today_delta.total_seconds()
+    # dir = 16877
+    # file = 33188
+    mock_st_mode = PropertyMock(
+        side_effect=[
+            33188,
+            33188,
+            16877,
+            33188,
+            16877,
+            16877,
+        ]
+    )
+    type(mystat).st_mode = mock_st_mode
+    mystat.st_size = 10
+
     remove = MagicMock(name="file.remove")
+
     with patch("os.walk", return_value=walker), patch(
         "os.path.islink", return_value=False
-    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
-        "os.path.getsize", return_value=10
-    ), patch.dict(
+    ), patch("os.stat", return_value=mystat), patch.dict(
         filestate.__opts__, {"test": False}
     ), patch.dict(
         filestate.__salt__, {"file.remove": remove}
@@ -592,14 +714,34 @@ def test_tidied_rmlinks():
         ("test", ["test1", "test2"], ["file3"]),
     ]
     today_delta = (datetime.today() - timedelta(days=14)) - datetime.utcfromtimestamp(0)
-    mock_lstat = MagicMock(return_value=SimpleNamespace(st_atime=today_delta))
+
+    mystat = MagicMock()
+    mystat.st_atime = today_delta.total_seconds()
+    # dir = 16877
+    # file = 33188
+    mock_st_mode = PropertyMock(
+        side_effect=[
+            33188,
+            16877,
+            33188,
+            16877,
+            16877,
+        ]
+    )
+    type(mystat).st_mode = mock_st_mode
+    mystat.st_size = 10
+
+    mylstat = MagicMock()
+    mylstat.st_atime = today_delta.total_seconds()
+    mylstat.st_mode = 33188
+    mylstat.st_size = 10
+
     remove = MagicMock(name="file.remove")
+
     with patch("os.walk", return_value=walker), patch(
         "os.path.islink", side_effect=[False, True, False, False, False, False]
-    ), patch("os.path.getatime", return_value=today_delta.total_seconds()), patch(
-        "os.lstat", return_value=mock_lstat
-    ), patch(
-        "os.path.getsize", return_value=10
+    ), patch("os.lstat", return_value=mylstat), patch(
+        "os.stat", return_value=mystat
     ), patch.dict(
         filestate.__opts__, {"test": False}
     ), patch.dict(

@@ -3,6 +3,7 @@ import time
 import pytest
 
 import salt.master
+import salt.utils.platform
 from tests.support.mock import patch
 
 
@@ -20,7 +21,39 @@ def encrypted_requests(tmp_path):
     )
 
 
+def test_maintenance_duration():
+    """
+    Validate Maintenance process duration.
+    """
+    opts = {
+        "loop_interval": 10,
+        "maintenance_interval": 1,
+        "cachedir": "/tmp",
+        "sock_dir": "/tmp",
+        "maintenance_niceness": 1,
+        "key_cache": "sched",
+        "conf_file": "",
+        "master_job_cache": "",
+        "pki_dir": "/tmp",
+        "eauth_tokens": "",
+    }
+    mp = salt.master.Maintenance(opts)
+    with patch("salt.utils.verify.check_max_open_files") as check_files, patch.object(
+        mp, "handle_key_cache"
+    ) as handle_key_cache, patch("salt.daemons") as salt_daemons, patch.object(
+        mp, "handle_git_pillar"
+    ) as handle_git_pillar:
+        mp.run()
+    assert salt_daemons.masterapi.clean_old_jobs.called
+    assert salt_daemons.masterapi.clean_expired_tokens.called
+    assert salt_daemons.masterapi.clean_pub_auth.called
+    assert handle_git_pillar.called
+
+
 def test_fileserver_duration():
+    """
+    Validate Fileserver process duration.
+    """
     with patch("salt.master.FileserverUpdate._do_update") as update:
         start = time.time()
         salt.master.FileserverUpdate.update(1, {}, 1)
@@ -29,7 +62,11 @@ def test_fileserver_duration():
         # one time.
         update.called_once()
         # Timeout is 1 second
-        assert 2 > end - start > 1
+        duration = end - start
+        if duration > 2 and salt.utils.platform.spawning_platform():
+            # Give spawning platforms some slack
+            duration = round(duration, 1)
+        assert 2 > duration > 1
 
 
 @pytest.mark.parametrize(

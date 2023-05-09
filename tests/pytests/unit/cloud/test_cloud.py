@@ -1,20 +1,17 @@
-import copy
-
 import pytest
 
-import salt.config
 from salt.cloud import Cloud
+from salt.exceptions import SaltCloudSystemExit
 from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
-def master_config():
-    opts = copy.deepcopy(salt.config.DEFAULT_MASTER_OPTS)
-    opts["parallel"] = False
-    opts["providers"] = {
+def master_config(master_opts):
+    master_opts["parallel"] = False
+    master_opts["providers"] = {
         "test": {},
     }
-    return opts
+    return master_opts
 
 
 @pytest.fixture
@@ -125,5 +122,27 @@ def test_vm_config_merger():
         "size": "t2.micro",
         "name": "test_vm",
     }
-    vm = salt.cloud.Cloud.vm_config("test_vm", main, provider, profile, {})
+    vm = Cloud.vm_config("test_vm", main, provider, profile, {})
     assert expected == vm
+
+
+def test_cloud_run_profile_create_returns_boolean(master_config):
+
+    master_config["profiles"] = {"test_profile": {"provider": "test_provider:saltify"}}
+    master_config["providers"] = {
+        "test_provider": {
+            "saltify": {"profiles": {"provider": "test_provider:saltify"}}
+        }
+    }
+    master_config["show_deploy_args"] = False
+
+    cloud = Cloud(master_config)
+    with patch.object(cloud, "create", return_value=True):
+        ret = cloud.run_profile("test_profile", ["test_vm"])
+        assert ret == {"test_vm": True}
+
+    cloud = Cloud(master_config)
+    with patch.object(cloud, "create", return_value=False):
+        with pytest.raises(SaltCloudSystemExit):
+            ret = cloud.run_profile("test_profile", ["test_vm"])
+            assert ret == {"test_vm": False}

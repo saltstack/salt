@@ -31,7 +31,7 @@ def configure_loader_modules(tmp_cache_dir):
         local_cache: {
             "__opts__": {
                 "cachedir": str(tmp_cache_dir),
-                "keep_jobs": 1,
+                "keep_jobs_seconds": 3600,
             },
         }
     }
@@ -96,9 +96,9 @@ def test_clean_old_jobs_empty_jid_dir_removed(make_tmp_jid_dirs, tmp_jid_dir):
     # Make sure there are no files in the directory before continuing
     assert jid_file is None
 
-    # Call clean_old_jobs function, patching the keep_jobs value with a
-    # very small value to force the call to clean the job.
-    with patch.dict(local_cache.__opts__, {"keep_jobs": 0.00000001}):
+    # Call clean_old_jobs function, patching the keep_jobs_seconds value
+    # with a very small value to force the call to clean the job.
+    with patch.dict(local_cache.__opts__, {"keep_jobs_seconds": 0.00000001}):
         # Sleep on Windows because time.time is only precise to 3 decimal
         # points, and therefore subtracting the jid_ctime from time.time
         # will result in a negative number
@@ -113,7 +113,7 @@ def test_clean_old_jobs_empty_jid_dir_removed(make_tmp_jid_dirs, tmp_jid_dir):
 def test_clean_old_jobs_empty_jid_dir_remains(make_tmp_jid_dirs, tmp_jid_dir):
     """
     Tests that an empty JID dir is NOT removed because it was created within
-    the keep_jobs time frame.
+    the keep_jobs_seconds time frame.
     """
     # Create temp job cache dir without files in it.
     jid_dir, jid_file = make_tmp_jid_dirs(create_files=False)
@@ -130,7 +130,7 @@ def test_clean_old_jobs_empty_jid_dir_remains(make_tmp_jid_dirs, tmp_jid_dir):
     else:
         jid_dir_name = jid_dir.rpartition("/")[2]
 
-    # Assert the JID directory is still present to be cleaned after keep_jobs interval
+    # Assert the JID directory is still present to be cleaned after keep_jobs_seconds interval
     assert [jid_dir_name] == os.listdir(tmp_jid_dir)
 
 
@@ -176,9 +176,9 @@ def test_clean_old_jobs_jid_file_is_cleaned(make_tmp_jid_dirs, tmp_jid_dir):
     jid_dir_name = jid_file.rpartition(os.sep)[2]
     assert jid_dir_name == "jid"
 
-    # Call clean_old_jobs function, patching the keep_jobs value with a
+    # Call clean_old_jobs function, patching the keep_jobs_seconds value with a
     # very small value to force the call to clean the job.
-    with patch.dict(local_cache.__opts__, {"keep_jobs": 0.00000001}):
+    with patch.dict(local_cache.__opts__, {"keep_jobs_seconds": 0.00000001}):
         # Sleep on Windows because time.time is only precise to 3 decimal
         # points, and therefore subtracting the jid_ctime from time.time
         # will result in a negative number

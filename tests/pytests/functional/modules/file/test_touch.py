@@ -2,8 +2,6 @@
 Tests for file.touch function
 """
 
-import os
-
 import pytest
 
 from salt.exceptions import SaltInvocationError
@@ -24,7 +22,7 @@ def test_touch(file, tmp_path):
     """
     target = tmp_path / "test.file"
     file.touch(str(target))
-    assert os.path.exists(target)
+    assert target.exists()
 
 
 def test_touch_error_atime(file, tmp_path):
@@ -53,7 +51,7 @@ def test_touch_atime(file, tmp_path):
     """
     target = tmp_path / "test.file"
     file.touch(str(target), atime=123)
-    assert os.stat(str(target)).st_atime == 123
+    assert target.stat().st_atime == 123
 
 
 def test_touch_atime_zero(file, tmp_path):
@@ -62,7 +60,7 @@ def test_touch_atime_zero(file, tmp_path):
     """
     target = tmp_path / "test.file"
     file.touch(str(target), atime=0)
-    assert os.stat(str(target)).st_atime == 0
+    assert target.stat().st_atime == 0
 
 
 def test_touch_mtime(file, tmp_path):
@@ -71,7 +69,7 @@ def test_touch_mtime(file, tmp_path):
     """
     target = tmp_path / "test.file"
     file.touch(str(target), mtime=234)
-    assert os.stat(str(target)).st_mtime == 234
+    assert target.stat().st_mtime == 234
 
 
 def test_touch_mtime_zero(file, tmp_path):
@@ -80,7 +78,7 @@ def test_touch_mtime_zero(file, tmp_path):
     """
     target = tmp_path / "test.file"
     file.touch(str(target), mtime=0)
-    assert os.stat(str(target)).st_mtime == 0
+    assert target.stat().st_mtime == 0
 
 
 def test_touch_atime_mtime(file, tmp_path):
@@ -89,5 +87,5 @@ def test_touch_atime_mtime(file, tmp_path):
     """
     target = tmp_path / "test.file"
     file.touch(str(target), atime=456, mtime=789)
-    assert os.stat(str(target)).st_atime == 456
-    assert os.stat(str(target)).st_mtime == 789
+    assert target.stat().st_atime == 456
+    assert target.stat().st_mtime == 789

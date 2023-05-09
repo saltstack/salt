@@ -4,6 +4,7 @@ import os
 import pathlib
 import shutil
 import sys
+from sysconfig import get_path
 
 import _pytest._version
 import attr
@@ -11,11 +12,6 @@ import pytest
 
 import salt.utils.files
 from tests.conftest import CODE_DIR
-
-try:
-    from sysconfig import get_python_lib  # pylint: disable=no-name-in-module
-except ImportError:
-    from distutils.sysconfig import get_python_lib
 
 PYTEST_GE_7 = getattr(_pytest._version, "version_tuple", (-1, -1)) >= (7, 0)
 
@@ -25,6 +21,7 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.destructive_test,
     pytest.mark.skip_if_not_root,
+    pytest.mark.slow_test,
 ]
 
 
@@ -139,7 +136,9 @@ def system_aptsources(request, grains):
                     "{}".format(*sys.version_info),
                     "{}.{}".format(*sys.version_info),
                 ]
-                session_site_packages_dir = get_python_lib()
+                session_site_packages_dir = get_path(
+                    "purelib"
+                )  # note: platlib and purelib could differ
                 session_site_packages_dir = os.path.relpath(
                     session_site_packages_dir, str(CODE_DIR)
                 )
@@ -622,7 +621,7 @@ class Repo:
         """
         if (
             self.grains["osfullname"] == "Ubuntu"
-            and self.grains["lsb_distrib_release"] == "22.04"
+            and self.grains["osrelease"] == "22.04"
         ):
             return True
         return False
@@ -659,7 +658,7 @@ class Repo:
                 )
             repo_content = "deb {opts} https://repo.saltproject.io/py3/{}/{}/{arch}/latest {} main".format(
                 self.fullname,
-                self.grains["lsb_distrib_release"],
+                self.grains["osrelease"],
                 self.grains["oscodename"],
                 arch=self.grains["osarch"],
                 opts=opts,
@@ -669,7 +668,7 @@ class Repo:
     @key_url.default
     def _default_key_url(self):
         key_url = "https://repo.saltproject.io/py3/{}/{}/{}/latest/salt-archive-keyring.gpg".format(
-            self.fullname, self.grains["lsb_distrib_release"], self.grains["osarch"]
+            self.fullname, self.grains["osrelease"], self.grains["osarch"]
         )
 
         if self.alt_repo:

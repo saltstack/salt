@@ -4,17 +4,19 @@ Test utility methods that communicate with SMB shares.
 import getpass
 import logging
 import os
+import shutil
 import signal
 import subprocess
 import tempfile
 import time
+
+import pytest
 
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.smb
 from tests.support.case import TestCase
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 CONFIG = (
@@ -54,23 +56,10 @@ TBE = (
 IPV6_ENABLED = bool(salt.utils.network.ip_addrs6(include_loopback=True))
 
 
-def which_smbd():
-    """
-    Find the smbd executable and cache the result if it exits.
-    """
-    if hasattr(which_smbd, "cached_result"):
-        return which_smbd.cached_result
-    smbd = salt.utils.path.which("smbd")
-    if smbd:
-        which_smbd.cached_result = smbd
-    return smbd
-
-
-@skipIf(not which_smbd(), reason="smbd binary not found")
-@skipIf(
-    not salt.utils.smb.HAS_SMBPROTOCOL,
-    '"smbprotocol" needs to be installed.',
+@pytest.mark.skipif(
+    not salt.utils.smb.HAS_SMBPROTOCOL, reason='"smbprotocol" needs to be installed.'
 )
+@pytest.mark.skip_if_binaries_missing("smbd")
 class TestSmb(TestCase):
 
     _smbd = None
@@ -107,7 +96,9 @@ class TestSmb(TestCase):
                     user=cls.username,
                 )
             )
-        cls._smbd = subprocess.Popen([which_smbd(), "-FS", "-P0", "-s", samba_conf])
+        cls._smbd = subprocess.Popen(
+            [shutil.which("smbd"), "-FS", "-P0", "-s", samba_conf]
+        )
         time.sleep(1)
         pidfile = os.path.join(cls.samba_dir, "smbd.pid")
         with salt.utils.files.fopen(pidfile, "r") as fp:
@@ -141,7 +132,7 @@ class TestSmb(TestCase):
             result = fp.read()
         assert result == content
 
-    @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    @pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
     def test_write_file_ipv6(self):
         """
         Transfer a file over SMB
@@ -180,7 +171,7 @@ class TestSmb(TestCase):
             result = fp.read()
         assert result == content
 
-    @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    @pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
     def test_write_str_v6(self):
         """
         Write a string to a file over SMB
@@ -215,7 +206,7 @@ class TestSmb(TestCase):
 
         assert not os.path.exists(share_path)
 
-    @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    @pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
     def test_delete_file_v6(self):
         """
         Validate deletion of files over SMB
@@ -247,7 +238,7 @@ class TestSmb(TestCase):
 
         assert os.path.exists(share_path)
 
-    @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    @pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
     def test_mkdirs_v6(self):
         """
         Create directories over SMB
@@ -283,7 +274,7 @@ class TestSmb(TestCase):
         assert not os.path.exists(local_path)
         assert not os.path.exists(os.path.join(self.public_dir, dir_name))
 
-    @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    @pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
     def test_delete_dirs_v6(self):
         """
         Validate deletion of directoreies over SMB
@@ -312,7 +303,7 @@ class TestSmb(TestCase):
         conn = salt.utils.smb.get_conn("127.0.0.1", self.username, "foo", port=1445)
         conn.close()
 
-    @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    @pytest.mark.skipif(not IPV6_ENABLED, reason="IPv6 not enabled")
     def test_connection_v6(self):
         """
         Validate creation of an SMB connection

@@ -1,12 +1,12 @@
 """
     :codeauthor: :email:`Zach Moody <zmoody@do.co>`
 """
-
+import pytest
 
 import salt.modules.netbox as netbox
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import pynetbox  # pylint: disable=unused-import
@@ -37,7 +37,7 @@ def mocked_clean_kwargs_get(**kwargs):
     return {"name": "test"}
 
 
-@skipIf(HAS_PYNETBOX is False, "pynetbox lib not installed")
+@pytest.mark.skipif(HAS_PYNETBOX is False, reason="pynetbox lib not installed")
 @patch("salt.modules.netbox._config", MagicMock())
 class NetBoxTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):

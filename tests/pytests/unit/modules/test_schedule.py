@@ -28,26 +28,20 @@ def job1():
 
 
 @pytest.fixture
-def sock_dir(tmp_path):
-    return str(tmp_path / "test-socks")
-
-
-@pytest.fixture
-def configure_loader_modules():
-    return {schedule: {}}
+def configure_loader_modules(minion_opts):
+    minion_opts["schedule"] = {}
+    return {schedule: {"__opts__": minion_opts}}
 
 
 # 'purge' function tests: 1
 @pytest.mark.slow_test
-def test_purge(sock_dir, job1):
+def test_purge(job1):
     """
     Test if it purge all the jobs currently scheduled on the minion.
     """
     _schedule_data = {"job1": job1}
     patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {}})
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
     )
@@ -74,9 +68,7 @@ def test_purge(sock_dir, job1):
 
     changes = {"job1": "removed", "job2": "removed", "job3": "removed"}
 
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {"job1": "salt"}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {"job1": "salt"}})
     patch_schedule_list = patch.object(
         schedule, "list_", MagicMock(return_value=_schedule_data)
     )
@@ -98,14 +90,12 @@ def test_purge(sock_dir, job1):
 
 # 'delete' function tests: 1
 @pytest.mark.slow_test
-def test_delete(sock_dir, job1):
+def test_delete(job1):
     """
     Test if it delete a job from the minion's schedule.
     """
     patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {}})
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
     )
@@ -125,9 +115,7 @@ def test_delete(sock_dir, job1):
         schedule, "list_", MagicMock(return_value=_schedule_data)
     )
 
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {"job1": "salt"}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {"job1": "salt"}})
 
     comm = "Deleted Job job1 from schedule."
     changes = {"job1": "removed"}
@@ -148,7 +136,7 @@ def test_delete(sock_dir, job1):
 
 
 # 'build_schedule_item' function tests: 1
-def test_build_schedule_item(sock_dir):
+def test_build_schedule_item():
     """
     Test if it build a schedule job.
     """
@@ -183,7 +171,7 @@ def test_build_schedule_item(sock_dir):
 # 'build_schedule_item_invalid_when' function tests: 1
 
 
-def test_build_schedule_item_invalid_when(sock_dir):
+def test_build_schedule_item_invalid_when():
     """
     Test if it build a schedule job.
     """
@@ -194,7 +182,7 @@ def test_build_schedule_item_invalid_when(sock_dir):
         ) == {"comment": comment, "result": False}
 
 
-def test_build_schedule_item_invalid_jobs_args(sock_dir):
+def test_build_schedule_item_invalid_jobs_args():
     """
     Test failure if job_arg and job_kwargs are passed correctly
     """
@@ -214,7 +202,7 @@ def test_build_schedule_item_invalid_jobs_args(sock_dir):
 
 
 @pytest.mark.slow_test
-def test_add(sock_dir):
+def test_add():
     """
     Test if it add a job to the schedule.
     """
@@ -227,9 +215,7 @@ def test_add(sock_dir):
     comm4 = "Job: job2 would be added to schedule."
 
     patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {"job1": "salt"}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {"job1": "salt"}})
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
     )
@@ -304,15 +290,13 @@ def test_add(sock_dir):
 
 
 @pytest.mark.slow_test
-def test_run_job(sock_dir, job1):
+def test_run_job(job1):
     """
     Test if it run a scheduled job on the minion immediately.
     """
     patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
 
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {"job1": job1}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {"job1": job1}})
 
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
@@ -334,15 +318,13 @@ def test_run_job(sock_dir, job1):
 
 
 @pytest.mark.slow_test
-def test_enable_job(sock_dir):
+def test_enable_job():
     """
     Test if it enable a job in the minion's schedule.
     """
     patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
 
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {"job1": job1}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {"job1": job1}})
 
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
@@ -363,15 +345,13 @@ def test_enable_job(sock_dir):
 
 
 @pytest.mark.slow_test
-def test_disable_job(sock_dir):
+def test_disable_job():
     """
     Test if it disable a job in the minion's schedule.
     """
     patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
 
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {"job1": job1}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {"job1": job1}})
 
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
@@ -392,14 +372,14 @@ def test_disable_job(sock_dir):
 
 
 @pytest.mark.slow_test
-def test_save(sock_dir):
+def test_save():
     """
     Test if it save all scheduled jobs on the minion.
     """
     comm1 = "Schedule (non-pillar items) saved."
     with patch.dict(
         schedule.__opts__,
-        {"schedule": {}, "default_include": "/tmp", "sock_dir": sock_dir},
+        {"default_include": "/tmp"},
     ):
         with patch("os.makedirs", MagicMock(return_value=True)):
             mock = MagicMock(return_value=True)
@@ -412,7 +392,7 @@ def test_save(sock_dir):
 # 'enable' function tests: 1
 
 
-def test_enable(sock_dir):
+def test_enable():
     """
     Test if it enable all scheduled jobs on the minion.
     """
@@ -426,7 +406,7 @@ def test_enable(sock_dir):
 # 'disable' function tests: 1
 
 
-def test_disable(sock_dir):
+def test_disable():
     """
     Test if it disable all scheduled jobs on the minion.
     """
@@ -441,7 +421,7 @@ def test_disable(sock_dir):
 
 
 @pytest.mark.slow_test
-def test_move(sock_dir, job1):
+def test_move(job1):
     """
     Test if it move scheduled job to another minion or minions.
     """
@@ -451,9 +431,7 @@ def test_move(sock_dir, job1):
 
     patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
 
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {"job1": job1}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {"job1": job1}})
 
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
@@ -545,7 +523,7 @@ def test_move(sock_dir, job1):
 
 
 @pytest.mark.slow_test
-def test_copy(sock_dir, job1):
+def test_copy(job1):
     """
     Test if it copy scheduled job to another minion or minions.
     """
@@ -555,9 +533,7 @@ def test_copy(sock_dir, job1):
 
     patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
 
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {"job1": job1}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {"job1": job1}})
 
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
@@ -648,7 +624,7 @@ def test_copy(sock_dir, job1):
 
 
 @pytest.mark.slow_test
-def test_modify(sock_dir, job1):
+def test_modify(job1):
     """
     Test if modifying job to the schedule.
     """
@@ -713,9 +689,7 @@ def test_modify(sock_dir, job1):
 
     patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
 
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {"job1": job1}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {"job1": job1}})
 
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
@@ -857,7 +831,7 @@ def test_modify(sock_dir, job1):
 # 'is_enabled' function tests: 1
 
 
-def test_is_enabled(sock_dir):
+def test_is_enabled():
     """
     Test is_enabled
     """
@@ -870,9 +844,7 @@ def test_is_enabled(sock_dir):
     mock_lst = MagicMock(return_value=mock_schedule)
 
     patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {}})
     patch_schedule_salt = patch.dict(
         schedule.__salt__,
         {"event.fire": MagicMock(return_value=True), "schedule.list": mock_lst},
@@ -894,7 +866,7 @@ def test_is_enabled(sock_dir):
 # 'job_status' function tests: 1
 
 
-def test_job_status(sock_dir):
+def test_job_status():
     """
     Test is_enabled
     """
@@ -912,9 +884,7 @@ def test_job_status(sock_dir):
     mock_lst = MagicMock(return_value=mock_schedule)
 
     patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {"job1": job1}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {"job1": job1}})
     patch_schedule_salt = patch.dict(
         schedule.__salt__,
         {"event.fire": MagicMock(return_value=True), "schedule.list": mock_lst},
@@ -935,7 +905,7 @@ def test_job_status(sock_dir):
 
 # 'purge' function tests: 1
 @pytest.mark.slow_test
-def test_list(sock_dir, job1):
+def test_list(job1):
     """
     Test schedule.list
     """
@@ -965,9 +935,7 @@ def test_list(sock_dir, job1):
 """
 
     patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {}})
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
     )
@@ -1011,7 +979,6 @@ def test_list(sock_dir, job1):
             ret = schedule.list_()
             assert ret == expected
 
-    _schedule_data = {"job1": job1}
     _ret_schedule_data = {
         "function": "test.ping",
         "seconds": 10,
@@ -1048,7 +1015,7 @@ def test_list(sock_dir, job1):
 
 
 @pytest.mark.slow_test
-def test_list_global_enabled(sock_dir, job1):
+def test_list_global_enabled(job1):
     """
     Test schedule.list when enabled globally
     """
@@ -1084,9 +1051,7 @@ def test_list_global_enabled(sock_dir, job1):
     seconds: 10
 """
     patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {}})
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
     )
@@ -1106,7 +1071,7 @@ def test_list_global_enabled(sock_dir, job1):
 
 
 @pytest.mark.slow_test
-def test_list_global_disabled(sock_dir, job1):
+def test_list_global_disabled(job1):
     """
     Test schedule.list when disabled  globally
     """
@@ -1143,9 +1108,7 @@ def test_list_global_disabled(sock_dir, job1):
     seconds: 10
 """
     patch_makedirs = patch("os.makedirs", MagicMock(return_value=True))
-    patch_schedule_opts = patch.dict(
-        schedule.__opts__, {"schedule": {}, "sock_dir": sock_dir}
-    )
+    patch_schedule_opts = patch.dict(schedule.__opts__, {"schedule": {}})
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
     )

@@ -1,5 +1,3 @@
-import sys
-
 import pytest
 
 import salt.utils.data
@@ -10,10 +8,6 @@ def test_get_value_simple_path():
     assert [{"value": "foo"}] == salt.utils.data.get_value(data, "a:b:c")
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 6),
-    reason="Test will randomly fail since Python3.5 does not have ordered dictionaries",
-)
 def test_get_value_placeholder_dict():
     data = {"a": {"b": {"name": "foo"}, "c": {"name": "bar"}}}
     assert [
@@ -22,10 +16,6 @@ def test_get_value_placeholder_dict():
     ] == salt.utils.data.get_value(data, "a:{id}:name")
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 6),
-    reason="Test will randomly fail since Python3.5 does not have ordered dictionaries",
-)
 def test_get_value_placeholder_list():
     data = {"a": [{"name": "foo"}, {"name": "bar"}]}
     assert [
@@ -34,10 +24,6 @@ def test_get_value_placeholder_list():
     ] == salt.utils.data.get_value(data, "a:{id}:name")
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 6),
-    reason="Test will randomly fail since Python3.5 does not have ordered dictionaries",
-)
 def test_get_value_nested_placeholder():
     data = {
         "a": {

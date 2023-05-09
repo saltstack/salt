@@ -9,7 +9,6 @@ import logging
 import os
 import sys
 import traceback
-import uuid
 
 import salt.channel.client
 import salt.ext.tornado.gen
@@ -81,6 +80,7 @@ def get_pillar(
             pillar_override=pillar_override,
             pillarenv=pillarenv,
             clean_cache=clean_cache,
+            extra_minion_data=extra_minion_data,
         )
     return ptype(
         opts,
@@ -419,6 +419,7 @@ class PillarCache:
         self.pillar_override = pillar_override
         self.pillarenv = pillarenv
         self.clean_cache = clean_cache
+        self.extra_minion_data = extra_minion_data
 
         if saltenv is None:
             self.saltenv = "base"
@@ -455,6 +456,7 @@ class PillarCache:
             functions=self.functions,
             pillar_override=self.pillar_override,
             pillarenv=self.pillarenv,
+            extra_minion_data=self.extra_minion_data,
         )
         return fresh_pillar.compile_pillar()
 
@@ -1338,6 +1340,11 @@ class Pillar:
         if self._closing:
             return
         self._closing = True
+        if self.client:
+            try:
+                self.client.destroy()
+            except AttributeError:
+                pass
 
     # pylint: disable=W1701
     def __del__(self):

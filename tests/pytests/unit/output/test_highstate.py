@@ -1,27 +1,18 @@
 import copy
 import logging
-import sys
 
 import pytest
 
-import salt.config
 import salt.output.highstate as highstate
+import salt.utils.stringutils
 from tests.support.mock import patch
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def configure_loader_modules():
-    minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    overrides = {
-        "extension_modules": "",
-        "optimization_order": [0, 1, 2],
-        "color": False,
-        "state_output_pct": True,
-    }
-    minion_opts.update(overrides)
+def configure_loader_modules(minion_opts):
+    minion_opts.update({"color": False, "state_output_pct": True})
     return {highstate: {"__opts__": minion_opts}}
 
 
@@ -254,7 +245,6 @@ def test_pct_summary_output():
     assert "                  file2" in actual_output
 
 
-@skipIf(sys.version_info < (3, 6), "RIP Python 3.5")
 def test__compress_ids():
     """
     Tests for expected data return for _compress_ids
@@ -864,7 +854,6 @@ def test_nested_output():
                 "salt_|-nested_|-state.orchestrate_|-runner": {
                     "comment": "Runner function 'state.orchestrate' executed.",
                     "name": "state.orchestrate",
-                    "__orchestration__": True,
                     "start_time": "09:22:53.158742",
                     "result": True,
                     "duration": 980.694,

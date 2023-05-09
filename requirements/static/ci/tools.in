@@ -1,0 +1,7 @@
+python-tools-scripts >= 0.12.0
+attrs
+boto3
+pyyaml
+jinja2
+packaging
+virustotal3

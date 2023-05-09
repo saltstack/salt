@@ -9,6 +9,11 @@ import salt.utils.yaml
 from salt.ext.tornado.httpclient import HTTPError, HTTPRequest
 from salt.ext.tornado.websocket import websocket_connect
 
+pytestmark = [
+    pytest.mark.destructive_test,
+    pytest.mark.skip_if_not_root,
+]
+
 
 @pytest.fixture
 def app(client_config):

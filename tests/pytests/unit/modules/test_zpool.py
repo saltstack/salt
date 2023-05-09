@@ -19,6 +19,10 @@ from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 from tests.support.zfs import ZFSMockData
 
+pytestmark = [
+    pytest.mark.slow_test,
+]
+
 
 @pytest.fixture
 def utils_patch():
@@ -26,12 +30,16 @@ def utils_patch():
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+def configure_loader_modules(minion_opts):
     utils = salt.loader.utils(
-        opts, whitelist=["zfs", "args", "systemd", "path", "platform"]
+        minion_opts, whitelist=["zfs", "args", "systemd", "path", "platform"]
     )
-    zpool_obj = {zpool: {"__opts__": opts, "__utils__": utils}}
+    zpool_obj = {
+        zpool: {
+            "__opts__": minion_opts,
+            "__utils__": utils,
+        },
+    }
 
     return zpool_obj
 

@@ -18,7 +18,7 @@ try:
 
     # We still need to use GitPython here for temp repo setup, so we do need to
     # actually import it. But we don't need import pygit2 in this module, we
-    # can just use the LooseVersion instances imported along with
+    # can just use the Version instances imported along with
     # salt.utils.gitfs to check if we have a compatible version.
     HAS_GITPYTHON = GITPYTHON_VERSION >= GITPYTHON_MINVER
 except (ImportError, AttributeError):

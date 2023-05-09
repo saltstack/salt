@@ -734,8 +734,8 @@ def test_get_slave_status_bad_server():
             assert rslt == []
 
 
-@pytest.mark.skipif(
-    True, reason="MySQL module claims this function is not ready for production"
+@pytest.mark.skip(
+    reason="MySQL module claims this function is not ready for production"
 )
 def test_free_slave():
     pass

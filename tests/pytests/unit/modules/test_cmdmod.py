@@ -29,9 +29,8 @@ MOCK_SHELL_FILE = "# List of acceptable shells\n\n/bin/bash\n"
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    return {cmdmod: {"__opts__": opts}}
+def configure_loader_modules(minion_opts):
+    return {cmdmod: {"__opts__": minion_opts}}
 
 
 @pytest.fixture(scope="module")
@@ -1057,3 +1056,59 @@ def test_runas_env_sudo_group(bundled):
                                             popen_mock.call_args_list[0][0][0]
                                             == exp_ret
                                         )
+
+
+def test_prep_powershell_cmd():
+    """
+    Tests _prep_powershell_cmd returns correct cmd
+    """
+    with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
+        stack = [["", "", ""], ["", "", ""], ["", "", ""]]
+        ret = cmdmod._prep_powershell_cmd(
+            shell="powershell", cmd="$PSVersionTable", stack=stack, encoded_cmd=False
+        )
+        assert ret == 'powershell -NonInteractive -NoProfile -Command "$PSVersionTable"'
+
+        ret = cmdmod._prep_powershell_cmd(
+            shell="powershell", cmd="$PSVersionTable", stack=stack, encoded_cmd=True
+        )
+        assert (
+            ret
+            == "powershell -NonInteractive -NoProfile -EncodedCommand $PSVersionTable"
+        )
+
+        stack = [["", "", ""], ["", "", "script"], ["", "", ""]]
+        ret = cmdmod._prep_powershell_cmd(
+            shell="powershell", cmd="$PSVersionTable", stack=stack, encoded_cmd=False
+        )
+        assert (
+            ret
+            == "powershell -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command $PSVersionTable"
+        )
+
+    with patch("salt.utils.platform.is_windows", MagicMock(return_value=True)):
+        stack = [["", "", ""], ["", "", ""], ["", "", ""]]
+
+        ret = cmdmod._prep_powershell_cmd(
+            shell="powershell", cmd="$PSVersionTable", stack=stack, encoded_cmd=False
+        )
+        assert (
+            ret == '"powershell" -NonInteractive -NoProfile -Command "$PSVersionTable"'
+        )
+
+        ret = cmdmod._prep_powershell_cmd(
+            shell="powershell", cmd="$PSVersionTable", stack=stack, encoded_cmd=True
+        )
+        assert (
+            ret
+            == '"powershell" -NonInteractive -NoProfile -EncodedCommand $PSVersionTable'
+        )
+
+        stack = [["", "", ""], ["", "", "script"], ["", "", ""]]
+        ret = cmdmod._prep_powershell_cmd(
+            shell="powershell", cmd="$PSVersionTable", stack=stack, encoded_cmd=False
+        )
+        assert (
+            ret
+            == '"powershell" -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command $PSVersionTable'
+        )

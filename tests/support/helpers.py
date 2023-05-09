@@ -30,7 +30,6 @@ import textwrap
 import threading
 import time
 import types
-from contextlib import contextmanager
 
 import attr
 import pytest
@@ -58,8 +57,6 @@ PRE_PYTEST_SKIP_REASON = (
 PRE_PYTEST_SKIP = pytest.mark.skip_on_env(
     "PRE_PYTEST_DONT_SKIP", present=False, reason=PRE_PYTEST_SKIP_REASON
 )
-ON_PY35 = sys.version_info < (3, 6)
-
 SKIP_INITIAL_PHOTONOS_FAILURES = pytest.mark.skip_on_env(
     "SKIP_INITIAL_PHOTONOS_FAILURES",
     eq="1",
@@ -1087,57 +1084,6 @@ def requires_system_grains(func):
     return decorator
 
 
-@requires_system_grains
-def runs_on(grains=None, **kwargs):
-    """
-    Skip the test if grains don't match the values passed into **kwargs
-    if a kwarg value is a list then skip if the grains don't match any item in the list
-    """
-    reason = kwargs.pop("reason", None)
-    for kw, value in kwargs.items():
-        if isinstance(value, list):
-            if not any(str(grains.get(kw)).lower() != str(v).lower() for v in value):
-                if reason is None:
-                    reason = "This test does not run on {}={}".format(
-                        kw, grains.get(kw)
-                    )
-                return skip(reason)
-        else:
-            if str(grains.get(kw)).lower() != str(value).lower():
-                if reason is None:
-                    reason = "This test runs on {}={}, not {}".format(
-                        kw, value, grains.get(kw)
-                    )
-                return skip(reason)
-    return _id
-
-
-@requires_system_grains
-def not_runs_on(grains=None, **kwargs):
-    """
-    Reverse of `runs_on`.
-    Skip the test if any grains match the values passed into **kwargs
-    if a kwarg value is a list then skip if the grains match any item in the list
-    """
-    reason = kwargs.pop("reason", None)
-    for kw, value in kwargs.items():
-        if isinstance(value, list):
-            if any(str(grains.get(kw)).lower() == str(v).lower() for v in value):
-                if reason is None:
-                    reason = "This test does not run on {}={}".format(
-                        kw, grains.get(kw)
-                    )
-                return skip(reason)
-        else:
-            if str(grains.get(kw)).lower() == str(value).lower():
-                if reason is None:
-                    reason = "This test does not run on {}={}, got {}".format(
-                        kw, value, grains.get(kw)
-                    )
-                return skip(reason)
-    return _id
-
-
 def _check_required_sminion_attributes(sminion_attr, *required_items):
     """
     :param sminion_attr: The name of the sminion attribute to check, such as 'functions' or 'states'
@@ -1633,22 +1579,6 @@ class PatchedEnviron:
         self.original_environ = os.environ.copy()
         for key in self.cleanup_keys:
             os.environ.pop(key, None)
-
-        # Make sure there are no unicode characters in the self.kwargs if we're
-        # on Python 2. These are being added to `os.environ` and causing
-        # problems
-        if sys.version_info < (3,):
-            kwargs = self.kwargs.copy()
-            clean_kwargs = {}
-            for k in self.kwargs:
-                key = k
-                if isinstance(key, str):
-                    key = key.encode("utf-8")
-                if isinstance(self.kwargs[k], str):
-                    kwargs[k] = kwargs[k].encode("utf-8")
-                clean_kwargs[key] = kwargs[k]
-            self.kwargs = clean_kwargs
-
         os.environ.update(**self.kwargs)
         return self
 
@@ -1671,13 +1601,25 @@ class VirtualEnv:
     venv_dir = attr.ib(converter=_cast_to_pathlib_path)
     env = attr.ib(default=None)
     system_site_packages = attr.ib(default=False)
-    pip_requirement = attr.ib(default="pip>=20.2.4,<21.2", repr=False)
-    setuptools_requirement = attr.ib(
-        default="setuptools!=50.*,!=51.*,!=52.*", repr=False
-    )
+    pip_requirement = attr.ib(repr=False)
+    setuptools_requirement = attr.ib(repr=False)
+    # TBD build_requirement = attr.ib(default="build!=0.6.*", repr=False)   # add build when implement pyproject.toml
     environ = attr.ib(init=False, repr=False)
     venv_python = attr.ib(init=False, repr=False)
     venv_bin_dir = attr.ib(init=False, repr=False)
+
+    @pip_requirement.default
+    def _default_pip_requiremnt(self):
+        if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+            return "pip>=22.3.1,<23.0"
+        return "pip>=20.2.4,<21.2"
+
+    @setuptools_requirement.default
+    def _default_setuptools_requirement(self):
+        if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+            # https://github.com/pypa/setuptools/commit/137ab9d684075f772c322f455b0dd1f992ddcd8f
+            return "setuptools>=65.6.3,<66"
+        return "setuptools!=50.*,!=51.*,!=52.*,<59"
 
     @venv_dir.default
     def _default_venv_dir(self):
@@ -1811,7 +1753,12 @@ class VirtualEnv:
             cmd.append("--system-site-packages")
         cmd.append(str(self.venv_dir))
         self.run(*cmd, cwd=str(self.venv_dir.parent))
-        self.install("-U", self.pip_requirement, self.setuptools_requirement)
+        self.install(
+            "-U",
+            self.pip_requirement,
+            self.setuptools_requirement,
+            # TBD self.build_requirement, # add build when implement pyproject.toml
+        )
         log.debug("Created virtualenv in %s", self.venv_dir)
 
 
@@ -1832,22 +1779,6 @@ class SaltVirtualEnv(VirtualEnv):
         env["USE_STATIC_REQUIREMENTS"] = "1"
         kwargs["env"] = env
         return super().install(*args, **kwargs)
-
-
-@contextmanager
-def change_cwd(path):
-    """
-    Context manager helper to change CWD for a with code block and restore
-    it at the end
-    """
-    old_cwd = os.getcwd()
-    try:
-        os.chdir(path)
-        # Do stuff
-        yield
-    finally:
-        # Restore Old CWD
-        os.chdir(old_cwd)
 
 
 @functools.lru_cache(maxsize=1)

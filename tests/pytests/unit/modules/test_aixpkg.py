@@ -1,20 +1,17 @@
 import logging
 import os
 
+import pytest
+
 import salt.modules.aixpkg as aixpkg
 import salt.modules.pkg_resource as pkg_resource
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
-try:
-    import pytest
-except ImportError:
-    pytest = None
-
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture()
+@pytest.fixture
 def lslpp_out():
     # Output from lslpp -Lc which contains Filesets and RPMs installed on system
     # Package Name:Fileset:Level:State:PTF Id:Fix State:Type:Description:Destination Dir.:Uninstaller:Message Catalog:Message Set:Message Number:Parent:Automatic:EFIX Locked:Install Path:Build Date
@@ -919,21 +916,21 @@ def test_version_with_valid_names():
                                                    (/bin/rpm)
 
 
-State codes: 
- A -- Applied. 
- B -- Broken. 
- C -- Committed. 
- E -- EFIX Locked. 
- O -- Obsolete.  (partially migrated to newer version) 
- ? -- Inconsistent State...Run lppchk -v. 
+State codes:
+ A -- Applied.
+ B -- Broken.
+ C -- Committed.
+ E -- EFIX Locked.
+ O -- Obsolete.  (partially migrated to newer version)
+ ? -- Inconsistent State...Run lppchk -v.
 
-Type codes: 
- F -- Installp Fileset 
- P -- Product 
- C -- Component 
- T -- Feature 
- R -- RPM Package 
- E -- Interim Fix 
+Type codes:
+ F -- Installp Fileset
+ P -- Product
+ C -- Component
+ T -- Feature
+ R -- RPM Package
+ E -- Interim Fix
 """
 
     lslpp_bash_out = """  bash                       5.1.4-2    C     R    The GNU Bourne Again shell
@@ -941,21 +938,21 @@ Type codes:
                                                    (/bin/rpm)
 
 
-State codes: 
- A -- Applied. 
- B -- Broken. 
- C -- Committed. 
- E -- EFIX Locked. 
- O -- Obsolete.  (partially migrated to newer version) 
- ? -- Inconsistent State...Run lppchk -v. 
+State codes:
+ A -- Applied.
+ B -- Broken.
+ C -- Committed.
+ E -- EFIX Locked.
+ O -- Obsolete.  (partially migrated to newer version)
+ ? -- Inconsistent State...Run lppchk -v.
 
-Type codes: 
- F -- Installp Fileset 
- P -- Product 
- C -- Component 
- T -- Feature 
- R -- RPM Package 
- E -- Interim Fix 
+Type codes:
+ F -- Installp Fileset
+ P -- Product
+ C -- Component
+ T -- Feature
+ R -- RPM Package
+ E -- Interim Fix
 """
 
     ver_chk = MagicMock(
@@ -986,21 +983,21 @@ def test_version_with_invalid_names():
     lslpp_mydog_out = """lslpp: Fileset mydog not installed.
 
 
-State codes: 
- A -- Applied. 
- B -- Broken. 
- C -- Committed. 
- E -- EFIX Locked. 
- O -- Obsolete.  (partially migrated to newer version) 
- ? -- Inconsistent State...Run lppchk -v. 
+State codes:
+ A -- Applied.
+ B -- Broken.
+ C -- Committed.
+ E -- EFIX Locked.
+ O -- Obsolete.  (partially migrated to newer version)
+ ? -- Inconsistent State...Run lppchk -v.
 
-Type codes: 
- F -- Installp Fileset 
- P -- Product 
- C -- Component 
- T -- Feature 
- R -- RPM Package 
- E -- Interim Fix 
+Type codes:
+ F -- Installp Fileset
+ P -- Product
+ C -- Component
+ T -- Feature
+ R -- RPM Package
+ E -- Interim Fix
 """
 
     ver_chk = MagicMock(return_value={"retcode": 1, "stdout": lslpp_mydog_out})
@@ -1186,8 +1183,8 @@ def test_install_fail_dnf_try_fileset():
     """
 
     bos_net_fake_error = """AIX generic repository                                                                                                                                                                                                                       12 kB/s | 2.6 kB     00:00
-AIX noarch repository                                                                                                                                                                                                                        12 kB/s | 2.5 kB     00:00    
-AIX 7.2 specific repository                                                                                                                                                                                                                  12 kB/s | 2.5 kB     00:00    
+AIX noarch repository                                                                                                                                                                                                                        12 kB/s | 2.5 kB     00:00
+AIX 7.2 specific repository                                                                                                                                                                                                                  12 kB/s | 2.5 kB     00:00
 No match for argument: bos.net
 Error: Unable to find a match: bos.net
 """
@@ -1262,7 +1259,7 @@ FAILURES
   discrepancies between the Table of Contents file (.toc) and the images that
   reside in the directory.
 
-    fake_info                                
+    fake_info
 
   << End of Failure Section >>
 
@@ -1270,7 +1267,7 @@ FAILURES
                    BUILDDATE Verification ...
 +-----------------------------------------------------------------------------+
 Verifying build dates...done
-FILESET STATISTICS 
+FILESET STATISTICS
 ------------------
     1  Selected to be installed, of which:
         1  FAILED pre-installation verification
@@ -1420,7 +1417,7 @@ SUCCESSES
                    BUILDDATE Verification ...
 +-----------------------------------------------------------------------------+
 Verifying build dates...done
-FILESET STATISTICS 
+FILESET STATISTICS
 ------------------
     1  Selected to be installed, of which:
         1  Passed pre-installation verification
@@ -1444,7 +1441,7 @@ installp: APPLYING software for:
  All rights reserved.
  US Government Users Restricted Rights - Use, duplication or disclosure
  restricted by GSA ADP Schedule Contract with IBM Corp.
-. . . . . << End of copyright notice for bos.adt >>. . . . 
+. . . . . << End of copyright notice for bos.adt >>. . . .
 
 Successfully updated the Kernel Authorization Table.
 Successfully updated the Kernel Role Table.
@@ -1452,7 +1449,7 @@ Successfully updated the Kernel Command Table.
 Successfully updated the Kernel Device Table.
 Successfully updated the Kernel Object Domain Table.
 Successfully updated the Kernel  Domains Table.
-Successfully updated the Kernel RBAC log level. 
+Successfully updated the Kernel RBAC log level.
 Finished processing all filesets.  (Total time:  1 secs).
 
 +-----------------------------------------------------------------------------+
@@ -1463,8 +1460,8 @@ Installation Summary
 --------------------
 Name                        Level           Part        Event       Result
 -------------------------------------------------------------------------------
-bos.adt.insttools           7.2.2.0         USR         APPLY       SUCCESS    
-bos.adt.insttools           7.2.2.0         ROOT        APPLY       SUCCESS 
+bos.adt.insttools           7.2.2.0         USR         APPLY       SUCCESS
+bos.adt.insttools           7.2.2.0         ROOT        APPLY       SUCCESS
 """
     dnf_call = MagicMock(
         side_effect=[fileset_pkg_name_lslpp_out_dict, {"retcode": 0, "stdout": ""}]

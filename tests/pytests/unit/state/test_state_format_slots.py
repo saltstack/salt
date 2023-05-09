@@ -15,11 +15,14 @@ from tests.support.mock import MagicMock, patch
 log = logging.getLogger(__name__)
 
 
+pytestmark = [
+    pytest.mark.core_test,
+]
+
+
 @pytest.fixture
-def state_obj(tmp_path):
+def state_obj(minion_opts):
     with patch("salt.state.State._gather_pillar"):
-        minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        minion_opts["cachedir"] = str(tmp_path)
         yield salt.state.State(minion_opts)
 
 

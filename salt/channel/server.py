@@ -774,7 +774,9 @@ class PubServerChannel:
         secrets = kwargs.get("secrets", None)
         if secrets is not None:
             salt.master.SMaster.secrets = secrets
-        self.transport.publish_daemon(self.publish_payload, self.presence_callback)
+        self.transport.publish_daemon(
+            self.publish_payload, self.presence_callback, self.remove_presence_callback
+        )
 
     def presence_callback(self, subscriber, msg):
         if msg["enc"] != "aes":

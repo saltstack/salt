@@ -1,17 +1,17 @@
 """
     Tests for salt.modules.boto3_route53
 """
-
-
 import random
 import string
 
+import pytest
+
 import salt.loader
 import salt.modules.boto3_route53 as boto3_route53
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import boto3
@@ -33,7 +33,7 @@ def __virtual__():
     """
     if not HAS_BOTO3:
         return False
-    if LooseVersion(boto3.__version__) < LooseVersion(REQUIRED_BOTO3_VERSION):
+    if Version(boto3.__version__) < Version(REQUIRED_BOTO3_VERSION):
         return (
             False,
             "The boto3 module must be greater or equal to version {}".format(
@@ -75,10 +75,10 @@ LIST_RESOURCE_RECORD_SETS_RETURN = {
 }
 
 
-@skipIf(HAS_BOTO3 is False, "The boto module must be installed.")
-@skipIf(
-    LooseVersion(boto3.__version__) < LooseVersion(REQUIRED_BOTO3_VERSION),
-    "The boto3 module must be greater or equal to version {}".format(
+@pytest.mark.skipif(HAS_BOTO3 is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
+    Version(boto3.__version__) < Version(REQUIRED_BOTO3_VERSION),
+    reason="The boto3 module must be greater or equal to version {}".format(
         REQUIRED_BOTO3_VERSION
     ),
 )

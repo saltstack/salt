@@ -8,7 +8,7 @@ import logging
 import pytest
 
 import salt.runners.vault as vault
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, Mock, patch
 
 log = logging.getLogger(__name__)
 
@@ -29,53 +29,34 @@ def grains():
     }
 
 
-def test_pattern_list_expander(grains):
-    """
-    Ensure _expand_pattern_lists works as intended:
-    - Expand list-valued patterns
-    - Do not change non-list-valued tokens
-    """
-    cases = {
-        "no-tokens-to-replace": ["no-tokens-to-replace"],
-        "single-dict:{minion}": ["single-dict:{minion}"],
-        "single-list:{grains[roles]}": ["single-list:web", "single-list:database"],
-        "multiple-lists:{grains[roles]}+{grains[aux]}": [
-            "multiple-lists:web+foo",
-            "multiple-lists:web+bar",
-            "multiple-lists:database+foo",
-            "multiple-lists:database+bar",
-        ],
-        "single-list-with-dicts:{grains[id]}+{grains[roles]}+{grains[id]}": [
-            "single-list-with-dicts:{grains[id]}+web+{grains[id]}",
-            "single-list-with-dicts:{grains[id]}+database+{grains[id]}",
-        ],
-        "deeply-nested-list:{grains[deep][foo][bar][baz]}": [
-            "deeply-nested-list:hello",
-            "deeply-nested-list:world",
-        ],
+@pytest.fixture
+def pillar():
+    return {
+        "role": "test",
     }
 
-    # The mappings dict is assembled in _get_policies, so emulate here
-    mappings = {"minion": grains["id"], "grains": grains}
-    for case, correct_output in cases.items():
-        output = vault._expand_pattern_lists(
-            case, **mappings
-        )  # pylint: disable=protected-access
-        diff = set(output).symmetric_difference(set(correct_output))
-        if diff:
-            log.debug("Test %s failed", case)
-            log.debug("Expected:\n\t%s\nGot\n\t%s", output, correct_output)
-            log.debug("Difference:\n\t%s", diff)
-        assert output == correct_output
+
+@pytest.fixture
+def expand_pattern_lists():
+    with patch.dict(
+        vault.__utils__,
+        {
+            "vault.expand_pattern_lists": Mock(
+                side_effect=lambda x, *args, **kwargs: [x]
+            )
+        },
+    ):
+        yield
 
 
+@pytest.mark.usefixtures("expand_pattern_lists")
 def test_get_policies_for_nonexisting_minions():
     minion_id = "salt_master"
     # For non-existing minions, or the master-minion, grains will be None
     cases = {
         "no-tokens-to-replace": ["no-tokens-to-replace"],
         "single-dict:{minion}": ["single-dict:{}".format(minion_id)],
-        "single-list:{grains[roles]}": [],
+        "single-grain:{grains[os]}": [],
     }
     with patch(
         "salt.utils.minions.get_minion_data",
@@ -94,28 +75,15 @@ def test_get_policies_for_nonexisting_minions():
             assert output == correct_output
 
 
+@pytest.mark.usefixtures("expand_pattern_lists")
 def test_get_policies(grains):
     """
-    Ensure _get_policies works as intended, including expansion of lists
+    Ensure _get_policies works as intended.
+    The expansion of lists is tested in the vault utility module unit tests.
     """
     cases = {
         "no-tokens-to-replace": ["no-tokens-to-replace"],
         "single-dict:{minion}": ["single-dict:test-minion"],
-        "single-list:{grains[roles]}": ["single-list:web", "single-list:database"],
-        "multiple-lists:{grains[roles]}+{grains[aux]}": [
-            "multiple-lists:web+foo",
-            "multiple-lists:web+bar",
-            "multiple-lists:database+foo",
-            "multiple-lists:database+bar",
-        ],
-        "single-list-with-dicts:{grains[id]}+{grains[roles]}+{grains[id]}": [
-            "single-list-with-dicts:test-minion+web+test-minion",
-            "single-list-with-dicts:test-minion+database+test-minion",
-        ],
-        "deeply-nested-list:{grains[deep][foo][bar][baz]}": [
-            "deeply-nested-list:hello",
-            "deeply-nested-list:world",
-        ],
         "should-not-cause-an-exception,but-result-empty:{foo}": [],
         "Case-Should-Be-Lowered:{grains[mixedcase]}": [
             "case-should-be-lowered:up-low-up"
@@ -137,6 +105,33 @@ def test_get_policies(grains):
                 log.debug("Expected:\n\t%s\nGot\n\t%s", output, correct_output)
                 log.debug("Difference:\n\t%s", diff)
             assert output == correct_output
+
+
+@pytest.mark.usefixtures("expand_pattern_lists")
+@pytest.mark.parametrize(
+    "pattern,count",
+    [
+        ("salt_minion_{minion}", 0),
+        ("salt_grain_{grains[id]}", 0),
+        ("unset_{foo}", 0),
+        ("salt_pillar_{pillar[role]}", 1),
+    ],
+)
+def test_get_policies_does_not_render_pillar_unnecessarily(
+    pattern, count, grains, pillar
+):
+    """
+    The pillar data should only be refreshed in case items are accessed.
+    """
+    with patch("salt.utils.minions.get_minion_data", autospec=True) as get_minion_data:
+        get_minion_data.return_value = (None, grains, None)
+        with patch("salt.pillar.get_pillar", autospec=True) as get_pillar:
+            get_pillar.return_value.compile_pillar.return_value = pillar
+            test_config = {"policies": [pattern]}
+            vault._get_policies(
+                "test-minion", test_config, refresh_pillar=True
+            )  # pylint: disable=protected-access
+            assert get_pillar.call_count == count
 
 
 def test_get_token_create_url():

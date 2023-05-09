@@ -1,10 +1,14 @@
-import salt.utils.platform
+import pytest
+
 import salt.utils.win_dotnet as win_dotnet
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
+
+pytestmark = [
+    pytest.mark.skip_unless_on_windows,
+]
 
 
-@skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinDotNetTestCase(TestCase):
     """
     Test cases for salt.utils.win_dotnet
