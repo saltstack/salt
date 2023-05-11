@@ -1580,11 +1580,13 @@ def _file_managed(name, test=None, **kwargs):
     # work around https://github.com/saltstack/salt/issues/62590
     test = test or __opts__["test"]
     file_managed = __states__["file.managed"]
-    if bool(test) is not bool(__opts__["test"]):
-        opts = copy.copy(__opts__)
-        opts["test"] = test
+    if test:
         # calls via __salt__["state.single"](..., test=test)
         # can overwrite __opts__["test"] permanently. Workaround:
+        opts = __opts__
+        if not __opts__["test"]:
+            opts = copy.copy(__opts__)
+            opts["test"] = test
         with salt.utils.context.func_globals_inject(file_managed, __opts__=opts):
             # The file execution module accesses __opts__["test"] as well
             with salt.utils.context.func_globals_inject(
