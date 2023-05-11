@@ -23,6 +23,7 @@ In addition, the Salt master can now be configured to issue AppRoles
 to minions and manage their metadata using a similar templating approach.
 Since this metadata can be taken advantage of in templated policies on the Vault side,
 the need for many boilerplate policies is reduced even further:
+{%- raw %}
 
 ```vaultpolicy
   path "salt/data/minions/{{identity.entity.metadata.minion-id}}" {
@@ -33,16 +34,17 @@ the need for many boilerplate policies is reduced even further:
       capabilities = ["read"]
   }
 ```
+{%- endraw %}
 
 Although existing configurations will keep working without intervention after upgrading
-the Salt master, it is strongly recommended to adjust the ``peer_run`` configuration to
+the Salt master, it is strongly recommended to adjust the `peer_run` configuration to
 include the new issuance endpoints in order to avoid unnecessary overhead:
 
 ```yaml
 peer_run:
-.*:
-  - vault.get_config
-  - vault.generate_new_token
+  .*:
+    - vault.get_config
+    - vault.generate_new_token
 ```
 
 Please see the [Vault execution module docs](https://docs.saltproject.io/en/3007.0/ref/modules/all/salt.modules.vault.html) for
