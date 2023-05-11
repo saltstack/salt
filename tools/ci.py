@@ -229,6 +229,9 @@ def runner_types(ctx: Context, event_name: str):
         "skip_pkg_tests": {
             "help": "Skip running the Salt Package tests",
         },
+        "skip_pkg_download_tests": {
+            "help": "Skip running the Salt Package download tests",
+        },
         "changed_files": {
             "help": (
                 "Path to '.json' file containing the payload of changed files "
@@ -243,6 +246,7 @@ def define_jobs(
     changed_files: pathlib.Path,
     skip_tests: bool = False,
     skip_pkg_tests: bool = False,
+    skip_pkg_download_tests: bool = False,
 ):
     """
     Set GH Actions 'jobs' output to know which jobs should run.
@@ -267,6 +271,7 @@ def define_jobs(
         "lint": True,
         "test": True,
         "test-pkg": True,
+        "test-pkg-download": True,
         "prepare-release": True,
         "build-docs": True,
         "build-source-tarball": True,
@@ -279,6 +284,8 @@ def define_jobs(
         jobs["test"] = False
     if skip_pkg_tests:
         jobs["test-pkg"] = False
+    if skip_pkg_download_tests:
+        jobs["test-pkg-download"] = False
 
     if event_name != "pull_request":
         # In this case, all defined jobs should run
@@ -345,7 +352,12 @@ def define_jobs(
             wfh.write("De-selecting the 'test-pkg' job.\n")
         jobs["test-pkg"] = False
 
-    if not jobs["test"] and not jobs["test-pkg"]:
+    if jobs["test-pkg-download"] and required_pkg_test_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'test-pkg-download' job.\n")
+        jobs["test-pkg-download"] = False
+
+    if not jobs["test"] and not jobs["test-pkg"] and not jobs["test-pkg-download"]:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             for job in (
                 "build-deps-onedir",
@@ -595,6 +607,8 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
             "debian-11-arm64",
             "ubuntu-20.04-arm64",
             "ubuntu-22.04-arm64",
+            "photonos-3",
+            "photonos-4",
         ]
         and pkg_type != "MSI"
     ):
@@ -605,7 +619,14 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
         # we will have arm64 onedir packages to upgrade from
         sessions.append("upgrade")
     if (
-        distro_slug not in ["centosstream-9", "ubuntu-22.04", "ubuntu-22.04-arm64"]
+        distro_slug
+        not in [
+            "centosstream-9",
+            "ubuntu-22.04",
+            "ubuntu-22.04-arm64",
+            "photonos-3",
+            "photonos-4",
+        ]
         and pkg_type != "MSI"
     ):
         # Packages for these OSs where never built for classic previously
@@ -627,41 +648,27 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
 
 
 @ci.command(
-    name="pkg-download-matrix",
+    name="get-releases",
     arguments={
-        "platform": {
-            "help": "The OS platform to generate the matrix for",
-            "choices": ("linux", "windows", "macos", "darwin"),
+        "repository": {
+            "help": "The repository to query for releases, e.g. saltstack/salt",
         },
     },
 )
-def pkg_download_matrix(ctx: Context, platform: str):
+def get_releases(ctx: Context, repository: str = "saltstack/salt"):
     """
-    Generate the test matrix.
+    Generate the latest salt release.
     """
     github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output is None:
-        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
 
-    tests = []
-    arches = []
-    if platform == "windows":
-        for arch in ("amd64", "x86"):
-            arches.append({"arch": arch})
-            for install_type in ("msi", "nsis"):
-                tests.append({"arch": arch, "install_type": install_type})
+    if github_output is None:
+        ctx.exit(1, "The 'GITHUB_OUTPUT' variable is not set.")
     else:
-        for arch in ("x86_64", "aarch64"):
-            if platform in ("macos", "darwin") and arch == "aarch64":
-                continue
-            arches.append({"arch": arch})
-            tests.append({"arch": arch})
-    ctx.info("Generated arch matrix:")
-    ctx.print(arches, soft_wrap=True)
-    ctx.info("Generated test matrix:")
-    ctx.print(tests, soft_wrap=True)
-    if github_output is not None:
+        releases = tools.utils.get_salt_releases(ctx, repository)
+        str_releases = [str(version) for version in releases]
+        latest = str_releases[-1]
+
         with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"arch={json.dumps(arches)}\n")
-            wfh.write(f"tests={json.dumps(tests)}\n")
-    ctx.exit(0)
+            wfh.write(f"latest-release={latest}\n")
+            wfh.write(f"releases={json.dumps(str_releases)}\n")
+        ctx.exit(0)

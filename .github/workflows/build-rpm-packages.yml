@@ -25,6 +25,9 @@ jobs:
         arch:
           - x86_64
           - aarch64
+        source:
+          - onedir
+          - src
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/packaging:centosstream-9
@@ -65,12 +68,26 @@ jobs:
 
       - name: Build RPM
         run: |
-          tools pkg build rpm --onedir salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
+          tools pkg build rpm ${{
+              matrix.source == 'onedir' &&
+              format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
+              ||
+              format('--arch={0}', matrix.arch)
+          }}
+
+      - name: Set Artifact Name
+        id: set-artifact-name
+        run: |
+          if [ "${{ matrix.source }}" != "src" ]; then
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm-from-src" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Upload RPMs
         uses: actions/upload-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-rpm
+          name: ${{ steps.set-artifact-name.outputs.artifact-name }}
           path: ~/rpmbuild/RPMS/${{ matrix.arch }}/*.rpm
           retention-days: 7
           if-no-files-found: error

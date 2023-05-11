@@ -1,12 +1,17 @@
 import logging
+import os
 import pathlib
 import shutil
+import subprocess
+import sys
 
 import pytest
+import yaml
 from pytestskipmarkers.utils import platform
 from saltfactories.utils import random_string
 from saltfactories.utils.tempfiles import SaltPillarTree, SaltStateTree
 
+import salt.config
 from tests.support.helpers import (
     CODE_DIR,
     TESTS_DIR,
@@ -16,6 +21,7 @@ from tests.support.helpers import (
     SaltPkgInstall,
     TestUser,
 )
+from tests.support.sminion import create_sminion
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +32,16 @@ def version(install_salt):
     get version number from artifact
     """
     return install_salt.get_version(version_only=True)
+
+
+@pytest.fixture(scope="session")
+def sminion():
+    return create_sminion()
+
+
+@pytest.fixture(scope="session")
+def grains(sminion):
+    return sminion.opts["grains"].copy()
 
 
 def pytest_addoption(parser):
@@ -282,6 +298,44 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         "netapi_enable_clients": ["local"],
         "external_auth": {"auto": {"saltdev": [".*"]}},
     }
+    test_user = False
+    master_config = install_salt.config_path / "master"
+    if master_config.exists():
+        with open(master_config) as fp:
+            data = yaml.safe_load(fp)
+            if data and "user" in data:
+                test_user = True
+                # We are testing a different user, so we need to test the system
+                # configs, or else permissions will not be correct.
+                config_overrides["user"] = data["user"]
+                config_overrides["log_file"] = salt.config.DEFAULT_MASTER_OPTS.get(
+                    "log_file"
+                )
+                config_overrides["root_dir"] = salt.config.DEFAULT_MASTER_OPTS.get(
+                    "root_dir"
+                )
+                config_overrides["key_logfile"] = salt.config.DEFAULT_MASTER_OPTS.get(
+                    "key_logfile"
+                )
+                config_overrides["pki_dir"] = salt.config.DEFAULT_MASTER_OPTS.get(
+                    "pki_dir"
+                )
+                config_overrides["api_logfile"] = salt.config.DEFAULT_API_OPTS.get(
+                    "api_logfile"
+                )
+                config_overrides["api_pidfile"] = salt.config.DEFAULT_API_OPTS.get(
+                    "api_pidfile"
+                )
+                # verify files where set with correct owner/group
+                verify_files = [
+                    pathlib.Path("/var", "log", "salt"),
+                    pathlib.Path("/etc", "salt", "master"),
+                    pathlib.Path("/var", "cache", "salt", "master"),
+                ]
+                for _file in verify_files:
+                    assert _file.owner() == "salt"
+                    assert _file.group() == "salt"
+
     if (platform.is_windows() or platform.is_darwin()) and install_salt.singlebin:
         start_timeout = 240
         # For every minion started we have to accept it's key.
@@ -324,6 +378,20 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
             salt_pkg_install=install_salt,
         )
     factory.after_terminate(pytest.helpers.remove_stale_master_key, factory)
+    if test_user:
+        # Salt factories calls salt.utils.verify.verify_env
+        # which sets root perms on /var/log/salt since we are running
+        # the test suite as root, but we want to run Salt master as salt
+        # We ensure those permissions where set by the package earlier
+        shutil.chown(pathlib.Path("/var", "log", "salt"), "salt", "salt")
+        # The engines_dirs is created in .nox path. We need to set correct perms
+        # for the user running the Salt Master
+        subprocess.run(["chown", "-R", "salt:salt", str(CODE_DIR.parent / ".nox")])
+        file_roots = pathlib.Path("/srv/", "salt")
+        pillar_roots = pathlib.Path("/srv/", "pillar")
+        for _dir in [file_roots, pillar_roots]:
+            subprocess.run(["chown", "-R", "salt:salt", str(_dir)])
+
     with factory.started(start_timeout=start_timeout):
         yield factory
 
@@ -364,6 +432,15 @@ def salt_minion(salt_factories, salt_master, install_salt):
         overrides=config_overrides,
         defaults=config_defaults,
     )
+    # Salt factories calls salt.utils.verify.verify_env
+    # which sets root perms on /srv/salt and /srv/pillar since we are running
+    # the test suite as root, but we want to run Salt master as salt
+    if not platform.is_windows() and not platform.is_darwin():
+        file_roots = pathlib.Path("/srv/", "salt")
+        pillar_roots = pathlib.Path("/srv/", "pillar")
+        for _dir in [file_roots, pillar_roots]:
+            subprocess.run(["chown", "-R", "salt:salt", str(_dir)])
+
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
     )
@@ -393,10 +470,29 @@ def test_account(salt_call_cli):
 
 
 @pytest.fixture(scope="module")
-def salt_api(salt_master, install_salt):
+def extras_pypath():
+    extras_dir = "extras-{}.{}".format(*sys.version_info)
+    if platform.is_windows():
+        return pathlib.Path(
+            os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir
+        )
+    elif platform.is_darwin():
+        return pathlib.Path("/opt", "salt", extras_dir)
+    else:
+        return pathlib.Path("/opt", "saltstack", "salt", extras_dir)
+
+
+@pytest.fixture(scope="module")
+def extras_pypath_bin(extras_pypath):
+    return extras_pypath / "bin"
+
+
+@pytest.fixture(scope="module")
+def salt_api(salt_master, install_salt, extras_pypath):
     """
     start up and configure salt_api
     """
+    shutil.rmtree(str(extras_pypath), ignore_errors=True)
     start_timeout = None
     if platform.is_windows() and install_salt.singlebin:
         start_timeout = 240

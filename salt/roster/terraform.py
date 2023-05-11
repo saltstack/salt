@@ -92,7 +92,9 @@ def _handle_old_salt_host_resource(resource):
     ret[MINION_ID] = attrs.get(MINION_ID)
     valid_attrs = set(attrs.keys()).intersection(TF_ROSTER_ATTRS.keys())
     for attr in valid_attrs:
-        ret[attr] = _cast_output_to_type(attrs.get(attr), TF_ROSTER_ATTRS.get(attr))
+        ret[attr] = _cast_output_to_type(
+            attr, attrs.get(attr), TF_ROSTER_ATTRS.get(attr)
+        )
     return ret
 
 
@@ -110,7 +112,9 @@ def _handle_new_salt_host_resource(resource):
         ret[MINION_ID] = attrs.get(MINION_ID)
         valid_attrs = set(attrs.keys()).intersection(TF_ROSTER_ATTRS.keys())
         for attr in valid_attrs:
-            ret[attr] = _cast_output_to_type(attrs.get(attr), TF_ROSTER_ATTRS.get(attr))
+            ret[attr] = _cast_output_to_type(
+                attr, attrs.get(attr), TF_ROSTER_ATTRS.get(attr)
+            )
         log.info(ret)
         rets.append(ret)
     return rets
@@ -134,8 +138,16 @@ def _add_ssh_key(ret):
         ret["priv"] = priv
 
 
-def _cast_output_to_type(value, typ):
+def _cast_output_to_type(attr, value, typ):
     """cast the value depending on the terraform type"""
+    if value is None:
+        # Timeout needs to default to 0 if the value is None
+        # The ssh command that is run cannot handle `-o ConnectTimeout=None`
+        if attr == "timeout":
+            return 0
+        else:
+            return value
+
     if value is None:
         return value
     if typ == "b":

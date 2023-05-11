@@ -834,7 +834,7 @@ def show_highstate(**kwargs):
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     with salt.client.ssh.state.SSHHighState(
         opts,
-        __pillar__,
+        __pillar__.value(),
         __salt__,
         __context__["fileclient"],
         context=__context__.value(),

@@ -2438,10 +2438,7 @@ enabled and can be disabled by changing this value to ``False``.
     ``saltenv`` will take its value. If both are used, ``environment`` will be
     ignored and ``saltenv`` will be used.
 
-Normally the minion is not isolated to any single environment on the master
-when running states, but the environment can be isolated on the minion side
-by statically setting it. Remember that the recommended way to manage
-environments is to isolate via the top file.
+The default fileserver environment to use when copying files and applying states.
 
 .. code-block:: yaml
 

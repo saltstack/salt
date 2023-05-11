@@ -14,13 +14,13 @@ Ensure that an encrypted device is mapped with the `mapped` function:
           - size=256
 
     swap:
-      crypted.mapped:
+      cryptdev.mapped:
         - device: /dev/sdx4
         - keyfile: /dev/urandom
         - opts: swap,cipher=aes-cbc-essiv:sha256,size=256
 
     mappedbyuuid:
-      crypted.mapped:
+      cryptdev.mapped:
         - device: UUID=066e0200-2867-4ebe-b9e6-f30026ca2314
         - keyfile: /etc/keyfile.key
         - config: /etc/alternate-crypttab

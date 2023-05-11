@@ -23,7 +23,7 @@ from ptscripts import Context, command_group
 
 import tools.pkg
 import tools.utils
-from tools.utils import Version
+from tools.utils import Version, get_salt_releases
 
 try:
     import boto3
@@ -122,7 +122,7 @@ _deb_distro_info = {
             ),
             "required": True,
         },
-        "nightly_build": {
+        "nightly_build_from": {
             "help": "Developement repository target",
         },
     },
@@ -136,7 +136,7 @@ def debian(
     repo_path: pathlib.Path = None,
     key_id: str = None,
     distro_arch: str = "amd64",
-    nightly_build: bool = False,
+    nightly_build_from: str = None,
 ):
     """
     Create the debian repository.
@@ -178,7 +178,7 @@ def debian(
         ftp_archive_config_suite = (
             f"""\n    APT::FTPArchive::Release::Suite "{suitename}";\n"""
         )
-    archive_description = f"SaltProject {display_name} Python 3{'' if nightly_build else ' development'} Salt package repo"
+    archive_description = f"SaltProject {display_name} Python 3{'' if not nightly_build_from else ' development'} Salt package repo"
     ftp_archive_config = f"""\
     APT::FTPArchive::Release::Origin "SaltProject";
     APT::FTPArchive::Release::Label "{label}";{ftp_archive_config_suite}
@@ -197,15 +197,27 @@ def debian(
     }}
     """
     ctx.info("Creating repository directory structure ...")
-    create_repo_path = _create_repo_path(
+    create_repo_path = _create_top_level_repo_path(
+        ctx,
         repo_path,
         salt_version,
         distro,
         distro_version=distro_version,
         distro_arch=distro_arch,
-        nightly_build=nightly_build,
+        nightly_build_from=nightly_build_from,
     )
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
 
+    create_repo_path = _create_repo_path(
+        ctx,
+        repo_path,
+        salt_version,
+        distro,
+        distro_version=distro_version,
+        distro_arch=distro_arch,
+        nightly_build_from=nightly_build_from,
+    )
     ftp_archive_config_file = create_repo_path / "apt-ftparchive.conf"
     ctx.info(f"Writing {ftp_archive_config_file} ...")
     ftp_archive_config_file.write_text(textwrap.dedent(ftp_archive_config))
@@ -291,7 +303,7 @@ def debian(
 
     ctx.info(f"Running '{' '.join(cmdline)}' ...")
     ctx.run(*cmdline, cwd=create_repo_path)
-    if nightly_build is False:
+    if not nightly_build_from:
         remote_versions = _get_remote_versions(
             tools.utils.STAGING_BUCKET_NAME,
             create_repo_path.parent.relative_to(repo_path),
@@ -302,18 +314,14 @@ def debian(
             if version.major == major_version:
                 matching_major = version
                 break
-        if not matching_major or matching_major < salt_version:
+        if not matching_major or matching_major <= salt_version:
             major_link = create_repo_path.parent.parent / str(major_version)
             ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
             major_link.symlink_to(f"minor/{salt_version}")
-        if not remote_versions or remote_versions[0] < salt_version:
+        if not remote_versions or remote_versions[0] <= salt_version:
             latest_link = create_repo_path.parent.parent / "latest"
             ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
             latest_link.symlink_to(f"minor/{salt_version}")
-    else:
-        latest_link = create_repo_path.parent / "latest"
-        ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
-        latest_link.symlink_to(create_repo_path.name)
 
     ctx.info("Done")
 
@@ -322,6 +330,7 @@ _rpm_distro_info = {
     "amazon": ["2"],
     "redhat": ["7", "8", "9"],
     "fedora": ["36", "37", "38"],
+    "photon": ["3", "4"],
 }
 
 
@@ -363,7 +372,7 @@ _rpm_distro_info = {
             ),
             "required": True,
         },
-        "nightly_build": {
+        "nightly_build_from": {
             "help": "Developement repository target",
         },
     },
@@ -377,7 +386,7 @@ def rpm(
     repo_path: pathlib.Path = None,
     key_id: str = None,
     distro_arch: str = "amd64",
-    nightly_build: bool = False,
+    nightly_build_from: str = None,
 ):
     """
     Create the redhat repository.
@@ -399,13 +408,26 @@ def rpm(
         distro_arch = "arm64"
 
     ctx.info("Creating repository directory structure ...")
-    create_repo_path = _create_repo_path(
+    create_repo_path = _create_top_level_repo_path(
+        ctx,
         repo_path,
         salt_version,
         distro,
         distro_version=distro_version,
         distro_arch=distro_arch,
-        nightly_build=nightly_build,
+        nightly_build_from=nightly_build_from,
+    )
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
+
+    create_repo_path = _create_repo_path(
+        ctx,
+        repo_path,
+        salt_version,
+        distro,
+        distro_version=distro_version,
+        distro_arch=distro_arch,
+        nightly_build_from=nightly_build_from,
     )
 
     # Export the GPG key in use
@@ -452,7 +474,7 @@ def rpm(
     else:
         ctx.run("createrepo", ".", cwd=create_repo_path)
 
-    if nightly_build:
+    if nightly_build_from:
         repo_domain = os.environ.get("SALT_REPO_DOMAIN_RELEASE", "repo.saltproject.io")
     else:
         repo_domain = os.environ.get(
@@ -476,8 +498,8 @@ def rpm(
 
     def _create_repo_file(create_repo_path, url_suffix):
         ctx.info(f"Creating '{repo_file_path.relative_to(repo_path)}' file ...")
-        if nightly_build:
-            base_url = "salt-dev/"
+        if nightly_build_from:
+            base_url = f"salt-dev/{nightly_build_from}/"
             repo_file_contents = "[salt-nightly-repo]"
         elif "rc" in salt_version:
             base_url = "salt_rc/"
@@ -493,7 +515,7 @@ def rpm(
         else:
             distro_name = distro.capitalize()
 
-        if int(distro_version) < 8:
+        if distro != "photon" and int(distro_version) < 8:
             failovermethod = "\n            failovermethod=priority"
         else:
             failovermethod = ""
@@ -512,14 +534,14 @@ def rpm(
         )
         create_repo_path.write_text(repo_file_contents)
 
-    if nightly_build:
+    if nightly_build_from:
         repo_file_path = create_repo_path.parent / "nightly.repo"
     else:
         repo_file_path = create_repo_path.parent / f"{create_repo_path.name}.repo"
 
     _create_repo_file(repo_file_path, f"minor/{salt_version}")
 
-    if nightly_build is False:
+    if not nightly_build_from:
         remote_versions = _get_remote_versions(
             tools.utils.STAGING_BUCKET_NAME,
             create_repo_path.parent.relative_to(repo_path),
@@ -530,24 +552,18 @@ def rpm(
             if version.major == major_version:
                 matching_major = version
                 break
-        if not matching_major or matching_major < salt_version:
+        if not matching_major or matching_major <= salt_version:
             major_link = create_repo_path.parent.parent / str(major_version)
             ctx.info(f"Creating '{major_link.relative_to(repo_path)}' symlink ...")
             major_link.symlink_to(f"minor/{salt_version}")
             repo_file_path = create_repo_path.parent.parent / f"{major_version}.repo"
             _create_repo_file(repo_file_path, str(major_version))
-        if not remote_versions or remote_versions[0] < salt_version:
+        if not remote_versions or remote_versions[0] <= salt_version:
             latest_link = create_repo_path.parent.parent / "latest"
             ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
             latest_link.symlink_to(f"minor/{salt_version}")
             repo_file_path = create_repo_path.parent.parent / "latest.repo"
             _create_repo_file(repo_file_path, "latest")
-    else:
-        latest_link = create_repo_path.parent / "latest"
-        ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
-        latest_link.symlink_to(create_repo_path.name)
-        repo_file_path = create_repo_path.parent.parent / "latest.repo"
-        _create_repo_file(repo_file_path, "latest")
 
     ctx.info("Done")
 
@@ -574,7 +590,7 @@ def rpm(
             ),
             "required": True,
         },
-        "nightly_build": {
+        "nightly_build_from": {
             "help": "Developement repository target",
         },
     },
@@ -585,7 +601,7 @@ def windows(
     incoming: pathlib.Path = None,
     repo_path: pathlib.Path = None,
     key_id: str = None,
-    nightly_build: bool = False,
+    nightly_build_from: str = None,
 ):
     """
     Create the windows repository.
@@ -598,7 +614,7 @@ def windows(
     _create_onedir_based_repo(
         ctx,
         salt_version=salt_version,
-        nightly_build=nightly_build,
+        nightly_build_from=nightly_build_from,
         repo_path=repo_path,
         incoming=incoming,
         key_id=key_id,
@@ -630,7 +646,7 @@ def windows(
             ),
             "required": True,
         },
-        "nightly_build": {
+        "nightly_build_from": {
             "help": "Developement repository target",
         },
     },
@@ -641,7 +657,7 @@ def macos(
     incoming: pathlib.Path = None,
     repo_path: pathlib.Path = None,
     key_id: str = None,
-    nightly_build: bool = False,
+    nightly_build_from: str = None,
 ):
     """
     Create the windows repository.
@@ -654,7 +670,7 @@ def macos(
     _create_onedir_based_repo(
         ctx,
         salt_version=salt_version,
-        nightly_build=nightly_build,
+        nightly_build_from=nightly_build_from,
         repo_path=repo_path,
         incoming=incoming,
         key_id=key_id,
@@ -686,7 +702,7 @@ def macos(
             ),
             "required": True,
         },
-        "nightly_build": {
+        "nightly_build_from": {
             "help": "Developement repository target",
         },
     },
@@ -697,7 +713,7 @@ def onedir(
     incoming: pathlib.Path = None,
     repo_path: pathlib.Path = None,
     key_id: str = None,
-    nightly_build: bool = False,
+    nightly_build_from: str = None,
 ):
     """
     Create the onedir repository.
@@ -710,7 +726,7 @@ def onedir(
     _create_onedir_based_repo(
         ctx,
         salt_version=salt_version,
-        nightly_build=nightly_build,
+        nightly_build_from=nightly_build_from,
         repo_path=repo_path,
         incoming=incoming,
         key_id=key_id,
@@ -742,7 +758,7 @@ def onedir(
             ),
             "required": True,
         },
-        "nightly_build": {
+        "nightly_build_from": {
             "help": "Developement repository target",
         },
     },
@@ -753,7 +769,7 @@ def src(
     incoming: pathlib.Path = None,
     repo_path: pathlib.Path = None,
     key_id: str = None,
-    nightly_build: bool = False,
+    nightly_build_from: str = None,
 ):
     """
     Create the onedir repository.
@@ -765,7 +781,16 @@ def src(
         assert key_id is not None
 
     ctx.info("Creating repository directory structure ...")
-    create_repo_path = repo_path / "salt" / "py3" / "src" / salt_version
+    create_repo_path = _create_top_level_repo_path(
+        ctx,
+        repo_path,
+        salt_version,
+        distro="src",
+        nightly_build_from=nightly_build_from,
+    )
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
+    create_repo_path = create_repo_path / salt_version
     create_repo_path.mkdir(exist_ok=True, parents=True)
     hashes_base_path = create_repo_path / f"salt-{salt_version}"
     for fpath in incoming.iterdir():
@@ -784,6 +809,8 @@ def src(
                 wfh.write(f"{hexdigest} {dpath.name}\n")
 
     for fpath in create_repo_path.iterdir():
+        if fpath.suffix in (".pub", ".gpg"):
+            continue
         tools.utils.gpg_sign(ctx, key_id, fpath)
 
     # Export the GPG key in use
@@ -848,6 +875,10 @@ def restore_previous_releases(ctx: Context):
     Restore release bucket from backup.
     """
     _rclone(ctx, tools.utils.BACKUP_BUCKET_NAME, tools.utils.RELEASE_BUCKET_NAME)
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"backup-complete=true\n")
     ctx.info("Done")
 
 
@@ -921,10 +952,13 @@ def release(ctx: Context, salt_version: str):
     with tempfile.TemporaryDirectory(prefix=f"{salt_version}_release_") as tsd:
         local_release_files_path = pathlib.Path(tsd) / repo_release_files_path.name
         try:
+            bucket_name = tools.utils.STAGING_BUCKET_NAME
             with local_release_files_path.open("wb") as wfh:
-                ctx.info(f"Downloading {repo_release_files_path} ...")
+                ctx.info(
+                    f"Downloading {repo_release_files_path} from bucket {bucket_name} ..."
+                )
                 s3.download_fileobj(
-                    Bucket=tools.utils.STAGING_BUCKET_NAME,
+                    Bucket=bucket_name,
                     Key=str(repo_release_files_path),
                     Fileobj=wfh,
                 )
@@ -934,11 +968,11 @@ def release(ctx: Context, salt_version: str):
                 log.exception(f"Error downloading {repo_release_files_path}: {exc}")
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "404":
-                ctx.error(f"Cloud not find {repo_release_files_path} in bucket.")
+                ctx.error(f"Could not find {repo_release_files_path} in bucket.")
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "400":
                 ctx.error(
-                    f"Cloud not download {repo_release_files_path} from bucket: {exc}"
+                    f"Could not download {repo_release_files_path} from bucket: {exc}"
                 )
                 ctx.exit(1)
             log.exception(f"Error downloading {repo_release_files_path}: {exc}")
@@ -948,9 +982,11 @@ def release(ctx: Context, salt_version: str):
         )
         try:
             with local_release_symlinks_path.open("wb") as wfh:
-                ctx.info(f"Downloading {repo_release_symlinks_path} ...")
+                ctx.info(
+                    f"Downloading {repo_release_symlinks_path} from bucket {bucket_name} ..."
+                )
                 s3.download_fileobj(
-                    Bucket=tools.utils.STAGING_BUCKET_NAME,
+                    Bucket=bucket_name,
                     Key=str(repo_release_symlinks_path),
                     Fileobj=wfh,
                 )
@@ -960,11 +996,11 @@ def release(ctx: Context, salt_version: str):
                 log.exception(f"Error downloading {repo_release_symlinks_path}: {exc}")
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "404":
-                ctx.error(f"Cloud not find {repo_release_symlinks_path} in bucket.")
+                ctx.error(f"Could not find {repo_release_symlinks_path} in bucket.")
                 ctx.exit(1)
             if exc.response["Error"]["Code"] == "400":
                 ctx.error(
-                    f"Cloud not download {repo_release_symlinks_path} from bucket: {exc}"
+                    f"Could not download {repo_release_symlinks_path} from bucket: {exc}"
                 )
                 ctx.exit(1)
             log.exception(f"Error downloading {repo_release_symlinks_path}: {exc}")
@@ -1033,6 +1069,7 @@ def release(ctx: Context, salt_version: str):
         for distro in ("windows", "macos", "onedir"):
 
             create_repo_path = _create_repo_path(
+                ctx,
                 repo_path,
                 salt_version,
                 distro=distro,
@@ -1146,7 +1183,7 @@ def release(ctx: Context, salt_version: str):
                     raise
                 if exc.response["Error"]["Code"] != "404":
                     raise
-                ctx.info(f"Cloud not find {repo_file_path} in bucket {bucket_name}")
+                ctx.info(f"Could not find {repo_file_path} in bucket {bucket_name}")
 
         for dirpath, dirnames, filenames in os.walk(repo_path, followlinks=True):
             for path in filenames:
@@ -1265,7 +1302,7 @@ def github(
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"release-messsage-file={release_message_path.resolve()}\n")
 
-    releases = _get_salt_releases(ctx, repository)
+    releases = get_salt_releases(ctx, repository)
     if Version(salt_version) >= releases[-1]:
         make_latest = True
     else:
@@ -1306,7 +1343,7 @@ def confirm_unreleased(
     """
     Confirm that the passed version is not yet tagged and/or released.
     """
-    releases = _get_salt_releases(ctx, repository)
+    releases = get_salt_releases(ctx, repository)
     if Version(salt_version) in releases:
         ctx.error(f"There's already a '{salt_version}' tag or github release.")
         ctx.exit(1)
@@ -1314,55 +1351,55 @@ def confirm_unreleased(
     ctx.exit(0)
 
 
-def _get_salt_releases(ctx: Context, repository: str) -> list[Version]:
-    """
-    Return a list of salt versions
-    """
-    versions = set()
-    with ctx.web as web:
-        headers = {
-            "Accept": "application/vnd.github+json",
-        }
-        if "GITHUB_TOKEN" in os.environ:
-            headers["Authorization"] = f"Bearer {os.environ['GITHUB_TOKEN']}"
-        web.headers.update(headers)
-        ret = web.get(f"https://api.github.com/repos/{repository}/tags")
-        if ret.status_code != 200:
-            ctx.error(
-                f"Failed to get the tags for repository {repository!r}: {ret.reason}"
+@repo.command(
+    name="confirm-staged",
+    arguments={
+        "salt_version": {
+            "help": "The salt version to check",
+        },
+        "repository": {
+            "help": (
+                "The full repository name, ie, 'saltstack/salt' on GitHub "
+                "to run the checks against."
             )
-            ctx.exit(1)
-        for tag in ret.json():
-            name = tag["name"]
-            if name.startswith("v"):
-                name = name[1:]
-            if "-" in name:
-                # We're not going to parse dash tags
-                continue
-            if "docs" in name:
-                # We're not going to consider doc tags
-                continue
-            versions.add(Version(name))
-
-        # Now let's go through the github releases
-        ret = web.get(f"https://api.github.com/repos/{repository}/releases")
-        if ret.status_code != 200:
-            ctx.error(
-                f"Failed to get the releases for repository {repository!r}: {ret.reason}"
+        },
+    },
+)
+def confirm_staged(ctx: Context, salt_version: str, repository: str = "saltstack/salt"):
+    """
+    Confirm that the passed version has been staged for release.
+    """
+    s3 = boto3.client("s3")
+    repo_release_files_path = pathlib.Path(
+        f"release-artifacts/{salt_version}/.release-files.json"
+    )
+    repo_release_symlinks_path = pathlib.Path(
+        f"release-artifacts/{salt_version}/.release-symlinks.json"
+    )
+    for remote_path in (repo_release_files_path, repo_release_symlinks_path):
+        try:
+            bucket_name = tools.utils.STAGING_BUCKET_NAME
+            ctx.info(
+                f"Checking for the presence of {remote_path} on bucket {bucket_name} ..."
             )
+            s3.head_object(
+                Bucket=bucket_name,
+                Key=str(remote_path),
+            )
+        except ClientError as exc:
+            if "Error" not in exc.response:
+                log.exception(f"Could not get information about {remote_path}: {exc}")
+                ctx.exit(1)
+            if exc.response["Error"]["Code"] == "404":
+                ctx.error(f"Could not find {remote_path} in bucket.")
+                ctx.exit(1)
+            if exc.response["Error"]["Code"] == "400":
+                ctx.error(f"Could get information about {remote_path}: {exc}")
+                ctx.exit(1)
+            log.exception(f"Error getting information about {remote_path}: {exc}")
             ctx.exit(1)
-        for release in ret.json():
-            name = release["name"]
-            if name.startswith("v"):
-                name = name[1:]
-            if name and "-" not in name and "docs" not in name:
-                # We're not going to parse dash or docs releases
-                versions.add(Version(name))
-            name = release["tag_name"]
-            if "-" not in name and "docs" not in name:
-                # We're not going to parse dash or docs releases
-                versions.add(Version(name))
-    return sorted(versions)
+    ctx.info(f"Version {salt_version} has been staged for release")
+    ctx.exit(0)
 
 
 def _get_repo_detailed_file_list(
@@ -1431,14 +1468,14 @@ def _get_remote_versions(bucket_name: str, remote_path: str):
             continue
         versions.append(Version(version))
     versions.sort(reverse=True)
-    log.info("Remove versions collected: %s", versions)
+    log.info("Remote versions collected: %s", versions)
     return versions
 
 
 def _create_onedir_based_repo(
     ctx: Context,
     salt_version: str,
-    nightly_build: bool,
+    nightly_build_from: str | None,
     repo_path: pathlib.Path,
     incoming: pathlib.Path,
     key_id: str,
@@ -1446,16 +1483,30 @@ def _create_onedir_based_repo(
     pkg_suffixes: tuple[str, ...],
 ):
     ctx.info("Creating repository directory structure ...")
-    create_repo_path = _create_repo_path(
-        repo_path, salt_version, distro, nightly_build=nightly_build
+    create_repo_path = _create_top_level_repo_path(
+        ctx,
+        repo_path,
+        salt_version,
+        distro,
+        nightly_build_from=nightly_build_from,
     )
-    if nightly_build is False:
+    # Export the GPG key in use
+    tools.utils.export_gpg_key(ctx, key_id, create_repo_path)
+
+    create_repo_path = _create_repo_path(
+        ctx,
+        repo_path,
+        salt_version,
+        distro,
+        nightly_build_from=nightly_build_from,
+    )
+    if not nightly_build_from:
         repo_json_path = create_repo_path.parent.parent / "repo.json"
     else:
         repo_json_path = create_repo_path.parent / "repo.json"
 
-    if nightly_build:
-        bucket_name = tools.utils.NIGHTLY_BUCKET_NAME
+    if nightly_build_from:
+        bucket_name = tools.utils.RELEASE_BUCKET_NAME
     else:
         bucket_name = tools.utils.STAGING_BUCKET_NAME
 
@@ -1531,11 +1582,7 @@ def _create_onedir_based_repo(
     repo_json = _get_repo_json_file_contents(
         ctx, bucket_name=bucket_name, repo_path=repo_path, repo_json_path=repo_json_path
     )
-    if nightly_build is True:
-        latest_link = create_repo_path.parent / "latest"
-        ctx.info(f"Creating '{latest_link.relative_to(repo_path)}' symlink ...")
-        latest_link.symlink_to(create_repo_path.name)
-
+    if nightly_build_from:
         ctx.info(f"Writing {repo_json_path} ...")
         repo_json_path.write_text(json.dumps(repo_json, sort_keys=True))
         return
@@ -1642,7 +1689,7 @@ def _get_repo_json_file_contents(
             raise
         if exc.response["Error"]["Code"] != "404":
             raise
-        ctx.info(f"Cloud not find {repo_json_path} in bucket {bucket_name}")
+        ctx.info(f"Could not find {repo_json_path} in bucket {bucket_name}")
     if repo_json:
         ctx.print(repo_json, soft_wrap=True)
     return repo_json
@@ -1678,7 +1725,7 @@ def _publish_repo(
     Publish packaging repositories.
     """
     if nightly_build:
-        bucket_name = tools.utils.NIGHTLY_BUCKET_NAME
+        bucket_name = tools.utils.RELEASE_BUCKET_NAME
     elif stage:
         bucket_name = tools.utils.STAGING_BUCKET_NAME
     else:
@@ -1787,17 +1834,33 @@ def _publish_repo(
         pass
 
 
-def _create_repo_path(
+def _create_top_level_repo_path(
+    ctx: Context,
     repo_path: pathlib.Path,
     salt_version: str,
     distro: str,
     distro_version: str | None = None,  # pylint: disable=bad-whitespace
     distro_arch: str | None = None,  # pylint: disable=bad-whitespace
-    nightly_build: bool = False,
+    nightly_build_from: str | None = None,  # pylint: disable=bad-whitespace
 ):
     create_repo_path = repo_path
-    if nightly_build:
-        create_repo_path = create_repo_path / "salt-dev"
+    if nightly_build_from:
+        create_repo_path = (
+            create_repo_path
+            / "salt-dev"
+            / nightly_build_from
+            / datetime.utcnow().strftime("%Y-%m-%d")
+        )
+        create_repo_path.mkdir(exist_ok=True, parents=True)
+        with ctx.chdir(create_repo_path.parent):
+            latest_nightly_symlink = pathlib.Path("latest")
+            if not latest_nightly_symlink.exists():
+                ctx.info(
+                    f"Creating 'latest' symlink to '{create_repo_path.relative_to(repo_path)}' ..."
+                )
+                latest_nightly_symlink.symlink_to(
+                    create_repo_path.name, target_is_directory=True
+                )
     elif "rc" in salt_version:
         create_repo_path = create_repo_path / "salt_rc"
     create_repo_path = create_repo_path / "salt" / "py3" / distro
@@ -1805,10 +1868,29 @@ def _create_repo_path(
         create_repo_path = create_repo_path / distro_version
     if distro_arch:
         create_repo_path = create_repo_path / distro_arch
-    if nightly_build is False:
-        create_repo_path = create_repo_path / "minor" / salt_version
-    else:
-        create_repo_path = create_repo_path / datetime.utcnow().strftime("%Y-%m-%d")
+    create_repo_path.mkdir(exist_ok=True, parents=True)
+    return create_repo_path
+
+
+def _create_repo_path(
+    ctx: Context,
+    repo_path: pathlib.Path,
+    salt_version: str,
+    distro: str,
+    distro_version: str | None = None,  # pylint: disable=bad-whitespace
+    distro_arch: str | None = None,  # pylint: disable=bad-whitespace
+    nightly_build_from: str | None = None,  # pylint: disable=bad-whitespace
+):
+    create_repo_path = _create_top_level_repo_path(
+        ctx,
+        repo_path,
+        salt_version,
+        distro,
+        distro_version,
+        distro_arch,
+        nightly_build_from=nightly_build_from,
+    )
+    create_repo_path = create_repo_path / "minor" / salt_version
     create_repo_path.mkdir(exist_ok=True, parents=True)
     return create_repo_path
 
