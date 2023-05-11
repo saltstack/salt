@@ -88,7 +88,7 @@
 
       - name: Create Repository
         run: |
-          tools pkg repo create onedir --key-id=<{ gpg_key_id }> <% if gh_environment == 'nightly' -%> --nightly-build <%- endif %> \
+          tools pkg repo create onedir --key-id=<{ gpg_key_id }> <% if gh_environment == 'nightly' -%> --nightly-build-from=${{ github.ref_name }} <%- endif %> \
             --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
 

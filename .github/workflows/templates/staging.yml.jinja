@@ -27,6 +27,10 @@ on:
         description: >
           The Salt version to set prior to building packages and staging the release.
           (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+      sign-windows-packages:
+        type: boolean
+        default: false
+        description: Sign Windows Packages
       skip-salt-test-suite:
         type: boolean
         default: false
@@ -66,17 +70,6 @@ concurrency:
         with:
           require: admin
           username: ${{ github.triggering_actor }}
-
-      - name: Check Branch
-        run: |
-          echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
-          if [ "${{ contains(fromJSON('<{ release_branches|tojson }>'), github.ref_name) }}" != "true" ]; then
-              echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
-              echo "Allowed branches: <{ release_branches|join(', ') }>"
-              exit 1
-          else
-              echo "Allowed to release from branch ${{ github.ref_name }}"
-          fi
 
 <%- endblock pre_jobs %>
 
@@ -131,6 +124,10 @@ concurrency:
         with:
           name: Salt-${{ needs.prepare-workflow.outputs.salt-version }}.epub
           path: artifacts/release
+
+      - name: Show Release Artifacts
+        run: |
+          tree -a artifacts/release
 
       {#-
 

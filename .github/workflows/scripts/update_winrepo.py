@@ -23,8 +23,8 @@ new_contents = []
 added = False
 for line in current_contents:
     new_contents.append(line)
-    if "for version in [" in line and not added:
-        new_contents.append(f"          '{version}',\n")
+    if "load_yaml as versions_relenv" in line and not added:
+        new_contents.append(f"- {version}\n")
         added = True
 
 with open(file, "w") as f:

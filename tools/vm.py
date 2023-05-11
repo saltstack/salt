@@ -630,6 +630,11 @@ class VM:
                     self.ctx.error(str(exc))
                     self.ctx.exit(1)
                 instance_id_path.unlink()
+            except AttributeError:
+                # This machine no longer exists?!
+                instance_id_path.unlink()
+                self.ctx.info("It appears the cached image no longer exists...")
+                self.ctx.exit(1)
         if not instance_id_path.exists():
             filters = [
                 {"Name": "tag:vm-name", "Values": [self.name]},

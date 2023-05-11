@@ -52,18 +52,23 @@
 
       - name: Create Repository
         run: |
-          tools pkg repo create src --key-id=<{ gpg_key_id }> <% if gh_environment == 'nightly' -%> --nightly-build <%- endif %> \
+          tools pkg repo create src --key-id=<{ gpg_key_id }> <% if gh_environment == 'nightly' -%> --nightly-build-from=${{ github.ref_name }} <%- endif %> \
             --salt-version=${{ needs.prepare-workflow.outputs.salt-version }} \
             --incoming=artifacts/pkgs/incoming --repo-path=artifacts/pkgs/repo
+
+      - name: Copy Files For Source Only Artifact Uploads
+        run: |
+          mkdir artifacts/src
+          find artifacts/pkgs/repo -type f -print -exec cp {} artifacts/src \;
 
       - name: Upload Standalone Repository As An Artifact
         uses: actions/upload-artifact@v3
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-<{ gh_environment }>-src-repo
           path: |
-            artifacts/pkgs/repo/salt/py3/src/${{ needs.prepare-workflow.outputs.salt-version }}/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
-            artifacts/pkgs/repo/salt/py3/src/${{ needs.prepare-workflow.outputs.salt-version }}/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.*
-            artifacts/pkgs/repo/salt/py3/src/${{ needs.prepare-workflow.outputs.salt-version }}/*-GPG-*
+            artifacts/src/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+            artifacts/src/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.*
+            artifacts/src/*-GPG-*
           retention-days: 7
           if-no-files-found: error
 

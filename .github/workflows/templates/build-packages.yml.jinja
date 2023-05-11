@@ -18,6 +18,11 @@
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
     <%- if pkg_type in ("macos", "windows") and gh_environment %>
       environment: <{ gh_environment }>
+      <%- if pkg_type == "macos" %>
+      sign-packages: true
+      <%- else %>
+      sign-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-windows-packages }} <%- endif %>
+      <%- endif %>
     secrets: inherit
     <%- endif %>
 

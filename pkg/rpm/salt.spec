@@ -14,6 +14,10 @@
 %global __requires_exclude_from ^.*\\.so.*$
 %define _source_payload w2.gzdio
 %define _binary_payload w2.gzdio
+%define _SALT_GROUP salt
+%define _SALT_USER salt
+%define _SALT_NAME Salt
+%define _SALT_HOME /opt/saltstack/salt
 
 # Disable python bytecompile for MANY reasons
 %global __os_install_post %(echo '%{__os_install_post}' | sed -e 's!/usr/lib[^[:space:]]*/brp-python-bytecompile[[:space:]].*$!!g')
@@ -21,7 +25,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3006.0
+Version: 3006.1
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -43,8 +47,12 @@ BuildRequires: python3
 BuildRequires: python3-pip
 BuildRequires: openssl
 BuildRequires: git
+
+# rhel is not defined on all rpm based distros.
+%if %{?rhel:1}%{!?rhel:0}
 %if %{rhel} >= 9
 BuildRequires: libxcrypt-compat
+%endif
 %endif
 
 %description
@@ -140,8 +148,12 @@ cd $RPM_BUILD_DIR
   # the <onedir>/bin directory
   find $RPM_BUILD_DIR/build/salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$(dirname $(readlink -f $0))/python3" "$0" "$@":g' {} \;
 
-	$RPM_BUILD_DIR/build/venv/bin/tools pkg build salt-onedir . --package-name $RPM_BUILD_DIR/build/salt --platform linux
+  $RPM_BUILD_DIR/build/venv/bin/tools pkg build salt-onedir . --package-name $RPM_BUILD_DIR/build/salt --platform linux
   $RPM_BUILD_DIR/build/venv/bin/tools pkg pre-archive-cleanup --pkg $RPM_BUILD_DIR/build/salt
+
+  # Generate master config
+  sed 's/#user: root/user: salt/g' %{_salt_src}/conf/master > $RPM_BUILD_DIR/build/master
+
 %else
   # The relenv onedir is being provided, all setup up until Salt is installed
   # is expected to be done
@@ -150,6 +162,9 @@ cd $RPM_BUILD_DIR
 
   # Fix any hardcoded paths to the relenv python binary on any of the scripts installed in the <onedir>/bin directory
   find salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$$(dirname $$(readlink -f $$0))/python3" "$$0" "$$@":g' {} \;
+
+  # Generate master config
+  sed 's/#user: root/user: salt/g' %{_salt_src}/conf/master > $RPM_BUILD_DIR/build/master
 
   cd $RPM_BUILD_DIR
 %endif
@@ -208,7 +223,7 @@ install -m 0755 %{buildroot}/opt/saltstack/salt/salt-pip %{buildroot}%{_bindir}/
 
 # Add the config files
 install -p -m 0640 %{_salt_src}/conf/minion %{buildroot}%{_sysconfdir}/salt/minion
-install -p -m 0640 %{_salt_src}/pkg/common/conf/master %{buildroot}%{_sysconfdir}/salt/master
+install -p -m 0640 $RPM_BUILD_DIR/build/master %{buildroot}%{_sysconfdir}/salt/master
 install -p -m 0640 %{_salt_src}/conf/cloud %{buildroot}%{_sysconfdir}/salt/cloud
 install -p -m 0640 %{_salt_src}/conf/roster %{buildroot}%{_sysconfdir}/salt/roster
 install -p -m 0640 %{_salt_src}/conf/proxy %{buildroot}%{_sysconfdir}/salt/proxy
@@ -274,8 +289,6 @@ rm -rf %{buildroot}
 %dir %{_sysconfdir}/salt/pki
 
 
-
-
 %files master
 %defattr(-,root,root)
 %doc %{_mandir}/man7/salt.7*
@@ -307,6 +320,7 @@ rm -rf %{buildroot}
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/syndics/
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/tokens/
 
+
 %files minion
 %defattr(-,root,root)
 %doc %{_mandir}/man1/salt-call.1*
@@ -323,16 +337,19 @@ rm -rf %{buildroot}
 %dir %{_sysconfdir}/salt/minion.d
 %dir %attr(0750, root, root) %{_var}/cache/salt/minion/
 
+
 %files syndic
 %doc %{_mandir}/man1/salt-syndic.1*
 %{_bindir}/salt-syndic
 %{_unitdir}/salt-syndic.service
+
 
 %files api
 %defattr(-,root,root)
 %doc %{_mandir}/man1/salt-api.1*
 %{_bindir}/salt-api
 %{_unitdir}/salt-api.service
+
 
 %files cloud
 %doc %{_mandir}/man1/salt-cloud.1*
@@ -344,35 +361,64 @@ rm -rf %{buildroot}
 %{_sysconfdir}/salt/cloud.providers.d
 %config(noreplace) %{_sysconfdir}/salt/cloud
 
+
 %files ssh
 %doc %{_mandir}/man1/salt-ssh.1*
 %{_bindir}/salt-ssh
 %config(noreplace) %{_sysconfdir}/salt/roster
 
-# Add salt user/group for Salt Master
-%pre master
-getent group salt >/dev/null || groupadd -r salt
-getent passwd salt >/dev/null || \
-    useradd -r -g salt -s /sbin/nologin \
-    -c "Salt user for Salt Master" salt
+
+%pre
+# create user to avoid running server as root
+# 1. create group if not existing
+if ! getent group %{_SALT_GROUP}; then
+   groupadd --system %{_SALT_GROUP} 2>/dev/null ||true
+fi
+# 2. create homedir if not existing
+test -d %{_SALT_HOME} || mkdir -p %{_SALT_HOME}
+# 3. create user if not existing
+#         -g %{_SALT_GROUP} \
+if ! getent passwd | grep -q "^%{_SALT_USER}:"; then
+  useradd --system \
+          --no-create-home \
+          -s /sbin/nologin \
+          -g %{_SALT_GROUP} \
+          %{_SALT_USER} 2>/dev/null || true
+fi
+# 4. adjust passwd entry
+usermod -c "%{_SALT_NAME}" \
+        -d %{_SALT_HOME}   \
+        -g %{_SALT_GROUP}  \
+         %{_SALT_USER}
+# 5. adjust file and directory permissions
+chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
 
 # assumes systemd for RHEL 7 & 8 & 9
 %preun master
 # RHEL 9 is giving warning msg if syndic is not installed, supress it
 %systemd_preun salt-syndic.service > /dev/null 2>&1
 
+
 %preun minion
 %systemd_preun salt-minion.service
+
 
 %preun api
 %systemd_preun salt-api.service
 
+
 %post
+chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
+chmod u=rwx,g=rwx,o=rx %{_SALT_HOME}
 ln -s -f /opt/saltstack/salt/spm %{_bindir}/spm
 ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
 
+
 %post cloud
+chown -R salt:salt /etc/salt/cloud.deploy.d
+chown -R salt:salt /opt/saltstack/salt/lib/python3.10/site-packages/salt/cloud/deploy
 ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
+
 
 %post master
 %systemd_post salt-master.service
@@ -450,6 +496,41 @@ fi
 
 
 %changelog
+* Fri May 05 2023 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.1
+
+# Fixed
+
+- Check that the return data from the cloud create function is a dictionary before attempting to pull values out. [#61236](https://github.com/saltstack/salt/issues/61236)
+- Ensure NamedLoaderContext's have their value() used if passing to other modules [#62477](https://github.com/saltstack/salt/issues/62477)
+- add documentation note about reactor state ids. [#63589](https://github.com/saltstack/salt/issues/63589)
+- Added support for ``test=True`` to the ``file.cached`` state module [#63785](https://github.com/saltstack/salt/issues/63785)
+- Updated `source_hash` documentation and added a log warning when `source_hash` is used with a source other than `http`, `https` and `ftp`. [#63810](https://github.com/saltstack/salt/issues/63810)
+- Fixed clear pillar cache on every highstate and added clean_pillar_cache=False to saltutil functions. [#64081](https://github.com/saltstack/salt/issues/64081)
+- Fix dmsetup device names with hyphen being picked up. [#64082](https://github.com/saltstack/salt/issues/64082)
+- Update all the scheduler functions to include a fire_event argument which will determine whether to fire the completion event onto the event bus.
+  This event is only used when these functions are called via the schedule execution modules.
+  Update all the calls to the schedule related functions in the deltaproxy proxy minion to include fire_event=False, as the event bus is not available when these functions are called. [#64102](https://github.com/saltstack/salt/issues/64102), [#64103](https://github.com/saltstack/salt/issues/64103)
+- Default to a 0 timeout if none is given for the terraform roster to avoid `-o ConnectTimeout=None` when using `salt-ssh` [#64109](https://github.com/saltstack/salt/issues/64109)
+- Disable class level caching of the file client on `SaltCacheLoader` and properly use context managers to take care of initialization and termination of the file client. [#64111](https://github.com/saltstack/salt/issues/64111)
+- Fixed several file client uses which were not properly terminating it by switching to using it as a context manager
+  whenever possible or making sure `.destroy()` was called when using a context manager was not possible. [#64113](https://github.com/saltstack/salt/issues/64113)
+- Fix running setup.py when passing in --salt-config-dir and --salt-cache-dir arguments. [#64114](https://github.com/saltstack/salt/issues/64114)
+- Moved /etc/salt/proxy and /lib/systemd/system/salt-proxy@.service to the salt-minion DEB package [#64117](https://github.com/saltstack/salt/issues/64117)
+- Stop passing `**kwargs` and be explicit about the keyword arguments to pass, namely, to `cp.cache_file` call in `salt.states.pkg` [#64118](https://github.com/saltstack/salt/issues/64118)
+- lgpo_reg.set_value now returns ``True`` on success instead of ``None`` [#64126](https://github.com/saltstack/salt/issues/64126)
+- Make salt user's home /opt/saltstack/salt [#64141](https://github.com/saltstack/salt/issues/64141)
+- Fix cmd.run doesn't output changes in test mode [#64150](https://github.com/saltstack/salt/issues/64150)
+- Move salt user and group creation to common package [#64158](https://github.com/saltstack/salt/issues/64158)
+- Fixed issue in salt-cloud so that multiple masters specified in the cloud
+  are written to the minion config properly [#64170](https://github.com/saltstack/salt/issues/64170)
+- Make sure the `salt-ssh` CLI calls it's `fsclient.destroy()` method when done. [#64184](https://github.com/saltstack/salt/issues/64184)
+- Stop using the deprecated `salt.transport.client` imports. [#64186](https://github.com/saltstack/salt/issues/64186)
+- Add a `.pth` to the Salt onedir env to ensure packages in extras are importable. Bump relenv to 0.12.3. [#64192](https://github.com/saltstack/salt/issues/64192)
+- Fix ``lgpo_reg`` state to work with User policy [#64200](https://github.com/saltstack/salt/issues/64200)
+- Cloud deployment directories are owned by salt user and group [#64204](https://github.com/saltstack/salt/issues/64204)
+- ``lgpo_reg`` state now enforces and reports changes to the registry [#64222](https://github.com/saltstack/salt/issues/64222)
+
+
 * Tue Apr 18 2023 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.0
 
 # Removed
