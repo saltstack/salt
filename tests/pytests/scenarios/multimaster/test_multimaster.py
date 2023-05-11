@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 ECHO_STR = "The FitnessGram Pacer Test is a multistage aerobic capacity test"
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
 ]
 
 

@@ -4,6 +4,10 @@ import pytest
 
 import salt.state
 
+pytestmark = [
+    pytest.mark.core_test,
+]
+
 
 @pytest.fixture
 def master_opts(master_opts):

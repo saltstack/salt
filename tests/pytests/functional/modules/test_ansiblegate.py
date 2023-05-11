@@ -9,6 +9,7 @@ pytestmark = [
         check_all=True,
         reason="ansible is not installed",
     ),
+    pytest.mark.slow_test,
 ]
 
 
