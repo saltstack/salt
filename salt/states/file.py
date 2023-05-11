@@ -5570,7 +5570,6 @@ def keyvalue(
     try:
         with salt.utils.files.fopen(name, "r") as fd:
             file_contents = fd.readlines()
-            fd.close()
     except FileNotFoundError as exc:
         if create_if_missing:
             append_if_not_found = True
