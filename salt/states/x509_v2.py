@@ -186,6 +186,7 @@ import datetime
 import logging
 import os.path
 
+import salt.utils.context
 import salt.utils.files
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.features import features
@@ -1578,8 +1579,22 @@ def _file_managed(name, test=None, **kwargs):
         raise SaltInvocationError("test param can only be None or True")
     # work around https://github.com/saltstack/salt/issues/62590
     test = test or __opts__["test"]
-    res = __salt__["state.single"]("file.managed", name, test=test, **kwargs)
-    return res[next(iter(res))]
+    file_managed = __states__["file.managed"]
+    if bool(test) is not bool(__opts__["test"]):
+        opts = copy.copy(__opts__)
+        opts["test"] = test
+        # calls via __salt__["state.single"](..., test=test)
+        # can overwrite __opts__["test"] permanently. Workaround:
+        with salt.utils.context.func_globals_inject(file_managed, __opts__=opts):
+            # The file execution module accesses __opts__["test"] as well
+            with salt.utils.context.func_globals_inject(
+                __salt__["file.check_perms"], __opts__=opts
+            ):
+                with salt.utils.context.func_globals_inject(
+                    __salt__["file.manage_file"], __opts__=opts
+                ):
+                    return file_managed(name, **kwargs)
+    return file_managed(name, **kwargs)
 
 
 def _check_file_ret(fret, ret, current):
