@@ -5,6 +5,8 @@ import salt.utils.win_reg
 
 log = logging.getLogger(__name__)
 
+CURRENTVERSION_KEY = r"SOFTWARE\Microsoft\Windows\CurrentVersion"
+DEPROVISIONED_KEY = fr"{CURRENTVERSION_KEY}\Appx\AppxAllUserStore\Deprovisioned"
 __virtualname__ = "appx"
 
 
@@ -56,7 +58,7 @@ def get(query=None, field="Name", include_store=False, frameworks=False, bundles
         return _pkg_list(__utils__["win_pwsh.run_dict"](" | ".join(cmd)), field)
 
 
-def remove(query=None, include_store=False, frameworks=False, bundles=True):
+def remove(query=None, include_store=False, frameworks=False, bundles=True, deprovision=False):
     packages = get(
         query=query,
         field=None,
@@ -66,7 +68,6 @@ def remove(query=None, include_store=False, frameworks=False, bundles=True):
     )
 
     def remove_package(package):
-
         remove_name = package["PackageFullName"]
         # If the package is part of a bundle with the same name, removal will
         # fail. Let's make sure it's a bundle
@@ -80,12 +81,16 @@ def remove(query=None, include_store=False, frameworks=False, bundles=True):
                 bundles=True,
             )
             if bundle and bundle["IsBundle"]:
+                log.debug(f'Found bundle: {bundle["PackageFullName"]}')
                 remove_name = bundle["PackageFullName"]
 
-        log.debug("Removing package: %s", remove_name)
-        __utils__["win_pwsh.run_dict"](
-            f"Remove-AppxPackage -AllUsers -Package {remove_name}"
-        )
+        if deprovision:
+            log.debug("Deprovisioning package: %s", remove_name)
+            remove_cmd = f"Remove-AppxProvisionedPackage -Online -PackageName {remove_name}"
+        else:
+            log.debug("Removing package: %s", remove_name)
+            remove_cmd = f"Remove-AppxPackage -AllUsers -Package {remove_name}"
+        __utils__["win_pwsh.run_dict"](remove_cmd)
 
     if isinstance(packages, list):
         log.debug("Removing %s packages", len(packages))
@@ -99,3 +104,17 @@ def remove(query=None, include_store=False, frameworks=False, bundles=True):
         return None
 
     return True
+
+
+def get_deprovisioned():
+    return salt.utils.win_reg.list_keys(hive="HKLM", key=f"{DEPROVISIONED_KEY}")
+
+
+def reprovision(package_name):
+    key = f"{DEPROVISIONED_KEY}\\{package_name}"
+    if salt.utils.win_reg.key_exists(hive="HKLM", key=key):
+        log.debug(f"Deprovisioned app found: {package_name}")
+        ret = salt.utils.win_reg.delete_key_recursive(hive="HKLM", key=key)
+        return not ret["Failed"]
+    log.debug(f"Deprovisioned app not found: {package_name}")
+    return None

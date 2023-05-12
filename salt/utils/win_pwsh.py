@@ -40,7 +40,9 @@ def run_dict(cmd, cwd=None):
             successfully
     """
     if "convertto-json" not in cmd.lower():
-        cmd = "{} | ConvertTo-Json".format(cmd)
+        cmd = f"{cmd} | ConvertTo-Json"
+    if "progresspreference" not in cmd.lower():
+        cmd = f"$ProgressPreference = 'SilentlyContinue'; {cmd}"
     log.debug("PowerShell: %s", cmd)
     ret = __salt__["cmd.run_all"](cmd, shell="powershell", cwd=cwd)
 
