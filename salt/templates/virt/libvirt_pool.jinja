@@ -43,17 +43,15 @@
          {% endif %}
     </adapter>
     {% endif %}
-    {% if ptype in ['netfs', 'iscsi', 'rbd', 'sheepdog', 'gluster', 'iscsi-direct'] and source.hosts %}
     {% for host in source.hosts %}
     <host name='{{ host.name }}' {% if host.port %}port='{{ host.port }}'{% endif %}/>
     {% endfor %}
-    {% endif %}
     {% if ptype in ['iscsi', 'rbd', 'iscsi-direct'] and source.auth %}
     <auth type='{{source.auth.type}}' username='{{ source.auth.username }}'>
       <secret {{ source.auth.secret.type }}='{{source.auth.secret.value}}'/>
     </auth>
     {% endif %}
-    {% if ptype in ['logical', 'rbd', 'sheepdog', 'gluster'] and source.name %}
+    {% if source.name %}
     <name>{{ source.name }}</name>
     {% endif %}
     {% if ptype in ['fs', 'netfs', 'logical', 'disk'] and source.format %}

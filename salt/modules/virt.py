@@ -1284,6 +1284,24 @@ def _gen_pool_xml(
     """
     Generate the XML string to define a libvirt storage pool
     """
+
+    # Validate settings
+    types_devices = ['fs', 'logical', 'disk', 'iscsi', 'zfs', 'vstorage', 'iscsi-direct']
+    if ptype not in types_devices and source_devices:
+        raise SaltInvocationError(
+            "pool type does not support passing devices"
+        )
+    types_hosts = ['netfs', 'iscsi', 'rbd', 'sheepdog', 'gluster', 'iscsi-direct']
+    if ptype not in types_hosts and source_hosts:
+        raise SaltInvocationError(
+            "pool type does not support passing hosts"
+        )
+    types_name = ['logical', 'rbd', 'sheepdog', 'gluster', 'zfs']
+    if ptype not in types_name and source_name:
+        raise SaltInvocationError(
+            "pool type does not support passing name"
+        )
+
     hosts = [host.split(":") for host in source_hosts or []]
     source = None
     if any(
