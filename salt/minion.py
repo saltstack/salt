@@ -4,7 +4,6 @@ Routines to set up a minion
 import binascii
 import contextlib
 import copy
-import functools
 import logging
 import multiprocessing
 import os
@@ -70,7 +69,6 @@ from salt.exceptions import (
     SaltSystemExit,
 )
 from salt.template import SLS_ENCODING
-from salt.utils.ctx import RequestContext
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.network import parse_host_port
@@ -2250,7 +2248,8 @@ class Minion(MinionBase):
         else:
             # pylint: disable=unexpected-keyword-arg
             ret_val = self._send_req_async(
-                load, timeout=timeout, callback=lambda f: None
+                load,
+                timeout=timeout,
             )
             # pylint: enable=unexpected-keyword-arg
 
@@ -2340,7 +2339,8 @@ class Minion(MinionBase):
         else:
             # pylint: disable=unexpected-keyword-arg
             ret_val = self._send_req_async(
-                load, timeout=timeout, callback=lambda f: None
+                load,
+                timeout=timeout,
             )
             # pylint: enable=unexpected-keyword-arg
 

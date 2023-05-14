@@ -32,7 +32,6 @@ from salt._logging.handlers import SysLogHandler  # isort:skip
 from salt._logging.handlers import WatchedFileHandler  # isort:skip
 from salt._logging.mixins import LoggingMixinMeta  # isort:skip
 from salt.exceptions import LoggingRuntimeError  # isort:skip
-from salt.utils.ctx import RequestContext  # isort:skip
 from salt.utils.immutabletypes import freeze, ImmutableDict  # isort:skip
 from salt.utils.textformat import TextFormat  # isort:skip
 
@@ -238,8 +237,11 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
             extra = {}
 
         # pylint: disable=no-member
-        current_jid = RequestContext.current.get("data", {}).get("jid", None)
-        log_fmt_jid = RequestContext.current.get("opts", {}).get("log_fmt_jid", None)
+        # XXX TODO
+        # current_jid = RequestContext.current.get("data", {}).get("jid", None)
+        # log_fmt_jid = RequestContext.current.get("opts", {}).get("log_fmt_jid", None)
+        current_jid = ""
+        log_fmt_jid = ""
         # pylint: enable=no-member
 
         if current_jid is not None:

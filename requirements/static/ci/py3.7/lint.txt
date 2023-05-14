@@ -878,7 +878,9 @@ toml==0.10.2
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/ci/lint.in
 tornado==6.1
-    # via python-telegram-bot
+    # via
+    #   -r requirements/base.txt
+    #   python-telegram-bot
 transitions==0.8.8
     # via junos-eznc
 twilio==7.9.2
