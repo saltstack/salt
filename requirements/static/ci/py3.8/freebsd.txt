@@ -873,6 +873,8 @@ toml==0.10.2
     # via -r requirements/static/ci/common.in
 tomli==2.0.1
     # via pytest
+tornado==6.1
+    # via -r requirements/base.txt
 transitions==0.8.1
     # via junos-eznc
 typing-extensions==4.2.0
