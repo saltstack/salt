@@ -363,6 +363,7 @@ class TCPReqServer(salt.transport.base.DaemonizedRequestServer):
         message_handler: function to call with your payloads
         """
         self.message_handler = message_handler
+        log.info("ReqServer workers %s", socket)
 
         with salt.utils.asynchronous.current_ioloop(io_loop):
             if USE_LOAD_BALANCER:

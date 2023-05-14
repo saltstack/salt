@@ -1691,10 +1691,9 @@ class Minion(MinionBase):
 
                 timeout_handler = handle_timeout
 
-            with salt.ext.tornado.stack_context.ExceptionStackContext(timeout_handler):
-                # pylint: disable=unexpected-keyword-arg
-                self._send_req_async(load, timeout, callback=lambda f: None)
-                # pylint: enable=unexpected-keyword-arg
+            # pylint: disable=unexpected-keyword-arg
+            self._send_req_async(load, timeout, callback=lambda f: None)
+            # pylint: enable=unexpected-keyword-arg
         return True
 
     @salt.ext.tornado.gen.coroutine
@@ -1829,11 +1828,7 @@ class Minion(MinionBase):
             else:
                 return Minion._thread_return(minion_instance, opts, data)
 
-        with salt.ext.tornado.stack_context.StackContext(
-            functools.partial(RequestContext, {"data": data, "opts": opts})
-        ):
-            with salt.ext.tornado.stack_context.StackContext(minion_instance.ctx):
-                run_func(minion_instance, opts, data)
+        run_func(minion_instance, opts, data)
 
     def _execute_job_function(
         self, function_name, function_args, executors, opts, data
@@ -2253,12 +2248,11 @@ class Minion(MinionBase):
                 timeout_handler()
                 return ""
         else:
-            with salt.ext.tornado.stack_context.ExceptionStackContext(timeout_handler):
-                # pylint: disable=unexpected-keyword-arg
-                ret_val = self._send_req_async(
-                    load, timeout=timeout, callback=lambda f: None
-                )
-                # pylint: enable=unexpected-keyword-arg
+            # pylint: disable=unexpected-keyword-arg
+            ret_val = self._send_req_async(
+                load, timeout=timeout, callback=lambda f: None
+            )
+            # pylint: enable=unexpected-keyword-arg
 
         log.trace("ret_val = %s", ret_val)  # pylint: disable=no-member
         return ret_val
@@ -2344,12 +2338,11 @@ class Minion(MinionBase):
                 timeout_handler()
                 return ""
         else:
-            with salt.ext.tornado.stack_context.ExceptionStackContext(timeout_handler):
-                # pylint: disable=unexpected-keyword-arg
-                ret_val = self._send_req_async(
-                    load, timeout=timeout, callback=lambda f: None
-                )
-                # pylint: enable=unexpected-keyword-arg
+            # pylint: disable=unexpected-keyword-arg
+            ret_val = self._send_req_async(
+                load, timeout=timeout, callback=lambda f: None
+            )
+            # pylint: enable=unexpected-keyword-arg
 
         log.trace("ret_val = %s", ret_val)  # pylint: disable=no-member
         return ret_val
@@ -3293,19 +3286,18 @@ class Syndic(Minion):
             log.warning("Unable to forward pub data: %s", args[1])
             return True
 
-        with salt.ext.tornado.stack_context.ExceptionStackContext(timeout_handler):
-            self.local.pub_async(
-                data["tgt"],
-                data["fun"],
-                data["arg"],
-                data["tgt_type"],
-                data["ret"],
-                data["jid"],
-                data["to"],
-                io_loop=self.io_loop,
-                callback=lambda _: None,
-                **kwargs
-            )
+        self.local.pub_async(
+            data["tgt"],
+            data["fun"],
+            data["arg"],
+            data["tgt_type"],
+            data["ret"],
+            data["jid"],
+            data["to"],
+            io_loop=self.io_loop,
+            callback=lambda _: None,
+            **kwargs
+        )
 
     def _send_req_sync(self, load, timeout):
         if self.opts["minion_sign_messages"]:
