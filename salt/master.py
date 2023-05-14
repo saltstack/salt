@@ -56,7 +56,6 @@ import salt.utils.zeromq
 import salt.wheel
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.ext.tornado.stack_context import StackContext
 from salt.transport import TRANSPORTS
 from salt.utils.channel import iter_transport_opts
 from salt.utils.ctx import RequestContext
@@ -1105,10 +1104,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         def run_func(data):
             return self.aes_funcs.run_func(data["cmd"], data)
 
-        with StackContext(
-            functools.partial(RequestContext, {"data": data, "opts": self.opts})
-        ):
-            ret = run_func(data)
+        ret = run_func(data)
 
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
