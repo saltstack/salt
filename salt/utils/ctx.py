@@ -16,12 +16,12 @@ def request_context(data):
     """
     A context manager that sets and un-sets the loader context
     """
-    tok = loader_ctxvar.set(data)
+    tok = request_ctxvar.set(data)
     try:
         yield
     finally:
-        loader_ctxvar.reset(tok)
+        request_ctxvar.reset(tok)
 
 
 def get_request_context():
-    return loader_ctxvar.get({})
+    return request_ctxvar.get({})
