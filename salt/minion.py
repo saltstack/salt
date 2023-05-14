@@ -38,6 +38,7 @@ import salt.transport
 import salt.utils.args
 import salt.utils.context
 import salt.utils.crypt
+import salt.utils.ctx
 import salt.utils.data
 import salt.utils.dictdiffer
 import salt.utils.dictupdate
@@ -1826,7 +1827,8 @@ class Minion(MinionBase):
             else:
                 return Minion._thread_return(minion_instance, opts, data)
 
-        run_func(minion_instance, opts, data)
+        with salt.utils.ctx.request_context({"data": data, "opts": opts}):
+            run_func(minion_instance, opts, data)
 
     def _execute_job_function(
         self, function_name, function_args, executors, opts, data
