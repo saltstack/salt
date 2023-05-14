@@ -10,3 +10,4 @@ packaging>=21.3
 looseversion
 # We need contextvars for salt-ssh
 contextvars
+tornado==6.1

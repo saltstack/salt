@@ -377,6 +377,8 @@ timelib==0.2.5
     # via -r requirements/windows.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.in
+tornado==6.1
+    # via -r requirements/base.txt
 typing-extensions==4.4.0
     # via
     #   pytest-shell-utilities

@@ -92,6 +92,8 @@ tempora==4.1.1
     # via portend
 timelib==0.2.5
     # via -r requirements/static/pkg/freebsd.in
+tornado==6.1
+    # via -r requirements/base.txt
 typing-extensions==3.10.0.0
     # via importlib-metadata
 urllib3==1.26.6

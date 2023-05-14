@@ -845,7 +845,9 @@ timelib==0.2.5
 toml==0.10.2
     # via -r requirements/static/ci/common.in
 tornado==6.1
-    # via python-telegram-bot
+    # via
+    #   -r requirements/base.txt
+    #   python-telegram-bot
 twilio==7.9.2
     # via -r requirements/static/ci/linux.in
 typing-extensions==4.2.0

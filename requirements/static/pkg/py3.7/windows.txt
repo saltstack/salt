@@ -125,6 +125,8 @@ tempora==4.1.1
     # via portend
 timelib==0.2.5
     # via -r requirements/windows.txt
+tornado==6.1
+    # via -r requirements/base.txt
 typing-extensions==4.4.0
     # via
     #   gitpython
