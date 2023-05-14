@@ -150,6 +150,8 @@ tempora==5.2.1
     # via portend
 tomli==2.0.1
     # via pytest
+tornado==6.1.0
+    # via -r requirements/base.txt
 typing-extensions==4.4.0
     # via
     #   pydantic

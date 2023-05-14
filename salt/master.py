@@ -5,7 +5,6 @@ involves preparing the three listeners and the workers needed by the master.
 import collections
 import copy
 import ctypes
-import functools
 import logging
 import multiprocessing
 import os
@@ -58,7 +57,6 @@ from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.transport import TRANSPORTS
 from salt.utils.channel import iter_transport_opts
-from salt.utils.ctx import RequestContext
 from salt.utils.debug import (
     enable_sigusr1_handler,
     enable_sigusr2_handler,

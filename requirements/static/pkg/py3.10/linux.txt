@@ -4,84 +4,90 @@
 #
 #    pip-compile --output-file=requirements/static/pkg/py3.10/linux.txt requirements/base.txt requirements/static/pkg/linux.in requirements/zeromq.txt
 #
-certifi==2022.12.7
+autocommand==2.2.2
+    # via jaraco.text
+certifi==2023.5.7
     # via requests
-cffi==1.14.6
+cffi==1.15.1
     # via cryptography
-chardet==3.0.4
+charset-normalizer==3.1.0
     # via requests
-cheroot==8.5.2
+cheroot==9.0.0
     # via cherrypy
-cherrypy==18.6.1
+cherrypy==18.8.0
     # via -r requirements/static/pkg/linux.in
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==39.0.2
+cryptography==40.0.2
     # via
     #   -r requirements/static/pkg/linux.in
     #   pyopenssl
-distro==1.5.0
+distro==1.8.0
     # via -r requirements/base.txt
-idna==2.8
+idna==3.4
     # via requests
-immutables==0.15
+immutables==0.19
     # via contextvars
-importlib-metadata==6.0.0
+importlib-metadata==6.6.0
     # via -r requirements/static/pkg/linux.in
-jaraco.classes==3.2.1
-    # via jaraco.collections
-jaraco.collections==3.4.0
+inflect==6.0.4
+    # via jaraco.text
+jaraco.collections==4.1.0
     # via cherrypy
-jaraco.functools==2.0
+jaraco.context==4.3.0
+    # via jaraco.text
+jaraco.functools==3.6.0
     # via
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.5.1
+jaraco.text==3.11.1
     # via jaraco.collections
 jinja2==3.1.2
     # via -r requirements/base.txt
 jmespath==1.0.1
     # via -r requirements/base.txt
-looseversion==1.0.2
+looseversion==1.1.2
     # via -r requirements/base.txt
 markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
-more-itertools==5.0.0
+more-itertools==9.1.0
     # via
     #   cheroot
     #   cherrypy
-    #   jaraco.classes
     #   jaraco.functools
-msgpack==1.0.2
+    #   jaraco.text
+msgpack==1.0.5
     # via -r requirements/base.txt
-packaging==22.0
+packaging==23.1
     # via -r requirements/base.txt
-portend==2.4
+portend==3.1.0
     # via cherrypy
-psutil==5.8.0
+psutil==5.9.5
     # via -r requirements/base.txt
 pycparser==2.21 ; python_version >= "3.9"
     # via
     #   -r requirements/static/pkg/linux.in
     #   cffi
-pycryptodomex==3.9.8
+pycryptodomex==3.17
     # via -r requirements/crypto.txt
-pyopenssl==23.0.0
+pydantic==1.10.7
+    # via inflect
+pyopenssl==23.1.1
     # via -r requirements/static/pkg/linux.in
-python-dateutil==2.8.1
+python-dateutil==2.8.2
     # via -r requirements/static/pkg/linux.in
-python-gnupg==0.4.8
+python-gnupg==0.5.0
     # via -r requirements/static/pkg/linux.in
-pytz==2022.1
+pytz==2023.3
     # via tempora
-pyyaml==5.4.1
+pyyaml==6.0
     # via -r requirements/base.txt
-pyzmq==23.2.0 ; python_version < "3.11"
+pyzmq==25.0.2 ; python_version < "3.11"
     # via -r requirements/zeromq.txt
-requests==2.25.1
+requests==2.30.0
     # via -r requirements/base.txt
 rpm-vercmp==0.1.2
     # via -r requirements/static/pkg/linux.in
@@ -90,19 +96,20 @@ setproctitle==1.3.2
 six==1.16.0
     # via
     #   cheroot
-    #   more-itertools
     #   python-dateutil
-tempora==4.1.1
+tempora==5.2.2
     # via portend
-timelib==0.2.5
+timelib==0.3.0
     # via -r requirements/static/pkg/linux.in
-tornado==6.1
+tornado==6.1.0
     # via -r requirements/base.txt
-urllib3==1.26.6
+typing-extensions==4.5.0
+    # via pydantic
+urllib3==2.0.2
     # via requests
-zc.lockfile==1.4
+zc.lockfile==3.0.post1
     # via cherrypy
-zipp==3.6.0
+zipp==3.15.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
