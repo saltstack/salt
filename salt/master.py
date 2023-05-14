@@ -36,6 +36,7 @@ import salt.state
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.crypt
+import salt.utils.ctx
 import salt.utils.event
 import salt.utils.files
 import salt.utils.gitfs
@@ -1102,7 +1103,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         def run_func(data):
             return self.aes_funcs.run_func(data["cmd"], data)
 
-        ret = run_func(data)
+        with salt.utils.ctx.request_context({"data": data, "opts": self.opts}):
+            ret = run_func(data)
 
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)

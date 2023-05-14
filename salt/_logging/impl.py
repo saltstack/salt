@@ -25,6 +25,8 @@ GARBAGE = logging.GARBAGE = 1
 QUIET = logging.QUIET = 1000
 
 import salt.defaults.exitcodes  # isort:skip  pylint: disable=unused-import
+import salt.utils.ctx
+
 from salt._logging.handlers import DeferredStreamHandler  # isort:skip
 from salt._logging.handlers import RotatingFileHandler  # isort:skip
 from salt._logging.handlers import StreamHandler  # isort:skip
@@ -236,13 +238,14 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         if extra is None:
             extra = {}
 
-        # pylint: disable=no-member
-        # XXX TODO
-        # current_jid = RequestContext.current.get("data", {}).get("jid", None)
-        # log_fmt_jid = RequestContext.current.get("opts", {}).get("log_fmt_jid", None)
-        current_jid = ""
-        log_fmt_jid = ""
-        # pylint: enable=no-member
+        current_jid = (
+            salt.utils.ctx.get_request_context().get("data", {}).get("jid", None)
+        )
+        log_fmt_jid = (
+            salt.utils.ctx.get_request_context()
+            .get("opts", {})
+            .get("log_fmt_jid", None)
+        )
 
         if current_jid is not None:
             extra["jid"] = current_jid
