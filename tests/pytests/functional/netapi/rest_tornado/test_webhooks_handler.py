@@ -36,6 +36,7 @@ async def test_hook_can_handle_get_parameters(http_client, app, content_type_map
                         "Content-Type": "application/json",
                         "Host": host,
                         "Accept-Encoding": "gzip",
+                        "User-Agent": "Tornado/6.1",
                     },
                     "post": {},
                     "get": {"param": ["1", "2"]},

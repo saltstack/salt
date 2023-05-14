@@ -617,13 +617,14 @@ def io_loop():
     """
     Create new io loop for each test, and tear it down after.
     """
-    loop = salt.ext.tornado.ioloop.IOLoop()
+
+    loop = salt.ext.tornado.ioloop.IOLoop.current()
     loop.make_current()
     try:
         yield loop
     finally:
         loop.clear_current()
-        loop.close(all_fds=True)
+#        loop.close(all_fds=True)
 
 
 # <---- Async Test Fixtures ------------------------------------------------------------------------------------------

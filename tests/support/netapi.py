@@ -79,7 +79,7 @@ class TestsTornadoHttpServer:
 
     @server.default
     def _server_default(self):
-        server = HTTPServer(self.app, io_loop=self.io_loop, **self.http_server_options)
+        server = HTTPServer(self.app, **self.http_server_options)
         server.add_sockets([self.sock])
         return server
 
