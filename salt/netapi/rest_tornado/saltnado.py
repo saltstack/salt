@@ -829,7 +829,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         ret = {"clients": list(self.saltclients.keys()), "return": "Welcome"}
         self.write(self.serialize(ret))
 
-    @salt.ext.tornado.web.asynchronous
+    @salt.ext.tornado.gen.coroutine
     def post(self):  # pylint: disable=arguments-differ
         """
         Send one or more Salt commands (lowstates) in the request body
@@ -1206,7 +1206,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
     A convenience endpoint for minion related functions
     """
 
-    @salt.ext.tornado.web.asynchronous
+    @salt.ext.tornado.gen.coroutine
     def get(self, mid=None):  # pylint: disable=W0221
         """
         A convenience URL for getting lists of minions or getting minion
@@ -1254,7 +1254,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         self.lowstate = [{"client": "local", "tgt": mid or "*", "fun": "grains.items"}]
         self.disbatch()
 
-    @salt.ext.tornado.web.asynchronous
+    @salt.ext.tornado.gen.coroutine
     def post(self):
         """
         Start an execution command and immediately return the job id
@@ -1332,7 +1332,7 @@ class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
     A convenience endpoint for job cache data
     """
 
-    @salt.ext.tornado.web.asynchronous
+    @salt.ext.tornado.gen.coroutine
     def get(self, jid=None):  # pylint: disable=W0221
         """
         A convenience URL for getting lists of previously run jobs or getting
@@ -1432,7 +1432,7 @@ class RunSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
     Endpoint to run commands without normal session handling
     """
 
-    @salt.ext.tornado.web.asynchronous
+    @salt.ext.tornado.gen.coroutine
     def post(self):
         """
         Run commands bypassing the :ref:`normal session handling
