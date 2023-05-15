@@ -2102,6 +2102,12 @@ def pool_running(
                 format: cifs
             - autostart: True
 
+    .. warning::
+
+        Many parameters have a default value in `libvirt`, which will work with
+        Salt. However, leaving them out will generally register a change every
+        time you apply the state.
+
     """
     ret = pool_defined(
         name,
