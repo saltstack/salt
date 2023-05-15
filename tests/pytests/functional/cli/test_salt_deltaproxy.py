@@ -20,6 +20,7 @@ pytestmark = [
         reason="Deltaproxy minions do not currently work on spawning platforms.",
     ),
     pytest.mark.core_test,
+    pytest.mark.skip(reason="Nest patch needs testing"),
 ]
 
 

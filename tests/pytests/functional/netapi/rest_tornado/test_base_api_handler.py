@@ -367,7 +367,7 @@ async def test_cors_preflight_request(http_client, app):
     assert response.code == 204
 
 
-async def test_cors_origin_url_with_arguments(app, http_client):
+async def test_cors_origin_url_with_arguments(io_loop, app, http_client):
     """
     Check that preflight requests works with url with components
     like jobs or minions endpoints.
