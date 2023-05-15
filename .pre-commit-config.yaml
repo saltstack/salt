@@ -1320,6 +1320,7 @@ repos:
           - msgpack==1.0.3
           - packaging
           - looseversion
+          - tornado
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1339,6 +1340,7 @@ repos:
           - msgpack==1.0.3
           - packaging
           - looseversion
+          - tornado
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
