@@ -40,7 +40,10 @@ def test_tornado_import_override(tmp_path):
             universal_newlines=True,
         )
         assert ret.returncode == 0
-        assert ret.stdout.strip() == "salt.ext.tornado"
+        if salt.USE_VENDORED_TORNADO:
+            assert ret.stdout.strip() == "salt.ext.tornado"
+        else:
+            assert ret.stdout.strip() == "tornado"
 
 
 def test_regression_56063():
