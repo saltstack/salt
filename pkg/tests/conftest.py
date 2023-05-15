@@ -352,11 +352,13 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
                 config_overrides["api_pidfile"] = salt.config.DEFAULT_API_OPTS.get(
                     "api_pidfile"
                 )
-                # verify files where set with correct owner/group
+                # verify files were set with correct owner/group
                 verify_files = [
-                    pathlib.Path("/var", "log", "salt"),
-                    pathlib.Path("/etc", "salt", "master"),
+                    pathlib.Path("/var", "log", "salt", "master"),
+                    pathlib.Path("/etc", "salt", "pki", "master"),
+                    pathlib.Path("/etc", "salt", "master.d"),
                     pathlib.Path("/var", "cache", "salt", "master"),
+                    pathlib.Path("/var", "run", "salt", "master"),
                 ]
                 for _file in verify_files:
                     assert _file.owner() == "salt"
