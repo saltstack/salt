@@ -2,6 +2,7 @@
     tests.pytests.conftest
     ~~~~~~~~~~~~~~~~~~~~~~
 """
+import asyncio
 import functools
 import inspect
 import logging
@@ -609,7 +610,6 @@ def pytest_pyfunc_call(pyfuncitem):
             asyncio.set_event_loop(loop)
             loop = salt.ext.tornado.ioloop.IOLoop.current()
 
-
     __tracebackhide__ = True
 
     loop.run_sync(
@@ -623,7 +623,6 @@ def io_loop():
     """
     Create new io loop for each test, and tear it down after.
     """
-    import asyncio
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop = salt.ext.tornado.ioloop.IOLoop.current()
