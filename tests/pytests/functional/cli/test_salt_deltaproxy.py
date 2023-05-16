@@ -20,7 +20,6 @@ pytestmark = [
         reason="Deltaproxy minions do not currently work on spawning platforms.",
     ),
     pytest.mark.core_test,
-    pytest.mark.skip(reason="Nest patch needs testing"),
 ]
 
 
@@ -205,7 +204,6 @@ def test_exit_status_correct_usage_large_number_of_minions(
 
             with factory.started():
                 assert factory.is_running()
-
                 # Let's issue a ping the control proxy
                 ret = salt_cli.run("test.ping", minion_tgt=proxy_minion_id)
                 assert ret.returncode == 0
