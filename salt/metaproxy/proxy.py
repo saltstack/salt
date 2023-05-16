@@ -380,11 +380,10 @@ def target(cls, minion_instance, opts, data, connected):
                 opts["cachedir"], uid=uid
             )
 
-    with salt.ext.tornado.stack_context.StackContext(minion_instance.ctx):
-        if isinstance(data["fun"], tuple) or isinstance(data["fun"], list):
-            ProxyMinion._thread_multi_return(minion_instance, opts, data)
-        else:
-            ProxyMinion._thread_return(minion_instance, opts, data)
+    if isinstance(data["fun"], tuple) or isinstance(data["fun"], list):
+        ProxyMinion._thread_multi_return(minion_instance, opts, data)
+    else:
+        ProxyMinion._thread_return(minion_instance, opts, data)
 
 
 def thread_return(cls, minion_instance, opts, data):
