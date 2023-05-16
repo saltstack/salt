@@ -39,6 +39,8 @@ def get_application(opts):
     except ImportError as err:
         log.error("ImportError! %s", err)
         return None
+    log = logging.getLogger()
+    log.setLevel(logging.DEBUG)
 
     mod_opts = opts.get(__virtualname__, {})
 
@@ -56,6 +58,7 @@ def get_application(opts):
 
     # if you have enabled websockets, add them!
     if mod_opts.get("websockets", False):
+        log.error("ENABEL WEBSOC")
         from . import saltnado_websockets
 
         token_pattern = r"([0-9A-Fa-f]{{{0}}})".format(
@@ -73,9 +76,10 @@ def get_application(opts):
             (all_events_pattern, saltnado_websockets.AllEventsHandler),
             (formatted_events_pattern, saltnado_websockets.FormattedEventsHandler),
         ]
+        log.error("ENABEL WEBSOC - DONE")
 
     application = salt.ext.tornado.web.Application(
-        paths, debug=mod_opts.get("debug", False)
+        paths, debug=True
     )
 
     application.opts = opts

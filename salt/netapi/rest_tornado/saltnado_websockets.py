@@ -313,26 +313,28 @@ class AllEventsHandler(
     """
 
     # pylint: disable=W0221
+    #@salt.ext.tornado.gen.coroutine
     def get(self, token):
         """
         Check the token, returns a 401 if the token is invalid.
         Else open the websocket connection
         """
-        log.debug("In the websocket get method")
-
+        log.error("In the websocket get method")
         self.token = token
         # close the connection, if not authenticated
         if not self.application.auth.get_tok(token):
             log.debug("Refusing websocket connection, bad token!")
             self.send_error(401)
             return
-        super().get(token)
+        log.error("In the websocket get method - get")
+        return super().get(token)
 
     def open(self, token):  # pylint: disable=W0221
         """
         Return a websocket connection to Salt
         representing Salt's "real time" event stream.
         """
+        log.error("Open websocket")
         self.connected = False
 
     @salt.ext.tornado.gen.coroutine
@@ -343,7 +345,7 @@ class AllEventsHandler(
         These messages make up salt's
         "real time" event stream.
         """
-        log.debug("Got websocket message %s", message)
+        log.error("Got websocket message %s", message)
         if message == "websocket client ready":
             if self.connected:
                 # TBD: Add ability to run commands in this branch
@@ -370,7 +372,7 @@ class AllEventsHandler(
 
     def on_close(self, *args, **kwargs):
         """Cleanup."""
-        log.debug("In the websocket close method")
+        log.error("In the websocket close method")
         self.close()
 
     def check_origin(self, origin):
@@ -395,7 +397,7 @@ class FormattedEventsHandler(AllEventsHandler):  # pylint: disable=W0223,W0232
         These messages make up salt's
         "real time" event stream.
         """
-        log.debug("Got websocket message %s", message)
+        log.error("Got websocket message %s", message)
         if message == "websocket client ready":
             if self.connected:
                 # TBD: Add ability to run commands in this branch

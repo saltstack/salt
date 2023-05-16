@@ -403,6 +403,10 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
         ("application/x-yaml", salt.utils.yaml.safe_dump),
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._auto_finish = False
+
     def _verify_client(self, low):
         """
         Verify that the client is in fact one we have
@@ -501,6 +505,11 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
         """
         # TODO: set a header or something??? so we know it was a timeout
         self.application.event_listener.clean_by_request(self)
+
+    def finish(self):
+        import traceback
+        log.error("FINISH CALLED: %s", "\n".join(traceback.format_stack()))
+        super().finish()
 
     def on_finish(self):
         """
@@ -659,6 +668,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         ret = {"status": "401 Unauthorized", "return": "Please log in"}
 
         self.write(self.serialize(ret))
+        self.finish()
 
     # TODO: make asynchronous? Underlying library isn't... and we ARE making disk calls :(
     def post(self):  # pylint: disable=arguments-differ
@@ -785,6 +795,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         }
 
         self.write(self.serialize(ret))
+        self.finish()
 
 
 class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
@@ -828,6 +839,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         """
         ret = {"clients": list(self.saltclients.keys()), "return": "Welcome"}
         self.write(self.serialize(ret))
+        self.finish()
 
     @salt.ext.tornado.gen.coroutine
     def post(self):  # pylint: disable=arguments-differ
@@ -912,6 +924,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         """
         Disbatch all lowstates to the appropriate clients
         """
+        log.error("BEGIN DISBATCH")
         ret = []
 
         # check clients before going, we want to throw 400 if one is bad
@@ -947,8 +960,10 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         try:
             self.write(self.serialize({"return": ret}))
             self.finish()
-        except RuntimeError:
+        except RuntimeError as exc:
+            log.exception("DISBATCH RUNTIME ERROR")
             pass  # Do we need any logging here?
+        log.error("END DISBATCH")
 
     @salt.ext.tornado.gen.coroutine
     def get_minion_returns(
@@ -1416,14 +1431,17 @@ class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         """
         # if you aren't authenticated, redirect to login
         if not self._verify_auth():
+            log.error("AUTH ERROR")
             self.redirect("/login")
             return
 
+        log.error("LOWSTATE")
         if jid:
             self.lowstate = [{"fun": "jobs.list_job", "jid": jid, "client": "runner"}]
         else:
             self.lowstate = [{"fun": "jobs.list_jobs", "client": "runner"}]
 
+        log.error("DISBATCH")
         self.disbatch()
 
 
@@ -1790,6 +1808,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         )
 
         self.write(self.serialize({"success": ret}))
+        self.finish()
 
 
 def _check_cors_origin(origin, allowed_origins):

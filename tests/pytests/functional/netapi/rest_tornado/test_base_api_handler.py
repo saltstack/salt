@@ -27,6 +27,7 @@ class StubHandler(saltnado.BaseSaltAPIHandler):  # pylint: disable=abstract-meth
             ret_dict[attr] = getattr(self, attr)
 
         self.write(self.serialize(ret_dict))
+        self.finish()
 
 
 @pytest.fixture
@@ -37,7 +38,7 @@ def app_urls():
     ]
 
 
-async def test_accept_content_type(http_client, content_type_map, subtests):
+async def test_accept_content_type(http_client, content_type_map, subtests, io_loop):
     """
     Test the base handler's accept picking
     """
