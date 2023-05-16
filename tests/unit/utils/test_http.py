@@ -133,7 +133,7 @@ class HTTPTestCase(TestCase):
 
         url = "http://{host}:{port}/".format(host=host, port=port)
         result = http.query(url, raise_error=False)
-        if sys.platform.strtswith("win"):
+        if sys.platform.startswith("win"):
             assert result == {"error": "[Errno 10061] Unknown error"}, result
         else:
             assert result == {"error": "[Errno 111] Connection refused"}, result
