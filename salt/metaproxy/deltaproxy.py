@@ -2,6 +2,7 @@
 #   Proxy minion metaproxy modules
 #
 
+import asyncio
 import concurrent.futures
 import logging
 import os
@@ -58,6 +59,7 @@ from salt.utils.process import SignalHandlingProcess, default_signals
 log = logging.getLogger(__name__)
 
 
+@salt.ext.tornado.gen.coroutine
 def post_master_init(self, master):
     """
     Function to finish init after a deltaproxy proxy
@@ -337,31 +339,19 @@ def post_master_init(self, master):
     _failed = list()
     if self.opts["proxy"].get("parallel_startup"):
         log.debug("Initiating parallel startup for proxies")
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = {
-                executor.submit(
-                    subproxy_post_master_init,
+        waitfor = []
+        for _id in self.opts["proxy"].get("ids", []):
+            waitfor.append(
+                subproxy_post_master_init(
                     _id,
                     uid,
                     self.opts,
                     self.proxy,
                     self.utils,
-                ): _id
-                for _id in self.opts["proxy"].get("ids", [])
-            }
-
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                sub_proxy_data = future.result()
-            except Exception as exc:  # pylint: disable=broad-except
-                _id = futures[future]
-                log.info(
-                    "An exception occured during initialization for %s, skipping: %s",
-                    _id,
-                    exc,
                 )
-                _failed.append(_id)
-                continue
+            )
+        results = yield salt.ext.tornado.gen.multi(waitfor)
+        for sub_proxy_data in results:
             minion_id = sub_proxy_data["proxy_opts"].get("id")
 
             if sub_proxy_data["proxy_minion"]:
@@ -378,7 +368,7 @@ def post_master_init(self, master):
         log.debug("Initiating non-parallel startup for proxies")
         for _id in self.opts["proxy"].get("ids", []):
             try:
-                sub_proxy_data = subproxy_post_master_init(
+                sub_proxy_data = yield subproxy_post_master_init(
                     _id, uid, self.opts, self.proxy, self.utils
                 )
             except Exception as exc:  # pylint: disable=broad-except
@@ -407,6 +397,7 @@ def post_master_init(self, master):
     self.ready = True
 
 
+@salt.ext.tornado.gen.coroutine
 def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     """
     Function to finish init after a deltaproxy proxy
@@ -415,6 +406,7 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     This is primarily loading modules, pillars, etc. (since they need
     to know which master they connected to) for the sub proxy minions.
     """
+
     proxy_grains = {}
     proxy_pillar = {}
 
@@ -433,7 +425,7 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     proxy_grains = salt.loader.grains(
         proxyopts, proxy=main_proxy, context=proxy_context
     )
-    proxy_pillar = salt.pillar.get_pillar(
+    proxy_pillar = yield salt.pillar.get_async_pillar(
         proxyopts,
         proxy_grains,
         minion_id,
@@ -577,7 +569,9 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
             "__proxy_keepalive", persist=True, fire_event=False
         )
 
-    return {"proxy_minion": _proxy_minion, "proxy_opts": proxyopts}
+    raise salt.ext.tornado.gen.Return(
+        {"proxy_minion": _proxy_minion, "proxy_opts": proxyopts}
+    )
 
 
 def target(cls, minion_instance, opts, data, connected):
@@ -598,11 +592,10 @@ def target(cls, minion_instance, opts, data, connected):
         uid = salt.utils.user.get_uid(user=opts.get("user", None))
         minion_instance.proc_dir = salt.minion.get_proc_dir(opts["cachedir"], uid=uid)
 
-    with salt.ext.tornado.stack_context.StackContext(minion_instance.ctx):
-        if isinstance(data["fun"], tuple) or isinstance(data["fun"], list):
-            ProxyMinion._thread_multi_return(minion_instance, opts, data)
-        else:
-            ProxyMinion._thread_return(minion_instance, opts, data)
+    if isinstance(data["fun"], tuple) or isinstance(data["fun"], list):
+        ProxyMinion._thread_multi_return(minion_instance, opts, data)
+    else:
+        ProxyMinion._thread_return(minion_instance, opts, data)
 
 
 def thread_return(cls, minion_instance, opts, data):
@@ -1130,7 +1123,9 @@ def tune_in(self, start=True):
     if self.opts["proxy"].get("parallel_startup"):
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = [
-                executor.submit(subproxy_tune_in, self.deltaproxy_objs[proxy_minion])
+                executor.submit(
+                    threaded_subproxy_tune_in, self.deltaproxy_objs[proxy_minion]
+                )
                 for proxy_minion in self.deltaproxy_objs
             ]
 
@@ -1144,6 +1139,12 @@ def tune_in(self, start=True):
     super(ProxyMinion, self).tune_in(start=start)
 
 
+def threaded_subproxy_tune_in(proxy_minion):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    subproxy_tune_in(proxy_minion)
+
+
 def subproxy_tune_in(proxy_minion, start=True):
     """
     Tunein sub proxy minions
@@ -1152,5 +1153,4 @@ def subproxy_tune_in(proxy_minion, start=True):
     proxy_minion.setup_beacons()
     proxy_minion.add_periodic_callback("cleanup", proxy_minion.cleanup_subprocesses)
     proxy_minion._state_run()
-
     return proxy_minion

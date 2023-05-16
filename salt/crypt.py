@@ -1308,7 +1308,7 @@ class SAuth(AsyncAuth):
             self.authenticate()
         return self._crypticle
 
-    def authenticate(self):  # TODO: remove unused var
+    def authenticate(self, _=None):  # TODO: remove unused var
         """
         Authenticate with the master, this method breaks the functional
         paradigm, it will update the master information from a fresh sign
