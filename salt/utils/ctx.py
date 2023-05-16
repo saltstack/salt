@@ -14,7 +14,7 @@ request_ctxvar = contextvars.ContextVar(DEFAULT_CTX_VAR)
 @contextlib.contextmanager
 def request_context(data):
     """
-    A context manager that sets and un-sets the loader context
+    A context manager that sets and un-sets the loader context.
     """
     tok = request_ctxvar.set(data)
     try:
@@ -24,4 +24,7 @@ def request_context(data):
 
 
 def get_request_context():
+    """
+    Get the data from the current request context.
+    """
     return request_ctxvar.get({})
