@@ -3,6 +3,7 @@
 """
 
 import socket
+import sys
 from contextlib import closing
 
 import pytest
@@ -132,7 +133,10 @@ class HTTPTestCase(TestCase):
 
         url = "http://{host}:{port}/".format(host=host, port=port)
         result = http.query(url, raise_error=False)
-        assert result == {"error": "[Errno 111] Connection refused"}, result
+        if sys.platform.strtswith("win"):
+            assert result == {"error": "[Errno 10061] Unknown error"}, result
+        else:
+            assert result == {"error": "[Errno 111] Connection refused"}, result
 
     def test_query_error_handling(self):
         ret = http.query("http://127.0.0.1:0")
