@@ -41,7 +41,7 @@ def get(query=None, field="Name", include_store=False, frameworks=False, bundles
     Args:
 
         query (str):
-            The query string to use to filter packages to be list. The string
+            The query string to use to filter packages to be listed. The string
             can match multiple packages. ``None`` will return all packages. Here
             are some example strings:
 
@@ -209,6 +209,27 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
 
 
 def get_deprovisioned(query=None):
+    """
+    Get a list of applications that have been deprovisioned. A deprovisioned
+    package will not be reinstalled during a Major system update.
+
+    Args:
+
+        query (str):
+            The query string to use to filter packages to be listed. The string
+            can match multiple packages. ``None`` will return all packages. Here
+            are some example strings:
+
+            - ``*teams*`` - Returns Microsoft Teams
+            - ``*zune*`` - Returns Windows Media Player and ZuneVideo
+            - ``*zuneMusic*`` - Only returns Windows Media Player
+            - ``*xbox*`` - Returns all xbox packages, there are 5 by default
+            - ``*`` - Returns everything but the Microsoft Store, unless
+              ``include_store=True``
+
+    Returns:
+        list: A list of packages matching the query criteria
+    """
     ret = salt.utils.win_reg.list_keys(hive="HKLM", key=f"{DEPROVISIONED_KEY}")
     if query is None:
         return ret
@@ -216,11 +237,19 @@ def get_deprovisioned(query=None):
 
 
 
-def reprovision(package_name):
-    key = f"{DEPROVISIONED_KEY}\\{package_name}"
-    if salt.utils.win_reg.key_exists(hive="HKLM", key=key):
-        log.debug(f"Deprovisioned app found: {package_name}")
+def reprovision(query=None):
+    pkgs = salt.utils.win_reg.list_keys(hive="HKLM", key=f"{DEPROVISIONED_KEY}")
+    failed = []
+    for item in fnmatch.filter(pkgs, query):
+        key = f"{DEPROVISIONED_KEY}\\{item}"
+        log.debug(f"Deprovisioning app: {item}")
         ret = salt.utils.win_reg.delete_key_recursive(hive="HKLM", key=key)
-        return not ret["Failed"]
-    log.debug(f"Deprovisioned app not found: {package_name}")
-    return None
+        if ret["Failed"]:
+            log.debug(f"Failed to deprovision: {item}")
+            failed.append(item)
+    if failed:
+        return {"Failed to deprovision": failed}
+    return True
+
+
+
