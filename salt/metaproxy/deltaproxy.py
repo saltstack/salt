@@ -1140,6 +1140,11 @@ def tune_in(self, start=True):
 
 
 def threaded_subproxy_tune_in(proxy_minion):
+    """
+    Run subproxy tune in with it's own event lopp.
+
+    This method needs to be the target of a thread.
+    """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     subproxy_tune_in(proxy_minion)
