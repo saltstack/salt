@@ -450,6 +450,8 @@ def install_dependencies(ctx: Context, name: str, nox_session: str = "ci-test-3"
     Install test dependencies on VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
+    if name == "amazonlinux-2":
+        vm.run(["sudo", "yum", "install", "-y", "libffi-devel"])
     returncode = vm.install_dependencies(nox_session)
     ctx.exit(returncode)
 

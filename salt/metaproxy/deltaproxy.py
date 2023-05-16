@@ -1147,7 +1147,7 @@ def threaded_subproxy_tune_in(proxy_minion):
     """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    subproxy_tune_in(proxy_minion)
+    return subproxy_tune_in(proxy_minion)
 
 
 def subproxy_tune_in(proxy_minion, start=True):
