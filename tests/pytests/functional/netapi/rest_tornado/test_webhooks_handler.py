@@ -1,8 +1,8 @@
 import urllib.parse
-import salt.ext.tornado
 
 import pytest
 
+import salt.ext.tornado
 import salt.utils.json
 from salt.netapi.rest_tornado import saltnado
 from tests.support.mock import MagicMock, patch
@@ -16,6 +16,7 @@ def app_urls():
 
 
 async def test_hook_can_handle_get_parameters(http_client, app, content_type_map):
+
     with patch("salt.utils.event.get_event") as get_event:
         with patch.dict(app.mod_opts, {"webhook_disable_auth": True}):
             event = MagicMock()

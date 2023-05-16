@@ -506,11 +506,6 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
         # TODO: set a header or something??? so we know it was a timeout
         self.application.event_listener.clean_by_request(self)
 
-    def finish(self):
-        import traceback
-        log.error("FINISH CALLED: %s", "\n".join(traceback.format_stack()))
-        super().finish()
-
     def on_finish(self):
         """
         When the job has been done, lets cleanup
@@ -924,7 +919,6 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         """
         Disbatch all lowstates to the appropriate clients
         """
-        log.error("BEGIN DISBATCH")
         ret = []
 
         # check clients before going, we want to throw 400 if one is bad
@@ -961,9 +955,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             self.write(self.serialize({"return": ret}))
             self.finish()
         except RuntimeError as exc:
-            log.exception("DISBATCH RUNTIME ERROR")
-            pass  # Do we need any logging here?
-        log.error("END DISBATCH")
+            log.exception("Encountered Runtime Error")
 
     @salt.ext.tornado.gen.coroutine
     def get_minion_returns(
@@ -1431,17 +1423,14 @@ class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         """
         # if you aren't authenticated, redirect to login
         if not self._verify_auth():
-            log.error("AUTH ERROR")
             self.redirect("/login")
             return
 
-        log.error("LOWSTATE")
         if jid:
             self.lowstate = [{"fun": "jobs.list_job", "jid": jid, "client": "runner"}]
         else:
             self.lowstate = [{"fun": "jobs.list_jobs", "client": "runner"}]
 
-        log.error("DISBATCH")
         self.disbatch()
 
 

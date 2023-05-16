@@ -27,7 +27,11 @@ def http_server_port(http_server):
 
 
 async def test_websocket_handler_upgrade_to_websocket(
-    http_client, auth_creds, content_type_map, http_server_port, io_loop,
+    http_client,
+    auth_creds,
+    content_type_map,
+    http_server_port,
+    io_loop,
 ):
     response = await http_client.fetch(
         "/login",
