@@ -1,4 +1,5 @@
 import urllib.parse
+import salt.ext.tornado
 
 import pytest
 
@@ -28,6 +29,7 @@ async def test_hook_can_handle_get_parameters(http_client, app, content_type_map
             )
             assert response.code == 200
             host = urllib.parse.urlparse(response.effective_url).netloc
+            print(event.fire_event.calls)
             event.fire_event.assert_called_once_with(
                 {
                     "headers": {
@@ -36,7 +38,7 @@ async def test_hook_can_handle_get_parameters(http_client, app, content_type_map
                         "Content-Type": "application/json",
                         "Host": host,
                         "Accept-Encoding": "gzip",
-                        "User-Agent": "Tornado/6.1",
+                        "User-Agent": f"Tornado/{salt.ext.tornado.version}",
                     },
                     "post": {},
                     "get": {"param": ["1", "2"]},
