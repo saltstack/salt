@@ -12,40 +12,6 @@ if sys.version_info < (3,):
     )
     sys.stderr.flush()
 
-
-USE_VENDORED_TORNADO = False
-
-
-class TornadoImporter:
-    def find_module(self, module_name, package_path=None):
-        if USE_VENDORED_TORNADO:
-            if module_name.startswith("tornado"):
-                return self
-        else:
-            if module_name.startswith("salt.ext.tornado"):
-                return self
-        return None
-
-    def load_module(self, name):
-        if USE_VENDORED_TORNADO:
-            mod = importlib.import_module("salt.ext.{}".format(name))
-        else:
-            # Remove 'salt.ext.' from the module
-            mod = importlib.import_module(name[9:])
-        sys.modules[name] = mod
-        return mod
-
-    def create_module(self, spec):
-        return self.load_module(spec.name)
-
-    def exec_module(self, module):
-        return None
-
-
-# Try our importer first
-sys.meta_path = [TornadoImporter()] + sys.meta_path
-
-
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
     "once",  # Show once

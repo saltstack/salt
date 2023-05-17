@@ -8,8 +8,8 @@ import logging
 import sys
 import threading
 
-import salt.ext.tornado.concurrent
-import salt.ext.tornado.ioloop
+import tornado.concurrent
+import tornado.ioloop
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ def current_ioloop(io_loop):
     A context manager that will set the current ioloop to io_loop for the context
     """
     try:
-        orig_loop = salt.ext.tornado.ioloop.IOLoop.current()
+        orig_loop = tornado.ioloop.IOLoop.current()
     except RuntimeError:
         orig_loop = None
     io_loop.make_current()
@@ -57,7 +57,7 @@ class SyncWrapper:
         close_methods=None,
         loop_kwarg=None,
     ):
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+        self.io_loop = tornado.ioloop.IOLoop()
         if args is None:
             args = []
         if kwargs is None:

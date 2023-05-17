@@ -11,6 +11,9 @@ import threading
 import traceback
 import types
 
+import tornado.gen  # pylint: disable=F0401
+import tornado.ioloop  # pylint: disable=F0401
+
 import salt
 import salt._logging
 import salt.beacons
@@ -20,8 +23,6 @@ import salt.config
 import salt.crypt
 import salt.defaults.exitcodes
 import salt.engines
-import salt.ext.tornado.gen  # pylint: disable=F0401
-import salt.ext.tornado.ioloop  # pylint: disable=F0401
 import salt.loader
 import salt.minion
 import salt.payload
@@ -59,7 +60,7 @@ from salt.utils.process import SignalHandlingProcess, default_signals
 log = logging.getLogger(__name__)
 
 
-@salt.ext.tornado.gen.coroutine
+@tornado.gen.coroutine
 def post_master_init(self, master):
     """
     Function to finish init after a deltaproxy proxy
@@ -352,7 +353,7 @@ def post_master_init(self, master):
             )
 
         try:
-            results = yield salt.ext.tornado.gen.multi(waitfor)
+            results = yield tornado.gen.multi(waitfor)
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Errors loading sub proxies")
 
@@ -405,7 +406,7 @@ def post_master_init(self, master):
     self.ready = True
 
 
-@salt.ext.tornado.gen.coroutine
+@tornado.gen.coroutine
 def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     """
     Function to finish init after a deltaproxy proxy
@@ -577,9 +578,7 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
             "__proxy_keepalive", persist=True, fire_event=False
         )
 
-    raise salt.ext.tornado.gen.Return(
-        {"proxy_minion": _proxy_minion, "proxy_opts": proxyopts}
-    )
+    raise tornado.gen.Return({"proxy_minion": _proxy_minion, "proxy_opts": proxyopts})
 
 
 def target(cls, minion_instance, opts, data, connected):
@@ -1052,7 +1051,7 @@ def handle_decoded_payload(self, data):
                     data["jid"],
                 )
                 once_logged = True
-            yield salt.ext.tornado.gen.sleep(0.5)
+            yield tornado.gen.sleep(0.5)
             process_count = self.subprocess_list.count
 
     # We stash an instance references to allow for the socket
