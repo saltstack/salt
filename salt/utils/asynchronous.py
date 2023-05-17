@@ -19,12 +19,18 @@ def current_ioloop(io_loop):
     """
     A context manager that will set the current ioloop to io_loop for the context
     """
-    orig_loop = salt.ext.tornado.ioloop.IOLoop.current()
+    try:
+        orig_loop = salt.ext.tornado.ioloop.IOLoop.current()
+    except RuntimeError:
+        orig_loop = None
     io_loop.make_current()
     try:
         yield
     finally:
-        orig_loop.make_current()
+        if orig_loop:
+            orig_loop.make_current()
+        else:
+            io_loop.clear_current()
 
 
 class SyncWrapper:
