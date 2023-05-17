@@ -168,7 +168,7 @@ def test_pub_server_channel(
         p = Path(str(master_config["sock_dir"])) / "workers.ipc"
         start = time.time()
         while not p.exists():
-            time.sleep(.3)
+            time.sleep(0.3)
             if time.time() - start > 20:
                 raise Exception("IPC socket not created")
         mode = os.lstat(p).st_mode

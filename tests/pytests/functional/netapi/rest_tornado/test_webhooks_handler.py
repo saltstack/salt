@@ -30,7 +30,6 @@ async def test_hook_can_handle_get_parameters(http_client, app, content_type_map
             )
             assert response.code == 200
             host = urllib.parse.urlparse(response.effective_url).netloc
-            print(event.fire_event.calls)
             event.fire_event.assert_called_once_with(
                 {
                     "headers": {
