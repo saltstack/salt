@@ -350,9 +350,16 @@ def post_master_init(self, master):
                     self.utils,
                 )
             )
-        results = yield salt.ext.tornado.gen.multi(waitfor)
+
+        try:
+            results = yield salt.ext.tornado.gen.multi(waitfor)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Errors loading sub proxies")
+
+        _failed = self.opts["proxy"].get("ids", [])
         for sub_proxy_data in results:
             minion_id = sub_proxy_data["proxy_opts"].get("id")
+            _failed.remove(minion_id)
 
             if sub_proxy_data["proxy_minion"]:
                 self.deltaproxy_opts[minion_id] = sub_proxy_data["proxy_opts"]
