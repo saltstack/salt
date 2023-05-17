@@ -17,10 +17,10 @@ import types
 
 import attr
 import pytest
+import tornado.ioloop
 from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
 
-import salt.ext.tornado.ioloop
 import salt.utils.files
 import salt.utils.platform
 from salt.serializers import yaml
@@ -603,12 +603,12 @@ def pytest_pyfunc_call(pyfuncitem):
     try:
         loop = funcargs["io_loop"]
     except KeyError:
-        loop = salt.ext.tornado.ioloop.IOLoop.current()
+        loop = tornado.ioloop.IOLoop.current()
         if loop.closed():
             log.warning("IOLoop found to be closed when starting test")
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            loop = salt.ext.tornado.ioloop.IOLoop.current()
+            loop = tornado.ioloop.IOLoop.current()
 
     __tracebackhide__ = True
 
@@ -625,7 +625,7 @@ def io_loop():
     """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop = salt.ext.tornado.ioloop.IOLoop.current()
+    loop = tornado.ioloop.IOLoop.current()
     loop.make_current()
     try:
         yield loop
