@@ -1235,7 +1235,7 @@ repos:
         alias: rewrite-tests
         name: Rewrite Salt's Test Suite
         files: ^tests/.*\.py$
-        args: [--silent, -E, fix_asserts, -E, fix_docstrings]
+        args: [--silent, -E, fix_asserts, -E, fix_docstrings, -E, fix_tornado_imports]
 
   - repo: https://github.com/timothycrosley/isort
     rev: 5.12.0

@@ -2,12 +2,12 @@ import hashlib
 import urllib.parse
 
 import pytest
+from tornado.httpclient import HTTPError, HTTPRequest
+from tornado.websocket import websocket_connect
 
 import salt.netapi.rest_tornado as rest_tornado
 import salt.utils.json
 import salt.utils.yaml
-from salt.ext.tornado.httpclient import HTTPError, HTTPRequest
-from salt.ext.tornado.websocket import websocket_connect
 
 pytestmark = [
     pytest.mark.destructive_test,
