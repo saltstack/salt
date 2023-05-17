@@ -54,6 +54,7 @@ from salt.utils.process import SignalHandlingProcess, default_signals
 
 log = logging.getLogger(__name__)
 
+
 @salt.ext.tornado.gen.coroutine
 def post_master_init(self, master):
     """
