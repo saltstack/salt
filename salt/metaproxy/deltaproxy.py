@@ -356,10 +356,11 @@ def post_master_init(self, master):
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Errors loading sub proxies")
 
-        _failed = self.opts["proxy"].get("ids", [])
+        _failed = self.opts["proxy"].get("ids", [])[:]
         for sub_proxy_data in results:
             minion_id = sub_proxy_data["proxy_opts"].get("id")
-            _failed.remove(minion_id)
+            if minion_id in _failed:
+                _failed.remove(minion_id)
 
             if sub_proxy_data["proxy_minion"]:
                 self.deltaproxy_opts[minion_id] = sub_proxy_data["proxy_opts"]
