@@ -395,7 +395,7 @@ class FormattedEventsHandler(AllEventsHandler):  # pylint: disable=W0223,W0232
         These messages make up salt's
         "real time" event stream.
         """
-        log.error("Got websocket message %s", message)
+        log.debug("Got websocket message %s", message)
         if message == "websocket client ready":
             if self.connected:
                 # TBD: Add ability to run commands in this branch
