@@ -208,8 +208,10 @@ def x509_master_config(ca_minion_id):
             ".*": [
                 "x509.sign_remote_certificate",
             ],
+        },
+        "peer_run": {
             ca_minion_id: [
-                "match.compound",
+                "match.compound_matches",
             ],
         },
     }
