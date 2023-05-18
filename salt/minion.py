@@ -1899,6 +1899,9 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         """
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
         minion_instance.gen_modules()
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
@@ -2085,6 +2088,9 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         """
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
         minion_instance.gen_modules()
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
