@@ -159,9 +159,7 @@ def _fetch_secret(pass_path):
             pass_error = pass_error.decode("utf-8")
         except (AttributeError, ValueError):
             pass
-        msg = "Could not fetch secret '{}' from the password store: {}".format(
-            pass_path, pass_error
-        )
+        msg = f"Could not fetch secret '{pass_path}' from the password store: {pass_error}"
         if pass_strict_fetch:
             raise SaltRenderError(msg)
         else:
