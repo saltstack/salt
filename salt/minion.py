@@ -1162,6 +1162,7 @@ class MinionManager(MinionBase):
                     minion.opts["master"],
                     exc_info=True,
                 )
+                break
 
     # Multi Master Tune In
     def tune_in(self):
