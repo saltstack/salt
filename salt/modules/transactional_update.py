@@ -285,6 +285,8 @@ from salt.modules.state import _check_queue, _prior_running_states, _wait, runni
 
 __func_alias__ = {"apply_": "apply"}
 
+__virtualname__ = "transactional_update"
+
 log = logging.getLogger(__name__)
 
 
@@ -300,7 +302,7 @@ def __virtual__():
             _prior_running_states, globals()
         )
         running = salt.utils.functools.namespaced_function(running, globals())
-        return True
+        return __virtualname__
     else:
         return (False, "Module transactional_update requires a transactional system")
 
