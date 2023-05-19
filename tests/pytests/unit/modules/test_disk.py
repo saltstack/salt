@@ -309,6 +309,21 @@ def test_format_():
 
 @pytest.mark.skip_on_windows(reason="Skip on Windows")
 @pytest.mark.skip_if_binaries_missing("mkfs")
+def test_format__nodiscard():
+    """
+    unit tests for disk.format_ with nodiscard parameter
+    """
+    device = "/dev/sdX1"
+    mock = MagicMock(return_value=0)
+    with patch.dict(disk.__salt__, {"cmd.retcode": mock}):
+        disk.format_(device=device, discard=False)
+        mock.assert_any_call(
+            ["mkfs", "-t", "ext4", "-Enodiscard", device], ignore_retcode=True
+        )
+
+
+@pytest.mark.skip_on_windows(reason="Skip on Windows")
+@pytest.mark.skip_if_binaries_missing("mkfs")
 def test_format__fat():
     """
     unit tests for disk.format_ with FAT parameter

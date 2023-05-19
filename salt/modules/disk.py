@@ -437,6 +437,7 @@ def format_(
     lazy_itable_init=None,
     fat=None,
     force=False,
+    discard=True,
 ):
     """
     Format a filesystem onto a device
@@ -475,6 +476,11 @@ def format_(
 
         This option is dangerous, use it with caution.
 
+    discard
+        Attempt to discard blocks at mkfs time (enabled by default)
+
+        This option is only enabled for ext and xfs filesystems
+
     CLI Example:
 
     .. code-block:: bash
@@ -490,6 +496,11 @@ def format_(
     if lazy_itable_init is not None:
         if fs_type[:3] == "ext":
             cmd.extend(["-E", "lazy_itable_init={}".format(lazy_itable_init)])
+    if not discard:
+        if fs_type[:3] == "ext":
+            cmd.append("-Enodiscard")
+        elif fs_type == "xfs":
+            cmd.append("-K")
     if fat is not None and fat in (12, 16, 32):
         if fs_type[-3:] == "fat":
             cmd.extend(["-F", fat])
