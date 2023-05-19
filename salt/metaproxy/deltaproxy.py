@@ -11,8 +11,8 @@ import threading
 import traceback
 import types
 
-import tornado.gen  # pylint: disable=F0401
-import tornado.ioloop  # pylint: disable=F0401
+import tornado.gen
+import tornado.ioloop
 
 import salt
 import salt._logging
@@ -355,7 +355,7 @@ def post_master_init(self, master):
         try:
             results = yield tornado.gen.multi(waitfor)
         except Exception as exc:  # pylint: disable=broad-except
-            log.error("Errors loading sub proxies")
+            log.error("Errors loading sub proxies: %s", exc)
 
         _failed = self.opts["proxy"].get("ids", [])[:]
         for sub_proxy_data in results:
