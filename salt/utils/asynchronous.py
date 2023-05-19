@@ -108,7 +108,10 @@ class SyncWrapper:
                 log.exception("Exception encountered while running stop method")
         io_loop = self.io_loop
         io_loop.stop()
-        io_loop.close(all_fds=True)
+        try:
+            io_loop.close(all_fds=True)
+        except KeyError:
+            pass
 
     def __getattr__(self, key):
         if key in self._async_methods:
