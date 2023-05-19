@@ -37,7 +37,7 @@ def test_strict_fetch():
     }
 
     popen_mock = MagicMock(spec=pass_.Popen)
-    popen_mock.return_value.communicate.return_value = ("password123456\n", "")
+    popen_mock.return_value.communicate.return_value = (b"password123456\n", b"")
     popen_mock.return_value.returncode = 0
 
     mocks = {
@@ -60,7 +60,7 @@ def test_strict_fetch_fail():
     }
 
     popen_mock = MagicMock(spec=pass_.Popen)
-    popen_mock.return_value.communicate.return_value = ("", "Secret not found")
+    popen_mock.return_value.communicate.return_value = (b"", b"Secret not found")
     popen_mock.return_value.returncode = 1
 
     mocks = {
@@ -96,7 +96,7 @@ def test_strict_fetch_pass_path_with_spaces():
     }
 
     popen_mock = MagicMock(spec=pass_.Popen)
-    popen_mock.return_value.communicate.return_value = ("password123456\n", "")
+    popen_mock.return_value.communicate.return_value = (b"password123456\n", b"")
     popen_mock.return_value.returncode = 0
 
     mocks = {
@@ -119,7 +119,10 @@ def test_strict_fetch_secret_with_whitespaces():
     }
 
     popen_mock = MagicMock(spec=pass_.Popen)
-    popen_mock.return_value.communicate.return_value = (" \tpassword123456\t \r\n", "")
+    popen_mock.return_value.communicate.return_value = (
+        b" \tpassword123456\t \r\n",
+        b"",
+    )
     popen_mock.return_value.returncode = 0
 
     mocks = {
@@ -146,7 +149,7 @@ def test_env():
     }
 
     popen_mock = MagicMock(spec=pass_.Popen)
-    popen_mock.return_value.communicate.return_value = ("password123456\n", "")
+    popen_mock.return_value.communicate.return_value = (b"password123456\n", b"")
     popen_mock.return_value.returncode = 0
 
     mocks = {
