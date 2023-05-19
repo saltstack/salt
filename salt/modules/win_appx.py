@@ -276,7 +276,7 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
     return True
 
 
-def get_deprovisioned(query=None):
+def list_deprovisioned(query=None):
     """
     When an app is deprovisioned, a registry key is created that will keep it
     from being reinstalled during a major system update. This function returns a
