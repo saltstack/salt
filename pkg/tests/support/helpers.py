@@ -596,8 +596,26 @@ class SaltPkgInstall:
             self.proc.run("launchctl", "disable", f"system/{service_name}")
             self.proc.run("launchctl", "bootout", "system", str(plist_file))
         elif upgrade:
+            env = os.environ.copy()
+            extra_args = []
+            if self.distro_id in ("ubuntu", "debian"):
+                env["DEBIAN_FRONTEND"] = "noninteractive"
+                extra_args = [
+                    "-o",
+                    "DPkg::Options::=--force-confdef",
+                    "-o",
+                    "DPkg::Options::=--force-confold",
+                ]
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
-            ret = self.proc.run(self.pkg_mngr, "upgrade", "-y", *self.pkgs)
+            args = extra_args + self.pkgs
+            ret = self.proc.run(
+                self.pkg_mngr,
+                "upgrade",
+                "-y",
+                *args,
+                _timeout=120,
+                env=env,
+            )
         else:
             log.info("Installing packages:\n%s", pprint.pformat(self.pkgs))
             ret = self.proc.run(self.pkg_mngr, "install", "-y", *self.pkgs)
