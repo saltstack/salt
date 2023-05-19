@@ -1171,7 +1171,7 @@ def create_csr(
             )
         )
 
-    ret = 'Created Private Key: "{}{}.key" '.format(csr_path, csr_filename)
+    log.debug('Created Private Key: "%s%s"', csr_path, '/' if not csr_path.endswith('/') else '')
     ret += 'Created CSR for "{}": "{}{}.csr"'.format(CN, csr_path, csr_filename)
 
     return ret
