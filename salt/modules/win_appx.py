@@ -1,3 +1,45 @@
+"""
+Manage provisioned apps
+=======================
+
+Provisioned apps are part of the image and are installed for every user the
+first time the user logs on. Provisioned apps are also updated and sometimes
+ reinstalled when the system is updated.
+
+Apps removed with this module will remove the app for all users and deprovision
+the app. Deprovisioned apps will neither be installed for new users nor will
+they be upgraded.
+
+An app removed with this module can only be re-provisioned on the machine, but
+it can't be re-installed for all users. Also, once a package has been
+deprovisioned, the only way to reinstall it is to download the package. This is
+difficult. I've outlined the steps below:
+
+1. Obtain the Microsoft Store URL for the app:
+    - Open the page for the app in the Microsoft Store
+    - Click the share button and copy the URL
+
+2. Look up the packages on https://store.rg-adguard.net/:
+    - Ensure ``URL (link)`` is selected in the first dropdown
+    - Paste the URL in the search field
+    - Ensure Retail is selected in the 2nd dropdown
+    - Click the checkmark button
+
+This should give you a list of URLs for the package and all dependencies for all
+architectures. Download the package and all dependencies for your system
+architecture. These will usually have one of the following file extensions:
+
+- ``.appx``
+- ``.appxbundle``
+- ``.msix``
+- ``.msixbundle``
+
+Dependencies will need to be installed first.
+
+Not all packages can be found this way, but it seems like most of them can.
+
+Use the ``appx.install`` function to provision the new app.
+"""
 import fnmatch
 import logging
 
@@ -6,9 +48,11 @@ import salt.utils.win_reg
 
 log = logging.getLogger(__name__)
 
-CURRENTVERSION_KEY = r"SOFTWARE\Microsoft\Windows\CurrentVersion"
-DEPROVISIONED_KEY = fr"{CURRENTVERSION_KEY}\Appx\AppxAllUserStore\Deprovisioned"
+CURRENT_VERSION_KEY = r"SOFTWARE\Microsoft\Windows\CurrentVersion"
+DEPROVISIONED_KEY = fr"{CURRENT_VERSION_KEY}\Appx\AppxAllUserStore\Deprovisioned"
+
 __virtualname__ = "appx"
+__func_alias__ = {"list_": "list"}
 
 
 def __virtual__():
@@ -21,7 +65,7 @@ def __virtual__():
     return __virtualname__
 
 
-def _pkg_list(raw, field="PackageFullName"):
+def _pkg_list(raw, field="Name"):
     result = []
     if raw:
         if isinstance(raw, list):
@@ -34,7 +78,7 @@ def _pkg_list(raw, field="PackageFullName"):
     return result
 
 
-def get(query=None, field="Name", include_store=False, frameworks=False, bundles=True):
+def list_(query=None, field="Name", include_store=False, frameworks=False, bundles=True):
     """
     Get a list of Microsoft Store packages installed on the system.
 
@@ -82,6 +126,24 @@ def get(query=None, field="Name", include_store=False, frameworks=False, bundles
     Raises:
         CommandExecutionError: If an error is encountered retrieving packages
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        # List installed apps that contain the word "candy"
+        salt '*' appx.list *candy*
+
+        # Return more information about the package
+        salt '*' appx.list *candy* field=None
+
+        # List all installed apps, including the Microsoft Store
+        salt '*' appx.list include_store=True
+
+        # List all installed apps, including frameworks
+        salt '*' appx.list frameworks=True
+
+        # List all installed apps that are bundles
+        salt '*' appx.list bundles=True
     """
     cmd = []
 
@@ -113,9 +175,9 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
     Removes Microsoft Store packages from the system. If the package is part of
     a bundle, the entire bundle will be removed.
 
-    By default, this function will remove the package for all users on the
-    system. It will also deprovision the packages so that it isn't re-installed
-    by later system updates. To only deprovision a package, set
+    This function removes the package for all users on the system. It also
+    deprovisions the packages so that it isn't re-installed by later system
+    updates. To only deprovision a package and not remove for all users, set
     ``deprovision_only=True``.
 
     Args:
@@ -134,7 +196,8 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
 
             .. note::
                 Use the ``appx.get`` function to make sure your query is
-                returning what you expect
+                returning what you expect. Then use the same query to remove
+                those packages
 
         include_store (bool):
             Include the Microsoft Store in the results of the query to be
@@ -160,8 +223,13 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
     Raises:
         CommandExecutionError: On errors encountered removing the package
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt
     """
-    packages = get(
+    packages = list_(
         query=query,
         field=None,
         include_store=include_store,
@@ -175,7 +243,7 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
         # fail. Let's make sure it's a bundle
         if not package["IsBundle"]:
             # If it's not a bundle, let's see if we can find the bundle
-            bundle = get(
+            bundle = list_(
                 query=f'{package["Name"]}*',
                 field=None,
                 include_store=include_store,
@@ -210,8 +278,9 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
 
 def get_deprovisioned(query=None):
     """
-    Get a list of applications that have been deprovisioned. A deprovisioned
-    package will not be reinstalled during a Major system update.
+    When an app is deprovisioned, a registry key is created that will keep it
+    from being reinstalled during a major system update. This function returns a
+    list of keys for apps that have been deprovisioned.
 
     Args:
 
@@ -236,20 +305,30 @@ def get_deprovisioned(query=None):
     return fnmatch.filter(ret, query)
 
 
+def install(package):
+    """
+    This function uses ``dism`` to provision a package. This means that it will
+    be made a part of the online image and added to new users on the system. If
+    a package has dependencies, those must be installed first.
 
-def reprovision(query=None):
-    pkgs = salt.utils.win_reg.list_keys(hive="HKLM", key=f"{DEPROVISIONED_KEY}")
-    failed = []
-    for item in fnmatch.filter(pkgs, query):
-        key = f"{DEPROVISIONED_KEY}\\{item}"
-        log.debug(f"Deprovisioning app: {item}")
-        ret = salt.utils.win_reg.delete_key_recursive(hive="HKLM", key=key)
-        if ret["Failed"]:
-            log.debug(f"Failed to deprovision: {item}")
-            failed.append(item)
-    if failed:
-        return {"Failed to deprovision": failed}
-    return True
+    If a package installed using this function has been deprovisioned
+    previously, the registry entry marking it as deprovisioned will be removed.
 
+    Args:
 
+        package (str):
+            The full path to the package to install. Can be one of the
+            following:
 
+            - ``.appx`` or ``.appxbundle``
+            - ``.msix`` or ``.msixbundle``
+            - ``.ppkg``
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
+    """
+    # I don't see a way to make the app installed for existing users on
+    # the system. The best we can do is provision the package for new
+    # users
+    ret = __salt__["dism.add_provisioned_package"](package)
+    return ret["retcode"] == 0

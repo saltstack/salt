@@ -56,7 +56,10 @@ def _get_components(type_regex, plural_type, install_value, image=None):
         "/Get-{}".format(plural_type),
     ]
     out = __salt__["cmd.run"](cmd)
-    pattern = r"{} : (.*)\r\n.*State : {}\r\n".format(type_regex, install_value)
+    if install_value:
+        pattern = r"{} : (.*)\r\n.*State : {}\r\n".format(type_regex, install_value)
+    else:
+        pattern = r"{} : (.*)\r\n.*".format(type_regex, install_value)
     capabilities = re.findall(pattern, out, re.MULTILINE)
     capabilities.sort()
     return capabilities
@@ -511,6 +514,58 @@ def add_package(
     return __salt__["cmd.run_all"](cmd)
 
 
+def add_provisioned_package(package, image=None, restart=False):
+    """
+    Provision a package using DISM. A provisioned package will install for new
+    users on the system. It will also be reinstalled on each user if the system
+    if updated.
+
+    Args:
+
+        package (str):
+            The package to install. Can be one of the following:
+
+            - ``.appx`` or ``.appxbundle``
+            - ``.msix`` or ``.msixbundle``
+            - ``.ppkg``
+
+        image (Optional[str]):
+            The path to the root directory of an offline Windows image. If
+            ``None`` is passed, the running operating system is targeted.
+            Default is ``None``.
+
+        restart (Optional[bool]):
+            Reboot the machine if required by the installation. Default is
+            ``False``
+
+    Returns:
+        dict: A dictionary containing the results of the command
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dism.add_provisioned_package C:\\Packages\\package.appx
+        salt '*' dism.add_provisioned_package C:\\Packages\\package.appxbundle
+        salt '*' dism.add_provisioned_package C:\\Packages\\package.msix
+        salt '*' dism.add_provisioned_package C:\\Packages\\package.msixbundle
+        salt '*' dism.add_provisioned_package C:\\Packages\\package.ppkg
+    """
+    cmd = [
+        bin_dism,
+        "/Quiet",
+        "/Image:{}".format(image) if image else "/Online",
+        "/Add-ProvisionedAppxPackage",
+        "/PackagePath:{}".format(package),
+        "/SkipLicense",
+    ]
+
+    if not restart:
+        cmd.append("/NoRestart")
+
+    return __salt__["cmd.run_all"](cmd)
+
+
 def remove_package(package, image=None, restart=False):
     """
     Uninstall a package
@@ -654,6 +709,32 @@ def installed_packages(image=None):
     )
 
 
+def provisioned_packages(image=None):
+    """
+    List the packages installed on the system
+
+    Args:
+        image (Optional[str]): The path to the root directory of an offline
+            Windows image. If `None` is passed, the running operating system is
+            targeted. Default is None.
+
+    Returns:
+        list: A list of installed packages
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dism.installed_packages
+    """
+    return _get_components(
+        type_regex="PackageName",
+        plural_type="ProvisionedAppxPackages",
+        install_value="",
+        image=image,
+    )
+
+
 def package_info(package, image=None):
     """
     Display information about a package
@@ -674,7 +755,7 @@ def package_info(package, image=None):
 
     .. code-block:: bash
 
-        salt '*' dism. package_info C:\\packages\\package.cab
+        salt '*' dism.package_info C:\\packages\\package.cab
     """
     cmd = [
         bin_dism,
