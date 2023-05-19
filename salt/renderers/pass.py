@@ -82,6 +82,7 @@ from os.path import expanduser
 from subprocess import PIPE, Popen
 
 import salt.utils.path
+import salt.utils.stringutils
 from salt.exceptions import SaltConfigurationError, SaltRenderError
 
 log = logging.getLogger(__name__)
@@ -167,7 +168,7 @@ def _fetch_secret(pass_path):
         else:
             log.warning(msg)
             return original_pass_path
-    return pass_data.rstrip("\r\n")
+    return salt.utils.stringutils.to_str(pass_data).rstrip("\r\n")
 
 
 def _decrypt_object(obj):
