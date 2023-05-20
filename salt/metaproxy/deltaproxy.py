@@ -58,6 +58,7 @@ from salt.utils.process import SignalHandlingProcess, default_signals
 log = logging.getLogger(__name__)
 
 
+@salt.ext.tornado.gen.coroutine
 def post_master_init(self, master):
     """
     Function to finish init after a deltaproxy proxy
@@ -409,6 +410,7 @@ def post_master_init(self, master):
     self.ready = True
 
 
+@salt.ext.tornado.gen.coroutine
 def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     """
     Function to finish init after a deltaproxy proxy
@@ -435,7 +437,7 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     proxy_grains = salt.loader.grains(
         proxyopts, proxy=main_proxy, context=proxy_context
     )
-    proxy_pillar = salt.pillar.get_pillar(
+    proxy_pillar = yield salt.pillar.get_async_pillar(
         proxyopts,
         proxy_grains,
         minion_id,
