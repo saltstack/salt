@@ -194,6 +194,7 @@ cp -R $RPM_BUILD_DIR/build/salt %{buildroot}/opt/saltstack/
 # Add some directories
 install -d -m 0755 %{buildroot}%{_var}/log/salt
 install -d -m 0755 %{buildroot}%{_var}/run/salt
+install -d -m 0755 %{buildroot}%{_var}/run/salt/master
 install -d -m 0755 %{buildroot}%{_var}/cache/salt
 install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master
 install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/minion
@@ -328,6 +329,7 @@ rm -rf %{buildroot}
 %dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions_denied/
 %dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions_pre/
 %dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions_rejected/
+%dir %attr(0750, salt, salt) %{_var}/run/salt/master/
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/jobs/
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/proc/
