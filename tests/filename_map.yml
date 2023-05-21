@@ -163,14 +163,14 @@ salt/matchers/*:
   - pytests.unit.matchers.test_confirm_top
 
 salt/metaproxy/*:
-  - pytests.functional.cli.test_salt_deltaproxy.py
-  - pytests.integration.cli.test_salt_deltaproxy.py
+  - pytests.functional.cli.test_salt_deltaproxy
+  - pytests.integration.cli.test_salt_deltaproxy
 
 salt/proxy/*:
   - pytests.integration.proxy.test_shell
   - pytests.integration.proxy.test_simple
-  - pytests.functional.cli.test_salt_deltaproxy.py
-  - pytests.integration.cli.test_salt_deltaproxy.py
+  - pytests.functional.cli.test_salt_deltaproxy
+  - pytests.integration.cli.test_salt_deltaproxy
 
 salt/state.py:
   - pytests.functional.modules.state.test_jinja_filters
