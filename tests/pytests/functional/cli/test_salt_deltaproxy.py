@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.core_test,
+    pytest.mark.windows_whitelisted,
 ]
 
 
