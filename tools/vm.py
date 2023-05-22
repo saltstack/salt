@@ -720,41 +720,50 @@ class VM:
         client = boto3.client("ec2", region_name=self.region_name)
         # Let's search for the launch template corresponding to this AMI
         launch_template_name = None
+        next_token = ""
         try:
-            response = response = client.describe_launch_templates(
-                Filters=[
-                    {
-                        "Name": "tag:spb:is-golden-image-template",
-                        "Values": ["true"],
-                    },
-                    {
-                        "Name": "tag:spb:project",
-                        "Values": ["salt-project"],
-                    },
-                    {
-                        "Name": "tag:spb:environment",
-                        "Values": [environment],
-                    },
-                    {
-                        "Name": "tag:spb:image-id",
-                        "Values": [self.config.ami],
-                    },
-                ]
-            )
-            log.debug(
-                "Search for launch template response:\n%s", pprint.pformat(response)
-            )
-            for details in response.get("LaunchTemplates"):
-                if launch_template_name is not None:
-                    log.warning(
-                        "Multiple launch templates for the same AMI. This is not "
-                        "supposed to happen. Picked the first one listed: %s",
-                        response,
-                    )
-                    break
-                launch_template_name = details["LaunchTemplateName"]
+            while True:
+                response = response = client.describe_launch_templates(
+                    Filters=[
+                        {
+                            "Name": "tag:spb:is-golden-image-template",
+                            "Values": ["true"],
+                        },
+                        {
+                            "Name": "tag:spb:project",
+                            "Values": ["salt-project"],
+                        },
+                        {
+                            "Name": "tag:spb:environment",
+                            "Values": [environment],
+                        },
+                        {
+                            "Name": "tag:spb:image-id",
+                            "Values": [self.config.ami],
+                        },
+                    ],
+                    NextToken=next_token,
+                )
+                log.debug(
+                    "Search for launch template response:\n%s",
+                    pprint.pformat(response),
+                )
+                for details in response.get("LaunchTemplates"):
+                    if launch_template_name is not None:
+                        log.warning(
+                            "Multiple launch templates for the same AMI. This is not "
+                            "supposed to happen. Picked the first one listed: %s",
+                            response,
+                        )
+                        break
+                    launch_template_name = details["LaunchTemplateName"]
 
-            if launch_template_name is None:
+                if launch_template_name is not None:
+                    break
+
+                next_token = response.get("NextToken")
+                if next_token:
+                    continue
                 self.ctx.error(f"Could not find a launch template for {self.name!r}")
                 self.ctx.exit(1)
         except ClientError as exc:
