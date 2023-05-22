@@ -709,10 +709,9 @@ def get_release_changelog_target(ctx: Context, event_name: str):
     if TYPE_CHECKING:
         assert github_output is not None
 
-    shared_context_file = (
-        tools.utils.REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
+    shared_context = yaml.safe_load(
+        tools.utils.SHARED_WORKFLOW_CONTEXT_FILEPATH.read_text()
     )
-    shared_context = yaml.safe_load(shared_context_file.read_text())
     release_branches = shared_context["release-branches"]
 
     release_changelog_target = "next-major-release"
