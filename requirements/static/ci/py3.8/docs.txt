@@ -45,23 +45,16 @@ immutables==0.15
     #   -c requirements/static/ci/py3.8/linux.txt
     #   contextvars
 jaraco.classes==3.2.1
-    # via
-    #   -c requirements/static/ci/py3.8/linux.txt
-    #   jaraco.collections
+    # via jaraco.collections
 jaraco.collections==3.4.0
-    # via
-    #   -c requirements/static/ci/py3.8/linux.txt
-    #   cherrypy
+    # via cherrypy
 jaraco.functools==2.0
     # via
-    #   -c requirements/static/ci/py3.8/linux.txt
     #   cheroot
     #   jaraco.text
     #   tempora
 jaraco.text==3.5.1
-    # via
-    #   -c requirements/static/ci/py3.8/linux.txt
-    #   jaraco.collections
+    # via jaraco.collections
 jinja2==3.1.2
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
@@ -188,9 +181,7 @@ urllib3==1.26.6
     #   -c requirements/static/ci/py3.8/linux.txt
     #   requests
 zc.lockfile==1.4
-    # via
-    #   -c requirements/static/ci/py3.8/linux.txt
-    #   cherrypy
+    # via cherrypy
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

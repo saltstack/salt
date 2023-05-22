@@ -182,9 +182,13 @@ junos-eznc==2.4.0 ; sys_platform != "win32" and python_version <= "3.10"
     #   napalm
 jxmlease==1.0.3 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
+kazoo==2.9.0 ; sys_platform != "win32" and sys_platform != "darwin"
+    # via -r requirements/static/ci/common.in
 keyring==5.7.1
     # via -r requirements/static/ci/common.in
 kubernetes==3.0.0
+    # via -r requirements/static/ci/common.in
+libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
 loguru==0.6.0
     # via ciscoconfparse
@@ -248,8 +252,9 @@ packaging==21.3
     # via
     #   -r requirements/base.txt
     #   pytest
-paramiko==2.10.1
+paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
+    #   -r requirements/static/ci/common.in
     #   junos-eznc
     #   napalm
     #   ncclient
@@ -285,6 +290,8 @@ pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
 pyeapi==0.8.4
     # via napalm
+pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
+    # via -r requirements/static/ci/common.in
 pynacl==1.4.0
     # via paramiko
 pyopenssl==23.0.0
@@ -426,6 +433,7 @@ six==1.16.0
     #   geomet
     #   jsonschema
     #   junos-eznc
+    #   kazoo
     #   kubernetes
     #   ncclient
     #   paramiko

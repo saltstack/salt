@@ -50,7 +50,6 @@ certifi==2022.12.7
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
-    #   msrest
     #   requests
 certvalidator==0.11.1
     # via vcert
@@ -140,8 +139,6 @@ iniconfig==1.0.1
     # via pytest
 ipaddress==1.0.22
     # via kubernetes
-isodate==0.6.0
-    # via msrest
 jaraco.classes==3.2.1
     # via jaraco.collections
 jaraco.collections==3.4.0
@@ -217,8 +214,6 @@ ncclient==0.6.9
     # via junos-eznc
 netaddr==0.7.19
     # via junos-eznc
-oauthlib==3.2.2
-    # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
 packaging==21.3
@@ -266,8 +261,6 @@ pygit2==1.8.0 ; python_version >= "3.7"
     # via -r requirements/static/ci/freebsd.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
-pyjwt==2.4.0
-    # via adal
 pynacl==1.3.0
     # via paramiko
 pyopenssl==23.0.0
@@ -352,8 +345,6 @@ pyzmq==23.2.0 ; python_version < "3.11"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-requests-oauthlib==1.3.0
-    # via msrest
 requests==2.25.1
     # via
     #   -r requirements/base.txt
@@ -363,9 +354,7 @@ requests==2.25.1
     #   etcd3-py
     #   kubernetes
     #   moto
-    #   msrest
     #   pyvmomi
-    #   requests-oauthlib
     #   responses
     #   vcert
 responses==0.10.6
@@ -391,7 +380,6 @@ six==1.16.0
     #   genshi
     #   geomet
     #   google-auth
-    #   isodate
     #   jsonschema
     #   junos-eznc
     #   kazoo
