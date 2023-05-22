@@ -39,6 +39,7 @@ jobs:
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
       releases: ${{ steps.get-salt-releases.outputs.releases }}
+      release-changelog-target: ${{ steps.get-release-changelog-target.outputs.release-changelog-target }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -243,6 +244,11 @@ jobs:
         id: set-cache-seed
         run: |
           echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
+
+      - name: Get Release Changelog Target
+        id: get-release-changelog-target
+        run: |
+          tools ci get-release-changelog-target ${{ github.event_name }}
   pre-commit:
     name: Pre-Commit
     if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
@@ -320,7 +326,7 @@ jobs:
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          if [ "${{ github.base_ref || github.ref_name }}" == "master" ]; then
+          if [ "${{ needs.prepare-workflow.outputs.release-changelog-target }}" == "next-major-release" ]; then
             tools changelog update-release-notes --next-release --template-only
           else
             tools changelog update-release-notes --template-only
@@ -330,7 +336,7 @@ jobs:
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          if [ "${{ github.base_ref || github.ref_name }}" == "master" ]; then
+          if [ "${{ needs.prepare-workflow.outputs.release-changelog-target }}" == "next-major-release" ]; then
               tools changelog update-release-notes --draft --next-release
               tools changelog update-release-notes --next-release
           else
