@@ -116,7 +116,7 @@ on:
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          if [ "${{ github.base_ref || github.ref_name }}" == "master" ]; then
+          if [ "${{ needs.prepare-workflow.outputs.release-changelog-target }}" == "next-major-release" ]; then
             tools changelog update-release-notes --next-release --template-only
           else
             tools changelog update-release-notes --template-only
@@ -126,7 +126,7 @@ on:
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          if [ "${{ github.base_ref || github.ref_name }}" == "master" ]; then
+          if [ "${{ needs.prepare-workflow.outputs.release-changelog-target }}" == "next-major-release" ]; then
               tools changelog update-release-notes --draft <%- if prepare_actual_release %> --release <%- endif %> --next-release
               tools changelog update-release-notes <%- if prepare_actual_release %> --release <%- endif %> --next-release
           else

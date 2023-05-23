@@ -30,10 +30,7 @@ build = command_group(
 
 
 def _get_shared_constants():
-    shared_constants = (
-        tools.utils.REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
-    )
-    return yaml.safe_load(shared_constants.read_text())
+    return yaml.safe_load(tools.utils.SHARED_WORKFLOW_CONTEXT_FILEPATH.read_text())
 
 
 @build.command(
