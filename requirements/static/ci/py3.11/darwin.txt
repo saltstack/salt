@@ -728,7 +728,7 @@ pyzmq==25.0.2 ; python_version >= "3.11"
     #   pytest-salt-factories
 requests-oauthlib==1.3.0
     # via msrest
-requests==2.25.1
+requests==2.31.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
