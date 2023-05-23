@@ -4,7 +4,7 @@ Manage provisioned apps
 
 Provisioned apps are part of the image and are installed for every user the
 first time the user logs on. Provisioned apps are also updated and sometimes
- reinstalled when the system is updated.
+reinstalled when the system is updated.
 
 Apps removed with this module will remove the app for all users and deprovision
 the app. Deprovisioned apps will neither be installed for new users nor will
@@ -44,6 +44,7 @@ import fnmatch
 import logging
 
 import salt.utils.platform
+import salt.utils.win_pwsh
 import salt.utils.win_reg
 
 log = logging.getLogger(__name__)
@@ -60,7 +61,11 @@ def __virtual__():
     Load only on Windows
     """
     if not salt.utils.platform.is_windows():
-        return False, "Module appx: module only works on Windows systems."
+        return False, "Appx module: Only available on Windows systems"
+
+    pwsh_info = __salt__["cmd.shell_info"](shell="powershell", list_modules=False)
+    if not pwsh_info["installed"]:
+        return False, "Appx module: PowerShell not available"
 
     return __virtualname__
 
@@ -164,10 +169,10 @@ def list_(query=None, field="Name", include_store=False, frameworks=False, bundl
     if not field:
         cmd.append("Sort-Object Name")
         cmd.append("Select Name, Version, PackageFullName, PackageFamilyName, IsBundle, IsFramework")
-        return __utils__["win_pwsh.run_dict"](" | ".join(cmd))
+        return salt.utils.win_pwsh.run_dict(" | ".join(cmd))
     else:
         cmd.append(f"Sort-Object {field}")
-        return _pkg_list(__utils__["win_pwsh.run_dict"](" | ".join(cmd)), field)
+        return _pkg_list(salt.utils.win_pwsh.run_dict(" | ".join(cmd)), field)
 
 
 def remove(query=None, include_store=False, frameworks=False, deprovision_only=False):
@@ -176,8 +181,8 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
     a bundle, the entire bundle will be removed.
 
     This function removes the package for all users on the system. It also
-    deprovisions the packages so that it isn't re-installed by later system
-    updates. To only deprovision a package and not remove for all users, set
+    deprovisions the package so that it isn't re-installed by later system
+    updates. To only deprovision a package and not remove it for all users, set
     ``deprovision_only=True``.
 
     Args:
@@ -195,13 +200,13 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
               ``include_store=True``
 
             .. note::
-                Use the ``appx.get`` function to make sure your query is
+                Use the ``appx.list`` function to make sure your query is
                 returning what you expect. Then use the same query to remove
                 those packages
 
         include_store (bool):
             Include the Microsoft Store in the results of the query to be
-            removed. Use this with caution. It difficult to reinstall the
+            removed. Use this with caution. It is difficult to reinstall the
             Microsoft Store once it has been removed with this function. Default
             is ``False``
 
@@ -210,7 +215,7 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
             Default is ``False``
 
         deprovision_only (bool):
-            Deprovision the package. The package will be removed from the
+            Only deprovision the package. The package will be removed from the
             current user and added to the list of deprovisioned packages. The
             package will not be re-installed in future system updates. New users
             of the system will not have the package installed. However, the
@@ -260,7 +265,7 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
         else:
             log.debug("Removing package: %s", remove_name)
             remove_cmd = f"Remove-AppxPackage -AllUsers -Package {remove_name}"
-        __utils__["win_pwsh.run_dict"](remove_cmd)
+        salt.utils.win_pwsh.run_dict(remove_cmd)
 
     if isinstance(packages, list):
         log.debug("Removing %s packages", len(packages))
@@ -313,6 +318,10 @@ def install(package):
 
     If a package installed using this function has been deprovisioned
     previously, the registry entry marking it as deprovisioned will be removed.
+
+    .. NOTE::
+        There is no ``appx.present`` state. Instead, use the
+        ``dism.provisioned_package_installed`` state.
 
     Args:
 
