@@ -67,8 +67,10 @@ def test_issue_64169(caplog):
 
         # Confirm that the state continued to install the package as expected.
         # Only check the 'pkgs' parameter of pip.install
+        # pylint: disable=unpacking-non-sequence
         (
             mock_install_call_args,
             mock_install_call_kwargs,
-        ) = mock_pip_install.call_args  # pylint: disable=unpacking-non-sequence
+        ) = mock_pip_install.call_args
+        # pylint: enable=unpacking-non-sequence
         assert mock_install_call_kwargs["pkgs"] == pkg_to_install
