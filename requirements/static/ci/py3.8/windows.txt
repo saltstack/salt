@@ -324,7 +324,7 @@ pyzmq==25.0.2 ; sys_platform == "win32"
     #   pytest-salt-factories
 requests-ntlm==1.1.0
     # via pywinrm
-requests==2.25.1
+requests==2.31.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
