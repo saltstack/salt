@@ -13,6 +13,7 @@ import logging
 import os
 
 import salt.utils.platform
+import salt.utils.win_pwsh
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -33,41 +34,6 @@ def __virtual__():
         return False, "PowerShell not available"
 
     return __virtualname__
-
-
-def _pshell_json(cmd, cwd=None):
-    """
-    Execute the desired powershell command and ensure that it returns data
-    in JSON format and load that into python
-    """
-    if "convertto-json" not in cmd.lower():
-        cmd = "{} | ConvertTo-Json".format(cmd)
-    log.debug("PowerShell: %s", cmd)
-    ret = __salt__["cmd.run_all"](cmd, shell="powershell", cwd=cwd)
-
-    if "pid" in ret:
-        del ret["pid"]
-
-    if ret.get("stderr", ""):
-        error = ret["stderr"].splitlines()[0]
-        raise CommandExecutionError(error, info=ret)
-
-    if "retcode" not in ret or ret["retcode"] != 0:
-        # run_all logs an error to log.error, fail hard back to the user
-        raise CommandExecutionError(
-            "Issue executing PowerShell {}".format(cmd), info=ret
-        )
-
-    # Sometimes Powershell returns an empty string, which isn't valid JSON
-    if ret["stdout"] == "":
-        ret["stdout"] = "{}"
-
-    try:
-        ret = salt.utils.json.loads(ret["stdout"], strict=False)
-    except ValueError:
-        raise CommandExecutionError("No JSON results from PowerShell", info=ret)
-
-    return ret
 
 
 def is_installed(name):
@@ -229,7 +195,7 @@ def list():
         salt '*' wusa.list
     """
     kbs = []
-    ret = _pshell_json("Get-HotFix | Select HotFixID")
+    ret = salt.utils.win_pwsh.run_dict("Get-HotFix | Select HotFixID")
     for item in ret:
         kbs.append(item["HotFixID"])
     return kbs
