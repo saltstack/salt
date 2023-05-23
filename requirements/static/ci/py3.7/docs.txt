@@ -49,16 +49,23 @@ importlib-metadata==4.6.4
     #   -c requirements/static/ci/py3.7/linux.txt
     #   sphinxcontrib-spelling
 jaraco.classes==3.2.1
-    # via jaraco.collections
+    # via
+    #   -c requirements/static/ci/py3.7/linux.txt
+    #   jaraco.collections
 jaraco.collections==3.4.0
-    # via cherrypy
+    # via
+    #   -c requirements/static/ci/py3.7/linux.txt
+    #   cherrypy
 jaraco.functools==2.0
     # via
+    #   -c requirements/static/ci/py3.7/linux.txt
     #   cheroot
     #   jaraco.text
     #   tempora
 jaraco.text==3.5.1
-    # via jaraco.collections
+    # via
+    #   -c requirements/static/ci/py3.7/linux.txt
+    #   jaraco.collections
 jinja2==3.1.2
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
@@ -191,7 +198,9 @@ urllib3==1.26.6
     #   -c requirements/static/ci/py3.7/linux.txt
     #   requests
 zc.lockfile==1.4
-    # via cherrypy
+    # via
+    #   -c requirements/static/ci/py3.7/linux.txt
+    #   cherrypy
 zipp==3.5.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt

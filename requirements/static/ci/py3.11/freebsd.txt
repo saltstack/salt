@@ -201,6 +201,8 @@ multidict==6.0.2
     # via
     #   aiohttp
     #   yarl
+oauthlib==3.2.2
+    # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
 packaging==21.3
@@ -332,6 +334,7 @@ requests==2.25.1
     #   kubernetes
     #   moto
     #   pyvmomi
+    #   requests-oauthlib
     #   responses
     #   vcert
 responses==0.10.6
@@ -355,6 +358,7 @@ six==1.16.0
     #   genshi
     #   geomet
     #   google-auth
+    #   isodate
     #   jsonschema
     #   kazoo
     #   kubernetes

@@ -25,9 +25,7 @@ attrs==20.3.0
     #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-system-statistics
-autocommand==2.2.2
-    # via jaraco.text
-backports.entry-points-selectable==1.2.0
+backports.entry-points-selectable==1.1.0
     # via virtualenv
 bcrypt==3.1.6
     # via
@@ -147,22 +145,20 @@ immutables==0.15
     # via contextvars
 importlib-metadata==6.0.0
     # via -r requirements/static/pkg/freebsd.in
-inflect==6.0.4
-    # via jaraco.text
 iniconfig==1.0.1
     # via pytest
 ipaddress==1.0.22
     # via kubernetes
-jaraco.collections==4.1.0
+jaraco.classes==3.2.1
+    # via jaraco.collections
+jaraco.collections==3.4.0
     # via cherrypy
-jaraco.context==4.3.0
-    # via jaraco.text
-jaraco.functools==3.6.0
+jaraco.functools==2.0
     # via
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.11.1
+jaraco.text==3.5.1
     # via jaraco.collections
 jinja2==3.1.2
     # via
@@ -184,13 +180,13 @@ junos-eznc==2.4.0 ; sys_platform != "win32" and python_version <= "3.10"
     #   napalm
 jxmlease==1.0.1 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-kazoo==2.9.0 ; sys_platform != "win32" and sys_platform != "darwin"
+kazoo==2.6.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
 keyring==5.7.1
     # via -r requirements/static/ci/common.in
 kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
-libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
+libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
 looseversion==1.0.2
     # via -r requirements/base.txt
@@ -216,8 +212,8 @@ more-itertools==5.0.0
     # via
     #   cheroot
     #   cherrypy
+    #   jaraco.classes
     #   jaraco.functools
-    #   jaraco.text
 moto==3.0.1 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
@@ -241,6 +237,8 @@ netmiko==3.2.0
     # via napalm
 ntc-templates==1.4.1
     # via junos-eznc
+oauthlib==3.2.2
+    # via requests-oauthlib
 oscrypto==1.2.0
     # via certvalidator
 packaging==21.3
@@ -288,8 +286,6 @@ pycparser==2.21 ; python_version >= "3.9"
     #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pydantic==1.10.7
-    # via inflect
 pyeapi==0.8.3
     # via napalm
 pygit2==1.8.0 ; python_version >= "3.7"
@@ -394,6 +390,7 @@ requests==2.25.1
     #   moto
     #   napalm
     #   pyvmomi
+    #   requests-oauthlib
     #   responses
     #   vcert
 responses==0.10.6
@@ -422,6 +419,7 @@ six==1.16.0
     #   genshi
     #   geomet
     #   google-auth
+    #   isodate
     #   jsonschema
     #   junos-eznc
     #   kazoo
@@ -464,7 +462,6 @@ transitions==0.8.1
     # via junos-eznc
 typing-extensions==4.2.0
     # via
-    #   pydantic
     #   pytest-shell-utilities
     #   pytest-system-statistics
 urllib3==1.26.6
@@ -497,7 +494,7 @@ yamlordereddictloader==0.4.0
     # via junos-eznc
 yarl==1.7.2
     # via aiohttp
-zc.lockfile==3.0.post1
+zc.lockfile==1.4
     # via cherrypy
 zipp==3.5.0
     # via importlib-metadata
