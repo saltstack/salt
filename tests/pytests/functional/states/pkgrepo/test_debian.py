@@ -494,7 +494,7 @@ def test_pkgrepo_with_architectures(pkgrepo, grains, sources_list_file, subtests
 
 
 @pytest.fixture(scope="module")
-def repo_uri(grains):
+def repo_uri():
     yield "http://www.deb-multimedia.org"
 
 
