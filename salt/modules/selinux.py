@@ -88,16 +88,16 @@ def getenforce():
     """
     _selinux_fs_path = selinux_fs_path()
     if _selinux_fs_path is None:
-        return "Disabled"
+        return "disabled"
     try:
         enforce = os.path.join(_selinux_fs_path, "enforce")
         with salt.utils.files.fopen(enforce, "r") as _fp:
             if salt.utils.stringutils.to_unicode(_fp.readline()).strip() == "0":
-                return "Permissive"
+                return "permissive"
             else:
-                return "Enforcing"
+                return "enforcing"
     except (OSError, AttributeError):
-        return "Disabled"
+        return "disabled"
 
 
 def getconfig():
@@ -135,13 +135,13 @@ def setenforce(mode):
     if isinstance(mode, str):
         if mode.lower() == "enforcing":
             mode = "1"
-            modestring = "Enforcing"
+            modestring = "enforcing"
         elif mode.lower() == "permissive":
             mode = "0"
-            modestring = "Permissive"
+            modestring = "permissive"
         elif mode.lower() == "disabled":
             mode = "0"
-            modestring = "Disabled"
+            modestring = "disabled"
         else:
             return "Invalid mode {}".format(mode)
     elif isinstance(mode, int):
@@ -153,7 +153,7 @@ def setenforce(mode):
         return "Invalid mode {}".format(mode)
 
     # enforce file does not exist if currently disabled.  Only for toggling enforcing/permissive
-    if getenforce() != "Disabled":
+    if getenforce() != "disabled":
         enforce = os.path.join(selinux_fs_path(), "enforce")
         try:
             with salt.utils.files.fopen(enforce, "w") as _fp:
