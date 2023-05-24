@@ -214,11 +214,6 @@ iniconfig==1.0.1
     # via
     #   -c requirements/static/ci/py3.10/windows.txt
     #   pytest
-ioloop==0.1a0
-    # via
-    #   -c requirements/static/ci/../pkg/py3.10/windows.txt
-    #   -c requirements/static/ci/py3.10/windows.txt
-    #   -r requirements/windows.txt
 ipaddress==1.0.22
     # via
     #   -c requirements/static/ci/py3.10/windows.txt
