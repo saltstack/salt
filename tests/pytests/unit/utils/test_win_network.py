@@ -1,11 +1,7 @@
-import logging
-
 import pytest
 
 import salt.utils.win_network as win_network
 from tests.support.mock import MagicMock, patch
-
-log = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.skip_unless_on_windows]
 
@@ -338,5 +334,4 @@ def test__get_base_properties_undefined_adapter():
 
 def test__get_network_interfaces_no_error():
     ret = win_network._get_network_interfaces()
-    log.debug("_get_network_interfaces return value: %s", ret)
-    assert isinstance(ret, list)
+    assert len(ret) > 0
