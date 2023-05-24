@@ -27,7 +27,7 @@ def test_salt_user_master(salt_master, install_salt):
 
 def test_salt_user_home(install_salt):
     """
-    Test the correct user is running the Salt Master
+    Test the salt user's home is /opt/saltstack/salt
     """
     proc = subprocess.run(
         ["getent", "passwd", "salt"], check=False, capture_output=True
@@ -43,7 +43,7 @@ def test_salt_user_home(install_salt):
 
 def test_salt_user_group(install_salt):
     """
-    Test the salt user is the salt group
+    Test the salt user is in the salt group
     """
     proc = subprocess.run(["id", "salt"], check=False, capture_output=True)
     assert proc.returncode == 0
@@ -77,7 +77,7 @@ def test_salt_user_shell(install_salt):
 
 def test_salt_cloud_dirs(install_salt):
     """
-    Test the correct user is running the Salt Master
+    Test salt-cloud directories are owned by salt:salt
     """
     paths = [
         "/opt/saltstack/salt/lib/python{}.{}/site-packages/salt/cloud/deploy".format(
