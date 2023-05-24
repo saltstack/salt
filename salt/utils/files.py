@@ -175,7 +175,7 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
             policy = salt.modules.selinux.getenforce()
         except (ImportError, CommandExecutionError):
             pass
-        if policy == "Enforcing":
+        if policy == "enforcing":
             with fopen(os.devnull, "w") as dev_null:
                 cmd = [rcon, dest]
                 subprocess.call(cmd, stdout=dev_null, stderr=dev_null)

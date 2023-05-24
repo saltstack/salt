@@ -40,11 +40,11 @@ def _refine_mode(mode):
     """
     mode = str(mode).lower()
     if any([mode.startswith("e"), mode == "1", mode == "on"]):
-        return "Enforcing"
+        return "enforcing"
     if any([mode.startswith("p"), mode == "0", mode == "off"]):
-        return "Permissive"
+        return "permissive"
     if any([mode.startswith("d")]):
-        return "Disabled"
+        return "disabled"
     return "unknown"
 
 
@@ -111,7 +111,7 @@ def mode(name):
 
     oldmode, mode = mode, __salt__["selinux.setenforce"](tmode)
     if mode == tmode or (
-        tmode == "Disabled" and __salt__["selinux.getconfig"]() == tmode
+        tmode == "disabled" and __salt__["selinux.getconfig"]() == tmode
     ):
         ret["result"] = True
         ret["comment"] = "SELinux has been set to {} mode".format(tmode)
