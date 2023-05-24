@@ -22,9 +22,9 @@ jobs:
         arch:
           - x86_64
           - aarch64
-        src:
-          - true
-          - false
+        source:
+          - onedir
+          - src
 
     container:
       image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-11
@@ -79,34 +79,31 @@ jobs:
 
       - name: Build Deb
         working-directory: pkgs/checkout/
-        if: ${{ matrix.src != true}}
         run: |
-          tools pkg build deb --onedir salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
-
-      - name: Build Deb
-        working-directory: pkgs/checkout/
-        if: ${{ matrix.src == true}}
-        run: |
-          tools pkg build deb --arch ${{ matrix.arch }}
+          tools pkg build deb ${{
+              matrix.source == 'onedir' &&
+              format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
+              ||
+              format('--arch={0}', matrix.arch)
+          }}
 
       - name: Cleanup
         run: |
           rm -rf pkgs/checkout/
 
-      - name: Upload DEBs
-        uses: actions/upload-artifact@v3
-        if: ${{ matrix.src == false}}
-        with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb
-          path: ${{ github.workspace }}/pkgs/*
-          retention-days: 7
-          if-no-files-found: error
+      - name: Set Artifact Name
+        id: set-artifact-name
+        run: |
+          if [ "${{ matrix.source }}" != "src" ]; then
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb-from-src" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Upload DEBs
         uses: actions/upload-artifact@v3
-        if: ${{ matrix.src == true}}
         with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-deb-from-src
+          name: ${{ steps.set-artifact-name.outputs.artifact-name }}
           path: ${{ github.workspace }}/pkgs/*
           retention-days: 7
           if-no-files-found: error

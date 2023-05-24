@@ -901,8 +901,11 @@ def create_crl(
             salt.utils.versions.kwargs_warn_until(["text"], "Potassium")
             kwargs.pop("text")
 
-        if kwargs:
-            raise SaltInvocationError(f"Unrecognized keyword arguments: {list(kwargs)}")
+        unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
+        if unknown:
+            raise SaltInvocationError(
+                f"Unrecognized keyword arguments: {list(unknown)}"
+            )
 
     if days_valid is None:
         try:
@@ -1235,8 +1238,9 @@ def create_private_key(
         for x in ignored_params:
             kwargs.pop(x)
 
-    if kwargs:
-        raise SaltInvocationError(f"Unrecognized keyword arguments: {list(kwargs)}")
+    unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
+    if unknown:
+        raise SaltInvocationError(f"Unrecognized keyword arguments: {list(unknown)}")
 
     if encoding not in ["der", "pem", "pkcs12"]:
         raise CommandExecutionError(

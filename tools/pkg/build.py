@@ -4,6 +4,7 @@ These commands are used to build the salt onedir and system packages.
 # pylint: disable=resource-leakage,broad-except
 from __future__ import annotations
 
+import json
 import logging
 import os
 import pathlib
@@ -29,10 +30,7 @@ build = command_group(
 
 
 def _get_shared_constants():
-    shared_constants = (
-        tools.utils.REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
-    )
-    return yaml.safe_load(shared_constants.read_text())
+    return yaml.safe_load(tools.utils.SHARED_WORKFLOW_CONTEXT_FILEPATH.read_text())
 
 
 @build.command(
@@ -393,20 +391,47 @@ def onedir_dependencies(
 
     # We import relenv here because it is not a hard requirement for the rest of the tools commands
     try:
-        from relenv.create import create
+        import relenv.create
     except ImportError:
         ctx.exit(1, "Relenv not installed in the current environment.")
 
     dest = pathlib.Path(package_name).resolve()
-    create(dest, arch=arch, version=python_version)
+    relenv.create.create(dest, arch=arch, version=python_version)
+
+    # Validate that we're using the relenv version we really want to
+    if platform == "windows":
+        env_scripts_dir = dest / "Scripts"
+    else:
+        env_scripts_dir = dest / "bin"
+
+    ret = ctx.run(
+        str(env_scripts_dir / "relenv"), "--version", capture=True, check=False
+    )
+    if ret.returncode:
+        ctx.error(f"Failed to get the relenv version: {ret}")
+        ctx.exit(1)
+
+    target_relenv_version = _get_shared_constants()["relenv_version"]
+    env_relenv_version = ret.stdout.strip().decode()
+    if env_relenv_version != target_relenv_version:
+        ctx.error(
+            f"The onedir installed relenv version({env_relenv_version}) is not "
+            f"the relenv version which should be used({target_relenv_version})."
+        )
+        ctx.exit(1)
+
+    ctx.info(
+        f"The relenv version installed in the onedir env({env_relenv_version}) "
+        f"matches the version which must be used."
+    )
 
     env = os.environ.copy()
     install_args = ["-v"]
     if platform == "windows":
-        python_bin = dest / "Scripts" / "python"
+        python_bin = env_scripts_dir / "python"
     else:
         env["RELENV_BUILDENV"] = "1"
-        python_bin = dest / "bin" / "python3"
+        python_bin = env_scripts_dir / "python3"
         install_args.extend(
             [
                 "--use-pep517",
@@ -466,8 +491,6 @@ def onedir_dependencies(
         str(requirements_file),
         env=env,
     )
-    extras_dir = dest / f"extras-{requirements_version}"
-    extras_dir.mkdir()
 
 
 @build.command(
@@ -503,6 +526,33 @@ def salt_onedir(
     onedir_env = pathlib.Path(package_name).resolve()
     _check_pkg_build_files_exist(ctx, onedir_env=onedir_env, salt_archive=salt_archive)
 
+    # Validate that we're using the relenv version we really want to
+    if platform == "windows":
+        env_scripts_dir = onedir_env / "Scripts"
+    else:
+        env_scripts_dir = onedir_env / "bin"
+
+    ret = ctx.run(
+        str(env_scripts_dir / "relenv"), "--version", capture=True, check=False
+    )
+    if ret.returncode:
+        ctx.error(f"Failed to get the relenv version: {ret}")
+        ctx.exit(1)
+
+    target_relenv_version = _get_shared_constants()["relenv_version"]
+    env_relenv_version = ret.stdout.strip().decode()
+    if env_relenv_version != target_relenv_version:
+        ctx.error(
+            f"The onedir installed relenv version({env_relenv_version}) is not "
+            f"the relenv version which should be used({target_relenv_version})."
+        )
+        ctx.exit(1)
+
+    ctx.info(
+        f"The relenv version installed in the onedir env({env_relenv_version}) "
+        f"matches the version which must be used."
+    )
+
     env = os.environ.copy()
     env["USE_STATIC_REQUIREMENTS"] = "1"
     env["RELENV_BUILDENV"] = "1"
@@ -525,18 +575,76 @@ def salt_onedir(
             "-CICD",
             env=env,
         )
+        python_executable = str(env_scripts_dir / "python.exe")
+        ret = ctx.run(
+            python_executable,
+            "-c",
+            "import json, sys, site, pathlib; sys.stdout.write(json.dumps([pathlib.Path(p).as_posix() for p in site.getsitepackages()]))",
+            capture=True,
+        )
+        if ret.returncode:
+            ctx.error(f"Failed to get the path to `site-packages`: {ret}")
+            ctx.exit(1)
+        site_packages_json = json.loads(ret.stdout.strip().decode())
+        ctx.info(f"Discovered 'site-packages' paths: {site_packages_json}")
     else:
         env["RELENV_PIP_DIR"] = "1"
-        pip_bin = onedir_env / "bin" / "pip3"
-        ctx.run(str(pip_bin), "install", str(salt_archive), env=env)
+        pip_bin = env_scripts_dir / "pip3"
+        ctx.run(
+            str(pip_bin),
+            "install",
+            "--no-warn-script-location",
+            str(salt_archive),
+            env=env,
+        )
         if platform == "darwin":
 
             def errfn(fn, path, err):
                 ctx.info(f"Removing {path} failed: {err}")
 
-            shutil.rmtree(onedir_env / "opt", onerror=errfn)
-            shutil.rmtree(onedir_env / "etc", onerror=errfn)
-            shutil.rmtree(onedir_env / "Library", onerror=errfn)
+            for subdir in ("opt", "etc", "Library"):
+                path = onedir_env / subdir
+                if path.exists():
+                    shutil.rmtree(path, onerror=errfn)
+
+        python_executable = str(env_scripts_dir / "python3")
+        ret = ctx.run(
+            python_executable,
+            "-c",
+            "import json, sys, site, pathlib; sys.stdout.write(json.dumps(site.getsitepackages()))",
+            capture=True,
+        )
+        if ret.returncode:
+            ctx.error(f"Failed to get the path to `site-packages`: {ret}")
+            ctx.exit(1)
+        site_packages_json = json.loads(ret.stdout.strip().decode())
+        ctx.info(f"Discovered 'site-packages' paths: {site_packages_json}")
+
+    site_packages: str
+    for site_packages_path in site_packages_json:
+        if "site-packages" in site_packages_path:
+            site_packages = site_packages_path
+            break
+    else:
+        ctx.error("Cloud not find a site-packages path with 'site-packages' in it?!")
+        ctx.exit(1)
+
+    ret = ctx.run(
+        str(python_executable),
+        "-c",
+        "import sys; print('{}.{}'.format(*sys.version_info))",
+        capture=True,
+    )
+    python_version_info = ret.stdout.strip().decode()
+    extras_dir = onedir_env / f"extras-{python_version_info}"
+    ctx.info(f"Creating Salt's extras path: {extras_dir}")
+    extras_dir.mkdir(exist_ok=True)
+
+    for fname in ("_salt_onedir_extras.py", "_salt_onedir_extras.pth"):
+        src = tools.utils.REPO_ROOT / "pkg" / "common" / "onedir" / fname
+        dst = pathlib.Path(site_packages) / fname
+        ctx.info(f"Copying '{src.relative_to(tools.utils.REPO_ROOT)}' to '{dst}' ...")
+        shutil.copyfile(src, dst)
 
 
 def _check_pkg_build_files_exist(ctx: Context, **kwargs):

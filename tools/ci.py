@@ -11,6 +11,7 @@ import pathlib
 import time
 from typing import TYPE_CHECKING
 
+import yaml
 from ptscripts import Context, command_group
 
 import tools.utils
@@ -648,41 +649,81 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
 
 
 @ci.command(
-    name="pkg-download-matrix",
+    name="get-releases",
     arguments={
-        "platform": {
-            "help": "The OS platform to generate the matrix for",
-            "choices": ("linux", "windows", "macos", "darwin"),
+        "repository": {
+            "help": "The repository to query for releases, e.g. saltstack/salt",
         },
     },
 )
-def pkg_download_matrix(ctx: Context, platform: str):
+def get_releases(ctx: Context, repository: str = "saltstack/salt"):
     """
-    Generate the test matrix.
+    Generate the latest salt release.
     """
+    github_output = os.environ.get("GITHUB_OUTPUT")
+
+    if github_output is None:
+        ctx.exit(1, "The 'GITHUB_OUTPUT' variable is not set.")
+    else:
+        releases = tools.utils.get_salt_releases(ctx, repository)
+        str_releases = [str(version) for version in releases]
+        latest = str_releases[-1]
+
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"latest-release={latest}\n")
+            wfh.write(f"releases={json.dumps(str_releases)}\n")
+        ctx.exit(0)
+
+
+@ci.command(
+    name="get-release-changelog-target",
+    arguments={
+        "event_name": {
+            "help": "The name of the GitHub event being processed.",
+        },
+    },
+)
+def get_release_changelog_target(ctx: Context, event_name: str):
+    """
+    Define which kind of release notes should be generated, next minor or major.
+    """
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is None:
+        ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event_path is not None
+
+    try:
+        gh_event = json.loads(open(gh_event_path).read())
+    except Exception as exc:
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
+        ctx.exit(1)
+
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output is None:
         ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+        ctx.exit(1)
 
-    tests = []
-    arches = []
-    if platform == "windows":
-        for arch in ("amd64", "x86"):
-            arches.append({"arch": arch})
-            for install_type in ("msi", "nsis"):
-                tests.append({"arch": arch, "install_type": install_type})
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    shared_context = yaml.safe_load(
+        tools.utils.SHARED_WORKFLOW_CONTEXT_FILEPATH.read_text()
+    )
+    release_branches = shared_context["release-branches"]
+
+    release_changelog_target = "next-major-release"
+    if event_name == "pull_request":
+        if gh_event["pull_request"]["base"]["ref"] in release_branches:
+            release_changelog_target = "next-minor-release"
+
     else:
-        for arch in ("x86_64", "aarch64"):
-            if platform in ("macos", "darwin") and arch == "aarch64":
-                continue
-            arches.append({"arch": arch})
-            tests.append({"arch": arch})
-    ctx.info("Generated arch matrix:")
-    ctx.print(arches, soft_wrap=True)
-    ctx.info("Generated test matrix:")
-    ctx.print(tests, soft_wrap=True)
-    if github_output is not None:
-        with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"arch={json.dumps(arches)}\n")
-            wfh.write(f"tests={json.dumps(tests)}\n")
+        for branch_name in release_branches:
+            if branch_name in gh_event["ref"]:
+                release_changelog_target = "next-minor-release"
+                break
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"release-changelog-target={release_changelog_target}\n")
     ctx.exit(0)
