@@ -521,7 +521,7 @@ def test_repo_present_absent_trailing_slash_uri(
     pkgrepo, repo_uri, trailing_slash_repo_file
 ):
     """
-    test adding a repo with a trailing slash in the uri
+    test adding and then removing a repo with a trailing slash in the uri
     """
     # with the trailing slash
     repo_content = f"deb {repo_uri}/ stable main"
@@ -601,12 +601,19 @@ def test_repo_present_absent_no_trailing_slash_uri_add_slash(
     assert ret.result
 
 
-@pytest.mark.requires_salt_states("pkgrepo.managed", "pkgrepo.absent")
-def test_repo_absent_trailing_slash_in_uri(
+@pytest.mark.requires_salt_states("pkgrepo.absent")
+def test_repo_absent_existing_repo_trailing_slash_uri(
     pkgrepo, repo_uri, subtests, trailing_slash_repo_file
 ):
     """
     Test pkgrepo.absent with a URI containing a trailing slash
+
+    This test is different from test_repo_present_absent_trailing_slash_uri.
+    That test first does a pkgrepo.managed with a URI containing a trailing
+    slash. Since pkgrepo.managed normalizes the URI by removing the trailing
+    slash, the resulting repo file created by Salt does not contain one. This
+    tests the case where Salt is asked to remove an existing repo with a
+    trailing slash in the repo URI.
 
     See https://github.com/saltstack/salt/issues/64286
     """
