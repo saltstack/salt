@@ -2940,7 +2940,6 @@ def _uninstall(
         }
 
     if __opts__["test"]:
-
         _changes = {}
         _changes.update({x: {"new": "{}d".format(action), "old": ""} for x in targets})
 
@@ -3306,9 +3305,16 @@ def group_installed(name, skip=None, include=None, **kwargs):
     .. versionchanged:: 2016.11.0
         Added support in :mod:`pacman <salt.modules.pacman>`
 
+    .. versionchanged:: 3006.2
+        For RPM-based systems, support for ``fromrepo``, ``enablerepo``, and
+        ``disablerepo`` (as used in :py:func:`pkg.install
+        <salt.modules.yumpkg.install>`) has been added. This allows one to, for
+        example, use ``enablerepo`` to perform a group install from a repo that
+        is otherwise disabled.
+
     Ensure that an entire package group is installed. This state is currently
-    only supported for the :mod:`yum <salt.modules.yumpkg>` and :mod:`pacman <salt.modules.pacman>`
-    package managers.
+    only supported for the :mod:`yum <salt.modules.yumpkg>` and :mod:`pacman
+    <salt.modules.pacman>` package managers.
 
     skip
         Packages that would normally be installed by the package group
@@ -3337,6 +3343,42 @@ def group_installed(name, skip=None, include=None, **kwargs):
         .. versionchanged:: 2016.3.0
             This option can no longer be passed as a comma-separated list, it
             must now be passed as a list (as shown in the above example).
+
+    fromrepo
+        Restrict ``yum groupinfo`` to the specified repo(s).
+        (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
+
+        .. code-block:: yaml
+
+            MyGroup:
+              pkg.group_installed:
+                - fromrepo: base,updates
+
+        .. versionadded:: 3006.2
+
+    enablerepo (ignored if ``fromrepo`` is specified)
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+        .. code-block:: yaml
+
+            MyGroup:
+              pkg.group_installed:
+                - enablerepo: myrepo
+
+        .. versionadded:: 3006.2
+
+    disablerepo (ignored if ``fromrepo`` is specified)
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
+
+        .. code-block:: yaml
+
+            MyGroup:
+              pkg.group_installed:
+                - disablerepo: epel
+
+        .. versionadded:: 3006.2
 
     .. note::
         Because this is essentially a wrapper around :py:func:`pkg.install
@@ -3371,7 +3413,7 @@ def group_installed(name, skip=None, include=None, **kwargs):
                 include[idx] = str(item)
 
     try:
-        diff = __salt__["pkg.group_diff"](name)
+        diff = __salt__["pkg.group_diff"](name, **kwargs)
     except CommandExecutionError as err:
         ret[
             "comment"
