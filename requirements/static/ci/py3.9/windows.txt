@@ -275,7 +275,7 @@ kubernetes==3.0.0
     # via
     #   -c requirements/static/ci/py3.9/windows.txt
     #   -r requirements/static/ci/common.in
-looseversion==1.0.2
+looseversion==1.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -c requirements/static/ci/py3.9/windows.txt

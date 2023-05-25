@@ -51,7 +51,7 @@ jmespath==1.0.1
     # via -r requirements/base.txt
 linode-python==1.1.1
     # via -r requirements/darwin.txt
-looseversion==1.0.2
+looseversion==1.2.0
     # via -r requirements/base.txt
 markupsafe==2.1.2
     # via

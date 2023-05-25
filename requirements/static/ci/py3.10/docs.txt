@@ -75,7 +75,7 @@ jmespath==1.0.1
     #   -r requirements/base.txt
 linkify-it-py==1.0.3
     # via myst-docutils
-looseversion==1.0.2
+looseversion==1.2.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
