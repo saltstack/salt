@@ -356,7 +356,7 @@ pyyaml==6.0
     #   kubernetes
     #   yamllint
     #   yamlordereddictloader
-pyzmq==25.0.2 ; python_version >= "3.11"
+pyzmq==25.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/zeromq.txt
