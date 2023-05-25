@@ -791,7 +791,7 @@ moto==3.0.1 ; python_version >= "3.6"
     # via
     #   -c requirements/static/ci/py3.11/freebsd.txt
     #   -r requirements/static/ci/common.in
-msgpack==1.0.2
+msgpack==1.0.5
     # via
     #   -c requirements/static/ci/../pkg/py3.11/freebsd.txt
     #   -c requirements/static/ci/py3.11/freebsd.txt

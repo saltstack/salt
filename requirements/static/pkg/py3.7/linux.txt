@@ -55,7 +55,7 @@ more-itertools==5.0.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-msgpack==1.0.2
+msgpack==1.0.5
     # via -r requirements/base.txt
 packaging==21.3
     # via -r requirements/base.txt
