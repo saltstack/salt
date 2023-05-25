@@ -72,7 +72,7 @@ more-itertools==8.2.0
     #   jaraco.functools
 msgpack==1.0.5
     # via -r requirements/base.txt
-packaging==21.3
+packaging==23.1
     # via -r requirements/base.txt
 portend==2.6
     # via cherrypy
@@ -92,8 +92,6 @@ pymysql==1.0.2
     # via -r requirements/windows.txt
 pyopenssl==23.0.0
     # via -r requirements/windows.txt
-pyparsing==3.0.9
-    # via packaging
 python-dateutil==2.8.1
     # via -r requirements/windows.txt
 python-gnupg==0.4.8

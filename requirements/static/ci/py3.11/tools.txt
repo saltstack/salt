@@ -32,12 +32,10 @@ markupsafe==2.1.2
     # via jinja2
 mdurl==0.1.2
     # via markdown-it-py
-packaging==21.3
+packaging==23.1
     # via -r requirements/static/ci/tools.in
 pygments==2.15.1
     # via rich
-pyparsing==3.0.9
-    # via packaging
 python-dateutil==2.8.2
     # via botocore
 python-tools-scripts==0.14.0

@@ -969,7 +969,7 @@ oscrypto==1.2.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   certvalidator
-packaging==21.3
+packaging==23.1
     # via
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   -c requirements/static/ci/py3.7/linux.txt
@@ -1059,10 +1059,8 @@ pyopenssl==23.0.0
     #   etcd3-py
 pyparsing==3.0.9
     # via
-    #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   -c requirements/static/ci/py3.7/linux.txt
     #   junos-eznc
-    #   packaging
 pypsexec==0.1.0
     # via -r requirements/static/ci/cloud.in
 pyrsistent==0.17.3
