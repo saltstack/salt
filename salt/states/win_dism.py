@@ -2,7 +2,7 @@
 Installing of Windows features using DISM
 =========================================
 
-Install Windows features/capabilities/packages with DISM
+Install Windows features, capabilities, and packages with DISM
 
 .. code-block:: yaml
 
