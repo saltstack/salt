@@ -80,7 +80,7 @@ pyasn1==0.4.8
     # via -r requirements/windows.txt
 pycparser==2.21
     # via cffi
-pycryptodomex==3.10.1
+pycryptodomex==3.18.0
     # via -r requirements/crypto.txt
 pymssql==2.2.7
     # via -r requirements/windows.txt
