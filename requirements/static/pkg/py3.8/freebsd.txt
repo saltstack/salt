@@ -92,7 +92,7 @@ six==1.16.0
     #   python-dateutil
 tempora==4.1.1
     # via portend
-timelib==0.2.5
+timelib==0.3.0
     # via -r requirements/static/pkg/freebsd.in
 tornado==6.1.0
     # via -r requirements/base.txt

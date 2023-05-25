@@ -119,7 +119,7 @@ smmap==4.0.0
     # via gitdb
 tempora==4.1.1
     # via portend
-timelib==0.2.5
+timelib==0.3.0
     # via -r requirements/windows.txt
 tornado==6.1.0
     # via -r requirements/base.txt
