@@ -75,7 +75,7 @@ pyasn1==0.4.8
     # via -r requirements/darwin.txt
 pycparser==2.21
     # via cffi
-pycryptodomex==3.18.0
+pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pyopenssl==23.1.1
     # via -r requirements/darwin.txt

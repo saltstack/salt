@@ -67,7 +67,7 @@ psutil==5.9.5
     # via -r requirements/base.txt
 pycparser==2.21
     # via cffi
-pycryptodomex==3.18.0
+pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pyopenssl==23.1.1
     # via -r requirements/static/pkg/freebsd.in
