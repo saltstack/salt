@@ -89,7 +89,7 @@ pytz==2022.1
     # via tempora
 pyyaml==6.0
     # via -r requirements/base.txt
-pyzmq==23.2.0 ; python_version < "3.11"
+pyzmq==25.1.0
     # via -r requirements/zeromq.txt
 requests==2.31.0
     # via
