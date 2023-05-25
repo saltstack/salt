@@ -81,9 +81,11 @@ def absent(name, query, include_store=False, frameworks=False, deprovision_only=
 
     CLI Example:
 
-    .. code-block:: bash
+    .. code-block:: yaml
 
-        salt
+        remove_candy_crush:
+          appx.absent:
+            query: *candy*
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 

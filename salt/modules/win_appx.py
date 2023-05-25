@@ -236,7 +236,7 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
 
     .. code-block:: bash
 
-        salt
+        salt "*" appx.remove *candy*
     """
     packages = list_(
         query=query,
@@ -309,6 +309,12 @@ def list_deprovisioned(query=None):
 
     Returns:
         list: A list of packages matching the query criteria
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" appx.list_deprovisioned *zune*
     """
     ret = salt.utils.win_reg.list_keys(hive="HKLM", key=f"{DEPROVISIONED_KEY}")
     if query is None:
@@ -341,6 +347,12 @@ def install(package):
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" appx.install "C:\\Temp\\Microsoft.ZuneMusic.msixbundle"
     """
     # I don't see a way to make the app installed for existing users on
     # the system. The best we can do is provision the package for new
