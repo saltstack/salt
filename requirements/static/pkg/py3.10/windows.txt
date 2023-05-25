@@ -79,9 +79,7 @@ psutil==5.9.5
 pyasn1==0.4.8
     # via -r requirements/windows.txt
 pycparser==2.21
-    # via
-    #   -r requirements/windows.txt
-    #   cffi
+    # via cffi
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
 pymssql==2.2.7

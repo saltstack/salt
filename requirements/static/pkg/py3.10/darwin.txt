@@ -74,9 +74,7 @@ psutil==5.9.5
 pyasn1==0.4.8
     # via -r requirements/darwin.txt
 pycparser==2.21
-    # via
-    #   -r requirements/darwin.txt
-    #   cffi
+    # via cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pyopenssl==23.1.1
