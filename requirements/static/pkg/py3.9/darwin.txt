@@ -22,7 +22,7 @@ cryptography==39.0.2
     # via
     #   -r requirements/darwin.txt
     #   pyopenssl
-distro==1.5.0
+distro==1.8.0
     # via -r requirements/base.txt
 gitdb==4.0.5
     # via gitpython
