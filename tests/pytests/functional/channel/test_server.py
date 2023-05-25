@@ -9,14 +9,14 @@ import time
 from pathlib import Path
 
 import pytest
+import tornado.gen
+import tornado.ioloop
 from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
 
 import salt.channel.client
 import salt.channel.server
 import salt.config
-import salt.ext.tornado.gen
-import salt.ext.tornado.ioloop
 import salt.master
 import salt.utils.platform
 import salt.utils.process
@@ -124,7 +124,7 @@ def master_secrets():
     salt.master.SMaster.secrets.pop("aes")
 
 
-@salt.ext.tornado.gen.coroutine
+@tornado.gen.coroutine
 def _connect_and_publish(
     io_loop, channel_minion_id, channel, server, received, timeout=60
 ):
@@ -141,7 +141,7 @@ def _connect_and_publish(
     server.publish({"tgt_type": "glob", "tgt": [channel_minion_id], "WTF": "SON"})
     start = time.time()
     while time.time() - start < timeout:
-        yield salt.ext.tornado.gen.sleep(1)
+        yield tornado.gen.sleep(1)
     io_loop.stop()
 
 
@@ -166,6 +166,11 @@ def test_pub_server_channel(
     req_server_channel.post_fork(handle_payload, io_loop=io_loop)
     if master_config["transport"] == "zeromq":
         p = Path(str(master_config["sock_dir"])) / "workers.ipc"
+        start = time.time()
+        while not p.exists():
+            time.sleep(0.3)
+            if time.time() - start > 20:
+                raise Exception("IPC socket not created")
         mode = os.lstat(p).st_mode
         assert bool(os.lstat(p).st_mode & stat.S_IRUSR)
         assert not bool(os.lstat(p).st_mode & stat.S_IRGRP)

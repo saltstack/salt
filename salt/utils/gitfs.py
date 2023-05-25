@@ -20,7 +20,8 @@ import time
 import weakref
 from datetime import datetime
 
-import salt.ext.tornado.ioloop
+import tornado.ioloop
+
 import salt.fileserver
 import salt.utils.configparser
 import salt.utils.data
@@ -2858,7 +2859,7 @@ class GitFS(GitBase):
         exited.
         """
         # No need to get the ioloop reference if we're not initializing remotes
-        io_loop = salt.ext.tornado.ioloop.IOLoop.current() if init_remotes else None
+        io_loop = tornado.ioloop.IOLoop.current() if init_remotes else None
         if not init_remotes or io_loop not in cls.instance_map:
             # We only evaluate the second condition in this if statement if
             # we're initializing remotes, so we won't get here unless io_loop
