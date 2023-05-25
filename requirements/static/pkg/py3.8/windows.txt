@@ -100,7 +100,7 @@ pythonnet==3.0.1
     # via -r requirements/windows.txt
 pytz==2022.1
     # via tempora
-pywin32==305
+pywin32==306
     # via
     #   -r requirements/windows.txt
     #   cherrypy
