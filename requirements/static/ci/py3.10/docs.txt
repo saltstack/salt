@@ -130,7 +130,7 @@ pycparser==2.21
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   cffi
-pycryptodomex==3.18.0
+pycryptodomex==3.9.8
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/crypto.txt
