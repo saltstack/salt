@@ -406,6 +406,17 @@ def _available_services(refresh=False):
         "/System/Library/LaunchDaemons",
     }
 
+    # MickMake notes: If your home directory is elsewhere; for
+    # example if you have an external disk that replaces /Users,
+    # but not mounted there, then the following method will pull
+    # in the current user's Library path.
+    # Use either os.path.expanduser('~') OR Path.home()
+    # Not sure which is better, but either works.
+    agent_path = os.path.expanduser('~') + "/Library/LaunchAgents"
+    if os.path.isdir(agent_path.format(user))
+        launchd_paths.update(os.path.expanduser('~') + "/Library/LaunchAgents")
+    # log.error("mmDEBUG: " + agent_path)
+
     agent_path = "/Users/{}/Library/LaunchAgents"
     launchd_paths.update(
         {
