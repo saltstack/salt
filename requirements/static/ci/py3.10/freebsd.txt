@@ -451,7 +451,7 @@ tempora==4.1.1
     # via
     #   -c requirements/static/ci/../pkg/py3.10/freebsd.txt
     #   portend
-timelib==0.2.5
+timelib==0.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/freebsd.txt
     #   -r requirements/static/pkg/freebsd.in
