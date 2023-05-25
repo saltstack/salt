@@ -134,7 +134,7 @@ pycparser==2.21
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   cffi
-pycryptodomex==3.9.8
+pycryptodomex==3.18.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/crypto.txt
