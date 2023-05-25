@@ -1103,7 +1103,7 @@ python-etcd==0.4.5
     # via
     #   -c requirements/static/ci/py3.10/freebsd.txt
     #   -r requirements/static/ci/common.in
-python-gnupg==0.4.8
+python-gnupg==0.5.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/freebsd.txt
     #   -c requirements/static/ci/py3.10/freebsd.txt
