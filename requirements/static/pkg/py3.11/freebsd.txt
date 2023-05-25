@@ -73,7 +73,7 @@ pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pyopenssl==23.1.1
     # via -r requirements/static/pkg/freebsd.in
-python-dateutil==2.8.1
+python-dateutil==2.8.2
     # via -r requirements/static/pkg/freebsd.in
 python-gnupg==0.4.8
     # via -r requirements/static/pkg/freebsd.in
