@@ -1166,7 +1166,7 @@ pyyaml==6.0
     #   napalm
     #   yamllint
     #   yamlordereddictloader
-pyzmq==23.2.0 ; python_version < "3.11"
+pyzmq==25.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   -c requirements/static/ci/py3.8/freebsd.txt
