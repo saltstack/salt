@@ -17,6 +17,7 @@ def render_dict():
 
 
 def test_compile_template_str_mkstemp_cleanup(minion_opts):
+    minion_opts["file_client"] = "local"
     with patch("os.unlink", MagicMock()) as unlinked:
         _state = salt.state.State(minion_opts)
         ret = template.compile_template_str(
