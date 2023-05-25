@@ -50,7 +50,7 @@ import salt.utils.win_reg
 log = logging.getLogger(__name__)
 
 CURRENT_VERSION_KEY = r"SOFTWARE\Microsoft\Windows\CurrentVersion"
-DEPROVISIONED_KEY = fr"{CURRENT_VERSION_KEY}\Appx\AppxAllUserStore\Deprovisioned"
+DEPROVISIONED_KEY = rf"{CURRENT_VERSION_KEY}\Appx\AppxAllUserStore\Deprovisioned"
 
 __virtualname__ = "appx"
 __func_alias__ = {"list_": "list"}
@@ -83,7 +83,9 @@ def _pkg_list(raw, field="Name"):
     return result
 
 
-def list_(query=None, field="Name", include_store=False, frameworks=False, bundles=True):
+def list_(
+    query=None, field="Name", include_store=False, frameworks=False, bundles=True
+):
     """
     Get a list of Microsoft Store packages installed on the system.
 
@@ -168,7 +170,9 @@ def list_(query=None, field="Name", include_store=False, frameworks=False, bundl
     cmd.append("Where-Object -Property NonRemovable -eq $false")
     if not field:
         cmd.append("Sort-Object Name")
-        cmd.append("Select Name, Version, PackageFullName, PackageFamilyName, IsBundle, IsFramework")
+        cmd.append(
+            "Select Name, Version, PackageFullName, PackageFamilyName, IsBundle, IsFramework"
+        )
         return salt.utils.win_pwsh.run_dict(" | ".join(cmd))
     else:
         cmd.append(f"Sort-Object {field}")
@@ -261,7 +265,9 @@ def remove(query=None, include_store=False, frameworks=False, deprovision_only=F
 
         if deprovision_only:
             log.debug("Deprovisioning package: %s", remove_name)
-            remove_cmd = f"Remove-AppxProvisionedPackage -Online -PackageName {remove_name}"
+            remove_cmd = (
+                f"Remove-AppxProvisionedPackage -Online -PackageName {remove_name}"
+            )
         else:
             log.debug("Removing package: %s", remove_name)
             remove_cmd = f"Remove-AppxPackage -AllUsers -Package {remove_name}"
