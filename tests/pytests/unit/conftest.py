@@ -17,7 +17,6 @@ def minion_opts(tmp_path):
         dirpath.mkdir(parents=True)
         opts[name] = str(dirpath)
     opts["log_file"] = "logs/minion.log"
-    opts["file_client"] = "local"
     return opts
 
 
