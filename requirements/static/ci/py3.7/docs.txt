@@ -52,7 +52,7 @@ immutables==0.15
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   contextvars
-importlib-metadata==4.6.4
+importlib-metadata==6.6.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   sphinxcontrib-spelling

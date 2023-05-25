@@ -37,7 +37,7 @@ idna==2.8
     # via requests
 immutables==0.15
     # via contextvars
-importlib-metadata==4.6.4
+importlib-metadata==6.6.0
     # via -r requirements/windows.txt
 jaraco.classes==3.2.1
     # via jaraco.collections
