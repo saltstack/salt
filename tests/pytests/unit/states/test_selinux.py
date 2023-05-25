@@ -26,8 +26,8 @@ def test_mode():
     }
     assert selinux.mode("unknown") == ret
 
-    mock_en = MagicMock(return_value="Enforcing")
-    mock_pr = MagicMock(side_effect=["Permissive", "Enforcing"])
+    mock_en = MagicMock(return_value="enforcing")
+    mock_pr = MagicMock(side_effect=["permissive", "enforcing"])
     with patch.dict(
         selinux.__salt__,
         {
@@ -37,32 +37,32 @@ def test_mode():
         },
     ):
         comt = "SELinux is already in Enforcing mode"
-        ret = {"name": "Enforcing", "comment": comt, "result": True, "changes": {}}
+        ret = {"name": "enforcing", "comment": comt, "result": True, "changes": {}}
         assert selinux.mode("Enforcing") == ret
 
         with patch.dict(selinux.__opts__, {"test": True}):
             comt = "SELinux mode is set to be changed to Permissive"
             ret = {
-                "name": "Permissive",
+                "name": "permissive",
                 "comment": comt,
                 "result": None,
-                "changes": {"new": "Permissive", "old": "Enforcing"},
+                "changes": {"new": "permissive", "old": "enforcing"},
             }
             assert selinux.mode("Permissive") == ret
 
         with patch.dict(selinux.__opts__, {"test": False}):
             comt = "SELinux has been set to Permissive mode"
             ret = {
-                "name": "Permissive",
+                "name": "permissive",
                 "comment": comt,
                 "result": True,
-                "changes": {"new": "Permissive", "old": "Enforcing"},
+                "changes": {"new": "permissive", "old": "enforcing"},
             }
             assert selinux.mode("Permissive") == ret
 
-            comt = "Failed to set SELinux to Permissive mode"
+            comt = "Failed to set SELinux to permissive mode"
             ret.update(
-                {"name": "Permissive", "comment": comt, "result": False, "changes": {}}
+                {"name": "permissive", "comment": comt, "result": False, "changes": {}}
             )
             assert selinux.mode("Permissive") == ret
 
