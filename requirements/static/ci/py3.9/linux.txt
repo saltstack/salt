@@ -1203,7 +1203,7 @@ pyvmomi==6.7.1.2018.12
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
-pyyaml==5.4.1
+pyyaml==6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
     #   -c requirements/static/ci/py3.9/linux.txt
