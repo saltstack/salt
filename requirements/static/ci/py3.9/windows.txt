@@ -187,7 +187,7 @@ gitdb==4.0.7
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -c requirements/static/ci/py3.9/windows.txt
     #   gitpython
-gitpython==3.1.30 ; python_version >= "3.7"
+gitpython==3.1.31
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -c requirements/static/ci/py3.9/windows.txt

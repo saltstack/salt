@@ -659,7 +659,7 @@ gitdb==4.0.5
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -c requirements/static/ci/py3.10/darwin.txt
     #   gitpython
-gitpython==3.1.30 ; python_version >= "3.7"
+gitpython==3.1.31
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -c requirements/static/ci/py3.10/darwin.txt
