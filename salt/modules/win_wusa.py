@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = "wusa"
+__func_alias__ = {"list_": "list"}
 
 
 def __virtual__():
@@ -181,7 +182,7 @@ def uninstall(path, restart=False):
     return True
 
 
-def list():
+def list_():
     """
     Get a list of updates installed on the machine
 
