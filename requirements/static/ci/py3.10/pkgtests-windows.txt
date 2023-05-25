@@ -103,7 +103,7 @@ psutil==5.9.5
     #   pytest-system-statistics
 pycparser==2.21
     # via cffi
-pycryptodomex==3.17
+pycryptodomex==3.18.0
     # via -r requirements/crypto.txt
 pydantic==1.10.4
     # via inflect

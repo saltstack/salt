@@ -130,11 +130,11 @@ psutil==5.9.5
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   -r requirements/base.txt
-pycparser==2.17
+pycparser==2.21
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   cffi
-pycryptodomex==3.9.8
+pycryptodomex==3.18.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   -r requirements/crypto.txt
