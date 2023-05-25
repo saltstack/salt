@@ -12,6 +12,14 @@ Versions are `MAJOR.PATCH`.
 
 ### Fixed
 
+- Darwin: Fix for resolving home directory when controlling services on MacOS - see [#64354](https://github.com/saltstack/salt/issues/64354).
+
+
+## 3006.1 (2023-05-05)
+
+
+### Fixed
+
 - Check that the return data from the cloud create function is a dictionary before attempting to pull values out. [#61236](https://github.com/saltstack/salt/issues/61236)
 - Ensure NamedLoaderContext's have their value() used if passing to other modules [#62477](https://github.com/saltstack/salt/issues/62477)
 - add documentation note about reactor state ids. [#63589](https://github.com/saltstack/salt/issues/63589)
