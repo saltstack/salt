@@ -72,6 +72,7 @@ import logging
 import os
 import re
 
+import salt.utils.args
 import salt.utils.pkg
 import salt.utils.platform
 import salt.utils.versions
@@ -257,7 +258,7 @@ def _find_download_targets(
     normalize=True,
     skip_suggestions=False,
     ignore_epoch=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Inspect the arguments to pkg.downloaded and discover what packages need to
@@ -512,7 +513,7 @@ def _find_install_targets(
     ignore_epoch=None,
     reinstall=False,
     refresh=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Inspect the arguments to pkg.installed and discover what packages need to
@@ -799,7 +800,7 @@ def _find_install_targets(
                             package_name,
                             ignore_types=ignore_types,
                             verify_options=verify_options,
-                            **kwargs
+                            **kwargs,
                         )
                     except (CommandExecutionError, SaltInvocationError) as exc:
                         failed_verify = exc.strerror
@@ -833,7 +834,7 @@ def _find_install_targets(
                             package_name,
                             ignore_types=ignore_types,
                             verify_options=verify_options,
-                            **kwargs
+                            **kwargs,
                         )
                     except (CommandExecutionError, SaltInvocationError) as exc:
                         failed_verify = exc.strerror
@@ -1061,7 +1062,7 @@ def installed(
     ignore_epoch=None,
     reinstall=False,
     update_holds=False,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 3007.0
@@ -1769,7 +1770,7 @@ def installed(
         ignore_epoch=ignore_epoch,
         reinstall=reinstall,
         refresh=refresh,
-        **kwargs
+        **kwargs,
     )
 
     try:
@@ -1938,7 +1939,7 @@ def installed(
                 update_holds=update_holds,
                 ignore_epoch=ignore_epoch,
                 split_arch=False,
-                **kwargs
+                **kwargs,
             )
         except CommandExecutionError as exc:
             ret = {"name": name, "result": False}
@@ -2155,7 +2156,7 @@ def installed(
                 reinstall_pkg,
                 ignore_types=ignore_types,
                 verify_options=verify_options,
-                **kwargs
+                **kwargs,
             )
             if verify_result:
                 failed.append(reinstall_pkg)
@@ -2344,7 +2345,7 @@ def downloaded(
             downloadonly=True,
             fromrepo=fromrepo,
             ignore_epoch=ignore_epoch,
-            **kwargs
+            **kwargs,
         )
         ret["result"] = True
         ret["changes"].update(pkg_ret)
@@ -2518,7 +2519,7 @@ def latest(
     skip_verify=False,
     pkgs=None,
     watch_flags=True,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 3007.0
@@ -2829,7 +2830,7 @@ def latest(
                 fromrepo=fromrepo,
                 skip_verify=skip_verify,
                 pkgs=targeted_pkgs,
-                **kwargs
+                **kwargs,
             )
         except CommandExecutionError as exc:
             return {
@@ -2937,7 +2938,7 @@ def _uninstall(
     pkgs=None,
     normalize=True,
     ignore_epoch=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Common function for package removal
@@ -3143,7 +3144,7 @@ def removed(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **
             pkgs=pkgs,
             normalize=normalize,
             ignore_epoch=ignore_epoch,
-            **kwargs
+            **kwargs,
         )
     except CommandExecutionError as exc:
         ret = {"name": name, "result": False}
@@ -3235,7 +3236,7 @@ def purged(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **k
             pkgs=pkgs,
             normalize=normalize,
             ignore_epoch=ignore_epoch,
-            **kwargs
+            **kwargs,
         )
     except CommandExecutionError as exc:
         ret = {"name": name, "result": False}
@@ -3405,6 +3406,9 @@ def group_installed(name, skip=None, include=None, **kwargs):
             This option can no longer be passed as a comma-separated list, it
             must now be passed as a list (as shown in the above example).
 
+    .. note::
+        The below options are only supported on RPM-based systems
+
     fromrepo
         Restrict ``yum groupinfo`` to the specified repo(s).
         (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
@@ -3474,13 +3478,16 @@ def group_installed(name, skip=None, include=None, **kwargs):
                 include[idx] = str(item)
 
     try:
-        diff = __salt__["pkg.group_diff"](name, **kwargs)
-    except CommandExecutionError as err:
-        ret[
-            "comment"
-        ] = "An error was encountered while installing/updating group '{}': {}.".format(
-            name, err
+        diff = __salt__["pkg.group_diff"](
+            name, **salt.utils.args.clean_kwargs(**kwargs)
         )
+    except (CommandExecutionError, TypeError) as err:
+        if "unexpected keyword argument" in str(err):
+            ret["comment"] = "Repo options are not supported on this platform"
+        else:
+            ret[
+                "comment"
+            ] = f"An error was encountered while installing/updating group '{name}': {err}."
         return ret
 
     mandatory = diff["mandatory"]["installed"] + diff["mandatory"]["not installed"]
