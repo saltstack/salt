@@ -5,6 +5,7 @@ import pytest
 
 import salt.modules.beacons as beaconmod
 import salt.modules.cp as cp
+import salt.modules.pacmanpkg as pacmanpkg
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.yumpkg as yumpkg
 import salt.states.beacon as beaconstate
@@ -36,6 +37,10 @@ def configure_loader_modules(minion_opts):
             "__opts__": minion_opts,
         },
         beaconmod: {
+            "__salt__": {},
+            "__opts__": minion_opts,
+        },
+        pacmanpkg: {
             "__salt__": {},
             "__opts__": minion_opts,
         },
@@ -1071,10 +1076,13 @@ def test_installed_with_single_normalize_32bit():
         ),
     ),
 )
-def test_group_installed_with_repo_options(list_pkgs, kwargs, expected_cli_options):
+def test_yumpkg_group_installed_with_repo_options(
+    list_pkgs, kwargs, expected_cli_options
+):
     """
-    Test that running a pkg.group_installed with repo options works results in
-    the correct yum/dnf groupinfo command being run by pkg.group_info.
+    Test that running a pkg.group_installed with repo options on RPM-based
+    systems results in the correct yum/dnf groupinfo command being run by
+    pkg.group_info.
     """
     kwargs = dict(item.split("=", 1) for item in kwargs)
     run_stdout = MagicMock(
@@ -1096,8 +1104,6 @@ def test_group_installed_with_repo_options(list_pkgs, kwargs, expected_cli_optio
         "pkg.group_info": yumpkg.group_info,
     }
 
-    # Need to mock yumpkg.list_pkgs() to return list_pkgs
-
     name = "MyGroup"
     with patch.dict(pkg.__salt__, salt_dict), patch.dict(
         yumpkg.__salt__, salt_dict
@@ -1117,6 +1123,23 @@ def test_group_installed_with_repo_options(list_pkgs, kwargs, expected_cli_optio
             output_loglevel="trace",
             python_shell=False,
         )
+
+
+def test_pacmanpkg_group_installed_with_repo_options(list_pkgs):
+    """
+    Test that running a pkg.group_installed with additional arguments on
+    platforms which use pacman does not result in a traceback, but is instead
+    cleanly handled and a useful comment included in the state return.
+    """
+    salt_dict = {
+        "pkg.group_diff": pacmanpkg.group_diff,
+    }
+
+    with patch.dict(pkg.__salt__, salt_dict), patch.dict(pacmanpkg.__salt__, salt_dict):
+        ret = pkg.group_installed("foo", fromrepo="bar")
+        assert not ret["result"]
+        assert not ret["changes"]
+        assert ret["comment"] == "Repo options are not supported on this platform"
 
 
 def test__get_installable_versions_no_version_found():
