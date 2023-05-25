@@ -26,9 +26,7 @@ def __virtual__():
     return __virtualname__
 
 
-def absent(
-    name, query, include_store=False, frameworks=False, deprovision_only=False
-):
+def absent(name, query, include_store=False, frameworks=False, deprovision_only=False):
     """
     Removes Microsoft Store packages from the system. If the package is part of
     a bundle, the entire bundle will be removed.
@@ -96,8 +94,9 @@ def absent(
         return ret
 
     if __opts__["test"]:
-        ret["changes"]["removed"] = matches
-        ret["comment"] = "Matching apps will be removed"
+        comment = ["The following apps will be removed:"]
+        comment.extend(matches)
+        ret["comment"] = "\n- ".join(comment)
         ret["result"] = None
         return ret
 
@@ -106,7 +105,7 @@ def absent(
         query,
         include_store=include_store,
         frameworks=frameworks,
-        deprovision_only=deprovision_only
+        deprovision_only=deprovision_only,
     )
 
     if status is None:
