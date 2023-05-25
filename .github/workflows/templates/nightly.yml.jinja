@@ -119,6 +119,8 @@ concurrency:
 
 <%- block set_pipeline_exit_status_extra_steps %>
 
+    <%- if workflow_slug == "nightly" %>
+
       - name: Notify Slack
         id: slack
         uses: slackapi/slack-github-action@v1.24.0
@@ -139,4 +141,7 @@ concurrency:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+    <%- endif %>
+
 <%- endblock set_pipeline_exit_status_extra_steps %>
