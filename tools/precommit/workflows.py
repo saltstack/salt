@@ -1,5 +1,5 @@
 """
-These commands are used by pre-commit.
+These commands are used for our GitHub Actions workflows.
 """
 # pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
@@ -19,9 +19,13 @@ log = logging.getLogger(__name__)
 WORKFLOWS = tools.utils.REPO_ROOT / ".github" / "workflows"
 TEMPLATES = WORKFLOWS / "templates"
 
+
 # Define the command group
 cgroup = command_group(
-    name="pre-commit", help="Pre-Commit Related Commands", description=__doc__
+    name="workflows",
+    help="Pre-Commit GH Actions Workflows Related Commands",
+    description=__doc__,
+    parent="pre-commit",
 )
 
 
