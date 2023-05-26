@@ -6,7 +6,7 @@ Install Windows features, capabilities, and packages with DISM
 
 .. code-block:: yaml
 
-    Language.Basic~~~en-US~0.0.1.0:
+    Language.Basic-en-US-0.0.1.0:
       dism.capability_installed
 
     NetFx3:
