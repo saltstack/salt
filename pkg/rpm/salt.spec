@@ -430,11 +430,6 @@ ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
 
 
 %post cloud
-if [ ! -e "/var/log/salt/cloud" ]; then
-  touch /var/log/salt/cloud
-  chmod 640 /var/log/salt/cloud
-fi
-chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python3.10/site-packages/salt/cloud/deploy
 ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
 
 
@@ -454,11 +449,6 @@ if [ $1 -lt 2 ]; then
     /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
   fi
 fi
-if [ ! -e "/var/log/salt/master" ]; then
-  touch /var/log/salt/master
-  chmod 640 /var/log/salt/master
-fi
-chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/cache/salt/master /var/run/salt/master
 
 %post syndic
 %systemd_post salt-syndic.service
@@ -486,9 +476,29 @@ ln -s -f /opt/saltstack/salt/salt-ssh %{_bindir}/salt-ssh
 %systemd_post salt-api.service
 ln -s -f /opt/saltstack/salt/salt-api %{_bindir}/salt-api
 
+
+%posttrans cloud
+if [ ! -e "/var/log/salt/cloud" ]; then
+  touch /var/log/salt/cloud
+  chmod 640 /var/log/salt/cloud
+fi
+chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python3.10/site-packages/salt/cloud/deploy
+
+
+%posttrans master
+if [ ! -e "/var/log/salt/master" ]; then
+  touch /var/log/salt/master
+  chmod 640 /var/log/salt/master
+fi
+chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/cache/salt/master /var/run/salt/master
+
+
 %preun
-find /opt/saltstack/salt -type f -name \*\.pyc -print0 | xargs --null --no-run-if-empty rm
-find /opt/saltstack/salt -type d -name __pycache__ -empty -print0 | xargs --null --no-run-if-empty rmdir
+if [ $1 -eq 0 ]; then
+  # Uninstall
+  find /opt/saltstack/salt -type f -name \*\.pyc -print0 | xargs --null --no-run-if-empty rm
+  find /opt/saltstack/salt -type d -name __pycache__ -empty -print0 | xargs --null --no-run-if-empty rmdir
+fi
 
 %postun master
 %systemd_postun_with_restart salt-master.service
