@@ -20,7 +20,7 @@ __virtualname__ = "dism"
 # host machine. On 32bit boxes that will always be System32. On 64bit boxes that
 # are running 64bit salt that will always be System32. On 64bit boxes that are
 # running 32bit salt the 64bit dism will be found in SysNative
-# Sysnative is a virtual folder, a special alias, that can be used to access the
+# SysNative is a virtual folder, a special alias, that can be used to access the
 # 64-bit System32 folder from a 32-bit application
 try:
     # This does not apply to Non-Windows platforms
