@@ -52,6 +52,7 @@ repos:
         alias: check-changelog-entries
         name: Check Changelog Entries
         args:
+          - pre-commit
           - changelog
           - pre-commit-checks
         additional_dependencies:
@@ -67,6 +68,7 @@ repos:
         pass_filenames: false
         args:
           - pre-commit
+          - workflows
           - generate-workflows
         additional_dependencies:
           - boto3==1.21.46
@@ -82,6 +84,7 @@ repos:
           - yaml
         args:
           - pre-commit
+          - workflows
           - actionlint
         additional_dependencies:
           - boto3==1.21.46
