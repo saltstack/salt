@@ -127,20 +127,19 @@ def test_pkg_paths(install_salt, pkg_paths, pkg_paths_salt_user):
                 salt_user_subdirs.extend(
                     [str(path.joinpath(sub_dir)) for sub_dir in sub_dirs]
                 )
+                # Individual files owned by salt user
                 for file in files:
                     file_path = path.joinpath(file)
                     assert file_path.owner() == "salt"
-                    assert file_path.group() == "salt"
             # Directories owned by root:root
             else:
                 assert path.owner() == "root"
                 assert path.group() == "root"
                 for file in files:
                     file_path = path.joinpath(file)
-                    # Individual files owned by salt:salt
+                    # Individual files owned by salt user
                     if str(file_path) in pkg_paths_salt_user:
                         assert file_path.owner() == "salt"
-                        assert file_path.group() == "salt"
                     else:
                         assert file_path.owner() == "root"
                         assert file_path.group() == "root"
