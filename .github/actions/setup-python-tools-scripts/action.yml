@@ -42,9 +42,6 @@ runs:
       with:
         path: ${{ inputs.cwd }}/.tools-venvs
         key: ${{ inputs.cache-prefix }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version-sha256sum }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}${{ inputs.cache-suffix && format('|{0}', inputs.cache-suffix) || '' }}
-        restore-keys: |
-          ${{ inputs.cache-prefix }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version-sha256sum }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}${{ inputs.cache-suffix && format('|{0}', inputs.cache-suffix) || '' }}
-          ${{ inputs.cache-prefix }}|${{ github.workflow }}|tools-venvs|${{ steps.get-python-version.outputs.version-sha256sum }}|${{ hashFiles('requirements/**/*.txt', 'tools/**/*.py') }}
 
     - name: Install 'python-tools-scripts'
       shell: bash
@@ -62,5 +59,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.cwd }}
       run: |
-        VERSION=$(tools --version)
+        # The first time `tools` runs with newer virtual enviroments we need to disregard the output
+        tools --debug --version
+        VERSION=$(tools --version | tail -n 1)
         echo "version=$VERSION" >> "${GITHUB_OUTPUT}"
