@@ -844,7 +844,7 @@ timelib==0.2.5
     # via -r requirements/static/pkg/linux.in
 toml==0.10.2
     # via -r requirements/static/ci/common.in
-tornado==6.1
+tornado==6.3.2 ; python_version >= "3.8"
     # via
     #   -r requirements/base.txt
     #   python-telegram-bot
