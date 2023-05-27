@@ -177,6 +177,10 @@ tempora==4.1.1
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   portend
+tornado==6.1.0
+    # via
+    #   -c requirements/static/ci/py3.8/linux.txt
+    #   -r requirements/base.txt
 typing-extensions==4.2.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt

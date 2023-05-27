@@ -10,11 +10,11 @@ import tempfile
 import textwrap
 
 import pytest
+import tornado
+import tornado.testing
 from saltfactories.utils import random_string
 
 import salt.config
-import salt.ext.tornado
-import salt.ext.tornado.testing
 import salt.metaproxy.proxy
 import salt.minion
 import salt.syspaths
@@ -38,7 +38,7 @@ class ProxyMinionTestCase(TestCase):
         proxy_minion = salt.minion.ProxyMinion(
             mock_opts,
             jid_queue=copy.copy(mock_jid_queue),
-            io_loop=salt.ext.tornado.ioloop.IOLoop(),
+            io_loop=tornado.ioloop.IOLoop(),
         )
         mock_metaproxy_call = MagicMock()
         with patch(
@@ -65,7 +65,7 @@ class ProxyMinionTestCase(TestCase):
         proxy_minion = salt.minion.ProxyMinion(
             mock_opts,
             jid_queue=copy.copy(mock_jid_queue),
-            io_loop=salt.ext.tornado.ioloop.IOLoop(),
+            io_loop=tornado.ioloop.IOLoop(),
         )
         mock_metaproxy_call = MagicMock()
         with patch(
@@ -93,7 +93,7 @@ class ProxyMinionTestCase(TestCase):
         proxy_minion = salt.minion.ProxyMinion(
             mock_opts,
             jid_queue=copy.copy(mock_jid_queue),
-            io_loop=salt.ext.tornado.ioloop.IOLoop(),
+            io_loop=tornado.ioloop.IOLoop(),
         )
         mock_metaproxy_call = MagicMock()
         with patch(

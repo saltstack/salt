@@ -7,6 +7,7 @@ import shutil
 from time import time
 
 import pytest
+import tornado.ioloop
 
 import salt.fileserver.gitfs
 import salt.utils.files
@@ -35,9 +36,7 @@ if HAS_PYGIT2:
 
 def _clear_instance_map():
     try:
-        del salt.utils.gitfs.GitFS.instance_map[
-            salt.ext.tornado.ioloop.IOLoop.current()
-        ]
+        del salt.utils.gitfs.GitFS.instance_map[tornado.ioloop.IOLoop.current()]
     except KeyError:
         pass
 
