@@ -493,6 +493,14 @@ fi
 chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/cache/salt/master /var/run/salt/master
 
 
+%posttrans api
+if [ ! -e "/var/log/salt/api" ]; then
+  touch /var/log/salt/api
+  chmod 640 /var/log/salt/api
+fi
+chown %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/api
+
+
 %preun
 if [ $1 -eq 0 ]; then
   # Uninstall
