@@ -3,6 +3,7 @@ Helpers/utils for working with tornado asynchronous stuff
 """
 
 
+import asyncio
 import contextlib
 import logging
 import sys
@@ -23,14 +24,14 @@ def current_ioloop(io_loop):
         orig_loop = tornado.ioloop.IOLoop.current()
     except RuntimeError:
         orig_loop = None
-    io_loop.make_current()
+    asyncio.set_event_loop(io_loop.asyncio_loop)
     try:
         yield
     finally:
         if orig_loop:
-            orig_loop.make_current()
+            asyncio.set_event_loop(orig_loop.asyncio_loop)
         else:
-            io_loop.clear_current()
+            asyncio.set_event_loop(None)
 
 
 class SyncWrapper:

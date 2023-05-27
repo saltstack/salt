@@ -1000,7 +1000,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         Bind to the local port
         """
         self.io_loop = tornado.ioloop.IOLoop()
-        self.io_loop.make_current()
         for req_channel in self.req_channels:
             req_channel.post_fork(
                 self._handle_payload, io_loop=self.io_loop
