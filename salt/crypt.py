@@ -558,8 +558,8 @@ class AsyncAuth:
             self._crypticle = Crypticle(self.opts, creds["aes"])
             self._authenticate_future = tornado.concurrent.Future()
             self._authenticate_future.set_result(True)
-        else:
-            self.authenticate()
+        #else:
+        #    self.authenticate()
 
     def __deepcopy__(self, memo):
         cls = self.__class__

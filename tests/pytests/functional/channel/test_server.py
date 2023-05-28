@@ -176,7 +176,7 @@ def test_pub_server_channel(
         assert not bool(os.lstat(p).st_mode & stat.S_IRGRP)
         assert not bool(os.lstat(p).st_mode & stat.S_IROTH)
 
-    pub_channel = salt.channel.client.AsyncPubChannel.factory(minion_config)
+    pub_channel = salt.channel.client.AsyncPubChannel.factory(minion_config, io_loop=io_loop)
     received = []
 
     try:

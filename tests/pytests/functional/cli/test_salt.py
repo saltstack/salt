@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 @pytest.fixture(autouse=True)
 def _install_salt_extension(shell):
     if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
+        yield
         return
 
     script_name = "salt-pip"
