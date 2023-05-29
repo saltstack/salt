@@ -7,6 +7,9 @@ from requests.exceptions import ConnectionError
 import salt.cache
 import salt.crypt
 import salt.exceptions
+import salt.modules.publish
+import salt.modules.saltutil
+import salt.utils.context
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.json
@@ -30,9 +33,6 @@ from salt.utils.vault.exceptions import (
 log = logging.getLogger(__name__)
 logging.getLogger("requests").setLevel(logging.WARNING)
 
-
-# Make __salt__ available globally to avoid loading minion_mods multiple times
-__salt__ = {}
 
 TOKEN_CKEY = "__token"
 CLIENT_CKEY = "_vault_authd_client"
@@ -203,7 +203,15 @@ def clear_cache(
                         if delta is True:
                             delta = 1
                         client.token_revoke(delta)
-                    if config["cache"]["expire_events"]:
+                    if (
+                        config["cache"]["expire_events"]
+                        and not force_local
+                        and hlp._get_salt_run_type(opts)
+                        not in [
+                            hlp.SALT_RUNTYPE_MASTER_IMPERSONATING,
+                            hlp.SALT_RUNTYPE_MASTER_PEER_RUN,
+                        ]
+                    ):
                         scope = cbank.split("/")[-1]
                         _get_event(opts)(tag=f"vault/cache/{scope}/clear")
             except Exception as err:  # pylint: disable=broad-except
@@ -751,10 +759,6 @@ def _query_master(
         result.pop("misc_data", None)
         return result, unwrap_client
 
-    global __salt__  # pylint: disable=global-statement
-    if not __salt__:
-        __salt__ = salt.loader.minion_mods(opts)
-
     minion_id = opts["grains"]["id"]
     pki_dir = opts["pki_dir"]
 
@@ -773,10 +777,12 @@ def _query_master(
             ("signature", signature),
             ("impersonated_by_master", False),
         ] + list(kwargs.items())
-
-        result = __salt__["publish.runner"](
-            f"vault.{func}", arg=[{"__kwarg__": True, k: v} for k, v in arg]
-        )
+        with salt.utils.context.func_globals_inject(
+            salt.modules.publish.runner, __opts__=opts
+        ):
+            result = salt.modules.publish.runner(
+                f"vault.{func}", arg=[{"__kwarg__": True, k: v} for k, v in arg]
+            )
     else:
         private_key = f"{pki_dir}/master.pem"
         log.debug(
@@ -786,13 +792,16 @@ def _query_master(
             private_key,
         )
         signature = base64.b64encode(salt.crypt.sign_message(private_key, minion_id))
-        result = __salt__["saltutil.runner"](
-            f"vault.{func}",
-            minion_id=minion_id,
-            signature=signature,
-            impersonated_by_master=True,
-            **kwargs,
-        )
+        with salt.utils.context.func_globals_inject(
+            salt.modules.saltutil.runner, __opts__=opts
+        ):
+            result = salt.modules.saltutil.runner(
+                f"vault.{func}",
+                minion_id=minion_id,
+                signature=signature,
+                impersonated_by_master=True,
+                **kwargs,
+            )
     return check_result(
         result,
         unwrap_client=unwrap_client,
@@ -801,13 +810,13 @@ def _query_master(
 
 
 def _get_event(opts):
-    if opts.get("__role") == "master":
-        return salt.utils.event.get_master_event(opts, opts["sock_dir"]).fire_event
+    event = salt.utils.event.get_event(
+        opts.get("__role", "minion"), sock_dir=opts["sock_dir"], opts=opts, listen=False
+    )
 
-    global __salt__  # pylint: disable=global-statement
-    if not __salt__:
-        __salt__ = salt.loader.minion_mods(opts)
-    return __salt__["event.send"]
+    if opts.get("__role", "minion") == "minion":
+        return event.fire_master
+    return event.fire_event
 
 
 def get_kv(opts, context, get_config=False):

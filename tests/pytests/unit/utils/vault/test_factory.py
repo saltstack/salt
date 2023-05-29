@@ -1067,15 +1067,17 @@ class TestFetchToken:
 class TestQueryMaster:
     @pytest.fixture(autouse=True)
     def publish_runner(self):
-        runner = Mock(return_value={"success": True})
-        with patch.dict(factory.__salt__, {"publish.runner": runner}):
-            yield runner
+        with patch("salt.modules.publish.runner", autospec=True) as runner:
+            runner.return_value = {"success": True}
+            with patch("salt.utils.context.func_globals_inject"):
+                yield runner
 
     @pytest.fixture(autouse=True)
     def saltutil_runner(self):
-        runner = Mock(return_value={"success": True})
-        with patch.dict(factory.__salt__, {"saltutil.runner": runner}):
-            yield runner
+        with patch("salt.modules.saltutil.runner", autospec=True) as runner:
+            runner.return_value = {"success": True}
+            with patch("salt.utils.context.func_globals_inject"):
+                yield runner
 
     @pytest.fixture(autouse=True, scope="class")
     def b64encode_sig(self):
@@ -1110,22 +1112,6 @@ class TestQueryMaster:
                 request.param: {"bar": "baz"}
             }
             yield unwrap_client
-
-    def test_query_master_loads_minion_mods_if_necessary(
-        self, opts, saltutil_runner, publish_runner
-    ):
-        """
-        Ensure that the runner requests loading execution modules
-        if the global has not been populated.
-        """
-        with patch("salt.loader.minion_mods") as loader:
-            loader.return_value = {
-                "publish.runner": publish_runner,
-                "saltutil.runner": saltutil_runner,
-            }
-            with patch.dict(factory.__salt__, {}, clear=True):
-                factory._query_master("func", opts)
-                loader.assert_called_once_with(opts)
 
     @pytest.mark.parametrize(
         "opts,expected",
