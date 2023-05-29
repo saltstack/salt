@@ -21,6 +21,7 @@ import salt.utils.data
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.json
 import salt.utils.vault as vault
+import salt.utils.vault.cache as vcache
 import salt.utils.vault.factory as vfactory
 import salt.utils.vault.helpers as vhelpers
 import salt.utils.versions
@@ -826,7 +827,7 @@ def cleanup_auth():
     return {"deleted": ret}
 
 
-def clear_cache():
+def clear_cache(master=True, minions=True):
     """
     .. versionadded:: 3007.0
 
@@ -841,11 +842,42 @@ def clear_cache():
     .. code-block:: bash
 
         salt-run vault.clear_cache
+        salt-run vault.clear_cache minions=false
+        salt-run vault.clear_cache master=false minions='[minion1, minion2]'
+
+    master
+        Clear cached data for the master context.
+        Includes cached master authentication data and KV metadata.
+        Defaults to true.
+
+    minions
+        Clear cached data for minions on the master.
+        Can include cached authentication credentials and KV metadata
+        for pillar compilation as well as AppRole metadata and
+        rendered policies for credential issuance.
+        Defaults to true. Set this to a list of minion IDs to only clear
+        cached data pertaining to thse minions.
     """
-    cache = salt.cache.factory(__opts__)
-    cache.flush("vault")
-    for minion in cache.list("minions"):
-        cache.flush(f"minions/{minion}/vault")
+    config, _, _ = vault._get_connection_config(
+        "vault", __opts__, __context__, force_local=True
+    )
+    cache = vcache._get_cache_backend(config, __opts__)
+
+    if cache is None:
+        log.info(
+            "Vault cache clearance was requested, but no persistent cache is configured"
+        )
+        return True
+
+    if master:
+        log.debug("Clearing master Vault cache")
+        cache.flush("vault")
+    if minions:
+        for minion in cache.list("minions"):
+            if minions is True or (isinstance(minions, list) and minion in minions):
+                log.debug(f"Clearing master Vault cache for minion {minion}")
+                cache.flush(f"minions/{minion}/vault")
+    return True
 
 
 def _config(key=None, default=vault.VaultException):

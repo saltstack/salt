@@ -10,7 +10,7 @@ from salt.utils.vault.exceptions import VaultConfigExpired, VaultLeaseExpired
 log = logging.getLogger(__name__)
 
 
-def _get_config_cache(opts, context, cbank, ckey):
+def _get_config_cache(opts, context, cbank, ckey="config"):
     """
     Factory for VaultConfigCache to get around some
     chicken-and-egg problems

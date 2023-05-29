@@ -1277,3 +1277,23 @@ def update_config(keep_session=False):
         Defaults to False.
     """
     return vault.update_config(__opts__, __context__, keep_session=keep_session)
+
+
+def get_server_config():
+    """
+    .. versionadded:: 3007.0
+
+    Return the server connection configuration that's currently in use by Salt.
+    Contains ``url``, ``verify`` and ``namespace``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vault.get_server_config
+    """
+    try:
+        client = vault.get_authd_client(__opts__, __context__)
+        return client.get_config()
+    except SaltException as err:
+        raise CommandExecutionError("{}: {}".format(type(err).__name__, err)) from err

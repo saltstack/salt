@@ -414,7 +414,7 @@ def _get_connection_config(
         raise VaultException("`pre_flush` and `update` are mutually exclusive")
 
     log.debug("Using Vault server connection configuration from remote.")
-    config_cache = vcache._get_config_cache(opts, context, cbank, "config")
+    config_cache = vcache._get_config_cache(opts, context, cbank)
     if pre_flush:
         # ensure any cached data is tried when building a client for revocation
         config_cache.ttl = None
