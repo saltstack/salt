@@ -2061,6 +2061,7 @@ jobs:
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
     runs-on: ubuntu-latest
+    environment: nightly
     needs:
       - workflow-requirements
       - trigger-branch-nightly-builds
