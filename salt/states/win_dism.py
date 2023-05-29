@@ -40,18 +40,28 @@ def capability_installed(
     Install a DISM capability
 
     Args:
-        name (str): The capability to install
-        source (str): The optional source of the capability
-        limit_access (bool): Prevent DISM from contacting Windows Update for
-            online images
-        image (Optional[str]): The path to the root directory of an offline
-            Windows image. If `None` is passed, the running operating system is
-            targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the install
+
+        name (str):
+            The capability to install
+
+        source (str):
+            The optional source of the capability
+
+        limit_access (bool):
+            Prevent DISM from contacting Windows Update for online images
+
+        image (Optional[str]):
+            The path to the root directory of an offline Windows image. If
+            ``None`` is passed, the running operating system is targeted.
+            Default is ``None``
+
+        restart (Optional[bool]):
+            Reboot the machine if required by the install
 
     Example:
+
         Run ``dism.available_capabilities`` to get a list of available
-        capabilities. This will help you get the proper name to use.
+        capabilities. This will help you get the proper name to use
 
         .. code-block:: yaml
 
@@ -95,16 +105,22 @@ def capability_removed(name, image=None, restart=False):
     Uninstall a DISM capability
 
     Args:
-        name (str): The capability to uninstall
-        image (Optional[str]): The path to the root directory of an offline
-            Windows image. If `None` is passed, the running operating system is
-            targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the
-            uninstall
+
+        name (str):
+            The capability to uninstall
+
+        image (Optional[str]):
+            The path to the root directory of an offline Windows image. If
+            ``None`` is passed, the running operating system is targeted.
+            Default is ``None``
+
+        restart (Optional[bool]):
+            Reboot the machine if required by the uninstall
 
     Example:
+
         Run ``dism.installed_capabilities`` to get a list of installed
-        capabilities. This will help you get the proper name to use.
+        capabilities. This will help you get the proper name to use
 
         .. code-block:: yaml
 
@@ -156,23 +172,36 @@ def feature_installed(
     Install a DISM feature
 
     Args:
-        name (str): The feature in which to install
-        package (Optional[str]): The parent package for the feature. You do not
-            have to specify the package if it is the Windows Foundation Package.
-            Otherwise, use package to specify the parent package of the feature
-        source (str): The optional source of the feature
-        limit_access (bool): Prevent DISM from contacting Windows Update for
-            online images
-        enable_parent (Optional[bool]): True will enable all parent features of
-            the specified feature
-        image (Optional[str]): The path to the root directory of an offline
-            Windows image. If `None` is passed, the running operating system is
-            targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the install
+
+        name (str):
+            The feature in which to install
+
+        package (Optional[str]):
+            The parent package for the feature. You do not have to specify the
+            package if it is the Windows Foundation Package. Otherwise, use
+            package to specify the parent package of the feature
+
+        source (str):
+            The optional source of the feature
+
+        limit_access (bool):
+            Prevent DISM from contacting Windows Update for online images
+
+        enable_parent (Optional[bool]):
+            ``True`` will enable all parent features of the specified feature
+
+        image (Optional[str]):
+            The path to the root directory of an offline Windows image. If
+            ``None`` is passed, the running operating system is targeted.
+            Default is ``None``
+
+        restart (Optional[bool]):
+            Reboot the machine if required by the install
 
     Example:
+
         Run ``dism.available_features`` to get a list of available features.
-        This will help you get the proper name to use.
+        This will help you get the proper name to use
 
         .. code-block:: yaml
 
@@ -218,18 +247,26 @@ def feature_removed(name, remove_payload=False, image=None, restart=False):
     Disables a feature.
 
     Args:
-        name (str): The feature to disable
-        remove_payload (Optional[bool]): Remove the feature's payload. Must
-            supply source when enabling in the future.
-        image (Optional[str]): The path to the root directory of an offline
-            Windows image. If `None` is passed, the running operating system is
-            targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the
-            uninstall
+
+        name (str):
+            The feature to disable
+
+        remove_payload (Optional[bool]):
+            Remove the feature's payload. Must supply source when enabling in
+            the future.
+
+        image (Optional[str]):
+            The path to the root directory of an offline Windows image. If
+            ``None`` is passed, the running operating system is targeted.
+            Default is ``None``
+
+        restart (Optional[bool]):
+            Reboot the machine if required by the uninstall
 
     Example:
+
         Run ``dism.installed_features`` to get a list of installed features.
-        This will help you get the proper name to use.
+        This will help you get the proper name to use
 
         .. code-block:: yaml
 
@@ -276,16 +313,24 @@ def package_installed(
     Install a package.
 
     Args:
-        name (str): The package to install. Can be a .cab file, a .msu file,
-            or a folder
-        ignore_check (Optional[bool]): Skip installation of the package if the
-            applicability checks fail
-        prevent_pending (Optional[bool]): Skip the installation of the package
-            if there are pending online actions
-        image (Optional[str]): The path to the root directory of an offline
-            Windows image. If `None` is passed, the running operating system is
-            targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the install
+
+        name (str):
+            The package to install. Can be a .cab file, a .msu file, or a folder
+
+        ignore_check (Optional[bool]):
+            Skip installation of the package if the applicability checks fail
+
+        prevent_pending (Optional[bool]):
+            Skip the installation of the package if there are pending online
+            actions
+
+        image (Optional[str]):
+            The path to the root directory of an offline Windows image. If
+            ``None`` is passed, the running operating system is targeted.
+            Default is ``None``
+
+        restart (Optional[bool]):
+            Reboot the machine if required by the install
 
     Example:
 
@@ -357,12 +402,12 @@ def provisioned_package_installed(name, image=None, restart=False):
 
             The name of the file before the file extension must match the name
             of the package after it is installed. This name can be found by
-            running ``dism.provisioned_packages".
+            running ``dism.provisioned_packages``
 
         image (Optional[str]):
             The path to the root directory of an offline Windows image. If
             ``None`` is passed, the running operating system is targeted.
-            Default is ``None``.
+            Default is ``None``
 
         restart (Optional[bool]):
             Reboot the machine if required by the installation. Default is
@@ -375,7 +420,6 @@ def provisioned_package_installed(name, image=None, restart=False):
             install_windows_media_player:
               dism.provisioned_package_installed:
                 - name: C:\\Packages\\Microsoft.ZuneVideo_2019.22091.10036.0_neutral_~_8wekyb3d8bbwe.Msixbundle
-
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
@@ -425,15 +469,20 @@ def package_removed(name, image=None, restart=False):
     Uninstall a package
 
     Args:
-        name (str): The full path to the package. Can be either a .cab file or a
-            folder. Should point to the original source of the package, not to
-            where the file is installed. This can also be the name of a package as listed in
-            ``dism.installed_packages``
-        image (Optional[str]): The path to the root directory of an offline
-            Windows image. If `None` is passed, the running operating system is
-            targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the
-            uninstall
+
+        name (str):
+            The full path to the package. Can be either a .cab file or a folder.
+            Should point to the original source of the package, not to where the
+            file is installed. This can also be the name of a package as listed
+            in ``dism.installed_packages``
+
+        image (Optional[str]):
+            The path to the root directory of an offline Windows image. If
+            ``None`` is passed, the running operating system is targeted.
+            Default is ``None``
+
+        restart (Optional[bool]):
+            Reboot the machine if required by the uninstall
 
     Example:
 
@@ -504,13 +553,17 @@ def kb_removed(name, image=None, restart=False):
     .. versionadded:: 3006.0
 
     Args:
-        name (str): The name of the KB. Can be with or without the KB at the
-            beginning.
-        image (Optional[str]): The path to the root directory of an offline
-            Windows image. If `None` is passed, the running operating system is
-            targeted. Default is None.
-        restart (Optional[bool]): Reboot the machine if required by the
-            uninstall
+
+        name (str):
+            The name of the KB. Can be with or without the KB at the beginning
+
+        image (Optional[str]):
+            The path to the root directory of an offline Windows image. If
+            ``None`` is passed, the running operating system is targeted.
+            Default is ``None``
+
+        restart (Optional[bool]):
+            Reboot the machine if required by the uninstall
 
     Example:
 
