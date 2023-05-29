@@ -514,8 +514,16 @@ class CACertHTTPSAdapter(requests.sessions.HTTPAdapter):
         self.ca_cert_data = ca_cert_data
         super().__init__(*args, **kwargs)
 
-    def init_poolmanager(self, *args, **kwargs):
+    def init_poolmanager(
+        self,
+        connections,
+        maxsize,
+        block=requests.adapters.DEFAULT_POOLBLOCK,
+        **pool_kwargs,
+    ):
         ssl_context = create_urllib3_context()
         ssl_context.load_verify_locations(cadata=self.ca_cert_data)
-        kwargs["ssl_context"] = ssl_context
-        return super().init_poolmanager(*args, **kwargs)
+        pool_kwargs["ssl_context"] = ssl_context
+        return super().init_poolmanager(
+            connections, maxsize, block=block, **pool_kwargs
+        )
