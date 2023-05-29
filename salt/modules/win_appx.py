@@ -13,7 +13,7 @@ they be upgraded.
 An app removed with this module can only be re-provisioned on the machine, but
 it can't be re-installed for all users. Also, once a package has been
 deprovisioned, the only way to reinstall it is to download the package. This is
-difficult. I've outlined the steps below:
+difficult. The steps are outlined below:
 
 1. Obtain the Microsoft Store URL for the app:
     - Open the page for the app in the Microsoft Store
@@ -25,7 +25,7 @@ difficult. I've outlined the steps below:
     - Ensure Retail is selected in the 2nd dropdown
     - Click the checkmark button
 
-This should give you a list of URLs for the package and all dependencies for all
+This should return a list of URLs for the package and all dependencies for all
 architectures. Download the package and all dependencies for your system
 architecture. These will usually have one of the following file extensions:
 

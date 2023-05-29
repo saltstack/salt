@@ -43,12 +43,13 @@ def absent(name, query, include_store=False, frameworks=False, deprovision_only=
             string matches multiple packages, they will all be removed. Here are
             some example strings:
 
-            - ``*teams*`` - Remove Microsoft Teams
-            - ``*zune*`` - Remove Windows Media Player and ZuneVideo
-            - ``*zuneMusic*`` - Only remove Windows Media Player
-            - ``*xbox*`` - Remove all xbox packages, there are 5 by default
-            - ``*`` - Remove everything but the Microsoft Store, unless
-              ``include_store=True``
+            | string          | description |
+            | --------------- | ----------- |
+            | ``*teams*``     | Remove Microsoft Teams |
+            | ``*zune*``      | Remove Windows Media Player and Zune Video |
+            | ``*zuneMusic*`` | Only remove Windows Media Player |
+            | ``*xbox*``      | Remove all xBox packages, there are 5 by default
+            | ``*``           | Remove everything but the Microsoft Store, unless ``include_store=True`` |
 
             .. note::
                 Use the ``appx.list`` function to make sure your query is
@@ -85,7 +86,7 @@ def absent(name, query, include_store=False, frameworks=False, deprovision_only=
 
         remove_candy_crush:
           appx.absent:
-            query: *candy*
+            - query: "*candy*"
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
