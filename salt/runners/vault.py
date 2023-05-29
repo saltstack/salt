@@ -581,6 +581,8 @@ def show_policies(minion_id, refresh_pillar=NOT_SET, expire=None):
 
 def sync_approles(minions=None, up=False, down=False):
     """
+    .. versionadded:: 3007.0
+
     Sync minion AppRole parameters with current settings, including associated
     token policies.
 
@@ -640,6 +642,8 @@ def sync_approles(minions=None, up=False, down=False):
 
 def list_approles():
     """
+    .. versionadded:: 3007.0
+
     List all AppRoles that have been created by the Salt master.
     They are named after the minions.
 
@@ -665,6 +669,8 @@ def list_approles():
 
 def sync_entities(minions=None, up=False, down=False):
     """
+    .. versionadded:: 3007.0
+
     Sync minion entities with current settings. Only updates entities for minions
     with existing AppRoles.
 
@@ -725,6 +731,8 @@ def sync_entities(minions=None, up=False, down=False):
 
 def list_entities():
     """
+    .. versionadded:: 3007.0
+
     List all entities that have been created by the Salt master.
     They are named `salt_minion_{minion_id}`.
 
@@ -751,6 +759,8 @@ def list_entities():
 
 def show_entity(minion_id):
     """
+    .. versionadded:: 3007.0
+
     Show entity metadata for <minion_id>.
 
     CLI Example:
@@ -767,6 +777,8 @@ def show_entity(minion_id):
 
 def show_approle(minion_id):
     """
+    .. versionadded:: 3007.0
+
     Show AppRole configuration for <minion_id>.
 
     CLI Example:
@@ -783,6 +795,8 @@ def show_approle(minion_id):
 
 def cleanup_auth():
     """
+    .. versionadded:: 3007.0
+
     Removes AppRoles and entities associated with unknown minion IDs.
     Can only clean up entities if the AppRole still exists.
 
@@ -814,6 +828,8 @@ def cleanup_auth():
 
 def clear_cache():
     """
+    .. versionadded:: 3007.0
+
     Clears master cache of Vault-specific data. This can include:
     - AppRole metadata
     - rendered policies
