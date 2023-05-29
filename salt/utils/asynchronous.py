@@ -8,8 +8,8 @@ import logging
 import sys
 import threading
 
-import salt.ext.tornado.concurrent
-import salt.ext.tornado.ioloop
+import tornado.concurrent
+import tornado.ioloop
 
 log = logging.getLogger(__name__)
 
@@ -19,12 +19,18 @@ def current_ioloop(io_loop):
     """
     A context manager that will set the current ioloop to io_loop for the context
     """
-    orig_loop = salt.ext.tornado.ioloop.IOLoop.current()
+    try:
+        orig_loop = tornado.ioloop.IOLoop.current()
+    except RuntimeError:
+        orig_loop = None
     io_loop.make_current()
     try:
         yield
     finally:
-        orig_loop.make_current()
+        if orig_loop:
+            orig_loop.make_current()
+        else:
+            io_loop.clear_current()
 
 
 class SyncWrapper:
@@ -51,7 +57,7 @@ class SyncWrapper:
         close_methods=None,
         loop_kwarg=None,
     ):
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+        self.io_loop = tornado.ioloop.IOLoop()
         if args is None:
             args = []
         if kwargs is None:
@@ -102,7 +108,10 @@ class SyncWrapper:
                 log.exception("Exception encountered while running stop method")
         io_loop = self.io_loop
         io_loop.stop()
-        io_loop.close(all_fds=True)
+        try:
+            io_loop.close(all_fds=True)
+        except KeyError:
+            pass
 
     def __getattr__(self, key):
         if key in self._async_methods:
