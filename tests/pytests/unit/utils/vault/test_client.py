@@ -614,3 +614,37 @@ def test_get_expected_creation_path_fails_for_unknown_type():
     """
     with pytest.raises(salt.exceptions.SaltInvocationError):
         vclient._get_expected_creation_path("nonexistent")
+
+
+@pytest.mark.parametrize(
+    "server_config",
+    [
+        {
+            "url": "https://127.0.0.1:8200",
+            "verify": "-----BEGIN CERTIFICATE-----testcert",
+        }
+    ],
+    indirect=True,
+)
+def test_vault_client_verify_pem(server_config):
+    """
+    Test that the ``verify`` parameter to the client can contain a PEM-encoded certificate
+    which will be used as the sole trust anchor for the Vault URL.
+    The ``verify`` parameter to ``Session.request`` should be None in that case since
+    it requires a local file path.
+    """
+    with patch("salt.utils.vault.client.CACertHTTPSAdapter", autospec=True) as adapter:
+        with patch("salt.utils.vault.requests.Session", autospec=True) as session:
+            client = vclient.VaultClient(**server_config)
+            adapter.assert_called_once_with(server_config["verify"])
+            session.return_value.mount.assert_called_once_with(
+                server_config["url"], adapter.return_value
+            )
+            client.request_raw("GET", "test")
+            session.return_value.request.assert_called_once_with(
+                "GET",
+                f"{server_config['url']}/v1/test",
+                headers=ANY,
+                json=ANY,
+                verify=None,
+            )

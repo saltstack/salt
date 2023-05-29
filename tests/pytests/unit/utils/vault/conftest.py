@@ -25,13 +25,15 @@ def _mock_json_response(data, status_code=200, reason=""):
     return response
 
 
-@pytest.fixture
-def server_config():
-    return {
+@pytest.fixture(params=[{}])
+def server_config(request):
+    conf = {
         "url": "http://127.0.0.1:8200",
         "namespace": None,
         "verify": None,
     }
+    conf.update(request.param)
+    return conf
 
 
 @pytest.fixture(params=["token", "approle"])

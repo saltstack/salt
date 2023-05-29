@@ -2,6 +2,7 @@ import logging
 import re
 
 import requests
+from requests.packages.urllib3.util.ssl_ import create_urllib3_context
 
 import salt.exceptions
 import salt.utils.vault.leases as leases
@@ -66,8 +67,23 @@ class VaultClient:
         self.url = url
         self.namespace = namespace
         self.verify = verify
+
+        ca_cert = None
+        try:
+            if verify.startswith("-----BEGIN CERTIFICATE"):
+                ca_cert = verify
+                verify = None
+        except AttributeError:
+            pass
+
+        # Keep the actual requests parameter separate from the client config
+        # to reduce complexity in config validation.
+        self._requests_verify = verify
         if session is None:
             session = requests.Session()
+            if ca_cert:
+                adapter = CACertHTTPSAdapter(ca_cert)
+                session.mount(url, adapter)
         self.session = session
 
     def delete(self, endpoint, wrap=False, raise_error=True, add_headers=None):
@@ -179,7 +195,12 @@ class VaultClient:
         except TypeError:
             pass
         res = self.session.request(
-            method, url, headers=headers, json=payload, verify=self.verify, **kwargs
+            method,
+            url,
+            headers=headers,
+            json=payload,
+            verify=self._requests_verify,
+            **kwargs,
         )
         return res
 
@@ -481,3 +502,20 @@ class AuthenticatedVaultClient(VaultClient):
         headers = super()._get_headers(wrap)
         headers["X-Vault-Token"] = str(self.auth.get_token())
         return headers
+
+
+class CACertHTTPSAdapter(requests.sessions.HTTPAdapter):
+    """
+    Allows to restrict requests CA chain validation
+    to a single root certificate without writing it to disk.
+    """
+
+    def __init__(self, ca_cert_data, *args, **kwargs):
+        self.ca_cert_data = ca_cert_data
+        super().__init__(*args, **kwargs)
+
+    def init_poolmanager(self, *args, **kwargs):
+        ssl_context = create_urllib3_context()
+        ssl_context.load_verify_locations(cadata=self.ca_cert_data)
+        kwargs["ssl_context"] = ssl_context
+        return super().init_poolmanager(*args, **kwargs)

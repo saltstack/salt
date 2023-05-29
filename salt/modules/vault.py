@@ -651,7 +651,7 @@ url
 
 verify
     Configures certificate verification behavior when issuing requests to the
-    Vault server. If unset, requests will use the system default CA bundle.
+    Vault server. If unset, requests will use the CA certificates bundled with ``certifi``.
 
     For details, please see `the requests documentation <https://requests.readthedocs.io/en/master/user/advanced/#ssl-cert-verification>`_.
 
@@ -662,6 +662,9 @@ verify
         Minions again respect the master configuration value, which was changed
         implicitly in v3001. If this value is set in the minion configuration
         as well, it will take precedence.
+
+        In addition, this value can now be set to a PEM-encoded CA certificate
+        to use as the sole trust anchor for certificate chain verification.
 
 namespace
     Optional Vault namespace. Used with Vault Enterprise.
