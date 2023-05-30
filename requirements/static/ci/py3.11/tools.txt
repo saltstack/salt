@@ -8,9 +8,9 @@ attrs==23.1.0
     # via
     #   -r requirements/static/ci/tools.in
     #   python-tools-scripts
-boto3==1.21.46
+boto3==1.26.143
     # via -r requirements/static/ci/tools.in
-botocore==1.24.46
+botocore==1.29.143
     # via
     #   boto3
     #   s3transfer
@@ -48,7 +48,7 @@ requests==2.31.0
     #   virustotal3
 rich==13.3.5
     # via python-tools-scripts
-s3transfer==0.5.2
+s3transfer==0.6.1
     # via boto3
 six==1.16.0
     # via python-dateutil

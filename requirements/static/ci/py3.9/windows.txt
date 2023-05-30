@@ -39,7 +39,7 @@ bcrypt==4.0.1
     # via
     #   -c requirements/static/ci/py3.9/windows.txt
     #   passlib
-boto3==1.21.46
+boto3==1.26.143
     # via
     #   -c requirements/static/ci/py3.9/windows.txt
     #   -r requirements/static/ci/common.in
@@ -48,7 +48,7 @@ boto==2.49.0
     # via
     #   -c requirements/static/ci/py3.9/windows.txt
     #   -r requirements/static/ci/common.in
-botocore==1.24.46
+botocore==1.29.143
     # via
     #   -c requirements/static/ci/py3.9/windows.txt
     #   boto3
@@ -575,7 +575,7 @@ rsa==4.7.2
     # via
     #   -c requirements/static/ci/py3.9/windows.txt
     #   google-auth
-s3transfer==0.5.2
+s3transfer==0.6.1
     # via
     #   -c requirements/static/ci/py3.9/windows.txt
     #   boto3
