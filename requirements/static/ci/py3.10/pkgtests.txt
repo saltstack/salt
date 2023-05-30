@@ -55,6 +55,7 @@ jaraco.functools==3.7.0
     # via
     #   cheroot
     #   jaraco.text
+    #   tempora
 jaraco.text==3.11.1
     # via jaraco.collections
 jinja2==3.1.2
@@ -136,7 +137,7 @@ requests==2.31.0
     # via
     #   -r requirements/base.txt
     #   docker
-tempora==5.2.0
+tempora==5.2.2
     # via portend
 tomli==2.0.1
     # via pytest

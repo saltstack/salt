@@ -78,7 +78,7 @@ msgpack==1.0.5
     # via -r requirements/base.txt
 packaging==23.1
     # via -r requirements/base.txt
-portend==2.6
+portend==3.1.0
     # via cherrypy
 psutil==5.9.5
     # via -r requirements/base.txt
@@ -123,7 +123,7 @@ six==1.15.0
     # via python-dateutil
 smmap==4.0.0
     # via gitdb
-tempora==4.1.1
+tempora==5.2.2
     # via portend
 timelib==0.3.0
     # via -r requirements/windows.txt

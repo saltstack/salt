@@ -1005,7 +1005,7 @@ pluggy==0.13.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   pytest
-portend==2.4
+portend==3.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -c requirements/static/ci/py3.8/linux.txt
@@ -1308,7 +1308,7 @@ strict-rfc3339==0.7
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/static/ci/common.in
-tempora==4.1.1
+tempora==5.2.2
     # via
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -c requirements/static/ci/py3.8/linux.txt
