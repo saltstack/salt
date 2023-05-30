@@ -40,6 +40,11 @@ attrs==20.3.0
     #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-system-statistics
+autocommand==2.2.2
+    # via
+    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
+    #   -c requirements/static/ci/py3.9/freebsd.txt
+    #   jaraco.text
 azure-applicationinsights==0.1.0
     # via
     #   -c requirements/static/ci/py3.9/freebsd.txt
@@ -701,6 +706,11 @@ importlib-metadata==6.6.0
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -c requirements/static/ci/py3.9/freebsd.txt
     #   -r requirements/static/pkg/freebsd.in
+inflect==6.0.4
+    # via
+    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
+    #   -c requirements/static/ci/py3.9/freebsd.txt
+    #   jaraco.text
 iniconfig==1.0.1
     # via
     #   -c requirements/static/ci/py3.9/freebsd.txt
@@ -713,24 +723,24 @@ isodate==0.6.0
     # via
     #   -c requirements/static/ci/py3.9/freebsd.txt
     #   msrest
-jaraco.classes==3.2.1
-    # via
-    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
-    #   -c requirements/static/ci/py3.9/freebsd.txt
-    #   jaraco.collections
-jaraco.collections==3.4.0
+jaraco.collections==4.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -c requirements/static/ci/py3.9/freebsd.txt
     #   cherrypy
-jaraco.functools==2.0
+jaraco.context==4.3.0
+    # via
+    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
+    #   -c requirements/static/ci/py3.9/freebsd.txt
+    #   jaraco.text
+jaraco.functools==3.7.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -c requirements/static/ci/py3.9/freebsd.txt
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.5.1
+jaraco.text==3.11.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -c requirements/static/ci/py3.9/freebsd.txt
@@ -818,8 +828,8 @@ more-itertools==9.1.0
     #   -c requirements/static/ci/py3.9/freebsd.txt
     #   cheroot
     #   cherrypy
-    #   jaraco.classes
     #   jaraco.functools
+    #   jaraco.text
 moto==3.0.1 ; python_version >= "3.6"
     # via
     #   -c requirements/static/ci/py3.9/freebsd.txt
@@ -1029,6 +1039,11 @@ pycryptodomex==3.9.8
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -c requirements/static/ci/py3.9/freebsd.txt
     #   -r requirements/crypto.txt
+pydantic==1.10.8
+    # via
+    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
+    #   -c requirements/static/ci/py3.9/freebsd.txt
+    #   inflect
 pyeapi==0.8.3
     # via
     #   -c requirements/static/ci/py3.9/freebsd.txt
@@ -1311,9 +1326,11 @@ transitions==0.8.1
     # via
     #   -c requirements/static/ci/py3.9/freebsd.txt
     #   junos-eznc
-typing-extensions==4.4.0
+typing-extensions==4.6.0
     # via
+    #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -c requirements/static/ci/py3.9/freebsd.txt
+    #   pydantic
     #   pytest-shell-utilities
     #   pytest-system-statistics
 urllib3==1.26.6

@@ -51,13 +51,11 @@ inflect==6.0.2
     # via jaraco.text
 iniconfig==2.0.0
     # via pytest
-jaraco.classes==3.2.3
-    # via jaraco.collections
-jaraco.collections==3.8.0
+jaraco.collections==4.1.0
     # via cherrypy
 jaraco.context==4.3.0
     # via jaraco.text
-jaraco.functools==3.5.2
+jaraco.functools==3.7.0
     # via
     #   cheroot
     #   jaraco.text
@@ -78,7 +76,6 @@ more-itertools==9.1.0
     # via
     #   cheroot
     #   cherrypy
-    #   jaraco.classes
     #   jaraco.functools
     #   jaraco.text
 msgpack==1.0.5
@@ -154,7 +151,7 @@ tomli==2.0.1
     # via pytest
 tornado==6.1.0
     # via -r requirements/base.txt
-typing-extensions==4.4.0
+typing-extensions==4.6.0
     # via
     #   pydantic
     #   pytest-shell-utilities

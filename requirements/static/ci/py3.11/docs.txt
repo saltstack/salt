@@ -6,6 +6,10 @@
 #
 alabaster==0.7.13
     # via sphinx
+autocommand==2.2.2
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   jaraco.text
 babel==2.12.1
     # via sphinx
 certifi==2023.5.7
@@ -52,21 +56,25 @@ immutables==0.19
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   contextvars
-jaraco.classes==3.2.1
+inflect==6.0.4
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
-    #   jaraco.collections
-jaraco.collections==3.4.0
+    #   jaraco.text
+jaraco.collections==4.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   cherrypy
-jaraco.functools==2.0
+jaraco.context==4.3.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   jaraco.text
+jaraco.functools==3.7.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.5.1
+jaraco.text==3.11.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   jaraco.collections
@@ -105,8 +113,8 @@ more-itertools==9.1.0
     #   -c requirements/static/ci/py3.11/linux.txt
     #   cheroot
     #   cherrypy
-    #   jaraco.classes
     #   jaraco.functools
+    #   jaraco.text
 msgpack==1.0.5
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -134,6 +142,10 @@ pycryptodomex==3.9.8
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/crypto.txt
+pydantic==1.10.8
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   inflect
 pyenchant==3.2.2
     # via sphinxcontrib-spelling
 pygments==2.15.1
@@ -191,6 +203,10 @@ tornado==6.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/base.txt
+typing-extensions==4.6.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   pydantic
 uc-micro-py==1.0.2
     # via linkify-it-py
 urllib3==1.26.6
