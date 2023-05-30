@@ -105,7 +105,7 @@ mdit-py-plugins==0.3.3
     # via myst-docutils
 mdurl==0.1.2
     # via markdown-it-py
-more-itertools==5.0.0
+more-itertools==9.1.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   cheroot
@@ -165,7 +165,6 @@ requests==2.31.0
 six==1.16.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
-    #   more-itertools
     #   sphinxcontrib-httpdomain
 snowballstemmer==2.1.0
     # via sphinx

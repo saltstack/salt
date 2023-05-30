@@ -819,7 +819,7 @@ mercurial==6.0.1
     #   -r requirements/static/ci/linux.in
 modernize==0.5
     # via saltpylint
-more-itertools==5.0.0
+more-itertools==9.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -c requirements/static/ci/py3.8/linux.txt
@@ -1235,7 +1235,6 @@ six==1.16.0
     #   junos-eznc
     #   kazoo
     #   kubernetes
-    #   more-itertools
     #   ncclient
     #   paramiko
     #   pynacl

@@ -62,7 +62,7 @@ markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
-more-itertools==8.2.0
+more-itertools==9.1.0
     # via
     #   cheroot
     #   cherrypy
