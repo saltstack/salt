@@ -24,7 +24,7 @@ distro==1.8.0
     # via -r requirements/base.txt
 idna==2.8
     # via requests
-immutables==0.15
+immutables==0.19
     # via contextvars
 importlib-metadata==6.6.0
     # via -r requirements/static/pkg/linux.in
