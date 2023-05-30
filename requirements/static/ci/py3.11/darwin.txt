@@ -581,7 +581,7 @@ click==7.0
     # via
     #   -c requirements/static/ci/py3.11/darwin.txt
     #   geomet
-clustershell==1.8.1
+clustershell==1.9.1
     # via
     #   -c requirements/static/ci/py3.11/darwin.txt
     #   -r requirements/static/ci/common.in

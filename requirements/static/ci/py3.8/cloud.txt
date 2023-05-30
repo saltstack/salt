@@ -591,7 +591,7 @@ click==7.1.1
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   geomet
-clustershell==1.8.3
+clustershell==1.9.1
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/static/ci/common.in

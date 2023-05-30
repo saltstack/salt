@@ -581,7 +581,7 @@ click==7.1.2
     # via
     #   -c requirements/static/ci/py3.10/freebsd.txt
     #   geomet
-clustershell==1.8.3
+clustershell==1.9.1
     # via
     #   -c requirements/static/ci/py3.10/freebsd.txt
     #   -r requirements/static/ci/common.in

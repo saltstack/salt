@@ -117,7 +117,7 @@ clr-loader==0.2.4
     #   -c requirements/static/ci/../pkg/py3.7/windows.txt
     #   -c requirements/static/ci/py3.7/windows.txt
     #   pythonnet
-clustershell==1.8.3
+clustershell==1.9.1
     # via
     #   -c requirements/static/ci/py3.7/windows.txt
     #   -r requirements/static/ci/common.in
