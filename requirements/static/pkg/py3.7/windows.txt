@@ -131,7 +131,7 @@ timelib==0.3.0
     # via -r requirements/windows.txt
 tornado==6.1.0
     # via -r requirements/base.txt
-typing-extensions==4.6.0
+typing-extensions==4.6.2
     # via
     #   gitpython
     #   immutables

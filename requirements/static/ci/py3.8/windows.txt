@@ -652,7 +652,7 @@ tornado==6.1.0
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -c requirements/static/ci/py3.8/windows.txt
     #   -r requirements/base.txt
-typing-extensions==4.6.0
+typing-extensions==4.6.2
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -c requirements/static/ci/py3.8/windows.txt

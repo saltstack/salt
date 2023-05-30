@@ -208,7 +208,7 @@ tornado==6.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
-typing-extensions==4.6.0
+typing-extensions==4.6.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   myst-docutils

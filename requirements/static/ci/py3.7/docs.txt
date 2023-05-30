@@ -213,7 +213,7 @@ tornado==6.1.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   -r requirements/base.txt
-typing-extensions==4.6.0
+typing-extensions==4.6.2
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   immutables
