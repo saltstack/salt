@@ -231,7 +231,7 @@ zc.lockfile==1.4
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   cherrypy
-zipp==3.5.0
+zipp==3.15.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   importlib-metadata
