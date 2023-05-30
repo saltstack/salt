@@ -51,7 +51,6 @@ def clear_proxy_minions(salt_master, proxy_minion_id):
             os.unlink(cachefile)
 
 
-@pytest.mark.slow_test
 def test_exit_status_no_proxyid(salt_master, proxy_minion_id):
     """
     Ensure correct exit status when --proxyid argument is missing.
@@ -93,7 +92,6 @@ def test_exit_status_unknown_user(salt_master, proxy_minion_id):
     assert "The user is not available." in exc.value.process_result.stderr
 
 
-@pytest.mark.slow_test
 def test_exit_status_unknown_argument(salt_master, proxy_minion_id):
     """
     Ensure correct exit status when an unknown argument is passed to

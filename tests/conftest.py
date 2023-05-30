@@ -577,6 +577,12 @@ def pytest_runtest_setup(item):
     ):
         item._skipped_by_mark = True
         pytest.skip(PRE_PYTEST_SKIP_REASON)
+    test_group_count = sum(
+        bool(item.get_closest_marker(group))
+        for group in ("core_test", "slow_test", "flaky_jail")
+    )
+    if test_group_count > 1:
+        raise pytest.UsageError("Tests can only be in one test group.")
 
     if item.get_closest_marker("core_test"):
         if not item.config.getoption("--core-tests"):
@@ -596,16 +602,11 @@ def pytest_runtest_setup(item):
                 "flaky jail tests are disabled, pass '--flaky-jail' to enable them.",
                 _use_item_location=True,
             )
-    if (
-        not item.get_closest_marker("slow_test")
-        and not item.get_closest_marker("core_test")
-        and not item.get_closest_marker("flaky_jail")
-    ):
-        if not item.config.getoption("--no-fast-tests"):
-            raise pytest.skip.Exception(
-                "Fast tests are disabled, dont pass '--no-fast-tests' to enable them.",
-                _use_item_location=True,
-            )
+    if test_group_count == 0 and not item.config.getoption("--no-fast-tests"):
+        raise pytest.skip.Exception(
+            "Fast tests are disabled, dont pass '--no-fast-tests' to enable them.",
+            _use_item_location=True,
+        )
 
     requires_sshd_server_marker = item.get_closest_marker("requires_sshd_server")
     if requires_sshd_server_marker is not None:
