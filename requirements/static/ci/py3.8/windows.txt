@@ -58,7 +58,7 @@ cachetools==3.1.0
     # via
     #   -c requirements/static/ci/py3.8/windows.txt
     #   google-auth
-cassandra-driver==3.23.0
+cassandra-driver==3.27.0
     # via
     #   -c requirements/static/ci/py3.8/windows.txt
     #   -r requirements/static/ci/common.in
@@ -127,6 +127,7 @@ cryptography==40.0.2
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   -c requirements/static/ci/py3.8/windows.txt
     #   -r requirements/crypto.txt
+    #   cassandra-driver
     #   etcd3-py
     #   moto
     #   pyopenssl

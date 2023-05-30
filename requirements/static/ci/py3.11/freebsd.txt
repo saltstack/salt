@@ -530,7 +530,7 @@ cachetools==3.1.0
     # via
     #   -c requirements/static/ci/py3.11/freebsd.txt
     #   google-auth
-cassandra-driver==3.24.0
+cassandra-driver==3.27.0
     # via
     #   -c requirements/static/ci/py3.11/freebsd.txt
     #   -r requirements/static/ci/common.in
@@ -603,6 +603,7 @@ cryptography==40.0.2
     #   azure-cosmosdb-table
     #   azure-keyvault
     #   azure-storage-common
+    #   cassandra-driver
     #   etcd3-py
     #   moto
     #   paramiko

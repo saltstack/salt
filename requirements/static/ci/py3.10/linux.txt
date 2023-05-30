@@ -548,7 +548,7 @@ cachetools==4.2.2
     #   -c requirements/static/ci/py3.10/linux.txt
     #   google-auth
     #   python-telegram-bot
-cassandra-driver==3.23.0
+cassandra-driver==3.27.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/static/ci/common.in
@@ -623,6 +623,7 @@ cryptography==40.0.2
     #   azure-cosmosdb-table
     #   azure-keyvault
     #   azure-storage-common
+    #   cassandra-driver
     #   etcd3-py
     #   moto
     #   paramiko
