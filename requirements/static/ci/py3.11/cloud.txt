@@ -202,12 +202,12 @@ idna==2.8
     #   etcd3-py
     #   requests
     #   yarl
-immutables==0.15
+immutables==0.19
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
     #   contextvars
-importlib-metadata==6.0.0
+importlib-metadata==6.6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
@@ -616,7 +616,7 @@ tempora==4.1.1
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt
     #   portend
-timelib==0.2.5
+timelib==0.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -c requirements/static/ci/py3.11/linux.txt

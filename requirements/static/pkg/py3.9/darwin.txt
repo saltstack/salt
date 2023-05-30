@@ -32,7 +32,7 @@ idna==2.8
     # via
     #   -r requirements/darwin.txt
     #   requests
-immutables==0.15
+immutables==0.19
     # via contextvars
 jaraco.classes==3.2.1
     # via jaraco.collections
