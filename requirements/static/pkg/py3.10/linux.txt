@@ -105,7 +105,7 @@ urllib3==1.26.6
     # via requests
 zc.lockfile==1.4
     # via cherrypy
-zipp==3.5.0
+zipp==3.15.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
