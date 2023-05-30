@@ -670,7 +670,7 @@ hglib==2.6.1
     # via
     #   -c requirements/static/ci/py3.11/freebsd.txt
     #   -r requirements/static/ci/freebsd.in
-idna==2.8
+idna==3.4
     # via
     #   -c requirements/static/ci/../pkg/py3.11/freebsd.txt
     #   -c requirements/static/ci/py3.11/freebsd.txt
