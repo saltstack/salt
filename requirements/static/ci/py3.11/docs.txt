@@ -20,7 +20,7 @@ charset-normalizer==2.1.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   requests
-cheroot==8.5.2
+cheroot==10.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   cherrypy
@@ -159,7 +159,6 @@ requests==2.31.0
 six==1.16.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
-    #   cheroot
     #   more-itertools
     #   sphinxcontrib-httpdomain
 snowballstemmer==2.2.0

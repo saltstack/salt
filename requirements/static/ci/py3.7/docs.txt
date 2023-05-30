@@ -20,7 +20,7 @@ charset-normalizer==2.1.1
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   requests
-cheroot==8.5.2
+cheroot==10.0.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   cherrypy
@@ -55,6 +55,7 @@ immutables==0.19
 importlib-metadata==6.6.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
+    #   cheroot
     #   sphinxcontrib-spelling
 jaraco.classes==3.2.1
     # via
@@ -164,7 +165,6 @@ requests==2.31.0
 six==1.16.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
-    #   cheroot
     #   more-itertools
     #   sphinxcontrib-httpdomain
 snowballstemmer==2.1.0

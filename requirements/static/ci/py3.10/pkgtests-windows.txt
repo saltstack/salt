@@ -21,7 +21,7 @@ cffi==1.15.1
     #   cryptography
 charset-normalizer==2.1.1
     # via requests
-cheroot==9.0.0
+cheroot==10.0.0
     # via cherrypy
 cherrypy==18.8.0
     # via -r requirements/static/ci/pkgtests-windows.in
@@ -148,8 +148,6 @@ pyzmq==25.1.0
     #   pytest-salt-factories
 requests==2.31.0
     # via -r requirements/base.txt
-six==1.16.0
-    # via cheroot
 tempora==5.2.1
     # via portend
 tomli==2.0.1

@@ -566,7 +566,7 @@ cheetah3==3.2.6.post2
     # via
     #   -c requirements/static/ci/py3.7/freebsd.txt
     #   -r requirements/static/ci/common.in
-cheroot==8.5.2
+cheroot==10.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.7/freebsd.txt
     #   -c requirements/static/ci/py3.7/freebsd.txt
@@ -706,6 +706,7 @@ importlib-metadata==6.6.0
     #   -c requirements/static/ci/py3.7/freebsd.txt
     #   -r requirements/static/pkg/freebsd.in
     #   backports.entry-points-selectable
+    #   cheroot
     #   jsonschema
     #   mako
     #   moto
@@ -1249,7 +1250,6 @@ six==1.16.0
     #   -c requirements/static/ci/py3.7/freebsd.txt
     #   bcrypt
     #   cassandra-driver
-    #   cheroot
     #   etcd3-py
     #   genshi
     #   geomet

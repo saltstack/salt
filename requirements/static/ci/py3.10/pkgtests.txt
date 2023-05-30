@@ -19,7 +19,7 @@ cffi==1.15.1
     # via cryptography
 charset-normalizer==2.1.1
     # via requests
-cheroot==9.0.0
+cheroot==10.0.0
     # via cherrypy
 cherrypy==18.8.0
     # via -r requirements/static/ci/pkgtests.in
@@ -139,8 +139,6 @@ requests==2.31.0
     # via
     #   -r requirements/base.txt
     #   docker
-six==1.16.0
-    # via cheroot
 tempora==5.2.0
     # via portend
 tomli==2.0.1
