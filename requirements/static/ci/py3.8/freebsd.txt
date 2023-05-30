@@ -563,7 +563,7 @@ zc.lockfile==1.4
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   cherrypy
-zipp==3.5.0
+zipp==3.15.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   importlib-metadata

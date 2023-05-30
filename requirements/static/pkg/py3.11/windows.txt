@@ -138,7 +138,7 @@ wmi==1.5.1
     # via -r requirements/windows.txt
 zc.lockfile==2.0
     # via cherrypy
-zipp==3.5.0
+zipp==3.15.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
