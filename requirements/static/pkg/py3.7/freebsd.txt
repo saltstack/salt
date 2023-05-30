@@ -26,7 +26,7 @@ distro==1.8.0
     #   -r requirements/static/pkg/freebsd.in
 idna==2.8
     # via requests
-immutables==0.15
+immutables==0.19
     # via contextvars
 importlib-metadata==6.6.0
     # via -r requirements/static/pkg/freebsd.in
@@ -97,7 +97,9 @@ timelib==0.3.0
 tornado==6.1.0
     # via -r requirements/base.txt
 typing-extensions==4.4.0
-    # via importlib-metadata
+    # via
+    #   immutables
+    #   importlib-metadata
 urllib3==1.26.6
     # via requests
 zc.lockfile==1.4

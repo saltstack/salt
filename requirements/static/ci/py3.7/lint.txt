@@ -701,7 +701,7 @@ idna==2.8
     #   etcd3-py
     #   requests
     #   yarl
-immutables==0.15
+immutables==0.19
     # via
     #   -c requirements/static/ci/../pkg/py3.7/linux.txt
     #   -c requirements/static/ci/py3.7/linux.txt
@@ -1326,6 +1326,7 @@ typing-extensions==4.4.0
     #   aiohttp
     #   async-timeout
     #   gitpython
+    #   immutables
     #   importlib-metadata
     #   yarl
 tzlocal==2.1

@@ -35,7 +35,7 @@ gitpython==3.1.31
     # via -r requirements/windows.txt
 idna==2.8
     # via requests
-immutables==0.15
+immutables==0.19
     # via contextvars
 importlib-metadata==6.6.0
     # via -r requirements/windows.txt
@@ -126,6 +126,7 @@ tornado==6.1.0
 typing-extensions==4.4.0
     # via
     #   gitpython
+    #   immutables
     #   importlib-metadata
 urllib3==1.26.6
     # via

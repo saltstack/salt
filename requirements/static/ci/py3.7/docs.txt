@@ -48,7 +48,7 @@ idna==2.8
     #   requests
 imagesize==1.2.0
     # via sphinx
-immutables==0.15
+immutables==0.19
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
     #   contextvars
@@ -201,6 +201,7 @@ tornado==6.1.0
 typing-extensions==4.4.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
+    #   immutables
     #   importlib-metadata
     #   markdown-it-py
     #   myst-docutils
