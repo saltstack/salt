@@ -493,7 +493,7 @@ pythonnet==3.0.1
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -c requirements/static/ci/py3.9/windows.txt
     #   -r requirements/windows.txt
-pytz==2022.1
+pytz==2023.3
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -c requirements/static/ci/py3.9/windows.txt

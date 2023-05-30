@@ -138,7 +138,7 @@ pyenchant==3.2.2
     # via sphinxcontrib-spelling
 pygments==2.14.0
     # via sphinx
-pytz==2022.1
+pytz==2023.3
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   babel

@@ -134,7 +134,7 @@ pytest==7.2.1
     #   pytest-tempdir
 pythonnet==3.0.1
     # via -r requirements/static/ci/pkgtests-windows.in
-pytz==2022.7.1
+pytz==2023.3
     # via tempora
 pywin32==306
     # via
