@@ -510,7 +510,7 @@ jsonschema==4.17.3
     # via -r requirements/static/ci/common.in
 junos-eznc==2.6.7 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-jxmlease==1.0.1 ; sys_platform != "win32"
+jxmlease==1.0.3 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 keyring==5.7.1
     # via -r requirements/static/ci/common.in
