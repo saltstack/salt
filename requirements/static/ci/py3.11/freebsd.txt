@@ -741,7 +741,7 @@ jmespath==1.0.1
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
-jsonschema==3.2.0
+jsonschema==4.17.3
     # via
     #   -c requirements/static/ci/py3.11/freebsd.txt
     #   -r requirements/static/ci/common.in

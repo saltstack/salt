@@ -786,7 +786,7 @@ jmespath==1.0.1
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
-jsonschema==3.2.0
+jsonschema==4.17.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
@@ -1325,7 +1325,6 @@ six==1.16.0
     #   geomet
     #   google-auth
     #   isodate
-    #   jsonschema
     #   junos-eznc
     #   kazoo
     #   kubernetes
