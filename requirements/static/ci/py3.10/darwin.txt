@@ -734,7 +734,7 @@ pyserial==3.5
     # via junos-eznc
 pytest-custom-exit-code==0.3.0
     # via -r requirements/pytest.txt
-pytest-helpers-namespace==2021.4.29
+pytest-helpers-namespace==2021.12.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
