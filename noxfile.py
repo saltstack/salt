@@ -1357,10 +1357,19 @@ def _lint(
     session, rcfile, flags, paths, tee_output=True, upgrade_setuptools_and_pip=True
 ):
     if _upgrade_pip_setuptools_and_wheel(session, upgrade=upgrade_setuptools_and_pip):
-        requirements_file = os.path.join(
+        linux_requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "linux.txt"
+        )
+        lint_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "lint.txt"
         )
-        install_command = ["--progress-bar=off", "-r", requirements_file]
+        install_command = [
+            "--progress-bar=off",
+            "-r",
+            linux_requirements_file,
+            "-r",
+            lint_requirements_file,
+        ]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     if tee_output:
