@@ -7,6 +7,8 @@ import pytest
 import salt.states.selinux as selinux
 from tests.support.mock import MagicMock, patch
 
+pytestmark = [pytest.mark.skip_on_windows]
+
 
 @pytest.fixture
 def configure_loader_modules():
@@ -36,12 +38,12 @@ def test_mode():
             "selinux.setenforce": mock_pr,
         },
     ):
-        comt = "SELinux is already in Enforcing mode"
+        comt = "SELinux is already in enforcing mode"
         ret = {"name": "enforcing", "comment": comt, "result": True, "changes": {}}
         assert selinux.mode("Enforcing") == ret
 
         with patch.dict(selinux.__opts__, {"test": True}):
-            comt = "SELinux mode is set to be changed to Permissive"
+            comt = "SELinux mode is set to be changed to permissive"
             ret = {
                 "name": "permissive",
                 "comment": comt,
@@ -51,7 +53,7 @@ def test_mode():
             assert selinux.mode("Permissive") == ret
 
         with patch.dict(selinux.__opts__, {"test": False}):
-            comt = "SELinux has been set to Permissive mode"
+            comt = "SELinux has been set to permissive mode"
             ret = {
                 "name": "permissive",
                 "comment": comt,
