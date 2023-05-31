@@ -252,7 +252,7 @@ more-itertools==9.1.0
     #   cherrypy
     #   jaraco.functools
     #   jaraco.text
-moto==3.0.1
+moto==4.1.10
     # via -r requirements/static/ci/common.in
 msgpack==1.0.5
     # via
