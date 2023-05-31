@@ -17,13 +17,14 @@ import salt.utils.win_functions
 
 log = logging.getLogger(__name__)
 
+
 REQ_ERROR = None
 try:
-    import libnacl.sealed
-    import libnacl.secret
+    import nacl.public
+    import nacl.secret
 except (ImportError, OSError) as e:
     REQ_ERROR = (
-        "libnacl import error, perhaps missing python libnacl package or should update."
+        "PyNaCl import error, perhaps missing python PyNaCl package or should update."
     )
 
 __virtualname__ = "nacl"
@@ -113,7 +114,7 @@ def _get_pk(**kwargs):
 
 def keygen(sk_file=None, pk_file=None, **kwargs):
     """
-    Use libnacl to generate a keypair.
+    Use PyNaCl to generate a keypair.
 
     If no `sk_file` is defined return a keypair.
 
@@ -143,17 +144,20 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
         sk_file = kwargs["keyfile"]
 
     if sk_file is None:
-        kp = libnacl.public.SecretKey()
-        return {"sk": base64.b64encode(kp.sk), "pk": base64.b64encode(kp.pk)}
+        kp = nacl.public.PrivateKey.generate()
+        return {
+            "sk": base64.b64encode(kp.encode()),
+            "pk": base64.b64encode(kp.public_key.encode()),
+        }
 
     if pk_file is None:
         pk_file = "{}.pub".format(sk_file)
 
     if sk_file and pk_file is None:
         if not os.path.isfile(sk_file):
-            kp = libnacl.public.SecretKey()
+            kp = nacl.public.PrivateKey.generate()
             with salt.utils.files.fopen(sk_file, "wb") as keyf:
-                keyf.write(base64.b64encode(kp.sk))
+                keyf.write(base64.b64encode(kp.encode()))
             if salt.utils.platform.is_windows():
                 cur_user = salt.utils.win_functions.get_current_user()
                 salt.utils.win_dacl.set_owner(sk_file, cur_user)
@@ -185,14 +189,14 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
         with salt.utils.files.fopen(sk_file, "rb") as keyf:
             sk = salt.utils.stringutils.to_unicode(keyf.read()).rstrip("\n")
             sk = base64.b64decode(sk)
-        kp = libnacl.public.SecretKey(sk)
+        kp = nacl.public.PublicKey(sk)
         with salt.utils.files.fopen(pk_file, "wb") as keyf:
-            keyf.write(base64.b64encode(kp.pk))
+            keyf.write(base64.b64encode(kp.encode()))
         return "saved pk_file: {}".format(pk_file)
 
-    kp = libnacl.public.SecretKey()
+    kp = nacl.public.PublicKey.generate()
     with salt.utils.files.fopen(sk_file, "wb") as keyf:
-        keyf.write(base64.b64encode(kp.sk))
+        keyf.write(base64.b64encode(kp.encode()))
     if salt.utils.platform.is_windows():
         cur_user = salt.utils.win_functions.get_current_user()
         salt.utils.win_dacl.set_owner(sk_file, cur_user)
@@ -203,7 +207,7 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
         # chmod 0600 file
         os.chmod(sk_file, 1536)
     with salt.utils.files.fopen(pk_file, "wb") as keyf:
-        keyf.write(base64.b64encode(kp.pk))
+        keyf.write(base64.b64encode(kp.encode()))
     return "saved sk_file:{}  pk_file: {}".format(sk_file, pk_file)
 
 
@@ -313,6 +317,7 @@ def dec(data, **kwargs):
     box_type = _get_config(**kwargs)["box_type"]
     if box_type == "secretbox":
         return secretbox_decrypt(data, **kwargs)
+
     return sealedbox_decrypt(data, **kwargs)
 
 
@@ -366,7 +371,8 @@ def sealedbox_encrypt(data, **kwargs):
     data = salt.utils.stringutils.to_bytes(data)
 
     pk = _get_pk(**kwargs)
-    b = libnacl.sealed.SealedBox(pk)
+    keypair = nacl.public.PublicKey(pk)
+    b = nacl.public.SealedBox(keypair)
     return base64.b64encode(b.encrypt(data))
 
 
@@ -389,8 +395,8 @@ def sealedbox_decrypt(data, **kwargs):
     data = salt.utils.stringutils.to_bytes(data)
 
     sk = _get_sk(**kwargs)
-    keypair = libnacl.public.SecretKey(sk)
-    b = libnacl.sealed.SealedBox(keypair)
+    keypair = nacl.public.PrivateKey(sk)
+    b = nacl.public.SealedBox(keypair)
     return b.decrypt(base64.b64decode(data))
 
 
@@ -411,7 +417,7 @@ def secretbox_encrypt(data, **kwargs):
     data = salt.utils.stringutils.to_bytes(data)
 
     sk = _get_sk(**kwargs)
-    b = libnacl.secret.SecretBox(sk)
+    b = nacl.secret.SecretBox(sk)
     return base64.b64encode(b.encrypt(data))
 
 
@@ -435,6 +441,5 @@ def secretbox_decrypt(data, **kwargs):
     data = salt.utils.stringutils.to_bytes(data)
 
     key = _get_sk(**kwargs)
-    b = libnacl.secret.SecretBox(key=key)
-
+    b = nacl.secret.SecretBox(key=key)
     return b.decrypt(base64.b64decode(data))

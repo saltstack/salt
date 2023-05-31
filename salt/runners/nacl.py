@@ -1,7 +1,7 @@
 """
 This module helps include encrypted passwords in pillars, grains and salt state files.
 
-:depends: libnacl, https://github.com/saltstack/libnacl
+:depends: PyNaCl, https://github.com/pyca/pynacl
 
 This is often useful if you wish to store your pillars in source control or
 share your pillar data with others that you trust. I don't advise making your pillars public
