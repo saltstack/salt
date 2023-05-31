@@ -534,7 +534,7 @@ urllib3==1.26.6
     #   python-etcd
     #   requests
     #   responses
-vcert==0.7.4 ; sys_platform != "win32"
+vcert==0.9.1 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 virtualenv==20.7.2
     # via
