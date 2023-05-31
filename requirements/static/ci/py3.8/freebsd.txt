@@ -629,7 +629,7 @@ distro==1.8.0
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
     #   pytest-skip-markers
-dnspython==1.16.0
+dnspython==2.3.0
     # via
     #   -c requirements/static/ci/py3.8/freebsd.txt
     #   -r requirements/static/ci/common.in
