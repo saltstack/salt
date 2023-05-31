@@ -221,7 +221,7 @@ keyring==5.7.1
     # via -r requirements/static/ci/common.in
 kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
-libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
+libnacl==1.8.0
     # via -r requirements/static/ci/common.in
 looseversion==1.2.0
     # via
