@@ -657,7 +657,7 @@ multidict==6.0.2
     #   yarl
 ncclient==0.6.9
     # via junos-eznc
-netaddr==0.7.19
+netaddr==0.8.0
     # via junos-eznc
 oauthlib==3.2.2
     # via requests-oauthlib

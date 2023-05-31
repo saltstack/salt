@@ -673,7 +673,7 @@ napalm==3.1.0 ; sys_platform != "win32" and python_version < "3.10"
     # via -r requirements/static/ci/common.in
 ncclient==0.6.4
     # via junos-eznc
-netaddr==0.7.19
+netaddr==0.8.0
     # via
     #   junos-eznc
     #   napalm
