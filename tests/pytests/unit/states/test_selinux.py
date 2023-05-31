@@ -7,8 +7,6 @@ import pytest
 import salt.states.selinux as selinux
 from tests.support.mock import MagicMock, patch
 
-pytestmark = [pytest.mark.skip_unless_on_linux]
-
 
 @pytest.fixture
 def configure_loader_modules():
@@ -28,8 +26,8 @@ def test_mode():
     }
     assert selinux.mode("unknown") == ret
 
-    mock_en = MagicMock(return_value="enforcing")
-    mock_pr = MagicMock(side_effect=["permissive", "enforcing"])
+    mock_en = MagicMock(return_value="Enforcing")
+    mock_pr = MagicMock(side_effect=["Permissive", "Enforcing"])
     with patch.dict(
         selinux.__salt__,
         {
@@ -38,33 +36,33 @@ def test_mode():
             "selinux.setenforce": mock_pr,
         },
     ):
-        comt = "SELinux is already in enforcing mode"
-        ret = {"name": "enforcing", "comment": comt, "result": True, "changes": {}}
+        comt = "SELinux is already in Enforcing mode"
+        ret = {"name": "Enforcing", "comment": comt, "result": True, "changes": {}}
         assert selinux.mode("Enforcing") == ret
 
         with patch.dict(selinux.__opts__, {"test": True}):
-            comt = "SELinux mode is set to be changed to permissive"
+            comt = "SELinux mode is set to be changed to Permissive"
             ret = {
-                "name": "permissive",
+                "name": "Permissive",
                 "comment": comt,
                 "result": None,
-                "changes": {"new": "permissive", "old": "enforcing"},
+                "changes": {"new": "Permissive", "old": "Enforcing"},
             }
             assert selinux.mode("Permissive") == ret
 
         with patch.dict(selinux.__opts__, {"test": False}):
-            comt = "SELinux has been set to permissive mode"
+            comt = "SELinux has been set to Permissive mode"
             ret = {
-                "name": "permissive",
+                "name": "Permissive",
                 "comment": comt,
                 "result": True,
-                "changes": {"new": "permissive", "old": "enforcing"},
+                "changes": {"new": "Permissive", "old": "Enforcing"},
             }
             assert selinux.mode("Permissive") == ret
 
-            comt = "Failed to set SELinux to permissive mode"
+            comt = "Failed to set SELinux to Permissive mode"
             ret.update(
-                {"name": "permissive", "comment": comt, "result": False, "changes": {}}
+                {"name": "Permissive", "comment": comt, "result": False, "changes": {}}
             )
             assert selinux.mode("Permissive") == ret
 
