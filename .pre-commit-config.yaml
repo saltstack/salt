@@ -937,11 +937,6 @@ repos:
           - --build-isolation
 #          - --resolver=backtracking
           - --py-version=3.7
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/pytest.txt
-          - --include=requirements/static/pkg/linux.in
-          - --include=requirements/static/ci/common.in
           - requirements/static/ci/cloud.in
 
       - id: pip-tools-compile
@@ -954,11 +949,6 @@ repos:
           - --build-isolation
 #          - --resolver=backtracking
           - --py-version=3.8
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/pytest.txt
-          - --include=requirements/static/pkg/linux.in
-          - --include=requirements/static/ci/common.in
           - requirements/static/ci/cloud.in
 
       - id: pip-tools-compile
@@ -971,11 +961,6 @@ repos:
           - --build-isolation
 #          - --resolver=backtracking
           - --py-version=3.9
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/pytest.txt
-          - --include=requirements/static/pkg/linux.in
-          - --include=requirements/static/ci/common.in
           - requirements/static/ci/cloud.in
 
       - id: pip-tools-compile
@@ -988,11 +973,6 @@ repos:
           - --build-isolation
 #          - --resolver=backtracking
           - --py-version=3.10
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/pytest.txt
-          - --include=requirements/static/pkg/linux.in
-          - --include=requirements/static/ci/common.in
           - requirements/static/ci/cloud.in
 
       - id: pip-tools-compile
@@ -1005,11 +985,6 @@ repos:
           - --build-isolation
 #          - --resolver=backtracking
           - --py-version=3.11
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/pytest.txt
-          - --include=requirements/static/pkg/linux.in
-          - --include=requirements/static/ci/common.in
           - requirements/static/ci/cloud.in
   # <---- Cloud CI Requirements --------------------------------------------------------------------------------------
 
