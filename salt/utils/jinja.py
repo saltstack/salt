@@ -940,7 +940,7 @@ class SerializerExtension(Extension):
 
     **Jinja Environment Configuration Override**
 
-    .. versionadded:: 3007
+    .. versionadded:: 3007.0
 
     A header can be added to jinja and jinja|yaml files to override the jinja
     environment configuration on a per-file basis. The header must appear on
