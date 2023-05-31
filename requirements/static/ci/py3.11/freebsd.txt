@@ -24,7 +24,6 @@ attrs==20.3.0
     # via
     #   aiohttp
     #   jsonschema
-    #   pytest
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-skip-markers
@@ -757,7 +756,7 @@ pytest-tempdir==2019.10.12
     #   pytest-salt-factories
 pytest-timeout==1.4.2
     # via -r requirements/pytest.txt
-pytest==7.2.0 ; python_version > "3.6"
+pytest==7.3.1
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code

@@ -6,7 +6,6 @@
 #
 attrs==22.2.0
     # via
-    #   pytest
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-skip-markers
@@ -118,7 +117,7 @@ pytest-system-statistics==1.0.2
     # via pytest-salt-factories
 pytest-tempdir==2019.10.12
     # via pytest-salt-factories
-pytest==7.2.1
+pytest==7.3.1
     # via
     #   pytest-helpers-namespace
     #   pytest-salt-factories
