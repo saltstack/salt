@@ -219,7 +219,7 @@ junos-eznc==2.6.7 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 jxmlease==1.0.3 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-kazoo==2.6.1 ; sys_platform != "win32" and sys_platform != "darwin"
+kazoo==2.9.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
 keyring==5.7.1
     # via -r requirements/static/ci/common.in
