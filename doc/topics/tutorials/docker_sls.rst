@@ -22,7 +22,7 @@ Step 1 - Install Docker
 =======================
 
 Since setting up Docker is well covered in the Docker documentation we will
-make no such effort to describe it here. Please see the Docker Installation 
+make no such effort to describe it here. Please see the Docker Installation
 Documentation for installing and setting up Docker:
 https://docs.docker.com/engine/installation/
 
@@ -37,8 +37,8 @@ Step 2 - Install Salt
 =====================
 
 For this tutorial we will be using Salt Call, which is available in the
-`salt-minion` package, please follow the Salt Installation docs found here:
-https://repo.saltstack.com/
+`salt-minion` package, please follow the
+`Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`_.
 
 Step 3 - Create With Salt States
 ================================
@@ -47,7 +47,7 @@ Next some Salt States are needed, for this example a very basic state which
 installs `vim` is used, but anything Salt States can do can be done here,
 please see the Salt States Introduction Tutorial to learn more about Salt
 States:
-https://docs.saltstack.com/en/stage/getstarted/config/
+https://docs.saltproject.io/en/stage/getstarted/config/
 
 For this tutorial, simply create a small state file in `/srv/salt/vim.sls`:
 

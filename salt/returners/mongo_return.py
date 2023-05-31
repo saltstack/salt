@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return data to a mongodb server
 
@@ -60,23 +59,17 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return mongo --return_kwargs '{"db": "another-salt"}'
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 import salt.returners
-
-# import Salt libs
 import salt.utils.jid
-from salt.ext import six
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
-# Import third party libs
 try:
     import pymongo
 
-    PYMONGO_VERSION = _LooseVersion(pymongo.version)
+    PYMONGO_VERSION = Version(pymongo.version)
     HAS_PYMONGO = True
 except ImportError:
     HAS_PYMONGO = False
@@ -100,7 +93,7 @@ def _remove_dots(src):
     Remove dots from the given data structure
     """
     output = {}
-    for key, val in six.iteritems(src):
+    for key, val in src.items():
         if isinstance(val, dict):
             val = _remove_dots(val)
         output[key.replace(".", "-")] = val
@@ -143,7 +136,7 @@ def _get_conn(ret):
     # pymongo versions < 2.3 until then there are
     # a bunch of these sections that need to be supported
 
-    if PYMONGO_VERSION > _LooseVersion("2.3"):
+    if PYMONGO_VERSION > Version("2.3"):
         conn = pymongo.MongoClient(host, port)
     else:
         conn = pymongo.Connection(host, port)
@@ -153,7 +146,7 @@ def _get_conn(ret):
         mdb.authenticate(user, password)
 
     if indexes:
-        if PYMONGO_VERSION > _LooseVersion("2.3"):
+        if PYMONGO_VERSION > Version("2.3"):
             mdb.saltReturns.create_index("minion")
             mdb.saltReturns.create_index("jid")
 
@@ -201,7 +194,7 @@ def returner(ret):
 
     # again we run into the issue with deprecated code from previous versions
 
-    if PYMONGO_VERSION > _LooseVersion("2.3"):
+    if PYMONGO_VERSION > Version("2.3"):
         # using .copy() to ensure original data for load is unchanged
         mdb.saltReturns.insert_one(sdata.copy())
     else:

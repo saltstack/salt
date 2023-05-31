@@ -2,10 +2,12 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+import copy
 import os
 import tempfile
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.saltmod as saltmod
@@ -167,7 +169,10 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
         ret.update(
             {
-                "comment": "States ran successfully. No changes made to minion1, minion3, minion2."
+                "comment": (
+                    "States ran successfully. No changes made to minion1, minion3,"
+                    " minion2."
+                )
             }
         )
         del ret["__jid__"]
@@ -203,7 +208,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             "name": name,
             "changes": {},
             "result": None,
-            "comment": "Function state would be executed " "on target {}".format(tgt),
+            "comment": "Function state would be executed on target {}".format(tgt),
         }
 
         with patch.dict(saltmod.__opts__, {"test": True}):
@@ -212,9 +217,10 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         ret.update(
             {
                 "result": True,
-                "changes": {"out": "highstate", "ret": {tgt: ""}},
-                "comment": "Function ran successfully."
-                " Function state ran on {}.".format(tgt),
+                "changes": {"ret": {tgt: ""}},
+                "comment": (
+                    "Function ran successfully. Function state ran on {}.".format(tgt)
+                ),
             }
         )
         with patch.dict(saltmod.__opts__, {"test": False}):
@@ -305,6 +311,76 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
                         saltmod.wait_for_event(name, tgt, timeout=-1.0), ret
                     )
 
+    # 'wait_for_event' function tests: 2
+
+    def test_wait_for_event_list_single_event(self):
+        """
+        Test to watch Salt's event bus and block until a condition is met
+        """
+        name = "presence"
+        event_id = "lost"
+        tgt = ["minion_1", "minion_2", "minion_3"]
+
+        comt = "Timeout value reached."
+
+        ret = {"name": name, "changes": {}, "result": False, "comment": comt}
+
+        class Mockevent:
+            """
+            Mock event class
+            """
+
+            flag = None
+
+            def __init__(self):
+                self.full = None
+
+            def get_event(self, full):
+                """
+                Mock get_event method
+                """
+                self.full = full
+                if self.flag:
+                    return {"tag": name, "data": {"lost": tgt}}
+                return None
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                pass
+
+        with patch.object(
+            salt.utils.event, "get_event", MagicMock(return_value=Mockevent())
+        ):
+            with patch.dict(saltmod.__opts__, {"sock_dir": True, "transport": True}):
+                with patch(
+                    "salt.states.saltmod.time.time", MagicMock(return_value=1.0)
+                ):
+                    ret.update({"comment": "Timeout value reached.", "result": False})
+                    self.assertDictEqual(
+                        saltmod.wait_for_event(
+                            name, tgt, event_id=event_id, timeout=-1.0
+                        ),
+                        ret,
+                    )
+
+                    Mockevent.flag = True
+                    ret.update(
+                        {
+                            "name": name,
+                            "changes": {"minions_seen": tgt},
+                            "result": True,
+                            "comment": "All events seen in 0.0 seconds.",
+                        }
+                    )
+                    self.assertDictEqual(
+                        saltmod.wait_for_event(
+                            name, copy.deepcopy(tgt), event_id="lost", timeout=1.0
+                        ),
+                        ret,
+                    )
+
     # 'runner' function tests: 1
 
     def test_runner(self):
@@ -318,7 +394,6 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             "name": "state",
             "result": True,
             "comment": "Runner function 'state' executed.",
-            "__orchestration__": True,
         }
         runner_mock = MagicMock(return_value={"return": True})
 
@@ -338,7 +413,6 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             "name": "state",
             "result": True,
             "comment": "Wheel function 'state' executed.",
-            "__orchestration__": True,
         }
         wheel_mock = MagicMock(return_value={"return": True})
 
@@ -348,7 +422,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
     @pytest.mark.slow_test
     def test_state_ssh(self):
         """
-        Test saltmod passes roster to saltutil.cmd
+        Test saltmod state passes roster to saltutil.cmd
         """
         origcmd = saltmod.__salt__["saltutil.cmd"]
         cmd_kwargs = {}
@@ -363,6 +437,27 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             ret = saltmod.state(
                 "state.sls", tgt="*", ssh=True, highstate=True, roster="my_roster"
             )
+        assert "roster" in cmd_kwargs
+        assert cmd_kwargs["roster"] == "my_roster"
+
+    @pytest.mark.slow_test
+    def test_function_ssh(self):
+        """
+        Test saltmod function passes roster to saltutil.cmd
+        """
+        origcmd = saltmod.__salt__["saltutil.cmd"]
+        cmd_kwargs = {}
+        cmd_args = []
+
+        def cmd_mock(*args, **kwargs):
+            cmd_args.extend(args)
+            cmd_kwargs.update(kwargs)
+            return origcmd(*args, **kwargs)
+
+        with patch.dict(saltmod.__opts__, {"test": False}), patch.dict(
+            saltmod.__salt__, {"saltutil.cmd": cmd_mock}
+        ):
+            saltmod.function("state", tgt="*", ssh=True, roster="my_roster")
         assert "roster" in cmd_kwargs
         assert cmd_kwargs["roster"] == "my_roster"
 
@@ -386,9 +481,9 @@ class StatemodTests(TestCase, LoaderModuleMockMixin):
         }
 
     def test_statemod_state(self):
-        """ Smoke test for for salt.states.statemod.state().  Ensures that we
-            don't take an exception if optional parameters are not specified in
-            __opts__ or __env__.
+        """Smoke test for for salt.states.statemod.state().  Ensures that we
+        don't take an exception if optional parameters are not specified in
+        __opts__ or __env__.
         """
         args = ("webserver_setup", "webserver2")
         kwargs = {

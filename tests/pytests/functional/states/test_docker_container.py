@@ -10,13 +10,14 @@ import subprocess
 
 import attr
 import pytest
+from saltfactories.utils import random_string
+
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
 from salt.modules.config import DEFAULTS as _config_defaults
-from saltfactories.utils import random_string
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
@@ -305,7 +306,10 @@ def test_running_start_false_without_replace(
     modules.docker.stop(container_name, force=True)
     # Re-run the state with start=False
     ret = docker_container.running(
-        name=container_name, image=image, start=False, shutdown_timeout=1,
+        name=container_name,
+        image=image,
+        start=False,
+        shutdown_timeout=1,
     )
     assert ret.result is True
     # Check to make sure that the container was not replaced
@@ -385,7 +389,10 @@ def test_running_start_true(docker_container, container_name, image, modules):
     modules.docker.stop(container_name, force=True)
     # Re-run the state with start=True
     ret = docker_container.running(
-        name=container_name, image=image, start=True, shutdown_timeout=1,
+        name=container_name,
+        image=image,
+        start=True,
+        shutdown_timeout=1,
     )
     assert ret.result is True
     # Check to make sure that the container was not replaced
@@ -405,7 +412,10 @@ def test_running_with_invalid_input(docker_container, container_name, image):
     """
     # Try to create a container with invalid input
     ret = docker_container.running(
-        name=container_name, image=image, ulimits="nofile:2048", shutdown_timeout=1,
+        name=container_name,
+        image=image,
+        ulimits="nofile:2048",
+        shutdown_timeout=1,
     )
     assert ret.result is False
     # Check to make sure that the container was not created
@@ -413,8 +423,8 @@ def test_running_with_invalid_input(docker_container, container_name, image):
     # Check that the error message about the invalid argument is
     # included in the comment for the state
     assert (
-        "Ulimit definition 'nofile:2048' is not in the format type=soft_limit[:hard_limit]"
-        in ret.comment
+        "Ulimit definition 'nofile:2048' is not in the format"
+        " type=soft_limit[:hard_limit]" in ret.comment
     )
 
 
@@ -483,7 +493,10 @@ def test_running_with_removed_argument(
     """
     # Create the container
     ret = docker_container.running(
-        name=container_name, image=image, command="sleep 600", shutdown_timeout=1,
+        name=container_name,
+        image=image,
+        command="sleep 600",
+        shutdown_timeout=1,
     )
     assert ret.result is True
     # Run the state again with the "command" argument removed
@@ -538,13 +551,17 @@ def test_absent_with_stopped_container(
     # Create the container
     modules.docker.create(image, name=container_name)
     # Remove the container
-    ret = docker_container.absent(name=container_name,)
+    ret = docker_container.absent(
+        name=container_name,
+    )
     assert ret.result is True
     # Check that we have a removed container ID in the changes dict
     assert "removed" in ret.changes
 
     # Run the state again to confirm it changes nothing
-    ret = docker_container.absent(name=container_name,)
+    ret = docker_container.absent(
+        name=container_name,
+    )
     assert ret.result is True
     # Nothing should have changed
     assert ret.changes == {}
@@ -559,13 +576,18 @@ def test_absent_with_running_container(docker_container, container_name, image):
     """
     # Create the container
     ret = docker_container.running(
-        name=container_name, image=image, command="sleep 600", shutdown_timeout=1,
+        name=container_name,
+        image=image,
+        command="sleep 600",
+        shutdown_timeout=1,
     )
     assert ret.result is True
 
     # Try to remove the container. This should fail because force=True
     # is needed to remove a container that is running.
-    ret = docker_container.absent(name=container_name,)
+    ret = docker_container.absent(
+        name=container_name,
+    )
     assert ret.result is False
     # Nothing should have changed
     assert ret.changes == {}
@@ -575,7 +597,10 @@ def test_absent_with_running_container(docker_container, container_name, image):
     )
 
     # Try again with force=True. This should succeed.
-    ret = docker_container.absent(name=container_name, force=True,)
+    ret = docker_container.absent(
+        name=container_name,
+        force=True,
+    )
     assert ret.result is True
     # Check that we have a removed container ID in the changes dict
     assert "removed" in ret.changes
@@ -837,7 +862,9 @@ def test_running_explicit_networks(
         # Create a container with no specific network configuration. The only
         # networks connected will be the default ones.
         ret = docker_container.running(
-            name=container_name, image=image, shutdown_timeout=1,
+            name=container_name,
+            image=image,
+            shutdown_timeout=1,
         )
         assert ret.result is True
 
@@ -848,7 +875,10 @@ def test_running_explicit_networks(
         # Re-run the state with an explicit network configuration. All of the
         # default networks should be disconnected.
         ret = docker_container.running(
-            name=container_name, image=image, networks=[net.name], shutdown_timeout=1,
+            name=container_name,
+            image=image,
+            networks=[net.name],
+            shutdown_timeout=1,
         )
         assert ret.result is True
         net_changes = ret.changes["container"]["Networks"]
@@ -891,7 +921,10 @@ def test_run_with_onlyif(docker_container, container_name, image, modules):
     for cmd in test_cmds:
         log.debug("Trying %s", cmd)
         ret = docker_container.run(
-            name=container_name, image=image, command="whoami", onlyif=cmd,
+            name=container_name,
+            image=image,
+            command="whoami",
+            onlyif=cmd,
         )
         try:
             assert ret.result is True
@@ -904,7 +937,10 @@ def test_run_with_onlyif(docker_container, container_name, image, modules):
     for cmd in ("/bin/true", ["/bin/true", "ls /"]):
         log.debug("Trying %s", cmd)
         ret = docker_container.run(
-            name=container_name, image=image, command="whoami", onlyif=cmd,
+            name=container_name,
+            image=image,
+            command="whoami",
+            onlyif=cmd,
         )
         assert ret.result is True
         assert ret.changes["Logs"] == "root\n"
@@ -924,7 +960,10 @@ def test_run_with_unless(docker_container, container_name, image, modules):
     for cmd in ("/bin/true", ["/bin/true", "/bin/true"]):
         log.debug("Trying %s", cmd)
         ret = docker_container.run(
-            name=container_name, image=image, command="whoami", unless=cmd,
+            name=container_name,
+            image=image,
+            command="whoami",
+            unless=cmd,
         )
         try:
             assert ret.result is True
@@ -943,7 +982,10 @@ def test_run_with_unless(docker_container, container_name, image, modules):
     for cmd in test_cmds:
         log.debug("Trying %s", cmd)
         ret = docker_container.run(
-            name=container_name, image=image, command="whoami", unless=cmd,
+            name=container_name,
+            image=image,
+            command="whoami",
+            unless=cmd,
         )
         assert ret.result is True
         assert ret.changes["Logs"] == "root\n"
@@ -972,7 +1014,10 @@ def test_run_with_creates(
         try:
             log.debug("Trying %s", good_file1)
             ret = docker_container.run(
-                name=container_name, image=image, command="whoami", creates=good_file1,
+                name=container_name,
+                image=image,
+                command="whoami",
+                creates=good_file1,
             )
             assert ret.result is True
             assert not ret.changes
@@ -989,7 +1034,10 @@ def test_run_with_creates(
         try:
             log.debug("Trying %s", path)
             ret = docker_container.run(
-                name=container_name, image=image, command="whoami", creates=path,
+                name=container_name,
+                image=image,
+                command="whoami",
+                creates=path,
             )
             assert ret.result is True
             assert not ret.changes
@@ -1006,7 +1054,10 @@ def test_run_with_creates(
             try:
                 log.debug("Trying %s", path)
                 ret = docker_container.run(
-                    name=container_name, image=image, command="whoami", creates=path,
+                    name=container_name,
+                    image=image,
+                    command="whoami",
+                    creates=path,
                 )
                 assert ret.result is True
                 assert ret.changes["Logs"] == "root\n"
@@ -1031,7 +1082,10 @@ def test_run_replace(docker_container, container_name, image):
 
     # Run again with replace=False, this should fail
     ret = docker_container.run(
-        name=container_name, image=image, command="whoami", replace=False,
+        name=container_name,
+        image=image,
+        command="whoami",
+        replace=False,
     )
     assert ret.result is False
     assert not ret.changes
@@ -1044,7 +1098,10 @@ def test_run_replace(docker_container, container_name, image):
     # a "Replaces" key in the changes dict to show that a container was
     # replaced.
     ret = docker_container.run(
-        name=container_name, image=image, command="whoami", replace=True,
+        name=container_name,
+        image=image,
+        command="whoami",
+        replace=True,
     )
     assert ret.result is True
     assert ret.changes["Logs"] == "root\n"
@@ -1063,20 +1120,28 @@ def test_run_force(docker_container, container_name, image):
     # Run again with replace=True, this should fail because the container
     # is still running
     ret = docker_container.run(
-        name=container_name, image=image, command="whoami", replace=True, force=False,
+        name=container_name,
+        image=image,
+        command="whoami",
+        replace=True,
+        force=False,
     )
     assert ret.result is False
     assert not ret.changes
     assert ret.comment == (
-        "Encountered error running container: Container '{}' exists and is running. "
-        "Run with replace=True and force=True to force removal of the existing container."
+        "Encountered error running container: Container '{}' exists and is running. Run"
+        " with replace=True and force=True to force removal of the existing container."
     ).format(container_name)
 
     # Run again with replace=True and force=True, this should proceed and
     # there should be a "Replaces" key in the changes dict to show that a
     # container was replaced.
     ret = docker_container.run(
-        name=container_name, image=image, command="whoami", replace=True, force=True,
+        name=container_name,
+        image=image,
+        command="whoami",
+        replace=True,
+        force=True,
     )
     assert ret.result is True
     assert ret.changes["Logs"] == "root\n"
@@ -1097,7 +1162,10 @@ def test_run_failhard(docker_container, container_name, image, modules):
     Engine API will cause an exception to be raised.
     """
     ret = docker_container.run(
-        name=container_name, image=image, command="/bin/false", failhard=True,
+        name=container_name,
+        image=image,
+        command="/bin/false",
+        failhard=True,
     )
     assert ret.result is False
     assert ret.changes["Logs"] == ""
@@ -1105,7 +1173,10 @@ def test_run_failhard(docker_container, container_name, image, modules):
     modules.docker.rm(container_name, force=True)
 
     ret = docker_container.run(
-        name=container_name, image=image, command="/bin/false", failhard=False,
+        name=container_name,
+        image=image,
+        command="/bin/false",
+        failhard=False,
     )
     assert ret.result is True
     assert ret.changes["Logs"] == ""
@@ -1120,7 +1191,10 @@ def test_run_bg(docker_container, container_name, image, modules):
     for the container to ensure that it ran as expected.
     """
     ret = docker_container.run(
-        name=container_name, image=image, command='sh -c "sleep 5 && whoami"', bg=True,
+        name=container_name,
+        image=image,
+        command='sh -c "sleep 5 && whoami"',
+        bg=True,
     )
     assert ret.result is True
     assert "Logs" not in ret.changes

@@ -2,24 +2,25 @@
     :codeauthor: Lukas Raska <lukas@raska.me>
 """
 
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+import pytest
 
-# Import Salt Libs
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules import elasticsearch
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # Import elasticsearch exceptions
 NO_ELASTIC = False
 try:
-    from elasticsearch import TransportError, NotFoundError
+    from elasticsearch import NotFoundError, TransportError
 except Exception:  # pylint: disable=broad-except
     NO_ELASTIC = True
 
 
-@skipIf(NO_ELASTIC, "Install elasticsearch-py before running Elasticsearch unit tests.")
+@pytest.mark.skipif(
+    NO_ELASTIC,
+    reason="Install elasticsearch-py before running Elasticsearch unit tests.",
+)
 class ElasticsearchTestCase(TestCase):
     """
     Test cases for salt.modules.elasticsearch

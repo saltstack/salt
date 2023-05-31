@@ -354,7 +354,9 @@ class PillarTestCase(TestCase):
 
         tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         try:
-            sls_files = self._setup_test_topfile_sls_pillar_match(tempdir,)
+            sls_files = self._setup_test_topfile_sls_pillar_match(
+                tempdir,
+            )
             fc_mock = MockFileclient(
                 cache_file=sls_files["top"]["dest"],
                 list_states=["top", "ssh", "ssh.minion", "generic", "generic.minion"],
@@ -375,43 +377,6 @@ class PillarTestCase(TestCase):
                 self.assertEqual(pillar.compile_pillar()["generic"]["key1"], "value1")
         finally:
             shutil.rmtree(tempdir, ignore_errors=True)
-
-    def test_dynamic_pillarenv(self):
-        opts = {
-            "optimization_order": [0, 1, 2],
-            "renderer": "json",
-            "renderer_blacklist": [],
-            "renderer_whitelist": [],
-            "state_top": "",
-            "pillar_roots": {
-                "__env__": ["/srv/pillar/__env__"],
-                "base": ["/srv/pillar/base"],
-            },
-            "file_roots": {"base": ["/srv/salt/base"], "dev": ["/svr/salt/dev"]},
-            "extension_modules": "",
-        }
-        pillar = salt.pillar.Pillar(opts, {}, "mocked-minion", "base", pillarenv="dev")
-        self.assertEqual(
-            pillar.opts["pillar_roots"],
-            {"base": ["/srv/pillar/base"], "dev": ["/srv/pillar/__env__"]},
-        )
-
-    def test_ignored_dynamic_pillarenv(self):
-        opts = {
-            "optimization_order": [0, 1, 2],
-            "renderer": "json",
-            "renderer_blacklist": [],
-            "renderer_whitelist": [],
-            "state_top": "",
-            "pillar_roots": {
-                "__env__": ["/srv/pillar/__env__"],
-                "base": ["/srv/pillar/base"],
-            },
-            "file_roots": {"base": ["/srv/salt/base"], "dev": ["/svr/salt/dev"]},
-            "extension_modules": "",
-        }
-        pillar = salt.pillar.Pillar(opts, {}, "mocked-minion", "base", pillarenv="base")
-        self.assertEqual(pillar.opts["pillar_roots"], {"base": ["/srv/pillar/base"]})
 
     @patch("salt.fileclient.Client.list_states")
     def test_malformed_pillar_sls(self, mock_list_states):
@@ -1088,7 +1053,7 @@ sub_with_slashes:
         )
 
 
-@patch("salt.transport.client.ReqChannel.factory", MagicMock())
+@patch("salt.channel.client.ReqChannel.factory", MagicMock())
 class RemotePillarTestCase(TestCase):
     """
     Tests for instantiating a RemotePillar in salt.pillar
@@ -1096,9 +1061,21 @@ class RemotePillarTestCase(TestCase):
 
     def setUp(self):
         self.grains = {}
+        self.tmp_pki = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.opts = {
+            "pki_dir": self.tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
+            "renderer": "json",
+            "path_to_add": "fake_data",
+            "path_to_add2": {"fake_data2": ["fake_data3", "fake_data4"]},
+            "pass_to_ext_pillars": ["path_to_add", "path_to_add2"],
+        }
 
     def tearDown(self):
-        for attr in ("grains",):
+        for attr in ("grains", "tmp_pki", "opts"):
             try:
                 delattr(self, attr)
             except AttributeError:
@@ -1111,17 +1088,25 @@ class RemotePillarTestCase(TestCase):
             mock_get_extra_minion_data,
         ):
 
-            salt.pillar.RemotePillar({}, self.grains, "mocked-minion", "dev")
-        mock_get_extra_minion_data.assert_called_once_with({"saltenv": "dev"})
+            salt.pillar.RemotePillar(self.opts, self.grains, "mocked-minion", "dev")
+        call_opts = dict(self.opts, saltenv="dev")
+        mock_get_extra_minion_data.assert_called_once_with(call_opts)
 
     def test_multiple_keys_in_opts_added_to_pillar(self):
         opts = {
+            "pki_dir": self.tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
             "renderer": "json",
             "path_to_add": "fake_data",
             "path_to_add2": {"fake_data2": ["fake_data3", "fake_data4"]},
             "pass_to_ext_pillars": ["path_to_add", "path_to_add2"],
         }
-        pillar = salt.pillar.RemotePillar(opts, self.grains, "mocked-minion", "dev")
+        pillar = salt.pillar.RemotePillar(
+            self.opts, self.grains, "mocked-minion", "dev"
+        )
         self.assertEqual(
             pillar.extra_minion_data,
             {
@@ -1131,56 +1116,33 @@ class RemotePillarTestCase(TestCase):
         )
 
     def test_subkey_in_opts_added_to_pillar(self):
-        opts = {
-            "renderer": "json",
-            "path_to_add": "fake_data",
-            "path_to_add2": {
+        opts = dict(
+            self.opts,
+            path_to_add2={
                 "fake_data5": "fake_data6",
                 "fake_data2": ["fake_data3", "fake_data4"],
             },
-            "pass_to_ext_pillars": ["path_to_add2:fake_data5"],
-        }
+            pass_to_ext_pillars=["path_to_add2:fake_data5"],
+        )
         pillar = salt.pillar.RemotePillar(opts, self.grains, "mocked-minion", "dev")
         self.assertEqual(
             pillar.extra_minion_data, {"path_to_add2": {"fake_data5": "fake_data6"}}
         )
 
     def test_non_existent_leaf_opt_in_add_to_pillar(self):
-        opts = {
-            "renderer": "json",
-            "path_to_add": "fake_data",
-            "path_to_add2": {
-                "fake_data5": "fake_data6",
-                "fake_data2": ["fake_data3", "fake_data4"],
-            },
-            "pass_to_ext_pillars": ["path_to_add2:fake_data_non_exist"],
-        }
-        pillar = salt.pillar.RemotePillar(opts, self.grains, "mocked-minion", "dev")
+        pillar = salt.pillar.RemotePillar(
+            self.opts, self.grains, "mocked-minion", "dev"
+        )
         self.assertEqual(pillar.pillar_override, {})
 
     def test_non_existent_intermediate_opt_in_add_to_pillar(self):
-        opts = {
-            "renderer": "json",
-            "path_to_add": "fake_data",
-            "path_to_add2": {
-                "fake_data5": "fake_data6",
-                "fake_data2": ["fake_data3", "fake_data4"],
-            },
-            "pass_to_ext_pillars": ["path_to_add_no_exist"],
-        }
-        pillar = salt.pillar.RemotePillar(opts, self.grains, "mocked-minion", "dev")
+        pillar = salt.pillar.RemotePillar(
+            self.opts, self.grains, "mocked-minion", "dev"
+        )
         self.assertEqual(pillar.pillar_override, {})
 
     def test_malformed_add_to_pillar(self):
-        opts = {
-            "renderer": "json",
-            "path_to_add": "fake_data",
-            "path_to_add2": {
-                "fake_data5": "fake_data6",
-                "fake_data2": ["fake_data3", "fake_data4"],
-            },
-            "pass_to_ext_pillars": MagicMock(),
-        }
+        opts = dict(self.opts, pass_to_ext_pillars=MagicMock())
         with self.assertRaises(salt.exceptions.SaltClientError) as excinfo:
             salt.pillar.RemotePillar(opts, self.grains, "mocked-minion", "dev")
         self.assertEqual(
@@ -1189,6 +1151,11 @@ class RemotePillarTestCase(TestCase):
 
     def test_pillar_send_extra_minion_data_from_config(self):
         opts = {
+            "pki_dir": self.tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
             "renderer": "json",
             "pillarenv": "fake_pillar_env",
             "path_to_add": "fake_data",
@@ -1202,7 +1169,7 @@ class RemotePillarTestCase(TestCase):
             crypted_transfer_decode_dictentry=MagicMock(return_value={})
         )
         with patch(
-            "salt.transport.client.ReqChannel.factory",
+            "salt.channel.client.ReqChannel.factory",
             MagicMock(return_value=mock_channel),
         ):
             pillar = salt.pillar.RemotePillar(
@@ -1232,6 +1199,11 @@ class RemotePillarTestCase(TestCase):
         """
         mocked_minion = MagicMock()
         opts = {
+            "pki_dir": self.tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
             "file_client": "local",
             "use_master_when_local": True,
             "pillar_cache": None,
@@ -1241,7 +1213,7 @@ class RemotePillarTestCase(TestCase):
         self.assertNotEqual(type(pillar), salt.pillar.PillarCache)
 
 
-@patch("salt.transport.client.AsyncReqChannel.factory", MagicMock())
+@patch("salt.channel.client.AsyncReqChannel.factory", MagicMock())
 class AsyncRemotePillarTestCase(TestCase):
     """
     Tests for instantiating a AsyncRemotePillar in salt.pillar
@@ -1249,9 +1221,10 @@ class AsyncRemotePillarTestCase(TestCase):
 
     def setUp(self):
         self.grains = {}
+        self.tmp_pki = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
     def tearDown(self):
-        for attr in ("grains",):
+        for attr in ("grains", "tmp_pki"):
             try:
                 delattr(self, attr)
             except AttributeError:
@@ -1269,6 +1242,11 @@ class AsyncRemotePillarTestCase(TestCase):
 
     def test_pillar_send_extra_minion_data_from_config(self):
         opts = {
+            "pki_dir": self.tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
             "renderer": "json",
             "pillarenv": "fake_pillar_env",
             "path_to_add": "fake_data",
@@ -1282,7 +1260,7 @@ class AsyncRemotePillarTestCase(TestCase):
             crypted_transfer_decode_dictentry=MagicMock(return_value={})
         )
         with patch(
-            "salt.transport.client.AsyncReqChannel.factory",
+            "salt.channel.client.AsyncReqChannel.factory",
             MagicMock(return_value=mock_channel),
         ):
             pillar = salt.pillar.RemotePillar(
@@ -1305,7 +1283,7 @@ class AsyncRemotePillarTestCase(TestCase):
         )
 
 
-@patch("salt.transport.client.ReqChannel.factory", MagicMock())
+@patch("salt.channel.client.ReqChannel.factory", MagicMock())
 class PillarCacheTestCase(TestCase):
     """
     Tests for instantiating a PillarCache in salt.pillar

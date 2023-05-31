@@ -1,233 +1,69 @@
-"""
-    :codeauthor: Gareth J. Greenaway <ggreenaway@vmware.com>
-"""
+import os
 
 import pytest
-import salt.modules.beacons as beaconmod
-import salt.states.beacon as beaconstate
-import salt.states.file as filestate
-from salt.utils.event import SaltEvent
-from tests.support.mock import MagicMock, patch
+
+import salt.modules.file as filemod
+import salt.states.file as file
+from tests.support.mock import call, create_autospec, patch
 
 
-@pytest.fixture
-def configure_loader_modules():
-    return {
-        filestate: {
-            "__env__": "base",
-            "__salt__": {"file.manage_file": False},
-            "__opts__": {"test": False, "cachedir": ""},
-            "__instance_id__": "",
-            "__low__": {},
-            "__utils__": {},
-        },
-        beaconstate: {"__salt__": {}, "__opts__": {}},
-        beaconmod: {"__salt__": {}, "__opts__": {}},
-    }
+@pytest.fixture(autouse=True)
+def setup_loader(request):
+    setup_loader_modules = {file: {"__opts__": {"test": False}}}
+    with pytest.helpers.loader_mock(request, setup_loader_modules) as loader_mock:
+        yield loader_mock
 
 
-def test_mod_beacon_unsupported():
-    """
-    Test to create a beacon based on a file
-    """
-    name = "/tmp/tempfile"
-
-    with patch.dict(filestate.__salt__, {"beacons.list": MagicMock(return_value={})}):
-        with patch.dict(filestate.__states__, {"beacon.present": beaconstate.present}):
-            ret = filestate.mod_beacon(name, sfun="copy")
-            expected = {
-                "name": name,
-                "changes": {},
-                "result": False,
-                "comment": "file.copy does not work with the beacon state function",
-            }
-
-            assert ret == expected
+@pytest.fixture()
+def fake_remove():
+    fake_remove_mod = create_autospec(filemod.remove)
+    with patch.dict(file.__salt__, {"file.remove": fake_remove_mod}):
+        yield fake_remove_mod
 
 
-def test_mod_beacon_beacon_false():
-    """
-    Test to create a beacon based on a file
-    """
-    name = "/tmp/tempfile"
+# TODO: This file.absent test should be a functional test instead. For now this is probably good enough -W. Werner, 2020-09-15
+@pytest.mark.parametrize("mock_mod", ["os.path.isfile", "os.path.isdir"])
+def test_file_absent_should_use_force_mode_for_file_remove(fake_remove, mock_mod):
+    expected_path = "/some/abspath/foo"
+    with patch(mock_mod, autospec=True, return_value=True):
+        file.absent(expected_path)
 
-    with patch.dict(filestate.__salt__, {"beacons.list": MagicMock(return_value={})}):
-        with patch.dict(filestate.__states__, {"beacon.present": beaconstate.present}):
-            ret = filestate.mod_beacon(name, sfun="managed")
-            expected = {
-                "name": name,
-                "changes": {},
-                "result": True,
-                "comment": "Not adding beacon.",
-            }
-
-            assert ret == expected
-
-            ret = filestate.mod_beacon(name, sfun="managed", beacon=False)
-            expected = {
-                "name": name,
-                "changes": {},
-                "result": True,
-                "comment": "Not adding beacon.",
-            }
-
-            assert ret == expected
+    fake_remove.assert_called_with(expected_path, force=True)
 
 
-def test_mod_beacon_file(tmp_path):
-    """
-    Test to create a beacon based on a file
-    """
+# TODO: This file.matches test should be a functional test instead. For now this is probably good enough -W. Werner, 2020-09-15
+def test_file_tidied_for_file_remove(fake_remove):
+    patch_is_dir = patch("os.path.isdir", autospec=True, return_value=True)
+    patch_os_walk = patch(
+        "os.walk",
+        autospec=True,
+        return_value=[("some root", ("dirs",), ("file1", "file2"))],
+    )
+    patch_stat = patch("os.stat", autospec=True)
+    with patch_os_walk, patch_is_dir, patch_stat as fake_stat:
+        fake_stat.return_value.st_atime = 1600356711.1166897
+        fake_stat.return_value.st_mode = 33188
+        fake_stat.return_value.st_size = 9001  # It's over 9000!
 
-    name = "/tmp/tempfile"
+        file.tidied("/some/directory/tree")
 
-    event_returns = [
-        {
-            "complete": True,
-            "tag": "/salt/minion/minion_beacons_list_complete",
-            "beacons": {},
-        },
-        {
-            "complete": True,
-            "tag": "/salt/minion/minion_beacons_list_complete",
-            "beacons": {},
-        },
-        {
-            "complete": True,
-            "tag": "/salt/minion/minion_beacons_list_available_complete",
-            "beacons": ["inotify"],
-        },
-        {
-            "valid": True,
-            "tag": "/salt/minion/minion_beacon_validation_complete",
-            "vcomment": "Valid beacon configuration",
-        },
-        {
-            "complete": True,
-            "tag": "/salt/minion/minion_beacon_add_complete",
-            "beacons": {
-                "beacon_inotify_/tmp/tempfile": [
-                    {
-                        "files": {
-                            "/tmp/tempfile": {"mask": ["create", "delete", "modify"]},
-                        }
-                    },
-                    {"interval": 60},
-                    {"coalesce": False},
-                    {"beacon_module": "inotify"},
-                ]
-            },
-        },
-    ]
-    mock = MagicMock(return_value=True)
-    beacon_state_mocks = {
-        "beacons.list": beaconmod.list_,
-        "beacons.add": beaconmod.add,
-        "beacons.list_available": beaconmod.list_available,
-        "event.fire": mock,
-    }
-
-    beacon_mod_mocks = {"event.fire": mock}
-
-    sock_dir = str(tmp_path / "test-socks")
-    with patch.dict(filestate.__states__, {"beacon.present": beaconstate.present}):
-        with patch.dict(beaconstate.__salt__, beacon_state_mocks):
-            with patch.dict(beaconmod.__salt__, beacon_mod_mocks):
-                with patch.dict(
-                    beaconmod.__opts__, {"beacons": {}, "sock_dir": sock_dir}
-                ):
-                    with patch.object(
-                        SaltEvent, "get_event", side_effect=event_returns
-                    ):
-                        ret = filestate.mod_beacon(name, sfun="managed", beacon="True")
-                        expected = {
-                            "name": "beacon_inotify_/tmp/tempfile",
-                            "changes": {},
-                            "result": True,
-                            "comment": "Adding beacon_inotify_/tmp/tempfile to beacons",
-                        }
-
-                        assert ret == expected
+    call_root_file1 = "some root{}file1".format(os.sep)
+    call_root_file2 = "some root{}file2".format(os.sep)
+    fake_remove.assert_has_calls([call(call_root_file1), call(call_root_file2)])
 
 
-def test_mod_beacon_directory(tmp_path):
-    """
-    Test to create a beacon based on a file
-    """
+# TODO: This file.copy test should be a functional test instead. For now this is probably good enough -W. Werner, 2020-09-15
+def test_file_copy_should_use_provided_force_mode_for_file_remove(fake_remove):
 
-    name = "/tmp/tempdir"
+    with patch("os.path.lexists", autospec=True, return_value=True), patch(
+        "os.path.isfile", autospec=True, return_value=True
+    ), patch("os.path.exists", autospec=True, return_value=True), patch.dict(
+        file.__opts__, {"user": "somefakeouser"}
+    ), patch(
+        "salt.states.file._check_user", autospec=True, return_value=False
+    ), patch(
+        "salt.utils.hashutils.get_hash", autospec=True, return_value=["12345", "54321"]
+    ):
+        file.copy_("/tmp/foo", source="/tmp/bar", group="fnord", force=True, mode=777)
 
-    event_returns = [
-        {
-            "complete": True,
-            "tag": "/salt/minion/minion_beacons_list_complete",
-            "beacons": {},
-        },
-        {
-            "complete": True,
-            "tag": "/salt/minion/minion_beacons_list_complete",
-            "beacons": {},
-        },
-        {
-            "complete": True,
-            "tag": "/salt/minion/minion_beacons_list_available_complete",
-            "beacons": ["inotify"],
-        },
-        {
-            "valid": True,
-            "tag": "/salt/minion/minion_beacon_validation_complete",
-            "vcomment": "Valid beacon configuration",
-        },
-        {
-            "complete": True,
-            "tag": "/salt/minion/minion_beacon_add_complete",
-            "beacons": {
-                "beacon_inotify_/tmp/tempdir": [
-                    {
-                        "files": {
-                            "/tmp/tempdir": {
-                                "mask": ["create", "delete", "modify"],
-                                "auto_add": True,
-                                "recurse": True,
-                                "exclude": [],
-                            }
-                        }
-                    },
-                    {"interval": 60},
-                    {"coalesce": False},
-                    {"beacon_module": "inotify"},
-                ]
-            },
-        },
-    ]
-    mock = MagicMock(return_value=True)
-    beacon_state_mocks = {
-        "beacons.list": beaconmod.list_,
-        "beacons.add": beaconmod.add,
-        "beacons.list_available": beaconmod.list_available,
-        "event.fire": mock,
-    }
-
-    beacon_mod_mocks = {"event.fire": mock}
-
-    sock_dir = str(tmp_path / "test-socks")
-    with patch.dict(filestate.__states__, {"beacon.present": beaconstate.present}):
-        with patch.dict(beaconstate.__salt__, beacon_state_mocks):
-            with patch.dict(beaconmod.__salt__, beacon_mod_mocks):
-                with patch.dict(
-                    beaconmod.__opts__, {"beacons": {}, "sock_dir": sock_dir}
-                ):
-                    with patch.object(
-                        SaltEvent, "get_event", side_effect=event_returns
-                    ):
-                        ret = filestate.mod_beacon(
-                            name, sfun="directory", beacon="True"
-                        )
-                        expected = {
-                            "name": "beacon_inotify_/tmp/tempdir",
-                            "changes": {},
-                            "result": True,
-                            "comment": "Adding beacon_inotify_/tmp/tempdir to beacons",
-                        }
-
-                        assert ret == expected
+    fake_remove.assert_called_with("/tmp/foo", force=True)

@@ -24,7 +24,7 @@ test_list_schema_csv = (
     'pg_toast,postgres,""'
 )
 
-test_list_language_csv = "Name\n" "internal\n" "c\n" "sql\n" "plpgsql\n"
+test_list_language_csv = "Name\ninternal\nc\nsql\nplpgsql\n"
 
 test_privileges_list_table_csv = (
     "name\n"
@@ -32,7 +32,7 @@ test_privileges_list_table_csv = (
 )
 
 test_privileges_list_group_csv = (
-    "rolname,admin_option\n" "baruwa,f\n" "baruwatest2,t\n" "baruwatest,f\n"
+    "rolname,admin_option\nbaruwa,f\nbaruwatest2,t\nbaruwatest,f\n"
 )
 
 log = logging.getLogger(__name__)
@@ -228,8 +228,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     "--dbname",
                     "maint_db",
                     "-c",
-                    "CREATE DATABASE \"dbname\" WITH ENCODING = 'utf8' "
-                    "LC_COLLATE = ''",
+                    "CREATE DATABASE \"dbname\" WITH ENCODING = 'utf8' LC_COLLATE = ''",
                 ],
                 host="testhost",
                 password="foo",
@@ -295,7 +294,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                         "Tablespace": "pg_default",
                         "Collate": "en_US",
                         "Owner": "postgres",
-                        "Access privileges": ("{=c/postgres,postgres=CTc/postgres}"),
+                        "Access privileges": "{=c/postgres,postgres=CTc/postgres}",
                     },
                     "template0": {
                         "Encoding": "LATIN1",
@@ -303,7 +302,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                         "Tablespace": "pg_default",
                         "Collate": "en_US",
                         "Owner": "postgres",
-                        "Access privileges": ("{=c/postgres,postgres=CTc/postgres}"),
+                        "Access privileges": "{=c/postgres,postgres=CTc/postgres}",
                     },
                     "postgres": {
                         "Encoding": "LATIN1",
@@ -371,7 +370,8 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                         "--dbname",
                         "maint_db",
                         "-c",
-                        "SELECT pid, pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'test_db' AND pid <> pg_backend_pid();",
+                        "SELECT pid, pg_terminate_backend(pid) FROM pg_stat_activity"
+                        " WHERE datname = 'test_db' AND pid <> pg_backend_pid();",
                     ],
                     host="testhost",
                     password="foo",
@@ -1468,7 +1468,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             query = (
                 "COPY (SELECT relacl AS name FROM pg_catalog.pg_class c "
                 "JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace "
-                "WHERE nspname = 'public' AND relname = 'awl' AND relkind = 'r' "
+                "WHERE nspname = 'public' AND relname = 'awl' AND relkind in ('r', 'v') "
                 "ORDER BY relname) TO STDOUT WITH CSV HEADER"
             )
 

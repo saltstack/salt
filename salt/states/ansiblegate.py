@@ -32,12 +32,10 @@ state:
           - state: installed
 
 """
-
 import logging
 import os
 import sys
 
-# Import salt modules
 import salt.fileclient
 import salt.utils.decorators.path
 from salt.utils.decorators import depends
@@ -108,13 +106,6 @@ def __virtual__():
     return __virtualname__
 
 
-def _client():
-    """
-    Get a fileclient
-    """
-    return salt.fileclient.get_file_client(__opts__)
-
-
 def _changes(plays):
     """
     Find changes in ansible return data
@@ -171,7 +162,8 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
     }
     if git_repo:
         if not isinstance(rundir, str) or not os.path.isdir(rundir):
-            rundir = _client()._extrn_path(git_repo, "base")
+            with salt.fileclient.get_file_client(__opts__) as client:
+                rundir = client._extrn_path(git_repo, "base")
             log.trace("rundir set to %s", rundir)
         if not isinstance(git_kwargs, dict):
             log.debug("Setting git_kwargs to empty dict: %s", git_kwargs)
@@ -184,20 +176,18 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
         checks = __salt__["ansible.playbooks"](
             name, rundir=rundir, check=True, diff=True, **ansible_kwargs
         )
-        if all(
-            not check["changed"]
-            and not check["failures"]
-            and not check["unreachable"]
-            and not check["skipped"]
+        if "stats" not in checks:
+            ret["comment"] = checks.get("stderr", checks)
+            ret["result"] = False
+            ret["changes"] = {}
+        elif all(
+            not check["changed"] and not check["failures"] and not check["unreachable"]
             for check in checks["stats"].values()
         ):
             ret["comment"] = "No changes to be made from playbook {}".format(name)
             ret["result"] = True
         elif any(
-            check["changed"]
-            and not check["failures"]
-            and not check["unreachable"]
-            and not check["skipped"]
+            check["changed"] and not check["failures"] and not check["unreachable"]
             for check in checks["stats"].values()
         ):
             ret["comment"] = "Changes will be made from playbook {}".format(name)
@@ -213,11 +203,12 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
         results = __salt__["ansible.playbooks"](
             name, rundir=rundir, diff=True, **ansible_kwargs
         )
-        if all(
-            not check["changed"]
-            and not check["failures"]
-            and not check["unreachable"]
-            and not check["skipped"]
+        if "stats" not in results:
+            ret["comment"] = results.get("stderr", results)
+            ret["result"] = False
+            ret["changes"] = {}
+        elif all(
+            not check["changed"] and not check["failures"] and not check["unreachable"]
             for check in results["stats"].values()
         ):
             ret["comment"] = "No changes to be made from playbook {}".format(name)
@@ -226,9 +217,7 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
         else:
             ret["changes"] = _changes(results)
             ret["result"] = all(
-                not check["failures"]
-                and not check["unreachable"]
-                and not check["skipped"]
+                not check["failures"] and not check["unreachable"]
                 for check in results["stats"].values()
             )
             if ret["result"]:

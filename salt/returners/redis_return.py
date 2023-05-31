@@ -97,6 +97,7 @@ import logging
 
 import salt.returners
 import salt.utils.jid
+import salt.utils.job
 import salt.utils.json
 import salt.utils.platform
 
@@ -201,7 +202,7 @@ def _get_serv(ret=None):
 
 
 def _get_ttl():
-    return __opts__.get("keep_jobs", 24) * 3600
+    return salt.utils.job.get_keep_jobs_seconds(__opts__)
 
 
 def returner(ret):

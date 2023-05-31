@@ -78,6 +78,7 @@ def _changes(
     win_description=None,
     allow_uid_change=False,
     allow_gid_change=False,
+    password_lock=None,
 ):
     """
     Return a dict of the changes required for a user if the user is present,
@@ -98,9 +99,9 @@ def _changes(
         return False
 
     change = {}
-    if groups is None:
-        groups = lusr["groups"]
     wanted_groups = sorted(set((groups or []) + (optional_groups or [])))
+    if not remove_groups:
+        wanted_groups = sorted(set(wanted_groups + lusr["groups"]))
     if uid and lusr["uid"] != uid:
         change["uid"] = uid
     if gid is not None and lusr["gid"] not in (gid, __salt__["file.group_to_gid"](gid)):
@@ -158,6 +159,10 @@ def _changes(
             change["warndays"] = warndays
         if expire and lshad["expire"] != expire:
             change["expire"] = expire
+        if (password_lock and not lshad["passwd"].startswith("!")) or (
+            password_lock is False and lshad["passwd"].startswith("!")
+        ):
+            change["password_lock"] = password_lock
     elif "shadow.info" in __salt__ and salt.utils.platform.is_windows():
         if (
             expire
@@ -166,6 +171,8 @@ def _changes(
             != salt.utils.dateutils.strftime(expire)
         ):
             change["expire"] = expire
+        if password_lock is False and lusr["account_locked"]:
+            change["password_lock"] = password_lock
 
     # GECOS fields
     fullname = salt.utils.data.decode(fullname)
@@ -266,7 +273,7 @@ def present(
     nologinit=False,
     allow_uid_change=False,
     allow_gid_change=False,
-    **kwargs
+    password_lock=None,
 ):
     """
     Ensure that the named user is present with the specified properties
@@ -369,6 +376,14 @@ def present(
     empty_password
         Set to True to enable password-less login for user, Default is ``False``.
 
+    password_lock
+        Set to ``False`` to unlock a user's password (or Windows account). On
+        non-Windows systems ONLY, this parameter can be set to ``True`` to lock
+        a user's password. Default is ``None``, which does not take action on
+        the password (or Windows account).
+
+        .. versionadded:: 3006.0
+
     shell
         The login shell, defaults to the system default shell
 
@@ -441,7 +456,7 @@ def present(
         home directory will be a unc path. Otherwise the home directory will be
         mapped to the specified drive. Must be a letter followed by a colon.
         Because of the colon, the value must be surrounded by single quotes. ie:
-        - win_homedrive: 'U:
+        ``- win_homedrive: 'U:'``
 
         .. versionchanged:: 2015.8.0
 
@@ -483,29 +498,29 @@ def present(
             if algo == "1":
                 log.warning("Using MD5 for hashing passwords is considered insecure!")
             log.debug(
-                "Re-using existing shadow salt for hashing password using {}".format(
-                    algorithms.get(algo)
-                )
+                "Re-using existing shadow salt for hashing password using %s",
+                algorithms.get(algo),
             )
             password = __salt__["shadow.gen_password"](
                 password, crypt_salt=shadow_salt, algorithm=algorithms.get(algo)
             )
         except ValueError:
             log.info(
-                "No existing shadow salt found, defaulting to a randomly generated new one"
+                "No existing shadow salt found, defaulting to a randomly generated"
+                " new one"
             )
             password = __salt__["shadow.gen_password"](password)
 
     if fullname is not None:
-        fullname = salt.utils.data.decode(fullname)
+        fullname = salt.utils.data.decode(str(fullname))
     if roomnumber is not None:
-        roomnumber = salt.utils.data.decode(roomnumber)
+        roomnumber = salt.utils.data.decode(str(roomnumber))
     if workphone is not None:
-        workphone = salt.utils.data.decode(workphone)
+        workphone = salt.utils.data.decode(str(workphone))
     if homephone is not None:
-        homephone = salt.utils.data.decode(homephone)
+        homephone = salt.utils.data.decode(str(homephone))
     if other is not None:
-        other = salt.utils.data.decode(other)
+        other = salt.utils.data.decode(str(other))
 
     # createhome not supported on Windows
     if __grains__["kernel"] == "Windows":
@@ -529,7 +544,7 @@ def present(
     if groups:
         missing_groups = [x for x in groups if not __salt__["group.info"](x)]
         if missing_groups:
-            ret["comment"] = "The following group(s) are not present: " "{}".format(
+            ret["comment"] = "The following group(s) are not present: {}".format(
                 ",".join(missing_groups)
             )
             ret["result"] = False
@@ -553,33 +568,10 @@ def present(
     if groups and optional_groups:
         for isected in set(groups).intersection(optional_groups):
             log.warning(
-                'Group "%s" specified in both groups and optional_groups '
-                "for user %s",
+                'Group "%s" specified in both groups and optional_groups for user %s',
                 isected,
                 name,
             )
-
-    # Warn until Silicon release, when old gid_from_name argument is used.
-    # Since gid_from_name is the only thing that we're pulling from the kwargs,
-    # we can also remove **kwargs from the function definition once we remove
-    # the entire if block below. The following two tests will also become
-    # redundant when this block is cleaned up:
-    #
-    # integration.states.test_user.UserTest.test_user_present_gid_from_name
-    # integration.states.test_user.UserTest.test_user_present_gid_from_name_and_usergroup
-    gid_from_name = kwargs.pop("gid_from_name", None)
-    if gid_from_name is not None:
-        msg = (
-            "The 'gid_from_name' argument in the user.present state has "
-            "been replaced with 'usergroup'"
-        )
-        if usergroup is not None:
-            msg += ". Ignoring since 'usergroup' was also used."
-        else:
-            msg += ". Update your SLS file to get rid of this warning."
-            usergroup = gid_from_name
-        salt.utils.versions.warn_until("Silicon", msg)
-        ret.setdefault("warnings", []).append(msg)
 
     # If usergroup was specified, we'll also be creating a new
     # group. We should report this change without setting the gid
@@ -621,6 +613,7 @@ def present(
             win_description,
             allow_uid_change,
             allow_gid_change,
+            password_lock=password_lock,
         )
     except CommandExecutionError as exc:
         ret["result"] = False
@@ -630,7 +623,7 @@ def present(
     if changes:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "The following user attributes are set to be " "changed:\n"
+            ret["comment"] = "The following user attributes are set to be changed:\n"
             for key, val in changes.items():
                 if key == "passwd":
                     val = "XXX-REDACTED-XXX"
@@ -656,6 +649,17 @@ def present(
 
         if changes.pop("empty_password", False) is True:
             __salt__["shadow.del_password"](name)
+
+        if "password_lock" in changes:
+            passlock = changes.pop("password_lock")
+            if not passlock and salt.utils.platform.is_windows():
+                __salt__["shadow.unlock_account"](name)
+            elif not passlock:
+                __salt__["shadow.unlock_password"](name)
+            elif passlock and not salt.utils.platform.is_windows():
+                __salt__["shadow.lock_password"](name)
+            else:
+                log.warning("Account locking is not available on Windows.")
 
         if "date" in changes:
             del changes["date"]
@@ -790,6 +794,7 @@ def present(
             win_description,
             allow_uid_change=True,
             allow_gid_change=True,
+            password_lock=password_lock,
         )
         # allow_uid_change and allow_gid_change passed as True to avoid race
         # conditions where a uid/gid is modified outside of Salt. If an
@@ -846,8 +851,6 @@ def present(
                 "profile": win_profile,
                 "logonscript": win_logonscript,
             }
-
-        # user.add returns true, false, or a str in the case of windows failure
         result = __salt__["user.add"](**params)
         if result is True:
             ret["comment"] = "New user {} created".format(name)
@@ -864,10 +867,10 @@ def present(
                     __salt__["shadow.set_password"](name, password)
                     spost = __salt__["shadow.info"](name)
                     if spost["passwd"] != password:
-                        ret["comment"] = (
-                            "User {} created but failed to set"
-                            " password to"
-                            " {}".format(name, "XXX-REDACTED-XXX")
+                        ret[
+                            "comment"
+                        ] = "User {} created but failed to set password to {}".format(
+                            name, "XXX-REDACTED-XXX"
                         )
                         ret["result"] = False
                     ret["changes"]["password"] = "XXX-REDACTED-XXX"
@@ -875,10 +878,9 @@ def present(
                     __salt__["shadow.del_password"](name)
                     spost = __salt__["shadow.info"](name)
                     if spost["passwd"] != "":
-                        ret["comment"] = (
-                            "User {} created but failed to "
-                            "empty password".format(name)
-                        )
+                        ret[
+                            "comment"
+                        ] = "User {} created but failed to empty password".format(name)
                         ret["result"] = False
                     ret["changes"]["password"] = ""
                 if date is not None:
@@ -929,10 +931,10 @@ def present(
                     __salt__["shadow.set_warndays"](name, warndays)
                     spost = __salt__["shadow.info"](name)
                     if spost["warn"] != warndays:
-                        ret["comment"] = (
-                            "User {} created but failed to set"
-                            " warn days to"
-                            " {}".format(name, warndays)
+                        ret[
+                            "comment"
+                        ] = "User {} created but failed to set warn days to {}".format(
+                            name, warndays
                         )
                         ret["result"] = False
                     ret["changes"]["warndays"] = warndays
@@ -950,10 +952,10 @@ def present(
             elif salt.utils.platform.is_windows():
                 if password and not empty_password:
                     if not __salt__["user.setpassword"](name, password):
-                        ret["comment"] = (
-                            "User {} created but failed to set"
-                            " password to"
-                            " {}".format(name, "XXX-REDACTED-XXX")
+                        ret[
+                            "comment"
+                        ] = "User {} created but failed to set password to {}".format(
+                            name, "XXX-REDACTED-XXX"
                         )
                         ret["result"] = False
                     ret["changes"]["passwd"] = "XXX-REDACTED-XXX"
@@ -972,10 +974,10 @@ def present(
                     ret["changes"]["expiration_date"] = spost["expire"]
             elif salt.utils.platform.is_darwin() and password and not empty_password:
                 if not __salt__["shadow.set_password"](name, password):
-                    ret["comment"] = (
-                        "User {} created but failed to set"
-                        " password to"
-                        " {}".format(name, "XXX-REDACTED-XXX")
+                    ret[
+                        "comment"
+                    ] = "User {} created but failed to set password to {}".format(
+                        name, "XXX-REDACTED-XXX"
                     )
                     ret["result"] = False
                 ret["changes"]["passwd"] = "XXX-REDACTED-XXX"

@@ -1,19 +1,17 @@
-import sys
+import pathlib
 
 import attr
 import pytest
-import salt.ext.tornado.gen
-import salt.transport.client
+import tornado.gen
+from tornado import locks
+
+import salt.channel.server
 import salt.transport.ipc
-import salt.transport.server
-from salt.ext.tornado import locks
+import salt.utils.platform
 
 pytestmark = [
     # Windows does not support POSIX IPC
     pytest.mark.skip_on_windows,
-    pytest.mark.skipif(
-        sys.version_info < (3, 6), reason="The IOLoop blocks under Py3.5 on these tests"
-    ),
 ]
 
 
@@ -44,13 +42,16 @@ class IPCTester:
     @subscriber.default
     def _subscriber_default(self):
         return salt.transport.ipc.IPCMessageSubscriber(
-            self.socket_path, io_loop=self.io_loop,
+            self.socket_path,
+            io_loop=self.io_loop,
         )
 
     @publisher.default
     def _publisher_default(self):
         return salt.transport.ipc.IPCMessagePublisher(
-            {"ipc_write_buffer": 0}, self.socket_path, io_loop=self.io_loop,
+            {"ipc_write_buffer": 0},
+            self.socket_path,
+            io_loop=self.io_loop,
         )
 
     async def handle_payload(self, payload, reply_func):
@@ -86,6 +87,9 @@ class IPCTester:
 
 @pytest.fixture
 def ipc_socket_path(tmp_path):
+    if salt.utils.platform.is_darwin():
+        # A shorter path so that we don't hit the AF_UNIX path too long
+        tmp_path = pathlib.Path("/tmp").resolve()
     _socket_path = tmp_path / "ipc-test.ipc"
     try:
         yield _socket_path
@@ -106,9 +110,9 @@ async def test_basic_send(channel):
     # XXX: IPCClient connect and connected methods need to be cleaned up as
     # this should not be needed.
     while not channel.subscriber._connecting_future.done():
-        await salt.ext.tornado.gen.sleep(0.01)
+        await tornado.gen.sleep(0.01)
     while not channel.subscriber.connected():
-        await salt.ext.tornado.gen.sleep(0.01)
+        await tornado.gen.sleep(0.01)
     assert channel.subscriber.connected()
     await channel.publish(msg)
     ret = await channel.read()

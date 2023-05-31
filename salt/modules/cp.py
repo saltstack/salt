@@ -9,10 +9,10 @@ import logging
 import os
 import urllib.parse
 
+import salt.channel.client
 import salt.crypt
 import salt.fileclient
 import salt.minion
-import salt.transport.client
 import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
@@ -41,7 +41,7 @@ def _gather_pillar(pillarenv, pillar_override):
     """
     pillar = salt.pillar.get_pillar(
         __opts__,
-        __grains__,
+        __grains__.value(),
         __opts__["id"],
         __opts__["saltenv"],
         pillar_override=pillar_override,
@@ -59,6 +59,12 @@ def recv(files, dest):
 
     This function receives small fast copy files from the master via salt-cp.
     It does not work via the CLI.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.recv
     """
     ret = {}
     for path, data in files.items():
@@ -85,6 +91,12 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
     """
     This function receives files copied to the minion using ``salt-cp`` and is
     not intended to be used directly on the CLI.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.recv_chunked
     """
     if "retcode" not in __context__:
         __context__["retcode"] = 0
@@ -145,26 +157,11 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
             pass
 
 
-def _mk_client():
-    """
-    Create a file client and add it to the context.
-
-    Each file client needs to correspond to a unique copy
-    of the opts dictionary, therefore it's hashed by the
-    id of the __opts__ dict
-    """
-    if "cp.fileclient_{}".format(id(__opts__)) not in __context__:
-        __context__[
-            "cp.fileclient_{}".format(id(__opts__))
-        ] = salt.fileclient.get_file_client(__opts__)
-
-
 def _client():
     """
     Return a client, hashed by the list of masters
     """
-    _mk_client()
-    return __context__["cp.fileclient_{}".format(id(__opts__))]
+    return salt.fileclient.get_file_client(__opts__)
 
 
 def _render_filenames(path, dest, saltenv, template, **kw):
@@ -179,8 +176,7 @@ def _render_filenames(path, dest, saltenv, template, **kw):
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
-            "Attempted to render file paths with unavailable engine "
-            "{}".format(template)
+            "Attempted to render file paths with unavailable engine {}".format(template)
         )
 
     kwargs = {}
@@ -221,9 +217,12 @@ def _render_filenames(path, dest, saltenv, template, **kw):
 
 
 def get_file(
-    path, dest, saltenv="base", makedirs=False, template=None, gzip=None, **kwargs
+    path, dest, saltenv=None, makedirs=False, template=None, gzip=None, **kwargs
 ):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     .. versionchanged:: 2018.3.0
         ``dest`` can now be a directory
 
@@ -268,6 +267,9 @@ def get_file(
         It may be necessary to quote the URL when using the querystring method,
         depending on the shell being used to run the command.
     """
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+
     (path, dest) = _render_filenames(path, dest, saltenv, template, **kwargs)
 
     path, senv = salt.utils.url.split_env(path)
@@ -277,26 +279,29 @@ def get_file(
     if not hash_file(path, saltenv):
         return ""
     else:
-        return _client().get_file(path, dest, makedirs, saltenv, gzip)
+        with _client() as client:
+            return client.get_file(path, dest, makedirs, saltenv, gzip)
 
 
 def envs():
     """
     List available environments for fileserver
 
-    CLI Example
+    CLI Example:
 
     .. code-block:: bash
 
         salt '*' cp.envs
     """
-    return _client().envs()
+    with _client() as client:
+        return client.envs()
 
 
-def get_template(
-    path, dest, template="jinja", saltenv="base", makedirs=False, **kwargs
-):
+def get_template(path, dest, template="jinja", saltenv=None, makedirs=False, **kwargs):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     Render a file as a template before setting it down.
     Warning, order is not the same as in fileclient.cp for
     non breaking old API.
@@ -307,6 +312,9 @@ def get_template(
 
         salt '*' cp.get_template salt://path/to/template /minion/dest
     """
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+
     if "salt" not in kwargs:
         kwargs["salt"] = __salt__
     if "pillar" not in kwargs:
@@ -315,11 +323,15 @@ def get_template(
         kwargs["grains"] = __grains__
     if "opts" not in kwargs:
         kwargs["opts"] = __opts__
-    return _client().get_template(path, dest, template, makedirs, saltenv, **kwargs)
+    with _client() as client:
+        return client.get_template(path, dest, template, makedirs, saltenv, **kwargs)
 
 
-def get_dir(path, dest, saltenv="base", template=None, gzip=None, **kwargs):
+def get_dir(path, dest, saltenv=None, template=None, gzip=None, **kwargs):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     Used to recursively copy a directory from the salt master
 
     CLI Example:
@@ -330,13 +342,20 @@ def get_dir(path, dest, saltenv="base", template=None, gzip=None, **kwargs):
 
     get_dir supports the same template and gzip arguments as get_file.
     """
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+
     (path, dest) = _render_filenames(path, dest, saltenv, template, **kwargs)
 
-    return _client().get_dir(path, dest, saltenv, gzip)
+    with _client() as client:
+        return client.get_dir(path, dest, saltenv, gzip)
 
 
-def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
+def get_url(path, dest="", saltenv=None, makedirs=False, source_hash=None):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     .. versionchanged:: 2018.3.0
         ``dest`` can now be a directory
 
@@ -365,7 +384,7 @@ def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
             and ``file://`` URLs. The files fetched by ``http://`` and
             ``https://`` will not be cached.
 
-    saltenv : base
+    saltenv
         Salt fileserver environment from which to retrieve the file. Ignored if
         ``path`` is not a ``salt://`` URL.
 
@@ -383,14 +402,20 @@ def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
         salt '*' cp.get_url salt://my/file /tmp/this_file_is_mine
         salt '*' cp.get_url http://www.slashdot.org /tmp/index.html
     """
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+
     if isinstance(dest, str):
-        result = _client().get_url(
-            path, dest, makedirs, saltenv, source_hash=source_hash
-        )
+        with _client() as client:
+            result = client.get_url(
+                path, dest, makedirs, saltenv, source_hash=source_hash
+            )
     else:
-        result = _client().get_url(
-            path, None, makedirs, saltenv, no_cache=True, source_hash=source_hash
-        )
+
+        with _client() as client:
+            result = client.get_url(
+                path, None, makedirs, saltenv, no_cache=True, source_hash=source_hash
+            )
     if not result:
         log.error(
             "Unable to fetch file %s from saltenv %s.",
@@ -402,8 +427,11 @@ def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
     return result
 
 
-def get_file_str(path, saltenv="base"):
+def get_file_str(path, saltenv=None):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     Download a file from a URL to the Minion cache directory and return the
     contents of that file
 
@@ -415,6 +443,9 @@ def get_file_str(path, saltenv="base"):
 
         salt '*' cp.get_file_str salt://my/file
     """
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+
     fn_ = cache_file(path, saltenv)
     if isinstance(fn_, str):
         try:
@@ -425,8 +456,11 @@ def get_file_str(path, saltenv="base"):
     return fn_
 
 
-def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
+def cache_file(path, saltenv=None, source_hash=None, verify_ssl=True, use_etag=False):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     Used to cache a single file on the Minion
 
     Returns the location of the new cached file on the Minion
@@ -443,6 +477,15 @@ def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
         will not attempt to validate the servers certificate. Default is True.
 
         .. versionadded:: 3002
+
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
 
     CLI Example:
 
@@ -467,6 +510,9 @@ def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
         It may be necessary to quote the URL when using the querystring method,
         depending on the shell being used to run the command.
     """
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+
     path = salt.utils.data.decode(path)
     saltenv = salt.utils.data.decode(saltenv)
 
@@ -496,10 +542,15 @@ def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
     if senv:
         saltenv = senv
 
-    result = _client().cache_file(
-        path, saltenv, source_hash=source_hash, verify_ssl=verify_ssl
-    )
-    if not result:
+    with _client() as client:
+        result = client.cache_file(
+            path,
+            saltenv,
+            source_hash=source_hash,
+            verify_ssl=verify_ssl,
+            use_etag=use_etag,
+        )
+    if not result and not use_etag:
         log.error("Unable to cache file '%s' from saltenv '%s'.", path, saltenv)
     if path_is_remote:
         # Cache was successful, store the result in __context__ to prevent
@@ -508,9 +559,12 @@ def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
     return result
 
 
-def cache_dest(url, saltenv="base"):
+def cache_dest(url, saltenv=None):
     """
     .. versionadded:: 3000
+
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
 
     Returns the expected cache path for the file, if cached using
     :py:func:`cp.cache_file <salt.modules.cp.cache_file>`.
@@ -528,11 +582,17 @@ def cache_dest(url, saltenv="base"):
         salt '*' cp.cache_dest salt://my/file
         salt '*' cp.cache_dest salt://my/file saltenv=dev
     """
-    return _client().cache_dest(url, saltenv)
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+    with _client() as client:
+        return client.cache_dest(url, saltenv)
 
 
-def cache_files(paths, saltenv="base"):
+def cache_files(paths, saltenv=None):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     Used to gather many files from the Master, the gathered files will be
     saved in the minion cachedir reflective to the paths retrieved from the
     Master
@@ -567,13 +627,19 @@ def cache_files(paths, saltenv="base"):
         It may be necessary to quote the URL when using the querystring method,
         depending on the shell being used to run the command.
     """
-    return _client().cache_files(paths, saltenv)
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+    with _client() as client:
+        return client.cache_files(paths, saltenv)
 
 
 def cache_dir(
-    path, saltenv="base", include_empty=False, include_pat=None, exclude_pat=None
+    path, saltenv=None, include_empty=False, include_pat=None, exclude_pat=None
 ):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     Download and cache everything under a directory from the master
 
 
@@ -603,11 +669,17 @@ def cache_dir(
         salt '*' cp.cache_dir salt://path/to/dir
         salt '*' cp.cache_dir salt://path/to/dir include_pat='E@*.py$'
     """
-    return _client().cache_dir(path, saltenv, include_empty, include_pat, exclude_pat)
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+    with _client() as client:
+        return client.cache_dir(path, saltenv, include_empty, include_pat, exclude_pat)
 
 
-def cache_master(saltenv="base"):
+def cache_master(saltenv=None):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     Retrieve all of the files on the master and cache them locally
 
     CLI Example:
@@ -616,7 +688,10 @@ def cache_master(saltenv="base"):
 
         salt '*' cp.cache_master
     """
-    return _client().cache_master(saltenv)
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+    with _client() as client:
+        return client.cache_master(saltenv)
 
 
 def cache_local_file(path):
@@ -643,11 +718,15 @@ def cache_local_file(path):
             return path_cached
 
     # The file hasn't been cached or has changed; cache it
-    return _client().cache_local_file(path)
+    with _client() as client:
+        return client.cache_local_file(path)
 
 
-def list_states(saltenv="base"):
+def list_states(saltenv=None):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     List all of the available state modules in an environment
 
     CLI Example:
@@ -656,11 +735,17 @@ def list_states(saltenv="base"):
 
         salt '*' cp.list_states
     """
-    return _client().list_states(saltenv)
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+    with _client() as client:
+        return client.list_states(saltenv)
 
 
-def list_master(saltenv="base", prefix=""):
+def list_master(saltenv=None, prefix=""):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     List all of the files stored on the master
 
     CLI Example:
@@ -669,11 +754,17 @@ def list_master(saltenv="base", prefix=""):
 
         salt '*' cp.list_master
     """
-    return _client().file_list(saltenv, prefix)
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+    with _client() as client:
+        return client.file_list(saltenv, prefix)
 
 
-def list_master_dirs(saltenv="base", prefix=""):
+def list_master_dirs(saltenv=None, prefix=""):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     List all of the directories stored on the master
 
     CLI Example:
@@ -682,11 +773,17 @@ def list_master_dirs(saltenv="base", prefix=""):
 
         salt '*' cp.list_master_dirs
     """
-    return _client().dir_list(saltenv, prefix)
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+    with _client() as client:
+        return client.dir_list(saltenv, prefix)
 
 
-def list_master_symlinks(saltenv="base", prefix=""):
+def list_master_symlinks(saltenv=None, prefix=""):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     List all of the symlinks stored on the master
 
     CLI Example:
@@ -695,11 +792,17 @@ def list_master_symlinks(saltenv="base", prefix=""):
 
         salt '*' cp.list_master_symlinks
     """
-    return _client().symlink_list(saltenv, prefix)
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+    with _client() as client:
+        return client.symlink_list(saltenv, prefix)
 
 
-def list_minion(saltenv="base"):
+def list_minion(saltenv=None):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     List all of the files cached on the minion
 
     CLI Example:
@@ -708,11 +811,17 @@ def list_minion(saltenv="base"):
 
         salt '*' cp.list_minion
     """
-    return _client().file_local_list(saltenv)
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+    with _client() as client:
+        return client.file_local_list(saltenv)
 
 
-def is_cached(path, saltenv="base"):
+def is_cached(path, saltenv=None):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     Returns the full path to a file if it is cached locally on the minion
     otherwise returns a blank string
 
@@ -722,11 +831,22 @@ def is_cached(path, saltenv="base"):
 
         salt '*' cp.is_cached salt://path/to/file
     """
-    return _client().is_cached(path, saltenv)
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+
+    path, senv = salt.utils.url.split_env(path)
+    if senv:
+        saltenv = senv
+
+    with _client() as client:
+        return client.is_cached(path, saltenv)
 
 
-def hash_file(path, saltenv="base"):
+def hash_file(path, saltenv=None):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     Return the hash of a file, to get the hash of a file on the
     salt master file server prepend the path with salt://<file on server>
     otherwise, prepend the file with / for a local file.
@@ -737,15 +857,22 @@ def hash_file(path, saltenv="base"):
 
         salt '*' cp.hash_file salt://path/to/file
     """
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+
     path, senv = salt.utils.url.split_env(path)
     if senv:
         saltenv = senv
 
-    return _client().hash_file(path, saltenv)
+    with _client() as client:
+        return client.hash_file(path, saltenv)
 
 
-def stat_file(path, saltenv="base", octal=True):
+def stat_file(path, saltenv=None, octal=True):
     """
+    .. versionchanged:: 3005
+        ``saltenv`` will use value from config if not explicitly set
+
     Return the permissions of a file, to get the permissions of a file on the
     salt master file server prepend the path with salt://<file on server>
     otherwise, prepend the file with / for a local file.
@@ -756,11 +883,15 @@ def stat_file(path, saltenv="base", octal=True):
 
         salt '*' cp.stat_file salt://path/to/file
     """
+    if not saltenv:
+        saltenv = __opts__["saltenv"] or "base"
+
     path, senv = salt.utils.url.split_env(path)
     if senv:
         saltenv = senv
 
-    stat = _client().hash_and_stat_file(path, saltenv)[1]
+    with _client() as client:
+        stat = client.hash_and_stat_file(path, saltenv)[1]
     if stat is None:
         return stat
     return salt.utils.files.st_mode_to_octal(stat[0]) if octal is True else stat[0]
@@ -836,7 +967,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
         "tok": auth.gen_token(b"salt"),
     }
 
-    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+    with salt.channel.client.ReqChannel.factory(__opts__) as channel:
         with salt.utils.files.fopen(path, "rb") as fp_:
             init_send = False
             while True:

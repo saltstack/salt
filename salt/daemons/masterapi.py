@@ -31,6 +31,7 @@ import salt.utils.files
 import salt.utils.gitfs
 import salt.utils.gzip_util
 import salt.utils.jid
+import salt.utils.job
 import salt.utils.mine
 import salt.utils.minions
 import salt.utils.path
@@ -137,7 +138,7 @@ def clean_pub_auth(opts):
                     if not os.path.isfile(auth_file_path):
                         continue
                     if time.time() - os.path.getmtime(auth_file_path) > (
-                        opts["keep_jobs"] * 3600
+                        salt.utils.job.get_keep_jobs_seconds(opts)
                     ):
                         os.remove(auth_file_path)
     except OSError:
@@ -149,7 +150,11 @@ def clean_old_jobs(opts):
     Clean out the old jobs from the job cache
     """
     # TODO: better way to not require creating the masterminion every time?
-    mminion = salt.minion.MasterMinion(opts, states=False, rend=False,)
+    mminion = salt.minion.MasterMinion(
+        opts,
+        states=False,
+        rend=False,
+    )
     # If the master job cache has a clean_old_jobs, call it
     fstr = "{}.clean_old_jobs".format(opts["master_job_cache"])
     if fstr in mminion.returners:
@@ -397,11 +402,9 @@ class RemoteFuncs:
         self.event = salt.utils.event.get_event(
             "master",
             self.opts["sock_dir"],
-            self.opts["transport"],
             opts=self.opts,
             listen=False,
         )
-        self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Create the tops dict for loading external top data
         self.tops = salt.loader.tops(self.opts)
@@ -1063,13 +1066,11 @@ class LocalFuncs:
     # _auth
     def __init__(self, opts, key):
         self.opts = opts
-        self.serial = salt.payload.Serial(opts)
         self.key = key
         # Create the event manager
         self.event = salt.utils.event.get_event(
             "master",
             self.opts["sock_dir"],
-            self.opts["transport"],
             opts=self.opts,
             listen=False,
         )
@@ -1108,8 +1109,10 @@ class LocalFuncs:
             return {
                 "error": {
                     "name": err_name,
-                    "message": 'Authentication failure of type "{}" occurred '
-                    "for user {}.".format(auth_type, username),
+                    "message": (
+                        'Authentication failure of type "{}" occurred '
+                        "for user {}.".format(auth_type, username)
+                    ),
                 }
             }
         elif isinstance(runner_check, dict) and "error" in runner_check:
@@ -1158,8 +1161,10 @@ class LocalFuncs:
                 return {
                     "error": {
                         "name": err_name,
-                        "message": 'Authentication failure of type "{}" occurred for '
-                        "user {}.".format(auth_type, username),
+                        "message": (
+                            'Authentication failure of type "{}" occurred for '
+                            "user {}.".format(auth_type, username)
+                        ),
                     }
                 }
             elif isinstance(wheel_check, dict) and "error" in wheel_check:
@@ -1186,7 +1191,9 @@ class LocalFuncs:
         except Exception as exc:  # pylint: disable=broad-except
             log.exception("Exception occurred while introspecting %s", fun)
             data["return"] = "Exception occurred in wheel {}: {}: {}".format(
-                fun, exc.__class__.__name__, exc,
+                fun,
+                exc.__class__.__name__,
+                exc,
             )
             data["success"] = False
             self.event.fire_event(data, salt.utils.event.tagify([jid, "ret"], "wheel"))

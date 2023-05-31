@@ -5,9 +5,9 @@ integration tests for mac_system
 import logging
 
 import pytest
+from saltfactories.utils import random_string
+
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +21,7 @@ SET_SUBNET_NAME = random_string("RS-", lowercase=False)
 @pytest.mark.usefixtures("salt_sub_minion")
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_if_binaries_missing("systemsetup")
+@pytest.mark.slow_test
 class MacSystemModuleTest(ModuleCase):
     """
     Validate the mac_system module
@@ -128,6 +129,7 @@ class MacSystemModuleTest(ModuleCase):
         self.assertEqual(self.run_function("system.get_subnet_name"), SET_SUBNET_NAME)
 
     @pytest.mark.slow_test
+    @pytest.mark.skip_initial_gh_actions_failure
     def test_get_list_startup_disk(self):
         """
         Test system.get_startup_disk
@@ -146,7 +148,7 @@ class MacSystemModuleTest(ModuleCase):
             self.run_function("system.set_startup_disk", ["spongebob"]),
         )
 
-    @skipIf(True, "Skip this test until mac fixes it.")
+    @pytest.mark.skip(reason="Skip this test until mac fixes it.")
     def test_get_set_restart_delay(self):
         """
         Test system.get_restart_delay
@@ -209,7 +211,7 @@ class MacSystemModuleTest(ModuleCase):
             self.run_function("system.set_disable_keyboard_on_lock", ["spongebob"]),
         )
 
-    @skipIf(True, "Skip this test until mac fixes it.")
+    @pytest.mark.skip(reason="Skip this test until mac fixes it.")
     def test_get_set_boot_arch(self):
         """
         Test system.get_boot_arch
@@ -244,7 +246,7 @@ class MacSystemComputerNameTest(ModuleCase):
     # A similar test used to be skipped on py3 due to 'hanging', if we see
     # something similar again we may want to skip this gain until we
     # investigate
-    # @skipIf(salt.utils.platform.is_darwin() and six.PY3, 'This test hangs on OS X on Py3.  Skipping until #53566 is merged.')
+    # @pytest.mark.skipif(salt.utils.platform.is_darwin() and six.PY3, reason='This test hangs on OS X on Py3.  Skipping until #53566 is merged.')
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
     def test_get_set_computer_name(self):

@@ -1,7 +1,7 @@
 import logging
 
 import salt.utils.files
-from salt.transport.client import ReqChannel
+from salt.channel.client import ReqChannel
 
 log = logging.getLogger(__name__)
 

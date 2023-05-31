@@ -130,6 +130,12 @@ Functions to interact with Hashicorp Vault.
         values, eg ``my-policies/{grains[os]}``. ``{minion}`` is shorthand for
         ``grains[id]``, eg ``saltstack/minion/{minion}``.
 
+        .. versionadded:: 3006.0
+
+            Policies can be templated with pillar values as well: ``salt_role_{pillar[roles]}``
+            Make sure to only reference pillars that are not sourced from Vault since the latter
+            ones might be unavailable during policy rendering.
+
         .. important::
 
             See :ref:`Is Targeting using Grain Data Secure?
@@ -160,9 +166,40 @@ Functions to interact with Hashicorp Vault.
         Optional. If policies is not configured, ``saltstack/minions`` and
         ``saltstack/{minion}`` are used as defaults.
 
+    policies_refresh_pillar
+        Whether to refresh the pillar data when rendering templated policies.
+        When unset (=null/None), will only refresh when the cached data
+        is unavailable, boolean values force one behavior always.
+
+        .. note::
+
+            Using cached pillar data only (policies_refresh_pillar=False)
+            might cause the policies to be out of sync. If there is no cached pillar
+            data available for the minion, pillar templates will fail to render at all.
+
+            If you use pillar values for templating policies and do not disable
+            refreshing pillar data, make sure the relevant values are not sourced
+            from Vault (ext_pillar, sdb) or from a pillar sls file that uses the vault
+            execution module. Although this will often work when cached pillar data is
+            available, if the master needs to compile the pillar data during policy rendering,
+            all Vault modules will be broken to prevent an infinite loop.
+
+    policies_cache_time
+        Policy computation can be heavy in case pillar data is used in templated policies and
+        it has not been cached. Therefore, a short-lived cache specifically for rendered policies
+        is used. This specifies the expiration timeout in seconds. Defaults to 60.
+
     keys
         List of keys to use to unseal vault server with the vault.unseal runner.
 
+    config_location
+        Where to get the connection details for calling vault. By default,
+        vault will try to determine if it needs to request the connection
+        details from the master or from the local config. This optional option
+        will force vault to use the connection details from the master or the
+        local config. Can only be either ``master`` or ``local``.
+
+          .. versionadded:: 3006.0
 
     Add this segment to the master configuration file, or
     /etc/salt/master.d/peer_run.conf:
@@ -178,12 +215,13 @@ Functions to interact with Hashicorp Vault.
 import logging
 import os
 
+from salt.defaults import NOT_SET
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
 
-def read_secret(path, key=None, metadata=False, default=CommandExecutionError):
+def read_secret(path, key=None, metadata=False, default=NOT_SET):
     """
     .. versionchanged:: 3001
         The ``default`` argument has been added. When the path or path/key
@@ -211,6 +249,8 @@ def read_secret(path, key=None, metadata=False, default=CommandExecutionError):
             first: {{ supersecret.first }}
             second: {{ supersecret.second }}
     """
+    if default == NOT_SET:
+        default = CommandExecutionError
     version2 = __utils__["vault.is_v2"](path)
     if version2["v2"]:
         path = version2["data"]
@@ -356,7 +396,7 @@ def destroy_secret(path, *args):
         return False
 
 
-def list_secrets(path, default=CommandExecutionError):
+def list_secrets(path, default=NOT_SET):
     """
     .. versionchanged:: 3001
         The ``default`` argument has been added. When the path or path/key
@@ -372,6 +412,8 @@ def list_secrets(path, default=CommandExecutionError):
 
             salt '*' vault.list_secrets "secret/my/"
     """
+    if default == NOT_SET:
+        default = CommandExecutionError
     log.debug("Listing vault secret keys for %s in %s", __grains__["id"], path)
     version2 = __utils__["vault.is_v2"](path)
     if version2["v2"]:

@@ -49,7 +49,7 @@ syndic_user: salt
 # Key cache. Increases master speed for large numbers of accepted
 # keys. Available options: 'sched'. (Updates on a fixed schedule.)
 # Note that enabling this feature means that minions will not be
-# available to target for up to the length of the maintanence loop
+# available to target for up to the length of the maintenance loop
 # which by default is 60s.
 #key_cache: ''
 
@@ -74,7 +74,11 @@ syndic_user: salt
 #verify_env: True
 
 # Set the number of hours to keep old job information in the job cache:
+# This option is deprecated by the keep_jobs_seconds option.
 #keep_jobs: 24
+
+# Set the number of seconds to keep old job information in the job cache:
+#keep_jobs_seconds: 86400
 
 # The number of seconds to wait when the client is requesting information
 # about running jobs.
@@ -372,6 +376,11 @@ syndic_user: salt
 # Set to True to enable keeping the calculated user's auth list in the token
 # file. This is disabled by default and the auth list is calculated or requested
 # from the eauth driver each time.
+#
+# Note: `keep_acl_in_token` will be forced to True when using external authentication
+# for REST API (`rest` is present under `external_auth`). This is because the REST API
+# does not store the password, and can therefore not retroactively fetch the ACL, so
+# the ACL must be stored in the token.
 #keep_acl_in_token: False
 
 # Auth subsystem module to use to get authorized access list for a user. By default it's
@@ -529,8 +538,8 @@ syndic_user: salt
 #  variable_end_string: '}}'
 #  comment_start_string: '{#'
 #  comment_end_string: '#}'
-#  line_statement_prefix: 
-#  line_comment_prefix: 
+#  line_statement_prefix:
+#  line_comment_prefix:
 #  trim_blocks: False
 #  lstrip_blocks: False
 #  newline_sequence: '\n'
@@ -544,8 +553,8 @@ syndic_user: salt
 #  variable_end_string: '}}'
 #  comment_start_string: '{#'
 #  comment_end_string: '#}'
-#  line_statement_prefix: 
-#  line_comment_prefix: 
+#  line_statement_prefix:
+#  line_comment_prefix:
 #  trim_blocks: False
 #  lstrip_blocks: False
 #  newline_sequence: '\n'
@@ -573,6 +582,14 @@ syndic_user: salt
 # successful states is returned. Useful when even the terse output of these
 # states is cluttering the logs. Set it to True to ignore them.
 #state_output_diff: False
+
+# The state_output_pct setting changes whether success and failure information
+# as a percent of total actions will be shown for each state run.
+#state_output_pct: False
+
+# The state_compress_ids setting aggregates information about states which have
+# multiple "names" under the same state ID in the highstate output.
+#state_compress_ids: False
 
 # Automatically aggregate all states that have support for mod_aggregate by
 # setting to 'True'. Or pass a list of state module names to automatically
@@ -694,13 +711,6 @@ syndic_user: salt
 # False. By uncommenting the line below, any detected symlink while listing
 # files on the Master will not be returned to the Minion.
 #fileserver_ignoresymlinks: True
-#
-# By default, the Salt fileserver recurses fully into all defined environments
-# to attempt to find files. To limit this behavior so that the fileserver only
-# traverses directories with SLS files and special Salt directories like _modules,
-# enable the option below. This might be useful for installations where a file root
-# has a very large number of files and performance is impacted. Default is False.
-# fileserver_limit_traversal: False
 #
 # The fileserver can fire events off every time the fileserver is updated,
 # these are disabled by default, but can be easily turned on by setting this
@@ -934,12 +944,13 @@ syndic_user: salt
 # configuration options to fully understand the tunable parameters and their implications.
 #
 # Note: setting ``pillar_cache: True`` has no effect on targeting Minions with Pillars.
-# See https://docs.saltstack.com/en/latest/topics/targeting/pillar.html
+# See https://docs.saltproject.io/en/latest/topics/targeting/pillar.html
 #pillar_cache: False
 
 # If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
 # of time, in seconds, before the cache is considered invalid by a master and a fresh
 # pillar is recompiled and stored.
+# The cache TTL does not prevent pillar cache from being refreshed before its TTL expires.
 #pillar_cache_ttl: 3600
 
 # If and only if a master has set `pillar_cache: True`, one of several storage providers

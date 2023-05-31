@@ -16,6 +16,7 @@ import salt.utils.args
 import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.platform
+import salt.utils.versions
 import salt.version
 from salt.utils.decorators import depends
 
@@ -675,3 +676,27 @@ def raise_exception(name, *args, **kwargs):
     except AttributeError:
         log.error("No such exception: %s", name)
         return False
+
+
+def deprecation_warning():
+    r"""
+    Return True, but also produce two DeprecationWarnings. One by date, the
+    other by the codename - release Oganesson, which should correspond to Salt
+    3108.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt \* test.deprecation_warning
+    """
+    # This warn should always stay in Salt.
+    salt.utils.versions.warn_until(
+        "Oganesson",
+        "This is a test deprecation warning by version.",
+    )
+    salt.utils.versions.warn_until_date(
+        "30000101",
+        "This is a test deprecation warning by date very far into the future ({date}).",
+    )
+    return True

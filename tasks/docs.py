@@ -12,6 +12,7 @@ import pathlib
 import re
 
 from invoke import task  # pylint: disable=3rd-party-module-not-gated
+
 from tasks import utils
 
 CODE_DIR = pathlib.Path(__file__).resolve().parent.parent
@@ -231,13 +232,23 @@ def check_virtual(ctx, files):
     for path in files:
         if path.name == "index.rst":
             continue
-        contents = path.read_text()
+        try:
+            contents = path.read_text()
+        except Exception as exc:  # pylint: disable=broad-except
+            utils.error(
+                "Error while processing '{}': {}".format(
+                    path,
+                    exc,
+                )
+            )
+            exitcode += 1
+            continue
         if ".. _virtual-" in contents:
             try:
                 python_module = doc_path_to_python_module[path]
                 utils.error(
-                    "The doc file at {} indicates that it's virtual, yet, there's a python module "
-                    "at {} that will shaddow it.",
+                    "The doc file at {} indicates that it's virtual, yet, there's a"
+                    " python module at {} that will shaddow it.",
                     path,
                     python_module,
                 )
@@ -305,9 +316,9 @@ def check_module_indexes(ctx, files):
             package = "cloud"
         if package == "file_server":
             package = "fileserver"
-        if package == "configuration":
-            package = "log"
-            path_parts = ["handlers"]
+        if package == "configuration" and path_parts == ["logging"]:
+            package = "log_handlers"
+            path_parts = []
         python_package = SALT_CODE_DIR.joinpath(package, *path_parts).relative_to(
             CODE_DIR
         )
@@ -401,7 +412,7 @@ def check_stray(ctx, files):
         DOCS_DIR / "ref" / "states" / "writing.rst",
         DOCS_DIR / "topics",
     )
-    exclude_paths = tuple([str(p.relative_to(CODE_DIR)) for p in exclude_paths])
+    exclude_paths = tuple(str(p.relative_to(CODE_DIR)) for p in exclude_paths)
     files = build_docs_paths(files)
     for path in files:
         if not str(path).startswith(str((DOCS_DIR / "ref").relative_to(CODE_DIR))):
@@ -418,8 +429,8 @@ def check_stray(ctx, files):
                 continue
             exitcode += 1
             utils.error(
-                "The doc at {} doesn't have a corresponding python module and is considered a stray "
-                "doc. Please remove it.",
+                "The doc at {} doesn't have a corresponding python module and is"
+                " considered a stray doc. Please remove it.",
                 path,
             )
     return exitcode

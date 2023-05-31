@@ -3,8 +3,13 @@
 """
 
 import pytest
+
 import salt.states.boto_elasticache as boto_elasticache
 from tests.support.mock import MagicMock, patch
+
+pytestmark = [
+    pytest.mark.slow_test,
+]
 
 
 @pytest.fixture

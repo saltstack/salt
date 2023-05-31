@@ -8,14 +8,15 @@ import copy
 import os
 import textwrap
 
+import pytest
+
 import salt.modules.opkg as opkg
-import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
-@skipIf(not salt.utils.platform.is_linux(), "Must be on Linux!")
+@pytest.mark.skip_unless_on_linux
 class OpkgTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.opkg
@@ -187,7 +188,11 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         Test - Install packages.
         """
         with patch("salt.modules.opkg.list_pkgs", MagicMock(side_effect=({}, {}))):
-            std_out = "Downloading http://feedserver/feeds/test/vim_7.4_arch.ipk.\n\nInstalling vim (7.4) on root\n"
+            std_out = (
+                "Downloading"
+                " http://feedserver/feeds/test/vim_7.4_arch.ipk.\n\nInstalling vim"
+                " (7.4) on root\n"
+            )
             ret_value = {"retcode": 0, "stdout": std_out}
             mock = MagicMock(return_value=ret_value)
             patch_kwargs = {

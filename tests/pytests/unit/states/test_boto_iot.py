@@ -3,6 +3,7 @@ import random
 import string
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.boto_iot as boto_iot
@@ -13,6 +14,11 @@ boto3 = pytest.importorskip("boto3", "1.2.1")
 botocore = pytest.importorskip("botocore", "1.4.41")
 
 log = logging.getLogger(__name__)
+
+
+pytestmark = [
+    pytest.mark.slow_test,
+]
 
 
 class GlobalConfig:
@@ -44,7 +50,10 @@ class GlobalConfig:
     error_content = {"Error": {"Code": 101, "Message": "Test-defined error"}}
     policy_ret = dict(
         policyName="testpolicy",
-        policyDocument='{"Version": "2012-10-17", "Statement": [{"Action": ["iot:Publish"], "Resource": ["*"], "Effect": "Allow"}]}',
+        policyDocument=(
+            '{"Version": "2012-10-17", "Statement": [{"Action": ["iot:Publish"],'
+            ' "Resource": ["*"], "Effect": "Allow"}]}'
+        ),
         policyArn="arn:aws:iot:us-east-1:123456:policy/my_policy",
         policyVersionId=1,
         defaultVersionId=1,
@@ -91,19 +100,29 @@ class GlobalConfig:
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    opts["grains"] = salt.loader.grains(opts)
+def session_instance():
+    GlobalConfig.conn_parameters["key"] = "".join(
+        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
+    )
+    with patch("boto3.session.Session") as patched_session:
+        yield patched_session()
+
+
+@pytest.fixture
+def configure_loader_modules(minion_opts):
+    minion_opts["grains"] = salt.loader.grains(minion_opts)
     ctx = {}
     utils = salt.loader.utils(
-        opts, whitelist=["boto3", "args", "systemd", "path", "platform"], context=ctx,
+        minion_opts,
+        whitelist=["boto3", "args", "systemd", "path", "platform"],
+        context=ctx,
     )
-    serializers = salt.loader.serializers(opts)
+    serializers = salt.loader.serializers(minion_opts)
     funcs = funcs = salt.loader.minion_mods(
-        opts, context=ctx, utils=utils, whitelist=["boto_iot"]
+        minion_opts, context=ctx, utils=utils, whitelist=["boto_iot"]
     )
     salt_states = salt.loader.states(
-        opts=opts,
+        opts=minion_opts,
         functions=funcs,
         utils=utils,
         whitelist=["boto_iot"],
@@ -111,7 +130,7 @@ def configure_loader_modules():
     )
     return {
         boto_iot: {
-            "__opts__": opts,
+            "__opts__": minion_opts,
             "__salt__": funcs,
             "__utils__": utils,
             "__states__": salt_states,
@@ -120,13 +139,7 @@ def configure_loader_modules():
     }
 
 
-def test_present_when_thing_type_does_not_exist():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_present_when_thing_type_does_not_exist(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.describe_thing_type.side_effect = [
@@ -148,13 +161,7 @@ def test_present_when_thing_type_does_not_exist():
     )
 
 
-def test_present_when_thing_type_exists():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_present_when_thing_type_exists(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.describe_thing_type.return_value = GlobalConfig.thing_type_ret
@@ -170,13 +177,7 @@ def test_present_when_thing_type_exists():
     assert conn.create_thing_type.call_count == 0
 
 
-def test_present_with_failure():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_present_with_failure(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.describe_thing_type.side_effect = [
@@ -197,13 +198,7 @@ def test_present_with_failure():
     assert "An error occurred" in result["comment"]
 
 
-def test_absent_when_thing_type_does_not_exist():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_absent_when_thing_type_does_not_exist(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.describe_thing_type.side_effect = GlobalConfig.not_found_error
@@ -215,13 +210,7 @@ def test_absent_when_thing_type_does_not_exist():
 
 
 @pytest.mark.slow_test
-def test_absent_when_thing_type_exists():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_absent_when_thing_type_exists(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.describe_thing_type.return_value = GlobalConfig.deprecated_thing_type_ret
@@ -233,13 +222,7 @@ def test_absent_when_thing_type_exists():
     assert conn.deprecate_thing_type.call_count == 0
 
 
-def test_absent_with_deprecate_failure():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_absent_with_deprecate_failure(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.describe_thing_type.return_value = GlobalConfig.thing_type_ret
@@ -255,13 +238,7 @@ def test_absent_with_deprecate_failure():
     assert conn.delete_thing_type.call_count == 0
 
 
-def test_absent_with_delete_failure():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_absent_with_delete_failure(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.describe_thing_type.return_value = GlobalConfig.deprecated_thing_type_ret
@@ -277,13 +254,7 @@ def test_absent_with_delete_failure():
     assert conn.deprecate_thing_type.call_count == 0
 
 
-def test_present_when_policy_does_not_exist():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_present_when_policy_does_not_exist(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.get_policy.side_effect = [
@@ -304,13 +275,7 @@ def test_present_when_policy_does_not_exist():
     )
 
 
-def test_present_when_policy_exists():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_present_when_policy_exists(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.get_policy.return_value = GlobalConfig.policy_ret
@@ -324,13 +289,7 @@ def test_present_when_policy_exists():
     assert result["changes"] == {}
 
 
-def test_present_again_with_failure():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_present_again_with_failure(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.get_policy.side_effect = [
@@ -349,13 +308,7 @@ def test_present_again_with_failure():
     assert "An error occurred" in result["comment"]
 
 
-def test_absent_when_policy_does_not_exist():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_absent_when_policy_does_not_exist(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.get_policy.side_effect = GlobalConfig.not_found_error
@@ -364,13 +317,7 @@ def test_absent_when_policy_does_not_exist():
     assert result["changes"] == {}
 
 
-def test_absent_when_policy_exists():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_absent_when_policy_exists(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.get_policy.return_value = GlobalConfig.policy_ret
@@ -382,13 +329,7 @@ def test_absent_when_policy_exists():
     assert result["changes"]["new"]["policy"] is None
 
 
-def test_absent_with_failure():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_absent_with_failure(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.get_policy.return_value = GlobalConfig.policy_ret
@@ -403,13 +344,7 @@ def test_absent_with_failure():
     assert "An error occurred" in result["comment"]
 
 
-def test_attached_when_policy_not_attached():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_attached_when_policy_not_attached(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_principal_policies.return_value = {"policies": []}
@@ -420,13 +355,7 @@ def test_attached_when_policy_not_attached():
     assert result["changes"]["new"]["attached"]
 
 
-def test_attached_when_policy_attached():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_attached_when_policy_attached(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_principal_policies.return_value = {"policies": [GlobalConfig.policy_ret]}
@@ -437,13 +366,7 @@ def test_attached_when_policy_attached():
     assert result["changes"] == {}
 
 
-def test_attached_with_failure():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_attached_with_failure(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_principal_policies.return_value = {"policies": []}
@@ -457,13 +380,7 @@ def test_attached_with_failure():
     assert result["changes"] == {}
 
 
-def test_detached_when_policy_not_detached():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_detached_when_policy_not_detached(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_principal_policies.return_value = {"policies": [GlobalConfig.policy_ret]}
@@ -475,13 +392,7 @@ def test_detached_when_policy_not_detached():
     assert not result["changes"]["new"]["attached"]
 
 
-def test_detached_when_policy_detached():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_detached_when_policy_detached(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_principal_policies.return_value = {"policies": []}
@@ -492,13 +403,7 @@ def test_detached_when_policy_detached():
     assert result["changes"] == {}
 
 
-def test_detached_with_failure():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_detached_with_failure(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.list_principal_policies.return_value = {"policies": [GlobalConfig.policy_ret]}
@@ -512,13 +417,7 @@ def test_detached_with_failure():
     assert result["changes"] == {}
 
 
-def test_present_when_topic_rule_does_not_exist():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_present_when_topic_rule_does_not_exist(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.get_topic_rule.side_effect = [
@@ -542,13 +441,7 @@ def test_present_when_topic_rule_does_not_exist():
     )
 
 
-def test_present_when_next_policy_exists():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_present_when_next_policy_exists(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.get_topic_rule.return_value = {"rule": GlobalConfig.topic_rule_ret}
@@ -565,13 +458,7 @@ def test_present_when_next_policy_exists():
     assert result["changes"] == {}
 
 
-def test_present_next_with_failure():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_present_next_with_failure(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.get_topic_rule.side_effect = [
@@ -593,13 +480,7 @@ def test_present_next_with_failure():
     assert "An error occurred" in result["comment"]
 
 
-def test_absent_when_topic_rule_does_not_exist():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_absent_when_topic_rule_does_not_exist(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.get_topic_rule.side_effect = GlobalConfig.topic_rule_not_found_error
@@ -608,13 +489,7 @@ def test_absent_when_topic_rule_does_not_exist():
     assert result["changes"] == {}
 
 
-def test_absent_when_topic_rule_exists():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_absent_when_topic_rule_exists(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.get_topic_rule.return_value = GlobalConfig.topic_rule_ret
@@ -625,13 +500,7 @@ def test_absent_when_topic_rule_exists():
     assert result["changes"]["new"]["rule"] is None
 
 
-def test_absent_next_with_failure():
-    GlobalConfig.conn_parameters["key"] = "".join(
-        random.choice(string.ascii_lowercase + string.digits) for _ in range(50)
-    )
-    patcher = patch("boto3.session.Session")
-    mock_session = patcher.start()
-    session_instance = mock_session.return_value
+def test_absent_next_with_failure(session_instance):
     conn = MagicMock()
     session_instance.client.return_value = conn
     conn.get_topic_rule.return_value = GlobalConfig.topic_rule_ret

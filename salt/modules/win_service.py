@@ -342,7 +342,7 @@ def start(name, timeout=90):
             raise CommandExecutionError(
                 "Failed To Start {}: {}".format(name, exc.strerror)
             )
-        log.debug('Service "{}" is running'.format(name))
+        log.debug('Service "%s" is running', name)
 
     srv_status = _status_wait(
         service_name=name,
@@ -383,7 +383,7 @@ def stop(name, timeout=90):
             raise CommandExecutionError(
                 "Failed To Stop {}: {}".format(name, exc.strerror)
             )
-        log.debug('Service "{}" is not running'.format(name))
+        log.debug('Service "%s" is not running', name)
 
     srv_status = _status_wait(
         service_name=name,
@@ -447,7 +447,7 @@ def create_win_salt_restart_task():
     """
     # Updated to use full name for Nessus agent
     cmd = salt.utils.path.which("cmd")
-    args = "/c ping -n 3 127.0.0.1 && net stop salt-minion && net start " "salt-minion"
+    args = "/c ping -n 3 127.0.0.1 && net stop salt-minion && net start salt-minion"
     return __salt__["task.create_task"](
         name="restart-salt-minion",
         user_name="System",
@@ -486,12 +486,16 @@ def status(name, *args, **kwargs):
     .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
+    .. versionchanged:: 3006.0
+        Returns "Not Found" if the service is not found on the system
+
     Args:
         name (str): The name of the service to check
 
     Returns:
         bool: True if running, False otherwise
         dict: Maps service name to True if running, False otherwise
+        str: Not Found if the service is not found on the system
 
     CLI Example:
 
@@ -508,7 +512,10 @@ def status(name, *args, **kwargs):
     else:
         services = [name]
     for service in services:
-        results[service] = info(service)["Status"] in ["Running", "Stop Pending"]
+        try:
+            results[service] = info(service)["Status"] in ["Running", "Stop Pending"]
+        except CommandExecutionError:
+            results[service] = "Not Found"
     if contains_globbing:
         return results
     return results[name]
@@ -1116,7 +1123,7 @@ def delete(name, timeout=90):
             raise CommandExecutionError(
                 "Failed to open {}. {}".format(name, exc.strerror)
             )
-        log.debug('Service "{}" is not present'.format(name))
+        log.debug('Service "%s" is not present', name)
         return True
 
     try:

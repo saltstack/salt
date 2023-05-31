@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.pkgng as pkgng
 from tests.support.mock import MagicMock, patch
 

@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+
 from tests.support.mock import MagicMock, patch
 
 try:
@@ -137,9 +138,7 @@ def test_eval_skip_during_range_invalid_date(schedule):
     run_time = dateutil.parser.parse("11/29/2017 4:00pm")
     schedule.eval(now=run_time)
     ret = schedule.job_status("job1")
-    _expected = (
-        "Invalid date string for end in " "skip_during_range. Ignoring " "job job1."
-    )
+    _expected = "Invalid date string for end in skip_during_range. Ignoring job job1."
     assert ret["_error"] == _expected
 
 

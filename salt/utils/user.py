@@ -1,26 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 Functions for querying and modifying a user account and the groups to which it
 belongs.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import ctypes
 import getpass
 import logging
 import os
 import sys
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.utils.decorators.jinja import jinja_filter
 
 # Conditional imports
@@ -165,13 +158,13 @@ def get_specific_user():
     user = get_user()
     if salt.utils.platform.is_windows():
         if _win_current_user_is_admin():
-            return "sudo_{0}".format(user)
+            return "sudo_{}".format(user)
     else:
         env_vars = ("SUDO_USER",)
         if user == "root":
             for evar in env_vars:
                 if evar in os.environ:
-                    return "sudo_{0}".format(os.environ[evar])
+                    return "sudo_{}".format(os.environ[evar])
     return user
 
 
@@ -189,7 +182,7 @@ def chugid(runas, group=None):
             target_pw_gid = grp.getgrnam(group).gr_gid
         except KeyError as err:
             raise CommandExecutionError(
-                "Failed to fetch the GID for {0}. Error: {1}".format(group, err)
+                "Failed to fetch the GID for {}. Error: {}".format(group, err)
             )
     else:
         target_pw_gid = uinfo.pw_gid
@@ -205,9 +198,7 @@ def chugid(runas, group=None):
     # this does not appear to be strictly true.
     group_list = get_group_dict(runas, include_default=True)
     if sys.platform == "darwin":
-        group_list = dict(
-            (k, v) for k, v in six.iteritems(group_list) if not k.startswith("_")
-        )
+        group_list = {k: v for k, v in group_list.items() if not k.startswith("_")}
     for group_name in group_list:
         gid = group_list[group_name]
         if gid not in supgroups_seen and not supgroups_seen.add(gid):
@@ -218,7 +209,7 @@ def chugid(runas, group=None):
             os.setgid(target_pw_gid)
         except OSError as err:
             raise CommandExecutionError(
-                "Failed to change from gid {0} to {1}. Error: {2}".format(
+                "Failed to change from gid {} to {}. Error: {}".format(
                     os.getgid(), target_pw_gid, err
                 )
             )
@@ -229,7 +220,7 @@ def chugid(runas, group=None):
             os.setgroups(supgroups)
         except OSError as err:
             raise CommandExecutionError(
-                "Failed to set supplemental groups to {0}. Error: {1}".format(
+                "Failed to set supplemental groups to {}. Error: {}".format(
                     supgroups, err
                 )
             )
@@ -239,7 +230,7 @@ def chugid(runas, group=None):
             os.setuid(uinfo.pw_uid)
         except OSError as err:
             raise CommandExecutionError(
-                "Failed to change from uid {0} to {1}. Error: {2}".format(
+                "Failed to change from uid {} to {}. Error: {}".format(
                     os.getuid(), uinfo.pw_uid, err
                 )
             )
@@ -302,9 +293,11 @@ def get_group_list(user, include_default=True):
         # Try os.getgrouplist, available in python >= 3.3
         log.trace("Trying os.getgrouplist for '%s'", user)
         try:
+            user_group_list = os.getgrouplist(user, pwd.getpwnam(user).pw_gid)
             group_names = [
-                grp.getgrgid(grpid).gr_name
-                for grpid in os.getgrouplist(user, pwd.getpwnam(user).pw_gid)
+                _group.gr_name
+                for _group in grp.getgrall()
+                if _group.gr_gid in user_group_list
             ]
         except Exception:  # pylint: disable=broad-except
             pass
@@ -370,9 +363,7 @@ def get_gid_list(user, include_default=True):
     """
     if HAS_GRP is False or HAS_PWD is False:
         return []
-    gid_list = list(
-        six.itervalues(get_group_dict(user, include_default=include_default))
-    )
+    gid_list = list(get_group_dict(user, include_default=include_default).values())
     return sorted(set(gid_list))
 
 

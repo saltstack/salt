@@ -1,26 +1,16 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import random
 import string
 from copy import deepcopy
 
-# Import Salt libs
+import pytest
+
 import salt.loader
 import salt.modules.boto_s3_bucket as boto_s3_bucket
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=import-error,no-name-in-module,unused-import
 try:
@@ -49,7 +39,7 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
+    elif Version(boto3.__version__) < Version(required_boto3_version):
         return False
     else:
         return True
@@ -122,7 +112,9 @@ if _has_required_boto():
         "get_bucket_notification_configuration": {
             "LambdaFunctionConfigurations": [
                 {
-                    "LambdaFunctionArn": "arn:aws:lambda:us-east-1:111111222222:function:my-function",
+                    "LambdaFunctionArn": (
+                        "arn:aws:lambda:us-east-1:111111222222:function:my-function"
+                    ),
                     "Id": "zxcvbnmlkjhgfdsa",
                     "Events": ["s3:ObjectCreated:*"],
                     "Filter": {
@@ -159,11 +151,12 @@ if _has_required_boto():
     }
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    reason="The boto3 module must be greater than or equal to version {}".format(
+        required_boto3_version
+    ),
 )
 class BotoS3BucketTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
@@ -176,7 +169,7 @@ class BotoS3BucketTestCaseBase(TestCase, LoaderModuleMockMixin):
         return {boto_s3_bucket: {"__utils__": utils}}
 
     def setUp(self):
-        super(BotoS3BucketTestCaseBase, self).setUp()
+        super().setUp()
         boto_s3_bucket.__init__(self.opts)
         del self.opts
         # Set up MagicMock to replace the boto3 session
@@ -198,7 +191,7 @@ class BotoS3BucketTestCaseBase(TestCase, LoaderModuleMockMixin):
         session_instance.client.return_value = self.conn
 
 
-class BotoS3BucketTestCaseMixin(object):
+class BotoS3BucketTestCaseMixin:
     pass
 
 
@@ -300,7 +293,7 @@ class BotoS3BucketTestCase(BotoS3BucketTestCaseBase, BotoS3BucketTestCaseMixin):
         """
         Tests describing parameters if bucket exists
         """
-        for key, value in six.iteritems(config_ret):
+        for key, value in config_ret.items():
             getattr(self.conn, key).return_value = deepcopy(value)
 
         result = boto_s3_bucket.describe(Bucket="mybucket", **conn_parameters)

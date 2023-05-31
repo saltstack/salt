@@ -1,10 +1,7 @@
-# coding: utf-8
 """
 Runner for setting and querying data via the sdb API on the master
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.utils.sdb
 
 __func_alias__ = {

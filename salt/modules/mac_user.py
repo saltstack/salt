@@ -65,7 +65,7 @@ def _dscl(cmd, ctype="create"):
 
 def _first_avail_uid():
     uids = {x.pw_uid for x in pwd.getpwall()}
-    for idx in range(501, 2 ** 24):
+    for idx in range(501, 2**24):
         if idx not in uids:
             return idx
 
@@ -142,22 +142,24 @@ def delete(name, remove=False, force=False):
     """
     if salt.utils.stringutils.contains_whitespace(name):
         raise SaltInvocationError("Username cannot contain whitespace")
-    if not info(name):
+
+    user_info = info(name)
+    if not user_info:
         return True
 
     # force is added for compatibility with user.absent state function
     if force:
         log.warning("force option is unsupported on MacOS, ignoring")
 
-    # remove home directory from filesystem
-    if remove:
-        __salt__["file.remove"](info(name)["home"])
-
     # Remove from any groups other than primary group. Needs to be done since
     # group membership is managed separately from users and an entry for the
     # user will persist even after the user is removed.
     chgroups(name, ())
-    return _dscl(["/Users/{}".format(name)], ctype="delete")["retcode"] == 0
+    ret = _dscl(["/Users/{}".format(name)], ctype="delete")["retcode"] == 0
+    if ret and remove:
+        # remove home directory from filesystem
+        __salt__["file.remove"](user_info["home"])
+    return ret
 
 
 def getent(refresh=False):
@@ -382,8 +384,10 @@ def info(name):
         salt '*' user.info root
     """
     try:
-        data = pwd.getpwnam(name)
-    except KeyError:
+        # pwd.getpwnam seems to cache weirdly, after an account is
+        # deleted, it still returns data. Let's not use it
+        data = next(iter(x for x in pwd.getpwall() if x.pw_name == name))
+    except StopIteration:
         return {}
     else:
         return _format_info(data)
@@ -525,10 +529,10 @@ def _kcpassword(password):
     # The magic 11 bytes - these are just repeated
     # 0x7D 0x89 0x52 0x23 0xD2 0xBC 0xDD 0xEA 0xA3 0xB9 0x1F
     key = [125, 137, 82, 35, 210, 188, 221, 234, 163, 185, 31]
-    key_len = len(key)
+    key_len = len(key) + 1  # macOS adds an extra byte for the trailing null
 
-    # Convert each character to a byte
-    password = list(map(ord, password))
+    # Convert each character to a byte and add a trailing null
+    password = list(map(ord, password)) + [0]
 
     # pad password length out to an even multiple of key length
     remainder = len(password) % key_len
@@ -550,9 +554,8 @@ def _kcpassword(password):
             password[password_index] = password[password_index] ^ key[key_index]
             key_index += 1
 
-    # Convert each byte back to a character
-    password = list(map(chr, password))
-    return b"".join(salt.utils.data.encode(password))
+    # Return the raw bytes
+    return bytes(password)
 
 
 def enable_auto_login(name, password):

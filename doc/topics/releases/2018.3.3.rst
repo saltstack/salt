@@ -11,7 +11,14 @@ Statistics
 - Total Issue References: **69**
 - Total PR References: **341**
 
-- Contributors: **55** (`Ch3LL`_, `FedericoCeratto`_, `KaiSforza`_, `L4rS6`_, `Lutseslav`_, `The-Loeki`_, `Vaelatern`_, `admd`_, `aesposito91`_, `asenci`_, `astorath`_, `azelezni`_, `babs`_, `bbczeuz`_, `bbinet`_, `brejoc`_, `cro`_, `daa`_, `dmurphy18`_, `dubb-b`_, `dwoz`_, `eliasp`_, `ezh`_, `garethgreenaway`_, `gtmanfred`_, `isbm`_, `jeduardo`_, `kt97679`_, `kuetrzi`_, `linoplt`_, `lomeroe`_, `lusche`_, `mateiw`_, `max-arnold`_, `maxim-sermin`_, `meaksh`_, `mmulqueen`_, `morganwillcock`_, `mtorromeo`_, `nullify005`_, `paulcollinsiii`_, `pritambaral`_, `rallytime`_, `rares-pop`_, `rmarchei`_, `rosscdh`_, `sizgiyaev`_, `sjorge`_, `t0fik`_, `terminalmage`_, `travispaul`_, `twangboy`_, `vinian`_, `weswhet`_, `zerthimon`_)
+- Contributors: **55** (`Ch3LL`_, `FedericoCeratto`_, `KaiSforza`_, `L4rS6`_, `Lutseslav`_,
+  `The-Loeki`_, `Vaelatern`_, `admd`_, `aesposito91`_, `asenci`_, `astorath`_, `azelezni`_,
+  `babs`_, `bbczeuz`_, `bbinet`_, `brejoc`_, `cro`_, `daa`_, `dmurphy18`_, `dubb-b`_, `dwoz`_,
+  `eliasp`_, `ezh`_, `garethgreenaway`_, `gtmanfred`_, `isbm`_, `jeduardo`_, `kt97679`_,
+  `kuetrzi`_, `linoplt`_, `lomeroe`_, `lusche`_, `mateiw`_, `max-arnold`_, `maxim-sermin`_,
+  `meaksh`_, `mmulqueen`_, `morganwillcock`_, `mtorromeo`_, `nullify005`_, `paulcollinsiii`_,
+  `pritambaral`_, `rallytime`_, `rares-pop`_, `rmarchei`_, `rosscdh`_, `sizgiyaev`_, `sjorge`_,
+  `t0fik`_, `terminalmage`_, `travispaul`_, `twangboy`_, `vinian`_, `weswhet`_, `zerthimon`_)
 
 
 .. warning::
@@ -1195,7 +1202,7 @@ Changelog for v2018.3.2..v2018.3.3
 
   * abd7f1312d Merge pull request `#48928`_ from Ch3LL/mac_runas
 
-  * 3d6455dbcd remove unecessary comment in setup
+  * 3d6455dbcd remove unnecessary comment in setup
 
   * 8e30db0217 move destructivetest to testname
 
@@ -1305,12 +1312,12 @@ Changelog for v2018.3.2..v2018.3.3
 
 * **ISSUE** `#37512`_: (`ChristianBeer`_) What's the precedence if multiple master configurations are specified? (refs: `#48888`_)
 
-* **PR** `#48888`_: (`terminalmage`_) Explictly document the configuration override priority
+* **PR** `#48888`_: (`terminalmage`_) Explicitly document the configuration override priority
   @ *2018-08-02 16:57:18 UTC*
 
   * ec8e07e8ce Merge pull request `#48888`_ from terminalmage/issue37512
 
-  * 7dce7cde14 Explictly document the configuration override priority
+  * 7dce7cde14 Explicitly document the configuration override priority
 
 * **PR** `#48871`_: (`dwoz`_) Remove unicode key pairs from environ after test
   @ *2018-08-01 22:33:41 UTC*
@@ -1347,7 +1354,7 @@ Changelog for v2018.3.2..v2018.3.3
 
     * 8a1285239a Merge pull request `#48426`_ from garethgreenaway/46689_fixing_pkg_held_when_package_is_installed
 
-      * 9b0f5dd212 Fixing identation, removing some unnecessary conditionals.
+      * 9b0f5dd212 Fixing indentation, removing some unnecessary conditionals.
 
       * 727964ab55 One last cleanup.
 
@@ -1517,7 +1524,7 @@ Changelog for v2018.3.2..v2018.3.3
 
   * 95329acb1e Fileserver transfers bytes
 
-  * aa34a80997 Always trasfer bytes from fileserver roots
+  * aa34a80997 Always transfer bytes from fileserver roots
 
 * **PR** `#48822`_: (`Ch3LL`_) Fix salt-ssh state.sls_id TypeError key must be a string
   @ *2018-07-30 20:29:29 UTC*
@@ -1576,7 +1583,7 @@ Changelog for v2018.3.2..v2018.3.3
 
     * 169afea16a Merge pull request `#48749`_ from Ch3LL/logo_docs
 
-      * 73b1fc29f0 Update Saltstack Logo banner on docs.saltstack.com
+      * 73b1fc29f0 Update Saltstack Logo banner on docs.saltproject.io
 
 * **ISSUE** `#48020`_: (`calvinhp`_) mine.get not returning data in a state.orchestrate sls  (refs: `#48765`_)
 
@@ -1639,12 +1646,12 @@ Changelog for v2018.3.2..v2018.3.3
 
   * d33056704b pass proxy_user, proxy_password, proxy_host, and ca_certs through salt.utils.stringutils.to_str()
 
-* **PR** `#48769`_: (`Ch3LL`_) Update Saltstack Logo banner on docs.saltstack.com
+* **PR** `#48769`_: (`Ch3LL`_) Update Saltstack Logo banner on docs.saltproject.io
   @ *2018-07-25 14:47:19 UTC*
 
   * 1eee4b136b Merge pull request `#48769`_ from Ch3LL/update_doc_2018.3
 
-  * 0cb4bac798 Update Saltstack Logo banner on docs.saltstack.com
+  * 0cb4bac798 Update Saltstack Logo banner on docs.saltproject.io
 
 * **PR** `#48760`_: (`dwoz`_) Multiple windows test fixes
   @ *2018-07-25 11:55:27 UTC*
@@ -1695,7 +1702,7 @@ Changelog for v2018.3.2..v2018.3.3
 
     * 83e4bba916 Merge pull request `#48635`_ from nbraud/acme
 
-      * 3673bae9de modules/acme: explicitely ignore the `perms` return value
+      * 3673bae9de modules/acme: explicitly ignore the `perms` return value
 
       * 1800a231e8 Fixup some schema expectations
 
@@ -1807,9 +1814,9 @@ Changelog for v2018.3.2..v2018.3.3
 
     * 1b6e6388f8 Merge pull request `#48588`_ from garethgreenaway/48415_event_send_multi_master
 
-      * fab25af1a9 Adding some quick documention about why we are setting ret=True following the channel.send.
+      * fab25af1a9 Adding some quick documentation about why we are setting ret=True following the channel.send.
 
-      * bf78f4b188 If the channel send is sucessful and does not raise an exception, we set ret to True, in case a previous exception from a previous channel send to another master has sent it to False.
+      * bf78f4b188 If the channel send is successful and does not raise an exception, we set ret to True, in case a previous exception from a previous channel send to another master has sent it to False.
 
       * 8d1551c5fb When using Salt multi-master, if we encouter a salt master that has not accepted the minion key yet we should not exit right away, rather continue on and try the next salt master available in the list.
 
@@ -2611,7 +2618,7 @@ Changelog for v2018.3.2..v2018.3.3
 
   * 06a927b2aa Merge pull request `#48293`_ from rallytime/bp-47453
 
-    * e96ab6778e dont reset system locale when running rabbitmqctl commands
+    * e96ab6778e don't reset system locale when running rabbitmqctl commands
 
 * **ISSUE** `#45939`_: (`andygabby`_) user.present with hash_password: True detects change on every state.apply/highstate (refs: `#47147`_)
 
@@ -2647,7 +2654,7 @@ Changelog for v2018.3.2..v2018.3.3
 
     * 83d7d286c4 Merge pull request `#48080`_ from lusche/2017.7
 
-      * 917dc985fc `#47984`_ remove the line completly
+      * 917dc985fc `#47984`_ remove the line completely
 
       * ba12ee947b Merge branch '2017.7' of https://github.com/saltstack/salt into 2017.7
 
@@ -3161,7 +3168,7 @@ Changelog for v2018.3.2..v2018.3.3
 
   * a040643a82 Accounting for certain situations when the query result is not a string, but actually a dictionary.
 
-* **ISSUE** `#48113`_: (`gaetanquentin`_) state file.line has error and  erase file content completly, while with mode  test=true it is ok (refs: `#48156`_)
+* **ISSUE** `#48113`_: (`gaetanquentin`_) state file.line has error and  erase file content completely, while with mode  test=true it is ok (refs: `#48156`_)
 
 * **PR** `#48156`_: (`garethgreenaway`_) [2018.3] Unicode fixes for file.line
   @ *2018-06-17 19:34:08 UTC*
@@ -4004,7 +4011,7 @@ Changelog for v2018.3.2..v2018.3.3
 
     * 0e87559ee3 Merge pull request `#47781`_ from rallytime/update-linode-sizes
 
-      * a90c1b760e Update cloud test profile and docs to use new Linode size lables
+      * a90c1b760e Update cloud test profile and docs to use new Linode size labels
 
     * 3ddc56cb9b Merge pull request `#47748`_ from rallytime/merge-2017.7
 
@@ -4570,7 +4577,7 @@ Changelog for v2018.3.2..v2018.3.3
 
   * 7f53be6e92 Merge pull request `#47444`_ from terminalmage/render_state-spurious-error
 
-    * a1e9fe00fd Skip trying to render a template for a nonexistant SLS file
+    * a1e9fe00fd Skip trying to render a template for a nonexistent SLS file
 
   * 50b9c4d79d Merge pull request `#47478`_ from terminalmage/rename-pip-state-test
 

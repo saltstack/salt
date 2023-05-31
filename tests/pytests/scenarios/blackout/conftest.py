@@ -56,9 +56,9 @@ class BlackoutPillar:
 
     def refresh_pillar(self, timeout=60, sleep=0.5, exiting_blackout=None):
         ret = self.salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt="*")
-        assert ret.exitcode == 0
-        assert self.minion_1_id in ret.json
-        assert self.minion_2_id in ret.json
+        assert ret.returncode == 0
+        assert self.minion_1_id in ret.data
+        assert self.minion_2_id in ret.data
         stop_at = time.time() + timeout
         while True:
             if time.time() > stop_at:
@@ -82,23 +82,23 @@ class BlackoutPillar:
             time.sleep(sleep)
 
             ret = self.salt_cli.run("pillar.get", "minion_blackout", minion_tgt="*")
-            if not ret.json:
+            if not ret.data:
                 # Something is wrong here. Try again
                 continue
-            assert self.minion_1_id in ret.json
-            assert self.minion_2_id in ret.json
-            if ret.json[self.minion_1_id] == "" or ret.json[self.minion_2_id] == "":
+            assert self.minion_1_id in ret.data
+            assert self.minion_2_id in ret.data
+            if ret.data[self.minion_1_id] == "" or ret.data[self.minion_2_id] == "":
                 # Pillar not found
                 continue
 
             # Minion 2 must NEVER enter blackout
-            assert ret.json[self.minion_2_id] is False
+            assert ret.data[self.minion_2_id] is False
 
-            if exiting_blackout is True and ret.json[self.minion_1_id] is not False:
+            if exiting_blackout is True and ret.data[self.minion_1_id] is not False:
                 continue
             elif (
                 exiting_blackout is False
-                and "Minion in blackout mode" not in ret.json[self.minion_1_id]
+                and "Minion in blackout mode" not in ret.data[self.minion_1_id]
             ):
                 continue
             # We got the pillar we're after, break out of the loop
@@ -129,7 +129,7 @@ def salt_master(salt_factories, pillar_state_tree):
     factory = salt_factories.salt_master_daemon(
         "blackout-master",
         defaults=config_defaults,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     with factory.started():
         yield factory

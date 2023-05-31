@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A module that adds data to the Pillar structure retrieved by an http request
 
@@ -13,9 +12,13 @@ Set the following Salt config to setup an http endpoint as the external pillar s
   ext_pillar:
     - http_yaml:
         url: http://example.com/api/minion_id
-        ::TODO::
         username: username
         password: password
+        header_dict: None
+        auth: None
+
+You can pass additional parameters, they will be added to the http.query call
+:py:func:`utils.http.query function <salt.utils.http.query>`:
 
 If the with_grains parameter is set, grain keys wrapped in can be provided (wrapped
 in <> brackets) in the url in order to populate pillar data based on the grain value.
@@ -40,17 +43,9 @@ in <> brackets) in the url in order to populate pillar data based on the grain v
 Module Documentation
 ====================
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import re
-
-from salt.ext import six
-
-# Import Salt libs
-from salt.ext.six.moves.urllib.parse import quote as _quote
+import urllib.parse
 
 log = logging.getLogger(__name__)
 
@@ -59,18 +54,31 @@ def __virtual__():
     return True
 
 
-def ext_pillar(minion_id, pillar, url, with_grains=False):  # pylint: disable=W0613
+def ext_pillar(
+    minion_id,
+    pillar,
+    url,
+    with_grains=False,
+    header_dict=None,
+    auth=None,
+    username=None,
+    password=None,
+):  # pylint: disable=W0613
     """
     Read pillar data from HTTP response.
 
     :param str url: Url to request.
     :param bool with_grains: Whether to substitute strings in the url with their grain values.
+    :param dict header_dict: Extra headers to send
+    :param str username: username for auth
+    :param str pasword: password for auth
+    :param auth: special auth if needed
 
     :return: A dictionary of the pillar data to add.
     :rtype: dict
     """
-
-    url = url.replace("%s", _quote(minion_id))
+    # As we are dealing with kwargs, clean args that are hardcoded in this function
+    url = url.replace("%s", urllib.parse.quote(minion_id))
 
     grain_pattern = r"<(?P<grain_name>.*?)>"
 
@@ -85,11 +93,19 @@ def ext_pillar(minion_id, pillar, url, with_grains=False):  # pylint: disable=W0
                 log.error("Unable to get minion '%s' grain: %s", minion_id, grain_name)
                 return {}
 
-            grain_value = _quote(six.text_type(grain_value))
-            url = re.sub("<{0}>".format(grain_name), grain_value, url)
+            grain_value = urllib.parse.quote(str(grain_value))
+            url = re.sub("<{}>".format(grain_name), grain_value, url)
 
     log.debug("Getting url: %s", url)
-    data = __salt__["http.query"](url=url, decode=True, decode_type="yaml")
+    data = __salt__["http.query"](
+        url=url,
+        decode=True,
+        decode_type="yaml",
+        header_dict=header_dict,
+        auth=auth,
+        username=username,
+        password=password,
+    )
 
     if "dict" in data:
         return data["dict"]

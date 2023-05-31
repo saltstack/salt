@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.grafana as grafana
 import salt.utils.json
 from salt.exceptions import SaltInvocationError

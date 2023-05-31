@@ -6,6 +6,7 @@ import logging
 import subprocess
 
 import pytest
+
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
@@ -31,8 +32,14 @@ def test_managed(cron_account, salt_cli, salt_minion, base_env_state_tree_root_d
     """
     file.managed
     """
-    cron_contents = "# Lines below here are managed by Salt, do not edit\n@hourly touch /tmp/test-file\n"
-    expected = "--- \n+++ \n@@ -1 +1,2 @@\n-\n+# Lines below here are managed by Salt, do not edit\n+@hourly touch /tmp/test-file\n"
+    cron_contents = (
+        "# Lines below here are managed by Salt, do not edit\n@hourly touch"
+        " /tmp/test-file\n"
+    )
+    expected = (
+        "--- \n+++ \n@@ -1 +1,2 @@\n-\n+# Lines below here are managed by Salt, do not"
+        " edit\n+@hourly touch /tmp/test-file\n"
+    )
     with pytest.helpers.temp_file(
         "issue-46881/cron", cron_contents, base_env_state_tree_root_dir
     ):
@@ -43,8 +50,8 @@ def test_managed(cron_account, salt_cli, salt_minion, base_env_state_tree_root_d
             user=cron_account.username,
             minion_tgt=salt_minion.id,
         )
-    assert ret.exitcode == 0, ret
-    state = ret.json["cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file"]
+    assert ret.returncode == 0, ret
+    state = ret.data["cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file"]
     assert "changes" in state
     assert "diff" in state["changes"]
     assert state["changes"]["diff"] == expected

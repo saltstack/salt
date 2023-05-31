@@ -6,9 +6,10 @@ Provide authentication using simple LDAP binds
 import itertools
 import logging
 
+from jinja2 import Environment
+
 import salt.utils.data
 import salt.utils.stringutils
-from jinja2 import Environment
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -16,8 +17,8 @@ log = logging.getLogger(__name__)
 try:
     # pylint: disable=no-name-in-module
     import ldap
-    import ldap.modlist
     import ldap.filter
+    import ldap.modlist
 
     HAS_LDAP = True
     # pylint: enable=no-name-in-module
@@ -273,7 +274,7 @@ def _bind(username, password, anonymous=False, opts=None):
             # search for the user's DN to be used for the actual authentication
             _ldap = _LDAPConnection(**connargs).ldap
             log.debug(
-                "Running LDAP user dn search with filter:%s, dn:%s, " "scope:%s",
+                "Running LDAP user dn search with filter:%s, dn:%s, scope:%s",
                 paramvalues["filter"],
                 basedn,
                 scope,
@@ -410,7 +411,7 @@ def groups(username, **kwargs):
                     ldap.SCOPE_SUBTREE,
                     get_user_dn_search,
                     ["distinguishedName"],
-                )  # future lint: disable=blacklisted-function
+                )
             except Exception as e:  # pylint: disable=broad-except
                 log.error("Exception thrown while looking up user DN in AD: %s", e)
                 return group_list
@@ -432,7 +433,7 @@ def groups(username, **kwargs):
                         salt.utils.stringutils.to_str(_config("accountattributename")),
                         "cn",
                     ],
-                )  # future lint: disable=blacklisted-function
+                )
             except Exception as e:  # pylint: disable=broad-except
                 log.error(
                     "Exception thrown while retrieving group membership in AD: %s", e
@@ -456,7 +457,7 @@ def groups(username, **kwargs):
                     salt.utils.stringutils.to_str(_config("groupattribute")),
                     "cn",
                 ],
-            )  # future lint: disable=blacklisted-function
+            )
 
             for entry, result in search_results:
                 for user in itertools.chain(
@@ -490,7 +491,7 @@ def groups(username, **kwargs):
                 search_string,
                 [
                     salt.utils.stringutils.to_str(_config("accountattributename")),
-                    "cn",  # future lint: disable=blacklisted-function
+                    "cn",
                     salt.utils.stringutils.to_str(_config("groupattribute")),
                 ],
             )
@@ -569,7 +570,7 @@ def __expand_ldap_entries(entries, opts=None):
                 try:
                     search_results = bind.search_s(
                         search_base, ldap.SCOPE_SUBTREE, search_string, ["cn"]
-                    )  # future lint: disable=blacklisted-function
+                    )
                     for ldap_match in search_results:
                         try:
                             minion_id = ldap_match[1]["cn"][0].lower()

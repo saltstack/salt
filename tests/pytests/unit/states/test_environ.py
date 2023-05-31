@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 import salt.modules.environ as envmodule
 import salt.modules.reg
 import salt.states.environ as envstate

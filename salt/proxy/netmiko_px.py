@@ -190,8 +190,14 @@ import salt.utils.args
 
 try:
     from netmiko import ConnectHandler
-    from netmiko.ssh_exception import NetMikoTimeoutException
-    from netmiko.ssh_exception import NetMikoAuthenticationException
+
+    try:
+        from netmiko import NetMikoAuthenticationException, NetMikoTimeoutException
+    except ImportError:
+        from netmiko.ssh_exception import (
+            NetMikoAuthenticationException,
+            NetMikoTimeoutException,
+        )
 
     HAS_NETMIKO = True
 except ImportError:
@@ -261,6 +267,7 @@ def init(opts):
     netmiko_connection_args.pop("proxytype", None)
     netmiko_connection_args.pop("multiprocessing", None)
     netmiko_connection_args.pop("skip_connect_on_init", None)
+    netmiko_connection_args.pop("connection_timeout", None)
 
     __context__["netmiko_device"]["args"] = netmiko_connection_args
 

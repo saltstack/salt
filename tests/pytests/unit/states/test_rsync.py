@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.rsync as rsync
 from tests.support.mock import MagicMock, patch
 

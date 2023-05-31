@@ -16,6 +16,14 @@ Module to provide Postgres compatibility to salt.
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar
 
+To prevent Postgres commands from running arbitrarily long, a timeout (in seconds) can be set
+
+    .. code-block:: yaml
+
+        postgres.timeout: 60
+
+    .. versionadded:: 3006.0
+
 :note: This module uses MD5 hashing which may not be compliant with certain
     security audits.
 
@@ -49,7 +57,7 @@ import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.saslprep import saslprep
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import LooseVersion
 
 try:
     import csv
@@ -68,6 +76,7 @@ log = logging.getLogger(__name__)
 
 
 _DEFAULT_PASSWORDS_ENCRYPTION = "md5"
+_DEFAULT_COMMAND_TIMEOUT_SECS = 0
 _EXTENSION_NOT_INSTALLED = "EXTENSION NOT INSTALLED"
 _EXTENSION_INSTALLED = "EXTENSION INSTALLED"
 _EXTENSION_TO_UPGRADE = "EXTENSION TO UPGRADE"
@@ -154,6 +163,9 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
     kwargs = {
         "reset_system_locale": False,
         "clean_env": True,
+        "timeout": __salt__["config.option"](
+            "postgres.timeout", default=_DEFAULT_COMMAND_TIMEOUT_SECS
+        ),
     }
     if runas is None:
         if not host:
@@ -254,7 +266,13 @@ def _run_initdb(
             __salt__["file.chown"](pgpassfile, runas, "")
         cmd.extend(["--pwfile={}".format(pgpassfile)])
 
-    kwargs = dict(runas=runas, clean_env=True)
+    kwargs = dict(
+        runas=runas,
+        clean_env=True,
+        timeout=__salt__["config.option"](
+            "postgres.timeout", default=_DEFAULT_COMMAND_TIMEOUT_SECS
+        ),
+    )
     cmdstr = " ".join([pipes.quote(c) for c in cmd])
     ret = __salt__["cmd.run_all"](cmdstr, python_shell=False, **kwargs)
 
@@ -318,7 +336,7 @@ def _parsed_version(
     )
 
     if psql_version:
-        return _LooseVersion(psql_version)
+        return LooseVersion(psql_version)
     else:
         log.warning(
             "Attempt to parse version of Postgres server failed. "
@@ -709,9 +727,8 @@ def db_remove(
     """
     for query in [
         'REVOKE CONNECT ON DATABASE "{db}" FROM public;'.format(db=name),
-        "SELECT pid, pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{db}' AND pid <> pg_backend_pid();".format(
-            db=name
-        ),
+        "SELECT pid, pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname ="
+        " '{db}' AND pid <> pg_backend_pid();".format(db=name),
         'DROP DATABASE "{db}";'.format(db=name),
     ]:
         ret = _psql_prepare_and_run(
@@ -981,11 +998,11 @@ def user_list(
         runas=runas,
     )
     if ver:
-        if ver >= _LooseVersion("9.1"):
+        if ver >= LooseVersion("9.1"):
             replication_column = "pg_roles.rolreplication"
         else:
             replication_column = "NULL"
-        if ver >= _LooseVersion("9.5"):
+        if ver >= LooseVersion("9.5"):
             rolcatupdate_column = "NULL"
         else:
             rolcatupdate_column = "pg_roles.rolcatupdate"
@@ -998,22 +1015,16 @@ def user_list(
 
     query = "".join(
         [
-            "SELECT "
-            'pg_roles.rolname as "name",'
-            'pg_roles.rolsuper as "superuser", '
-            'pg_roles.rolinherit as "inherits privileges", '
-            'pg_roles.rolcreaterole as "can create roles", '
-            'pg_roles.rolcreatedb as "can create databases", '
-            '{0} as "can update system catalogs", '
-            'pg_roles.rolcanlogin as "can login", '
-            '{1} as "replication", '
-            'pg_roles.rolconnlimit as "connections", '
-            "(SELECT array_agg(pg_roles2.rolname)"
-            "    FROM pg_catalog.pg_auth_members"
-            "    JOIN pg_catalog.pg_roles pg_roles2 ON (pg_auth_members.roleid = pg_roles2.oid)"
-            '    WHERE pg_auth_members.member = pg_roles.oid) as "groups",'
-            'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
-            'pg_roles.rolconfig  as "defaults variables" ',
+            'SELECT pg_roles.rolname as "name",pg_roles.rolsuper as "superuser",'
+            ' pg_roles.rolinherit as "inherits privileges", pg_roles.rolcreaterole as'
+            ' "can create roles", pg_roles.rolcreatedb as "can create databases", {0}'
+            ' as "can update system catalogs", pg_roles.rolcanlogin as "can login", {1}'
+            ' as "replication", pg_roles.rolconnlimit as "connections", (SELECT'
+            " array_agg(pg_roles2.rolname)    FROM pg_catalog.pg_auth_members    JOIN"
+            " pg_catalog.pg_roles pg_roles2 ON (pg_auth_members.roleid = pg_roles2.oid)"
+            "    WHERE pg_auth_members.member = pg_roles.oid) as"
+            ' "groups",pg_roles.rolvaliduntil::timestamp(0) as "expiry time",'
+            ' pg_roles.rolconfig  as "defaults variables" ',
             _x(', COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '),
             "FROM pg_roles ",
             _x("LEFT JOIN pg_authid ON pg_roles.oid = pg_authid.oid "),
@@ -1212,7 +1223,7 @@ def _verify_password(role, password, verifier, method):
 
 def _md5_password(role, password):
     return "md5{}".format(
-        hashlib.md5(
+        hashlib.md5(  # nosec
             salt.utils.stringutils.to_bytes("{}{}".format(password, role))
         ).hexdigest()
     )
@@ -1285,7 +1296,9 @@ def _role_cmd_args(
             )
         )
     if isinstance(valid_until, str) and bool(valid_until):
-        escaped_valid_until = "'{}'".format(valid_until.replace("'", "''"),)
+        escaped_valid_until = "'{}'".format(
+            valid_until.replace("'", "''"),
+        )
     skip_superuser = False
     if bool(db_role) and bool(superuser) == bool(db_role["superuser"]):
         skip_superuser = True
@@ -1634,7 +1647,7 @@ def available_extensions(
 
     """
     exts = []
-    query = "select * " "from pg_available_extensions();"
+    query = "select * from pg_available_extensions();"
     ret = psql_query(
         query,
         user=user,
@@ -1777,11 +1790,11 @@ def is_available_extension(
 
 def _pg_is_older_ext_ver(a, b):
     """
-    Compare versions of extensions using salt.utils.versions.LooseVersion.
+    Compare versions of extensions using `looseversion.LooseVersion`.
 
     Returns ``True`` if version a is lesser than b.
     """
-    return _LooseVersion(a) < _LooseVersion(b)
+    return LooseVersion(a) < LooseVersion(b)
 
 
 def is_installed_extension(
@@ -2792,7 +2805,7 @@ def _make_privileges_list_query(name, object_type, prepend):
                     "ON n.oid = c.relnamespace",
                     "WHERE nspname = '{0}'",
                     "AND relname = '{1}'",
-                    "AND relkind = 'r'",
+                    "AND relkind in ('r', 'v')",
                     "ORDER BY relname",
                 ]
             )
@@ -2951,6 +2964,8 @@ def _get_object_owner(
                     "FROM pg_catalog.pg_proc p",
                     "JOIN pg_catalog.pg_namespace n",
                     "ON n.oid = p.pronamespace",
+                    "JOIN pg_catalog.pg_roles r",
+                    "ON p.proowner = r.oid",
                     "WHERE nspname = '{0}'",
                     "AND p.oid::regprocedure::text = '{1}'",
                     "ORDER BY proname, proargtypes",
@@ -3033,7 +3048,7 @@ def _validate_privileges(object_type, privs, privileges):
     else:
         if privileges:
             raise SaltInvocationError(
-                "The privileges option should not " "be set for object_type group"
+                "The privileges option should not be set for object_type group"
             )
 
 
@@ -3434,11 +3449,8 @@ def privileges_grant(
         if object_type == "group":
             query = 'GRANT {} TO "{}" WITH ADMIN OPTION'.format(object_name, name)
         elif object_type in ("table", "sequence") and object_name.upper() == "ALL":
-            query = (
-                "GRANT {} ON ALL {}S IN SCHEMA {} TO "
-                '"{}" WITH GRANT OPTION'.format(
-                    _grants, object_type.upper(), prepend, name
-                )
+            query = 'GRANT {} ON ALL {}S IN SCHEMA {} TO "{}" WITH GRANT OPTION'.format(
+                _grants, object_type.upper(), prepend, name
             )
         else:
             query = 'GRANT {} ON {} {} TO "{}" WITH GRANT OPTION'.format(
@@ -3565,7 +3577,7 @@ def privileges_revoke(
         runas=runas,
     ):
         log.info(
-            "The object: %s of type: %s does not" " have privileges: %s set",
+            "The object: %s of type: %s does not have privileges: %s set",
             object_name,
             object_type,
             privileges,

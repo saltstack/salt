@@ -1,4 +1,5 @@
 import pytest
+
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo_module
 import salt.states.win_lgpo as win_lgpo_state
@@ -8,6 +9,7 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
     pytest.mark.destructive_test,
+    pytest.mark.slow_test,
 ]
 
 
@@ -25,10 +27,11 @@ def configure_loader_modules(minion_opts, modules):
     }
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def stage_single():
     current_setting = win_lgpo_module.get_policy(
-        policy_name="SeTakeOwnershipPrivilege", policy_class="machine",
+        policy_name="SeTakeOwnershipPrivilege",
+        policy_class="machine",
     )
     try:
         win_lgpo_module.set_computer_policy(
@@ -45,10 +48,11 @@ def stage_single():
         )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def stage_multiple():
     current_setting = win_lgpo_module.get_policy(
-        policy_name="SeTakeOwnershipPrivilege", policy_class="machine",
+        policy_name="SeTakeOwnershipPrivilege",
+        policy_class="machine",
     )
     try:
         win_lgpo_module.set_computer_policy(
@@ -74,7 +78,8 @@ def test_cumulative_rights_assignments(stage_single):
         cumulative_rights_assignments=True,
     )
     result = win_lgpo_module.get_policy(
-        policy_name="SeTakeOwnershipPrivilege", policy_class="machine",
+        policy_name="SeTakeOwnershipPrivilege",
+        policy_class="machine",
     )
     assert sorted(result) == sorted(expected)
 
@@ -84,8 +89,9 @@ def test_cumulative_rights_assignments_test_true(stage_single):
         "name": "SeTakeOwnershipPrivilege",
         "result": None,
         "changes": {},
-        "comment": "The following policies are set to change:\n"
-        "SeTakeOwnershipPrivilege",
+        "comment": (
+            "The following policies are set to change:\nSeTakeOwnershipPrivilege"
+        ),
     }
     with patch.dict(win_lgpo_state.__opts__, {"test": True}):
         result = win_lgpo_state.set_(
@@ -139,7 +145,8 @@ def test_non_cumulative_rights_assignments(stage_multiple):
         cumulative_rights_assignments=False,
     )
     result = win_lgpo_module.get_policy(
-        policy_name="SeTakeOwnershipPrivilege", policy_class="machine",
+        policy_name="SeTakeOwnershipPrivilege",
+        policy_class="machine",
     )
     assert sorted(result) == sorted(expected)
 
@@ -149,8 +156,9 @@ def test_non_cumulative_rights_assignments_test_true(stage_multiple):
         "name": "SeTakeOwnershipPrivilege",
         "result": None,
         "changes": {},
-        "comment": "The following policies are set to change:\n"
-        "SeTakeOwnershipPrivilege",
+        "comment": (
+            "The following policies are set to change:\nSeTakeOwnershipPrivilege"
+        ),
     }
     with patch.dict(win_lgpo_state.__opts__, {"test": True}):
         result = win_lgpo_state.set_(
@@ -204,7 +212,8 @@ def test_cumulative_rights_assignments_resolve_name(stage_single):
         cumulative_rights_assignments=True,
     )
     result = win_lgpo_module.get_policy(
-        policy_name="SeTakeOwnershipPrivilege", policy_class="machine",
+        policy_name="SeTakeOwnershipPrivilege",
+        policy_class="machine",
     )
     assert sorted(result) == sorted(expected)
 
@@ -214,8 +223,9 @@ def test_cumulative_rights_assignments_resolve_name_test_true(stage_single):
         "name": "SeTakeOwnershipPrivilege",
         "result": None,
         "changes": {},
-        "comment": "The following policies are set to change:\n"
-        "SeTakeOwnershipPrivilege",
+        "comment": (
+            "The following policies are set to change:\nSeTakeOwnershipPrivilege"
+        ),
     }
     with patch.dict(win_lgpo_state.__opts__, {"test": True}):
         result = win_lgpo_state.set_(
@@ -269,7 +279,8 @@ def test_non_cumulative_rights_assignments_resolve_name(stage_multiple):
         cumulative_rights_assignments=False,
     )
     result = win_lgpo_module.get_policy(
-        policy_name="SeTakeOwnershipPrivilege", policy_class="machine",
+        policy_name="SeTakeOwnershipPrivilege",
+        policy_class="machine",
     )
     assert sorted(result) == sorted(expected)
 
@@ -279,8 +290,9 @@ def test_non_cumulative_rights_assignments_resolve_name_test_true(stage_multiple
         "name": "SeTakeOwnershipPrivilege",
         "result": None,
         "changes": {},
-        "comment": "The following policies are set to change:\n"
-        "SeTakeOwnershipPrivilege",
+        "comment": (
+            "The following policies are set to change:\nSeTakeOwnershipPrivilege"
+        ),
     }
     with patch.dict(win_lgpo_state.__opts__, {"test": True}):
         result = win_lgpo_state.set_(

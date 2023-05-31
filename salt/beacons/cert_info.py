@@ -10,6 +10,7 @@ Beacon to monitor certificate expiration dates from files on the filesystem.
 import logging
 from datetime import datetime
 
+import salt.utils.beacons
 import salt.utils.files
 
 try:
@@ -28,7 +29,9 @@ __virtualname__ = "cert_info"
 
 def __virtual__():
     if HAS_OPENSSL is False:
-        return False
+        err_msg = "OpenSSL library is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
 
     return __virtualname__
 
@@ -37,17 +40,16 @@ def validate(config):
     """
     Validate the beacon configuration
     """
-    _config = {}
-    list(map(_config.update, config))
-
     # Configuration for cert_info beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for cert_info beacon must be a list.")
+        return False, "Configuration for cert_info beacon must be a list."
 
-    if "files" not in _config:
+    config = salt.utils.beacons.list_to_dict(config)
+
+    if "files" not in config:
         return (
             False,
-            ("Configuration for cert_info beacon must contain files option."),
+            "Configuration for cert_info beacon must contain files option.",
         )
     return True, "Valid beacon configuration"
 
@@ -78,12 +80,11 @@ def beacon(config):
     certificates = []
     CryptoError = crypto.Error  # pylint: disable=invalid-name
 
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
-    global_notify_days = _config.get("notify_days", DEFAULT_NOTIFY_DAYS)
+    global_notify_days = config.get("notify_days", DEFAULT_NOTIFY_DAYS)
 
-    for cert_path in _config.get("files", []):
+    for cert_path in config.get("files", []):
         notify_days = global_notify_days
 
         if isinstance(cert_path, dict):

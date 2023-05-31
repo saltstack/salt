@@ -14,6 +14,7 @@ proxy modules
     chronos
     cimc
     cisconso
+    deltaproxy
     docker
     dummy
     esxcluster
@@ -30,5 +31,6 @@ proxy modules
     panos
     philips_hue
     rest_sample
+    restconf
     ssh_sample
     vcenter

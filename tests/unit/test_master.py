@@ -1,6 +1,7 @@
 import time
 
 import pytest
+
 import salt.config
 import salt.master
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
@@ -129,6 +130,7 @@ class TransportMethodsTest(TestCase):
             "_send_ssh_pub",
             "get_method",
             "destroy",
+            "connect",
         ]
         for name in dir(clear_funcs):
             if name in clear_funcs.expose_methods:
@@ -185,8 +187,9 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "TokenAuthenticationError",
-                "message": 'Authentication failure of type "token" occurred '
-                "for user test.",
+                "message": (
+                    'Authentication failure of type "token" occurred for user test.'
+                ),
             }
         }
 
@@ -230,8 +233,9 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "EauthAuthenticationError",
-                "message": 'Authentication failure of type "eauth" occurred for '
-                "user UNKNOWN.",
+                "message": (
+                    'Authentication failure of type "eauth" occurred for user UNKNOWN.'
+                ),
             }
         }
         ret = self.clear_funcs.runner({"eauth": "foo"})
@@ -247,8 +251,9 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "EauthAuthenticationError",
-                "message": 'Authentication failure of type "eauth" occurred for '
-                "user test.",
+                "message": (
+                    'Authentication failure of type "eauth" occurred for user test.'
+                ),
             }
         }
         with patch(
@@ -322,8 +327,9 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "TokenAuthenticationError",
-                "message": 'Authentication failure of type "token" occurred '
-                "for user test.",
+                "message": (
+                    'Authentication failure of type "token" occurred for user test.'
+                ),
             }
         }
 
@@ -367,8 +373,9 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "EauthAuthenticationError",
-                "message": 'Authentication failure of type "eauth" occurred for '
-                "user UNKNOWN.",
+                "message": (
+                    'Authentication failure of type "eauth" occurred for user UNKNOWN.'
+                ),
             }
         }
         ret = self.clear_funcs.wheel({"eauth": "foo"})
@@ -384,8 +391,9 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "EauthAuthenticationError",
-                "message": 'Authentication failure of type "eauth" occurred for '
-                "user test.",
+                "message": (
+                    'Authentication failure of type "eauth" occurred for user test.'
+                ),
             }
         }
         with patch(
@@ -673,7 +681,9 @@ class MaintenanceTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     """
 
     def setUp(self):
-        opts = self.get_temp_config("master", git_pillar_update_interval=180)
+        opts = self.get_temp_config(
+            "master", git_pillar_update_interval=180, maintenance_interval=181
+        )
         self.main_class = salt.master.Maintenance(opts)
         self.main_class._after_fork_methods = self.main_class._finalize_methods = []
 
@@ -750,10 +760,10 @@ class MaintenanceTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 self.assertEqual(str(exc), "Time passes")
             self.assertEqual(mocked_time._calls, [60] * 4)
             self.assertEqual(mocked__post_fork_init.call_times, [0])
-            self.assertEqual(mocked_clean_old_jobs.call_times, [60, 120, 180])
-            self.assertEqual(mocked_clean_expired_tokens.call_times, [60, 120, 180])
-            self.assertEqual(mocked_clean_pub_auth.call_times, [60, 120, 180])
-            self.assertEqual(mocked_handle_git_pillar.call_times, [0, 180])
+            self.assertEqual(mocked_clean_old_jobs.call_times, [0, 120, 180])
+            self.assertEqual(mocked_clean_expired_tokens.call_times, [0, 120, 180])
+            self.assertEqual(mocked_clean_pub_auth.call_times, [0, 120, 180])
+            self.assertEqual(mocked_handle_git_pillar.call_times, [0])
             self.assertEqual(mocked_handle_schedule.call_times, [0, 60, 120, 180])
             self.assertEqual(mocked_handle_key_cache.call_times, [0, 60, 120, 180])
             self.assertEqual(mocked_handle_presence.call_times, [0, 60, 120, 180])

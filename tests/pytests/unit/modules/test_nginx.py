@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.nginx as nginx
 from tests.support.mock import patch
 

@@ -9,6 +9,7 @@ import subprocess
 import sys
 
 import pytest
+
 import salt.states.pip_state as pip_state
 import salt.utils.path
 import salt.version
@@ -17,7 +18,7 @@ from tests.support.helpers import VirtualEnv, dedent
 from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import pip
@@ -30,7 +31,9 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-@skipIf(not HAS_PIP, "The 'pip' library is not importable(installed system-wide)")
+@pytest.mark.skipif(
+    not HAS_PIP, reason="The 'pip' library is not importable(installed system-wide)"
+)
 class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
@@ -182,12 +185,14 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                 return_value={
                     "retcode": 0,
                     "stderr": "",
-                    "stdout": "Downloading/unpacking https://pypi.python.org/packages"
-                    "/source/S/SaltTesting/SaltTesting-0.5.0.tar.gz\n  "
-                    "Downloading SaltTesting-0.5.0.tar.gz\n  Running "
-                    "setup.py egg_info for package from "
-                    "https://pypi.python.org/packages/source/S/SaltTesting/"
-                    "SaltTesting-0.5.0.tar.gz\n    \nCleaning up...",
+                    "stdout": (
+                        "Downloading/unpacking https://pypi.python.org/packages"
+                        "/source/S/SaltTesting/SaltTesting-0.5.0.tar.gz\n  "
+                        "Downloading SaltTesting-0.5.0.tar.gz\n  Running "
+                        "setup.py egg_info for package from "
+                        "https://pypi.python.org/packages/source/S/SaltTesting/"
+                        "SaltTesting-0.5.0.tar.gz\n    \nCleaning up..."
+                    ),
                 }
             )
             with patch.dict(
@@ -241,7 +246,8 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
             ):
                 with patch.dict(pip_state.__opts__, {"test": False}):
                     ret = pip_state.installed(
-                        "arbitrary ID that should be ignored due to requirements specified",
+                        "arbitrary ID that should be ignored due to requirements"
+                        " specified",
                         requirements="/tmp/non-existing-requirements.txt",
                     )
                     self.assertSaltTrueReturn({"test": ret})
@@ -281,18 +287,14 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
 
         site_pkgs = "/tmp/pip-env/lib/python3.7/site-packages"
         check_stdout = [
-            (
-                "Looking in indexes: https://custom-pypi-url.org,"
-                "https://pypi.org/simple/\nRequirement already satisfied: pep8 in {1}"
-                "(from -r /tmp/files/prod/{0} (line 1)) (1.7.1)".format(
-                    req_filename, site_pkgs
-                )
+            "Looking in indexes: https://custom-pypi-url.org,"
+            "https://pypi.org/simple/\nRequirement already satisfied: pep8 in {1}"
+            "(from -r /tmp/files/prod/{0} (line 1)) (1.7.1)".format(
+                req_filename, site_pkgs
             ),
-            (
-                "Requirement already satisfied: pep8 in {1}"
-                "(from -r /tmp/files/prod/{0} (line1)) (1.7.1)".format(
-                    req_filename, site_pkgs
-                )
+            "Requirement already satisfied: pep8 in {1}"
+            "(from -r /tmp/files/prod/{0} (line1)) (1.7.1)".format(
+                req_filename, site_pkgs
             ),
         ]
         pip_version = pip.__version__
@@ -322,17 +324,16 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
 
         site_pkgs = "/tmp/pip-env/lib/python3.7/site-packages"
         check_stdout = [
-            (
-                "Looking in indexes: https://custom-pypi-url.org,"
-                "https://pypi.org/simple/\nCollecting pep8\n  Using cached"
-                "https://custom-pypi-url.org//packages/42/3f/669429cef5acb4/pep8-1.7.1-py2.py3-none-any.whl"
-                " (41 kB)\nInstalling collected packages: pep8\nSuccessfully installed pep8-1.7.1"
-            ),
-            (
-                "Collecting pep8\n  Using cached"
-                "https://custom-pypi-url.org//packages/42/3f/669429cef5acb4/pep8-1.7.1-py2.py3-none-any.whl"
-                " (41 kB)\nInstalling collected packages: pep8\nSuccessfully installed pep8-1.7.1"
-            ),
+            "Looking in indexes:"
+            " https://custom-pypi-url.org,https://pypi.org/simple/\nCollecting pep8\n "
+            " Using"
+            " cachedhttps://custom-pypi-url.org//packages/42/3f/669429cef5acb4/pep8-1.7.1-py2.py3-none-any.whl"
+            " (41 kB)\nInstalling collected packages: pep8\nSuccessfully installed"
+            " pep8-1.7.1",
+            "Collecting pep8\n  Using"
+            " cachedhttps://custom-pypi-url.org//packages/42/3f/669429cef5acb4/pep8-1.7.1-py2.py3-none-any.whl"
+            " (41 kB)\nInstalling collected packages: pep8\nSuccessfully installed"
+            " pep8-1.7.1",
         ]
 
         pip_version = pip.__version__
@@ -405,23 +406,17 @@ class PipStateUtilsTest(TestCase):
             pip_state.purge_pip()
 
 
-@skipIf(
-    salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
-)
+@pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False)
 @pytest.mark.requires_network
 class PipStateInstallationErrorTest(TestCase):
     @pytest.mark.slow_test
     def test_importable_installation_error(self):
         extra_requirements = []
         for name, version in salt.version.dependency_information():
-            if name in ["PyYAML"]:
+            if name in ["PyYAML", "packaging", "looseversion"]:
                 extra_requirements.append("{}=={}".format(name, version))
         failures = {}
         pip_version_requirements = [
-            # Latest pip 8
-            "<9.0",
-            # Latest pip 9
-            "<10.0",
             # Latest pip 18
             "<19.0",
             # Latest pip 19
@@ -439,11 +434,11 @@ class PipStateInstallationErrorTest(TestCase):
             import salt.states.pip_state
             salt.states.pip_state.InstallationError
         except ImportError as exc:
-            traceback.print_exc(exc, file=sys.stdout)
+            traceback.print_exc(file=sys.stdout)
             sys.stdout.flush()
             sys.exit(1)
         except AttributeError as exc:
-            traceback.print_exc(exc, file=sys.stdout)
+            traceback.print_exc(file=sys.stdout)
             sys.stdout.flush()
             sys.exit(2)
         except Exception as exc:
@@ -481,7 +476,6 @@ class PipStateInstallationErrorTest(TestCase):
             for requirement, exception in failures.items():
                 errors += "pip{}: {}\n\n".format(requirement or "", exception)
             self.fail(
-                "Failed to get InstallationError exception under at least one pip version:\n{}".format(
-                    errors
-                )
+                "Failed to get InstallationError exception under at least one pip"
+                " version:\n{}".format(errors)
             )

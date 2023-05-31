@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 SaltClass Pillar Module
 =======================
@@ -12,8 +11,6 @@ SaltClass Pillar Module
 For additional configuration instructions, see the :mod:`saltclass <salt.tops.saltclass>` module
 """
 
-# import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 

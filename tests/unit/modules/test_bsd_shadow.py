@@ -2,25 +2,19 @@
     :codeauthor: Alan Somers <asomers@gmail.com>
 """
 
-
 import re
 
-import salt.utils.platform
+import pytest
+
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
-try:
-    import salt.modules.bsd_shadow as shadow
-
-    HAS_SHADOW = True
-except ImportError:
-    HAS_SHADOW = False
+shadow = pytest.importorskip("salt.modules.bsd_shadow")
 
 # Although bsd_shadow runs on NetBSD and OpenBSD as well, the mocks are
 # currently only designed for FreeBSD.
-@skipIf(not salt.utils.platform.is_freebsd(), "minion is not FreeBSD")
-@skipIf(not HAS_SHADOW, "shadow module is not available")
+@pytest.mark.skip_unless_on_freebsd
 class BSDShadowTest(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {

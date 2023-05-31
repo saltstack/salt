@@ -2,13 +2,55 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 import pytest
+
+import salt.modules.boto_route53 as boto53mod
+import salt.modules.boto_vpc as botovpcmod
 import salt.states.boto_route53 as boto_route53
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, create_autospec, patch
 
 
 @pytest.fixture
 def configure_loader_modules():
     return {boto_route53: {}}
+
+
+@pytest.fixture
+def patch_botomod_hosted_zones():
+    with patch.dict(
+        boto_route53.__salt__,
+        {
+            "boto_route53.describe_hosted_zones": create_autospec(
+                boto53mod.describe_hosted_zones
+            ),
+            "boto_vpc.describe_vpcs": create_autospec(botovpcmod.describe_vpcs),
+        },
+    ):
+        yield
+
+
+@pytest.fixture
+def fake_single_vpc(patch_botomod_hosted_zones):
+    boto_route53.__salt__["boto_vpc.describe_vpcs"].return_value = {
+        "vpcs": [{"region": "fnordland", "id": "fnord"}],
+    }
+    boto_route53.__salt__["boto_route53.describe_hosted_zones"].return_value = {
+        "HostedZone": {"Config": {"PrivateZone": "true"}},
+        "VPCs": {"VPC": {"VPCId": "fnord", "VPCRegion": "fnordland"}},
+    }
+
+
+@pytest.fixture
+def fake_multiple_vpcs(patch_botomod_hosted_zones):
+    boto_route53.__salt__["boto_vpc.describe_vpcs"].return_value = {
+        "vpcs": [{"region": "fnordland", "id": "fnord"}],
+    }
+    boto_route53.__salt__["boto_route53.describe_hosted_zones"].return_value = {
+        "HostedZone": {"Config": {"PrivateZone": "true"}},
+        "VPCs": [
+            {"VPCId": "fnord", "VPCRegion": "fnordland"},
+            {"VPCId": "fnord part 2", "VPCRegion": "fnordlandia"},
+        ],
+    }
 
 
 def test_present():
@@ -66,3 +108,17 @@ def test_absent():
             comt = "Route53 record {} set to be deleted.".format(name)
             ret.update({"comment": comt, "result": None})
             assert boto_route53.absent(name, zone, record_type) == ret
+
+
+def test_hosted_zone_present_should_not_fail_when_one_vpc_in_deets(fake_single_vpc):
+    boto_route53.hosted_zone_present(
+        name="fnord", private_zone=True, vpc_region="fnordland", vpc_name="fnord"
+    )
+
+
+def test_hosted_zone_present_should_not_fail_with_multiple_vpcs_in_deets(
+    fake_multiple_vpcs,
+):
+    boto_route53.hosted_zone_present(
+        name="fnord", private_zone=True, vpc_region="fnordland", vpc_name="fnord"
+    )

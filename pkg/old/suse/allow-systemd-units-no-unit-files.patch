@@ -1,0 +1,78 @@
+From 90bece1faa1862465e97f7caf262c65cd84583ff Mon Sep 17 00:00:00 2001
+From: Massimiliano Torromeo <massimiliano.torromeo@gmail.com>
+Date: Fri, 11 Apr 2014 14:43:02 +0200
+Subject: [PATCH] Allow systemd units no provided by unit files to be handled.
+
+This allows querying status, start, stop, restart and list units that
+are not actually provided by unit files. Such units cannot be
+enabled/disabled and that's why those actions still prefer the
+"list-unit-files" output over "list-units".
+
+Units that couldn't be handled otherwise include for example mount
+units and sysvinit compatibility units such as those present on
+debian systems.
+
+The output of a "service.running ssh" state on a debian wheezy target
+is:
+
+          ID: ssh
+    Function: service.running
+      Result: False
+     Comment: The named service ssh is not available
+     Changes:
+
+after this patch:
+
+          ID: ssh
+    Function: service.running
+      Result: True
+     Comment: The service ssh is already running
+     Changes:
+---
+ salt/modules/systemd.py | 24 +++++++++++++++++++++++-
+ 1 file changed, 23 insertions(+), 1 deletion(-)
+
+diff --git a/salt/modules/systemd.py b/salt/modules/systemd.py
+index 57b55f5..e2cfb1d 100644
+--- a/salt/modules/systemd.py
++++ b/salt/modules/systemd.py
+@@ -72,6 +72,28 @@ def _systemctl_cmd(action, name):
+     return 'systemctl {0} {1}'.format(action, _canonical_unit_name(name))
+
+
++def _get_all_units():
++    '''
++    Get all units and their state. Units ending in .service
++    are normalized so that they can be referenced without a type suffix.
++    '''
++    rexp = re.compile(r'(?m)^(?P<name>.+)\.(?P<type>' +
++                      '|'.join(VALID_UNIT_TYPES) +
++                      r')\s+loaded\s+(?P<active>[^\s]+)')
++
++    out = __salt__['cmd.run_stdout'](
++        'systemctl --full list-units | col -b'
++    )
++
++    ret = {}
++    for match in rexp.finditer(out):
++        name = match.group('name')
++        if match.group('type') != 'service':
++            name += '.' + match.group('type')
++        ret[name] = match.group('active')
++    return ret
++
++
+ def _get_all_unit_files():
+     '''
+     Get all unit files and their state. Unit files ending in .service
+@@ -173,7 +195,7 @@ def get_all():
+
+         salt '*' service.get_all
+     '''
+-    return sorted(_get_all_unit_files().keys())
++    return sorted(_get_all_units().keys())
+
+
+ def available(name):
+--
+1.9.3

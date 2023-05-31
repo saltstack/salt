@@ -6,6 +6,7 @@ import os
 import textwrap
 
 import pytest
+
 import salt.config
 import salt.minion
 import salt.syspaths
@@ -23,7 +24,7 @@ from tests.support.helpers import patched_environ, with_tempdir, with_tempfile
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -252,14 +253,14 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     @with_tempfile()
     def test_sha256_is_default_for_master(self, fpath):
         with salt.utils.files.fopen(fpath, "w") as wfh:
-            wfh.write("root_dir: /\n" "key_logfile: key\n")
+            wfh.write("root_dir: /\nkey_logfile: key\n")
         config = salt.config.master_config(fpath)
         self.assertEqual(config["hash_type"], "sha256")
 
     @with_tempfile()
     def test_sha256_is_default_for_minion(self, fpath):
         with salt.utils.files.fopen(fpath, "w") as wfh:
-            wfh.write("root_dir: /\n" "key_logfile: key\n")
+            wfh.write("root_dir: /\nkey_logfile: key\n")
         config = salt.config.minion_config(fpath)
         self.assertEqual(config["hash_type"], "sha256")
 
@@ -289,7 +290,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         os.makedirs(root_dir)
         fpath = os.path.join(root_dir, "config")
         with salt.utils.files.fopen(fpath, "w") as fp_:
-            fp_.write("root_dir: {}\n" "log_file: {}\n".format(root_dir, fpath))
+            fp_.write("root_dir: {}\nlog_file: {}\n".format(root_dir, fpath))
         config = salt.config.master_config(fpath)
         self.assertEqual(config["log_file"], fpath)
 
@@ -299,13 +300,12 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         os.makedirs(root_dir)
         fpath = os.path.join(root_dir, "config")
         with salt.utils.files.fopen(fpath, "w") as fp_:
-            fp_.write("root_dir: {}\n" "log_file: {}\n".format(root_dir, fpath))
+            fp_.write("root_dir: {}\nlog_file: {}\n".format(root_dir, fpath))
         config = salt.config.master_config(fpath)
         self.assertEqual(config["log_file"], fpath)
 
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "You can't set an environment dynamically in Windows",
+    @pytest.mark.skip_on_windows(
+        reason="You can't set an environment dynamically in Windows"
     )
     @with_tempdir()
     def test_load_master_config_from_environ_var(self, tempdir):
@@ -314,7 +314,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         env_fpath = os.path.join(env_root_dir, "config-env")
 
         with salt.utils.files.fopen(env_fpath, "w") as fp_:
-            fp_.write("root_dir: {}\n" "log_file: {}\n".format(env_root_dir, env_fpath))
+            fp_.write("root_dir: {}\nlog_file: {}\n".format(env_root_dir, env_fpath))
         with patched_environ(SALT_MASTER_CONFIG=env_fpath):
             # Should load from env variable, not the default configuration file.
             config = salt.config.master_config("{}/master".format(CONFIG_DIR))
@@ -324,7 +324,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         os.makedirs(root_dir)
         fpath = os.path.join(root_dir, "config")
         with salt.utils.files.fopen(fpath, "w") as fp_:
-            fp_.write("root_dir: {}\n" "log_file: {}\n".format(root_dir, fpath))
+            fp_.write("root_dir: {}\nlog_file: {}\n".format(root_dir, fpath))
         # Let's set the environment variable, yet, since the configuration
         # file path is not the default one, i.e., the user has passed an
         # alternative configuration file form the CLI parser, the
@@ -333,9 +333,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             config = salt.config.master_config(fpath)
             self.assertEqual(config["log_file"], fpath)
 
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "You can't set an environment dynamically in Windows",
+    @pytest.mark.skip_on_windows(
+        reason="You can't set an environment dynamically in Windows"
     )
     @with_tempdir()
     def test_load_minion_config_from_environ_var(self, tempdir):
@@ -344,7 +343,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         env_fpath = os.path.join(env_root_dir, "config-env")
 
         with salt.utils.files.fopen(env_fpath, "w") as fp_:
-            fp_.write("root_dir: {}\n" "log_file: {}\n".format(env_root_dir, env_fpath))
+            fp_.write("root_dir: {}\nlog_file: {}\n".format(env_root_dir, env_fpath))
 
         with patched_environ(SALT_MINION_CONFIG=env_fpath):
             # Should load from env variable, not the default configuration file
@@ -355,7 +354,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         os.makedirs(root_dir)
         fpath = os.path.join(root_dir, "config")
         with salt.utils.files.fopen(fpath, "w") as fp_:
-            fp_.write("root_dir: {}\n" "log_file: {}\n".format(root_dir, fpath))
+            fp_.write("root_dir: {}\nlog_file: {}\n".format(root_dir, fpath))
         # Let's set the environment variable, yet, since the configuration
         # file path is not the default one, i.e., the user has passed an
         # alternative configuration file form the CLI parser, the
@@ -364,9 +363,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             config = salt.config.minion_config(fpath)
             self.assertEqual(config["log_file"], fpath)
 
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "You can't set an environment dynamically in Windows",
+    @pytest.mark.skip_on_windows(
+        reason="You can't set an environment dynamically in Windows"
     )
     @with_tempdir()
     def test_load_client_config_from_environ_var(self, tempdir):
@@ -380,15 +378,15 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         master_config = os.path.join(env_root_dir, "master")
         with salt.utils.files.fopen(master_config, "w") as fp_:
             fp_.write(
-                "blah: true\n"
-                "root_dir: {}\n"
-                "log_file: {}\n".format(env_root_dir, master_config)
+                "blah: true\nroot_dir: {}\nlog_file: {}\n".format(
+                    env_root_dir, master_config
+                )
             )
 
         # Now the client configuration file
         env_fpath = os.path.join(env_root_dir, "config-env")
         with salt.utils.files.fopen(env_fpath, "w") as fp_:
-            fp_.write("root_dir: {}\n" "log_file: {}\n".format(env_root_dir, env_fpath))
+            fp_.write("root_dir: {}\nlog_file: {}\n".format(env_root_dir, env_fpath))
 
         with patched_environ(
             SALT_MASTER_CONFIG=master_config, SALT_CLIENT_CONFIG=env_fpath
@@ -402,7 +400,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         os.makedirs(root_dir)
         fpath = os.path.join(root_dir, "config")
         with salt.utils.files.fopen(fpath, "w") as fp_:
-            fp_.write("root_dir: {}\n" "log_file: {}\n".format(root_dir, fpath))
+            fp_.write("root_dir: {}\nlog_file: {}\n".format(root_dir, fpath))
         # Let's set the environment variable, yet, since the configuration
         # file path is not the default one, i.e., the user has passed an
         # alternative configuration file form the CLI parser, the
@@ -423,9 +421,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # settings
         with salt.utils.files.fopen(minion_config, "w") as fp_:
             fp_.write(
-                "blah: false\n"
-                "root_dir: {}\n"
-                "log_file: {}\n".format(tempdir, minion_config)
+                "blah: false\nroot_dir: {}\nlog_file: {}\n".format(
+                    tempdir, minion_config
+                )
             )
 
         # Now, let's populate an extra configuration file under minion.d
@@ -454,9 +452,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # settings
         with salt.utils.files.fopen(master_config, "w") as fp_:
             fp_.write(
-                "blah: false\n"
-                "root_dir: {}\n"
-                "log_file: {}\n".format(tempdir, master_config)
+                "blah: false\nroot_dir: {}\nlog_file: {}\n".format(
+                    tempdir, master_config
+                )
             )
 
         # Now, let's populate an extra configuration file under master.d
@@ -486,9 +484,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         with salt.utils.files.fopen(fpath, "w") as wfh:
             wfh.write(
-                "file_roots:\n"
-                "  base:\n"
-                "    - {}".format(os.path.join(tempdir, "*"))
+                "file_roots:\n  base:\n    - {}".format(os.path.join(tempdir, "*"))
             )
         config = salt.config.master_config(fpath)
         base = config["file_roots"]["base"]
@@ -519,9 +515,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         with salt.utils.files.fopen(fpath, "w") as wfh:
             wfh.write(
-                "pillar_roots:\n"
-                "  base:\n"
-                "    - {}".format(os.path.join(tempdir, "*"))
+                "pillar_roots:\n  base:\n    - {}".format(os.path.join(tempdir, "*"))
             )
         config = salt.config.master_config(fpath)
         base = config["pillar_roots"]["base"]
@@ -573,9 +567,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         with salt.utils.files.fopen(fpath, "w") as wfh:
             wfh.write(
-                "file_roots:\n"
-                "  base:\n"
-                "    - {}".format(os.path.join(tempdir, "*"))
+                "file_roots:\n  base:\n    - {}".format(os.path.join(tempdir, "*"))
             )
         config = salt.config.minion_config(fpath)
         base = config["file_roots"]["base"]
@@ -599,9 +591,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         with salt.utils.files.fopen(fpath, "w") as wfh:
             wfh.write(
-                "pillar_roots:\n"
-                "  base:\n"
-                "    - {}".format(os.path.join(tempdir, "*"))
+                "pillar_roots:\n  base:\n    - {}".format(os.path.join(tempdir, "*"))
             )
         config = salt.config.minion_config(fpath)
         base = config["pillar_roots"]["base"]
@@ -1675,9 +1665,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     # other cloud configuration tests
 
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "You can't set an environment dynamically in Windows",
+    @pytest.mark.skip_on_windows(
+        reason="You can't set an environment dynamically in Windows"
     )
     @with_tempdir()
     def test_load_cloud_config_from_environ_var(self, tempdir):
@@ -1686,7 +1675,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         env_fpath = os.path.join(env_root_dir, "config-env")
 
         with salt.utils.files.fopen(env_fpath, "w") as fp_:
-            fp_.write("root_dir: {}\n" "log_file: {}\n".format(env_root_dir, env_fpath))
+            fp_.write("root_dir: {}\nlog_file: {}\n".format(env_root_dir, env_fpath))
 
         with patched_environ(SALT_CLOUD_CONFIG=env_fpath):
             # Should load from env variable, not the default configuration file
@@ -1697,7 +1686,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         os.makedirs(root_dir)
         fpath = os.path.join(root_dir, "config")
         with salt.utils.files.fopen(fpath, "w") as fp_:
-            fp_.write("root_dir: {}\n" "log_file: {}\n".format(root_dir, fpath))
+            fp_.write("root_dir: {}\nlog_file: {}\n".format(root_dir, fpath))
         # Let's set the environment variable, yet, since the configuration
         # file path is not the default one, i.e., the user has passed an
         # alternative configuration file form the CLI parser, the
@@ -1857,6 +1846,12 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertNotIn("environment", ret)
             self.assertEqual(ret["saltenv"], "foo")
 
+            # Test config to verify that `keep_acl_in_token` is forced to True
+            # when `rest` is present as driver in the `external_auth` config.
+            overrides = {"external_auth": {"rest": {"^url": "http://test_url/rest"}}}
+            ret = salt.config.apply_master_config(overrides=overrides)
+            self.assertTrue(ret["keep_acl_in_token"])
+
             # MINION CONFIG
 
             # Ensure that environment overrides saltenv when saltenv not
@@ -1889,7 +1884,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     @with_tempfile()
     def test_minion_config_role_master(self, fpath):
         with salt.utils.files.fopen(fpath, "w") as wfh:
-            wfh.write("root_dir: /\n" "key_logfile: key\n")
+            wfh.write("root_dir: /\nkey_logfile: key\n")
         with patch("salt.config.apply_sdb") as apply_sdb_mock, patch(
             "salt.config._validate_opts"
         ) as validate_opts_mock:
@@ -1905,9 +1900,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         overrides = {}
 
         with salt.utils.files.fopen(fpath, "w") as wfh:
-            wfh.write(
-                "root_dir: /\n" "key_logfile: key\n" "cachedir: {}".format(cachedir)
-            )
+            wfh.write("root_dir: /\nkey_logfile: key\ncachedir: {}".format(cachedir))
         config = salt.config.mminion_config(fpath, overrides)
         self.assertEqual(config["__role"], "master")
         self.assertEqual(config["cachedir"], cachedir)
@@ -1918,7 +1911,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         overrides = {"cachedir": cachedir}
 
         with salt.utils.files.fopen(fpath, "w") as wfh:
-            wfh.write("root_dir: /\n" "key_logfile: key\n")
+            wfh.write("root_dir: /\nkey_logfile: key\n")
         config = salt.config.mminion_config(fpath, overrides)
         self.assertEqual(config["__role"], "master")
         self.assertEqual(config["cachedir"], cachedir)

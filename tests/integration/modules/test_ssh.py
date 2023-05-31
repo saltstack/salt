@@ -6,13 +6,14 @@ import os
 import shutil
 
 import pytest
+import requests
+
 import salt.utils.files
 import salt.utils.platform
-from salt.ext.tornado.httpclient import HTTPClient
 from tests.support.case import ModuleCase
 from tests.support.runtests import RUNTIME_VARS
 
-GITHUB_FINGERPRINT = "9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:64:f1:74:20:11:2e:f8:8a:c3:a1:39:49:8f"
+GITHUB_FINGERPRINT = "b8:d8:95:ce:d9:2c:0a:c0:e1:71:cd:2e:f5:ef:01:ba:34:17:55:4a:4a:64:80:d3:31:cc:c2:be:3d:ed:0f:6b"
 
 
 def check_status():
@@ -20,7 +21,7 @@ def check_status():
     Check the status of Github for remote operations
     """
     try:
-        return HTTPClient().fetch("http://github.com").code == 200
+        return requests.get("https://github.com").status_code == 200
     except Exception:  # pylint: disable=broad-except
         return False
 
@@ -48,9 +49,9 @@ class SSHModuleTest(ModuleCase):
         if not os.path.isdir(self.subsalt_dir):
             os.makedirs(self.subsalt_dir)
 
-        ssh_raw_path = os.path.join(RUNTIME_VARS.FILES, "ssh", "raw")
-        with salt.utils.files.fopen(ssh_raw_path) as fd:
-            self.key = fd.read().strip()
+        known_hosts_file = os.path.join(RUNTIME_VARS.FILES, "ssh", "known_hosts")
+        with salt.utils.files.fopen(known_hosts_file) as fd:
+            self.key = fd.read().strip().splitlines()[0].split()[-1]
 
     def tearDown(self):
         """
@@ -127,12 +128,17 @@ class SSHModuleTest(ModuleCase):
                 "AssertionError: {}. Function returned: {}".format(exc, ret)
             )
 
+    @pytest.mark.skip_on_photonos(
+        reason="Skip on PhotonOS.  Attempting to receive the SSH key from Github, using RSA keys which are disabled.",
+    )
     @pytest.mark.slow_test
     def test_recv_known_host_entries(self):
         """
         Check that known host information is returned from remote host
         """
-        ret = self.run_function("ssh.recv_known_host_entries", ["github.com"])
+        ret = self.run_function(
+            "ssh.recv_known_host_entries", ["github.com"], enc="ssh-rsa"
+        )
         try:
             self.assertNotEqual(ret, None)
             self.assertEqual(ret[0]["enc"], "ssh-rsa")
@@ -212,6 +218,9 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function("ssh.check_known_host", arg, **kwargs)
         self.assertEqual(ret, "add")
 
+    @pytest.mark.skip_on_photonos(
+        reason="Skip on PhotonOS.  Attempting to receive the SSH key from Github, using RSA keys which are disabled.",
+    )
     @pytest.mark.slow_test
     def test_set_known_host(self):
         """
@@ -219,7 +228,10 @@ class SSHModuleTest(ModuleCase):
         """
         # add item
         ret = self.run_function(
-            "ssh.set_known_host", ["root", "github.com"], config=self.known_hosts
+            "ssh.set_known_host",
+            ["root", "github.com"],
+            enc="ssh-rsa",
+            config=self.known_hosts,
         )
         try:
             self.assertEqual(ret["status"], "updated")

@@ -5,10 +5,11 @@
 import os
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string, runs_on
 
 # Create user strings for tests
 ADD_USER = random_string("RS-", lowercase=False)
@@ -18,8 +19,8 @@ CHANGE_USER = random_string("RS-", lowercase=False)
 
 
 @pytest.mark.skip_if_not_root
-@runs_on(kernel="Darwin")
 @pytest.mark.destructive_test
+@pytest.mark.skip_unless_on_darwin
 class MacUserModuleTest(ModuleCase):
     """
     Integration tests for the mac_user module
@@ -122,9 +123,11 @@ class MacUserModuleTest(ModuleCase):
             self.assertEqual(fullname_info["fullname"], "Foo Bar")
 
             # Test mac_user.chgroups
+            pre_info = self.run_function("user.info", [CHANGE_USER])["groups"]
+            expected = pre_info + ["wheel"]
             self.run_function("user.chgroups", [CHANGE_USER, "wheel"])
             groups_info = self.run_function("user.info", [CHANGE_USER])
-            self.assertEqual(groups_info["groups"], ["wheel"])
+            self.assertEqual(groups_info["groups"], expected)
 
         except AssertionError:
             self.run_function("user.delete", [CHANGE_USER])
@@ -154,7 +157,7 @@ class MacUserModuleTest(ModuleCase):
             self.assertTrue(os.path.exists("/etc/kcpassword"))
 
             # Are the contents of the file correct
-            test_data = b".\xc3\xb8'B\xc2\xa0\xc3\x99\xc2\xad\xc2\x8b\xc3\x8d\xc3\x8dl"
+            test_data = bytes.fromhex("2e f8 27 42 a0 d9 ad 8b cd cd 6c 7d")
             with salt.utils.files.fopen("/etc/kcpassword", "rb") as f:
                 file_data = f.read()
             self.assertEqual(test_data, file_data)

@@ -10,9 +10,10 @@ import os
 import re
 import tempfile
 
+from requests.structures import CaseInsensitiveDict
+
 import salt.utils.data
 import salt.utils.platform
-from requests.structures import CaseInsensitiveDict
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -20,7 +21,7 @@ from salt.exceptions import (
     SaltInvocationError,
 )
 from salt.utils.data import CaseInsensitiveDict
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -44,8 +45,7 @@ def __virtual__():
     if __grains__["osrelease"] in ("XP", "2003Server"):
         return (
             False,
-            "Cannot load module chocolatey: Chocolatey requires "
-            "Windows Vista or later",
+            "Cannot load module chocolatey: Chocolatey requires Windows Vista or later",
         )
 
     return __virtualname__
@@ -68,7 +68,7 @@ def _yes():
     """
     if "chocolatey._yes" in __context__:
         return __context__["chocolatey._yes"]
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.9.9"):
+    if Version(chocolatey_version()) >= Version("0.9.9"):
         answer = ["--yes"]
     else:
         answer = []
@@ -83,7 +83,7 @@ def _no_progress():
     """
     if "chocolatey._no_progress" in __context__:
         return __context__["chocolatey._no_progress"]
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.10.4"):
+    if Version(chocolatey_version()) >= Version("0.10.4"):
         answer = ["--no-progress"]
     else:
         log.warning("--no-progress unsupported in choco < 0.10.4")
@@ -248,7 +248,7 @@ def bootstrap(force=False, source=None):
                 log.debug("Downloading PowerShell...")
                 __salt__["cp.get_url"](path=url, dest=dest)
             except MinionError:
-                err = "Failed to download PowerShell KB for {}" "".format(
+                err = "Failed to download PowerShell KB for {}".format(
                     __grains__["osrelease"]
                 )
                 if source:
@@ -312,9 +312,9 @@ def bootstrap(force=False, source=None):
 
     # Download Chocolatey installer
     try:
-        log.debug("Downloading Chocolatey: {}".format(os.path.basename(url)))
+        log.debug("Downloading Chocolatey: %s", os.path.basename(url))
         script = __salt__["cp.get_url"](path=url, dest=dest)
-        log.debug("Script: {}".format(script))
+        log.debug("Script: %s", script)
     except MinionError:
         err = "Failed to download Chocolatey Installer"
         if source:
@@ -323,7 +323,7 @@ def bootstrap(force=False, source=None):
 
     # If this is a nupkg download we need to unzip it first
     if os.path.splitext(os.path.basename(dest))[1] == ".nupkg":
-        log.debug("Unzipping Chocolatey: {}".format(dest))
+        log.debug("Unzipping Chocolatey: %s", dest)
         __salt__["archive.unzip"](
             zip_file=dest,
             dest=os.path.join(os.path.dirname(dest), "chocolatey"),
@@ -335,11 +335,11 @@ def bootstrap(force=False, source=None):
 
     if not os.path.exists(script):
         raise CommandExecutionError(
-            "Failed to find Chocolatey installation " "script: {}".format(script)
+            "Failed to find Chocolatey installation script: {}".format(script)
         )
 
     # Run the Chocolatey bootstrap
-    log.debug("Installing Chocolatey: {}".format(script))
+    log.debug("Installing Chocolatey: %s", script)
     result = __salt__["cmd.script"](
         script, cwd=os.path.dirname(script), shell="powershell", python_shell=True
     )
@@ -375,7 +375,7 @@ def unbootstrap():
     choco_dir = os.environ.get("ChocolateyInstall", False)
     if choco_dir:
         if os.path.exists(choco_dir):
-            log.debug("Removing Chocolatey directory: {}".format(choco_dir))
+            log.debug("Removing Chocolatey directory: %s", choco_dir)
             __salt__["file.remove"](path=choco_dir, force=True)
             removed.append("Removed Directory: {}".format(choco_dir))
     else:
@@ -385,14 +385,14 @@ def unbootstrap():
         ]
         for path in known_paths:
             if os.path.exists(path):
-                log.debug("Removing Chocolatey directory: {}".format(path))
+                log.debug("Removing Chocolatey directory: %s", path)
                 __salt__["file.remove"](path=path, force=True)
                 removed.append("Removed Directory: {}".format(path))
 
     # Delete all Chocolatey environment variables
     for env_var in __salt__["environ.items"]():
         if env_var.lower().startswith("chocolatey"):
-            log.debug("Removing Chocolatey environment variable: {}" "".format(env_var))
+            log.debug("Removing Chocolatey environment variable: %s", env_var)
             __salt__["environ.setval"](
                 key=env_var, val=False, false_unsets=True, permanent="HKLM"
             )
@@ -404,7 +404,7 @@ def unbootstrap():
     # Remove Chocolatey from the path:
     for path in __salt__["win_path.get_path"]():
         if "chocolatey" in path.lower():
-            log.debug("Removing Chocolatey path item: {}" "".format(path))
+            log.debug("Removing Chocolatey path item: %s", path)
             __salt__["win_path.remove"](path=path, rehash=True)
             removed.append("Removed Path Item: {}".format(path))
 
@@ -778,7 +778,7 @@ def install_missing(name, version=None, source=None):
         salt '*' chocolatey.install_missing <package name>
         salt '*' chocolatey.install_missing <package name> version=<package version>
     """
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.9.8.24"):
+    if Version(chocolatey_version()) >= Version("0.9.8.24"):
         log.warning("installmissing is deprecated, using install")
         return install(name, version=version)
 
@@ -1049,7 +1049,7 @@ def update(name, source=None, pre_versions=False):
         salt "*" chocolatey.update <package name> pre_versions=True
     """
     # chocolatey helpfully only supports a single package argument
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.9.8.24"):
+    if Version(chocolatey_version()) >= Version("0.9.8.24"):
         log.warning("update is deprecated, using upgrade")
         return upgrade(name, source=source, pre_versions=pre_versions)
 
@@ -1126,7 +1126,7 @@ def version(name, check_remote=False, source=None, pre_versions=False):
     return packages
 
 
-def add_source(name, source_location, username=None, password=None):
+def add_source(name, source_location, username=None, password=None, priority=None):
     """
     Instructs Chocolatey to add a source.
 
@@ -1144,11 +1144,18 @@ def add_source(name, source_location, username=None, password=None):
         Provide password for chocolatey sources that need authentication
         credentials.
 
+    priority
+        The priority order of this source as compared to other sources,
+        lower is better. Defaults to 0 (no priority). All priorities
+        above 0 will be evaluated first, then zero-based values will be
+        evaluated in config file order.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' chocolatey.add_source <source name> <source_location>
+        salt '*' chocolatey.add_source <source name> <source_location> priority=100
         salt '*' chocolatey.add_source <source name> <source_location> user=<user> password=<password>
 
     """
@@ -1165,6 +1172,8 @@ def add_source(name, source_location, username=None, password=None):
         cmd.extend(["--user", username])
     if password:
         cmd.extend(["--password", password])
+    if priority:
+        cmd.extend(["--priority", priority])
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:

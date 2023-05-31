@@ -6,8 +6,6 @@ Module to manage Windows software repo on a Standalone Minion
 For documentation on Salt's Windows Repo feature, see :ref:`here
 <windows-package-manager>`.
 """
-
-
 import logging
 import os
 
@@ -19,14 +17,15 @@ import salt.utils.gitfs
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltRenderError
-
-# All the "unused" imports here are needed for the imported winrepo runner code
-# pylint: disable=unused-import
-from salt.runners.winrepo import GLOBAL_ONLY, PER_REMOTE_ONLY, PER_REMOTE_OVERRIDES
 from salt.runners.winrepo import genrepo as _genrepo
 from salt.runners.winrepo import update_git_repos as _update_git_repos
 
 # pylint: enable=unused-import
+if salt.utils.platform.is_windows():
+    _genrepo = salt.utils.functools.namespaced_function(_genrepo, globals())
+    _update_git_repos = salt.utils.functools.namespaced_function(
+        _update_git_repos, globals()
+    )
 
 log = logging.getLogger(__name__)
 
@@ -39,11 +38,6 @@ def __virtual__():
     Set the winrepo module if the OS is Windows
     """
     if salt.utils.platform.is_windows():
-        global _genrepo, _update_git_repos
-        _genrepo = salt.utils.functools.namespaced_function(_genrepo, globals())
-        _update_git_repos = salt.utils.functools.namespaced_function(
-            _update_git_repos, globals()
-        )
         return __virtualname__
     return (False, "This module only works on Windows.")
 

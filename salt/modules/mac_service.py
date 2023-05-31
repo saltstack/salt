@@ -36,7 +36,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 # Define the module's virtual name
 __virtualname__ = "service"
@@ -62,8 +62,7 @@ def __virtual__():
     if not salt.utils.platform.is_darwin():
         return (
             False,
-            "Failed to load the mac_service module:\n"
-            "Only available on macOS systems.",
+            "Failed to load the mac_service module:\nOnly available on macOS systems.",
         )
 
     if not salt.utils.path.which("launchctl"):
@@ -80,7 +79,7 @@ def __virtual__():
             'Required binary not found: "plutil"',
         )
 
-    if _LooseVersion(__grains__["osrelease"]) < _LooseVersion("10.11"):
+    if Version(__grains__["osrelease"]) < Version("10.11"):
         return (
             False,
             "Failed to load the mac_service module:\nRequires macOS 10.11 or newer",

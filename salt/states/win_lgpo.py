@@ -418,23 +418,13 @@ def set_(
                             if e_name not in valid_names:
                                 new_e_name = e_name.split(":")[-1].strip()
                                 # If we find an invalid name, test the new
-                                # format. If found, replace the old with the
-                                # new
+                                # format. If found, add to deprecation comments
+                                # and bail
                                 if new_e_name in valid_names:
                                     msg = (
-                                        "The LGPO module changed the way "
-                                        "it gets policy element names.\n"
                                         '"{}" is no longer valid.\n'
                                         'Please use "{}" instead.'
                                         "".format(e_name, new_e_name)
-                                    )
-                                    salt.utils.versions.warn_until("Phosphorus", msg)
-                                    pol_data[p_class]["requested_policy"][p_name][
-                                        new_e_name
-                                    ] = pol_data[p_class]["requested_policy"][
-                                        p_name
-                                    ].pop(
-                                        e_name
                                     )
                                     deprecation_comments.append(msg)
                                 else:
@@ -442,13 +432,17 @@ def set_(
                                     ret["comment"] = "\n".join(
                                         [ret["comment"], msg]
                                     ).strip()
-                                    ret["result"] = False
+                                ret["result"] = False
                 else:
                     ret["comment"] = "\n".join(
                         [ret["comment"], lookup["message"]]
                     ).strip()
                     ret["result"] = False
     if not ret["result"]:
+        if deprecation_comments:
+            deprecation_comments.insert(
+                0, "The LGPO module changed the way it gets policy element names."
+            )
         deprecation_comments.append(ret["comment"])
         ret["comment"] = "\n".join(deprecation_comments).strip()
         return ret
@@ -487,10 +481,10 @@ def set_(
                     changes = False
                     requested_policy_json = salt.utils.json.dumps(
                         p_data["requested_policy"][p_name], sort_keys=True
-                    ).lower()
+                    )
                     current_policy_json = salt.utils.json.dumps(
                         current_policy[class_map[p_class]][p_name], sort_keys=True
-                    ).lower()
+                    )
 
                     requested_policy_check = salt.utils.json.loads(
                         requested_policy_json
@@ -577,14 +571,15 @@ def set_(
                         "\n".join(policy_changes)
                     )
                 else:
-                    msg = (
-                        "The following policies are in the correct "
-                        "state:\n{}".format("\n".join(policy_changes))
+                    msg = "Failed to set the following policies:\n{}".format(
+                        "\n".join(policy_changes)
                     )
+                    ret["result"] = False
             else:
                 msg = (
-                    "Errors occurred while attempting to configure "
-                    "policies: {}".format(_ret)
+                    "Errors occurred while attempting to configure policies: {}".format(
+                        _ret
+                    )
                 )
                 ret["result"] = False
             deprecation_comments.append(msg)

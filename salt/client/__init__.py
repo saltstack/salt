@@ -25,24 +25,25 @@ import sys
 import time
 from datetime import datetime
 
+import tornado.gen
+
 import salt.cache
+import salt.channel.client
 import salt.config
 import salt.defaults.exitcodes
-import salt.ext.tornado.gen
 import salt.loader
 import salt.payload
 import salt.syspaths as syspaths
-import salt.transport.client
 import salt.utils.args
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minions
+import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
-import salt.utils.zeromq
 from salt.exceptions import (
     AuthenticationError,
     AuthorizationError,
@@ -215,7 +216,6 @@ class LocalClient:
                     c_path,
                 )
             self.opts = salt.config.client_config(c_path)
-        self.serial = salt.payload.Serial(self.opts)
         self.salt_user = salt.utils.user.get_specific_user()
         self.skip_perm_errors = skip_perm_errors
         self.key = self.__read_master_key()
@@ -224,7 +224,6 @@ class LocalClient:
         self.event = salt.utils.event.get_event(
             "master",
             self.opts["sock_dir"],
-            self.opts["transport"],
             opts=self.opts,
             listen=self.listen,
             io_loop=io_loop,
@@ -330,7 +329,7 @@ class LocalClient:
         elif "jid" not in pub_data:
             return {}
         if pub_data["jid"] == "0":
-            print("Failed to connect to the Master, " "is the Salt Master running?")
+            print("Failed to connect to the Master, is the Salt Master running?")
             return {}
 
         # If we order masters (via a syndic), don't short circuit if no minions
@@ -418,7 +417,7 @@ class LocalClient:
         )
         return _res["minions"]
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def run_job_async(
         self,
         tgt,
@@ -475,7 +474,7 @@ class LocalClient:
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
 
-        raise salt.ext.tornado.gen.Return(self._check_pub_data(pub_data, listen=listen))
+        raise tornado.gen.Return(self._check_pub_data(pub_data, listen=listen))
 
     def cmd_async(
         self, tgt, fun, arg=(), tgt_type="glob", ret="", jid="", kwarg=None, **kwargs
@@ -530,6 +529,10 @@ class LocalClient:
             >>> SLC.cmd_subset('*', 'test.ping', subset=1)
             {'jerry': True}
         """
+
+        # Support legacy parameter name:
+        subset = kwargs.pop("sub", subset)
+
         minion_ret = self.cmd(tgt, "sys.list_functions", tgt_type=tgt_type, **kwargs)
         minions = list(minion_ret)
         random.shuffle(minions)
@@ -588,10 +591,9 @@ class LocalClient:
         # even though it has already been imported.
         # when cmd_batch is called via the NetAPI
         # the module is unavailable.
-        import salt.utils.args
-
         # Late import - not used anywhere else in this file
         import salt.cli.batch
+        import salt.utils.args
 
         arg = salt.utils.args.condition_input(arg, kwarg)
         opts = {
@@ -626,7 +628,7 @@ class LocalClient:
             if key not in opts:
                 opts[key] = val
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
-        for ret in batch.run():
+        for ret, _ in batch.run():
             yield ret
 
     def cmd(
@@ -822,7 +824,6 @@ class LocalClient:
                 listen=True,
                 **kwargs
             )
-
             if not self.pub_data:
                 yield self.pub_data
             else:
@@ -1190,6 +1191,13 @@ class LocalClient:
                 # if we got None, then there were no events
                 if raw is None:
                     break
+                if "error" in raw.get("data", {}):
+                    yield {
+                        "error": {
+                            "name": "AuthorizationError",
+                            "message": "Authorization error occurred.",
+                        }
+                    }
                 if "minions" in raw.get("data", {}):
                     minions.update(raw["data"]["minions"])
                     if "missing" in raw.get("data", {}):
@@ -1447,8 +1455,9 @@ class LocalClient:
             )
         except Exception as exc:  # pylint: disable=broad-except
             raise SaltClientError(
-                "Returner {} could not fetch jid data. "
-                "Exception details: {}".format(self.opts["master_job_cache"], exc)
+                "Returner {} could not fetch jid data. Exception details: {}".format(
+                    self.opts["master_job_cache"], exc
+                )
             )
         for minion in data:
             m_data = {}
@@ -1644,7 +1653,7 @@ class LocalClient:
             timeout=timeout,
             tgt=tgt,
             tgt_type=tgt_type,
-            # (gtmanfred) expect_minions is popped here incase it is passed from a client
+            # (gtmanfred) expect_minions is popped here in case it is passed from a client
             # call. If this is not popped, then it would be passed twice to
             # get_iter_returns.
             expect_minions=(
@@ -1692,15 +1701,21 @@ class LocalClient:
                             yield {
                                 id_: {
                                     "out": "no_return",
-                                    "ret": "Minion did not return. [No response]"
-                                    "\nThe minions may not have all finished running and any "
-                                    "remaining minions will return upon completion. To look "
-                                    "up the return data for this job later, run the following "
-                                    "command:\n\n"
-                                    "salt-run jobs.lookup_jid {}".format(jid),
+                                    "ret": (
+                                        "Minion did not return. [No response]\nThe"
+                                        " minions may not have all finished running and"
+                                        " any remaining minions will return upon"
+                                        " completion. To look up the return data for"
+                                        " this job later, run the following"
+                                        " command:\n\nsalt-run jobs.lookup_jid {}".format(
+                                            jid
+                                        )
+                                    ),
                                     "retcode": salt.defaults.exitcodes.EX_GENERIC,
                                 }
                             }
+                elif "error" in min_ret:
+                    raise AuthorizationError("Authorization error occurred")
                 else:
                     yield {id_: min_ret}
 
@@ -1819,11 +1834,7 @@ class LocalClient:
         if kwargs:
             payload_kwargs["kwargs"] = kwargs
 
-        # If we have a salt user, add it to the payload
-        if self.opts["syndic_master"] and "user" in kwargs:
-            payload_kwargs["user"] = kwargs["user"]
-        elif self.salt_user:
-            payload_kwargs["user"] = self.salt_user
+        payload_kwargs["user"] = self.salt_user
 
         # If we're a syndication master, pass the timeout
         if self.opts["order_masters"]:
@@ -1879,11 +1890,11 @@ class LocalClient:
         )
 
         master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(self.opts["interface"]),
+            salt.utils.network.ip_bracket(self.opts["interface"]),
             str(self.opts["ret_port"]),
         )
 
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", master_uri=master_uri
         ) as channel:
             try:
@@ -1931,7 +1942,7 @@ class LocalClient:
 
         return {"jid": payload["load"]["jid"], "minions": payload["load"]["minions"]}
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def pub_async(
         self,
         tgt,
@@ -1982,12 +1993,12 @@ class LocalClient:
 
         master_uri = (
             "tcp://"
-            + salt.utils.zeromq.ip_bracket(self.opts["interface"])
+            + salt.utils.network.ip_bracket(self.opts["interface"])
             + ":"
             + str(self.opts["ret_port"])
         )
 
-        with salt.transport.client.AsyncReqChannel.factory(
+        with salt.channel.client.AsyncReqChannel.factory(
             self.opts, io_loop=io_loop, crypt="clear", master_uri=master_uri
         ) as channel:
             try:
@@ -2012,7 +2023,7 @@ class LocalClient:
                 # and try again if the key has changed
                 key = self.__read_master_key()
                 if key == self.key:
-                    raise salt.ext.tornado.gen.Return(payload)
+                    raise tornado.gen.Return(payload)
                 self.key = key
                 payload_kwargs["key"] = self.key
                 payload = yield channel.send(payload_kwargs)
@@ -2030,9 +2041,9 @@ class LocalClient:
                 raise PublishError(error)
 
             if not payload:
-                raise salt.ext.tornado.gen.Return(payload)
+                raise tornado.gen.Return(payload)
 
-        raise salt.ext.tornado.gen.Return(
+        raise tornado.gen.Return(
             {"jid": payload["load"]["jid"], "minions": payload["load"]["minions"]}
         )
 
@@ -2206,7 +2217,7 @@ class ProxyCaller:
     .. code-block:: python
 
         import salt.client
-        caller = salt.client.Caller()
+        caller = salt.client.ProxyCaller()
         caller.cmd('test.ping')
 
     Note, a running master or minion daemon is not required to use this class.

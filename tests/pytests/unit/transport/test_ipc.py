@@ -1,9 +1,14 @@
 import pytest
-import salt.ext.tornado.iostream
+import tornado.iostream
+from pytestshellutils.utils import ports
+
 import salt.transport.ipc
 import salt.utils.asynchronous
 import salt.utils.platform
-from saltfactories.utils.ports import get_unused_localhost_port
+
+pytestmark = [
+    pytest.mark.core_test,
+]
 
 
 def test_ipc_connect_in_async_methods():
@@ -17,7 +22,7 @@ async def test_ipc_connect_sync_wrapped(io_loop, tmp_path):
     salt.utils.asynchronous.SyncWrapper.
     """
     if salt.utils.platform.is_windows():
-        socket_path = get_unused_localhost_port()
+        socket_path = ports.get_unused_localhost_port()
     else:
         socket_path = str(tmp_path / "noexist.ipc")
     subscriber = salt.utils.asynchronous.SyncWrapper(
@@ -26,6 +31,6 @@ async def test_ipc_connect_sync_wrapped(io_loop, tmp_path):
         kwargs={"io_loop": io_loop},
         loop_kwarg="io_loop",
     )
-    with pytest.raises(salt.ext.tornado.iostream.StreamClosedError):
+    with pytest.raises(tornado.iostream.StreamClosedError):
         # Don't `await subscriber.connect()`, that's the purpose of the SyncWrapper
         subscriber.connect()

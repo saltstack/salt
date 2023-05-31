@@ -6,6 +6,7 @@ import contextlib
 import pathlib
 
 import pytest
+
 from tests.support.case import ShellCase
 from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 from tests.support.mock import MagicMock, create_autospec, patch
@@ -233,6 +234,7 @@ class FileserverTest(ShellCase):
                 fun="fileserver.update", backend="gitfs", unknown_arg="foo"
             )
         self.assertIn(
-            "Passed invalid arguments: got an unexpected keyword argument 'unknown_arg'",
+            "Passed invalid arguments: got an unexpected keyword argument"
+            " 'unknown_arg'",
             ret["return"],
         )

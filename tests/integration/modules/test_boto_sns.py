@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Validate the boto_sns module
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import re
 
-# Import Salt Testing libs
-from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
+import pytest
 
-# Import 3rd-party libs
+from tests.support.case import ModuleCase
+
 try:
     import boto
 
@@ -21,9 +15,9 @@ except ImportError:
     NO_BOTO_MODULE = True
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_BOTO_MODULE,
-    "Please install the boto library before running boto integration tests.",
+    reason="Please install the boto library before running boto integration tests.",
 )
 class BotoSNSTest(ModuleCase):
     def setUp(self):
@@ -31,7 +25,8 @@ class BotoSNSTest(ModuleCase):
             boto.connect_iam()
         except boto.exception.NoAuthHandlerFound:
             self.skipTest(
-                "Please setup boto AWS credentials before running boto integration tests."
+                "Please setup boto AWS credentials before running boto integration"
+                " tests."
             )
         # The name of the topic you want to create.
         # Constraints: Topic names must be made up of only uppercase and
@@ -104,7 +99,7 @@ class BotoSNSTest(ModuleCase):
         )
 
     def _get_arn(self, name):
-        return "arn:aws:sns:us-east-1:{0}:{1}".format(self.account_id, name)
+        return "arn:aws:sns:us-east-1:{}:{}".format(self.account_id, name)
 
     @property
     def account_id(self):

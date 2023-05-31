@@ -2,21 +2,20 @@
 Render the pillar data
 """
 
-
 import collections
 import copy
 import fnmatch
-import inspect
 import logging
 import os
 import sys
 import traceback
 
-import salt.ext.tornado.gen
+import tornado.gen
+
+import salt.channel.client
 import salt.fileclient
 import salt.loader
 import salt.minion
-import salt.transport.client
 import salt.utils.args
 import salt.utils.cache
 import salt.utils.crypt
@@ -24,7 +23,6 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.url
 from salt.exceptions import SaltClientError
-from salt.ext import six
 from salt.template import compile_template
 
 # Even though dictupdate is imported, invoking salt.utils.dictupdate.merge here
@@ -47,6 +45,7 @@ def get_pillar(
     pillar_override=None,
     pillarenv=None,
     extra_minion_data=None,
+    clean_cache=False,
 ):
     """
     Return the correct pillar driver based on the file_client option
@@ -81,6 +80,8 @@ def get_pillar(
             functions=funcs,
             pillar_override=pillar_override,
             pillarenv=pillarenv,
+            clean_cache=clean_cache,
+            extra_minion_data=extra_minion_data,
         )
     return ptype(
         opts,
@@ -106,6 +107,7 @@ def get_async_pillar(
     pillar_override=None,
     pillarenv=None,
     extra_minion_data=None,
+    clean_cache=False,
 ):
     """
     Return the correct pillar driver based on the file_client option
@@ -118,6 +120,21 @@ def get_async_pillar(
     ptype = {"remote": AsyncRemotePillar, "local": AsyncPillar}.get(
         file_client, AsyncPillar
     )
+    if file_client == "remote":
+        # AsyncPillar does not currently support calls to PillarCache
+        # clean_cache is a kwarg for PillarCache
+        return ptype(
+            opts,
+            grains,
+            minion_id,
+            saltenv,
+            ext,
+            functions=funcs,
+            pillar_override=pillar_override,
+            pillarenv=pillarenv,
+            extra_minion_data=extra_minion_data,
+            clean_cache=clean_cache,
+        )
     return ptype(
         opts,
         grains,
@@ -168,7 +185,7 @@ class RemotePillarMixin:
         if "pass_to_ext_pillars" in opts:
             if not isinstance(opts["pass_to_ext_pillars"], list):
                 log.exception("'pass_to_ext_pillars' config is malformed.")
-                raise SaltClientError("'pass_to_ext_pillars' config is " "malformed.")
+                raise SaltClientError("'pass_to_ext_pillars' config is malformed.")
             for key in opts["pass_to_ext_pillars"]:
                 salt.utils.dictupdate.update(
                     extra_data,
@@ -196,13 +213,14 @@ class AsyncRemotePillar(RemotePillarMixin):
         pillar_override=None,
         pillarenv=None,
         extra_minion_data=None,
+        clean_cache=False,
     ):
         self.opts = opts
         self.opts["saltenv"] = saltenv
         self.ext = ext
         self.grains = grains
         self.minion_id = minion_id
-        self.channel = salt.transport.client.AsyncReqChannel.factory(opts)
+        self.channel = salt.channel.client.AsyncReqChannel.factory(opts)
         if pillarenv is not None:
             self.opts["pillarenv"] = pillarenv
         self.pillar_override = pillar_override or {}
@@ -220,8 +238,9 @@ class AsyncRemotePillar(RemotePillarMixin):
             merge_lists=True,
         )
         self._closing = False
+        self.clean_cache = clean_cache
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def compile_pillar(self):
         """
         Return a future which will contain the pillar data from the master
@@ -236,24 +255,30 @@ class AsyncRemotePillar(RemotePillarMixin):
             "ver": "2",
             "cmd": "_pillar",
         }
+        if self.clean_cache:
+            load["clean_cache"] = self.clean_cache
         if self.ext:
             load["ext"] = self.ext
         try:
             ret_pillar = yield self.channel.crypted_transfer_decode_dictentry(
-                load, dictkey="pillar",
+                load,
+                dictkey="pillar",
             )
+        except salt.crypt.AuthenticationError as exc:
+            log.error(exc.message)
+            raise SaltClientError("Exception getting pillar.")
         except Exception:  # pylint: disable=broad-except
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
 
         if not isinstance(ret_pillar, dict):
-            msg = (
-                "Got a bad pillar from master, type {}, expecting dict: " "{}"
-            ).format(type(ret_pillar).__name__, ret_pillar)
+            msg = "Got a bad pillar from master, type {}, expecting dict: {}".format(
+                type(ret_pillar).__name__, ret_pillar
+            )
             log.error(msg)
             # raise an exception! Pillar isn't empty, we can't sync it!
             raise SaltClientError(msg)
-        raise salt.ext.tornado.gen.Return(ret_pillar)
+        raise tornado.gen.Return(ret_pillar)
 
     def destroy(self):
         if self._closing:
@@ -291,7 +316,7 @@ class RemotePillar(RemotePillarMixin):
         self.ext = ext
         self.grains = grains
         self.minion_id = minion_id
-        self.channel = salt.transport.client.ReqChannel.factory(opts)
+        self.channel = salt.channel.client.ReqChannel.factory(opts)
         if pillarenv is not None:
             self.opts["pillarenv"] = pillarenv
         self.pillar_override = pillar_override or {}
@@ -327,7 +352,8 @@ class RemotePillar(RemotePillarMixin):
         if self.ext:
             load["ext"] = self.ext
         ret_pillar = self.channel.crypted_transfer_decode_dictentry(
-            load, dictkey="pillar",
+            load,
+            dictkey="pillar",
         )
 
         if not isinstance(ret_pillar, dict):
@@ -380,6 +406,7 @@ class PillarCache:
         pillar_override=None,
         pillarenv=None,
         extra_minion_data=None,
+        clean_cache=False,
     ):
         # Yes, we need all of these because we need to route to the Pillar object
         # if we have no cache. This is another refactor target.
@@ -392,6 +419,8 @@ class PillarCache:
         self.functions = functions
         self.pillar_override = pillar_override
         self.pillarenv = pillarenv
+        self.clean_cache = clean_cache
+        self.extra_minion_data = extra_minion_data
 
         if saltenv is None:
             self.saltenv = "base"
@@ -428,6 +457,7 @@ class PillarCache:
             functions=self.functions,
             pillar_override=self.pillar_override,
             pillarenv=self.pillarenv,
+            extra_minion_data=self.extra_minion_data,
         )
         return fresh_pillar.compile_pillar()
 
@@ -440,6 +470,8 @@ class PillarCache:
         return True
 
     def compile_pillar(self, *args, **kwargs):  # Will likely just be pillar_dirs
+        if self.clean_cache:
+            self.clear_pillar()
         log.debug(
             "Scanning pillar cache for information about minion %s and pillarenv %s",
             self.minion_id,
@@ -626,6 +658,10 @@ class Pillar:
                     env,
                 )
                 opts["pillar_roots"][env] = opts["pillar_roots"].pop("__env__")
+                for idx, root in enumerate(opts["pillar_roots"][env]):
+                    opts["pillar_roots"][env][idx] = opts["pillar_roots"][env][
+                        idx
+                    ].replace("__env__", env)
             else:
                 log.debug(
                     "pillar_roots __env__ ignored (environment '%s' found in pillar_roots)",
@@ -638,9 +674,9 @@ class Pillar:
         """
         Pull the file server environments out of the master options
         """
-        envs = {"base"}
+        envs = ["base"]
         if "pillar_roots" in self.opts:
-            envs.update(list(self.opts["pillar_roots"]))
+            envs.extend([x for x in list(self.opts["pillar_roots"]) if x not in envs])
         return envs
 
     def get_tops(self):
@@ -667,7 +703,7 @@ class Pillar:
                 else:
                     saltenvs.add(self.opts["pillarenv"])
             else:
-                saltenvs = self._get_envs()
+                saltenvs.update(self._get_envs())
                 if self.opts.get("pillar_source_merging_strategy", None) == "none":
                     saltenvs &= {self.saltenv or "base"}
 
@@ -723,9 +759,9 @@ class Pillar:
                         )
                     except Exception as exc:  # pylint: disable=broad-except
                         errors.append(
-                            (
-                                "Rendering Top file {} failed, render error" ":\n{}"
-                            ).format(sls, exc)
+                            "Rendering Top file {} failed, render error:\n{}".format(
+                                sls, exc
+                            )
                         )
                     done[saltenv].append(sls)
             for saltenv in pops:
@@ -819,7 +855,9 @@ class Pillar:
                     continue
             for match, data in body.items():
                 if self.matchers["confirm_top.confirm_top"](
-                    match, data, self.opts.get("nodegroups", {}),
+                    match,
+                    data,
+                    self.opts.get("nodegroups", {}),
                 ):
                     if saltenv not in matches:
                         matches[saltenv] = env_matches = []
@@ -843,7 +881,7 @@ class Pillar:
         if not fn_:
             if sls in self.ignored_pillars.get(saltenv, []):
                 log.debug(
-                    "Skipping ignored and missing SLS '%s' in " "environment '%s'",
+                    "Skipping ignored and missing SLS '%s' in environment '%s'",
                     sls,
                     saltenv,
                 )
@@ -851,14 +889,13 @@ class Pillar:
             elif self.opts["pillar_roots"].get(saltenv):
                 msg = (
                     "Specified SLS '{}' in environment '{}' is not"
-                    " available on the salt master"
-                ).format(sls, saltenv)
+                    " available on the salt master".format(sls, saltenv)
+                )
                 log.error(msg)
                 errors.append(msg)
             else:
-                msg = (
-                    "Specified SLS '{}' in environment '{}' was not "
-                    "found. ".format(sls, saltenv)
+                msg = "Specified SLS '{}' in environment '{}' was not found. ".format(
+                    sls, saltenv
                 )
                 if self.opts.get("__git_pillar", False) is True:
                     msg += (
@@ -940,13 +977,16 @@ class Pillar:
                                     else:
                                         include_parts = sls.split(".")[:-1]
                                     sub_sls = ".".join(include_parts + [sub_sls[1:]])
-                                matches = fnmatch.filter(self.avail[saltenv], sub_sls,)
+                                matches = fnmatch.filter(
+                                    self.avail[saltenv],
+                                    sub_sls,
+                                )
                                 matched_pstates.extend(matches)
                             except KeyError:
                                 errors.extend(
                                     [
-                                        "No matching pillar environment for environment "
-                                        "'{}' found".format(saltenv)
+                                        "No matching pillar environment for environment"
+                                        " '{}' found".format(saltenv)
                                     ]
                                 )
                                 matched_pstates = [sub_sls]
@@ -1103,8 +1143,8 @@ class Pillar:
             # the git ext_pillar() func is run, but only for masterless.
             if self.ext and "git" in self.ext and self.opts.get("__role") != "minion":
                 # Avoid circular import
-                import salt.utils.gitfs
                 import salt.pillar.git_pillar
+                import salt.utils.gitfs
 
                 git_pillar = salt.utils.gitfs.GitPillar(
                     self.opts,
@@ -1151,7 +1191,10 @@ class Pillar:
                     ext = self._external_pillar_data(pillar, val, key)
                 except Exception as exc:  # pylint: disable=broad-except
                     errors.append(
-                        "Failed to load ext_pillar {}: {}".format(key, exc.__str__(),)
+                        "Failed to load ext_pillar {}: {}".format(
+                            key,
+                            exc.__str__(),
+                        )
                     )
                     log.error(
                         "Exception caught loading ext_pillar '%s':\n%s",
@@ -1298,6 +1341,11 @@ class Pillar:
         if self._closing:
             return
         self._closing = True
+        if self.client:
+            try:
+                self.client.destroy()
+            except AttributeError:
+                pass
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1309,7 +1357,7 @@ class Pillar:
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in
 # ext_pillar etc.
 class AsyncPillar(Pillar):
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def compile_pillar(self, ext=True):
         ret = super().compile_pillar(ext=ext)
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)

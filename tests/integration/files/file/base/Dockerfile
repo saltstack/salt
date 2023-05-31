@@ -1,5 +1,4 @@
 from base
-MAINTAINER SaltStack, Inc.
+MAINTAINER VMware, Inc.
 
 RUN /bin/echo "The cheese shop is open" > /tmp/cheese
-

@@ -6,10 +6,10 @@ import os
 import random
 
 import pytest
+
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on
 
 # Module Variables
 ASSIGN_CMD = "net.inet.icmp.icmplim"
@@ -17,8 +17,8 @@ CONFIG = "/etc/sysctl.conf"
 
 
 @pytest.mark.destructive_test
-@runs_on(kernel="Darwin")
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_unless_on_darwin
 class DarwinSysctlModuleTest(ModuleCase):
     """
     Integration tests for the darwin_sysctl module

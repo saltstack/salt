@@ -1,18 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Helpers/utils for working with tornado asynchronous stuff
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import contextlib
 import logging
 import sys
 import threading
 
-import salt.ext.tornado.concurrent
-import salt.ext.tornado.ioloop
-from salt.ext import six
+import tornado.concurrent
+import tornado.ioloop
 
 log = logging.getLogger(__name__)
 
@@ -22,22 +19,28 @@ def current_ioloop(io_loop):
     """
     A context manager that will set the current ioloop to io_loop for the context
     """
-    orig_loop = salt.ext.tornado.ioloop.IOLoop.current()
+    try:
+        orig_loop = tornado.ioloop.IOLoop.current()
+    except RuntimeError:
+        orig_loop = None
     io_loop.make_current()
     try:
         yield
     finally:
-        orig_loop.make_current()
+        if orig_loop:
+            orig_loop.make_current()
+        else:
+            io_loop.clear_current()
 
 
-class SyncWrapper(object):
+class SyncWrapper:
     """
     A wrapper to make Async classes synchronous
 
     This is uses as a simple wrapper, for example:
 
     asynchronous = AsyncClass()
-    # this method would reguarly return a future
+    # this method would regularly return a future
     future = asynchronous.async_method()
 
     sync = SyncWrapper(async_factory_method, (arg1, arg2), {'kwarg1': 'val'})
@@ -54,7 +57,7 @@ class SyncWrapper(object):
         close_methods=None,
         loop_kwarg=None,
     ):
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+        self.io_loop = tornado.ioloop.IOLoop()
         if args is None:
             args = []
         if kwargs is None:
@@ -105,7 +108,10 @@ class SyncWrapper(object):
                 log.exception("Exception encountered while running stop method")
         io_loop = self.io_loop
         io_loop.stop()
-        io_loop.close(all_fds=True)
+        try:
+            io_loop.close(all_fds=True)
+        except KeyError:
+            pass
 
     def __getattr__(self, key):
         if key in self._async_methods:
@@ -116,14 +122,16 @@ class SyncWrapper(object):
         def wrap(*args, **kwargs):
             results = []
             thread = threading.Thread(
-                target=self._target, args=(key, args, kwargs, results, self.io_loop),
+                target=self._target,
+                args=(key, args, kwargs, results, self.io_loop),
             )
             thread.start()
             thread.join()
             if results[0]:
                 return results[1]
             else:
-                six.reraise(*results[1])
+                exc_info = results[1]
+                raise exc_info[1].with_traceback(exc_info[2])
 
         return wrap
 
@@ -132,7 +140,7 @@ class SyncWrapper(object):
             result = io_loop.run_sync(lambda: getattr(self.obj, key)(*args, **kwargs))
             results.append(True)
             results.append(result)
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             results.append(False)
             results.append(sys.exc_info())
 

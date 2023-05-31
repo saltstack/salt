@@ -4,4 +4,4 @@ patch
 pygit2>=1.2.0; python_version >= '3.7'
 sed
 pywinrm>=0.4.1
-
+yamllint

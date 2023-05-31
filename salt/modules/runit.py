@@ -347,7 +347,10 @@ def _get_svc_path(name="*", status=None):
     ena = set()
     for el in glob.glob(os.path.join(SERVICE_DIR, name)):
         if _is_svc(el):
-            ena.add(os.readlink(el))
+            if os.path.islink(el):
+                ena.add(os.readlink(el))
+            else:
+                ena.add(el)
             log.trace("found enabled service path: %s", el)
 
     if status == "ENABLED":
@@ -383,7 +386,7 @@ def _get_svc_list(name="*", status=None):
         'DISABLED' : available service that is not enabled
         'ENABLED'  : enabled service (whether started on boot or not)
     """
-    return sorted([os.path.basename(el) for el in _get_svc_path(name, status)])
+    return sorted(os.path.basename(el) for el in _get_svc_path(name, status))
 
 
 def get_svc_alias():
@@ -607,7 +610,7 @@ def enable(name, start=False, **kwargs):
                 salt.utils.files.fopen(down_file, "w").close()
                 # pylint: enable=resource-leakage
             except OSError:
-                log.error("Unable to create file {}".format(down_file))
+                log.error("Unable to create file %s", down_file)
                 return False
 
     # enable the service
@@ -616,7 +619,7 @@ def enable(name, start=False, **kwargs):
 
     except OSError:
         # (attempt to) remove temp down_file anyway
-        log.error("Unable to create symlink {}".format(down_file))
+        log.error("Unable to create symlink %s", down_file)
         if not start:
             os.unlink(down_file)
         return False

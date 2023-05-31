@@ -5,16 +5,17 @@ integration tests for mac_shadow
 import datetime
 
 import pytest
+from saltfactories.utils import random_string
+
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string, runs_on
 
 TEST_USER = random_string("RS-", lowercase=False)
 NO_USER = random_string("RS-", lowercase=False)
 
 
-@runs_on(kernel="Darwin")
 @pytest.mark.skip_if_binaries_missing("dscl", "pwpolicy")
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_unless_on_darwin
 class MacShadowModuleTest(ModuleCase):
     """
     Validate the mac_shadow module
@@ -33,6 +34,7 @@ class MacShadowModuleTest(ModuleCase):
         self.run_function("user.delete", [TEST_USER])
 
     @pytest.mark.slow_test
+    @pytest.mark.skip_initial_gh_actions_failure
     def test_info(self):
         """
         Test shadow.info
@@ -65,6 +67,7 @@ class MacShadowModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
+    @pytest.mark.skip_initial_gh_actions_failure
     def test_get_last_change(self):
         """
         Test shadow.get_last_change
@@ -83,6 +86,7 @@ class MacShadowModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
+    @pytest.mark.skip_initial_gh_actions_failure
     def test_get_login_failed_last(self):
         """
         Test shadow.get_login_failed_last
@@ -101,6 +105,7 @@ class MacShadowModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
+    @pytest.mark.skip_initial_gh_actions_failure
     def test_get_login_failed_count(self):
         """
         Test shadow.get_login_failed_count

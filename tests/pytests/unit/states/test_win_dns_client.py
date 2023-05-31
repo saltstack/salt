@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.win_dns_client as win_dns_client
 from tests.support.mock import MagicMock, patch
 
@@ -81,10 +82,7 @@ def test_dns_dhcp():
     mock = MagicMock(side_effect=["dhcp", "salt", "salt"])
     with patch.dict(win_dns_client.__salt__, {"win_dns_client.get_dns_config": mock}):
         ret.update(
-            {
-                "comment": "Local Area Connection already configured"
-                " with DNS from DHCP"
-            }
+            {"comment": "Local Area Connection already configured with DNS from DHCP"}
         )
         assert win_dns_client.dns_dhcp("salt") == ret
 

@@ -3,6 +3,7 @@ integration tests for mac_power
 """
 
 import pytest
+
 from tests.support.case import ModuleCase
 
 
@@ -10,6 +11,7 @@ from tests.support.case import ModuleCase
 @pytest.mark.skip_unless_on_darwin
 @pytest.mark.skip_if_binaries_missing("systemsetup")
 @pytest.mark.skip_if_not_root
+@pytest.mark.slow_test
 class MacPowerModuleTest(ModuleCase):
     """
     Validate the mac_power module

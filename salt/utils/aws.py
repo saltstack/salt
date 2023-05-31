@@ -8,15 +8,12 @@ This is a base library used by a number of AWS services.
 :depends: requests
 """
 
-import binascii
 import hashlib
 import hmac
 import logging
 import random
 import re
 import time
-import urllib.parse
-import xml.etree.ElementTree as ET
 from datetime import datetime
 
 import salt.config
@@ -30,11 +27,32 @@ try:
 except ImportError:
     HAS_REQUESTS = False  # pylint: disable=W0612
 
+try:
+    import binascii
+
+    HAS_BINASCII = True  # pylint: disable=W0612
+except ImportError:
+    HAS_BINASCII = False  # pylint: disable=W0612
+
+try:
+    import urllib.parse
+
+    HAS_URLLIB = True  # pylint: disable=W0612
+except ImportError:
+    HAS_URLLIB = False  # pylint: disable=W0612
+
+try:
+    import xml.etree.ElementTree as ET
+
+    HAS_ETREE = True  # pylint: disable=W0612
+except ImportError:
+    HAS_ETREE = False  # pylint: disable=W0612
+
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
 
 log = logging.getLogger(__name__)
 DEFAULT_LOCATION = "us-east-1"
-DEFAULT_AWS_API_VERSION = "2014-10-01"
+DEFAULT_AWS_API_VERSION = "2016-11-15"
 AWS_RETRY_CODES = [
     "RequestLimitExceeded",
     "InsufficientInstanceCapacity",
@@ -54,6 +72,7 @@ __Token__ = ""
 __Expiration__ = ""
 __Location__ = ""
 __AssumeCache__ = {}
+__IMDS_Token__ = None
 
 
 def sleep_exponential_backoff(attempts):
@@ -68,7 +87,45 @@ def sleep_exponential_backoff(attempts):
     A failure rate of >10% is observed when using the salt-api with an asynchronous client
     specified (runner_async).
     """
-    time.sleep(random.uniform(1, 2 ** attempts))
+    time.sleep(random.uniform(1, 2**attempts))
+
+
+def get_metadata(path, refresh_token_if_needed=True):
+    """
+    Get the instance metadata at the provided path
+    The path argument will be prepended by http://169.254.169.254/latest/
+    If using IMDSv2 with tokens required, the token will be fetched and used for subsequent requests
+    (unless refresh_token_if_needed is False, in which case this will fail if tokens are required
+    and no token was already cached)
+    """
+    global __IMDS_Token__
+
+    headers = {}
+    if __IMDS_Token__ is not None:
+        headers["X-aws-ec2-metadata-token"] = __IMDS_Token__
+
+    # Connections to instance meta-data must fail fast and never be proxied
+    result = requests.get(
+        "http://169.254.169.254/latest/{}".format(path),
+        proxies={"http": ""},
+        headers=headers,
+        timeout=AWS_METADATA_TIMEOUT,
+    )
+
+    if result.status_code == 401 and refresh_token_if_needed:
+        # Probably using IMDSv2 with tokens required, so fetch token and retry
+        token_result = requests.put(
+            "http://169.254.169.254/latest/api/token",
+            headers={"X-aws-ec2-metadata-token-ttl-seconds": "21600"},
+            proxies={"http": ""},
+            timeout=AWS_METADATA_TIMEOUT,
+        )
+        __IMDS_Token__ = token_result.text
+        if token_result.ok:
+            return get_metadata(path, False)
+
+    result.raise_for_status()
+    return result
 
 
 def creds(provider):
@@ -95,27 +152,14 @@ def creds(provider):
                 return __AccessKeyId__, __SecretAccessKey__, __Token__
         # We don't have any cached credentials, or they are expired, get them
 
-        # Connections to instance meta-data must fail fast and never be proxied
         try:
-            result = requests.get(
-                "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
-                proxies={"http": ""},
-                timeout=AWS_METADATA_TIMEOUT,
-            )
-            result.raise_for_status()
+            result = get_metadata("meta-data/iam/security-credentials/")
             role = result.text
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
             return provider["id"], provider["key"], ""
 
         try:
-            result = requests.get(
-                "http://169.254.169.254/latest/meta-data/iam/security-credentials/{}".format(
-                    role
-                ),
-                proxies={"http": ""},
-                timeout=AWS_METADATA_TIMEOUT,
-            )
-            result.raise_for_status()
+            result = get_metadata("meta-data/iam/security-credentials/{}".format(role))
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
             return provider["id"], provider["key"], ""
 
@@ -164,7 +208,9 @@ def sig2(method, endpoint, params, provider, aws_api_version):
     querystring = urllib.parse.urlencode(list(zip(keys, values)))
 
     canonical = "{}\n{}\n/\n{}".format(
-        method.encode("utf-8"), endpoint.encode("utf-8"), querystring.encode("utf-8"),
+        method.encode("utf-8"),
+        endpoint.encode("utf-8"),
+        querystring.encode("utf-8"),
     )
 
     hashed = hmac.new(secret_access_key, canonical, hashlib.sha256)
@@ -186,7 +232,7 @@ def assumed_creds(prov_dict, role_arn, location=None):
 
     for key, creds in __AssumeCache__.items():
         if (creds["Expiration"] - now) <= 120:
-            __AssumeCache__.delete(key)
+            __AssumeCache__[key].delete()
 
     if role_arn in __AssumeCache__:
         c = __AssumeCache__[role_arn]
@@ -205,7 +251,10 @@ def assumed_creds(prov_dict, role_arn, location=None):
             "Action": "AssumeRole",
             "RoleSessionName": session_name,
             "RoleArn": role_arn,
-            "Policy": '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1", "Effect":"Allow","Action":"*","Resource":"*"}]}',
+            "Policy": (
+                '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1",'
+                ' "Effect":"Allow","Action":"*","Resource":"*"}]}'
+            ),
             "DurationSeconds": "3600",
         },
         aws_api_version=version,
@@ -330,9 +379,13 @@ def sig4(
     ).hexdigest()
 
     # Add signing information to the request
-    authorization_header = (
-        "{} Credential={}/{}, SignedHeaders={}, Signature={}"
-    ).format(algorithm, access_key_id, credential_scope, signed_headers, signature,)
+    authorization_header = "{} Credential={}/{}, SignedHeaders={}, Signature={}".format(
+        algorithm,
+        access_key_id,
+        credential_scope,
+        signed_headers,
+        signature,
+    )
 
     new_headers["Authorization"] = authorization_header
 
@@ -442,8 +495,8 @@ def query(
                 endpoint_err = (
                     "Could not find a valid endpoint in the "
                     "requesturl: {}. Looking for something "
-                    "like https://some.aws.endpoint/?args"
-                ).format(requesturl)
+                    "like https://some.aws.endpoint/?args".format(requesturl)
+                )
                 log.error(endpoint_err)
                 if return_url is True:
                     return {"error": endpoint_err}, requesturl
@@ -569,12 +622,7 @@ def get_region_from_metadata():
         return __Location__
 
     try:
-        # Connections to instance meta-data must fail fast and never be proxied
-        result = requests.get(
-            "http://169.254.169.254/latest/dynamic/instance-identity/document",
-            proxies={"http": ""},
-            timeout=AWS_METADATA_TIMEOUT,
-        )
+        result = get_metadata("dynamic/instance-identity/document")
     except requests.exceptions.RequestException:
         log.warning("Failed to get AWS region from instance metadata.", exc_info=True)
         # Do not try again

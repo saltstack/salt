@@ -60,20 +60,17 @@ import salt.utils.msgpack
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import SaltCloudSystemExit
 from salt.utils.functools import namespaced_function
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 # pylint: disable=import-error
 LIBCLOUD_IMPORT_ERROR = None
 try:
     import libcloud
-    from libcloud.compute.types import Provider
+    from libcloud.common.google import ResourceInUseError, ResourceNotFoundError
     from libcloud.compute.providers import get_driver
-    from libcloud.loadbalancer.types import Provider as Provider_lb
+    from libcloud.compute.types import Provider
     from libcloud.loadbalancer.providers import get_driver as get_driver_lb
-    from libcloud.common.google import (
-        ResourceInUseError,
-        ResourceNotFoundError,
-    )
+    from libcloud.loadbalancer.types import Provider as Provider_lb
 
     HAS_LIBCLOUD = True
 except ImportError:
@@ -110,7 +107,7 @@ def __virtual__():
     if not HAS_LIBCLOUD:
         return False, "apache-libcloud is not installed"
 
-    if _LooseVersion(libcloud.__version__) < _LooseVersion("2.5.0"):
+    if Version(libcloud.__version__) < Version("2.5.0"):
         return False, "The salt-cloud GCE driver requires apache-libcloud>=2.5.0"
 
     if get_configured_provider() is False:
@@ -243,12 +240,6 @@ def _expand_address(addy):
     ret = {}
     ret.update(addy.__dict__)
     ret["extra"]["zone"] = addy.region.name
-    return ret
-
-
-def _expand_region(region):
-    ret = {}
-    ret["name"] = region.name
     return ret
 
 
@@ -400,6 +391,24 @@ def __get_size(conn, vm_):
         "size", vm_, __opts__, default="n1-standard-1", search_global=False
     )
     return conn.ex_get_size(size, __get_location(conn, vm_))
+
+
+def __get_labels(vm_):
+    """
+    Get configured labels.
+    """
+    l = config.get_cloud_config_value(
+        "ex_labels", vm_, __opts__, default="{}", search_global=False
+    )
+    # Consider warning the user that the labels in the cloud profile
+    # could not be interpreted, bad formatting?
+    try:
+        labels = literal_eval(l)
+    except Exception:  # pylint: disable=W0703
+        labels = None
+    if not labels or not isinstance(labels, dict):
+        labels = None
+    return labels
 
 
 def __get_tags(vm_):
@@ -1186,7 +1195,7 @@ def create_address(kwargs=None, call=None):
     name = kwargs["name"]
     ex_region = kwargs["region"]
     ex_address = kwargs.get("address", None)
-    kwargs["region"] = _expand_region(kwargs["region"])
+    kwargs["region"] = {"name": ex_region.name}
 
     conn = get_conn()
 
@@ -2260,7 +2269,7 @@ def create_attach_volumes(name, kwargs, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The create_attach_volumes action must be called with " "-a or --action."
+            "The create_attach_volumes action must be called with -a or --action."
         )
 
     volumes = literal_eval(kwargs["volumes"])
@@ -2294,8 +2303,8 @@ def request_instance(vm_):
     """
     if not GCE_VM_NAME_REGEX.match(vm_["name"]):
         raise SaltCloudSystemExit(
-            "VM names must start with a letter, only contain letters, numbers, or dashes "
-            "and cannot end in a dash."
+            "VM names must start with a letter, only contain letters, numbers, or"
+            " dashes and cannot end in a dash."
         )
 
     try:
@@ -2329,6 +2338,7 @@ def request_instance(vm_):
         "size": __get_size(conn, vm_),
         "image": __get_image(conn, vm_),
         "location": __get_location(conn, vm_),
+        "ex_labels": __get_labels(vm_),
         "ex_network": __get_network(conn, vm_),
         "ex_subnetwork": __get_subnetwork(vm_),
         "ex_tags": __get_tags(vm_),

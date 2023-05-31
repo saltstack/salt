@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #  Copyright (C) 2014 Floris Bruynooghe <flub@devork.be>
 
 r"""
@@ -17,34 +16,22 @@ This external Pillar source can be configured in the master config file as such:
    ext_pillar:
      - hg: ssh://hg@example.co/user/repo
 """
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import hashlib
 import logging
 import os
 
-# Import Salt Libs
 import salt.pillar
 import salt.utils.stringutils
-
-# Import Third Party Libs
-from salt.ext import six
 
 try:
     import hglib
 except ImportError:
     hglib = None
 
-
-__virtualname__ = "hg"
 log = logging.getLogger(__name__)
 
-
-# The default option values
-__opts__ = {}
+__virtualname__ = "hg"
 
 
 def __virtual__():
@@ -94,20 +81,17 @@ def update(repo_uri):
         repo.pull()
 
 
-class Repo(object):
+class Repo:
     """
     Deal with remote hg (mercurial) repository for Pillar
     """
 
     def __init__(self, repo_uri):
-        """ Initialize a hg repo (or open it if it already exists) """
+        """Initialize a hg repo (or open it if it already exists)"""
         self.repo_uri = repo_uri
         cachedir = os.path.join(__opts__["cachedir"], "hg_pillar")
         hash_type = getattr(hashlib, __opts__.get("hash_type", "md5"))
-        if six.PY2:
-            repo_hash = hash_type(repo_uri).hexdigest()
-        else:
-            repo_hash = hash_type(salt.utils.stringutils.to_bytes(repo_uri)).hexdigest()
+        repo_hash = hash_type(salt.utils.stringutils.to_bytes(repo_uri)).hexdigest()
         self.working_dir = os.path.join(cachedir, repo_hash)
         if not os.path.isdir(self.working_dir):
             self.repo = hglib.clone(repo_uri, self.working_dir)

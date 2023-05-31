@@ -3,6 +3,7 @@ Tests for the salt-run command
 """
 
 import pytest
+
 from tests.support.case import ShellCase
 
 

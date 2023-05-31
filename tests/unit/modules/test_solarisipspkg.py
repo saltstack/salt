@@ -1,23 +1,18 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import
-
 import sys
 
-import salt.modules.pkg_resource as pkg_resource
+import pytest
 
-# Import Salt libs
+import salt.modules.pkg_resource as pkg_resource
 import salt.modules.solarisipspkg as solarisips
 import salt.utils.data
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
-@skipIf(sys.platform != "solaris", "Skip when not running on Solaris")
+@pytest.mark.skipif(
+    sys.platform != "solaris", reason="Skip when not running on Solaris"
+)
 class IpsTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.solarisips
@@ -43,14 +38,22 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
         Test installing a single package
         """
         pkg_list_pre = {
-            "pkg://solaris/compress/bzip2": "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z",
+            "pkg://solaris/compress/bzip2": (
+                "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z"
+            ),
             "pkg://solaris/compress/gzip": "1.5,5.11-0.175.3.0.0.30.0:20150821T161446Z",
-            "pkg://solaris/compress/p7zip": "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z",
+            "pkg://solaris/compress/p7zip": (
+                "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z"
+            ),
         }
         pkg_list_post = {
-            "pkg://solaris/compress/bzip2": "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z",
+            "pkg://solaris/compress/bzip2": (
+                "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z"
+            ),
             "pkg://solaris/compress/gzip": "1.5,5.11-0.175.3.0.0.30.0:20150821T161446Z",
-            "pkg://solaris/compress/p7zip": "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z",
+            "pkg://solaris/compress/p7zip": (
+                "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z"
+            ),
             "pkg://solaris/text/less": "458,5.11-0.175.3.0.0.30.0:20150821T172730Z",
         }
         install_cmd = {
@@ -74,16 +77,26 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
         Test installing a list of packages
         """
         pkg_list_pre = {
-            "pkg://solaris/compress/bzip2": "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z",
+            "pkg://solaris/compress/bzip2": (
+                "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z"
+            ),
             "pkg://solaris/compress/gzip": "1.5,5.11-0.175.3.0.0.30.0:20150821T161446Z",
-            "pkg://solaris/compress/p7zip": "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z",
+            "pkg://solaris/compress/p7zip": (
+                "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z"
+            ),
         }
         pkg_list_post = {
-            "pkg://solaris/compress/bzip2": "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z",
+            "pkg://solaris/compress/bzip2": (
+                "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z"
+            ),
             "pkg://solaris/compress/gzip": "1.5,5.11-0.175.3.0.0.30.0:20150821T161446Z",
-            "pkg://solaris/compress/p7zip": "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z",
+            "pkg://solaris/compress/p7zip": (
+                "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z"
+            ),
             "pkg://solaris/text/less": "458,5.11-0.175.3.0.0.30.0:20150821T172730Z",
-            "pkg://solaris/system/library/security/libsasl": "0.5.11,5.11-0.175.3.32.0.1.0:20180406T191209Z",
+            "pkg://solaris/system/library/security/libsasl": (
+                "0.5.11,5.11-0.175.3.32.0.1.0:20180406T191209Z"
+            ),
         }
         install_cmd = {
             "pid": 1234,
@@ -106,16 +119,26 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
         Test installing a list of packages
         """
         pkg_list_pre = {
-            "pkg://solaris/compress/bzip2": "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z",
+            "pkg://solaris/compress/bzip2": (
+                "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z"
+            ),
             "pkg://solaris/compress/gzip": "1.5,5.11-0.175.3.0.0.30.0:20150821T161446Z",
-            "pkg://solaris/compress/p7zip": "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z",
+            "pkg://solaris/compress/p7zip": (
+                "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z"
+            ),
         }
         pkg_list_post = {
-            "pkg://solaris/compress/bzip2": "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z",
+            "pkg://solaris/compress/bzip2": (
+                "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z"
+            ),
             "pkg://solaris/compress/gzip": "1.5,5.11-0.175.3.0.0.30.0:20150821T161446Z",
-            "pkg://solaris/compress/p7zip": "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z",
+            "pkg://solaris/compress/p7zip": (
+                "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z"
+            ),
             "pkg://solaris/text/less": "458,5.11-0.175.3.0.0.30.0:20150821T172730Z",
-            "pkg://solaris/system/library/security/libsasl": "0.5.11,5.11-0.175.3.32.0.1.0:20180406T191209Z",
+            "pkg://solaris/system/library/security/libsasl": (
+                "0.5.11,5.11-0.175.3.32.0.1.0:20180406T191209Z"
+            ),
         }
         install_cmd = {
             "pid": 1234,
@@ -140,16 +163,26 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
         Test installing a list of packages
         """
         pkg_list_pre = {
-            "pkg://solaris/compress/bzip2": "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z",
+            "pkg://solaris/compress/bzip2": (
+                "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z"
+            ),
             "pkg://solaris/compress/gzip": "1.5,5.11-0.175.3.0.0.30.0:20150821T161446Z",
-            "pkg://solaris/compress/p7zip": "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z",
+            "pkg://solaris/compress/p7zip": (
+                "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z"
+            ),
         }
         pkg_list_post = {
-            "pkg://solaris/compress/bzip2": "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z",
+            "pkg://solaris/compress/bzip2": (
+                "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z"
+            ),
             "pkg://solaris/compress/gzip": "1.5,5.11-0.175.3.0.0.30.0:20150821T161446Z",
-            "pkg://solaris/compress/p7zip": "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z",
+            "pkg://solaris/compress/p7zip": (
+                "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z"
+            ),
             "pkg://solaris/text/less": "458,5.11-0.175.3.0.0.30.0:20150821T172730Z",
-            "pkg://solaris/system/library/security/libsasl": "0.5.11,5.11-0.175.3.32.0.1.0:20180406T191209Z",
+            "pkg://solaris/system/library/security/libsasl": (
+                "0.5.11,5.11-0.175.3.32.0.1.0:20180406T191209Z"
+            ),
         }
         install_cmd = {
             "pid": 1234,
@@ -208,16 +241,26 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
             }
 
         pkg_list_pre = {
-            "pkg://solaris/compress/bzip2": "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z",
+            "pkg://solaris/compress/bzip2": (
+                "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z"
+            ),
             "pkg://solaris/compress/gzip": "1.5,5.11-0.175.3.0.0.30.0:20150821T161446Z",
-            "pkg://solaris/compress/p7zip": "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z",
+            "pkg://solaris/compress/p7zip": (
+                "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z"
+            ),
         }
         pkg_list_post = {
-            "pkg://solaris/compress/bzip2": "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z",
+            "pkg://solaris/compress/bzip2": (
+                "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z"
+            ),
             "pkg://solaris/compress/gzip": "1.5,5.11-0.175.3.0.0.30.0:20150821T161446Z",
-            "pkg://solaris/compress/p7zip": "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z",
+            "pkg://solaris/compress/p7zip": (
+                "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z"
+            ),
             "pkg://solaris/text/less": "458,5.11-0.175.3.0.0.30.0:20150821T172730Z",
-            "pkg://solaris/system/library/security/libsasl": "0.5.11,5.11-0.175.3.32.0.1.0:20180406T191209Z",
+            "pkg://solaris/system/library/security/libsasl": (
+                "0.5.11,5.11-0.175.3.32.0.1.0:20180406T191209Z"
+            ),
         }
         mock_install_cmd = MagicMock(side_effect=check_param)
         list_pkgs_responses = [pkg_list_pre, pkg_list_post]
@@ -250,16 +293,26 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
             }
 
         pkg_list_pre = {
-            "pkg://solaris/compress/bzip2": "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z",
+            "pkg://solaris/compress/bzip2": (
+                "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z"
+            ),
             "pkg://solaris/compress/gzip": "1.5,5.11-0.175.3.0.0.30.0:20150821T161446Z",
-            "pkg://solaris/compress/p7zip": "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z",
+            "pkg://solaris/compress/p7zip": (
+                "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z"
+            ),
         }
         pkg_list_post = {
-            "pkg://solaris/compress/bzip2": "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z",
+            "pkg://solaris/compress/bzip2": (
+                "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z"
+            ),
             "pkg://solaris/compress/gzip": "1.5,5.11-0.175.3.0.0.30.0:20150821T161446Z",
-            "pkg://solaris/compress/p7zip": "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z",
+            "pkg://solaris/compress/p7zip": (
+                "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z"
+            ),
             "pkg://solaris/text/less": "458,5.11-0.175.3.0.0.30.0:20150821T172730Z",
-            "pkg://solaris/system/library/security/libsasl": "0.5.11,5.11-0.175.3.32.0.1.0:20180406T191209Z",
+            "pkg://solaris/system/library/security/libsasl": (
+                "0.5.11,5.11-0.175.3.32.0.1.0:20180406T191209Z"
+            ),
         }
         mock_install_cmd = MagicMock(side_effect=check_param)
         list_pkgs_responses = [pkg_list_pre, pkg_list_post]
@@ -288,16 +341,26 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
             }
 
         pkg_list_pre = {
-            "pkg://solaris/compress/bzip2": "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z",
+            "pkg://solaris/compress/bzip2": (
+                "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z"
+            ),
             "pkg://solaris/compress/gzip": "1.5,5.11-0.175.3.0.0.30.0:20150821T161446Z",
-            "pkg://solaris/compress/p7zip": "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z",
+            "pkg://solaris/compress/p7zip": (
+                "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z"
+            ),
         }
         pkg_list_post = {
-            "pkg://solaris/compress/bzip2": "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z",
+            "pkg://solaris/compress/bzip2": (
+                "1.0.6,5.11-0.175.3.10.0.4.0:20160630T215500Z"
+            ),
             "pkg://solaris/compress/gzip": "1.5,5.11-0.175.3.0.0.30.0:20150821T161446Z",
-            "pkg://solaris/compress/p7zip": "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z",
+            "pkg://solaris/compress/p7zip": (
+                "16.2.3,5.11-0.175.3.34.0.2.0:20180614T204908Z"
+            ),
             "pkg://solaris/text/less": "458,5.11-0.175.3.0.0.30.0:20150821T172730Z",
-            "pkg://solaris/system/library/security/libsasl": "0.5.11,5.11-0.175.3.32.0.1.0:20180406T191209Z",
+            "pkg://solaris/system/library/security/libsasl": (
+                "0.5.11,5.11-0.175.3.32.0.1.0:20180406T191209Z"
+            ),
         }
         mock_install_cmd = MagicMock(side_effect=check_param)
         list_pkgs_responses = [pkg_list_pre, pkg_list_post]

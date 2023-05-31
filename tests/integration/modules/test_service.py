@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.systemd
@@ -30,9 +31,7 @@ class ServiceModuleTest(ModuleCase):
             self.service_name = "syslog"
             cmd_name = "syslog-ng"
         elif os_family == "MacOS":
-            self.service_name = "org.ntp.ntpd"
-            if int(os_release.split(".")[1]) >= 13:
-                self.service_name = "com.apple.AirPlayXPCHelper"
+            self.service_name = "com.apple.AirPlayXPCHelper"
         elif salt.utils.platform.is_windows():
             self.service_name = "Spooler"
 

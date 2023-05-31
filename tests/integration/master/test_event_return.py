@@ -14,9 +14,10 @@ import subprocess
 import sys
 import time
 
+from pytestshellutils.utils import ports
+from pytestshellutils.utils.processes import terminate_process
+
 from salt.utils.nb_popen import NonBlockingPopen
-from saltfactories.utils.ports import get_unused_localhost_port
-from saltfactories.utils.processes import terminate_process
 from tests.support.cli_scripts import ScriptPathMixin
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.runtests import RUNTIME_VARS
@@ -29,14 +30,14 @@ class TestEventReturn(AdaptedConfigurationTestCaseMixin, ScriptPathMixin, TestCa
     @classmethod
     def setUpClass(cls):
         overrides = {
-            "publish_port": get_unused_localhost_port(),
-            "ret_port": get_unused_localhost_port(),
-            "tcp_master_pub_port": get_unused_localhost_port(),
-            "tcp_master_pull_port": get_unused_localhost_port(),
-            "tcp_master_publish_pull": get_unused_localhost_port(),
-            "tcp_master_workers": get_unused_localhost_port(),
-            "runtests_conn_check_port": get_unused_localhost_port(),
-            "runtests_log_port": get_unused_localhost_port(),
+            "publish_port": ports.get_unused_localhost_port(),
+            "ret_port": ports.get_unused_localhost_port(),
+            "tcp_master_pub_port": ports.get_unused_localhost_port(),
+            "tcp_master_pull_port": ports.get_unused_localhost_port(),
+            "tcp_master_publish_pull": ports.get_unused_localhost_port(),
+            "tcp_master_workers": ports.get_unused_localhost_port(),
+            "runtests_conn_check_port": ports.get_unused_localhost_port(),
+            "runtests_log_port": ports.get_unused_localhost_port(),
         }
         overrides["pytest_engine_port"] = overrides["runtests_conn_check_port"]
         temp_config = AdaptedConfigurationTestCaseMixin.get_temp_config(
@@ -84,7 +85,8 @@ class TestEventReturn(AdaptedConfigurationTestCaseMixin, ScriptPathMixin, TestCa
 
                 if b"DeprecationWarning: object() takes no parameters" in out:
                     self.fail(
-                        "'DeprecationWarning: object() takes no parameters' was seen in output"
+                        "'DeprecationWarning: object() takes no parameters' was seen in"
+                        " output"
                     )
 
                 if b"TypeError: object() takes no parameters" in out:

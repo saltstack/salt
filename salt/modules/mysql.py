@@ -1,16 +1,12 @@
 """
 Module to provide MySQL compatibility to salt.
 
-:depends:   - MySQLdb Python module
-
-.. note::
-
-    On CentOS 5 (and possibly RHEL 5) both MySQL-python and python26-mysqldb
-    need to be installed.
+:depends:   - Python module: MySQLdb, mysqlclient, or PyMYSQL
 
 :configuration: In order to connect to MySQL, certain configuration is required
-    in /etc/salt/minion on the relevant minions. Some sample configs might look
-    like::
+    in either the relevant minion config (/etc/salt/minion), or pillar.
+
+    Some sample configs might look like::
 
         mysql.host: 'localhost'
         mysql.port: 3306
@@ -49,10 +45,10 @@ import salt.utils.stringutils
 try:
     # Trying to import MySQLdb
     import MySQLdb
-    import MySQLdb.cursors
     import MySQLdb.converters
-    from MySQLdb.constants import FIELD_TYPE, FLAG, CLIENT
+    import MySQLdb.cursors
     from MySQLdb import OperationalError
+    from MySQLdb.constants import CLIENT, FIELD_TYPE, FLAG
 except ImportError:
     try:
         # MySQLdb import failed, try to import PyMySQL
@@ -60,10 +56,10 @@ except ImportError:
 
         pymysql.install_as_MySQLdb()
         import MySQLdb
-        import MySQLdb.cursors
         import MySQLdb.converters
-        from MySQLdb.constants import FIELD_TYPE, FLAG, CLIENT
+        import MySQLdb.cursors
         from MySQLdb import OperationalError
+        from MySQLdb.constants import CLIENT, FIELD_TYPE, FLAG
     except ImportError:
         MySQLdb = None
 
@@ -76,16 +72,17 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-# TODO: this is not used anywhere in the code?
-__opts__ = {}
-
 __grants__ = [
     "ALL PRIVILEGES",
     "ALTER",
     "ALTER ROUTINE",
     "BACKUP_ADMIN",
     "BINLOG_ADMIN",
+    "BINLOG ADMIN",  # MariaDB since 10.5.2
+    "BINLOG MONITOR",  # MariaDB since 10.5.2
+    "BINLOG REPLAY",  # MariaDB since 10.5.2
     "CONNECTION_ADMIN",
+    "CONNECTION ADMIN",  # MariaDB since 10.5.2
     "CREATE",
     "CREATE ROLE",
     "CREATE ROUTINE",
@@ -94,11 +91,13 @@ __grants__ = [
     "CREATE USER",
     "CREATE VIEW",
     "DELETE",
+    "DELETE HISTORY",  # MariaDB since 10.3.4
     "DROP",
     "DROP ROLE",
     "ENCRYPTION_KEY_ADMIN",
     "EVENT",
     "EXECUTE",
+    "FEDERATED ADMIN",  # MariaDB since 10.5.2
     "FILE",
     "GRANT OPTION",
     "GROUP_REPLICATION_ADMIN",
@@ -107,19 +106,26 @@ __grants__ = [
     "LOCK TABLES",
     "PERSIST_RO_VARIABLES_ADMIN",
     "PROCESS",
+    "READ_ONLY ADMIN",  # MariaDB since 10.5.2
     "REFERENCES",
     "RELOAD",
+    "REPLICA MONITOR",  # MariaDB since 10.5.9
     "REPLICATION CLIENT",
+    "REPLICATION MASTER ADMIN",  # MariaDB since 10.5.2
+    "REPLICATION REPLICA",  # MariaDB since 10.5.1
     "REPLICATION SLAVE",
     "REPLICATION_SLAVE_ADMIN",
+    "REPLICATION SLAVE ADMIN",  # MariaDB since 10.5.2
     "RESOURCE_GROUP_ADMIN",
     "RESOURCE_GROUP_USER",
     "ROLE_ADMIN",
     "SELECT",
+    "SET USER",  # MariaDB since 10.5.2
     "SET_USER_ID",
     "SHOW DATABASES",
     "SHOW VIEW",
     "SHUTDOWN",
+    "SLAVE MONITOR",  # MariaDB since 10.5.9
     "SUPER",
     "SYSTEM_VARIABLES_ADMIN",
     "TRIGGER",
@@ -622,6 +628,67 @@ def _grant_to_tokens(grant):
     return dict(user=user, host=host, grant=grant_tokens, database=database)
 
 
+def _resolve_grant_aliases(grants, server_version):
+    """
+
+    There can be a situation where the database supports grants "A" and "B", where
+    "B" is an alias for "A". In that case, when you want to grant "B" to a user,
+    the database will actually report it added "A". We need to resolve those
+    aliases to not report (wrong) errors.
+
+    :param grants: the tokenized grants
+
+    :param server_version: version string of the connected database
+
+    """
+    if "MariaDB" not in server_version:
+        return grants
+
+    mariadb_version_compare_replication_replica = "10.5.1"
+    mariadb_version_compare_binlog_monitor = "10.5.2"
+    mariadb_version_compare_slave_monitor = "10.5.9"
+
+    resolved_tokens = []
+
+    for token in grants:
+        if (
+            salt.utils.versions.version_cmp(
+                server_version, mariadb_version_compare_replication_replica
+            )
+            >= 0
+        ):
+            if token == "REPLICATION REPLICA":
+                # https://mariadb.com/kb/en/grant/#replication-replica
+                resolved_tokens.append("REPLICATION SLAVE")
+                continue
+
+        if (
+            salt.utils.versions.version_cmp(
+                server_version, mariadb_version_compare_binlog_monitor
+            )
+            >= 0
+        ):
+            if token == "REPLICATION CLIENT":
+                # https://mariadb.com/kb/en/grant/#replication-client
+                resolved_tokens.append("BINLOG MONITOR")
+                continue
+
+        if (
+            salt.utils.versions.version_cmp(
+                server_version, mariadb_version_compare_slave_monitor
+            )
+            >= 0
+        ):
+            if token == "REPLICA MONITOR":
+                # https://mariadb.com/kb/en/grant/#replica-monitor
+                resolved_tokens.append("SLAVE MONITOR")
+                continue
+
+        resolved_tokens.append(token)
+
+    return resolved_tokens
+
+
 def quote_identifier(identifier, for_grants=False):
     r"""
     Return an identifier name (column, table, database, etc) escaped for MySQL
@@ -676,6 +743,12 @@ def _execute(cur, qry, args=None):
 def _sanitize_comments(content):
     # Remove comments which might affect line by line parsing
     # Regex should remove any text beginning with # (or --) not inside of ' or "
+    if not HAS_SQLPARSE:
+        log.error(
+            "_sanitize_comments unavailable, no python sqlparse library installed."
+        )
+        return content
+
     return sqlparse.format(content, strip_comments=True)
 
 
@@ -1044,7 +1117,7 @@ def free_slave(**connection_args):
 
     slave_cur.execute("stop slave")
     slave_cur.execute("reset master")
-    slave_cur.execute("change master to MASTER_HOST=" "")
+    slave_cur.execute("change master to MASTER_HOST=")
     slave_cur.execute("show slave status")
     results = slave_cur.fetchone()
 
@@ -1104,13 +1177,22 @@ def alter_db(name, character_set=None, collate=None, **connection_args):
         return []
     cur = dbc.cursor()
     existing = db_get(name, **connection_args)
+    # escaping database name is not required because of backticks in query expression
     qry = "ALTER DATABASE `{}` CHARACTER SET {} COLLATE {};".format(
-        name.replace("%", r"\%").replace("_", r"\_"),
+        name,
         character_set or existing.get("character_set"),
         collate or existing.get("collate"),
     )
     args = {}
-    _execute(cur, qry, args)
+    try:
+        if _execute(cur, qry, args):
+            log.info("DB '%s' altered", name)
+            return True
+    except MySQLdb.OperationalError as exc:
+        err = "MySQL Error {}: {}".format(*exc.args)
+        __context__["mysql.error"] = err
+        log.error(err)
+    return False
 
 
 def db_get(name, **connection_args):
@@ -1134,7 +1216,14 @@ def db_get(name, **connection_args):
         "INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME=%(dbname)s;"
     )
     args = {"dbname": name}
-    _execute(cur, qry, args)
+    try:
+        _execute(cur, qry, args)
+    except MySQLdb.OperationalError as exc:
+        err = "MySQL Error {}: {}".format(*exc.args)
+        __context__["mysql.error"] = err
+        log.error(err)
+        return []
+
     if cur.rowcount:
         rows = cur.fetchall()
         return {"character_set": rows[0][0], "collate": rows[0][1]}
@@ -1346,9 +1435,7 @@ def _mysql_user_exists(
 
     server_version = salt.utils.data.decode(version(**connection_args))
     compare_version = "8.0.11"
-    qry = (
-        "SELECT User,Host FROM mysql.user WHERE User = %(user)s AND " "Host = %(host)s"
-    )
+    qry = "SELECT User,Host FROM mysql.user WHERE User = %(user)s AND Host = %(host)s"
     args = {}
     args["user"] = user
     args["host"] = host
@@ -1391,9 +1478,7 @@ def _mariadb_user_exists(
     **connection_args
 ):
 
-    qry = (
-        "SELECT User,Host FROM mysql.user WHERE User = %(user)s AND " "Host = %(host)s"
-    )
+    qry = "SELECT User,Host FROM mysql.user WHERE User = %(user)s AND Host = %(host)s"
     args = {}
     args["user"] = user
     args["host"] = host
@@ -1454,8 +1539,9 @@ def user_exists(
         server_version = salt.utils.data.decode(version(**connection_args))
         if not server_version:
             last_err = __context__["mysql.error"]
-            err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(
-                last_err
+            err = (
+                "MySQL Error: Unable to fetch current server version. Last error was:"
+                ' "{}"'.format(last_err)
             )
             log.error(err)
             return False
@@ -1534,7 +1620,7 @@ def user_info(user, host="localhost", **connection_args):
         return False
 
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    qry = "SELECT * FROM mysql.user WHERE User = %(user)s AND " "Host = %(host)s"
+    qry = "SELECT * FROM mysql.user WHERE User = %(user)s AND Host = %(host)s"
     args = {}
     args["user"] = user
     args["host"] = host
@@ -1570,38 +1656,47 @@ def _mysql_user_create(
     args = {}
     args["user"] = user
     args["host"] = host
-    if password is not None:
-        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-            args["auth_plugin"] = auth_plugin
-            qry += " IDENTIFIED WITH %(auth_plugin)s BY %(password)s"
-        else:
-            qry += " IDENTIFIED BY %(password)s"
-        args["password"] = str(password)
-    elif password_hash is not None:
-        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-            qry += " IDENTIFIED BY %(password)s"
-        else:
-            qry += " IDENTIFIED BY PASSWORD %(password)s"
-        args["password"] = password_hash
-    elif salt.utils.data.is_true(allow_passwordless):
+    if unix_socket:
         if not plugin_status("auth_socket", **connection_args):
             err = "The auth_socket plugin is not enabled."
             log.error(err)
             __context__["mysql.error"] = err
             qry = False
         else:
-            if salt.utils.data.is_true(unix_socket):
-                if host == "localhost":
-                    qry += " IDENTIFIED WITH auth_socket"
-                else:
-                    log.error("Auth via unix_socket can be set only for host=localhost")
+            if host == "localhost":
+                qry += " IDENTIFIED WITH auth_socket"
+            else:
+                log.error("Auth via unix_socket can be set only for host=localhost")
+                __context__["mysql.error"] = err
+                qry = False
     else:
-        log.error(
-            "password or password_hash must be specified, unless "
-            "allow_passwordless=True"
-        )
-        qry = False
-
+        if not salt.utils.data.is_true(allow_passwordless):
+            if password is not None:
+                if (
+                    salt.utils.versions.version_cmp(server_version, compare_version)
+                    >= 0
+                ):
+                    args["auth_plugin"] = auth_plugin
+                    qry += " IDENTIFIED WITH %(auth_plugin)s BY %(password)s"
+                else:
+                    qry += " IDENTIFIED BY %(password)s"
+                args["password"] = str(password)
+            elif password_hash is not None:
+                if (
+                    salt.utils.versions.version_cmp(server_version, compare_version)
+                    >= 0
+                ):
+                    args["auth_plugin"] = auth_plugin
+                    qry += " IDENTIFIED WITH %(auth_plugin)s AS %(password)s"
+                else:
+                    qry += " IDENTIFIED BY PASSWORD %(password)s"
+                args["password"] = password_hash
+            else:
+                log.error(
+                    "password or password_hash must be specified, unless "
+                    "allow_passwordless=True"
+                )
+                qry = False
     return qry, args
 
 
@@ -1621,31 +1716,33 @@ def _mariadb_user_create(
     args = {}
     args["user"] = user
     args["host"] = host
-    if password is not None:
-        qry += " IDENTIFIED BY %(password)s"
-        args["password"] = str(password)
-    elif password_hash is not None:
-        qry += " IDENTIFIED BY PASSWORD %(password)s"
-        args["password"] = password_hash
-    elif salt.utils.data.is_true(allow_passwordless):
+    if unix_socket:
         if not plugin_status("unix_socket", **connection_args):
             err = "The unix_socket plugin is not enabled."
             log.error(err)
             __context__["mysql.error"] = err
             qry = False
         else:
-            if salt.utils.data.is_true(unix_socket):
-                if host == "localhost":
-                    qry += " IDENTIFIED VIA unix_socket"
-                else:
-                    log.error("Auth via unix_socket can be set only for host=localhost")
+            if host == "localhost":
+                qry += " IDENTIFIED VIA unix_socket"
+            else:
+                log.error("Auth via unix_socket can be set only for host=localhost")
+                __context__["mysql.error"] = err
+                qry = False
     else:
-        log.error(
-            "password or password_hash must be specified, unless "
-            "allow_passwordless=True"
-        )
-        qry = False
-
+        if not salt.utils.data.is_true(allow_passwordless):
+            if password is not None:
+                qry += " IDENTIFIED BY %(password)s"
+                args["password"] = str(password)
+            elif password_hash is not None:
+                qry += " IDENTIFIED BY PASSWORD %(password)s"
+                args["password"] = password_hash
+            else:
+                log.error(
+                    "password or password_hash must be specified, unless "
+                    "allow_passwordless=True"
+                )
+                qry = False
     return qry, args
 
 
@@ -1719,8 +1816,9 @@ def user_create(
         server_version = salt.utils.data.decode(version(**connection_args))
         if not server_version:
             last_err = __context__["mysql.error"]
-            err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(
-                last_err
+            err = (
+                "MySQL Error: Unable to fetch current server version. Last error was:"
+                ' "{}"'.format(last_err)
             )
             log.error(err)
             return False
@@ -1829,7 +1927,12 @@ def _mysql_user_chpass(
     args["host"] = host
 
     if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
+        args["auth_plugin"] = auth_plugin
+        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(auth_plugin)s "
+        if password is not None:
+            qry += "BY %(password)s;"
+        elif password_hash is not None:
+            qry += "AS %(password)s;"
     else:
         qry = (
             "UPDATE mysql.user SET "
@@ -1853,7 +1956,10 @@ def _mysql_user_chpass(
                     salt.utils.versions.version_cmp(server_version, compare_version)
                     >= 0
                 ):
-                    qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(unix_socket)s AS %(user)s;"
+                    qry = (
+                        "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(unix_socket)s"
+                        " AS %(user)s;"
+                    )
                 else:
                     qry = (
                         "UPDATE mysql.user SET "
@@ -1882,7 +1988,7 @@ def _mariadb_user_chpass(
 ):
 
     server_version = salt.utils.data.decode(version(**connection_args))
-    compare_version = "10.4.0"
+    compare_version = "10.4"
 
     args = {}
 
@@ -1905,7 +2011,9 @@ def _mariadb_user_chpass(
     args["host"] = host
 
     if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
+        args["auth_plugin"] = auth_plugin
+        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED VIA %(auth_plugin)s USING "
+        qry += password_sql
     else:
         qry = (
             "UPDATE mysql.user SET "
@@ -1999,8 +2107,9 @@ def user_chpass(
         server_version = salt.utils.data.decode(version(**connection_args))
         if not server_version:
             last_err = __context__["mysql.error"]
-            err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(
-                last_err
+            err = (
+                "MySQL Error: Unable to fetch current server version. Last error was:"
+                ' "{}"'.format(last_err)
             )
             log.error(err)
             return False
@@ -2374,6 +2483,7 @@ def grant_exists(
         if (
             salt.utils.versions.version_cmp(server_version, "8.0") >= 0
             and "MariaDB" not in server_version
+            and database == "*.*"
         ):
             grant = ",".join([i for i in __all_privileges__])
         else:
@@ -2381,8 +2491,9 @@ def grant_exists(
 
     try:
         target = __grant_generate(grant, database, user, host, grant_option, escape)
-    except Exception:  # pylint: disable=broad-except
+    except Exception as exc:  # pylint: disable=broad-except
         log.error("Error during grant generation.")
+        log.error(exc)
         return False
 
     grants = user_grants(user, host, **connection_args)
@@ -2398,6 +2509,9 @@ def grant_exists(
     _grants = {}
     for grant in grants:
         grant_token = _grant_to_tokens(grant)
+        grant_token["grant"] = _resolve_grant_aliases(
+            grant_token["grant"], server_version
+        )
         if grant_token["database"] not in _grants:
             _grants[grant_token["database"]] = {
                 "user": grant_token["user"],
@@ -2409,6 +2523,9 @@ def grant_exists(
             _grants[grant_token["database"]]["grant"].extend(grant_token["grant"])
 
     target_tokens = _grant_to_tokens(target)
+    target_tokens["grant"] = _resolve_grant_aliases(
+        target_tokens["grant"], server_version
+    )
     for database, grant_tokens in _grants.items():
         try:
             _grant_tokens = {}
@@ -2572,7 +2689,7 @@ def grant_revoke(
         grant, database, user, host, grant_option, escape, **connection_args
     ):
         log.info(
-            "Grant '%s' on '%s' for user '%s' has been " "revoked",
+            "Grant '%s' on '%s' for user '%s' has been revoked",
             grant,
             database,
             user,
@@ -2580,7 +2697,7 @@ def grant_revoke(
         return True
 
     log.info(
-        "Grant '%s' on '%s' for user '%s' has NOT been " "revoked",
+        "Grant '%s' on '%s' for user '%s' has NOT been revoked",
         grant,
         database,
         user,
@@ -2993,7 +3110,10 @@ def plugin_status(name, **connection_args):
     if dbc is None:
         return ""
     cur = dbc.cursor()
-    qry = "SELECT PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME = %(name)s"
+    qry = (
+        "SELECT PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME ="
+        " %(name)s"
+    )
     args = {}
     args["name"] = name
 

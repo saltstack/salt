@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.timezone as timezone
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
@@ -31,7 +32,9 @@ def test_system():
     ):
         ret.update(
             {
-                "comment": "Unable to compare desired timezone 'salt' to system timezone: ",
+                "comment": (
+                    "Unable to compare desired timezone 'salt' to system timezone: "
+                ),
                 "result": False,
             }
         )

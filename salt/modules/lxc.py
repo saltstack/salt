@@ -35,7 +35,7 @@ import salt.utils.odict
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -76,7 +76,8 @@ def __virtual__():
     #
     return (
         False,
-        "The lxc execution module cannot be loaded: the lxc-start binary is not in the path.",
+        "The lxc execution module cannot be loaded: the lxc-start binary is not in the"
+        " path.",
     )
 
 
@@ -115,8 +116,8 @@ def version():
     if not __context__.get(k, None):
         cversion = __salt__["cmd.run_all"]("lxc-info --version")
         if not cversion["retcode"]:
-            ver = _LooseVersion(cversion["stdout"])
-            if ver < _LooseVersion("1.0"):
+            ver = Version(cversion["stdout"])
+            if ver < Version("1.0"):
                 raise CommandExecutionError("LXC should be at least 1.0")
             __context__[k] = "{}".format(ver)
     return __context__.get(k, None)
@@ -877,7 +878,7 @@ def _network_conf(conf_tuples=None, **kwargs):
     # if we didn't explicitly say no to
     # (lxc.network.ipv4.gateway: auto)
     if (
-        _LooseVersion(version()) <= _LooseVersion("1.0.7")
+        Version(version()) <= Version("1.0.7")
         and True not in ["lxc.network.ipv4.gateway" in a for a in ret]
         and True in ["lxc.network.ipv4" in a for a in ret]
     ):
@@ -982,7 +983,7 @@ def _get_veths(net_data):
             if sitem.startswith("#") or not sitem:
                 continue
             elif "=" in item:
-                item = tuple([a.strip() for a in item.split("=", 1)])
+                item = tuple(a.strip() for a in item.split("=", 1))
         if item[0] == "lxc.network.type":
             current_nic = salt.utils.odict.OrderedDict()
         if item[0] == "lxc.network.name":
@@ -1575,7 +1576,7 @@ def init(
                 if (
                     retcode(
                         name,
-                        ('sh -c \'touch "{0}"; test -e "{0}"\''.format(gid)),
+                        'sh -c \'touch "{0}"; test -e "{0}"\''.format(gid),
                         path=path,
                         chroot_fallback=True,
                         ignore_retcode=True,
@@ -1614,7 +1615,7 @@ def init(
                 if (
                     retcode(
                         name,
-                        ('sh -c \'touch "{0}"; test -e "{0}"\''.format(gid)),
+                        'sh -c \'touch "{0}"; test -e "{0}"\''.format(gid),
                         chroot_fallback=True,
                         path=path,
                         ignore_retcode=True,
@@ -1665,9 +1666,9 @@ def init(
                 ret["result"] = False
             else:
                 if not result:
-                    ret["comment"] = (
-                        "Bootstrap failed, see minion log for " "more information"
-                    )
+                    ret[
+                        "comment"
+                    ] = "Bootstrap failed, see minion log for more information"
                     ret["result"] = False
                 else:
                     changes.append({"bootstrap": "Container successfully bootstrapped"})
@@ -1691,8 +1692,10 @@ def init(
                 else:
                     changes.append(
                         {
-                            "bootstrap": "Container successfully bootstrapped "
-                            "using seed_cmd '{}'".format(seed_cmd)
+                            "bootstrap": (
+                                "Container successfully bootstrapped "
+                                "using seed_cmd '{}'".format(seed_cmd)
+                            )
                         }
                     )
 
@@ -1968,7 +1971,7 @@ def create(
         raise SaltInvocationError("Only one of 'template' and 'image' is permitted")
     elif not any((template, image, profile)):
         raise SaltInvocationError(
-            "At least one of 'template', 'image', and 'profile' is " "required"
+            "At least one of 'template', 'image', and 'profile' is required"
         )
 
     options = select("options") or {}
@@ -2126,7 +2129,7 @@ def clone(name, orig, profile=None, network_profile=None, nic_opts=None, **kwarg
     if backing in ("dir", "overlayfs", "btrfs"):
         size = None
     # LXC commands and options changed in 2.0 - CF issue #34086 for details
-    if _LooseVersion(version()) >= _LooseVersion("2.0"):
+    if Version(version()) >= Version("2.0"):
         # https://linuxcontainers.org/lxc/manpages//man1/lxc-copy.1.html
         cmd = "lxc-copy"
         cmd += " {} -n {} -N {}".format(snapshot, orig, name)
@@ -2326,8 +2329,9 @@ def _change_state(
 
     if _cmdout["retcode"] != 0:
         raise CommandExecutionError(
-            "Error changing state for container '{}' using command "
-            "'{}': {}".format(name, cmd, _cmdout["stdout"])
+            "Error changing state for container '{}' using command '{}': {}".format(
+                name, cmd, _cmdout["stdout"]
+            )
         )
     if expected is not None:
         # some commands do not wait, so we will
@@ -3228,7 +3232,7 @@ def running_systemd(name, cache=True, path=None):
         if result["retcode"] == 0:
             result = run_all(
                 name,
-                'sh -c "chmod +x {0};{0}"' "".format(script),
+                'sh -c "chmod +x {0};{0}"'.format(script),
                 path=path,
                 python_shell=True,
             )
@@ -3238,7 +3242,7 @@ def running_systemd(name, cache=True, path=None):
             )
         run_all(
             name,
-            'sh -c \'if [ -f "{0}" ];then rm -f "{0}";fi\'' "".format(script),
+            'sh -c \'if [ -f "{0}" ];then rm -f "{0}";fi\''.format(script),
             path=path,
             ignore_retcode=True,
             python_shell=True,
@@ -3590,7 +3594,7 @@ def bootstrap(
 
                 run_all(
                     name,
-                    'sh -c \'if [ -f "{0}" ];then rm -f "{0}";fi\'' "".format(script),
+                    'sh -c \'if [ -f "{0}" ];then rm -f "{0}";fi\''.format(script),
                     path=path,
                     ignore_retcode=True,
                     python_shell=True,
@@ -4373,7 +4377,10 @@ def write_conf(conf_file, conf):
         elif isinstance(line, dict):
             for key in list(line.keys()):
                 out_line = None
-                if isinstance(line[key], (str, (str,), (int,), float),):
+                if isinstance(
+                    line[key],
+                    (str, (str,), (int,), float),
+                ):
                     out_line = " = ".join((key, "{}".format(line[key])))
                 elif isinstance(line[key], dict):
                     out_line = " = ".join((key, line[key]["value"]))

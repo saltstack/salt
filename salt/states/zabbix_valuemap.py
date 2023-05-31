@@ -1,24 +1,15 @@
-# -*- coding: utf-8 -*-
 """
-.. versionadded:: 2017.7
-
 Management of Zabbix Valuemap object over Zabbix API.
+
+.. versionadded:: 2017.7
 
 :codeauthor: Jakub Sliva <jakub.sliva@ultimum.io>
 """
-from __future__ import absolute_import, unicode_literals
 
 import json
 import logging
 
-try:
-    from salt.ext import six
-    from salt.exceptions import SaltException
-
-    IMPORTS_OK = True
-except ImportError:
-    IMPORTS_OK = False
-
+from salt.exceptions import SaltException
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +19,7 @@ def __virtual__():
     Only make these states available if Zabbix module and run_query function is available
     and all 3rd party modules imported.
     """
-    if "zabbix.run_query" in __salt__ and IMPORTS_OK:
+    if "zabbix.run_query" in __salt__:
         return True
     return False, "Import zabbix or other needed modules failed."
 
@@ -65,7 +56,7 @@ def present(name, params, **kwargs):
     input_params = __salt__["zabbix.substitute_params"](params, **kwargs)
     log.info(
         "Zabbix Value map: input params: %s",
-        six.text_type(json.dumps(input_params, indent=4)),
+        str(json.dumps(input_params, indent=4)),
     )
 
     search = {"output": "extend", "selectMappings": "extend", "filter": {"name": name}}
@@ -73,7 +64,7 @@ def present(name, params, **kwargs):
     valuemap_get = __salt__["zabbix.run_query"]("valuemap.get", search, **kwargs)
     log.info(
         "Zabbix Value map: valuemap.get result: %s",
-        six.text_type(json.dumps(valuemap_get, indent=4)),
+        str(json.dumps(valuemap_get, indent=4)),
     )
 
     existing_obj = (
@@ -86,11 +77,11 @@ def present(name, params, **kwargs):
         diff_params = __salt__["zabbix.compare_params"](input_params, existing_obj)
         log.info(
             "Zabbix Value map: input params: {%s",
-            six.text_type(json.dumps(input_params, indent=4)),
+            str(json.dumps(input_params, indent=4)),
         )
         log.info(
             "Zabbix Value map: Object comparison result. Differences: %s",
-            six.text_type(diff_params),
+            str(diff_params),
         )
 
         if diff_params:
@@ -99,18 +90,22 @@ def present(name, params, **kwargs):
             ]
             log.info(
                 "Zabbix Value map: update params: %s",
-                six.text_type(json.dumps(diff_params, indent=4)),
+                str(json.dumps(diff_params, indent=4)),
             )
 
             if dry_run:
                 ret["result"] = True
-                ret["comment"] = 'Zabbix Value map "{0}" would be fixed.'.format(name)
+                ret["comment"] = 'Zabbix Value map "{}" would be fixed.'.format(name)
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Value map "{0}" differs '
-                        "in following parameters: {1}".format(name, diff_params),
-                        "new": 'Zabbix Value map "{0}" would correspond to definition.'.format(
-                            name
+                        "old": (
+                            'Zabbix Value map "{}" differs '
+                            "in following parameters: {}".format(name, diff_params)
+                        ),
+                        "new": (
+                            'Zabbix Value map "{}" would correspond to definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }
@@ -120,16 +115,18 @@ def present(name, params, **kwargs):
                 )
                 log.info(
                     "Zabbix Value map: valuemap.update result: %s",
-                    six.text_type(valuemap_update),
+                    str(valuemap_update),
                 )
                 if valuemap_update:
                     ret["result"] = True
-                    ret["comment"] = 'Zabbix Value map "{0}" updated.'.format(name)
+                    ret["comment"] = 'Zabbix Value map "{}" updated.'.format(name)
                     ret["changes"] = {
                         name: {
-                            "old": 'Zabbix Value map "{0}" differed '
-                            "in following parameters: {1}".format(name, diff_params),
-                            "new": 'Zabbix Value map "{0}" fixed.'.format(name),
+                            "old": (
+                                'Zabbix Value map "{}" differed '
+                                "in following parameters: {}".format(name, diff_params)
+                            ),
+                            "new": 'Zabbix Value map "{}" fixed.'.format(name),
                         }
                     }
 
@@ -137,19 +134,21 @@ def present(name, params, **kwargs):
             ret["result"] = True
             ret[
                 "comment"
-            ] = 'Zabbix Value map "{0}" already exists and corresponds to a definition.'.format(
+            ] = 'Zabbix Value map "{}" already exists and corresponds to a definition.'.format(
                 name
             )
 
     else:
         if dry_run:
             ret["result"] = True
-            ret["comment"] = 'Zabbix Value map "{0}" would be created.'.format(name)
+            ret["comment"] = 'Zabbix Value map "{}" would be created.'.format(name)
             ret["changes"] = {
                 name: {
-                    "old": 'Zabbix Value map "{0}" does not exist.'.format(name),
-                    "new": 'Zabbix Value map "{0}" would be created '
-                    "according definition.".format(name),
+                    "old": 'Zabbix Value map "{}" does not exist.'.format(name),
+                    "new": (
+                        'Zabbix Value map "{}" would be created '
+                        "according definition.".format(name)
+                    ),
                 }
             }
         else:
@@ -159,17 +158,19 @@ def present(name, params, **kwargs):
             )
             log.info(
                 "Zabbix Value map: valuemap.create result: %s",
-                six.text_type(valuemap_create),
+                str(valuemap_create),
             )
 
             if valuemap_create:
                 ret["result"] = True
-                ret["comment"] = 'Zabbix Value map "{0}" created.'.format(name)
+                ret["comment"] = 'Zabbix Value map "{}" created.'.format(name)
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Value map "{0}" did not exist.'.format(name),
-                        "new": 'Zabbix Value map "{0}" created according definition.'.format(
-                            name
+                        "old": 'Zabbix Value map "{}" did not exist.'.format(name),
+                        "new": (
+                            'Zabbix Value map "{}" created according definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }
@@ -204,15 +205,15 @@ def absent(name, **kwargs):
 
     if not object_id:
         ret["result"] = True
-        ret["comment"] = 'Zabbix Value map "{0}" does not exist.'.format(name)
+        ret["comment"] = 'Zabbix Value map "{}" does not exist.'.format(name)
     else:
         if dry_run:
             ret["result"] = True
-            ret["comment"] = 'Zabbix Value map "{0}" would be deleted.'.format(name)
+            ret["comment"] = 'Zabbix Value map "{}" would be deleted.'.format(name)
             ret["changes"] = {
                 name: {
-                    "old": 'Zabbix Value map "{0}" exists.'.format(name),
-                    "new": 'Zabbix Value map "{0}" would be deleted.'.format(name),
+                    "old": 'Zabbix Value map "{}" exists.'.format(name),
+                    "new": 'Zabbix Value map "{}" would be deleted.'.format(name),
                 }
             }
         else:
@@ -222,11 +223,11 @@ def absent(name, **kwargs):
 
             if valuemap_delete:
                 ret["result"] = True
-                ret["comment"] = 'Zabbix Value map "{0}" deleted.'.format(name)
+                ret["comment"] = 'Zabbix Value map "{}" deleted.'.format(name)
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Value map "{0}" existed.'.format(name),
-                        "new": 'Zabbix Value map "{0}" deleted.'.format(name),
+                        "old": 'Zabbix Value map "{}" existed.'.format(name),
+                        "new": 'Zabbix Value map "{}" deleted.'.format(name),
                     }
                 }
 

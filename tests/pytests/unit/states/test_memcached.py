@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.memcached as memcached
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch

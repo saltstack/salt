@@ -5,6 +5,7 @@ Tests for salt.modules.slack module
 import urllib.parse
 
 import pytest
+
 import salt.modules.slack_notify as slack_notify
 from tests.support.mock import MagicMock, patch
 

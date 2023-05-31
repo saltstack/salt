@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.vbox_guest as vbox_guest
 from tests.support.mock import MagicMock, patch
 
@@ -29,8 +30,9 @@ def test_additions_installed():
             ret.update(
                 {
                     "changes": {"new": True, "old": False},
-                    "comment": "The state of VirtualBox Guest"
-                    " Additions will be changed.",
+                    "comment": (
+                        "The state of VirtualBox Guest Additions will be changed."
+                    ),
                     "result": None,
                 }
             )
@@ -40,8 +42,7 @@ def test_additions_installed():
             ret.update(
                 {
                     "changes": {"new": False, "old": False},
-                    "comment": "The state of VirtualBox Guest"
-                    " Additions was changed!",
+                    "comment": "The state of VirtualBox Guest Additions was changed!",
                     "result": False,
                 }
             )
@@ -65,8 +66,9 @@ def test_additions_removed():
             ret.update(
                 {
                     "changes": {"new": True, "old": True},
-                    "comment": "The state of VirtualBox Guest"
-                    " Additions will be changed.",
+                    "comment": (
+                        "The state of VirtualBox Guest Additions will be changed."
+                    ),
                     "result": None,
                 }
             )
@@ -75,8 +77,7 @@ def test_additions_removed():
         with patch.dict(vbox_guest.__opts__, {"test": False}):
             ret.update(
                 {
-                    "comment": "The state of VirtualBox Guest"
-                    " Additions was changed!",
+                    "comment": "The state of VirtualBox Guest Additions was changed!",
                     "result": True,
                 }
             )
@@ -103,8 +104,10 @@ def test_grantaccess_to_sharedfolders():
             ret.update(
                 {
                     "changes": {"new": ["AB"], "old": "salt"},
-                    "comment": "List of users who have access to"
-                    " auto-mounted shared folders will be changed",
+                    "comment": (
+                        "List of users who have access to"
+                        " auto-mounted shared folders will be changed"
+                    ),
                     "result": None,
                 }
             )
@@ -114,8 +117,10 @@ def test_grantaccess_to_sharedfolders():
             ret.update(
                 {
                     "changes": {"new": "salt", "old": "salt"},
-                    "comment": "List of users who have access to"
-                    " auto-mounted shared folders was changed",
+                    "comment": (
+                        "List of users who have access to"
+                        " auto-mounted shared folders was changed"
+                    ),
                     "result": True,
                 }
             )

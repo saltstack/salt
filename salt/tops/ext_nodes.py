@@ -85,7 +85,6 @@ def top(**kwargs):
         ],
         stdout=subprocess.PIPE,
         check=True,
-        shell=True,  # nosec
     )
     ndata = salt.utils.yaml.safe_load(proc.stdout)
     if not ndata:

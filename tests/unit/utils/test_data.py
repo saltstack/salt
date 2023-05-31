@@ -2,14 +2,11 @@
 Tests for salt.utils.data
 """
 
-
+import builtins
 import logging
 
 import salt.utils.data
 import salt.utils.stringutils
-from salt.ext.six.moves import (  # pylint: disable=import-error,redefined-builtin
-    builtins,
-)
 from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
 from tests.support.unit import LOREM_IPSUM, TestCase
@@ -60,9 +57,11 @@ class DataTestCase(TestCase):
     def test_mysql_to_dict(self):
         test_mysql_output = [
             "+----+------+-----------+------+---------+------+-------+------------------+",
-            "| Id | User | Host      | db   | Command | Time | State | Info             |",
+            "| Id | User | Host      | db   | Command | Time | State | Info         "
+            "    |",
             "+----+------+-----------+------+---------+------+-------+------------------+",
-            "|  7 | root | localhost | NULL | Query   |    0 | init  | show processlist |",
+            "|  7 | root | localhost | NULL | Query   |    0 | init  | show"
+            " processlist |",
             "+----+------+-----------+------+---------+------+-------+------------------+",
         ]
 
@@ -225,7 +224,9 @@ class DataTestCase(TestCase):
         self.assertEqual(
             "it worked",
             salt.utils.data.traverse_dict_and_list(
-                {"foo": {1234: "it worked"}}, "foo:1234", "it didn't work",
+                {"foo": {1234: "it worked"}},
+                "foo:1234",
+                "it didn't work",
             ),
         )
         # Make sure that we properly return the default value when the initial
@@ -234,7 +235,9 @@ class DataTestCase(TestCase):
         self.assertEqual(
             "default",
             salt.utils.data.traverse_dict_and_list(
-                {"foo": {"baz": "didn't work"}}, "foo:bar", "default",
+                {"foo": {"baz": "didn't work"}},
+                "foo:bar",
+                "default",
             ),
         )
 
@@ -498,7 +501,11 @@ class DataTestCase(TestCase):
         # Test binary blob
         self.assertEqual(salt.utils.data.decode(BYTES, keep=True, to_str=True), BYTES)
         self.assertRaises(
-            UnicodeDecodeError, salt.utils.data.decode, BYTES, keep=False, to_str=True,
+            UnicodeDecodeError,
+            salt.utils.data.decode,
+            BYTES,
+            keep=False,
+            to_str=True,
         )
 
     def test_decode_fallback(self):
@@ -693,9 +700,7 @@ class DataTestCase(TestCase):
     def test_stringify(self):
         self.assertRaises(TypeError, salt.utils.data.stringify, 9)
         self.assertEqual(
-            salt.utils.data.stringify(
-                ["one", "two", "three", 4, 5]
-            ),  # future lint: disable=blacklisted-function
+            salt.utils.data.stringify(["one", "two", "three", 4, 5]),
             ["one", "two", "three", "4", "5"],
         )
 
@@ -766,11 +771,11 @@ class FilterFalseyTestCase(TestCase):
         self.assertIs(type(old_dict), type(new_dict))
         # Test excluding int
         old_list = [0]
-        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type(0)])
+        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[int])
         self.assertEqual(old_list, new_list)
         # Test excluding str (or unicode) (or both)
         old_list = [""]
-        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[type("")])
+        new_list = salt.utils.data.filter_falsey(old_list, ignore_types=[str])
         self.assertEqual(old_list, new_list)
         # Test excluding list
         old_list = [[]]
@@ -982,7 +987,7 @@ class FilterFalseyTestCase(TestCase):
             [{"foo": ""}],
         ]
         new_list = salt.utils.data.filter_falsey(
-            old_list, recurse_depth=3, ignore_types=[type(0), type("")]
+            old_list, recurse_depth=3, ignore_types=[int, str]
         )
         self.assertEqual(
             ["foo", ["foo"], ["foo"], {"foo": 0}, {"foo": "bar"}, [{"foo": ""}]],
