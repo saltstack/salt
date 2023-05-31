@@ -8,9 +8,9 @@ aiohttp==3.8.1
     # via etcd3-py
 aiosignal==1.2.0
     # via aiohttp
-ansible-core==2.11.7
+ansible-core==2.11.12
     # via ansible
-ansible==4.4.0 ; python_version < "3.9"
+ansible==4.10.0 ; python_version <= "3.8"
     # via -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
