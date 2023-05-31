@@ -604,11 +604,6 @@ def pytest_pyfunc_call(pyfuncitem):
         loop = funcargs["io_loop"]
     except KeyError:
         loop = tornado.ioloop.IOLoop.current()
-        if loop.closed():
-            log.warning("IOLoop found to be closed when starting test")
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop = tornado.ioloop.IOLoop.current()
 
     __tracebackhide__ = True
 
