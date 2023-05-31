@@ -338,7 +338,7 @@ pytest-salt-factories[docker]==1.0.0rc21 ; sys_platform != "win32"
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.7.0
     # via pytest-salt-factories
-pytest-skip-markers==1.2.0
+pytest-skip-markers==1.4.0
     # via
     #   pytest-salt-factories
     #   pytest-shell-utilities
