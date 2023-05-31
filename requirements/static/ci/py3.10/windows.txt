@@ -147,11 +147,7 @@ dnspython==2.3.0
     #   -c requirements/static/ci/py3.10/windows.txt
     #   -r requirements/static/ci/common.in
     #   python-etcd
-docker-pycreds==0.4.0
-    # via
-    #   -c requirements/static/ci/py3.10/windows.txt
-    #   docker
-docker==2.7.0
+docker==6.1.2
     # via
     #   -c requirements/static/ci/py3.10/windows.txt
     #   -r requirements/static/ci/common.in
@@ -336,6 +332,7 @@ packaging==23.1
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -c requirements/static/ci/py3.10/windows.txt
     #   -r requirements/base.txt
+    #   docker
     #   pytest
 passlib[bcrypt]==1.7.4
     # via
@@ -520,6 +517,7 @@ pywin32==306
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -c requirements/static/ci/py3.10/windows.txt
     #   -r requirements/windows.txt
+    #   docker
     #   pytest-skip-markers
     #   wmi
 pywinrm==0.4.1
@@ -593,8 +591,6 @@ six==1.15.0
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -c requirements/static/ci/py3.10/windows.txt
     #   cassandra-driver
-    #   docker
-    #   docker-pycreds
     #   etcd3-py
     #   genshi
     #   geomet
@@ -656,6 +652,7 @@ urllib3==1.26.6
     #   -c requirements/static/ci/py3.10/windows.txt
     #   -r requirements/windows.txt
     #   botocore
+    #   docker
     #   kubernetes
     #   python-etcd
     #   requests
