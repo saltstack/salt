@@ -203,7 +203,7 @@ lxml==4.9.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/windows.txt
-mako==1.2.2
+mako==1.2.4
     # via -r requirements/static/ci/common.in
 markupsafe==2.1.2
     # via
