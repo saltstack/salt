@@ -10,19 +10,14 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
 try:
-    import libnacl.sealed  # pylint: disable=unused-import
-    import libnacl.secret  # pylint: disable=unused-import
-
     import salt.utils.nacl as nacl
-
-    HAS_LIBNACL = True
+    HAS_PYNACL = nacl.check_requirements()
 except (ImportError, OSError, AttributeError):
-    HAS_LIBNACL = False
+    HAS_PYNACL = False
 
 
-@pytest.mark.skipif(sys.version_info >= (3, 10), reason="Segfaults with python 3.10")
 @pytest.mark.skipif(
-    not HAS_LIBNACL, reason="skipping test_nacl, reason=libnacl is unavailable"
+    not HAS_PYNACL, reason="skipping test_nacl, reason=libnacl is unavailable"
 )
 class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
