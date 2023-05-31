@@ -38,7 +38,7 @@ only recommended for very secure environments.
       .*:
         - .*
 
-This configuration will allow minions with IDs ending in ``.example.com`` access
+This configuration allows minions with IDs ending in ``.example.com`` access
 to the test, ps, and pkg module functions.
 
 .. code-block:: yaml
