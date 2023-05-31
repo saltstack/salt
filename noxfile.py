@@ -1528,10 +1528,25 @@ def docs_html(session, compress, clean):
     Build Salt's HTML Documentation
     """
     if _upgrade_pip_setuptools_and_wheel(session):
-        requirements_file = os.path.join(
+        linux_requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "linux.txt"
+        )
+        base_requirements_file = os.path.join("requirements", "base.txt")
+        zeromq_requirements_file = os.path.join("requirements", "zeromq.txt")
+        docs_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "docs.txt"
         )
-        install_command = ["--progress-bar=off", "-r", requirements_file]
+        install_command = [
+            "--progress-bar=off",
+            "--constraint",
+            linux_requirements_file,
+            "-r",
+            base_requirements_file,
+            "-r",
+            zeromq_requirements_file,
+            "-r",
+            docs_requirements_file,
+        ]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir("doc/")
     if clean:
@@ -1551,10 +1566,25 @@ def docs_man(session, compress, update, clean):
     Build Salt's Manpages Documentation
     """
     if _upgrade_pip_setuptools_and_wheel(session):
-        requirements_file = os.path.join(
+        linux_requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "linux.txt"
+        )
+        base_requirements_file = os.path.join("requirements", "base.txt")
+        zeromq_requirements_file = os.path.join("requirements", "zeromq.txt")
+        docs_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "docs.txt"
         )
-        install_command = ["--progress-bar=off", "-r", requirements_file]
+        install_command = [
+            "--progress-bar=off",
+            "--constraint",
+            linux_requirements_file,
+            "-r",
+            base_requirements_file,
+            "-r",
+            zeromq_requirements_file,
+            "-r",
+            docs_requirements_file,
+        ]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir("doc/")
     if clean:
