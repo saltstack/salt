@@ -7,7 +7,7 @@ import pytest
 import salt.states.selinux as selinux
 from tests.support.mock import MagicMock, patch
 
-pytestmark = [pytest.mark.skip_on_windows]
+pytestmark = [pytest.mark.skip_unless_on_linux]
 
 
 @pytest.fixture
