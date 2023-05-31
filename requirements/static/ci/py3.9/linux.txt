@@ -6,45 +6,28 @@
 #
 adal==1.2.3
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   azure-datalake-store
     #   msrestazure
 aiohttp==3.8.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   etcd3-py
+    # via etcd3-py
 aiosignal==1.2.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   aiohttp
+    # via aiohttp
 ansible-core==2.14.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   ansible
+    # via ansible
 ansible==7.1.0 ; python_version >= "3.9"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/linux.in
+    # via -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 apscheduler==3.6.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   python-telegram-bot
+    # via python-telegram-bot
 asn1crypto==1.3.0
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   certvalidator
     #   oscrypto
 async-timeout==4.0.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   aiohttp
+    # via aiohttp
 attrs==20.3.0
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   aiohttp
     #   jsonschema
     #   pytest
@@ -55,19 +38,13 @@ attrs==20.3.0
 autocommand==2.2.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   jaraco.text
 azure-applicationinsights==0.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure
+    # via azure
 azure-batch==4.1.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure
+    # via azure
 azure-common==1.1.18
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   azure-applicationinsights
     #   azure-batch
     #   azure-cosmosdb-table
@@ -143,205 +120,107 @@ azure-common==1.1.18
     #   azure-storage-file
     #   azure-storage-queue
 azure-cosmosdb-nspkg==2.0.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-cosmosdb-table
+    # via azure-cosmosdb-table
 azure-cosmosdb-table==1.0.5
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure
+    # via azure
 azure-datalake-store==0.0.44
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure
+    # via azure
 azure-eventgrid==1.2.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure
+    # via azure
 azure-graphrbac==0.40.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure
+    # via azure
 azure-keyvault==1.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure
+    # via azure
 azure-loganalytics==0.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure
+    # via azure
 azure-mgmt-advisor==1.0.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-applicationinsights==0.1.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-authorization==0.50.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-batch==5.0.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-batchai==2.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-billing==0.2.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-cdn==3.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-cognitiveservices==3.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-commerce==1.0.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-compute==4.6.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-consumption==2.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-containerinstance==1.4.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-containerregistry==2.7.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-containerservice==4.4.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-cosmosdb==0.4.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-datafactory==0.6.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-datalake-analytics==0.6.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-datalake-nspkg==3.0.1
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   azure-mgmt-datalake-analytics
     #   azure-mgmt-datalake-store
 azure-mgmt-datalake-store==0.5.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-datamigration==1.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-devspaces==0.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-devtestlabs==2.2.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-dns==2.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-eventgrid==1.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-eventhub==2.5.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-hanaonazure==0.1.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-iotcentral==0.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-iothub==0.5.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-iothubprovisioningservices==0.2.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-keyvault==1.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-loganalytics==0.2.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-logic==3.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-machinelearningcompute==0.4.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-managementgroups==0.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-managementpartner==0.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-maps==0.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-marketplaceordering==0.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-media==1.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-monitor==0.5.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-msi==0.2.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-network==2.6.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-notificationhubs==2.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-nspkg==3.0.2
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   azure-mgmt-advisor
     #   azure-mgmt-applicationinsights
     #   azure-mgmt-authorization
@@ -391,88 +270,47 @@ azure-mgmt-nspkg==3.0.2
     #   azure-mgmt-trafficmanager
     #   azure-mgmt-web
 azure-mgmt-policyinsights==0.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-powerbiembedded==2.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-rdbms==1.8.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-recoveryservices==0.3.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-recoveryservicesbackup==0.3.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-redis==5.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-relay==0.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-reservations==0.2.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-resource==2.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-scheduler==2.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-search==2.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-servicebus==0.5.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-servicefabric==0.2.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-signalr==0.1.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-sql==0.9.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-storage==2.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-subscription==0.2.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-trafficmanager==0.50.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt-web==0.35.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure-mgmt
+    # via azure-mgmt
 azure-mgmt==4.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure
+    # via azure
 azure-nspkg==3.0.2
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   azure-applicationinsights
     #   azure-batch
     #   azure-cosmosdb-nspkg
@@ -485,94 +323,63 @@ azure-nspkg==3.0.2
     #   azure-servicefabric
     #   azure-servicemanagement-legacy
 azure-servicebus==0.21.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure
+    # via azure
 azure-servicefabric==6.3.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure
+    # via azure
 azure-servicemanagement-legacy==0.20.6
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure
+    # via azure
 azure-storage-blob==1.5.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure
+    # via azure
 azure-storage-common==1.4.0
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   azure-cosmosdb-table
     #   azure-storage-blob
     #   azure-storage-file
     #   azure-storage-queue
 azure-storage-file==1.4.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure
+    # via azure
 azure-storage-queue==1.4.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   azure
+    # via azure
 azure==4.0.0 ; sys_platform != "win32"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 backports.entry-points-selectable==1.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   virtualenv
+    # via virtualenv
 bcrypt==3.1.6
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   paramiko
     #   passlib
 boto3==1.26.143
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   moto
 boto==2.49.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 botocore==1.29.143
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   boto3
     #   moto
     #   s3transfer
 cached-property==1.5.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   pygit2
+    # via pygit2
 cachetools==4.2.2
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   google-auth
     #   python-telegram-bot
 cassandra-driver==3.27.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 certifi==2023.5.7
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   kubernetes
     #   msrest
     #   python-telegram-bot
     #   requests
 certvalidator==0.11.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   vcert
+    # via vcert
 cffi==1.15.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   azure-datalake-store
     #   bcrypt
@@ -583,53 +390,36 @@ cffi==1.15.1
 charset-normalizer==2.1.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   aiohttp
     #   requests
 cheetah3==3.2.6.post2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 cheroot==10.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   cherrypy
 cherrypy==18.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/linux.in
 ciscoconfparse==1.5.19
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   napalm
+    # via napalm
 click==7.1.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   geomet
+    # via geomet
 clustershell==1.9.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 colorama==0.4.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   ciscoconfparse
+    # via ciscoconfparse
 contextvars==2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
 croniter==1.3.15 ; sys_platform != "win32"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 cryptography==40.0.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/crypto.txt
     #   adal
     #   ansible-core
@@ -643,136 +433,94 @@ cryptography==40.0.2
     #   pyopenssl
     #   vcert
 distlib==0.3.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   virtualenv
+    # via virtualenv
 distro==1.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
     #   pytest-skip-markers
 dnspython==2.3.0
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   ciscoconfparse
     #   python-etcd
 docker==6.1.2
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
-etcd3-py==0.1.6 ; python_version >= "3.6"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+etcd3-py==0.1.6
+    # via -r requirements/static/ci/common.in
 exceptiongroup==1.0.4
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   pytest
+    # via pytest
 filelock==3.0.12
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   virtualenv
+    # via virtualenv
 flaky==3.7.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/pytest.txt
+    # via -r requirements/pytest.txt
 frozenlist==1.3.0
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   aiohttp
     #   aiosignal
 future==0.18.3
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   napalm
     #   textfsm
 genshi==0.7.5
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 geomet==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   cassandra-driver
+    # via cassandra-driver
 gitdb==4.0.5
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   gitpython
+    # via gitpython
 gitpython==3.1.31
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 google-auth==1.6.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   kubernetes
+    # via kubernetes
 hglib==2.6.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/linux.in
+    # via -r requirements/static/ci/linux.in
 idna==3.4
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   etcd3-py
     #   requests
     #   yarl
 immutables==0.19
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   contextvars
 importlib-metadata==6.6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/pkg/linux.in
 inflect==6.0.4
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   jaraco.text
 iniconfig==1.0.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   pytest
+    # via pytest
 ipaddress==1.0.22
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   kubernetes
+    # via kubernetes
 isodate==0.6.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   msrest
+    # via msrest
 jaraco.collections==4.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   cherrypy
 jaraco.context==4.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   jaraco.text
 jaraco.functools==3.7.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   cheroot
     #   jaraco.text
     #   tempora
 jaraco.text==3.11.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   jaraco.collections
 jinja2==3.1.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
     #   ansible-core
     #   junos-eznc
@@ -781,93 +529,65 @@ jinja2==3.1.2
 jmespath==1.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
 jsonschema==4.17.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 junos-eznc==2.4.0 ; sys_platform != "win32" and python_version <= "3.10"
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   napalm
 jxmlease==1.0.1 ; sys_platform != "win32"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 kazoo==2.6.1 ; sys_platform != "win32" and sys_platform != "darwin"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 keyring==5.7.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 kubernetes==3.0.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 looseversion==1.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
 lxml==4.9.2
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   junos-eznc
     #   napalm
     #   ncclient
 mako==1.2.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 markupsafe==2.1.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
     #   jinja2
     #   mako
     #   moto
     #   werkzeug
 mercurial==6.0.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/linux.in
+    # via -r requirements/static/ci/linux.in
 mock==3.0.5
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/pytest.txt
+    # via -r requirements/pytest.txt
 more-itertools==9.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   cheroot
     #   cherrypy
     #   jaraco.functools
     #   jaraco.text
-moto==3.0.1 ; python_version >= "3.6"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+moto==3.0.1
+    # via -r requirements/static/ci/common.in
 msgpack==1.0.5
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
 msrest==0.6.14
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   azure-applicationinsights
     #   azure-eventgrid
     #   azure-keyvault
@@ -891,7 +611,6 @@ msrest==0.6.14
     #   msrestazure
 msrestazure==0.6.3
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   azure-batch
     #   azure-eventgrid
     #   azure-graphrbac
@@ -958,50 +677,34 @@ msrestazure==0.6.3
     #   azure-mgmt-web
 multidict==6.0.2
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   aiohttp
     #   yarl
-napalm==3.1.0 ; sys_platform != "win32" and python_version > "3.6" and python_version < "3.10"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+napalm==3.1.0 ; sys_platform != "win32" and python_version < "3.10"
+    # via -r requirements/static/ci/common.in
 ncclient==0.6.4
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   junos-eznc
+    # via junos-eznc
 netaddr==0.7.19
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   junos-eznc
     #   napalm
     #   pyeapi
 netmiko==3.2.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   napalm
+    # via napalm
 ntc-templates==1.4.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   junos-eznc
+    # via junos-eznc
 oauthlib==3.2.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   requests-oauthlib
+    # via requests-oauthlib
 oscrypto==1.2.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   certvalidator
+    # via certvalidator
 packaging==23.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
     #   ansible-core
     #   docker
     #   pytest
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   junos-eznc
     #   napalm
@@ -1010,159 +713,105 @@ paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     #   scp
 passlib[bcrypt]==1.7.4
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   ciscoconfparse
 pathspec==0.9.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   yamllint
+    # via yamllint
 pathtools==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   watchdog
+    # via watchdog
 platformdirs==2.2.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   virtualenv
+    # via virtualenv
 pluggy==0.13.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   pytest
+    # via pytest
 portend==3.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   cherrypy
 psutil==5.9.5
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
 pyasn1-modules==0.2.4
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   google-auth
+    # via google-auth
 pyasn1==0.4.8
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   pyasn1-modules
     #   rsa
 pycparser==2.21 ; python_version >= "3.9"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   cffi
 pycryptodomex==3.9.8
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/crypto.txt
 pydantic==1.10.8
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   inflect
 pyeapi==0.8.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   napalm
+    # via napalm
 pygit2==1.5.0 ; python_version > "3.8"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/linux.in
+    # via -r requirements/static/ci/linux.in
 pyiface==0.0.11
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/linux.in
+    # via -r requirements/static/ci/linux.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 pyjwt==2.4.0
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   adal
     #   twilio
-pymysql==1.0.2 ; python_version > "3.5"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/linux.in
+pymysql==1.0.2
+    # via -r requirements/static/ci/linux.in
 pynacl==1.3.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   paramiko
+    # via paramiko
 pyopenssl==23.1.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
 pyparsing==3.0.9
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   junos-eznc
+    # via junos-eznc
 pyrsistent==0.17.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   jsonschema
+    # via jsonschema
 pyserial==3.4
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   junos-eznc
     #   netmiko
 pytest-custom-exit-code==0.3.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/pytest.txt
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/pytest.txt
+    # via -r requirements/pytest.txt
 pytest-salt-factories[docker]==1.0.0rc21 ; sys_platform != "win32"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/pytest.txt
+    # via -r requirements/pytest.txt
 pytest-shell-utilities==1.6.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   pytest-salt-factories
+    # via pytest-salt-factories
 pytest-skip-markers==1.2.0
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
 pytest-subtests==0.4.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/pytest.txt
+    # via -r requirements/pytest.txt
 pytest-system-statistics==1.0.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   pytest-salt-factories
+    # via pytest-salt-factories
 pytest-tempdir==2019.10.12
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
 pytest-timeout==1.4.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/pytest.txt
+    # via -r requirements/pytest.txt
 pytest==7.2.0 ; python_version > "3.6"
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
     #   pytest-helpers-namespace
@@ -1174,13 +823,10 @@ pytest==7.2.0 ; python_version > "3.6"
     #   pytest-tempdir
     #   pytest-timeout
 python-consul==1.1.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/linux.in
+    # via -r requirements/static/ci/linux.in
 python-dateutil==2.8.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/pkg/linux.in
     #   adal
     #   azure-cosmosdb-table
@@ -1191,22 +837,16 @@ python-dateutil==2.8.2
     #   moto
     #   vcert
 python-etcd==0.4.5
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 python-gnupg==0.5.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/pkg/linux.in
-python-telegram-bot==13.7 ; python_version > "3.5"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/linux.in
+python-telegram-bot==13.7
+    # via -r requirements/static/ci/linux.in
 pytz==2023.3
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   apscheduler
     #   moto
     #   python-telegram-bot
@@ -1214,13 +854,10 @@ pytz==2023.3
     #   twilio
     #   tzlocal
 pyvmomi==6.7.1.2018.12
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 pyyaml==6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
     #   ansible-core
     #   clustershell
@@ -1232,25 +869,17 @@ pyyaml==6.0
 pyzmq==25.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
 redis-py-cluster==2.1.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/linux.in
+    # via -r requirements/static/ci/linux.in
 redis==3.5.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   redis-py-cluster
+    # via redis-py-cluster
 requests-oauthlib==1.3.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   msrest
+    # via msrest
 requests==2.31.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
     #   adal
@@ -1274,49 +903,33 @@ requests==2.31.0
     #   twilio
     #   vcert
 resolvelib==0.5.4
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   ansible-core
+    # via ansible-core
 responses==0.10.6
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   moto
+    # via moto
 rfc3987==1.3.8
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 rpm-vercmp==0.1.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/pkg/linux.in
 rsa==4.7.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   google-auth
+    # via google-auth
 s3transfer==0.6.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   boto3
+    # via boto3
 scp==0.13.2
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   junos-eznc
     #   napalm
     #   netmiko
 semantic-version==2.9.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   etcd3-py
+    # via etcd3-py
 setproctitle==1.3.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/pkg/linux.in
 six==1.16.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   apscheduler
     #   bcrypt
     #   cassandra-driver
@@ -1342,135 +955,90 @@ six==1.16.0
     #   virtualenv
     #   websocket-client
 slack-bolt==1.15.5
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/linux.in
+    # via -r requirements/static/ci/linux.in
 slack-sdk==3.19.5
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   slack-bolt
+    # via slack-bolt
 smmap==3.0.4
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   gitdb
+    # via gitdb
 sqlparse==0.4.4
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 tempora==5.2.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   portend
 terminal==0.4.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   ntc-templates
+    # via ntc-templates
 textfsm==1.1.0
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   napalm
     #   netmiko
     #   ntc-templates
 timelib==0.3.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/pkg/linux.in
 toml==0.10.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 tomli==2.0.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   pytest
+    # via pytest
 tornado==6.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
     #   python-telegram-bot
 transitions==0.8.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   junos-eznc
+    # via junos-eznc
 twilio==7.9.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/linux.in
+    # via -r requirements/static/ci/linux.in
 typing-extensions==4.6.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   pydantic
     #   pytest-shell-utilities
     #   pytest-system-statistics
 tzlocal==2.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   apscheduler
+    # via apscheduler
 urllib3==1.26.6
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   botocore
     #   docker
     #   kubernetes
     #   python-etcd
     #   requests
 vcert==0.7.4 ; sys_platform != "win32"
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 virtualenv==20.7.2
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
 watchdog==0.10.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   docker
     #   kubernetes
 werkzeug==2.2.3
     # via
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   moto
     #   pytest-httpserver
 xmltodict==0.12.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   moto
+    # via moto
 yamllint==1.26.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   -r requirements/static/ci/linux.in
+    # via -r requirements/static/ci/linux.in
 yamlordereddictloader==0.4.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   junos-eznc
+    # via junos-eznc
 yarl==1.7.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   aiohttp
+    # via aiohttp
 zc.lockfile==1.4
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   cherrypy
 zipp==3.15.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/linux.txt
-    #   -c requirements/static/ci/py3.9/linux.txt
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:

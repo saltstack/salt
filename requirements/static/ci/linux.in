@@ -1,5 +1,6 @@
 # Linux static CI requirements
---constraint=./py{py_version}/{platform}.txt
+--constraint=../pkg/py{py_version}/{platform}.txt
+
 pyiface
 pygit2<1.1.0; python_version <= '3.8'
 pygit2>=1.4.0; python_version > '3.8'
