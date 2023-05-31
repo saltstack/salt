@@ -58,7 +58,8 @@ class SyncWrapper:
         close_methods=None,
         loop_kwarg=None,
     ):
-        self.io_loop = tornado.ioloop.IOLoop()
+        self.asyncio_loop = asyncio.new_event_loop()
+        self.io_loop = tornado.ioloop.IOLoop(asyncio_loop=self.asyncio_loop)
         if args is None:
             args = []
         if kwargs is None:
@@ -124,7 +125,7 @@ class SyncWrapper:
             results = []
             thread = threading.Thread(
                 target=self._target,
-                args=(key, args, kwargs, results, self.io_loop),
+                args=(key, args, kwargs, results, self.asyncio_loop),
             )
             thread.start()
             thread.join()
@@ -136,7 +137,9 @@ class SyncWrapper:
 
         return wrap
 
-    def _target(self, key, args, kwargs, results, io_loop):
+    def _target(self, key, args, kwargs, results, asyncio_loop):
+        asyncio.set_event_loop(asyncio_loop)
+        io_loop = tornado.ioloop.IOLoop.current()
         try:
             result = io_loop.run_sync(lambda: getattr(self.obj, key)(*args, **kwargs))
             results.append(True)
