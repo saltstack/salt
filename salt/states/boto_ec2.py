@@ -60,6 +60,13 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
+__deprecated__ = (
+    3009,
+    "Potassium",
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto"
+)
+
 
 def __virtual__():
     """

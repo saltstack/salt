@@ -144,11 +144,19 @@ Delete also accepts a VPC peering connection id.
 
 import logging
 
+log = logging.getLogger(__name__)
+
 import salt.utils.dictupdate as dictupdate
 
 __virtualname__ = "boto_vpc"
 
-log = logging.getLogger(__name__)
+
+__deprecated__ = (
+    3009,
+    "Potassium",
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto"
+)
 
 
 def __virtual__():

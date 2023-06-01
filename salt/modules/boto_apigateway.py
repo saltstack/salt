@@ -106,6 +106,13 @@ except ImportError:
 # pylint: enable=import-error
 
 
+__deprecated__ = (
+    3009,
+    "Potassium",
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto"
+)
+
 def __virtual__():
     """
     Only load if boto libraries exist and if boto libraries are greater than
