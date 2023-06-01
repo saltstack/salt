@@ -50,7 +50,7 @@ on:
         required: false
         type: string
         description: The type of artifact to download
-        default: pkg
+        default: package
 
 
 env:
