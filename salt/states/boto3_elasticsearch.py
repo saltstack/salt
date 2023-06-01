@@ -50,6 +50,13 @@ import salt.utils.json
 from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
+
+__deprecated__ = (
+    3009,
+    "Potassium",
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto"
+)
 __virtualname__ = "boto3_elasticsearch"
 
 

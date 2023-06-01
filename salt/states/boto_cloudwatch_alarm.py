@@ -55,6 +55,12 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 
 import salt.utils.data
 
+__deprecated__ = (
+    3009,
+    "Potassium",
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto"
+)
 
 def __virtual__():
     """

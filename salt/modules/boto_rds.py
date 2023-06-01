@@ -127,6 +127,13 @@ def __virtual__():
     return salt.utils.versions.check_boto_reqs(boto3_ver="1.3.1")
 
 
+__deprecated__ = (
+    3009,
+    "Potassium",
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto"
+)
+
 def __init__(opts):
     if HAS_BOTO:
         __utils__["boto3.assign_funcs"](__name__, "rds")

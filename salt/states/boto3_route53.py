@@ -73,6 +73,12 @@ from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
+__deprecated__ = (
+    3009,
+    "Potassium",
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto"
+)
 
 def __virtual__():
     """

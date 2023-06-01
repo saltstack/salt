@@ -34,6 +34,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.utils.decorators import Depends
+from salt.utils.decorators.extension_deprecation import extension_deprecation_message
 
 try:
     # Try the stdlib C extension first
@@ -977,6 +978,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 # We're not interested in imported functions, only
                 # functions defined(or namespaced) on the loaded module.
                 continue
+
+            # When the module is deprecated wrap functions in deprecation
+            # warning.
+            if hasattr(mod, '__deprecated__'):
+                func = extension_deprecation_message(*mod.__deprecated__)(func)
 
             # Let's get the function name.
             # If the module has the __func_alias__ attribute, it must be a
