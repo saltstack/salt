@@ -12,6 +12,9 @@ from tests.support.pytest.mysql import *  # pylint: disable=wildcard-import,unus
 log = logging.getLogger(__name__)
 
 pytestmark = [
+    # Skipping docker mysql tests on 3005. Requires
+    # significant change to resolve, updating salt factories
+    pytest.mark.skip,
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
     pytest.mark.skipif(
