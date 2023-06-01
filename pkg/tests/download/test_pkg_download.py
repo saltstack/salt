@@ -81,6 +81,11 @@ def root_url(salt_release):
     return _root_url
 
 
+@pytest.fixture(scope="module")
+def artifact_type():
+    return os.environ.get("DOWNLOAD_TEST_ARTIFACT_TYPE")
+
+
 def get_salt_release():
     salt_release = os.environ.get("SALT_RELEASE")
     pkg_test_type = os.environ.get("PKG_TEST_TYPE", "install")
@@ -131,10 +136,21 @@ def salt_release():
 
 
 @pytest.fixture(scope="module")
+def downloads_path(tmp_path_factory):
+    return tmp_path_factory.mktemp("downloads")
+
+
+@pytest.fixture(scope="module")
 def _setup_system(
-    tmp_path_factory, grains, shell, root_url, salt_release, gpg_key_name, repo_subpath
+    grains,
+    shell,
+    root_url,
+    salt_release,
+    gpg_key_name,
+    repo_subpath,
+    artifact_type,
+    downloads_path,
 ):
-    downloads_path = tmp_path_factory.mktemp("downloads")
     try:
         # Windows is a special case, because sometimes we need to uninstall the packages
         if grains["os_family"] == "Windows":
@@ -210,6 +226,7 @@ def _setup_system(
                     downloads_path=downloads_path,
                     gpg_key_name=gpg_key_name,
                     repo_subpath=repo_subpath,
+                    artifact_type=artifact_type,
                 )
             else:
                 pytest.fail("Don't know how to handle %s", grains["osfinger"])
@@ -286,64 +303,81 @@ def setup_debian_family(
     downloads_path,
     gpg_key_name,
     repo_subpath,
+    artifact_type,
 ):
     arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
-    if arch == "aarch64":
-        arch = "arm64"
-    elif arch == "x86_64":
-        arch = "amd64"
-
     ret = shell.run("apt-get", "update", "-y", check=False)
     if ret.returncode != 0:
         pytest.fail(str(ret))
 
-    if repo_subpath == "minor":
-        repo_url_base = (
-            f"{root_url}/{os_name}/{os_version}/{arch}/{repo_subpath}/{salt_release}"
+    if artifact_type == "package":
+        if arch == "aarch64":
+            arch = "arm64"
+        elif arch == "x86_64":
+            arch = "amd64"
+
+        if repo_subpath == "minor":
+            repo_url_base = f"{root_url}/{os_name}/{os_version}/{arch}/{repo_subpath}/{salt_release}"
+        else:
+            repo_url_base = f"{root_url}/{os_name}/{os_version}/{arch}/{repo_subpath}"
+        gpg_file_url = f"{root_url}/{os_name}/{os_version}/{arch}/{gpg_key_name}"
+
+        try:
+            pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_key_name)
+        except Exception as exc:
+            pytest.fail(f"Failed to download {gpg_file_url}: {exc}")
+
+        salt_sources_path = downloads_path / "salt.list"
+        salt_sources_path.write_text(
+            f"deb [signed-by=/usr/share/keyrings/{gpg_key_name} arch={arch}] {repo_url_base} {os_codename} main\n"
         )
+        commands = [
+            (
+                "mv",
+                str(downloads_path / gpg_key_name),
+                f"/usr/share/keyrings/{gpg_key_name}",
+            ),
+            (
+                "mv",
+                str(salt_sources_path),
+                "/etc/apt/sources.list.d/salt.list",
+            ),
+            ("apt-get", "install", "-y", "ca-certificates"),
+            ("update-ca-certificates",),
+            ("apt-get", "update"),
+            (
+                "apt-get",
+                "install",
+                "-y",
+                "salt-master",
+                "salt-minion",
+                "salt-ssh",
+                "salt-syndic",
+                "salt-cloud",
+                "salt-api",
+            ),
+        ]
+        for cmd in commands:
+            ret = shell.run(*cmd)
+            if ret.returncode != 0:
+                pytest.fail(str(ret))
     else:
-        repo_url_base = f"{root_url}/{os_name}/{os_version}/{arch}/{repo_subpath}"
-    gpg_file_url = f"{root_url}/{os_name}/{os_version}/{arch}/{gpg_key_name}"
+        # We are testing the onedir download
+        onedir_name = f"salt-{salt_release}-onedir-linux-{arch}.tar.xz"
+        if repo_subpath == "minor":
+            repo_url_base = f"{root_url}/onedir/{repo_subpath}/{salt_release}"
+        else:
+            repo_url_base = f"{root_url}/onedir/{repo_subpath}"
+        onedir_url = f"{repo_url_base}/{onedir_name}"
+        onedir_location = downloads_path / onedir_name
+        onedir_extracted = downloads_path / "onedir_extracted"
 
-    try:
-        pytest.helpers.download_file(gpg_file_url, downloads_path / gpg_key_name)
-    except Exception as exc:
-        pytest.fail(f"Failed to download {gpg_file_url}: {exc}")
+        try:
+            pytest.helpers.download_file(onedir_url, onedir_location)
+        except Exception as exc:
+            pytest.fail(f"Failed to download {onedir_url}: {exc}")
 
-    salt_sources_path = downloads_path / "salt.list"
-    salt_sources_path.write_text(
-        f"deb [signed-by=/usr/share/keyrings/{gpg_key_name} arch={arch}] {repo_url_base} {os_codename} main\n"
-    )
-    commands = [
-        (
-            "mv",
-            str(downloads_path / gpg_key_name),
-            f"/usr/share/keyrings/{gpg_key_name}",
-        ),
-        (
-            "mv",
-            str(salt_sources_path),
-            "/etc/apt/sources.list.d/salt.list",
-        ),
-        ("apt-get", "install", "-y", "ca-certificates"),
-        ("update-ca-certificates",),
-        ("apt-get", "update"),
-        (
-            "apt-get",
-            "install",
-            "-y",
-            "salt-master",
-            "salt-minion",
-            "salt-ssh",
-            "salt-syndic",
-            "salt-cloud",
-            "salt-api",
-        ),
-    ]
-    for cmd in commands:
-        ret = shell.run(*cmd)
-        if ret.returncode != 0:
-            pytest.fail(str(ret))
+        shell.run("tar", "xvf", str(onedir_location), "-C", str(onedir_extracted))
 
 
 def setup_macos(shell, root_url, salt_release, downloads_path, repo_subpath):
@@ -426,12 +460,18 @@ def setup_windows(shell, root_url, salt_release, downloads_path, repo_subpath):
 
 
 @pytest.fixture(scope="module")
-def install_dir(_setup_system):
-    if platform.is_windows():
-        return pathlib.Path(os.getenv("ProgramFiles"), "Salt Project", "Salt").resolve()
-    if platform.is_darwin():
-        return pathlib.Path("/opt", "salt")
-    return pathlib.Path("/opt", "saltstack", "salt")
+def install_dir(_setup_system, artifact_type, downloads_path):
+    if artifact_type == "package":
+        if platform.is_windows():
+            return pathlib.Path(
+                os.getenv("ProgramFiles"), "Salt Project", "Salt"
+            ).resolve()
+        if platform.is_darwin():
+            return pathlib.Path("/opt", "salt")
+        return pathlib.Path("/opt", "saltstack", "salt")
+    else:
+        # We are testing the onedir
+        return downloads_path / "onedir_extracted" / "salt"
 
 
 @pytest.fixture(scope="module")
