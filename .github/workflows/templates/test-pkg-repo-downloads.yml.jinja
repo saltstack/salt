@@ -1,35 +1,37 @@
 
   <%- set linux_pkg_tests = (
-                               ("almalinux-8", "Alma Linux 8", "x86_64"),
-                               ("almalinux-8-arm64", "Alma Linux 8 Arm64", "aarch64"),
-                               ("almalinux-9", "Alma Linux 9", "x86_64"),
-                               ("almalinux-9-arm64", "Alma Linux 9 Arm64", "aarch64"),
-                               ("amazonlinux-2", "Amazon Linux 2", "x86_64"),
-                               ("amazonlinux-2-arm64", "Amazon Linux 2 Arm64", "aarch64"),
-                               ("centos-7", "CentOS 7", "x86_64"),
-                               ("centos-7-arm64", "CentOS 7 Arm64", "aarch64"),
-                               ("centosstream-8", "CentOS Stream 8", "x86_64"),
-                               ("centosstream-8-arm64", "CentOS Stream 8 Arm64", "aarch64"),
-                               ("centosstream-9", "CentOS Stream 9", "x86_64"),
-                               ("centosstream-9-arm64", "CentOS Stream 9 Arm64", "aarch64"),
-                               ("debian-10", "Debian 10", "x86_64"),
-                               ("debian-11", "Debian 11", "x86_64"),
-                               ("debian-11-arm64", "Debian 11 Arm64", "aarch64"),
-                               ("fedora-37", "Fedora 37", "x86_64"),
-                               ("fedora-37-arm64", "Fedora 37 Arm64", "aarch64"),
-                               ("fedora-38", "Fedora 38", "x86_64"),
-                               ("fedora-38-arm64", "Fedora 38 Arm64", "aarch64"),
-                               ("photonos-3", "Photon OS 3", "x86_64"),
-                               ("photonos-4", "Photon OS 4", "x86_64"),
-                               ("ubuntu-20.04", "Ubuntu 20.04", "x86_64"),
-                               ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "aarch64"),
-                               ("ubuntu-22.04", "Ubuntu 22.04", "x86_64"),
-                               ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "aarch64")
+                               ("almalinux-8", "Alma Linux 8", "x86_64", "pkg"),
+                               ("almalinux-8-arm64", "Alma Linux 8 Arm64", "aarch64", "pkg"),
+                               ("almalinux-9", "Alma Linux 9", "x86_64", "pkg"),
+                               ("almalinux-9-arm64", "Alma Linux 9 Arm64", "aarch64", "pkg"),
+                               ("amazonlinux-2", "Amazon Linux 2", "x86_64", "pkg"),
+                               ("amazonlinux-2-arm64", "Amazon Linux 2 Arm64", "aarch64", "pkg"),
+                               ("centos-7", "CentOS 7", "x86_64", "pkg"),
+                               ("centos-7-arm64", "CentOS 7 Arm64", "aarch64", "pkg"),
+                               ("centosstream-8", "CentOS Stream 8", "x86_64", "pkg"),
+                               ("centosstream-8-arm64", "CentOS Stream 8 Arm64", "aarch64", "pkg"),
+                               ("centosstream-9", "CentOS Stream 9", "x86_64", "pkg"),
+                               ("centosstream-9-arm64", "CentOS Stream 9 Arm64", "aarch64", "pkg"),
+                               ("debian-10", "Debian 10", "x86_64", "pkg"),
+                               ("debian-11", "Debian 11", "x86_64", "pkg"),
+                               ("debian-11-arm64", "Debian 11 Arm64", "aarch64", "pkg"),
+                               ("fedora-37", "Fedora 37", "x86_64", "pkg"),
+                               ("fedora-37-arm64", "Fedora 37 Arm64", "aarch64", "pkg"),
+                               ("fedora-38", "Fedora 38", "x86_64", "pkg"),
+                               ("fedora-38-arm64", "Fedora 38 Arm64", "aarch64", "pkg"),
+                               ("photonos-3", "Photon OS 3", "x86_64", "pkg"),
+                               ("photonos-4", "Photon OS 4", "x86_64", "pkg"),
+                               ("ubuntu-20.04", "Ubuntu 20.04", "x86_64", "pkg"),
+                               ("ubuntu-20.04-arm64", "Ubuntu 20.04 Arm64", "aarch64", "pkg"),
+                               ("ubuntu-22.04", "Ubuntu 22.04", "x86_64", "pkg"),
+                               ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "aarch64", "pkg"),
+                               ("ubuntu-22.04", "Ubuntu 22.04", "x86_64", "onedir"),
+                               ("ubuntu-22.04-arm64", "Ubuntu 22.04 Arm64", "aarch64", "onedir")
                             ) %>
 
 
-  <%- for slug, display_name, arch in linux_pkg_tests %>
-    <%- set job_name = "{}-pkg-download-tests".format(slug.replace(".", "")) %>
+  <%- for slug, display_name, arch, type in linux_pkg_tests %>
+    <%- set job_name = "{}-pkg-download-tests-{}".format(slug.replace(".", ""), type) %>
 
   <{ job_name }>:
     <%- do test_repo_needs.append(job_name) %>
@@ -55,6 +57,7 @@
       environment: <{ gh_environment }>
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: <{ type }>
     secrets: inherit
 
   <%- endfor %>

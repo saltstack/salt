@@ -46,6 +46,11 @@ on:
         type: string
         description: The nox session to run
         default: test-pkgs-onedir
+      test-type:
+        required: false
+        type: string
+        description: The type of artifact to download
+        default: pkg
 
 
 env:

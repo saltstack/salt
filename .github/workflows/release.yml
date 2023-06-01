@@ -220,7 +220,7 @@ jobs:
         run: |
           tools pkg repo publish release ${{ needs.prepare-workflow.outputs.salt-version }}
 
-  almalinux-8-pkg-download-tests:
+  almalinux-8-pkg-download-tests-pkg:
     name: Test Alma Linux 8 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -237,9 +237,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  almalinux-8-arm64-pkg-download-tests:
+  almalinux-8-arm64-pkg-download-tests-pkg:
     name: Test Alma Linux 8 Arm64 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -256,9 +257,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  almalinux-9-pkg-download-tests:
+  almalinux-9-pkg-download-tests-pkg:
     name: Test Alma Linux 9 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -275,9 +277,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  almalinux-9-arm64-pkg-download-tests:
+  almalinux-9-arm64-pkg-download-tests-pkg:
     name: Test Alma Linux 9 Arm64 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -294,9 +297,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  amazonlinux-2-pkg-download-tests:
+  amazonlinux-2-pkg-download-tests-pkg:
     name: Test Amazon Linux 2 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -313,9 +317,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  amazonlinux-2-arm64-pkg-download-tests:
+  amazonlinux-2-arm64-pkg-download-tests-pkg:
     name: Test Amazon Linux 2 Arm64 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -332,9 +337,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  centos-7-pkg-download-tests:
+  centos-7-pkg-download-tests-pkg:
     name: Test CentOS 7 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -351,9 +357,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  centos-7-arm64-pkg-download-tests:
+  centos-7-arm64-pkg-download-tests-pkg:
     name: Test CentOS 7 Arm64 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -370,9 +377,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  centosstream-8-pkg-download-tests:
+  centosstream-8-pkg-download-tests-pkg:
     name: Test CentOS Stream 8 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -389,9 +397,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  centosstream-8-arm64-pkg-download-tests:
+  centosstream-8-arm64-pkg-download-tests-pkg:
     name: Test CentOS Stream 8 Arm64 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -408,9 +417,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  centosstream-9-pkg-download-tests:
+  centosstream-9-pkg-download-tests-pkg:
     name: Test CentOS Stream 9 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -427,9 +437,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  centosstream-9-arm64-pkg-download-tests:
+  centosstream-9-arm64-pkg-download-tests-pkg:
     name: Test CentOS Stream 9 Arm64 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -446,9 +457,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  debian-10-pkg-download-tests:
+  debian-10-pkg-download-tests-pkg:
     name: Test Debian 10 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -465,9 +477,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  debian-11-pkg-download-tests:
+  debian-11-pkg-download-tests-pkg:
     name: Test Debian 11 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -484,9 +497,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  debian-11-arm64-pkg-download-tests:
+  debian-11-arm64-pkg-download-tests-pkg:
     name: Test Debian 11 Arm64 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -503,9 +517,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  fedora-37-pkg-download-tests:
+  fedora-37-pkg-download-tests-pkg:
     name: Test Fedora 37 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -522,9 +537,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  fedora-37-arm64-pkg-download-tests:
+  fedora-37-arm64-pkg-download-tests-pkg:
     name: Test Fedora 37 Arm64 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -541,9 +557,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  fedora-38-pkg-download-tests:
+  fedora-38-pkg-download-tests-pkg:
     name: Test Fedora 38 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -560,9 +577,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  fedora-38-arm64-pkg-download-tests:
+  fedora-38-arm64-pkg-download-tests-pkg:
     name: Test Fedora 38 Arm64 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -579,9 +597,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  photonos-3-pkg-download-tests:
+  photonos-3-pkg-download-tests-pkg:
     name: Test Photon OS 3 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -598,9 +617,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  photonos-4-pkg-download-tests:
+  photonos-4-pkg-download-tests-pkg:
     name: Test Photon OS 4 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -617,9 +637,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  ubuntu-2004-pkg-download-tests:
+  ubuntu-2004-pkg-download-tests-pkg:
     name: Test Ubuntu 20.04 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -636,9 +657,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  ubuntu-2004-arm64-pkg-download-tests:
+  ubuntu-2004-arm64-pkg-download-tests-pkg:
     name: Test Ubuntu 20.04 Arm64 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -655,9 +677,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  ubuntu-2204-pkg-download-tests:
+  ubuntu-2204-pkg-download-tests-pkg:
     name: Test Ubuntu 22.04 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -674,9 +697,10 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
     secrets: inherit
 
-  ubuntu-2204-arm64-pkg-download-tests:
+  ubuntu-2204-arm64-pkg-download-tests-pkg:
     name: Test Ubuntu 22.04 Arm64 Package Downloads
     if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
     needs:
@@ -693,6 +717,47 @@ jobs:
       environment: release
       skip-code-coverage: true
       latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: pkg
+    secrets: inherit
+
+  ubuntu-2204-pkg-download-tests-onedir:
+    name: Test Ubuntu 22.04 Package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-22.04
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: onedir
+    secrets: inherit
+
+  ubuntu-2204-arm64-pkg-download-tests-onedir:
+    name: Test Ubuntu 22.04 Arm64 Package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-22.04-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      test-type: onedir
     secrets: inherit
 
   macos-12-pkg-download-tests:
@@ -765,31 +830,33 @@ jobs:
       - prepare-workflow
       - backup
       - publish-repositories
-      - almalinux-8-pkg-download-tests
-      - almalinux-8-arm64-pkg-download-tests
-      - almalinux-9-pkg-download-tests
-      - almalinux-9-arm64-pkg-download-tests
-      - amazonlinux-2-pkg-download-tests
-      - amazonlinux-2-arm64-pkg-download-tests
-      - centos-7-pkg-download-tests
-      - centos-7-arm64-pkg-download-tests
-      - centosstream-8-pkg-download-tests
-      - centosstream-8-arm64-pkg-download-tests
-      - centosstream-9-pkg-download-tests
-      - centosstream-9-arm64-pkg-download-tests
-      - debian-10-pkg-download-tests
-      - debian-11-pkg-download-tests
-      - debian-11-arm64-pkg-download-tests
-      - fedora-37-pkg-download-tests
-      - fedora-37-arm64-pkg-download-tests
-      - fedora-38-pkg-download-tests
-      - fedora-38-arm64-pkg-download-tests
-      - photonos-3-pkg-download-tests
-      - photonos-4-pkg-download-tests
-      - ubuntu-2004-pkg-download-tests
-      - ubuntu-2004-arm64-pkg-download-tests
-      - ubuntu-2204-pkg-download-tests
-      - ubuntu-2204-arm64-pkg-download-tests
+      - almalinux-8-pkg-download-tests-pkg
+      - almalinux-8-arm64-pkg-download-tests-pkg
+      - almalinux-9-pkg-download-tests-pkg
+      - almalinux-9-arm64-pkg-download-tests-pkg
+      - amazonlinux-2-pkg-download-tests-pkg
+      - amazonlinux-2-arm64-pkg-download-tests-pkg
+      - centos-7-pkg-download-tests-pkg
+      - centos-7-arm64-pkg-download-tests-pkg
+      - centosstream-8-pkg-download-tests-pkg
+      - centosstream-8-arm64-pkg-download-tests-pkg
+      - centosstream-9-pkg-download-tests-pkg
+      - centosstream-9-arm64-pkg-download-tests-pkg
+      - debian-10-pkg-download-tests-pkg
+      - debian-11-pkg-download-tests-pkg
+      - debian-11-arm64-pkg-download-tests-pkg
+      - fedora-37-pkg-download-tests-pkg
+      - fedora-37-arm64-pkg-download-tests-pkg
+      - fedora-38-pkg-download-tests-pkg
+      - fedora-38-arm64-pkg-download-tests-pkg
+      - photonos-3-pkg-download-tests-pkg
+      - photonos-4-pkg-download-tests-pkg
+      - ubuntu-2004-pkg-download-tests-pkg
+      - ubuntu-2004-arm64-pkg-download-tests-pkg
+      - ubuntu-2204-pkg-download-tests-pkg
+      - ubuntu-2204-arm64-pkg-download-tests-pkg
+      - ubuntu-2204-pkg-download-tests-onedir
+      - ubuntu-2204-arm64-pkg-download-tests-onedir
       - macos-12-pkg-download-tests
       - windows-2022-nsis-amd64-pkg-download-tests
       - windows-2022-msi-amd64-pkg-download-tests
