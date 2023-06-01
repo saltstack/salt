@@ -291,7 +291,7 @@ pymysql==1.0.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/windows.txt
-pyopenssl==23.1.1
+pyopenssl==23.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   -r requirements/windows.txt
