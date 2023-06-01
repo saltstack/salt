@@ -6,5 +6,5 @@ netaddr
 profitbricks
 pypsexec
 pywinrm
-pyspnego==0.8.0
-smbprotocol==1.10.1
+pyspnego
+smbprotocol
