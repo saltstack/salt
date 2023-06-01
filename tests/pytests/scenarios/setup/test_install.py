@@ -28,6 +28,8 @@ def use_static_requirements_ids(value):
 
 @pytest.fixture(params=[True, False], ids=use_static_requirements_ids)
 def use_static_requirements(request):
+    if not request.param and salt.utils.platform.is_windows():
+        pytest.skip("Windows installs with statis requirements only")
     return request.param
 
 
