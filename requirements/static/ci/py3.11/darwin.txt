@@ -112,7 +112,7 @@ dnspython==2.3.0
     # via
     #   -r requirements/static/ci/common.in
     #   python-etcd
-docker==5.0.3
+docker==6.1.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
@@ -246,6 +246,7 @@ packaging==23.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
+    #   docker
     #   pytest
 passlib[bcrypt]==1.7.4
     # via -r requirements/static/ci/common.in
@@ -450,6 +451,7 @@ urllib3==1.26.6
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   botocore
+    #   docker
     #   kubernetes
     #   python-etcd
     #   requests
