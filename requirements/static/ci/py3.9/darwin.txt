@@ -49,7 +49,7 @@ cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
-certifi==2022.12.7
+certifi==2023.5.7
     # via
     #   -c requirements/static/ci/../pkg/py3.9/darwin.txt
     #   -r requirements/static/ci/common.in
