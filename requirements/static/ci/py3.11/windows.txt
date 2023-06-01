@@ -491,7 +491,7 @@ xmltodict==0.12.0
     # via
     #   moto
     #   pywinrm
-yamllint==1.28.0
+yamllint==1.32.0
     # via -r requirements/static/ci/windows.in
 yarl==1.8.1
     # via aiohttp
