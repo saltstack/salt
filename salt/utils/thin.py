@@ -33,16 +33,14 @@ import salt.utils.stringutils
 import salt.version
 
 # This is needed until we drop support for python 3.6
+has_immutables = False
 try:
     import immutables
-except ImportError:
-    immutables = None
 
-try:
-    # typing_extensions is an immutables dependency on newer versions
-    import typing_extensions
+    has_immutables = True
 except ImportError:
-    typing_extensions = None
+    pass
+
 
 try:
     import zlib
@@ -434,7 +432,6 @@ def get_tops(extra_mods="", so_mods=""):
         backports_abc,
         looseversion,
         packaging,
-        immutables,
     ]
     modules = find_site_modules("contextvars")
     if modules:
@@ -443,8 +440,8 @@ def get_tops(extra_mods="", so_mods=""):
         contextvars = py_contextvars
     log.debug("Using contextvars %r", contextvars)
     mods.append(contextvars)
-    if typing_extensions is not None:
-        mods.append(typing_extensions)
+    if has_immutables:
+        mods.append(immutables)
     for mod in mods:
         if mod:
             log.debug('Adding module to the tops: "%s"', mod.__name__)

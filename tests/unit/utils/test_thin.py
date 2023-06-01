@@ -446,14 +446,10 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.looseversion",
         type("looseversion", (), {"__file__": "/site-packages/looseversion"}),
     )
-    @patch(
+    @patch_if(
+        salt.utils.thin.has_immutables,
         "salt.utils.thin.immutables",
         type("immutables", (), {"__file__": "/site-packages/immutables"}),
-    )
-    @patch_if(
-        salt.utils.thin.typing_extensions is not None,
-        "salt.utils.thin.typing_extensions",
-        type("typing_extensions", (), {"__file__": "/site-packages/typing_extensions"}),
     )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops(self):
@@ -478,10 +474,9 @@ class SSHThinTestCase(TestCase):
             "contextvars",
             "looseversion",
             "packaging",
-            "immutables",
         ]
-        if salt.utils.thin.typing_extensions is not None:
-            base_tops.append("typing_extensions")
+        if salt.utils.thin.has_immutables:
+            base_tops.extend(["immutables"])
         tops = []
         for top in thin.get_tops(extra_mods="foo,bar"):
             if top.find("/") != -1:
@@ -556,14 +551,10 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.looseversion",
         type("looseversion", (), {"__file__": "/site-packages/looseversion"}),
     )
-    @patch(
+    @patch_if(
+        salt.utils.thin.has_immutables,
         "salt.utils.thin.immutables",
         type("immutables", (), {"__file__": "/site-packages/immutables"}),
-    )
-    @patch_if(
-        salt.utils.thin.typing_extensions is not None,
-        "salt.utils.thin.typing_extensions",
-        type("typing_extensions", (), {"__file__": "/site-packages/typing_extensions"}),
     )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_extra_mods(self):
@@ -588,12 +579,11 @@ class SSHThinTestCase(TestCase):
             "contextvars",
             "looseversion",
             "packaging",
-            "immutables",
             "foo",
             "bar.py",
         ]
-        if salt.utils.thin.typing_extensions is not None:
-            base_tops.append("typing_extensions")
+        if salt.utils.thin.has_immutables:
+            base_tops.extend(["immutables"])
         libs = salt.utils.thin.find_site_modules("contextvars")
         foo = {"__file__": os.sep + os.path.join("custom", "foo", "__init__.py")}
         bar = {"__file__": os.sep + os.path.join("custom", "bar")}
@@ -676,14 +666,10 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.looseversion",
         type("looseversion", (), {"__file__": "/site-packages/looseversion"}),
     )
-    @patch(
+    @patch_if(
+        salt.utils.thin.has_immutables,
         "salt.utils.thin.immutables",
         type("immutables", (), {"__file__": "/site-packages/immutables"}),
-    )
-    @patch_if(
-        salt.utils.thin.typing_extensions is not None,
-        "salt.utils.thin.typing_extensions",
-        type("typing_extensions", (), {"__file__": "/site-packages/typing_extensions"}),
     )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_so_mods(self):
@@ -708,12 +694,11 @@ class SSHThinTestCase(TestCase):
             "contextvars",
             "looseversion",
             "packaging",
-            "immutables",
             "foo.so",
             "bar.so",
         ]
-        if salt.utils.thin.typing_extensions is not None:
-            base_tops.append("typing_extensions")
+        if salt.utils.thin.has_immutables:
+            base_tops.extend(["immutables"])
         libs = salt.utils.thin.find_site_modules("contextvars")
         with patch("salt.utils.thin.find_site_modules", MagicMock(side_effect=[libs])):
             with patch(
