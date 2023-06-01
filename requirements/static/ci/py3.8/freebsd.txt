@@ -63,7 +63,6 @@ cffi==1.15.1
     #   -r requirements/static/ci/common.in
     #   cryptography
     #   napalm
-    #   pygit2
     #   pynacl
 charset-normalizer==2.1.1
     # via
@@ -331,8 +330,6 @@ pydantic==1.10.8
     #   inflect
 pyeapi==0.8.3
     # via napalm
-pygit2==1.8.0
-    # via -r requirements/static/ci/freebsd.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
 pynacl==1.5.0
