@@ -51,8 +51,6 @@ botocore==1.29.143
     #   boto3
     #   moto
     #   s3transfer
-cached-property==1.5.2
-    # via pygit2
 cachetools==4.2.2
     # via google-auth
 cassandra-driver==3.27.0
@@ -351,7 +349,7 @@ pydantic==1.10.8
     #   inflect
 pyeapi==0.8.3
     # via napalm
-pygit2==1.5.0 ; python_version > "3.8"
+pygit2==1.12.1 ; python_version >= "3.8"
     # via -r requirements/static/ci/linux.in
 pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
