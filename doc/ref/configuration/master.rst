@@ -4046,29 +4046,6 @@ This option defines the update interval (in seconds) for :ref:`MinionFS
 
     minionfs_update_interval: 120
 
-azurefs: Azure File Server Backend
-----------------------------------
-
-.. versionadded:: 2015.8.0
-
-See the :mod:`azurefs documentation <salt.fileserver.azurefs>` for usage
-examples.
-
-.. conf_master:: azurefs_update_interval
-
-``azurefs_update_interval``
-***************************
-
-.. versionadded:: 2018.3.0
-
-Default: ``60``
-
-This option defines the update interval (in seconds) for azurefs.
-
-.. code-block:: yaml
-
-    azurefs_update_interval: 120
-
 s3fs: S3 File Server Backend
 ----------------------------
 
