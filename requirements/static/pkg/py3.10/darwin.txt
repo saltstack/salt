@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements/static/pkg/py3.10/darwin.txt requirements/darwin.txt requirements/static/pkg/darwin.in
 #
-apache-libcloud==2.5.0
+apache-libcloud==3.7.0
     # via -r requirements/darwin.txt
 autocommand==2.2.2
     # via jaraco.text
