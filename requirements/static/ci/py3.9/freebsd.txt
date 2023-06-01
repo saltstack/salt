@@ -120,7 +120,7 @@ dnspython==2.3.0
     #   -r requirements/static/ci/common.in
     #   ciscoconfparse
     #   python-etcd
-docker==5.0.3
+docker==6.1.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
@@ -282,6 +282,7 @@ packaging==23.1
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -r requirements/base.txt
+    #   docker
     #   pytest
 paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
@@ -530,6 +531,7 @@ urllib3==1.26.6
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   botocore
+    #   docker
     #   kubernetes
     #   python-etcd
     #   requests
