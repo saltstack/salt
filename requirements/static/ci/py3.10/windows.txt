@@ -366,7 +366,7 @@ pywin32==306
     #   docker
     #   pytest-skip-markers
     #   wmi
-pywinrm==0.4.1
+pywinrm==0.4.3
     # via -r requirements/static/ci/windows.in
 pyyaml==6.0
     # via
