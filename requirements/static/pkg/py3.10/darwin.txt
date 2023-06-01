@@ -34,7 +34,7 @@ idna==3.4
     # via
     #   -r requirements/darwin.txt
     #   requests
-immutables==0.19
+immutables==0.15
     # via contextvars
 inflect==6.0.4
     # via jaraco.text

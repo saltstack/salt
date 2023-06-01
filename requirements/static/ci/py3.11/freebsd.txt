@@ -148,7 +148,7 @@ idna==3.4
     #   etcd3-py
     #   requests
     #   yarl
-immutables==0.19
+immutables==0.15
     # via
     #   -c requirements/static/ci/../pkg/py3.11/freebsd.txt
     #   contextvars

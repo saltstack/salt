@@ -40,7 +40,7 @@ filelock==3.9.0
     # via virtualenv
 idna==3.4
     # via requests
-immutables==0.19
+immutables==0.15
     # via contextvars
 inflect==6.0.2
     # via jaraco.text

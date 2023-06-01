@@ -28,7 +28,7 @@ distro==1.8.0
     #   -r requirements/static/pkg/freebsd.in
 idna==3.4
     # via requests
-immutables==0.19
+immutables==0.15
     # via contextvars
 importlib-metadata==6.6.0
     # via -r requirements/static/pkg/freebsd.in
