@@ -42,7 +42,7 @@ pycparser==2.21
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   cffi
-pypsexec==0.1.0
+pypsexec==0.3.0
     # via -r requirements/static/ci/cloud.in
 pyspnego==0.8.0
     # via
@@ -63,7 +63,6 @@ six==1.16.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   profitbricks
-    #   pypsexec
     #   pywinrm
 smbprotocol==1.10.1
     # via
