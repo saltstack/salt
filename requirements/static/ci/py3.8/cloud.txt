@@ -48,7 +48,7 @@ pyspnego==0.8.0
     # via
     #   -r requirements/static/ci/cloud.in
     #   smbprotocol
-pywinrm==0.3.0
+pywinrm==0.4.3
     # via -r requirements/static/ci/cloud.in
 requests-ntlm==1.1.0
     # via pywinrm
