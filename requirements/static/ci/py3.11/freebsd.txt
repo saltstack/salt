@@ -140,7 +140,7 @@ gitpython==3.1.30
     # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
-hglib==2.6.1
+hglib==2.6.2
     # via -r requirements/static/ci/freebsd.in
 idna==3.4
     # via

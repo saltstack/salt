@@ -151,7 +151,7 @@ google-auth==1.6.3
     # via kubernetes
 h11==0.14.0
     # via httpcore
-hglib==2.6.1
+hglib==2.6.2
     # via -r requirements/static/ci/linux.in
 httpcore==0.17.2
     # via httpx
