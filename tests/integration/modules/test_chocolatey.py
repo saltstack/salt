@@ -7,6 +7,7 @@ from tests.support.unit import skipIf
 
 
 @skipIf(not salt.utils.platform.is_windows(), "Tests for only Windows")
+@skipIf(not salt.utils.path.which("choco"), "chocolatey not found")
 @pytest.mark.windows_whitelisted
 @pytest.mark.destructive_test
 class ChocolateyModuleTest(ModuleCase):
