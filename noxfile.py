@@ -10,6 +10,7 @@ Nox configuration script
 import datetime
 import os
 import pathlib
+import platform
 import sys
 import tempfile
 
@@ -720,6 +721,16 @@ def pytest_tornado(session, coverage):
 def _pytest(session, coverage, cmd_args):
     # Create required artifacts directories
     _create_ci_directories()
+
+    if "amzn2" in platform.release():
+        # workaround on 3005 for https://github.com/saltstack/salt/issues/62851
+        session.run(
+            "pip3",
+            "install",
+            "-y",
+            "importlib_metadata<5.0.0",
+            silent=True,
+        )
 
     env = {"CI_RUN": "1" if CI_RUN else "0"}
 
