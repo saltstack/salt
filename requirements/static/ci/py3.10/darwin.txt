@@ -410,7 +410,7 @@ pytz==2023.3
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   tempora
-pyvmomi==6.7.1.2018.12
+pyvmomi==8.0.1.0.1
     # via -r requirements/static/ci/common.in
 pyyaml==6.0
     # via
@@ -440,7 +440,6 @@ requests==2.31.0
     #   kubernetes
     #   moto
     #   napalm
-    #   pyvmomi
     #   responses
     #   vcert
     #   vultr

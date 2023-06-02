@@ -361,7 +361,7 @@ pytz==2023.3
     # via
     #   -c requirements/static/ci/../pkg/py3.9/windows.txt
     #   tempora
-pyvmomi==6.7.1.2018.12
+pyvmomi==8.0.1.0.1
     # via -r requirements/static/ci/common.in
 pywin32==306
     # via
@@ -398,7 +398,6 @@ requests==2.31.0
     #   etcd3-py
     #   kubernetes
     #   moto
-    #   pyvmomi
     #   pywinrm
     #   requests-ntlm
     #   responses
