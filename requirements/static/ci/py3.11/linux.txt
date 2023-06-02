@@ -202,7 +202,7 @@ jmespath==1.0.1
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
-jsonschema==3.2.0
+jsonschema==4.17.3
     # via -r requirements/static/ci/common.in
 jxmlease==1.0.1 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
@@ -451,7 +451,6 @@ six==1.16.0
     #   genshi
     #   geomet
     #   google-auth
-    #   jsonschema
     #   kazoo
     #   kubernetes
     #   mock
