@@ -18,7 +18,7 @@ contextvars==2.4
     # via -r requirements/base.txt
 cryptography==39.0.2
     # via pyopenssl
-distro==1.5.0
+distro==1.8.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
