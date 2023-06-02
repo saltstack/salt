@@ -849,8 +849,6 @@ repos:
 #          - --resolver=backtracking
           - --py-version=3.8
           - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
@@ -864,8 +862,6 @@ repos:
 #          - --resolver=backtracking
           - --py-version=3.9
           - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
@@ -879,8 +875,6 @@ repos:
 #          - --resolver=backtracking
           - --py-version=3.10
           - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
@@ -894,8 +888,6 @@ repos:
 #          - --resolver=backtracking
           - --py-version=3.11
           - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
           - requirements/static/ci/docs.in
   # <---- Doc CI Requirements ----------------------------------------------------------------------------------------
 
