@@ -145,7 +145,7 @@ pyzmq==25.1.0
     #   pytest-salt-factories
 requests==2.31.0
     # via -r requirements/base.txt
-tempora==5.2.1
+tempora==5.2.2
     # via portend
 tomli==2.0.1
     # via pytest
