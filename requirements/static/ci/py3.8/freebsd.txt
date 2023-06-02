@@ -522,7 +522,7 @@ tornado==6.3.2 ; python_version >= "3.8"
     #   -r requirements/base.txt
 transitions==0.8.1
     # via junos-eznc
-typing-extensions==4.6.0
+typing-extensions==4.6.2
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   pydantic

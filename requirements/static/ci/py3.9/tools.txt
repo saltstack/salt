@@ -50,7 +50,7 @@ s3transfer==0.5.2
     # via boto3
 six==1.16.0
     # via python-dateutil
-typing-extensions==4.6.0
+typing-extensions==4.6.2
     # via python-tools-scripts
 urllib3==1.26.12
     # via
