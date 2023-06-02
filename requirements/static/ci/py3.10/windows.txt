@@ -38,7 +38,7 @@ botocore==1.29.143
     #   s3transfer
 cachetools==3.1.0
     # via google-auth
-cassandra-driver==3.23.0
+cassandra-driver==3.27.0
     # via -r requirements/static/ci/common.in
 certifi==2023.5.7
     # via
@@ -89,6 +89,7 @@ cryptography==40.0.2
     # via
     #   -c requirements/static/ci/../pkg/py3.10/windows.txt
     #   -r requirements/crypto.txt
+    #   cassandra-driver
     #   etcd3-py
     #   moto
     #   pyopenssl
