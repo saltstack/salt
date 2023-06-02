@@ -81,7 +81,7 @@ msgpack==1.0.5
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
-packaging==21.3
+packaging==23.1
     # via
     #   -r requirements/base.txt
     #   pytest
@@ -103,8 +103,6 @@ pycryptodomex==3.17
     # via -r requirements/crypto.txt
 pydantic==1.10.4
     # via inflect
-pyparsing==3.0.9
-    # via packaging
 pytest-helpers-namespace==2021.12.29
     # via
     #   pytest-salt-factories
