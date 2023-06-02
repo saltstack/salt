@@ -39,8 +39,6 @@ immutables==0.15
     # via contextvars
 importlib-metadata==4.6.4
     # via -r requirements/windows.txt
-ioloop==0.1a0
-    # via -r requirements/windows.txt
 jaraco.classes==3.2.1
     # via jaraco.collections
 jaraco.collections==3.3.0
