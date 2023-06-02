@@ -84,7 +84,7 @@ cherrypy==18.8.0
     #   -r requirements/static/pkg/freebsd.in
 click==7.1.2
     # via geomet
-clustershell==1.8.3
+clustershell==1.9.1
     # via -r requirements/static/ci/common.in
 contextvars==2.4
     # via

@@ -98,7 +98,7 @@ ciscoconfparse==1.5.19
     # via napalm
 click==7.1.1
     # via geomet
-clustershell==1.8.3
+clustershell==1.9.1
     # via -r requirements/static/ci/common.in
 colorama==0.4.3
     # via ciscoconfparse

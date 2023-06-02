@@ -77,7 +77,7 @@ clr-loader==0.2.4
     # via
     #   -c requirements/static/ci/../pkg/py3.11/windows.txt
     #   pythonnet
-clustershell==1.8.3
+clustershell==1.9.1
     # via -r requirements/static/ci/common.in
 colorama==0.4.1
     # via pytest
