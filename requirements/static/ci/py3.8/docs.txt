@@ -28,7 +28,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/base.txt
-distro==1.5.0
+distro==1.8.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/base.txt
