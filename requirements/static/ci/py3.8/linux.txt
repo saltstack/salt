@@ -442,7 +442,7 @@ pytz==2023.3
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   tempora
     #   twilio
-pyvmomi==6.7.1.2018.12
+pyvmomi==8.0.1.0.1
     # via -r requirements/static/ci/common.in
 pyyaml==6.0
     # via
@@ -478,7 +478,6 @@ requests==2.31.0
     #   moto
     #   napalm
     #   python-consul
-    #   pyvmomi
     #   responses
     #   twilio
     #   vcert
