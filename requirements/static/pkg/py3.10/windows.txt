@@ -4,6 +4,8 @@
 #
 #    pip-compile --output-file=requirements/static/pkg/py3.10/windows.txt requirements/static/pkg/windows.in requirements/windows.txt
 #
+autocommand==2.2.2
+    # via jaraco.text
 certifi==2023.5.7
     # via
     #   -r requirements/windows.txt
@@ -39,16 +41,18 @@ immutables==0.19
     # via contextvars
 importlib-metadata==6.6.0
     # via -r requirements/windows.txt
-jaraco.classes==3.2.1
-    # via jaraco.collections
-jaraco.collections==3.3.0
+inflect==6.0.4
+    # via jaraco.text
+jaraco.collections==4.1.0
     # via cherrypy
-jaraco.functools==2.0
+jaraco.context==4.3.0
+    # via jaraco.text
+jaraco.functools==3.7.0
     # via
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.5.0
+jaraco.text==3.11.1
     # via jaraco.collections
 jinja2==3.1.2
     # via -r requirements/base.txt
@@ -66,8 +70,8 @@ more-itertools==9.1.0
     # via
     #   cheroot
     #   cherrypy
-    #   jaraco.classes
     #   jaraco.functools
+    #   jaraco.text
 msgpack==1.0.5
     # via -r requirements/base.txt
 packaging==23.1
@@ -82,6 +86,8 @@ pycparser==2.21
     # via cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
+pydantic==1.10.8
+    # via inflect
 pymssql==2.2.7
     # via -r requirements/windows.txt
 pymysql==1.0.2
@@ -120,6 +126,8 @@ timelib==0.3.0
     # via -r requirements/windows.txt
 tornado==6.3.2 ; python_version >= "3.8"
     # via -r requirements/base.txt
+typing-extensions==4.6.0
+    # via pydantic
 urllib3==1.26.6
     # via
     #   -r requirements/windows.txt

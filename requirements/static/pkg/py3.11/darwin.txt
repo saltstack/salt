@@ -6,6 +6,8 @@
 #
 apache-libcloud==2.5.0
     # via -r requirements/darwin.txt
+autocommand==2.2.2
+    # via jaraco.text
 certifi==2023.5.7
     # via requests
 cffi==1.15.1
@@ -34,16 +36,18 @@ idna==2.8
     #   requests
 immutables==0.19
     # via contextvars
-jaraco.classes==3.2.1
-    # via jaraco.collections
-jaraco.collections==3.4.0
+inflect==6.0.4
+    # via jaraco.text
+jaraco.collections==4.1.0
     # via cherrypy
-jaraco.functools==2.0
+jaraco.context==4.3.0
+    # via jaraco.text
+jaraco.functools==3.7.0
     # via
     #   cheroot
     #   jaraco.text
     #   tempora
-jaraco.text==3.5.1
+jaraco.text==3.11.1
     # via jaraco.collections
 jinja2==3.1.2
     # via -r requirements/base.txt
@@ -61,8 +65,8 @@ more-itertools==9.1.0
     # via
     #   cheroot
     #   cherrypy
-    #   jaraco.classes
     #   jaraco.functools
+    #   jaraco.text
 msgpack==1.0.5
     # via -r requirements/base.txt
 packaging==23.1
@@ -77,6 +81,8 @@ pycparser==2.21
     # via cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
+pydantic==1.10.8
+    # via inflect
 pyopenssl==23.1.1
     # via -r requirements/darwin.txt
 python-dateutil==2.8.2
@@ -106,6 +112,8 @@ timelib==0.3.0
     # via -r requirements/darwin.txt
 tornado==6.3.2 ; python_version >= "3.8"
     # via -r requirements/base.txt
+typing-extensions==4.6.0
+    # via pydantic
 urllib3==1.26.6
     # via requests
 vultr==1.0.1
