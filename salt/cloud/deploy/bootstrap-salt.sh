@@ -8614,7 +8614,7 @@ install_gentoo_git_deps() {
             sys-apps/pciutils
             dev-python/pyyaml
             dev-python/pyzmq
-            dev-python/pynacl
+            dev-python/libnacl
             dev-python/pycryptodome
             dev-python/py
             dev-python/requests

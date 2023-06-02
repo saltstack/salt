@@ -125,7 +125,7 @@ def __virtual__():
 
 def keygen(sk_file=None, pk_file=None, **kwargs):
     """
-    Use libnacl to generate a keypair.
+    Use PyNaCL to generate a keypair.
 
     If no `sk_file` is defined return a keypair.
 
