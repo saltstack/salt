@@ -130,7 +130,7 @@ packaging==23.1
     #   -c requirements/static/ci/py3.8/linux.txt
     #   -r requirements/base.txt
     #   sphinx
-portend==2.4
+portend==3.1.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   cherrypy
@@ -200,7 +200,7 @@ sphinxcontrib-serializinghtml==1.1.4
     # via sphinx
 sphinxcontrib-spelling==7.7.0
     # via -r requirements/static/ci/docs.in
-tempora==4.1.1
+tempora==5.2.2
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   portend
