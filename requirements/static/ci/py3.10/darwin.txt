@@ -72,7 +72,7 @@ charset-normalizer==2.1.1
     #   requests
 cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
-cheroot==8.5.2
+cheroot==10.0.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   cherrypy
@@ -423,7 +423,6 @@ six==1.16.0
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   bcrypt
     #   cassandra-driver
-    #   cheroot
     #   etcd3-py
     #   genshi
     #   geomet
