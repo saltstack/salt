@@ -136,8 +136,10 @@ def salt_release():
 
 
 @pytest.fixture(scope="module")
-def downloads_path(tmp_path_factory):
-    return tmp_path_factory.mktemp("downloads")
+def onedir_install_path(tmp_path_factory):
+    install_path = tmp_path_factory.mktemp("onedir_install")
+    yield install_path
+    shutil.rmtree(install_path, ignore_errors=True)
 
 
 @pytest.fixture(scope="module")
@@ -149,8 +151,10 @@ def _setup_system(
     gpg_key_name,
     repo_subpath,
     artifact_type,
-    downloads_path,
+    tmp_path_factory,
+    onedir_install_path,
 ):
+    downloads_path = tmp_path_factory.mktemp("downloads")
     try:
         # Windows is a special case, because sometimes we need to uninstall the packages
         if grains["os_family"] == "Windows":
@@ -227,6 +231,7 @@ def _setup_system(
                     gpg_key_name=gpg_key_name,
                     repo_subpath=repo_subpath,
                     artifact_type=artifact_type,
+                    onedir_install_path=onedir_install_path,
                 )
             else:
                 pytest.fail("Don't know how to handle %s", grains["osfinger"])
@@ -304,6 +309,7 @@ def setup_debian_family(
     gpg_key_name,
     repo_subpath,
     artifact_type,
+    onedir_install_path,
 ):
     arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
     ret = shell.run("apt-get", "update", "-y", check=False)
@@ -370,7 +376,7 @@ def setup_debian_family(
             repo_url_base = f"{root_url}/onedir/{repo_subpath}"
         onedir_url = f"{repo_url_base}/{onedir_name}"
         onedir_location = downloads_path / onedir_name
-        onedir_extracted = downloads_path / "onedir_extracted"
+        onedir_extracted = onedir_install_path
 
         try:
             pytest.helpers.download_file(onedir_url, onedir_location)
@@ -460,7 +466,7 @@ def setup_windows(shell, root_url, salt_release, downloads_path, repo_subpath):
 
 
 @pytest.fixture(scope="module")
-def install_dir(_setup_system, artifact_type, downloads_path):
+def install_dir(_setup_system, artifact_type, onedir_install_path):
     if artifact_type == "package":
         if platform.is_windows():
             return pathlib.Path(
@@ -471,7 +477,7 @@ def install_dir(_setup_system, artifact_type, downloads_path):
         return pathlib.Path("/opt", "saltstack", "salt")
     else:
         # We are testing the onedir
-        return downloads_path / "onedir_extracted" / "salt"
+        return onedir_install_path / "salt"
 
 
 @pytest.fixture(scope="module")
