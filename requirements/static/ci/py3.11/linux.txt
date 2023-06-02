@@ -381,7 +381,7 @@ pytz==2022.1
     #   tzlocal
 pyvmomi==6.7.1.2018.12
     # via -r requirements/static/ci/common.in
-pyyaml==5.4.1
+pyyaml==6.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   -r requirements/base.txt
