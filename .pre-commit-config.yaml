@@ -903,11 +903,6 @@ repos:
 #          - --resolver=backtracking
           - --py-version=3.8
           - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/static/pkg/linux.in
-          - --include=requirements/static/ci/linux.in
-          - --include=requirements/static/ci/common.in
           - requirements/static/ci/lint.in
 
       - id: pip-tools-compile
@@ -921,11 +916,6 @@ repos:
 #          - --resolver=backtracking
           - --py-version=3.9
           - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/static/pkg/linux.in
-          - --include=requirements/static/ci/linux.in
-          - --include=requirements/static/ci/common.in
           - requirements/static/ci/lint.in
 
       - id: pip-tools-compile
@@ -939,11 +929,6 @@ repos:
 #          - --resolver=backtracking
           - --py-version=3.10
           - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/static/pkg/linux.in
-          - --include=requirements/static/ci/linux.in
-          - --include=requirements/static/ci/common.in
           - requirements/static/ci/lint.in
 
       - id: pip-tools-compile
@@ -957,11 +942,6 @@ repos:
 #          - --resolver=backtracking
           - --py-version=3.11
           - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/static/pkg/linux.in
-          - --include=requirements/static/ci/linux.in
-          - --include=requirements/static/ci/common.in
           - requirements/static/ci/lint.in
 
   # <---- Lint CI Requirements ---------------------------------------------------------------------------------------
