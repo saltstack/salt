@@ -727,7 +727,6 @@ def _pytest(session, coverage, cmd_args):
         session.run(
             "pip3",
             "install",
-            "-y",
             "importlib_metadata<5.0.0",
             silent=True,
         )
