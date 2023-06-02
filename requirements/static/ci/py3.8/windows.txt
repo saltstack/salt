@@ -209,7 +209,7 @@ markupsafe==2.1.2
     #   werkzeug
 mock==3.0.5
     # via -r requirements/pytest.txt
-more-itertools==8.2.0
+more-itertools==9.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
     #   cheroot
