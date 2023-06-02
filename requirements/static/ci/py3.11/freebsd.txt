@@ -213,7 +213,7 @@ mercurial==6.0.1
     # via -r requirements/static/ci/freebsd.in
 mock==3.0.5
     # via -r requirements/pytest.txt
-more-itertools==5.0.0
+more-itertools==9.1.0
     # via
     #   -c requirements/static/ci/../pkg/py3.11/freebsd.txt
     #   cheroot
@@ -403,7 +403,6 @@ six==1.16.0
     #   kazoo
     #   kubernetes
     #   mock
-    #   more-itertools
     #   paramiko
     #   pynacl
     #   python-dateutil
