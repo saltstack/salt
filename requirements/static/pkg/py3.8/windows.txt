@@ -29,7 +29,7 @@ cryptography==40.0.2
     #   pyopenssl
 distro==1.8.0
     # via -r requirements/base.txt
-gitdb==4.0.7
+gitdb==4.0.10
     # via gitpython
 gitpython==3.1.31
     # via -r requirements/windows.txt

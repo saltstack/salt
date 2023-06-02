@@ -201,7 +201,7 @@ geomet==0.1.2
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   cassandra-driver
-gitdb==4.0.5
+gitdb==4.0.10
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   gitpython
