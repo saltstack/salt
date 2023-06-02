@@ -381,7 +381,7 @@ pytest==7.2.0 ; python_version > "3.6"
     #   pytest-system-statistics
     #   pytest-tempdir
     #   pytest-timeout
-python-dateutil==2.8.1
+python-dateutil==2.8.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -r requirements/static/pkg/freebsd.in
