@@ -127,7 +127,7 @@ pytest==7.2.1
     #   pytest-skip-markers
     #   pytest-system-statistics
     #   pytest-tempdir
-pytz==2022.7.1
+pytz==2023.3
     # via tempora
 pyyaml==6.0
     # via -r requirements/base.txt
