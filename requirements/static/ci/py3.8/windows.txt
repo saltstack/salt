@@ -268,7 +268,6 @@ pyasn1==0.4.8
 pycparser==2.21
     # via
     #   -c requirements/static/ci/../pkg/py3.8/windows.txt
-    #   -r requirements/windows.txt
     #   cffi
 pycryptodomex==3.10.1
     # via
