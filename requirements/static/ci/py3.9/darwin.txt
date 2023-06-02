@@ -210,7 +210,7 @@ jmespath==1.0.1
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
-jsonschema==3.2.0
+jsonschema==4.17.3
     # via -r requirements/static/ci/common.in
 junos-eznc==2.4.0 ; sys_platform != "win32" and python_version <= "3.10"
     # via
@@ -477,7 +477,6 @@ six==1.16.0
     #   genshi
     #   geomet
     #   google-auth
-    #   jsonschema
     #   junos-eznc
     #   kubernetes
     #   mock
