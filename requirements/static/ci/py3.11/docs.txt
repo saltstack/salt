@@ -126,7 +126,7 @@ psutil==5.9.5
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/base.txt
-pycparser==2.21 ; python_version >= "3.9"
+pycparser==2.21
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   cffi
