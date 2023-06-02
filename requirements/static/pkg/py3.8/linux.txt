@@ -57,7 +57,7 @@ more-itertools==5.0.0
     #   jaraco.functools
 msgpack==1.0.5
     # via -r requirements/base.txt
-packaging==21.3
+packaging==23.1
     # via -r requirements/base.txt
 portend==2.4
     # via cherrypy
@@ -69,8 +69,6 @@ pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pyopenssl==23.0.0
     # via -r requirements/static/pkg/linux.in
-pyparsing==3.0.9
-    # via packaging
 python-dateutil==2.8.1
     # via -r requirements/static/pkg/linux.in
 python-gnupg==0.4.8

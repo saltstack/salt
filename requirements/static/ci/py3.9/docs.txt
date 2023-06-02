@@ -109,7 +109,7 @@ msgpack==1.0.5
     #   -r requirements/base.txt
 myst-docutils[linkify]==0.18.1
     # via -r requirements/static/ci/docs.in
-packaging==21.3
+packaging==23.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/base.txt
@@ -130,10 +130,6 @@ pyenchant==3.2.2
     # via sphinxcontrib-spelling
 pygments==2.14.0
     # via sphinx
-pyparsing==3.0.9
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   packaging
 pytz==2022.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt

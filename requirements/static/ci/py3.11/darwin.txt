@@ -233,7 +233,7 @@ multidict==6.0.2
     #   yarl
 oscrypto==1.2.0
     # via certvalidator
-packaging==21.3
+packaging==23.1
     # via
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
@@ -284,10 +284,6 @@ pyopenssl==23.0.0
     #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
     #   -r requirements/darwin.txt
     #   etcd3-py
-pyparsing==3.0.9
-    # via
-    #   -c requirements/static/ci/../pkg/py3.11/darwin.txt
-    #   packaging
 pyrsistent==0.17.3
     # via jsonschema
 pytest-custom-exit-code==0.3.0
