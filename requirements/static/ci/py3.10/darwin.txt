@@ -235,7 +235,7 @@ more-itertools==8.2.0
     #   jaraco.functools
 moto==3.0.1
     # via -r requirements/static/ci/common.in
-msgpack==1.0.2
+msgpack==1.0.5
     # via
     #   -c requirements/static/ci/../pkg/py3.10/darwin.txt
     #   -r requirements/base.txt

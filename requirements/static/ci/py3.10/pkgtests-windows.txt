@@ -77,7 +77,7 @@ more-itertools==9.0.0
     #   jaraco.classes
     #   jaraco.functools
     #   jaraco.text
-msgpack==1.0.4
+msgpack==1.0.5
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
