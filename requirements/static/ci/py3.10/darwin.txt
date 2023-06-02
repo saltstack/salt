@@ -201,7 +201,7 @@ jmespath==1.0.1
     #   botocore
 jsonschema==3.2.0
     # via -r requirements/static/ci/common.in
-junos-eznc==2.6.0 ; sys_platform != "win32" and python_version <= "3.10"
+junos-eznc==2.6.7 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 jxmlease==1.0.1 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
@@ -253,7 +253,7 @@ multidict==6.0.2
     # via
     #   aiohttp
     #   yarl
-ncclient==0.6.9
+ncclient==0.6.13
     # via junos-eznc
 netaddr==0.8.0
     # via junos-eznc
@@ -520,9 +520,7 @@ xmltodict==0.12.0
 yamllint==1.26.3
     # via -r requirements/static/ci/darwin.in
 yamlordereddictloader==0.4.0
-    # via
-    #   -r requirements/static/ci/darwin.in
-    #   junos-eznc
+    # via junos-eznc
 yarl==1.7.2
     # via aiohttp
 zc.lockfile==2.0
