@@ -489,7 +489,7 @@ tornado==6.3.2 ; python_version >= "3.8"
     #   python-telegram-bot
 twilio==7.9.2
     # via -r requirements/static/ci/linux.in
-typing-extensions==4.6.0
+typing-extensions==4.6.2
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
     #   pydantic

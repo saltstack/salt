@@ -569,7 +569,7 @@ transitions==0.8.1
     # via junos-eznc
 twilio==7.9.2
     # via -r requirements/static/ci/linux.in
-typing-extensions==4.6.0
+typing-extensions==4.6.2
     # via
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   pydantic
