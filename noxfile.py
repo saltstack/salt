@@ -920,11 +920,20 @@ def test_cloud(session, coverage):
         )
     # Install requirements
     if _upgrade_pip_setuptools_and_wheel(session):
-        requirements_file = os.path.join(
+        linux_requirements_file = os.path.join(
+            "requirements", "static", "ci", pydir, "linux.txt"
+        )
+        cloud_requirements_file = os.path.join(
             "requirements", "static", "ci", pydir, "cloud.txt"
         )
 
-        install_command = ["--progress-bar=off", "-r", requirements_file]
+        install_command = [
+            "--progress-bar=off",
+            "-r",
+            linux_requirements_file,
+            "-r",
+            cloud_requirements_file,
+        ]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
