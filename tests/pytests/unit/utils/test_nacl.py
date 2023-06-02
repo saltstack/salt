@@ -1,9 +1,42 @@
 """
     Unit tests for the salt.utils.nacl module
 """
+import os
 
-import salt.utils.nacl
+import pytest
+from saltfactories.utils.tempfiles import temp_file
+
+import salt.modules.config as config
+import salt.utils.files
 from tests.support.mock import patch
+
+try:
+    import salt.utils.nacl as nacl
+
+    HAS_PYNACL = nacl.check_requirements
+except (ImportError, OSError, AttributeError):
+    HAS_PYNACL = False
+
+
+@pytest.mark.skipif(
+    not HAS_PYNACL, reason="skipping test_nacl, reason=PyNaCl is unavailable"
+)
+@pytest.fixture
+def configure_loader_modules():
+    return {
+        nacl: {"__salt__": {"config.get": config.get}},
+        config: {"__opts__": {}},
+    }
+
+
+@pytest.fixture(scope="module")
+def test_key():
+    return "C16NxgBhw8cqbhvPCDAn2pirwW1A1WEVLUexCsoUD2Y="
+
+
+@pytest.fixture(scope="module")
+def test_pub():
+    return "+XWFfZXnfItS++a4gQf8Adu1aUlTgHWyTfsglbTdXyg="
 
 
 def test_fips_mode():
@@ -14,3 +47,130 @@ def test_fips_mode():
     with patch("salt.utils.nacl.__opts__", opts, create=True):
         ret = salt.utils.nacl.__virtual__()
         assert ret == (False, "nacl utils not available in FIPS mode")
+
+
+def test_keygen():
+    """
+    test nacl.keygen function
+    """
+    ret = nacl.keygen()
+    assert all(key in ret for key in ret.keys())
+
+
+def test_keygen_sk_file(test_key):
+    """
+    test nacl.keygen function
+    with sk_file set
+    """
+    with temp_file("test_keygen_sk_file") as fpath:
+        with salt.utils.files.fopen(fpath, "w") as wfh:
+            wfh.write(test_key)
+
+        # test sk_file
+        ret = nacl.keygen(sk_file=fpath)
+        assert "saved pk_file: {}.pub".format(fpath) == ret
+        salt.utils.files.remove(str(fpath) + ".pub")
+
+
+def test_keygen_keyfile(test_key):
+    """
+    test nacl.keygen function
+    with keyfile set
+    """
+    with temp_file("test_keygen_keyfile") as fpath:
+        with salt.utils.files.fopen(fpath, "w") as wfh:
+            wfh.write(test_key)
+
+        ret = nacl.keygen(keyfile=fpath)
+        assert "saved pk_file: {}.pub".format(fpath) == ret
+        salt.utils.files.remove(str(fpath) + ".pub")
+
+
+def test_enc_keyfile(test_key, test_pub):
+    """
+    test nacl.enc function
+    with keyfile and pk_file set
+    """
+    with temp_file("test_enc_keyfile") as fpath:
+        with salt.utils.files.fopen(fpath, "w") as wfh:
+            wfh.write(test_key)
+        with salt.utils.files.fopen(str(fpath) + ".pub", "w") as wfhpub:
+            wfhpub.write(test_pub)
+
+        kwargs = {
+            "opts": {"pki_dir": os.path.dirname(fpath)},
+            "keyfile": str(fpath),
+            "pk_file": str(fpath) + ".pub",
+        }
+        ret = nacl.enc("blah", **kwargs)
+        assert isinstance(ret, bytes)
+        salt.utils.files.remove(str(fpath) + ".pub")
+
+
+def test_enc_sk_file(test_key, test_pub):
+    """
+    test nacl.enc function
+    with sk_file and pk_file set
+    """
+    with temp_file("test_enc_sk_file") as fpath:
+        with salt.utils.files.fopen(fpath, "w") as wfh:
+            wfh.write(test_key)
+        with salt.utils.files.fopen(str(fpath) + ".pub", "w") as wfhpub:
+            wfhpub.write(test_pub)
+
+        kwargs = {
+            "opts": {"pki_dir": os.path.dirname(fpath)},
+            "sk_file": str(fpath),
+            "pk_file": str(fpath) + ".pub",
+        }
+        ret = nacl.enc("blah", **kwargs)
+        assert isinstance(ret, bytes)
+        salt.utils.files.remove(str(fpath) + ".pub")
+
+
+def test_dec_keyfile(test_key, test_pub):
+    """
+    test nacl.dec function
+    with keyfile and pk_file set
+    """
+    with temp_file("test_dec_keyfile") as fpath:
+        with salt.utils.files.fopen(fpath, "w") as wfh:
+            wfh.write(test_key)
+        with salt.utils.files.fopen(str(fpath) + ".pub", "w") as wfhpub:
+            wfhpub.write(test_pub)
+
+        kwargs = {
+            "opts": {"pki_dir": os.path.dirname(fpath)},
+            "keyfile": str(fpath),
+            "pk_file": str(fpath) + ".pub",
+        }
+
+        enc_data = nacl.enc("blah", **kwargs)
+        ret = nacl.dec(enc_data, **kwargs)
+        assert isinstance(ret, bytes)
+        assert ret == b"blah"
+        salt.utils.files.remove(str(fpath) + ".pub")
+
+
+def test_dec_sk_file(test_key, test_pub):
+    """
+    test nacl.dec function
+    with sk_file and pk_file set
+    """
+    with temp_file("test_dec_sk_file") as fpath:
+        with salt.utils.files.fopen(fpath, "w") as wfh:
+            wfh.write(test_key)
+        with salt.utils.files.fopen(str(fpath) + ".pub", "w") as wfhpub:
+            wfhpub.write(test_pub)
+
+        kwargs = {
+            "opts": {"pki_dir": os.path.dirname(fpath)},
+            "sk_file": str(fpath),
+            "pk_file": str(fpath) + ".pub",
+        }
+
+        enc_data = nacl.enc("blah", **kwargs)
+        ret = nacl.dec(enc_data, **kwargs)
+        assert isinstance(ret, bytes)
+        assert ret == b"blah"
+        salt.utils.files.remove(str(fpath) + ".pub")
