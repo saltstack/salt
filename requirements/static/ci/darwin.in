@@ -4,7 +4,6 @@
 # pylxd>=2.2.5
 --constraint=../pkg/py{py_version}/{platform}.txt
 
-yamlordereddictloader
 pygit2>=1.2.0
 yamllint
 mercurial
