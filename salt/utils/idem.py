@@ -7,7 +7,6 @@ This util provides access to an idem-ready hub
 .. versionadded:: 3002
 """
 import logging
-import sys
 
 try:
     import pop.hub
@@ -22,8 +21,6 @@ __virtualname__ = "idem"
 
 
 def __virtual__():
-    if sys.version_info < (3, 6):
-        return False, "idem only works on python3.6 and later"
     if not HAS_POP[0]:
         return HAS_POP
     return __virtualname__
