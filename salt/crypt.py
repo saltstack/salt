@@ -929,7 +929,8 @@ class AsyncAuth:
             autosign_grains = {}
             for grain in self.opts["autosign_grains"]:
                 autosign_grains[grain] = self.opts["grains"].get(grain, None)
-            payload["autosign_grains"] = autosign_grains
+            if autosign_grains:
+                payload["autosign_grains"] = autosign_grains            
         try:
             pubkey_path = os.path.join(self.opts["pki_dir"], self.mpub)
             pub = get_rsa_pub_key(pubkey_path)
