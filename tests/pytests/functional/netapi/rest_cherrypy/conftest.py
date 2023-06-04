@@ -28,8 +28,9 @@ def app(client_config, load_auth):
         )
 
 
+# The order of these fixtures matter, app before io_loop
 @pytest.fixture
-def http_server(io_loop, app, netapi_port):
+def http_server(app, netapi_port, io_loop):
     with netapi.TestsTornadoHttpServer(
         io_loop=io_loop, app=app, port=netapi_port
     ) as server:

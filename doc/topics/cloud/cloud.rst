@@ -28,10 +28,7 @@ upon execution. Most often, it uses ``get_configured_provider()`` to determine
 if the necessary configuration has been set up. It may also check for necessary
 imports, to decide whether to load the module. In most cases, it will return a
 ``True`` or ``False`` value. If the name of the driver used does not match the
-filename, then that name should be returned instead of ``True``. An example of
-this may be seen in the Azure module:
-
-https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/cloud/clouds/msazure.py
+filename, then that name should be returned instead of ``True``.
 
 The get_configured_provider() Function
 --------------------------------------
@@ -240,8 +237,7 @@ The script() Function
 ---------------------
 This function builds the deploy script to be used on the remote machine.  It is
 likely to be moved into the ``salt.utils.cloud`` library in the near future, as
-it is very generic and can usually be copied wholesale from another module. An
-excellent example is in the Azure driver.
+it is very generic and can usually be copied wholesale from another module.
 
 The destroy() Function
 ----------------------

@@ -968,7 +968,6 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         Bind to the interface specified in the configuration file
         """
         io_loop = tornado.ioloop.IOLoop()
-        io_loop.make_current()
 
         # Spin up the publisher
         self.pub_server = pub_server = PubServer(

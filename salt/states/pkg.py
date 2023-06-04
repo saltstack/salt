@@ -1090,6 +1090,12 @@ def installed(
         Any argument that is passed through to the ``install`` function, which
         is not defined for that function, will be silently ignored.
 
+    .. note::
+        In Windows, some packages are installed using the task manager. The Salt
+        minion installer does this. In that case, there is no way to know if the
+        package installs correctly. All that can be reported is that the task
+        that launches the installer started successfully.
+
     :param str name:
         The name of the package to be installed. This parameter is ignored if
         either "pkgs" or "sources" is used. Additionally, please note that this
@@ -2034,12 +2040,25 @@ def installed(
             new_caps = __salt__["pkg.list_provides"](**kwargs)
         else:
             new_caps = {}
+
         _ok, failed = _verify_install(
             desired, new_pkgs, ignore_epoch=ignore_epoch, new_caps=new_caps
         )
         modified = [x for x in _ok if x in targets]
         not_modified = [x for x in _ok if x not in targets and x not in to_reinstall]
         failed = [x for x in failed if x in targets]
+
+    # When installing packages that use the task scheduler, we can only know
+    # that the task was started, not that it installed successfully. This is
+    # especially the case when upgrading the Salt minion on Windows as the
+    # installer kills and unregisters the Salt minion service. We will only know
+    # that the installation was successful if the minion comes back up. So, we
+    # just want to report success in that scenario
+    for item in failed:
+        if item in changes and isinstance(changes[item], dict):
+            if changes[item].get("install status", "") == "task started":
+                modified.append(item)
+                failed.remove(item)
 
     if modified:
         if sources:
