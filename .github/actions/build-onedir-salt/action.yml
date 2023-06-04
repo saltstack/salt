@@ -1,0 +1,106 @@
+---
+name: build-onedir-salt
+description: Build Onedir Package
+inputs:
+  platform:
+    required: true
+    type: string
+    description: The platform to build
+  arch:
+    required: true
+    type: string
+    description: The platform arch to build
+  package-name:
+    required: false
+    type: string
+    description: The onedir package name to create
+    default: salt
+  cache-prefix:
+    required: true
+    type: string
+    description: Seed used to invalidate caches
+  python-version:
+    required: true
+    type: string
+    description: The python version to build
+  salt-version:
+    type: string
+    required: true
+    description: The Salt version to set prior to building packages.
+
+
+env:
+  COLUMNS: 190
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  RELENV_BUILDENV: 1
+
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Download Cached Deps Onedir Package Directory
+      id: onedir-bare-cache
+      uses: actions/cache@v3
+      with:
+        path: artifacts/${{ inputs.package-name }}
+        key: >
+          ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|
+          ${{ hashFiles(
+            format('{0}/.relenv/**/*.xz', github.workspace),
+            'requirements/static/pkg/*/*.txt',
+            '.github/actions/build-onedir-deps/action.yml',
+            'cicd/shared-gh-workflows-context.yml'
+          ) }}
+
+    - name: Download Source Tarball
+      uses: actions/download-artifact@v3
+      with:
+        name: salt-${{ inputs.salt-version }}.tar.gz
+
+    - name: Install Salt Into Onedir
+      shell: bash
+      run: |
+        tools pkg build salt-onedir salt-${{ inputs.salt-version }}.tar.gz --platform ${{ inputs.platform }} --package-name artifacts/${{ inputs.package-name }}
+
+    - name: Cleanup Salt Onedir Directory
+      shell: bash
+      run: |
+        tools pkg pre-archive-cleanup artifacts/${{ inputs.package-name }}
+
+    - name: Create Archive
+      shell: bash
+      run: |
+        cd artifacts/
+        tar -cJf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz  ${{ inputs.package-name }}
+
+    - name: Create Archive (Zipfile)
+      if: ${{ inputs.platform == 'windows' }}
+      shell: powershell
+      run: |
+        cd artifacts
+        py -3 -m zipfile -c "${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.zip" ${{ inputs.package-name }}
+
+    - name: Create Hash Files
+      shell: bash
+      run: |
+        tools pkg generate-hashes artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.*
+
+    - name: Upload Onedir Tarball as an Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+        path: artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz*
+        retention-days: 7
+        if-no-files-found: error
+
+    - name: Upload Onedir Zipfile as an Artifact
+      if: ${{ inputs.platform == 'windows' }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.zip
+        path: artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.zip*
+        retention-days: 7
+        if-no-files-found: error

@@ -2,7 +2,6 @@ import logging
 
 import pytest
 
-import salt.config
 import salt.modules.chocolatey as chocolatey_mod
 import salt.states.chocolatey as chocolatey
 from tests.support.mock import MagicMock, patch
@@ -16,16 +15,15 @@ def choco_path():
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+def configure_loader_modules(minion_opts):
     return {
         chocolatey: {
-            "__opts__": opts,
+            "__opts__": minion_opts,
             "__salt__": {},
             "__context__": {},
         },
         chocolatey_mod: {
-            "__opts__": opts,
+            "__opts__": minion_opts,
             "__context__": {},
         },
     }

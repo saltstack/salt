@@ -24,7 +24,7 @@ def configure_loader_modules(tmp_cache_dir):
         local_cache: {
             "__opts__": {
                 "cachedir": str(tmp_cache_dir),
-                "keep_jobs": 0.0000000010,
+                "keep_jobs_seconds": 0.0000000010,
             }
         }
     }
@@ -139,11 +139,42 @@ def test_not_clean_new_jobs(add_job, job_cache_dir_files):
     """
     add_job()
 
-    with patch.dict(local_cache.__opts__, {"keep_jobs": 24}):
+    with patch.dict(local_cache.__opts__, {"keep_jobs_seconds": 86400}):
         assert local_cache.clean_old_jobs() is None
 
         _check_dir_files(
             "job cache was removed: ", job_cache_dir_files, status="present"
+        )
+
+
+@pytest.mark.slow_test
+def test_override_clean_jobs(add_job, job_cache_dir_files):
+    """
+    test to ensure keep_jobs_seconds overrides keep_jobs if set
+    """
+    add_job()
+    time.sleep(1.5)
+
+    with patch.dict(local_cache.__opts__, {"keep_jobs_seconds": 1, "keep_jobs": 4}):
+        assert local_cache.clean_old_jobs() is None
+
+        _check_dir_files(
+            "job cache was removed: ", job_cache_dir_files, status="removed"
+        )
+
+
+@pytest.mark.slow_test
+def test_override_clean_jobs_seconds(add_job, job_cache_dir_files):
+    """
+    test to ensure keep_jobs still works as long as keep_jobs_seconds is set to default
+    """
+    add_job()
+
+    with patch.dict(local_cache.__opts__, {"keep_jobs_seconds": 86400, "keep_jobs": 1}):
+        assert local_cache.clean_old_jobs() is None
+
+        _check_dir_files(
+            "job cache was not removed: ", job_cache_dir_files, status="present"
         )
 
 

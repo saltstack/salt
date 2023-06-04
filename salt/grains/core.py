@@ -23,8 +23,6 @@ import time
 import uuid
 from errno import EACCES, EPERM
 
-import distro
-
 import salt.exceptions
 
 # Solve the Chicken and egg problem where grains need to run before any
@@ -41,6 +39,7 @@ import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.utils.network import _clear_interfaces, _get_interfaces
+from salt.utils.platform import linux_distribution as _linux_distribution
 
 try:
     # pylint: disable=no-name-in-module
@@ -88,15 +87,6 @@ except ImportError:  # Define freedesktop_os_release for Python < 3.10
 
     def _freedesktop_os_release():
         return _parse_os_release("/etc/os-release", "/usr/lib/os-release")
-
-
-# rewrite distro.linux_distribution to allow best=True kwarg in version(), needed to get the minor version numbers in CentOS
-def _linux_distribution():
-    return (
-        distro.id(),
-        distro.version(best=True),
-        distro.codename(),
-    )
 
 
 def __init__(opts):
@@ -1685,6 +1675,11 @@ def id_():
     return {"id": __opts__.get("id", "")}
 
 
+# Pattern for os-release PRETTY_NAME containing "name version (codename)"
+_PRETTY_NAME_RE = re.compile(r"[^\d]+ (?P<version>\d[\d.+\-a-z]*) \((?P<codename>.+)\)")
+# Pattern for os-release VERSION containing "version (codename)"
+_VERSION_RE = re.compile(r"\d[\d.+\-a-z]* \((?P<codename>.+)\)")
+
 _REPLACE_LINUX_RE = re.compile(r"\W(?:gnu/)?linux", re.IGNORECASE)
 
 # This maps (at most) the first ten characters (no spaces, lowercased) of
@@ -1731,14 +1726,31 @@ _OS_NAME_MAP = {
     "mendel": "Mendel",
 }
 
+# This dictionary maps the pair of os-release ID and NAME to the 'os' grain
+# that Salt traditionally uses, and is used by the os_data() function to
+# create the "os" grain.
+#
+# Add entries to this dictionary to retain historic values of the "os" grain.
+_ID_AND_NAME_TO_OS_NAME_MAP = {
+    ("astra", "Astra Linux (Orel)"): "AstraLinuxCE",
+    ("astra", "Astra Linux (Smolensk)"): "AstraLinuxSE",
+    ("pop", "Pop!_OS"): "Pop",
+}
 
-def _derive_os_grain(osfullname):
+
+def _derive_os_grain(osfullname, os_id=None):
     """
     Derive the 'os' grain from the 'osfullname' grain
+
+    For deriving the 'os' grain from the os-release data,
+    pass NAME as 'osfullname' and ID as 'os_id'.
 
     The 'os' grain that Salt traditionally uses is a shortened
     version of the 'osfullname' grain.
     """
+    if (os_id, osfullname) in _ID_AND_NAME_TO_OS_NAME_MAP:
+        return _ID_AND_NAME_TO_OS_NAME_MAP[(os_id, osfullname)]
+
     distroname = _REPLACE_LINUX_RE.sub("", osfullname).strip()
     # return the first ten characters with no spaces, lowercased
     shortname = distroname.replace(" ", "").lower()[:10]
@@ -1802,6 +1814,7 @@ _OS_FAMILY_MAP = {
     "Devuan": "Debian",
     "antiX": "Debian",
     "Kali": "Debian",
+    "Parrot OS": "Debian",
     "neon": "Debian",
     "Cumulus": "Debian",
     "Deepin": "Debian",
@@ -1819,6 +1832,25 @@ _OS_FAMILY_MAP = {
     "Mendel": "Debian",
     "OSMC": "Debian",
 }
+
+
+# Map the 'family_id' (from os-release) to the 'os_family' grain. If your
+# system is having trouble with detection, please make sure that the
+# 'family_id' is determined correctly first (in case multiple ID_LIKE entries
+# are specified).
+_OS_FAMILY_ID_MAP = {
+    # Red Hat Enterprise Linux (RHEL) is based on Fedora
+    # and Fedora is the successor of Red Hat Linux (RHL).
+    "fedora": "RedHat"
+}
+
+
+def _prettify_os_family(family_id):
+    if family_id in _OS_FAMILY_ID_MAP:
+        return _OS_FAMILY_ID_MAP[family_id]
+    # Fall back to use the os_id with an capital starting letter.
+    return family_id.capitalize()
+
 
 # Matches any possible format:
 #     DISTRIB_ID="Ubuntu"
@@ -2020,6 +2052,91 @@ def _linux_lsb_distrib_data():
     return grains, has_error
 
 
+def _family_id(os_id, id_like):
+    """
+    Return the family ID which is the oldest distribution ancestor.
+    """
+    if not id_like:
+        # If ID_LIKE is not specified, the distribution has no derivative.
+        return os_id
+
+    ids_like = [os_id] + id_like.split()
+
+    # Linux Mint 20.3 does not declare to be a derivative of Debian.
+    if "debian" in ids_like or "ubuntu" in ids_like:
+        return "debian"
+
+    # The IDs are ordered from closest to farthest.
+    return ids_like[-1]
+
+
+def _os_release_quirks_for_oscodename(os_release):
+    """
+    Apply quirks for 'oscodename' grain for faulty os-release files
+
+    Some distributions do not (fully) follow the os-release
+    specification. This function bundles all required quirks
+    for the 'oscodename' grain. To be on the safe side, only
+    apply the quirks for allow-listed distributions. Better
+    not set the codename instead of setting it wrong.
+    """
+    if os_release["ID"] in ("astra",):
+        # Astra Linux has no version codename, but Salt used
+        # to report the variant ID as oscodename.
+        return os_release.get("VARIANT_ID")
+    if os_release["ID"] in ("almalinux", "rocky"):
+        # VERSION_CODENAME is not set, but the codename is
+        # mentioned in PRETTY_NAME and VERSION.
+        match = _VERSION_RE.match(os_release.get("VERSION", ""))
+        if match:
+            return match.group("codename")
+    return None
+
+
+def _os_release_quirks_for_osrelease(os_release):
+    """
+    Apply quirks for 'osrelease' grain for faulty os-release files
+
+    Some distributions do not (fully) follow the os-release
+    specification. This function bundles all required quirks
+    for the 'osrelease' grain. To be on the safe side, only
+    apply the quirks for allow-listed distributions. Better
+    not set the release instead of setting it wrong.
+    """
+    if os_release["ID"] in ("mendel",):
+        # Mendel sets VERSION_CODENAME but not VERSION_ID.
+        # Only PRETTY_NAME mentions the version number.
+        match = _PRETTY_NAME_RE.match(os_release["PRETTY_NAME"])
+        if match:
+            return match.group("version")
+    return None
+
+
+def _os_release_to_grains(os_release):
+    """
+    Transform the given os-release data to grains.
+
+    The os-release file is a freedesktop.org standard:
+    https://www.freedesktop.org/software/systemd/man/os-release.html
+
+    The keys NAME, ID, and PRETTY_NAME are expected to exist. All
+    other keys are optional.
+    """
+    family_id = _family_id(os_release["ID"], os_release.get("ID_LIKE"))
+    grains = {
+        "os": _derive_os_grain(os_release["NAME"], os_release["ID"]),
+        "os_family": _prettify_os_family(family_id),
+        "oscodename": os_release.get("VERSION_CODENAME")
+        or _os_release_quirks_for_oscodename(os_release),
+        "osfullname": os_release["NAME"].strip(),
+        "osrelease": os_release.get("VERSION_ID")
+        or _os_release_quirks_for_osrelease(os_release),
+    }
+
+    # oscodename and osrelease could be empty or None. Remove those.
+    return {key: value for key, value in grains.items() if key}
+
+
 def _linux_distribution_data():
     """
     Determine distribution information like OS name and version.
@@ -2033,9 +2150,53 @@ def _linux_distribution_data():
 
     This function might also return lsb_distrib_* grains
     from _linux_lsb_distrib_data().
+
+    Most Linux distributions should ship a os-release file
+    and this file should be the sole source for deriving the
+    OS grains. To not cause regressions, only switch the
+    distribution that has been tested.
     """
     grains, lsb_has_error = _linux_lsb_distrib_data()
 
+    log.trace("Getting OS name, release, and codename from freedesktop_os_release")
+    try:
+        os_release = _freedesktop_os_release()
+        grains.update(_os_release_to_grains(os_release))
+
+        # To prevent regressions, only let distributions solely
+        # use os-release after testing.
+        if os_release["ID"] in (
+            "almalinux",
+            "astra",
+            "debian",
+            "linuxmint",
+            "mendel",
+            "pop",
+            "rocky",
+            "ubuntu",
+        ):
+            # Solely use os-release data. See description of the function.
+            return grains
+
+    except OSError:
+        os_release = {}
+
+    # Warning: The remaining code is legacy code. Please solely rely
+    # on os-release data. See description of the function.
+    if "osrelease" in grains:
+        # Let the legacy code define osrelease to avoid discrepancies.
+        del grains["osrelease"]
+    return _legacy_linux_distribution_data(grains, os_release, lsb_has_error)
+
+
+def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
+    """
+    Legacy heuristics to determine distribution information.
+
+    Most Linux distributions should ship a os-release file
+    and this file should be the sole source for deriving the
+    OS grains. See _linux_distribution_data.
+    """
     if lsb_has_error:
         if grains.get("lsb_distrib_description", "").lower().startswith("antergos"):
             # Antergos incorrectly configures their /etc/lsb-release,
@@ -2044,10 +2205,6 @@ def _linux_distribution_data():
             grains["osfullname"] = "Antergos Linux"
         elif "lsb_distrib_id" not in grains:
             log.trace("Failed to get lsb_distrib_id, trying to parse os-release")
-            try:
-                os_release = _freedesktop_os_release()
-            except OSError:
-                os_release = {}
             if os_release:
                 if "NAME" in os_release:
                     grains["lsb_distrib_id"] = os_release["NAME"].strip()
@@ -2056,13 +2213,7 @@ def _linux_distribution_data():
                 if "VERSION_CODENAME" in os_release:
                     grains["lsb_distrib_codename"] = os_release["VERSION_CODENAME"]
                 elif "PRETTY_NAME" in os_release:
-                    codename = os_release["PRETTY_NAME"]
-                    # https://github.com/saltstack/salt/issues/44108
-                    if os_release["ID"] == "debian":
-                        codename_match = re.search(r"\((\w+)\)$", codename)
-                        if codename_match:
-                            codename = codename_match.group(1)
-                    grains["lsb_distrib_codename"] = codename
+                    grains["lsb_distrib_codename"] = os_release["PRETTY_NAME"]
                 if "CPE_NAME" in os_release:
                     cpe = _parse_cpe_name(os_release["CPE_NAME"])
                     if not cpe:
@@ -2645,6 +2796,7 @@ def fqdns():
         or salt.utils.platform.is_sunos()
         or salt.utils.platform.is_aix()
         or salt.utils.platform.is_junos()
+        or salt.utils.platform.is_darwin()
         else True,
     ):
         opt = __salt__["network.fqdns"]()
@@ -2926,6 +3078,7 @@ def _hw_data(osdata):
     Provides
         biosversion
         biosvendor
+        boardname
         productname
         manufacturer
         serialnumber
@@ -2945,6 +3098,7 @@ def _hw_data(osdata):
         sysfs_firmware_info = {
             "biosversion": "bios_version",
             "biosvendor": "bios_vendor",
+            "boardname": "board_name",
             "productname": "product_name",
             "manufacturer": "sys_vendor",
             "biosreleasedate": "bios_date",

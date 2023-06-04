@@ -16,6 +16,7 @@ import copy
 import datetime
 import fnmatch
 import importlib
+import inspect
 import logging
 import os
 import random
@@ -83,6 +84,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "fun",
         "state",
         "check_cmd",
+        "cmd_opts_exclude",
         "failhard",
         "onlyif",
         "unless",
@@ -971,10 +973,18 @@ class State:
             "timeout",
             "success_retcodes",
         )
+        if "cmd_opts_exclude" in low_data:
+            if not isinstance(low_data["cmd_opts_exclude"], list):
+                cmd_opts_exclude = [low_data["cmd_opts_exclude"]]
+            else:
+                cmd_opts_exclude = low_data["cmd_opts_exclude"]
+        else:
+            cmd_opts_exclude = []
         for run_cmd_arg in POSSIBLE_CMD_ARGS:
-            cmd_opts[run_cmd_arg] = low_data.get(run_cmd_arg)
+            if run_cmd_arg not in cmd_opts_exclude:
+                cmd_opts[run_cmd_arg] = low_data.get(run_cmd_arg)
 
-        if "shell" in low_data:
+        if "shell" in low_data and "shell" not in cmd_opts_exclude:
             cmd_opts["shell"] = low_data["shell"]
         elif "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
@@ -2292,6 +2302,7 @@ class State:
             initial_ret={"full": state_func_name},
             expected_extra_kws=STATE_INTERNAL_KEYWORDS,
         )
+
         inject_globals = {
             # Pass a copy of the running dictionary, the low state chunks and
             # the current state dictionaries.
@@ -2301,6 +2312,7 @@ class State:
             "__running__": immutabletypes.freeze(running) if running else {},
             "__instance_id__": self.instance_id,
             "__lowstate__": immutabletypes.freeze(chunks) if chunks else {},
+            "__user__": self.opts.get("user", "UNKNOWN"),
         }
 
         if "__env__" in low:
@@ -2374,11 +2386,15 @@ class State:
                                 *cdata["args"], **cdata["kwargs"]
                             )
                 self.states.inject_globals = {}
-            if (
-                "check_cmd" in low
-                and "{0[state]}.mod_run_check_cmd".format(low) not in self.states
-            ):
-                ret.update(self._run_check_cmd(low))
+            if "check_cmd" in low:
+                state_check_cmd = "{0[state]}.mod_run_check_cmd".format(low)
+                state_func = "{0[state]}.{0[fun]}".format(low)
+                state_func_sig = inspect.signature(self.states[state_func])
+                if state_check_cmd not in self.states:
+                    ret.update(self._run_check_cmd(low))
+                else:
+                    if "check_cmd" not in state_func_sig.parameters:
+                        ret.update(self._run_check_cmd(low))
         except Exception as exc:  # pylint: disable=broad-except
             log.debug(
                 "An exception occurred in this state: %s",
@@ -3742,7 +3758,9 @@ class BaseHighState:
             )
             opts["env_order"] = mopts.get("env_order", opts.get("env_order", []))
             opts["default_top"] = mopts.get("default_top", opts.get("default_top"))
-            opts["state_events"] = mopts.get("state_events")
+            opts["state_events"] = (
+                opts.get("state_events") or mopts.get("state_events") or False
+            )
             opts["state_aggregate"] = (
                 opts.get("state_aggregate") or mopts.get("state_aggregate") or False
             )
@@ -3775,7 +3793,7 @@ class BaseHighState:
             envs.extend([env for env in client_envs if env not in envs])
             return envs
 
-    def get_tops(self):
+    def get_tops(self, context=None):
         """
         Gather the top files
         """
@@ -3806,6 +3824,7 @@ class BaseHighState:
                         self.state.opts["renderer_blacklist"],
                         self.state.opts["renderer_whitelist"],
                         saltenv=self.opts["saltenv"],
+                        context=context,
                     )
                 ]
             else:
@@ -3831,6 +3850,7 @@ class BaseHighState:
                             self.state.opts["renderer_blacklist"],
                             self.state.opts["renderer_whitelist"],
                             saltenv=saltenv,
+                            context=context,
                         )
                     )
                 else:
@@ -3887,6 +3907,7 @@ class BaseHighState:
                                 self.state.opts["renderer_blacklist"],
                                 self.state.opts["renderer_whitelist"],
                                 saltenv,
+                                context=context,
                             )
                         )
                         done[saltenv].append(sls)
@@ -4137,12 +4158,12 @@ class BaseHighState:
 
         return errors
 
-    def get_top(self):
+    def get_top(self, context=None):
         """
         Returns the high data derived from the top file
         """
         try:
-            tops = self.get_tops()
+            tops = self.get_tops(context=context)
         except SaltRenderError as err:
             log.error("Unable to render top file: %s", err.error)
             return {}
@@ -4379,7 +4400,11 @@ class BaseHighState:
                             mod_tgt = "{}:{}".format(r_env, sls_target)
                             if mod_tgt not in mods:
                                 nstate, err = self.render_state(
-                                    sls_target, r_env, mods, matches
+                                    sls_target,
+                                    r_env,
+                                    mods,
+                                    matches,
+                                    context=context,
                                 )
                                 if nstate:
                                     self.merge_included_states(state, nstate, errors)
@@ -4761,15 +4786,15 @@ class BaseHighState:
 
         return self.state.call_high(high, orchestration_jid)
 
-    def compile_highstate(self):
+    def compile_highstate(self, context=None):
         """
         Return just the highstate or the errors
         """
         err = []
-        top = self.get_top()
+        top = self.get_top(context=context)
         err += self.verify_tops(top)
         matches = self.top_matches(top)
-        high, errors = self.render_highstate(matches)
+        high, errors = self.render_highstate(matches, context=context)
         err += errors
 
         if err:
@@ -4777,14 +4802,14 @@ class BaseHighState:
 
         return high
 
-    def compile_low_chunks(self):
+    def compile_low_chunks(self, context=None):
         """
         Compile the highstate but don't run it, return the low chunks to
         see exactly what the highstate will execute
         """
-        top = self.get_top()
+        top = self.get_top(context=context)
         matches = self.top_matches(top)
-        high, errors = self.render_highstate(matches)
+        high, errors = self.render_highstate(matches, context=context)
 
         # If there is extension data reconcile it
         high, ext_errors = self.state.reconcile_extend(high)

@@ -12,14 +12,14 @@ import time
 import uuid
 
 import pytest
+import tornado.gen
+import tornado.ioloop
 
 import salt.channel.client
 import salt.channel.server
 import salt.config
 import salt.crypt
 import salt.exceptions
-import salt.ext.tornado.gen
-import salt.ext.tornado.ioloop
 import salt.transport.zeromq
 import salt.utils.platform
 import salt.utils.process
@@ -39,6 +39,12 @@ except ImportError:
         from Crypto.Cipher import PKCS1_OAEP  # nosec
 
 log = logging.getLogger(__name__)
+
+
+pytestmark = [
+    pytest.mark.core_test,
+]
+
 
 MASTER_PRIV_KEY = """
 -----BEGIN RSA PRIVATE KEY-----
@@ -337,14 +343,16 @@ def run_loop_in_thread(loop, evt):
     """
     loop.make_current()
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def stopper():
+        yield tornado.gen.sleep(0.1)
         while True:
-            if evt.is_set():
+            if not evt.is_set():
                 loop.stop()
                 break
-            yield salt.ext.tornado.gen.sleep(0.3)
+            yield tornado.gen.sleep(0.3)
 
+    loop.add_callback(evt.set)
     loop.add_callback(stopper)
     try:
         loop.start()
@@ -374,7 +382,7 @@ class MockSaltMinionMaster:
         self.server_channel = salt.channel.server.ReqServerChannel.factory(master_opts)
         self.server_channel.pre_fork(self.process_manager)
 
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+        self.io_loop = tornado.ioloop.IOLoop()
         self.evt = threading.Event()
         self.server_channel.post_fork(self._handle_payload, io_loop=self.io_loop)
         self.server_thread = threading.Thread(
@@ -382,27 +390,32 @@ class MockSaltMinionMaster:
         )
         self.server_thread.start()
         minion_opts = temp_salt_minion.config.copy()
-        minion_opts.update({"master_ip": "127.0.0.1"})
-        minion_opts.update({"transport": "zeromq"})
+        minion_opts.update(
+            {
+                "master_ip": "127.0.0.1",
+                "transport": "zeromq",
+            }
+        )
         self.channel = salt.channel.client.ReqChannel.factory(
             minion_opts, crypt="clear"
         )
 
     def __enter__(self):
+        self.channel.__enter__()
+        self.evt.wait()
         return self
 
     def __exit__(self, *args, **kwargs):
-        self.channel.close()
+        self.channel.__exit__(*args, **kwargs)
         del self.channel
         # Attempting to kill the children hangs the test suite.
         # Let the test suite handle this instead.
         self.process_manager.stop_restarting()
         self.process_manager.kill_children()
-        self.evt.set()
+        self.evt.clear()
         self.server_thread.join()
-        time.sleep(
-            2
-        )  # Give the procs a chance to fully close before we stop the io_loop
+        # Give the procs a chance to fully close before we stop the io_loop
+        time.sleep(2)
         self.server_channel.close()
         SMaster.secrets.pop("aes")
         del self.server_channel
@@ -412,24 +425,23 @@ class MockSaltMinionMaster:
 
     # pylint: enable=W1701
     @classmethod
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _handle_payload(cls, payload):
         """
         TODO: something besides echo
         """
         cls.mock._handle_payload_hook()
-        raise salt.ext.tornado.gen.Return((payload, {"fun": "send_clear"}))
+        raise tornado.gen.Return((payload, {"fun": "send_clear"}))
 
 
-def test_badload(temp_salt_minion, temp_salt_master):
+@pytest.mark.parametrize("message", ["", [], ()])
+def test_badload(temp_salt_minion, temp_salt_master, message):
     """
     Test a variety of bad requests, make sure that we get some sort of error
     """
     with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
-        msgs = ["", [], tuple()]
-        for msg in msgs:
-            ret = minion_master.channel.send(msg, timeout=2, tries=1)
-            assert ret == "payload and load must be a dict"
+        ret = minion_master.channel.send(message, timeout=5, tries=1)
+        assert ret == "payload and load must be a dict"
 
 
 def test_payload_handling_exception(temp_salt_minion, temp_salt_master):
@@ -449,8 +461,8 @@ def test_serverside_exception(temp_salt_minion, temp_salt_master):
     """
     with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
         with patch.object(minion_master.mock, "_handle_payload_hook") as _mock:
-            _mock.side_effect = salt.ext.tornado.gen.Return(({}, {"fun": "madeup-fun"}))
-            ret = minion_master.channel.send({}, timeout=2, tries=1)
+            _mock.side_effect = tornado.gen.Return(({}, {"fun": "madeup-fun"}))
+            ret = minion_master.channel.send({}, timeout=5, tries=1)
             assert ret == "Server-side exception handling payload"
 
 
@@ -472,7 +484,7 @@ def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
         sign_pub_messages=False,
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
-    ioloop = salt.ext.tornado.ioloop.IOLoop()
+    ioloop = tornado.ioloop.IOLoop()
     transport = salt.transport.zeromq.PublishClient(opts, ioloop)
     with transport:
         patch_socket = MagicMock(return_value=True)
@@ -514,7 +526,7 @@ def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
 
-    ioloop = salt.ext.tornado.ioloop.IOLoop()
+    ioloop = tornado.ioloop.IOLoop()
     channel = salt.transport.zeromq.PublishClient(opts, ioloop)
     with channel:
         with patch(
@@ -561,7 +573,7 @@ def test_zeromq_async_pub_channel_filtering_decode_message(
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
 
-    ioloop = salt.ext.tornado.ioloop.IOLoop()
+    ioloop = tornado.ioloop.IOLoop()
     channel = salt.transport.zeromq.PublishClient(opts, ioloop)
     with channel:
         with patch(
@@ -574,7 +586,7 @@ def test_zeromq_async_pub_channel_filtering_decode_message(
 
 
 def test_req_server_chan_encrypt_v2(pki_dir):
-    loop = salt.ext.tornado.ioloop.IOLoop.current()
+    loop = tornado.ioloop.IOLoop.current()
     opts = {
         "worker_threads": 1,
         "master_uri": "tcp://127.0.0.1:4506",
@@ -618,7 +630,7 @@ def test_req_server_chan_encrypt_v2(pki_dir):
 
 
 def test_req_server_chan_encrypt_v1(pki_dir):
-    loop = salt.ext.tornado.ioloop.IOLoop.current()
+    loop = tornado.ioloop.IOLoop.current()
     opts = {
         "worker_threads": 1,
         "master_uri": "tcp://127.0.0.1:4506",
@@ -665,6 +677,8 @@ def test_req_chan_decode_data_dict_entry_v1(pki_dir):
         "id": "minion",
         "__role": "minion",
         "keysize": 4096,
+        "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     master_opts = dict(opts, pki_dir=str(pki_dir.joinpath("master")))
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
@@ -696,6 +710,8 @@ async def test_req_chan_decode_data_dict_entry_v2(pki_dir):
         "id": "minion",
         "__role": "minion",
         "keysize": 4096,
+        "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     master_opts = dict(opts, pki_dir=str(pki_dir.joinpath("master")))
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
@@ -716,14 +732,14 @@ async def test_req_chan_decode_data_dict_entry_v2(pki_dir):
     client.auth.crypticle.loads = auth.crypticle.loads
     client.transport = MagicMock()
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def mocksend(msg, timeout=60, tries=3):
         client.transport.msg = msg
         load = client.auth.crypticle.loads(msg["load"])
         ret = server._encrypt_private(
             pillar_data, dictkey, target, nonce=load["nonce"], sign_messages=True
         )
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)
 
     client.transport.send = mocksend
 
@@ -760,6 +776,8 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(pki_dir):
         "id": "minion",
         "__role": "minion",
         "keysize": 4096,
+        "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     master_opts = dict(opts, pki_dir=str(pki_dir.joinpath("master")))
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
@@ -784,10 +802,10 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(pki_dir):
         pillar_data, dictkey, target, nonce=badnonce, sign_messages=True
     )
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def mocksend(msg, timeout=60, tries=3):
         client.transport.msg = msg
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)
 
     client.transport.send = mocksend
 
@@ -824,6 +842,8 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(pki_dir):
         "id": "minion",
         "__role": "minion",
         "keysize": 4096,
+        "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     master_opts = dict(opts, pki_dir=str(pki_dir.joinpath("master")))
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
@@ -845,7 +865,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(pki_dir):
     client.auth.crypticle.loads = auth.crypticle.loads
     client.transport = MagicMock()
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def mocksend(msg, timeout=60, tries=3):
         client.transport.msg = msg
         load = client.auth.crypticle.loads(msg["load"])
@@ -867,7 +887,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(pki_dir):
         data["pillar"] = {"pillar1": "bar"}
         signed_msg["data"] = salt.payload.dumps(data)
         ret[dictkey] = pcrypt.dumps(signed_msg)
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)
 
     client.transport.send = mocksend
 
@@ -904,6 +924,8 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(pki_dir):
         "id": "minion",
         "__role": "minion",
         "keysize": 4096,
+        "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     master_opts = dict(opts, pki_dir=str(pki_dir.joinpath("master")))
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
@@ -925,7 +947,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(pki_dir):
     client.auth.crypticle.loads = auth.crypticle.loads
     client.transport = MagicMock()
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def mocksend(msg, timeout=60, tries=3):
         client.transport.msg = msg
         load = client.auth.crypticle.loads(msg["load"])
@@ -954,7 +976,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(pki_dir):
         else:
             cipher = PKCS1_OAEP.new(pub)
             ret["key"] = cipher.encrypt(key)
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)
 
     client.transport.send = mocksend
 
@@ -972,7 +994,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(pki_dir):
     }
 
     with pytest.raises(salt.crypt.AuthenticationError) as excinfo:
-        ret = await client.crypted_transfer_decode_dictentry(
+        await client.crypted_transfer_decode_dictentry(
             load,
             dictkey="pillar",
         )
@@ -980,7 +1002,6 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(pki_dir):
 
 
 async def test_req_serv_auth_v1(pki_dir):
-    mockloop = MagicMock()
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
         "interface": "127.0.0.1",
@@ -1034,7 +1055,6 @@ async def test_req_serv_auth_v1(pki_dir):
 
 
 async def test_req_serv_auth_v2(pki_dir):
-    mockloop = MagicMock()
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
         "interface": "127.0.0.1",
@@ -1090,7 +1110,6 @@ async def test_req_serv_auth_v2(pki_dir):
 
 
 async def test_req_chan_auth_v2(pki_dir, io_loop):
-    mockloop = MagicMock()
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
         "interface": "127.0.0.1",
@@ -1107,6 +1126,8 @@ async def test_req_chan_auth_v2(pki_dir, io_loop):
         "key_pass": None,
         "publish_port": 4505,
         "auth_mode": 1,
+        "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     SMaster.secrets["aes"] = {
         "secret": multiprocessing.Array(
@@ -1138,7 +1159,6 @@ async def test_req_chan_auth_v2(pki_dir, io_loop):
 
 
 async def test_req_chan_auth_v2_with_master_signing(pki_dir, io_loop):
-    mockloop = MagicMock()
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
         "interface": "127.0.0.1",
@@ -1155,6 +1175,8 @@ async def test_req_chan_auth_v2_with_master_signing(pki_dir, io_loop):
         "key_pass": None,
         "publish_port": 4505,
         "auth_mode": 1,
+        "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     SMaster.secrets["aes"] = {
         "secret": multiprocessing.Array(
@@ -1230,7 +1252,6 @@ async def test_req_chan_auth_v2_with_master_signing(pki_dir, io_loop):
 async def test_req_chan_auth_v2_new_minion_with_master_pub(pki_dir, io_loop):
 
     pki_dir.joinpath("master", "minions", "minion").unlink()
-    mockloop = MagicMock()
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
         "interface": "127.0.0.1",
@@ -1248,6 +1269,7 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub(pki_dir, io_loop):
         "publish_port": 4505,
         "auth_mode": 1,
         "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     SMaster.secrets["aes"] = {
         "secret": multiprocessing.Array(
@@ -1288,7 +1310,6 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub_bad_sig(pki_dir, io_l
     mapub.unlink()
     mapub.write_text(MASTER2_PUB_KEY.strip())
 
-    mockloop = MagicMock()
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
         "interface": "127.0.0.1",
@@ -1306,6 +1327,7 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub_bad_sig(pki_dir, io_l
         "publish_port": 4505,
         "auth_mode": 1,
         "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     SMaster.secrets["aes"] = {
         "secret": multiprocessing.Array(
@@ -1338,7 +1360,6 @@ async def test_req_chan_auth_v2_new_minion_without_master_pub(pki_dir, io_loop):
 
     pki_dir.joinpath("master", "minions", "minion").unlink()
     pki_dir.joinpath("minion", "minion_master.pub").unlink()
-    mockloop = MagicMock()
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
         "interface": "127.0.0.1",
@@ -1356,6 +1377,7 @@ async def test_req_chan_auth_v2_new_minion_without_master_pub(pki_dir, io_loop):
         "publish_port": 4505,
         "auth_mode": 1,
         "acceptance_wait_time": 3,
+        "acceptance_wait_time_max": 3,
     }
     SMaster.secrets["aes"] = {
         "secret": multiprocessing.Array(

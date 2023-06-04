@@ -5,7 +5,6 @@
 import logging
 import os
 import shutil
-import sys
 import textwrap
 
 import pytest
@@ -409,10 +408,6 @@ def test_set_filesystems():
                 )
 
 
-@pytest.mark.skipif(
-    sys.version_info[0] == 3 and sys.version_info[1] <= 5,
-    reason="run on Python 3.6 or greater where OrderedDict is default",
-)
 @pytest.mark.skip_on_windows(
     reason="Not supported on Windows, does not handle tabs well"
 )
@@ -872,3 +867,30 @@ def test_is_mounted():
         mount.__grains__, {"kernel": ""}
     ):
         assert mount.is_mounted("name")
+
+
+def test_get_mount_from_path(tmp_path):
+    expected = tmp_path
+    while not os.path.ismount(expected):
+        expected = expected.parent
+    path = str(tmp_path)
+    ret = mount.get_mount_from_path(path)
+    assert ret == str(expected)
+
+
+def test_get_device_from_path(tmp_path):
+    expected = tmp_path
+    while not os.path.ismount(expected):
+        expected = expected.parent
+    mock_active = [
+        {},
+        {str(expected): {"device": "mydevice"}},
+    ]
+    path = str(tmp_path)
+    with patch("salt.modules.mount.active", MagicMock(side_effect=mock_active)):
+        with patch.dict(mount.__grains__, {"kernel": ""}):
+            with patch.dict(mount.__grains__, {"os": "test"}):
+                ret = mount.get_device_from_path(path)
+                assert ret is None
+                ret = mount.get_device_from_path(path)
+                assert ret == "mydevice"

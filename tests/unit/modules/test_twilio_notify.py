@@ -1,12 +1,12 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-
+import pytest
 
 import salt.modules.twilio_notify as twilio_notify
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 HAS_LIBS = False
 try:
@@ -88,7 +88,7 @@ class MockTwilioRestClient:
             self.messages = MockMessages()
 
 
-@skipIf(not HAS_LIBS, "twilio.rest is not available")
+@pytest.mark.skipif(not HAS_LIBS, reason="twilio.rest is not available")
 class TwilioNotifyTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.twilio_notify

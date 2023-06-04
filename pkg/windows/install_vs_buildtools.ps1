@@ -11,43 +11,31 @@ needed to build Python from source.
 install_vc_buildtools.ps1
 
 #>
+param(
+    [Parameter(Mandatory=$false)]
+    [Alias("c")]
+# Don't pretify the output of the Write-Result
+    [Switch] $CICD
+)
 
+#-------------------------------------------------------------------------------
 # Script Preferences
+#-------------------------------------------------------------------------------
+
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
 $ProgressPreference = "SilentlyContinue"
 $ErrorActionPreference = "Stop"
 
 #-------------------------------------------------------------------------------
-# Import Modules
+# Script Functions
 #-------------------------------------------------------------------------------
-$SCRIPT_DIR = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").DirectoryName
-Import-Module $SCRIPT_DIR\Modules\uac-module.psm1
 
-#-------------------------------------------------------------------------------
-# Check for Elevated Privileges
-#-------------------------------------------------------------------------------
-If (!(Get-IsAdministrator)) {
-    If (Get-IsUacEnabled) {
-        # We are not running "as Administrator" - so relaunch as administrator
-        # Create a new process object that starts PowerShell
-        $newProcess = new-object System.Diagnostics.ProcessStartInfo "PowerShell";
-
-        # Specify the current script path and name as a parameter
-        $newProcess.Arguments = $myInvocation.MyCommand.Definition
-
-        # Specify the current working directory
-        $newProcess.WorkingDirectory = "$SCRIPT_DIR"
-
-        # Indicate that the process should be elevated
-        $newProcess.Verb = "runas";
-
-        # Start the new process
-        [System.Diagnostics.Process]::Start($newProcess);
-
-        # Exit from the current, unelevated, process
-        Exit
-    } Else {
-        Throw "You must be administrator to run this script"
+function Write-Result($result, $ForegroundColor="Green") {
+    if ( $CICD ) {
+        Write-Host $result -ForegroundColor $ForegroundColor
+    } else {
+        $position = 80 - $result.Length - [System.Console]::CursorLeft
+        Write-Host -ForegroundColor $ForegroundColor ("{0,$position}$result" -f "")
     }
 }
 
@@ -82,14 +70,14 @@ Write-Host "Confirming Presence of Visual Studio Build Tools: " -NoNewline
 }
 
 if ( $install_build_tools ) {
-    Write-Host "Missing" -ForegroundColor Yellow
+    Write-Result "Missing" -ForegroundColor Yellow
 
     Write-Host "Checking available disk space: " -NoNewLine
     $available = (Get-PSDrive $env:SystemDrive.Trim(":")).Free
     if ( $available -gt (1024 * 1024 * 1024 * 9.1) ) {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     } else {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         Write-Host "Not enough disk space"
         exit 1
     }
@@ -97,9 +85,9 @@ if ( $install_build_tools ) {
     Write-Host "Downloading Visual Studio 2017 build tools: " -NoNewline
     Invoke-WebRequest -Uri "$VS_BLD_TOOLS" -OutFile "$env:TEMP\vs_buildtools.exe"
     if ( Test-Path -Path "$env:TEMP\vs_buildtools.exe" ) {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     } else {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     }
 
@@ -122,9 +110,9 @@ if ( $install_build_tools ) {
                                 "--wait" `
                   -Wait -WindowStyle Hidden
     if ( Test-Path -Path "$env:TEMP\build_tools\vs_buildtools.exe" ) {
-        Write-Host "Success" -ForegroundColor Green
+        Write-Result "Success" -ForegroundColor Green
     } else {
-        Write-Host "Failed" -ForegroundColor Red
+        Write-Result "Failed" -ForegroundColor Red
         exit 1
     }
 
@@ -138,9 +126,9 @@ if ( $install_build_tools ) {
                                     "$($env:TEMP)\build_tools\certificates\manifestCounterSignRootCertificate.cer" `
                       -Wait -WindowStyle Hidden
         if ( Test-Path -Path Cert:\LocalMachine\Root\3b1efd3a66ea28b16697394703a72ca340a05bd5 ) {
-            Write-Host "Success" -ForegroundColor Green
+            Write-Result "Success" -ForegroundColor Green
         } else {
-            Write-Host "Failed" -ForegroundColor Yellow
+            Write-Result "Failed" -ForegroundColor Yellow
         }
     }
 
@@ -154,9 +142,9 @@ if ( $install_build_tools ) {
                                 "$($env:TEMP)\build_tools\certificates\manifestRootCertificate.cer" `
                   -Wait -WindowStyle Hidden
         if ( Test-Path -Path Cert:\LocalMachine\Root\8f43288ad272f3103b6fb1428485ea3014c0bcfe ) {
-            Write-Host "Success" -ForegroundColor Green
+            Write-Result "Success" -ForegroundColor Green
         } else {
-            Write-Host "Failed" -ForegroundColor Yellow
+            Write-Result "Failed" -ForegroundColor Yellow
         }
     }
 
@@ -166,19 +154,19 @@ if ( $install_build_tools ) {
                   -Wait
     @($VS_CL_BIN, $MSBUILD_BIN, $WIN10_SDK_RC) | ForEach-Object {
         if ( ! (Test-Path -Path $_) ) {
-            Write-Host "Failed" -ForegroundColor Red
+            Write-Result "Failed" -ForegroundColor Red
             exit 1
         }
     }
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 } else {
-    Write-Host "Success" -ForegroundColor Green
+    Write-Result "Success" -ForegroundColor Green
 }
 
 #-------------------------------------------------------------------------------
 # Finished
 #-------------------------------------------------------------------------------
+
 Write-Host $("-" * 80)
 Write-Host "Install Visual Studio Build Tools Completed" -ForegroundColor Cyan
 Write-Host $("=" * 80)
-

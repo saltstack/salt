@@ -42,10 +42,6 @@ execution modules
     at_solaris
     augeas_cfg
     aws_sqs
-    azurearm_compute
-    azurearm_dns
-    azurearm_network
-    azurearm_resource
     bamboohr
     baredoc
     bcache
@@ -542,6 +538,7 @@ execution modules
     winrepo
     wordpress
     x509
+    x509_v2
     xapi_virt
     xbpspkg
     xfs

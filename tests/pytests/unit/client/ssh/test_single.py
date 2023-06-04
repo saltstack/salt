@@ -10,6 +10,7 @@ import salt.config
 import salt.roster
 import salt.utils.files
 import salt.utils.path
+import salt.utils.platform
 import salt.utils.thin
 import salt.utils.yaml
 from salt.client import ssh
@@ -339,9 +340,7 @@ def test_run_ssh_pre_flight(opts, target, tmp_path):
         ] == mock_cmd.call_args_list
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_windows(), reason="SSH_PY_SHIM not set on windows"
-)
+@pytest.mark.skip_on_windows(reason="SSH_PY_SHIM not set on windows")
 @pytest.mark.slow_test
 def test_cmd_run_set_path(opts, target):
     """
@@ -363,9 +362,7 @@ def test_cmd_run_set_path(opts, target):
     assert re.search("\\" + target["set_path"], ret)
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_windows(), reason="SSH_PY_SHIM not set on windows"
-)
+@pytest.mark.skip_on_windows(reason="SSH_PY_SHIM not set on windows")
 @pytest.mark.slow_test
 def test_cmd_run_not_set_path(opts, target):
     """
@@ -409,6 +406,13 @@ def test_cmd_block_python_version_error(opts, target):
         assert "ERROR: Python version error. Recommendation(s) follow:" in ret[0]
 
 
+def _check_skip(grains):
+    if grains["os"] == "MacOS":
+        return True
+    return False
+
+
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 @pytest.mark.skip_on_windows(reason="pre_flight_args is not implemented for Windows")
 @pytest.mark.parametrize(
     "test_opts",

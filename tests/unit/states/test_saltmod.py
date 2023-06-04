@@ -394,7 +394,6 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             "name": "state",
             "result": True,
             "comment": "Runner function 'state' executed.",
-            "__orchestration__": True,
         }
         runner_mock = MagicMock(return_value={"return": True})
 
@@ -414,7 +413,6 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             "name": "state",
             "result": True,
             "comment": "Wheel function 'state' executed.",
-            "__orchestration__": True,
         }
         wheel_mock = MagicMock(return_value={"return": True})
 

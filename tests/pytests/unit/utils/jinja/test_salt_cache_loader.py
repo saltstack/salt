@@ -15,7 +15,7 @@ import salt.utils.json  # pylint: disable=unused-import
 import salt.utils.stringutils  # pylint: disable=unused-import
 import salt.utils.yaml  # pylint: disable=unused-import
 from salt.utils.jinja import SaltCacheLoader
-from tests.support.mock import Mock, patch
+from tests.support.mock import Mock, call, patch
 
 
 @pytest.fixture
@@ -224,14 +224,45 @@ def test_file_client_kwarg(minion_opts, mock_file_client):
     assert loader._file_client is mock_file_client
 
 
-def test_cache_loader_shutdown(minion_opts, mock_file_client):
+def test_cache_loader_passed_file_client(minion_opts, mock_file_client):
     """
     The shudown method can be called without raising an exception when the
     file_client does not have a destroy method
     """
-    assert not hasattr(mock_file_client, "destroy")
-    mock_file_client.opts = minion_opts
-    loader = SaltCacheLoader(minion_opts, _file_client=mock_file_client)
-    assert loader._file_client is mock_file_client
-    # Shutdown method should not raise any exceptions
-    loader.shutdown()
+    # Test SaltCacheLoader creating and destroying the file client created
+    file_client = Mock()
+    with patch("salt.fileclient.get_file_client", return_value=file_client):
+        loader = SaltCacheLoader(minion_opts)
+        assert loader._file_client is None
+        with loader:
+            assert loader._file_client is file_client
+        assert loader._file_client is None
+        assert file_client.mock_calls == [call.destroy()]
+
+    # Test SaltCacheLoader reusing the file client passed
+    file_client = Mock()
+    file_client.opts = {"file_roots": minion_opts["file_roots"]}
+    with patch("salt.fileclient.get_file_client", return_value=Mock()):
+        loader = SaltCacheLoader(minion_opts, _file_client=file_client)
+        assert loader._file_client is file_client
+        with loader:
+            assert loader._file_client is file_client
+        assert loader._file_client is file_client
+        assert file_client.mock_calls == []
+
+    # Test SaltCacheLoader creating a client even though a file client was
+    # passed because the "file_roots" option is different, and, as such,
+    # the destroy method on the new file client is called, but not on the
+    # file client passed in.
+    file_client = Mock()
+    file_client.opts = {"file_roots": ""}
+    new_file_client = Mock()
+    with patch("salt.fileclient.get_file_client", return_value=new_file_client):
+        loader = SaltCacheLoader(minion_opts, _file_client=file_client)
+        assert loader._file_client is file_client
+        with loader:
+            assert loader._file_client is not file_client
+            assert loader._file_client is new_file_client
+        assert loader._file_client is None
+        assert file_client.mock_calls == []
+        assert new_file_client.mock_calls == [call.destroy()]

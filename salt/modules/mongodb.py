@@ -18,7 +18,7 @@ import re
 
 import salt.utils.json
 from salt.exceptions import get_error_message as _get_error_message
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 try:
     import pymongo
@@ -336,7 +336,7 @@ def user_list(
         output = []
         mongodb_version = _version(mdb)
 
-        if _LooseVersion(mongodb_version) >= _LooseVersion("2.6"):
+        if Version(mongodb_version) >= Version("2.6"):
             for user in mdb.command("usersInfo")["users"]:
                 output.append({"user": user["user"], "roles": user["roles"]})
         else:
@@ -697,7 +697,7 @@ def collection_create(
     authdb=None,
 ):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     Create a collection in the specified database.
 
@@ -752,7 +752,7 @@ def collection_drop(
     authdb=None,
 ):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     Drop a collection in the specified database.
 
@@ -806,7 +806,7 @@ def collections_list(
     authdb=None,
 ):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     List the collections available in the specified database.
 

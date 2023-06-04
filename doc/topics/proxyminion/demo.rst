@@ -112,4 +112,3 @@ the 'url' key above should say ``url: http://127.0.0.1:8000``
 
 11. States can be written to target the proxy.  Feel free to experiment with
     them.
-

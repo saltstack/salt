@@ -114,7 +114,7 @@ if HAS_PIP is True:
 
 # pylint: enable=import-error
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = "pip"
@@ -189,10 +189,10 @@ def _check_pkg_version_format(pkg):
             # vcs+URL urls are not properly parsed.
             # The next line is meant to trigger an AttributeError and
             # handle lower pip versions
-            log.debug("Installed pip version: %s", pip.__version__)
+            logger.debug("Installed pip version: %s", pip.__version__)
             install_req = _from_line(pkg)
         except AttributeError:
-            log.debug("Installed pip version is lower than 1.2")
+            logger.debug("Installed pip version is lower than 1.2")
             supported_vcs = ("git", "svn", "hg", "bzr")
             if pkg.startswith(supported_vcs):
                 for vcs in supported_vcs:
@@ -251,7 +251,7 @@ def _check_if_installed(
     index_url,
     extra_index_url,
     pip_list=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Takes a package name and version specification (if any) and checks it is
@@ -351,7 +351,7 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
     making the comparison.
     """
     if HAS_PKG_RESOURCES is False:
-        log.warning(
+        logger.warning(
             "The pkg_resources packages was not loaded. Please install setuptools."
         )
         return None
@@ -367,7 +367,9 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
         if pkg_resources.parse_version(pkg1) > pkg_resources.parse_version(pkg2):
             return 1
     except Exception as exc:  # pylint: disable=broad-except
-        log.exception(exc)
+        logger.exception(
+            f'Comparison of package versions "{pkg1}" and "{pkg2}" failed: {exc}'
+        )
     return None
 
 
@@ -418,7 +420,7 @@ def installed(
     cache_dir=None,
     no_binary=None,
     extra_args=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Make sure the package is installed
@@ -845,12 +847,16 @@ def installed(
     # No requirements case.
     # Check pre-existence of the requested packages.
     else:
-        # Attempt to pre-cache a the current pip list
+        # Attempt to pre-cache the current pip list
         try:
-            pip_list = __salt__["pip.list"](bin_env=bin_env, user=user, cwd=cwd)
+            pip_list = __salt__["pip.list"](
+                bin_env=bin_env, user=user, cwd=cwd, env_vars=env_vars
+            )
         # If we fail, then just send False, and we'll try again in the next function call
         except Exception as exc:  # pylint: disable=broad-except
-            log.exception(exc)
+            logger.exception(
+                f"Pre-caching of PIP packages during states.pip.installed failed by exception from pip.list: {exc}"
+            )
             pip_list = False
 
         for prefix, state_pkg_name, version_spec in pkgs_details:
@@ -870,7 +876,7 @@ def installed(
                     index_url,
                     extra_index_url,
                     pip_list,
-                    **kwargs
+                    **kwargs,
                 )
                 # If _check_if_installed result is None, something went wrong with
                 # the command running. This way we keep stateful output.
@@ -976,7 +982,7 @@ def installed(
         no_cache_dir=no_cache_dir,
         extra_args=extra_args,
         disable_version_check=True,
-        **kwargs
+        **kwargs,
     )
 
     if pip_install_call and pip_install_call.get("retcode", 1) == 0:
@@ -1041,7 +1047,7 @@ def installed(
                             user=user,
                             cwd=cwd,
                             env_vars=env_vars,
-                            **kwargs
+                            **kwargs,
                         )
                     )
 

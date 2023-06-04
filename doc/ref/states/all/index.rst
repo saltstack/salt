@@ -24,10 +24,6 @@ state modules
     at
     augeas
     aws_sqs
-    azurearm_compute
-    azurearm_dns
-    azurearm_network
-    azurearm_resource
     beacon
     bigip
     blockdev
@@ -229,6 +225,7 @@ state modules
     nxos_upgrade
     openstack_config
     openvswitch_bridge
+    openvswitch_db
     openvswitch_port
     opsgenie
     pagerduty
@@ -346,6 +343,7 @@ state modules
     winrepo
     wordpress
     x509
+    x509_v2
     xml
     xmpp
     zabbix_action

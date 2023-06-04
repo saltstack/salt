@@ -1,8 +1,7 @@
 import urllib.parse
 
 import pytest
-
-from salt.ext.tornado.httpclient import HTTPError
+from tornado.httpclient import HTTPError
 
 pytestmark = [
     pytest.mark.destructive_test,

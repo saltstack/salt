@@ -17,6 +17,7 @@ from tests.support.mock import Mock, patch
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("apt-cache", "grep"),
+    pytest.mark.slow_test,
 ]
 
 KEY_FILES = (
@@ -218,7 +219,7 @@ def test__expand_repo_def(grains):
     test_repo, comps = get_current_repo()
     ret = aptpkg._expand_repo_def(
         os_name=grains["os"],
-        lsb_distrib_codename=grains.get("lsb_distrib_codename"),
+        os_codename=grains.get("oscodename"),
         repo=test_repo,
     )
     for key in [
@@ -310,6 +311,7 @@ def test_get_repo_keys_keydir_not_exist(key):
 
 @pytest.mark.parametrize("get_key_file", KEY_FILES, indirect=True)
 @pytest.mark.parametrize("aptkey", [False, True])
+@pytest.mark.skip_if_not_root
 def test_add_del_repo_key(get_key_file, aptkey):
     """
     Test both add_repo_key and del_repo_key when

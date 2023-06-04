@@ -20,7 +20,6 @@ import salt.utils.stringutils
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempfile
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -64,10 +63,7 @@ class CPModuleTest(ModuleCase):
         self.assertNotIn("bacon", data)
 
     @with_tempfile()
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "This test hangs on Windows on Py3",
-    )
+    @pytest.mark.skip_on_windows(reason="This test hangs on Windows on Py3")
     def test_get_file_templated_paths(self, tgt):
         """
         cp.get_file
@@ -238,9 +234,9 @@ class CPModuleTest(ModuleCase):
         self.run_function("cp.get_url", ["https://repo.saltproject.io/index.html", tgt])
         with salt.utils.files.fopen(tgt, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Bootstrap", data)
-        self.assertIn("Debian", data)
-        self.assertIn("Windows", data)
+        self.assertIn("Salt Project", data)
+        self.assertIn("Package", data)
+        self.assertIn("Repo", data)
         self.assertNotIn("AYBABTU", data)
 
     @pytest.mark.slow_test
@@ -254,9 +250,9 @@ class CPModuleTest(ModuleCase):
 
         with salt.utils.files.fopen(ret, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Bootstrap", data)
-        self.assertIn("Debian", data)
-        self.assertIn("Windows", data)
+        self.assertIn("Salt Project", data)
+        self.assertIn("Package", data)
+        self.assertIn("Repo", data)
         self.assertNotIn("AYBABTU", data)
 
     @pytest.mark.slow_test
@@ -277,9 +273,9 @@ class CPModuleTest(ModuleCase):
             time.sleep(sleep)
         if ret.find("HTTP 599") != -1:
             raise Exception("https://repo.saltproject.io/index.html returned 599 error")
-        self.assertIn("Bootstrap", ret)
-        self.assertIn("Debian", ret)
-        self.assertIn("Windows", ret)
+        self.assertIn("Salt Project", ret)
+        self.assertIn("Package", ret)
+        self.assertIn("Repo", ret)
         self.assertNotIn("AYBABTU", ret)
 
     @pytest.mark.slow_test
@@ -350,9 +346,9 @@ class CPModuleTest(ModuleCase):
         """
         src = "https://repo.saltproject.io/index.html"
         ret = self.run_function("cp.get_file_str", [src])
-        self.assertIn("Bootstrap", ret)
-        self.assertIn("Debian", ret)
-        self.assertIn("Windows", ret)
+        self.assertIn("Salt Project", ret)
+        self.assertIn("Package", ret)
+        self.assertIn("Repo", ret)
         self.assertNotIn("AYBABTU", ret)
 
     @pytest.mark.slow_test
@@ -417,7 +413,7 @@ class CPModuleTest(ModuleCase):
         with salt.utils.files.fopen(ret, "r") as cp_:
             self.assertEqual(salt.utils.stringutils.to_unicode(cp_.read()), "foo")
 
-    @skipIf(not salt.utils.path.which("nginx"), "nginx not installed")
+    @pytest.mark.skip_if_binaries_missing("nginx")
     @pytest.mark.slow_test
     @pytest.mark.skip_if_not_root
     def test_cache_remote_file(self):

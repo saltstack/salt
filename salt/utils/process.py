@@ -20,13 +20,14 @@ import sys
 import threading
 import time
 
+from tornado import gen
+
 import salt._logging
 import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
-from salt.ext.tornado import gen
 
 log = logging.getLogger(__name__)
 
@@ -1090,7 +1091,8 @@ class SignalHandlingProcess(Process):
                     self.pid,
                     os.getpid(),
                 )
-        sys.exit(salt.defaults.exitcodes.EX_OK)
+        # It's OK to call os._exit instead of sys.exit on forked processed
+        os._exit(salt.defaults.exitcodes.EX_OK)
 
     def start(self):
         with default_signals(signal.SIGINT, signal.SIGTERM):

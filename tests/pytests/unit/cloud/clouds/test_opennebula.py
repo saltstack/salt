@@ -622,9 +622,7 @@ def test_image_clone_no_image_id_or_image_name():
     )
 
 
-@pytest.mark.skipif(
-    True, reason="Need to figure out how to mock calls to the O.N. API first."
-)
+@pytest.mark.skip(reason="Need to figure out how to mock calls to the O.N. API first.")
 def test_image_clone_success():
     """
     Tests that image_clone returns successfully

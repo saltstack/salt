@@ -8,11 +8,11 @@ import pytest
 import salt.config
 import salt.states.boto_vpc as boto_vpc
 import salt.utils.botomod as botomod
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=import-error,unused-import
 from tests.unit.modules.test_boto_vpc import BotoVpcTestCaseMixin
@@ -86,7 +86,7 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
+    elif Version(boto.__version__) < Version(required_boto_version):
         return False
     else:
         return True
@@ -142,11 +142,11 @@ class BotoVpcStateTestCaseBase(TestCase, LoaderModuleMockMixin):
         )
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}".format(
+    reason="The boto module must be greater than or equal to version {}".format(
         required_boto_version
     ),
 )
@@ -155,9 +155,9 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
     TestCase for salt.states.boto_vpc state.module
     """
 
-    @skipIf(
+    @pytest.mark.skipif(
         sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
+        reason="Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
     @pytest.mark.slow_test
@@ -175,9 +175,9 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
             vpc_present_result["changes"]["new"]["vpc"]["state"], "available"
         )
 
-    @skipIf(
+    @pytest.mark.skipif(
         sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
+        reason="Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
     def test_present_when_vpc_exists(self):
@@ -187,7 +187,9 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(vpc_present_result["changes"], {})
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
+    @pytest.mark.skip(
+        reason="Disabled pending https://github.com/spulec/moto/issues/493"
+    )
     def test_present_with_failure(self):
         with patch(
             "moto.ec2.models.VPCBackend.create_vpc",
@@ -199,9 +201,9 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
             self.assertFalse(vpc_present_result["result"])
             self.assertTrue("Mocked error" in vpc_present_result["comment"])
 
-    @skipIf(
+    @pytest.mark.skipif(
         sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
+        reason="Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
     @pytest.mark.slow_test
@@ -214,9 +216,9 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(vpc_absent_result["result"])
         self.assertEqual(vpc_absent_result["changes"], {})
 
-    @skipIf(
+    @pytest.mark.skipif(
         sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
+        reason="Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
     @pytest.mark.slow_test
@@ -228,7 +230,9 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(vpc_absent_result["changes"]["new"]["vpc"], None)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
+    @pytest.mark.skip(
+        reason="Disabled pending https://github.com/spulec/moto/issues/493"
+    )
     def test_absent_with_failure(self):
         vpc = self._create_vpc(name="test")
         with patch(
@@ -250,9 +254,9 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         _create = getattr(self, "_create_" + self.resource_type)
         _create(vpc_id=vpc_id, name=name, **self.extra_kwargs)
 
-    @skipIf(
+    @pytest.mark.skipif(
         sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
+        reason="Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
     @pytest.mark.slow_test
@@ -273,9 +277,9 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         )
         self.assertTrue(exists)
 
-    @skipIf(
+    @pytest.mark.skipif(
         sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
+        reason="Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
     @pytest.mark.slow_test
@@ -290,7 +294,9 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         self.assertEqual(resource_present_result["changes"], {})
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
+    @pytest.mark.skip(
+        reason="Disabled pending https://github.com/spulec/moto/issues/493"
+    )
     def test_present_with_failure(self):
         vpc = self._create_vpc(name="test")
         with patch(
@@ -304,9 +310,9 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
             self.assertFalse(resource_present_result["result"])
             self.assertTrue("Mocked error" in resource_present_result["comment"])
 
-    @skipIf(
+    @pytest.mark.skipif(
         sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
+        reason="Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
     @pytest.mark.slow_test
@@ -321,9 +327,9 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         self.assertTrue(resource_absent_result["result"])
         self.assertEqual(resource_absent_result["changes"], {})
 
-    @skipIf(
+    @pytest.mark.skipif(
         sys.version_info > (3, 6),
-        "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
+        reason="Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
     )
     @mock_ec2_deprecated
     @pytest.mark.slow_test
@@ -345,7 +351,9 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         self.assertFalse(exists)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
+    @pytest.mark.skip(
+        reason="Disabled pending https://github.com/spulec/moto/issues/493"
+    )
     def test_absent_with_failure(self):
         vpc = self._create_vpc(name="test")
         self._create_resource(vpc_id=vpc.id, name="test")
@@ -361,11 +369,11 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
             self.assertTrue("Mocked error" in resource_absent_result["comment"])
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}".format(
+    reason="The boto module must be greater than or equal to version {}".format(
         required_boto_version
     ),
 )
@@ -376,11 +384,11 @@ class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMi
     extra_kwargs = {"cidr_block": cidr_block}
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}".format(
+    reason="The boto module must be greater than or equal to version {}".format(
         required_boto_version
     ),
 )
@@ -392,17 +400,16 @@ class BotoVpcInternetGatewayTestCase(
     backend_delete = "InternetGatewayBackend.delete_internet_gateway"
 
 
-@skipIf(
-    True,
-    "Disabled for Python 3 due to upstream bugs: "
+@pytest.mark.skip(
+    reason="Disabled for Python 3 due to upstream bugs: "
     "https://github.com/spulec/moto/issues/548 and "
     "https://github.com/gabrielfalcao/HTTPretty/issues/325",
 )
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(HAS_MOTO is False, "The moto module must be installed.")
-@skipIf(
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(HAS_MOTO is False, reason="The moto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto module must be greater than or equal to version {}".format(
+    reason="The boto module must be greater than or equal to version {}".format(
         required_boto_version
     ),
 )

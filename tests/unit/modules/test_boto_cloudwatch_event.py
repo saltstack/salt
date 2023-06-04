@@ -2,12 +2,14 @@ import logging
 import random
 import string
 
+import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.boto_cloudwatch_event as boto_cloudwatch_event
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=import-error,no-name-in-module,unused-import
 try:
@@ -117,7 +119,7 @@ class BotoCloudWatchEventTestCaseMixin:
     pass
 
 
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
 class BotoCloudWatchEventTestCase(
     BotoCloudWatchEventTestCaseBase, BotoCloudWatchEventTestCaseMixin
 ):

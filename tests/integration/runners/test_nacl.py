@@ -8,7 +8,6 @@ import sys
 import pytest
 
 from tests.support.case import ShellCase
-from tests.support.unit import skipIf
 
 try:
     import libnacl.sealed  # pylint: disable=unused-import
@@ -21,8 +20,10 @@ except (ImportError, OSError, AttributeError):
 log = logging.getLogger(__name__)
 
 
-@skipIf(not HAS_LIBNACL, "skipping test_nacl, libnacl is unavailable")
-@skipIf(sys.version_info >= (3, 10), "Segfaults with python 3")
+@pytest.mark.skipif(
+    not HAS_LIBNACL, reason="skipping test_nacl, reason=libnacl is unavailable"
+)
+@pytest.mark.skipif(sys.version_info >= (3, 10), reason="Segfaults with python 3")
 @pytest.mark.windows_whitelisted
 class NaclTest(ShellCase):
     """
