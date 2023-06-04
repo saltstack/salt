@@ -941,7 +941,7 @@ class AsyncAuth:
             else:
                 cipher = PKCS1_OAEP.new(pub)
                 payload["token"] = cipher.encrypt(self.token)
-        except Exception:  # pylint: disable=broad-except
+        except FileNotFoundError:  # pylint: disable=broad-except
             pass
         with salt.utils.files.fopen(self.pub_path) as f:
             payload["pub"] = f.read()
