@@ -626,7 +626,7 @@ def mounted(
                     active = __salt__["mount.active"](extended=True)
                     if comp_real_name in active:
                         ret["comment"] = "Unable to unmount"
-                        ret["result"] = None
+                        ret["result"] = False
                         return ret
                     update_mount_cache = True
             else:
