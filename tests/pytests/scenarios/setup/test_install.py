@@ -421,6 +421,15 @@ def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
             cwd=src_dir,
         )
 
+        venv.run(
+            venv.venv_python,
+            "-m",
+            "pip",
+            "install",
+            "pip>=20.2.4,<21.2",
+            "setuptools<58.0",
+        )
+
         venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
 
         # Let's ensure the version is correct
