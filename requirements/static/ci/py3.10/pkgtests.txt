@@ -129,7 +129,7 @@ pyzmq==25.0.2 ; python_version < "3.11"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-requests==2.28.2
+requests==2.31.0
     # via
     #   -r requirements/base.txt
     #   docker
@@ -139,6 +139,8 @@ tempora==5.2.0
     # via portend
 tomli==2.0.1
     # via pytest
+tornado==6.3.2 ; python_version >= "3.8"
+    # via -r requirements/base.txt
 typing-extensions==4.4.0
     # via
     #   pydantic

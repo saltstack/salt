@@ -218,7 +218,7 @@ def proc_info(pid, attrs=None):
     attrs
         Optional list of desired process attributes.  The list of possible
         attributes can be found here:
-        http://pythonhosted.org/psutil/#psutil.Process
+        https://psutil.readthedocs.io/en/latest/#processes
     """
     try:
         proc = psutil.Process(pid)

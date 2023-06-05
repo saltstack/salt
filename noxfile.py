@@ -104,7 +104,7 @@ def session_warn(session, message):
     try:
         session.warn(message)
     except AttributeError:
-        session.log("WARNING: {}".format(message))
+        session.log(f"WARNING: {message}")
 
 
 def session_run_always(session, *command, **kwargs):
@@ -129,15 +129,15 @@ def session_run_always(session, *command, **kwargs):
 
 def find_session_runner(session, name, python_version, onedir=False, **kwargs):
     if onedir:
-        name += "-onedir-{}".format(ONEDIR_PYTHON_PATH)
+        name += f"-onedir-{ONEDIR_PYTHON_PATH}"
     else:
-        name += "-{}".format(python_version)
+        name += f"-{python_version}"
     for s, _ in session._runner.manifest.list_all_sessions():
         if name not in s.signatures:
             continue
         for signature in s.signatures:
             for key, value in kwargs.items():
-                param = "{}={!r}".format(key, value)
+                param = f"{key}={value!r}"
                 if param not in signature:
                     break
             else:
@@ -185,10 +185,8 @@ def _get_session_python_version_info(session):
 
 def _get_pydir(session):
     version_info = _get_session_python_version_info(session)
-    if version_info < (3, 5):
-        session.error("Only Python >= 3.5 is supported")
-    if IS_WINDOWS and version_info < (3, 6):
-        session.error("Only Python >= 3.6 is supported on Windows")
+    if version_info < (3, 8):
+        session.error("Only Python >= 3.8 is supported")
     return "py{}.{}".format(*version_info)
 
 
@@ -203,7 +201,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
                 "static",
                 requirements_type,
                 pydir,
-                "{}-windows.txt".format(transport),
+                f"{transport}-windows.txt",
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
@@ -217,7 +215,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
-        session.error("Could not find a windows requirements file for {}".format(pydir))
+        session.error(f"Could not find a windows requirements file for {pydir}")
     elif IS_DARWIN:
         if crypto is None:
             _requirements_file = os.path.join(
@@ -225,7 +223,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
                 "static",
                 requirements_type,
                 pydir,
-                "{}-darwin.txt".format(transport),
+                f"{transport}-darwin.txt",
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
@@ -239,7 +237,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
-        session.error("Could not find a darwin requirements file for {}".format(pydir))
+        session.error(f"Could not find a darwin requirements file for {pydir}")
     elif IS_FREEBSD:
         if crypto is None:
             _requirements_file = os.path.join(
@@ -247,7 +245,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
                 "static",
                 requirements_type,
                 pydir,
-                "{}-freebsd.txt".format(transport),
+                f"{transport}-freebsd.txt",
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
@@ -261,7 +259,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
-        session.error("Could not find a freebsd requirements file for {}".format(pydir))
+        session.error(f"Could not find a freebsd requirements file for {pydir}")
     else:
         if crypto is None:
             _requirements_file = os.path.join(
@@ -269,7 +267,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
                 "static",
                 requirements_type,
                 pydir,
-                "{}-linux.txt".format(transport),
+                f"{transport}-linux.txt",
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
@@ -283,7 +281,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
-        session.error("Could not find a linux requirements file for {}".format(pydir))
+        session.error(f"Could not find a linux requirements file for {pydir}")
 
 
 def _upgrade_pip_setuptools_and_wheel(session, upgrade=True, onedir=False):
@@ -571,7 +569,7 @@ def test_parametrized(session, coverage, transport, crypto):
             session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
-        "--transport={}".format(transport),
+        f"--transport={transport}",
     ] + session.posargs
     _pytest(session, coverage=coverage, cmd_args=cmd_args)
 
@@ -1016,7 +1014,7 @@ def _pytest(session, coverage, cmd_args, env=None):
         if arg == "--log-file" or arg.startswith("--log-file="):
             break
     else:
-        args.append("--log-file={}".format(RUNTESTS_LOGFILE))
+        args.append(f"--log-file={RUNTESTS_LOGFILE}")
     args.extend(cmd_args)
 
     if PRINT_SYSTEM_INFO and "--sysinfo" not in args:
@@ -1358,7 +1356,7 @@ def _lint(
         session.run("pylint", "--version")
         pylint_report_path = os.environ.get("PYLINT_REPORT")
 
-    cmd_args = ["pylint", "--rcfile={}".format(rcfile)] + list(flags) + list(paths)
+    cmd_args = ["pylint", f"--rcfile={rcfile}"] + list(flags) + list(paths)
 
     cmd_kwargs = {"env": {"PYTHONUNBUFFERED": "1"}}
 
@@ -1433,8 +1431,8 @@ def lint(session):
     """
     Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
     """
-    session.notify("lint-salt-{}".format(session.python))
-    session.notify("lint-tests-{}".format(session.python))
+    session.notify(f"lint-salt-{session.python}")
+    session.notify(f"lint-tests-{session.python}")
 
 
 @nox.session(python="3", name="lint-salt")
@@ -1498,7 +1496,7 @@ def docs(session, compress, update, clean):
     """
     Build Salt's Documentation
     """
-    session.notify("docs-html-{}(compress={})".format(session.python, compress))
+    session.notify(f"docs-html-{session.python}(compress={compress})")
     session.notify(
         find_session_runner(
             session,

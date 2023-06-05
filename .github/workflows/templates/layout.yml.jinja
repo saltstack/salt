@@ -91,6 +91,7 @@ jobs:
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
       releases: ${{ steps.get-salt-releases.outputs.releases }}
+      release-changelog-target: ${{ steps.get-release-changelog-target.outputs.release-changelog-target }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -305,6 +306,12 @@ jobs:
         id: set-cache-seed
         run: |
           echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
+
+      - name: Get Release Changelog Target
+        id: get-release-changelog-target
+        run: |
+          tools ci get-release-changelog-target ${{ github.event_name }}
+
   <%- endblock prepare_workflow_job %>
   <%- endif %>
 
@@ -316,6 +323,9 @@ jobs:
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
     runs-on: ubuntu-latest
+    <%- if workflow_slug == "nightly" %>
+    environment: <{ workflow_slug }>
+    <%- endif %>
     needs:
       <%- for need in prepare_workflow_needs.iter(consume=True) %>
       - <{ need }>
