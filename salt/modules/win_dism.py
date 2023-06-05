@@ -518,7 +518,9 @@ def add_provisioned_package(package, image=None, restart=False):
     """
     Provision a package using DISM. A provisioned package will install for new
     users on the system. It will also be reinstalled on each user if the system
-    if updated.
+    is updated.
+
+    .. versionadded:: 3007.0
 
     Args:
 
@@ -712,6 +714,8 @@ def installed_packages(image=None):
 def provisioned_packages(image=None):
     """
     List the packages installed on the system
+
+    .. versionadded:: 3007.0
 
     Args:
         image (Optional[str]): The path to the root directory of an offline

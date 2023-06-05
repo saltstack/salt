@@ -389,7 +389,9 @@ def package_installed(
 
 def provisioned_package_installed(name, image=None, restart=False):
     """
-    Install a package.
+    Provision a package on a Windows image.
+
+    .. versionadded:: 3007.0
 
     Args:
 
