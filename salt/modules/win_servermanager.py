@@ -194,7 +194,7 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
         shlex.quote(feature),
         management_tools,
         "-IncludeAllSubFeature" if recurse else "",
-        "" if source is None else "-Source {}".format(source),
+        "" if source is None else f"-Source {source}",
     )
     out = salt.utils.win_pwsh.run_dict(cmd)
 

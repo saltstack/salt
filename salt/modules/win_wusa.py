@@ -57,7 +57,7 @@ def is_installed(name):
     """
     return (
         __salt__["cmd.retcode"](
-            cmd="Get-HotFix -Id {}".format(name),
+            cmd=f"Get-HotFix -Id {name}",
             shell="powershell",
             ignore_retcode=True,
         )
@@ -105,17 +105,17 @@ def install(path, restart=False):
     # Check the ret_code
     file_name = os.path.basename(path)
     errors = {
-        2359302: "{} is already installed".format(file_name),
+        2359302: f"{file_name} is already installed",
         3010: (
-            "{} correctly installed but server reboot is needed to complete"
-            " installation".format(file_name)
+            f"{file_name} correctly installed but server reboot is needed to "
+            f"complete installation"
         ),
         87: "Unknown error",
     }
     if ret_code in errors:
         raise CommandExecutionError(errors[ret_code], ret_code)
     elif ret_code:
-        raise CommandExecutionError("Unknown error: {}".format(ret_code))
+        raise CommandExecutionError(f"Unknown error: {ret_code}")
 
     return True
 
@@ -170,14 +170,14 @@ def uninstall(path, restart=False):
     # If you pass /quiet and specify /kb, you'll always get retcode 87 if there
     # is an error. Use the actual file to get a more descriptive error
     errors = {
-        -2145116156: "{} does not support uninstall".format(kb),
-        2359303: "{} not installed".format(kb),
+        -2145116156: f"{kb} does not support uninstall",
+        2359303: f"{kb} not installed",
         87: "Unknown error. Try specifying an .msu file",
     }
     if ret_code in errors:
         raise CommandExecutionError(errors[ret_code], ret_code)
     elif ret_code:
-        raise CommandExecutionError("Unknown error: {}".format(ret_code))
+        raise CommandExecutionError(f"Unknown error: {ret_code}")
 
     return True
 
