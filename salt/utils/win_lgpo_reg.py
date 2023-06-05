@@ -96,7 +96,7 @@ def read_reg_pol_file(reg_pol_path):
     """
     return_data = None
     if os.path.exists(reg_pol_path):
-        log.debug("LGPO_REG Utils: Reading from %s", reg_pol_path)
+        log.debug("LGPO_REG Util: Reading from %s", reg_pol_path)
         with salt.utils.files.fopen(reg_pol_path, "rb") as pol_file:
             return_data = pol_file.read()
     return return_data
