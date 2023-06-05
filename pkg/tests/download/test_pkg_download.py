@@ -82,8 +82,8 @@ def root_url(salt_release):
 
 
 @pytest.fixture(scope="module")
-def artifact_type():
-    return os.environ.get("DOWNLOAD_TEST_ARTIFACT_TYPE")
+def package_type():
+    return os.environ.get("DOWNLOAD_TEST_PACKAGE_TYPE")
 
 
 def get_salt_release():
@@ -150,7 +150,7 @@ def _setup_system(
     salt_release,
     gpg_key_name,
     repo_subpath,
-    artifact_type,
+    package_type,
     tmp_path_factory,
     onedir_install_path,
 ):
@@ -230,7 +230,7 @@ def _setup_system(
                     downloads_path=downloads_path,
                     gpg_key_name=gpg_key_name,
                     repo_subpath=repo_subpath,
-                    artifact_type=artifact_type,
+                    package_type=package_type,
                     onedir_install_path=onedir_install_path,
                 )
             else:
@@ -308,7 +308,7 @@ def setup_debian_family(
     downloads_path,
     gpg_key_name,
     repo_subpath,
-    artifact_type,
+    package_type,
     onedir_install_path,
 ):
     arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
@@ -316,7 +316,7 @@ def setup_debian_family(
     if ret.returncode != 0:
         pytest.fail(str(ret))
 
-    if artifact_type == "package":
+    if package_type == "package":
         if arch == "aarch64":
             arch = "arm64"
         elif arch == "x86_64":
@@ -386,88 +386,149 @@ def setup_debian_family(
         shell.run("tar", "xvf", str(onedir_location), "-C", str(onedir_extracted))
 
 
-def setup_macos(shell, root_url, salt_release, downloads_path, repo_subpath):
-    arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
-    if arch == "aarch64":
-        arch = "arm64"
+def setup_macos(
+    shell,
+    root_url,
+    salt_release,
+    downloads_path,
+    repo_subpath,
+    package_type,
+    onedir_install_path,
+):
+    if package_type == "package":
+        arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
+        if arch == "aarch64":
+            arch = "arm64"
 
-    if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
-        mac_pkg = f"salt-{salt_release}-py3-{arch}.pkg"
-        if repo_subpath == "minor":
-            mac_pkg_url = f"{root_url}/macos/{repo_subpath}/{salt_release}/{mac_pkg}"
+        if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
+            mac_pkg = f"salt-{salt_release}-py3-{arch}.pkg"
+            if repo_subpath == "minor":
+                mac_pkg_url = (
+                    f"{root_url}/macos/{repo_subpath}/{salt_release}/{mac_pkg}"
+                )
+            else:
+                mac_pkg_url = f"{root_url}/macos/{repo_subpath}/{mac_pkg}"
         else:
-            mac_pkg_url = f"{root_url}/macos/{repo_subpath}/{mac_pkg}"
+            mac_pkg_url = f"{root_url}/macos/{salt_release}/{mac_pkg}"
+            mac_pkg = f"salt-{salt_release}-macos-{arch}.pkg"
+
+        mac_pkg_path = downloads_path / mac_pkg
+        pytest.helpers.download_file(mac_pkg_url, mac_pkg_path)
+
+        ret = shell.run(
+            "installer",
+            "-pkg",
+            str(mac_pkg_path),
+            "-target",
+            "/",
+            check=False,
+        )
+        assert ret.returncode == 0, ret
     else:
-        mac_pkg_url = f"{root_url}/macos/{salt_release}/{mac_pkg}"
-        mac_pkg = f"salt-{salt_release}-macos-{arch}.pkg"
+        # We are testing the onedir download
+        onedir_name = f"salt-{salt_release}-onedir-darwin-{arch}.tar.xz"
+        if repo_subpath == "minor":
+            repo_url_base = f"{root_url}/onedir/{repo_subpath}/{salt_release}"
+        else:
+            repo_url_base = f"{root_url}/onedir/{repo_subpath}"
+        onedir_url = f"{repo_url_base}/{onedir_name}"
+        onedir_location = downloads_path / onedir_name
+        onedir_extracted = onedir_install_path
 
-    mac_pkg_path = downloads_path / mac_pkg
-    pytest.helpers.download_file(mac_pkg_url, mac_pkg_path)
+        try:
+            pytest.helpers.download_file(onedir_url, onedir_location)
+        except Exception as exc:
+            pytest.fail(f"Failed to download {onedir_url}: {exc}")
 
-    ret = shell.run(
-        "installer",
-        "-pkg",
-        str(mac_pkg_path),
-        "-target",
-        "/",
-        check=False,
-    )
-    assert ret.returncode == 0, ret
+        shell.run("tar", "xvf", str(onedir_location), "-C", str(onedir_extracted))
 
 
 @contextlib.contextmanager
-def setup_windows(shell, root_url, salt_release, downloads_path, repo_subpath):
+def setup_windows(
+    shell,
+    root_url,
+    salt_release,
+    downloads_path,
+    repo_subpath,
+    package_type,
+    onedir_install_path,
+):
     try:
-        root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
+        if package_type == "package":
+            root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
 
-        arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
-        install_type = os.environ.get("INSTALL_TYPE") or "msi"
-        if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
-            if install_type.lower() == "nsis":
-                if arch.lower() != "x86":
-                    arch = arch.upper()
-                win_pkg = f"Salt-Minion-{salt_release}-Py3-{arch}-Setup.exe"
+            arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
+            if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
+                if package_type.lower() == "nsis":
+                    if arch.lower() != "x86":
+                        arch = arch.upper()
+                    win_pkg = f"Salt-Minion-{salt_release}-Py3-{arch}-Setup.exe"
+                else:
+                    if arch.lower() != "x86":
+                        arch = arch.upper()
+                    win_pkg = f"Salt-Minion-{salt_release}-Py3-{arch}.msi"
+                if repo_subpath == "minor":
+                    win_pkg_url = (
+                        f"{root_url}/windows/{repo_subpath}/{salt_release}/{win_pkg}"
+                    )
+                else:
+                    win_pkg_url = f"{root_url}/windows/{repo_subpath}/{win_pkg}"
+                ssm_bin = root_dir / "ssm.exe"
             else:
-                if arch.lower() != "x86":
-                    arch = arch.upper()
-                win_pkg = f"Salt-Minion-{salt_release}-Py3-{arch}.msi"
-            if repo_subpath == "minor":
-                win_pkg_url = (
-                    f"{root_url}/windows/{repo_subpath}/{salt_release}/{win_pkg}"
+                win_pkg = f"salt-{salt_release}-windows-{arch}.exe"
+                win_pkg_url = f"{root_url}/windows/{salt_release}/{win_pkg}"
+                ssm_bin = root_dir / "bin" / "ssm_bin"
+
+            pkg_path = downloads_path / win_pkg
+
+            pytest.helpers.download_file(win_pkg_url, pkg_path)
+            if package_type.lower() == "nsis":
+                ret = shell.run(str(pkg_path), "/start-minion=0", "/S", check=False)
+            else:
+                ret = shell.run(
+                    "msiexec", "/qn", "/i", str(pkg_path), 'START_MINION=""'
                 )
+            assert ret.returncode == 0, ret
+
+            log.debug("Removing installed salt-minion service")
+            ret = shell.run(
+                "cmd",
+                "/c",
+                str(ssm_bin),
+                "remove",
+                "salt-minion",
+                "confirm",
+                check=False,
+            )
+            assert ret.returncode == 0, ret
+        else:
+            # We are testing the onedir download
+            onedir_name = f"salt-{salt_release}-onedir-windows-{arch}.tar.xz"
+            if repo_subpath == "minor":
+                repo_url_base = f"{root_url}/onedir/{repo_subpath}/{salt_release}"
             else:
-                win_pkg_url = f"{root_url}/windows/{repo_subpath}/{win_pkg}"
-            ssm_bin = root_dir / "ssm.exe"
-        else:
-            win_pkg = f"salt-{salt_release}-windows-{arch}.exe"
-            win_pkg_url = f"{root_url}/windows/{salt_release}/{win_pkg}"
-            ssm_bin = root_dir / "bin" / "ssm_bin"
+                repo_url_base = f"{root_url}/onedir/{repo_subpath}"
+            onedir_url = f"{repo_url_base}/{onedir_name}"
+            onedir_location = downloads_path / onedir_name
+            onedir_extracted = onedir_install_path
 
-        pkg_path = downloads_path / win_pkg
+            try:
+                pytest.helpers.download_file(onedir_url, onedir_location)
+            except Exception as exc:
+                pytest.fail(f"Failed to download {onedir_url}: {exc}")
 
-        pytest.helpers.download_file(win_pkg_url, pkg_path)
-        if install_type.lower() == "nsis":
-            ret = shell.run(str(pkg_path), "/start-minion=0", "/S", check=False)
-        else:
-            ret = shell.run("msiexec", "/qn", "/i", str(pkg_path), 'START_MINION=""')
-        assert ret.returncode == 0, ret
-
-        log.debug("Removing installed salt-minion service")
-        ret = shell.run(
-            "cmd", "/c", str(ssm_bin), "remove", "salt-minion", "confirm", check=False
-        )
-        assert ret.returncode == 0, ret
+            shell.run("tar", "xvf", str(onedir_location), "-C", str(onedir_extracted))
         yield
     finally:
         # We need to uninstall the MSI packages, otherwise they will not install correctly
-        if install_type.lower() == "msi":
+        if package_type.lower() == "msi":
             ret = shell.run("msiexec", "/qn", "/x", str(pkg_path))
             assert ret.returncode == 0, ret
 
 
 @pytest.fixture(scope="module")
-def install_dir(_setup_system, artifact_type, onedir_install_path):
-    if artifact_type == "package":
+def install_dir(_setup_system, package_type, onedir_install_path):
+    if package_type == "package":
         if platform.is_windows():
             return pathlib.Path(
                 os.getenv("ProgramFiles"), "Salt Project", "Salt"
