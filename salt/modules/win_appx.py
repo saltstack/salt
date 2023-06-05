@@ -2,6 +2,8 @@
 Manage provisioned apps
 =======================
 
+.. versionadded:: 3007.0
+
 Provisioned apps are part of the image and are installed for every user the
 first time the user logs on. Provisioned apps are also updated and sometimes
 reinstalled when the system is updated.
