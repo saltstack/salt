@@ -30,7 +30,7 @@ def test_run_dict_json_string():
         "stdout": '[{"HotFixID": "KB123456"}, {"HotFixID": "KB123457"}]',
     }
     mock_all = MagicMock(return_value=ret)
-    with patch.dict(win_pwsh.__salt__, {"cmd.run_all": mock_all}):
+    with patch("salt.modules.cmdmod.run_all", mock_all):
         result = win_pwsh.run_dict("Junk-Command")
         assert result == [{"HotFixID": "KB123456"}, {"HotFixID": "KB123457"}]
 
@@ -46,7 +46,7 @@ def test_run_dict_empty_return():
         "stdout": "",
     }
     mock_all = MagicMock(return_value=ret)
-    with patch.dict(win_pwsh.__salt__, {"cmd.run_all": mock_all}):
+    with patch("salt.modules.cmdmod.run_all", mock_all):
         result = win_pwsh.run_dict("Junk-Command")
         assert result == {}
 
@@ -59,7 +59,7 @@ def test_run_dict_stderr():
         "stdout": "",
     }
     mock_all = MagicMock(return_value=ret)
-    with patch.dict(win_pwsh.__salt__, {"cmd.run_all": mock_all}):
+    with patch("salt.modules.cmdmod.run_all", mock_all):
         with pytest.raises(CommandExecutionError) as exc_info:
             win_pwsh.run_dict("Junk-Command")
         assert "This is an error" in exc_info.value.message
@@ -72,7 +72,7 @@ def test_run_dict_missing_retcode():
         "stdout": "",
     }
     mock_all = MagicMock(return_value=ret)
-    with patch.dict(win_pwsh.__salt__, {"cmd.run_all": mock_all}):
+    with patch("salt.modules.cmdmod.run_all", mock_all):
         with pytest.raises(CommandExecutionError) as exc_info:
             win_pwsh.run_dict("Junk-Command")
         assert "Issue executing PowerShell" in exc_info.value.message
@@ -86,7 +86,7 @@ def test_run_dict_retcode_not_zero():
         "stdout": "",
     }
     mock_all = MagicMock(return_value=ret)
-    with patch.dict(win_pwsh.__salt__, {"cmd.run_all": mock_all}):
+    with patch("salt.modules.cmdmod.run_all", mock_all):
         with pytest.raises(CommandExecutionError) as exc_info:
             win_pwsh.run_dict("Junk-Command")
         assert "Issue executing PowerShell" in exc_info.value.message
@@ -100,7 +100,7 @@ def test_run_dict_invalid_json():
         "stdout": "Invalid Json",
     }
     mock_all = MagicMock(return_value=ret)
-    with patch.dict(win_pwsh.__salt__, {"cmd.run_all": mock_all}):
+    with patch("salt.modules.cmdmod.run_all", mock_all):
         with pytest.raises(CommandExecutionError) as exc_info:
             win_pwsh.run_dict("Junk-Command")
         assert "No JSON results from PowerShell" in exc_info.value.message
