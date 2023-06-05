@@ -15,7 +15,7 @@ autocommand==2.2.2
     # via jaraco.text
 certifi==2022.12.7
     # via requests
-charset-normalizer==3.0.1
+charset-normalizer==2.1.1
     # via requests
 cheroot==9.0.0
     # via cherrypy
@@ -61,7 +61,7 @@ jmespath==1.0.1
     # via -r requirements/base.txt
 looseversion==1.0.3
     # via -r requirements/base.txt
-markupsafe==2.1.1
+markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
@@ -76,7 +76,7 @@ msgpack==1.0.4
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
-packaging==23.0
+packaging==21.3
     # via
     #   -r requirements/base.txt
     #   pytest
@@ -96,6 +96,8 @@ pycryptodomex==3.16.0
     # via -r requirements/crypto.txt
 pydantic==1.10.4
     # via inflect
+pyparsing==3.0.9
+    # via packaging
 pytest-helpers-namespace==2021.12.29
     # via
     #   pytest-salt-factories

@@ -17,5 +17,3 @@ python-gnupg>=0.4.4
 setproctitle>=1.2.3
 timelib>=0.2.5
 vultr>=1.0.1
-
-importlib-metadata>=3.3.0

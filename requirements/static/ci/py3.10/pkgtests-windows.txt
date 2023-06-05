@@ -17,7 +17,7 @@ certifi==2022.12.7
     # via requests
 cffi==1.15.1
     # via clr-loader
-charset-normalizer==3.0.1
+charset-normalizer==2.1.1
     # via requests
 cheroot==9.0.0
     # via cherrypy
@@ -81,7 +81,7 @@ msgpack==1.0.4
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
-packaging==23.0
+packaging==21.3
     # via
     #   -r requirements/base.txt
     #   pytest
@@ -103,6 +103,8 @@ pycryptodomex==3.17
     # via -r requirements/crypto.txt
 pydantic==1.10.4
     # via inflect
+pyparsing==3.0.9
+    # via packaging
 pytest-helpers-namespace==2021.12.29
     # via
     #   pytest-salt-factories
@@ -128,7 +130,7 @@ pytest==7.2.1
     #   pytest-skip-markers
     #   pytest-system-statistics
     #   pytest-tempdir
-pythonnet==3.0.1 ; python_version >= "3.7"
+pythonnet==3.0.1
     # via -r requirements/static/ci/pkgtests-windows.in
 pytz==2022.7.1
     # via tempora

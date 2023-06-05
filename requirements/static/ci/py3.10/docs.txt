@@ -12,7 +12,7 @@ certifi==2022.12.7
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   requests
-charset-normalizer==2.0.12
+charset-normalizer==2.1.1
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   requests
@@ -66,6 +66,7 @@ jinja2==3.1.2
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
+    #   -r requirements/static/ci/docs.in
     #   myst-docutils
     #   sphinx
 jmespath==1.0.1
@@ -104,7 +105,7 @@ msgpack==1.0.2
     #   -r requirements/base.txt
 myst-docutils[linkify]==0.18.1
     # via -r requirements/static/ci/docs.in
-packaging==22.0
+packaging==21.3
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
@@ -125,6 +126,10 @@ pyenchant==3.2.2
     # via sphinxcontrib-spelling
 pygments==2.14.0
     # via sphinx
+pyparsing==3.0.9
+    # via
+    #   -c requirements/static/ci/py3.10/linux.txt
+    #   packaging
 pytz==2022.1
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
@@ -149,20 +154,22 @@ six==1.16.0
     #   -c requirements/static/ci/py3.10/linux.txt
     #   cheroot
     #   more-itertools
-    #   sphinxcontrib.httpdomain
+    #   sphinxcontrib-httpdomain
 snowballstemmer==2.1.0
     # via sphinx
 sphinx==6.1.3 ; python_version >= "3.9"
     # via
     #   -r requirements/static/ci/docs.in
+    #   sphinxcontrib-httpdomain
     #   sphinxcontrib-spelling
-    #   sphinxcontrib.httpdomain
 sphinxcontrib-applehelp==1.0.2
     # via sphinx
 sphinxcontrib-devhelp==1.0.2
     # via sphinx
 sphinxcontrib-htmlhelp==2.0.0
     # via sphinx
+sphinxcontrib-httpdomain==1.8.1
+    # via -r requirements/static/ci/docs.in
 sphinxcontrib-jsmath==1.0.1
     # via sphinx
 sphinxcontrib-qthelp==1.0.3
@@ -170,8 +177,6 @@ sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.5
     # via sphinx
 sphinxcontrib-spelling==7.7.0
-    # via -r requirements/static/ci/docs.in
-sphinxcontrib.httpdomain==1.8.1
     # via -r requirements/static/ci/docs.in
 tempora==4.1.1
     # via
@@ -181,7 +186,7 @@ tornado==6.3.2 ; python_version >= "3.8"
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
-typing-extensions==4.2.0
+typing-extensions==4.4.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   myst-docutils
