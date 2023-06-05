@@ -1,6 +1,8 @@
 """
 Manage Microsoft Store apps on Windows. Removing an app with this modules will
 deprovision the app from the online Windows image.
+
+.. versionadded:: 3007.0
 """
 import fnmatch
 import logging
