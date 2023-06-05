@@ -4,11 +4,11 @@ Script for setting up an additional salt-minion on a machine with Salt installed
 
 .DESCRIPTION
 This script will install an additional minion on a machine that already has a
-Salt installtion using one of the Salt packages. It will set up the directory
+Salt installation using one of the Salt packages. It will set up the directory
 structure required by Salt. It will also lay down a minion config to be used
 by the Salt minion. Additionaly, this script will install and start a Salt
-minion service that uses the root_dir and minion config. You can also pass the
-name of a service account to be used by the service.
+minion service that uses the root_dir specified in the minion config. You can
+also pass the name of a service account to be used by the service.
 
 You can also remove the multiminion setup with this script.
 

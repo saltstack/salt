@@ -165,6 +165,25 @@ if ( ! (Test-Path -Path "$BUILD_DIR\ssm.exe") ) {
     }
 }
 
+# Copy the multiminion scripts to the Build directory
+$scripts = @(
+    "multi-minion.cmd",
+    "multi-minion.ps1"
+)
+$scripts | ForEach-Object {
+    if (!(Test-Path -Path "$BUILD_DIR\$_")) {
+        Write-Host "Copying $_ to the Build directory: " -NoNewline
+        Copy-Item -Path "$SCRIPT_DIR\$_" -Destination "$BUILD_DIR\$_"
+        if (Test-Path -Path "$BUILD_DIR\$_") {
+            Write-Result "Success" -ForegroundColor Green
+        } else {
+            Write-Result "Failed" -ForegroundColor Red
+            exit 1
+        }
+    }
+}
+
+# Copy VCRedist 2013 to the prereqs directory
 New-Item -Path $PREREQ_DIR -ItemType Directory | Out-Null
 Write-Host "Copying VCRedist 2013 $ARCH_X to prereqs: " -NoNewline
 $file = "vcredist_$ARCH_X`_2013.exe"
@@ -176,6 +195,7 @@ if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
     exit 1
 }
 
+# Copy Universal C Runtimes to the prereqs directory
 Write-Host "Copying Universal C Runtimes $ARCH_X to prereqs: " -NoNewline
 $file = "ucrt_$ARCH_X.zip"
 Invoke-WebRequest -Uri "$SALT_DEP_URL/$file" -OutFile "$PREREQ_DIR\$file"
