@@ -8,7 +8,7 @@ certifi==2022.12.7
     # via requests
 cffi==1.14.6
     # via cryptography
-charset-normalizer==3.1.0
+charset-normalizer==2.1.1
     # via requests
 cheroot==8.5.2
     # via cherrypy
@@ -57,7 +57,7 @@ more-itertools==5.0.0
     #   jaraco.functools
 msgpack==1.0.2
     # via -r requirements/base.txt
-packaging==22.0
+packaging==21.3
     # via -r requirements/base.txt
 portend==2.4
     # via cherrypy
@@ -71,6 +71,8 @@ pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pyopenssl==23.0.0
     # via -r requirements/static/pkg/freebsd.in
+pyparsing==3.0.9
+    # via packaging
 python-dateutil==2.8.1
     # via -r requirements/static/pkg/freebsd.in
 python-gnupg==0.4.8
@@ -100,7 +102,7 @@ urllib3==1.26.6
     # via requests
 zc.lockfile==1.4
     # via cherrypy
-zipp==3.12.0
+zipp==3.5.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
