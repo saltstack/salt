@@ -1,12 +1,7 @@
-import logging
-
 import salt.modules.cmdmod
 import salt.utils.json
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-__salt__ = {"cmd.run_all": salt.modules.cmdmod.run_all}
-log = logging.getLogger(__name__)
 
 __virtualname__ = "win_pwsh"
 
@@ -43,7 +38,7 @@ def run_dict(cmd, cwd=None):
         cmd = f"{cmd} | ConvertTo-Json"
     if "progresspreference" not in cmd.lower():
         cmd = f"$ProgressPreference = 'SilentlyContinue'; {cmd}"
-    ret = __salt__["cmd.run_all"](cmd, shell="powershell", cwd=cwd)
+    ret = salt.modules.cmdmod.run_all(cmd=cmd, shell="powershell", cwd=cwd)
 
     if "pid" in ret:
         del ret["pid"]
