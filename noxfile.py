@@ -11,6 +11,7 @@ import datetime
 import os
 import pathlib
 import platform
+import subprocess
 import sys
 import tempfile
 
@@ -724,11 +725,13 @@ def _pytest(session, coverage, cmd_args):
 
     if "amzn2" in platform.release():
         # workaround on 3005 for https://github.com/saltstack/salt/issues/62851
-        session.run(
-            "pip3",
-            "install",
-            "importlib_metadata<5.0.0",
-            silent=True,
+        subprocess.run(
+            [
+                "pip3",
+                "install",
+                "importlib_metadata<5.0.0",
+            ],
+            check=True,
         )
 
     env = {"CI_RUN": "1" if CI_RUN else "0"}
