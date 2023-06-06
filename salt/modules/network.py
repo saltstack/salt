@@ -1364,7 +1364,7 @@ def ip_neighs6():
     """
     Return the ip neighbour (arp) table from the minion for IPv6 addresses
 
-    .. versionadded:: 3007
+    .. versionadded:: 3007.0
 
     CLI Example:
 
