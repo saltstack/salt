@@ -99,8 +99,10 @@ if HAS_MAKO:
                 )
 
         def destroy(self):
-            if self.client:
+            if self._file_client:
+                file_client = self._file_client
+                self._file_client = None
                 try:
-                    self.client.destroy()
+                    file_client.destroy()
                 except AttributeError:
                     pass
