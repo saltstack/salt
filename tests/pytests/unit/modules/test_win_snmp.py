@@ -39,7 +39,7 @@ def test_get_auth_traps_enabled():
     Test - Determine whether the host is configured to send authentication traps.
     """
     mock_value = MagicMock(return_value={"vdata": 1})
-    with patch.dict(win_snmp.__utils__, {"reg.read_value": mock_value}):
+    with patch("salt.utils.win_reg.read_value", mock_value):
         assert win_snmp.get_auth_traps_enabled()
 
 
@@ -49,7 +49,7 @@ def test_set_auth_traps_enabled():
     """
     mock_value = MagicMock(return_value=True)
     kwargs = {"status": True}
-    with patch.dict(win_snmp.__utils__, {"reg.set_value": mock_value}), patch(
+    with patch("salt.utils.win_reg.set_value", mock_value), patch(
         "salt.modules.win_snmp.get_auth_traps_enabled", MagicMock(return_value=True)
     ):
         assert win_snmp.set_auth_traps_enabled(**kwargs)
@@ -61,9 +61,8 @@ def test_get_community_names(community_names):
     """
     mock_ret = MagicMock(return_value=[{"vdata": 16, "vname": "TestCommunity"}])
     mock_false = MagicMock(return_value=False)
-    with patch.dict(
-        win_snmp.__utils__,
-        {"reg.list_values": mock_ret, "reg.key_exists": mock_false},
+    with patch.multiple(
+        "salt.utils.win_reg", list_values=mock_ret, key_exists=mock_false
     ):
         assert win_snmp.get_community_names() == community_names
 
@@ -74,9 +73,8 @@ def test_get_community_names_gpo():
     """
     mock_ret = MagicMock(return_value=[{"vdata": "TestCommunity", "vname": 1}])
     mock_false = MagicMock(return_value=True)
-    with patch.dict(
-        win_snmp.__utils__,
-        {"reg.list_values": mock_ret, "reg.key_exists": mock_false},
+    with patch.multiple(
+        "salt.utils.win_reg", list_values=mock_ret, key_exists=mock_false
     ):
         assert win_snmp.get_community_names() == {"TestCommunity": "Managed by GPO"}
 
@@ -88,9 +86,8 @@ def test_set_community_names(community_names):
     mock_true = MagicMock(return_value=True)
     kwargs = {"communities": community_names}
     mock_false = MagicMock(return_value=False)
-    with patch.dict(
-        win_snmp.__utils__,
-        {"reg.set_value": mock_true, "reg.key_exists": mock_false},
+    with patch.multiple(
+        "salt.utils.win_reg", list_values=mock_true, key_exists=mock_false
     ), patch(
         "salt.modules.win_snmp.get_community_names",
         MagicMock(return_value=community_names),
@@ -104,9 +101,8 @@ def test_set_community_names_gpo(community_names):
     """
     mock_true = MagicMock(return_value=True)
     kwargs = {"communities": community_names}
-    with patch.dict(
-        win_snmp.__utils__,
-        {"reg.set_value": mock_true, "reg.key_exists": mock_true},
+    with patch.multiple(
+        "salt.utils.win_reg", list_values=mock_true, key_exists=mock_true
     ), patch(
         "salt.modules.win_snmp.get_community_names",
         MagicMock(return_value=community_names),
