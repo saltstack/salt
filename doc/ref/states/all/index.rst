@@ -320,6 +320,7 @@ state modules
     virt
     virtualenv_mod
     webutil
+    win_appx
     win_certutil
     win_dacl
     win_dism
