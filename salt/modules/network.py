@@ -1337,7 +1337,7 @@ def ip_neighs():
     """
     Return the ip neighbour (arp) table from the minion for IPv4 addresses
 
-    .. versionadded:: 3007
+    .. versionadded:: 3007.0
 
     CLI Example:
 
