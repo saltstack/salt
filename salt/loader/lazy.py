@@ -1,3 +1,4 @@
+import ast
 import copy
 import functools
 import importlib
@@ -244,7 +245,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         virtual_funcs=None,
         extra_module_dirs=None,
         pack_self=None,
-        # Once we get rid of __utils__, the keyword argument bellow should be removed
+        # Once we get rid of __utils__, the keyword arguments bellow should be removed
+        _ast_dunder_virtual_inspect=False,
         _only_pack_properly_namespaced_functions=True,
     ):  # pylint: disable=W0231
         """
@@ -275,6 +277,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self._gc_finalizer = None
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
+        self._ast_dunder_virtual_inspect = _ast_dunder_virtual_inspect
         self._only_pack_properly_namespaced_functions = (
             _only_pack_properly_namespaced_functions
         )
@@ -669,6 +672,24 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     def _load_module(self, name):
         mod = None
         fpath, suffix = self.file_mapping[name][:2]
+        if suffix == ".py" and self._ast_dunder_virtual_inspect:
+            with salt.utils.files.fopen(fpath) as rfh:
+                tree = ast.parse(rfh.read())
+                for node in tree.body:
+                    if not isinstance(node, ast.FunctionDef):
+                        continue
+                    if node.name == "__virtual__":
+                        # The module defines a __virtual__ function.
+                        # Continue regular loading.
+                        break
+                else:
+                    # The module did not define a __virtual__ function, stop
+                    # processing the module
+                    log.debug(
+                        "Not loading %r because it does not define a __virtual__ function",
+                        name,
+                    )
+                    return False
         # if the fpath has `.cpython-3x` in it, but the running Py version
         # is 3.y, the following will cause us to return immediately and we won't try to import this .pyc.
         # This is for the unusual case where several Python versions share a single
