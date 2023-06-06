@@ -22,8 +22,8 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def targets(conditioned_raw, tgt, tgt_type, ipv="ipv4"):
-    rmatcher = RosterMatcher(conditioned_raw, tgt, tgt_type, ipv)
+def targets(opts, conditioned_raw, tgt, tgt_type, ipv="ipv4"):
+    rmatcher = RosterMatcher(opts, conditioned_raw, tgt, tgt_type, ipv)
     return rmatcher.targets()
 
 
@@ -44,7 +44,8 @@ class RosterMatcher:
     Matcher for the roster data structure
     """
 
-    def __init__(self, raw, tgt, tgt_type, ipv="ipv4"):
+    def __init__(self, opts, raw, tgt, tgt_type, ipv="ipv4"):
+        self.opts = opts
         self.tgt = tgt
         self.tgt_type = tgt_type
         self.raw = raw
@@ -55,7 +56,7 @@ class RosterMatcher:
         Execute the correct tgt_type routine and return
         """
         try:
-            return getattr(self, "ret_{}_minions".format(self.tgt_type))()
+            return getattr(self, f"ret_{self.tgt_type}_minions")()
         except AttributeError:
             return {}
 
@@ -97,7 +98,7 @@ class RosterMatcher:
         Return minions which match the special list-only groups defined by
         ssh_list_nodegroups
         """
-        nodegroup = __opts__.get("ssh_list_nodegroups", {}).get(self.tgt, [])
+        nodegroup = self.opts.get("ssh_list_nodegroups", {}).get(self.tgt, [])
         nodegroup = _tgt_set(nodegroup)
         return self._ret_minions(nodegroup.intersection)
 
@@ -109,14 +110,14 @@ class RosterMatcher:
             raise RuntimeError("Python lib 'seco.range' is not available")
 
         minions = {}
-        range_hosts = _convert_range_to_list(self.tgt, __opts__["range_server"])
+        range_hosts = _convert_range_to_list(self.tgt, self.opts["range_server"])
         return self._ret_minions(range_hosts.__contains__)
 
     def get_data(self, minion):
         """
         Return the configured ip
         """
-        ret = copy.deepcopy(__opts__.get("roster_defaults", {}))
+        ret = copy.deepcopy(self.opts.get("roster_defaults", {}))
         if isinstance(self.raw[minion], str):
             ret.update({"host": self.raw[minion]})
             return ret

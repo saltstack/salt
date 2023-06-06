@@ -36,11 +36,11 @@ Or with a Saltfile
 
 """
 
-
 import logging
 import os
 
 import salt.utils.files
+import salt.utils.roster_matcher
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
@@ -98,11 +98,9 @@ def targets(tgt, tgt_type="glob"):
         raise OSError("Cannot find SSH known_hosts file")
     if not os.access(ssh_known_hosts_file, os.R_OK):
         log.error("Cannot access SSH known_hosts file: %s", ssh_known_hosts_file)
-        raise OSError(
-            "Cannot access SSH known_hosts file: {}".format(ssh_known_hosts_file)
-        )
+        raise OSError(f"Cannot access SSH known_hosts file: {ssh_known_hosts_file}")
 
     with salt.utils.files.fopen(ssh_known_hosts_file, "r") as hostfile:
         raw = _parse_ssh_known_hosts([line.rstrip() for line in hostfile])
 
-    return __utils__["roster_matcher.targets"](raw, tgt, tgt_type, "ipv4")
+    return salt.utils.roster_matcher.targets(__opts__, raw, tgt, tgt_type, "ipv4")
