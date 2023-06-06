@@ -24,12 +24,6 @@ __virtualname__ = "zfs"
 __salt__ = {
     "cmd.run": salt.modules.cmdmod.run,
 }
-__utils__ = {
-    "zfs.is_supported": salt.utils.zfs.is_supported,
-    "zfs.has_feature_flags": salt.utils.zfs.has_feature_flags,
-    "zfs.zpool_command": salt.utils.zfs.zpool_command,
-    "zfs.to_size": salt.utils.zfs.to_size,
-}
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +47,7 @@ def _zfs_pool_data():
     grains = {}
 
     # collect zpool data
-    zpool_list_cmd = __utils__["zfs.zpool_command"](
+    zpool_list_cmd = salt.utils.zfs.zpool_command(
         "list",
         flags=["-H"],
         opts={"-o": "name,size"},
@@ -62,7 +56,7 @@ def _zfs_pool_data():
         if "zpool" not in grains:
             grains["zpool"] = {}
         zpool = zpool.split()
-        grains["zpool"][zpool[0]] = __utils__["zfs.to_size"](zpool[1], False)
+        grains["zpool"][zpool[0]] = salt.utils.zfs.to_size(zpool[1], False)
 
     # return grain data
     return grains
@@ -73,8 +67,8 @@ def zfs():
     Provide grains for zfs/zpool
     """
     grains = {}
-    grains["zfs_support"] = __utils__["zfs.is_supported"]()
-    grains["zfs_feature_flags"] = __utils__["zfs.has_feature_flags"]()
+    grains["zfs_support"] = salt.utils.zfs.is_supported()
+    grains["zfs_feature_flags"] = salt.utils.zfs.has_feature_flags()
     if grains["zfs_support"]:
         grains = salt.utils.dictupdate.update(
             grains, _zfs_pool_data(), merge_lists=True
