@@ -164,6 +164,8 @@ def _setup_system(
                 salt_release=salt_release,
                 downloads_path=downloads_path,
                 repo_subpath=repo_subpath,
+                package_type=package_type,
+                onedir_install_path=onedir_install_path,
             ):
                 yield
         else:
@@ -174,6 +176,8 @@ def _setup_system(
                     salt_release=salt_release,
                     downloads_path=downloads_path,
                     repo_subpath=repo_subpath,
+                    package_type=package_type,
+                    onedir_install_path=onedir_install_path,
                 )
             elif grains["os"] == "Amazon":
                 setup_redhat_family(
