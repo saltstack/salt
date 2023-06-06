@@ -399,8 +399,8 @@ def setup_macos(
     package_type,
     onedir_install_path,
 ):
+    arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
     if package_type == "package":
-        arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
         if arch == "aarch64":
             arch = "arm64"
 
@@ -458,10 +458,10 @@ def setup_windows(
     onedir_install_path,
 ):
     try:
+        arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
         if package_type == "package":
             root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
 
-            arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
             if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
                 if package_type.lower() == "nsis":
                     if arch.lower() != "x86":
