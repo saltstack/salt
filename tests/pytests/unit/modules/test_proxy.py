@@ -146,7 +146,7 @@ def test_set_ftp_proxy_macos():
         assert out
 
 
-def test_get_proxy_win():
+def test_get_proxy_windows():
     """
     Test to make sure that we correctly get the current proxy info on
     Windows
@@ -166,8 +166,8 @@ def test_get_proxy_win():
         "https": {"server": "192.168.0.2", "port": "3128"},
         "ftp": {"server": "192.168.0.3", "port": "3128"},
     }
-    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
-        proxy.__utils__, {"reg.read_value": mock_reg_read}
+    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch(
+        "salt.utils.win_reg.read_value", mock_reg_read
     ):
         out = proxy.get_proxy_win()
         assert out == expected
@@ -193,8 +193,8 @@ def test_get_http_proxy_windows():
     }
     mock = MagicMock(return_value=result)
     expected = {"server": "192.168.0.1", "port": "3128"}
-    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
-        proxy.__utils__, {"reg.read_value": mock}
+    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch(
+        "salt.utils.win_reg.read_value", mock
     ):
         out = proxy.get_http_proxy()
         mock.assert_called_once_with(
@@ -215,8 +215,8 @@ def test_get_https_proxy_windows():
     }
     mock = MagicMock(return_value=result)
     expected = {"server": "192.168.0.2", "port": "3128"}
-    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
-        proxy.__utils__, {"reg.read_value": mock}
+    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch(
+        "salt.utils.win_reg.read_value", mock
     ):
         out = proxy.get_https_proxy()
         mock.assert_called_once_with(
@@ -237,8 +237,8 @@ def test_get_ftp_proxy_windows():
     }
     mock = MagicMock(return_value=result)
     expected = {"server": "192.168.0.3", "port": "3128"}
-    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
-        proxy.__utils__, {"reg.read_value": mock}
+    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch(
+        "salt.utils.win_reg.read_value", mock
     ):
         out = proxy.get_ftp_proxy()
         mock.assert_called_once_with(
@@ -251,7 +251,7 @@ def test_get_ftp_proxy_windows():
 
 def test_get_all_proxies_macos_fails():
     mock = MagicMock()
-    with patch.dict(proxy.__utils__, {"reg.read_value": mock}):
+    with patch("salt.utils.win_reg.read_value", mock):
         out = proxy.get_proxy_win()
         assert not mock.called
         assert out is None
@@ -289,8 +289,8 @@ def test_get_all_proxies_windows():
             vname="ProxyEnable",
         ),
     ]
-    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
-        proxy.__utils__, {"reg.read_value": mock}
+    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch(
+        "salt.utils.win_reg.read_value", mock
     ):
         out = proxy.get_proxy_win()
         mock.assert_has_calls(calls)
@@ -324,8 +324,8 @@ def test_set_http_proxy_windows():
     ]
     mock_reg = MagicMock()
     mock_cmd = MagicMock()
-    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
-        proxy.__utils__, {"reg.set_value": mock_reg}
+    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch(
+        "salt.utils.win_reg.set_value", mock_reg
     ), patch.dict(proxy.__salt__, {"cmd.run": mock_cmd}):
         out = proxy.set_http_proxy(
             server="192.168.0.1",
@@ -364,8 +364,8 @@ def test_set_https_proxy_windows():
     ]
     mock_reg = MagicMock()
     mock_cmd = MagicMock()
-    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
-        proxy.__utils__, {"reg.set_value": mock_reg}
+    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch(
+        "salt.utils.win_reg.set_value", mock_reg
     ), patch.dict(proxy.__salt__, {"cmd.run": mock_cmd}):
         out = proxy.set_https_proxy(
             server="192.168.0.1",
@@ -404,8 +404,8 @@ def test_set_ftp_proxy_windows():
     ]
     mock_reg = MagicMock()
     mock_cmd = MagicMock()
-    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
-        proxy.__utils__, {"reg.set_value": mock_reg}
+    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch(
+        "salt.utils.win_reg.set_value", mock_reg
     ), patch.dict(proxy.__salt__, {"cmd.run": mock_cmd}):
         out = proxy.set_ftp_proxy(
             server="192.168.0.1",
@@ -446,8 +446,8 @@ def test_set_proxy_windows():
     ]
     mock_reg = MagicMock()
     mock_cmd = MagicMock()
-    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
-        proxy.__utils__, {"reg.set_value": mock_reg}
+    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch(
+        "salt.utils.win_reg.set_value", mock_reg
     ), patch.dict(proxy.__salt__, {"cmd.run": mock_cmd}):
         out = proxy.set_proxy_win(
             server="192.168.0.1",
@@ -486,8 +486,8 @@ def test_set_proxy_windows_no_ftp():
     ]
     mock_reg = MagicMock()
     mock_cmd = MagicMock()
-    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch.dict(
-        proxy.__utils__, {"reg.set_value": mock_reg}
+    with patch.dict(proxy.__grains__, {"os": "Windows"}), patch(
+        "salt.utils.win_reg.set_value", mock_reg
     ), patch.dict(proxy.__salt__, {"cmd.run": mock_cmd}):
         out = proxy.set_proxy_win(
             server="192.168.0.1",
