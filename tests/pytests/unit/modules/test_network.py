@@ -19,9 +19,8 @@ log = logging.getLogger(__name__)
 @pytest.fixture
 def configure_loader_modules():
     ## return {networkmod: {}}
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
     utils = salt.loader.utils(
-        opts, whitelist=["network", "path", "platform", "stringutils"]
+        minion_opts, whitelist=["network", "path", "platform", "stringutils"]
     )
     return {
         networkmod: {"__utils__": utils},
