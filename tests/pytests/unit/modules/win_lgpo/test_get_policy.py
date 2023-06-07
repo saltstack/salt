@@ -54,8 +54,10 @@ def clean_comp():
         os.getenv("SystemRoot"), "System32", "GroupPolicy", "Machine", "Registry.pol"
     )
     reg_pol.unlink(missing_ok=True)
-    yield reg_pol
-    reg_pol.unlink(missing_ok=True)
+    try:
+        yield reg_pol
+    finally:
+        reg_pol.unlink(missing_ok=True)
 
 
 @pytest.fixture
@@ -68,8 +70,10 @@ def checkbox_policy():
         "Server port": 1273,
     }
     win_lgpo.set_computer_policy(name=policy_name, setting=copy.copy(policy_settings))
-    yield policy_name, policy_settings
-    win_lgpo.set_computer_policy(name=policy_name, setting="Not Configured")
+    try:
+        yield policy_name, policy_settings
+    finally:
+        win_lgpo.set_computer_policy(name=policy_name, setting="Not Configured")
 
 
 def test_name(osrelease):
