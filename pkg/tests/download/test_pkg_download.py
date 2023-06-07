@@ -459,7 +459,7 @@ def setup_windows(
 ):
     try:
         arch = os.environ.get("SALT_REPO_ARCH") or "amd64"
-        if package_type == "package":
+        if package_type != "onedir":
             root_dir = pathlib.Path(r"C:\Program Files\Salt Project\Salt")
 
             if packaging.version.parse(salt_release) > packaging.version.parse("3005"):
