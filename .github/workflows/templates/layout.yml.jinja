@@ -316,6 +316,9 @@ jobs:
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
     runs-on: ubuntu-latest
+    <%- if workflow_slug == "nightly" %>
+    environment: <{ workflow_slug }>
+    <%- endif %>
     needs:
       <%- for need in prepare_workflow_needs.iter(consume=True) %>
       - <{ need }>

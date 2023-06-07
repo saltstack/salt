@@ -174,7 +174,7 @@ def _check_pkg_version_format(pkg):
 
     if not HAS_PIP:
         ret["comment"] = (
-            "An importable Python 2 pip module is required but could not be "
+            "An importable Python pip module is required but could not be "
             "found on your system. This usually means that the system's pip "
             "package is not installed properly."
         )

@@ -632,7 +632,7 @@ def install(
     reinstall=False,
     downloadonly=False,
     ignore_epoch=False,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -2813,13 +2813,17 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                     else:
                         if not aptkey:
                             key_file = kwargs["signedby"]
-                            add_repo_key(
+                            if not add_repo_key(
                                 keyid=key,
                                 keyserver=keyserver,
                                 aptkey=False,
                                 keydir=key_file.parent,
                                 keyfile=key_file,
-                            )
+                            ):
+                                raise CommandExecutionError(
+                                    f"Error: Could not add key: {key}"
+                                )
+
                         else:
                             cmd = [
                                 "apt-key",
@@ -2859,7 +2863,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                 func_kwargs["keydir"] = kwargs.get("signedby").parent
 
             if not add_repo_key(path=str(fn_), aptkey=False, **func_kwargs):
-                return False
+                raise CommandExecutionError(f"Error: Could not add key: {str(fn_)}")
         else:
             cmd = ["apt-key", "add", str(fn_)]
             out = __salt__["cmd.run_stdout"](cmd, python_shell=False, **kwargs)
