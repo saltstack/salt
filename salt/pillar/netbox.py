@@ -56,28 +56,28 @@ site_prefixes: ``True``
     Whether should retrieve the prefixes of the site the device belongs to.
 
 devices: ``True``
-    .. versionadded:: 3004.0
+    .. versionadded:: 3004
 
     Whether should retrieve physical devices.
 
 virtual_machines: ``False``
-    .. versionadded:: 3004.0
+    .. versionadded:: 3004
 
     Whether should retrieve virtual machines.
 
 interfaces: ``False``
-    .. versionadded:: 3004.0
+    .. versionadded:: 3004
 
     Whether should retrieve the interfaces of the device.
 
 interface_ips: ``False``
-    .. versionadded:: 3004.0
+    .. versionadded:: 3004
 
     Whether should retrieve the IP addresses for interfaces of the device.
     (interfaces must be set to True as well)
 
 api_query_result_limit: ``Use NetBox default``
-    .. versionadded:: 3004.0
+    .. versionadded:: 3004
 
     An integer specifying how many results should be returned for each query
     to the NetBox API. Leaving this unset will use NetBox's default value.
