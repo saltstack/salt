@@ -12,6 +12,7 @@ import salt.config
 import salt.crypt
 import salt.minion
 import salt.syspaths
+import salt.utils.dynamic_dict
 import salt.utils.files
 import salt.utils.network
 import salt.utils.platform
@@ -493,11 +494,83 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             },
         )
 
+    def test_validate_roots(self):
+        with patch("salt.config._expand_glob_path") as egp:
+            egp.side_effect = [["dir1"], ["dir2"]]
+            ret = salt.config._validate_roots(
+                {
+                    "file_roots": {
+                        "env1": ["/tmp/dir1", "/tmp/dir2"],
+                        "env2": ["/tmp/dir3"],
+                    }
+                },
+                "file_roots",
+            )
+
+            assert isinstance(ret, salt.utils.dynamic_dict.DynamicDict)
+            egp.assert_not_called()
+            assert ret["env1"] == ["dir1"]
+            egp.assert_called_once_with(
+                ["/tmp/dir1", "/tmp/dir2"], dyn_dict=ret, key="env1"
+            )
+            egp.reset_mock()
+            assert ret.get("env2") == ["dir2"]
+            egp.assert_called_once_with(["/tmp/dir3"], dyn_dict=ret, key="env2")
+
+    @with_tempdir()
+    def test_dynamic_roots(self, tempdir):
+        # Create some files for roots
+        for file_name in ("formula1", "formula2", "other1", "other2"):
+            with salt.utils.files.fopen(os.path.join(tempdir, file_name), "w") as fobj:
+                fobj.write(file_name)
+
+        ret = salt.config._validate_roots(
+            {
+                "file_roots": {
+                    "env1": [os.path.join(tempdir, "formula*")],
+                    "env2": [os.path.join(tempdir, "other*")],
+                }
+            },
+            "file_roots",
+        )
+
+        assert set(ret["env1"]) == {
+            os.path.join(tempdir, "formula1"),
+            os.path.join(tempdir, "formula2"),
+        }
+        assert set(ret["env2"]) == {
+            os.path.join(tempdir, "other1"),
+            os.path.join(tempdir, "other2"),
+        }
+
+        # Create more files
+        for file_name in ("formula3", "other3"):
+            with salt.utils.files.fopen(os.path.join(tempdir, file_name), "w") as fobj:
+                fobj.write(file_name)
+
+        # Roots are resolved again
+        assert set(ret["env1"]) == {
+            os.path.join(tempdir, "formula1"),
+            os.path.join(tempdir, "formula2"),
+            os.path.join(tempdir, "formula3"),
+        }
+        assert set(ret["env2"]) == {
+            os.path.join(tempdir, "other1"),
+            os.path.join(tempdir, "other2"),
+            os.path.join(tempdir, "other3"),
+        }
+
     def test_validate_bad_file_roots(self):
-        expected = salt.config._expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])
-        with patch("salt.config._normalize_roots") as mk:
-            ret = salt.config._validate_file_roots(None)
-            assert not mk.called
+        expected = ["dir1"]
+        with patch("salt.config._expand_glob_path") as egp:
+            egp.return_value = expected
+            ret = salt.config._validate_roots({}, "file_roots")
+            assert not isinstance(ret, salt.utils.dynamic_dict.DynamicDict)
+            # Immutable lists do not support direct comparison, so cannot use assert_called_once_with()
+            egp.assert_called_once()
+            assert list(egp.call_args[0][0]) == list(
+                salt.config.DEFAULT_MASTER_OPTS["file_roots"]["base"]
+            )
         assert ret == {"base": expected}
 
     @with_tempfile()
@@ -525,10 +598,16 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         )
 
     def test_validate_bad_pillar_roots(self):
-        expected = salt.config._expand_glob_path([salt.syspaths.BASE_PILLAR_ROOTS_DIR])
-        with patch("salt.config._normalize_roots") as mk:
-            ret = salt.config._validate_pillar_roots(None)
-            assert not mk.called
+        expected = ["dir1"]
+        with patch("salt.config._expand_glob_path") as egp:
+            egp.return_value = expected
+            ret = salt.config._validate_roots({}, "pillar_roots")
+            assert not isinstance(ret, salt.utils.dynamic_dict.DynamicDict)
+            # Immutable lists do not support direct comparison, so cannot use assert_called_once_with()
+            egp.assert_called_once()
+            assert list(egp.call_args[0][0]) == list(
+                salt.config.DEFAULT_MASTER_OPTS["pillar_roots"]["base"]
+            )
         assert ret == {"base": expected}
 
     @with_tempdir()
