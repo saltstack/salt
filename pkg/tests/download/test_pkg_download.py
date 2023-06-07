@@ -532,7 +532,7 @@ def setup_windows(
 
 @pytest.fixture(scope="module")
 def install_dir(_setup_system, package_type, onedir_install_path):
-    if package_type == "package":
+    if package_type != "onedir":
         if platform.is_windows():
             return pathlib.Path(
                 os.getenv("ProgramFiles"), "Salt Project", "Salt"
