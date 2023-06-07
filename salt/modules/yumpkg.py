@@ -1905,7 +1905,7 @@ def upgrade(
         Disable exclude from main, for a repo or for everything.
         (e.g., ``yum --disableexcludes='main'``)
 
-        .. versionadded:: 2014.7
+        .. versionadded:: 2014.7.0
 
     name
         The name of the package to be upgraded. Note that this parameter is
@@ -2446,7 +2446,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
 def list_holds(pattern=__HOLD_PATTERN, full=True):
     r"""
-    .. versionchanged:: 2016.3.0,2015.8.4,2015.5.10
+    .. versionchanged:: 2015.5.10,2015.8.4,2016.3.0
         Function renamed from ``pkg.get_locked_pkgs`` to ``pkg.list_holds``.
 
     List information on locked packages
@@ -2573,7 +2573,7 @@ def group_list():
 def group_info(name, expand=False, ignore_groups=None):
     """
     .. versionadded:: 2014.1.0
-    .. versionchanged:: 3001,2016.3.0,2015.8.4,2015.5.10
+    .. versionchanged:: 2015.5.10,2015.8.4,2016.3.0,3001
         The return data has changed. A new key ``type`` has been added to
         distinguish environment groups from package groups. Also, keys for the
         group name and group ID have been added. The ``mandatory packages``,
@@ -2683,7 +2683,7 @@ def group_info(name, expand=False, ignore_groups=None):
 def group_diff(name):
     """
     .. versionadded:: 2014.1.0
-    .. versionchanged:: 2016.3.0,2015.8.4,2015.5.10
+    .. versionchanged:: 2015.5.10,2015.8.4,2016.3.0
         Environment groups are now supported. The key names have been renamed,
         similar to the changes made in :py:func:`pkg.group_info
         <salt.modules.yumpkg.group_info>`.

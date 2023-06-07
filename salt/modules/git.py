@@ -1019,7 +1019,7 @@ def clone(
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
 
-        .. versionadded:: 20515.5.0
+        .. versionadded:: 2015.5.0
 
     https_pass
         Set HTTP Basic Auth password. Only accepted for HTTPS URLs.

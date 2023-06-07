@@ -3506,7 +3506,7 @@ def _get_http_proxy_url():
 
 def list_downloaded(root=None, **kwargs):
     """
-    .. versionadded:: 3000?
+    .. versionadded:: 3000
 
     List prefetched packages downloaded by apt in the local disk.
 

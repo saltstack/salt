@@ -1046,7 +1046,7 @@ repos:
 
   - repo: https://github.com/s0undt3ch/salt-rewrite
     # Automatically rewrite code with known rules
-    rev: 2.0.0
+    rev: 2.4.2
     hooks:
       - id: salt-rewrite
         alias: rewrite-docstrings
@@ -1058,10 +1058,6 @@ repos:
                 salt/ext/.*
             )$
 
-  - repo: https://github.com/s0undt3ch/salt-rewrite
-    # Automatically rewrite code with known rules
-    rev: 2.0.0
-    hooks:
       - id: salt-rewrite
         alias: rewrite-tests
         name: Rewrite Salt's Test Suite

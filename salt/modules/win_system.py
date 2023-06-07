@@ -755,7 +755,7 @@ def join_domain(
             ``True`` will restart the computer after a successful join. Default
             is ``False``
 
-            .. versionadded:: 2015.8.2/2015.5.7
+            .. versionadded:: 2015.5.7,2015.8.2
 
     Returns:
         dict: Returns a dictionary if successful, otherwise ``False``
@@ -889,7 +889,7 @@ def unjoin_domain(
         workgroup (str):
             The workgroup to join the computer to. Default is ``WORKGROUP``
 
-            .. versionadded:: 2015.8.2/2015.5.7
+            .. versionadded:: 2015.5.7,2015.8.2
 
         disable (bool):
             ``True`` to disable the computer account in Active Directory.
@@ -899,7 +899,7 @@ def unjoin_domain(
             ``True`` will restart the computer after successful unjoin. Default
             is ``False``
 
-            .. versionadded:: 2015.8.2/2015.5.7
+            .. versionadded:: 2015.5.7,2015.8.2
 
     Returns:
         dict: Returns a dictionary if successful, otherwise ``False``
