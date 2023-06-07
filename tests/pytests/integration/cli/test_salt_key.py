@@ -1,6 +1,8 @@
 import ast
+import copy
 import os
 import re
+import shutil
 import textwrap
 
 import pytest
@@ -138,7 +140,7 @@ def test_list_accepted_args(salt_key_cli, key_type):
     assert ret.returncode == 0
     assert "error:" not in ret.stdout
     # Should throw an error now
-    ret = salt_key_cli.run("-l", "foo-{}".format(key_type))
+    ret = salt_key_cli.run("-l", f"foo-{key_type}")
     assert ret.returncode != 0
     assert "error:" in ret.stderr
 
@@ -156,6 +158,49 @@ def test_list_all(salt_key_cli, salt_minion, salt_sub_minion):
         "minions": [salt_minion.id, salt_sub_minion.id],
     }
     assert ret.data == expected
+
+
+def test_list_all_no_check_files(
+    salt_key_cli, salt_minion, salt_sub_minion, tmp_path, salt_master
+):
+    """
+    test salt-key -L
+    """
+    config_dir = tmp_path / "key_no_check_files"
+    config_dir.mkdir()
+    pki_dir = config_dir / "pki_dir"
+    shutil.copytree(salt_master.config["pki_dir"], str(pki_dir))
+    with pytest.helpers.change_cwd(str(config_dir)):
+        master_config = copy.deepcopy(salt_master.config)
+        master_config["pki_check_files"] = False
+        master_config["pki_dir"] = "pki_dir"
+        master_config["root_dir"] = str(config_dir)
+        with salt.utils.files.fopen(str(config_dir / "master"), "w") as fh_:
+            fh_.write(salt.utils.yaml.dump(master_config, default_flow_style=False))
+        ret = salt_key_cli.run(
+            f"--config-dir={config_dir}",
+            "-L",
+        )
+        assert ret.returncode == 0
+        expected = {
+            "minions_rejected": [],
+            "minions_denied": [],
+            "minions_pre": [],
+            "minions": [salt_minion.id, salt_sub_minion.id],
+        }
+        assert ret.data == expected
+
+        bad_key = pki_dir / "minions" / "dir1"
+        bad_key.mkdir()
+
+        ret = salt_key_cli.run(
+            f"--config-dir={config_dir}",
+            "-L",
+        )
+        assert ret.returncode == 0
+        # The directory will show up since there is no file check
+        expected["minions"].insert(0, "dir1")
+        assert ret.data == expected
 
 
 def test_list_all_yaml_out(salt_key_cli, salt_minion, salt_sub_minion):
@@ -323,7 +368,7 @@ def test_accept_bad_key(salt_master, salt_key_cli):
         # Check Key
         ret = salt_key_cli.run("-y", "-a", min_name)
         assert ret.returncode == 0
-        assert "invalid key for {}".format(min_name) in ret.stderr
+        assert f"invalid key for {min_name}" in ret.stderr
     finally:
         if os.path.exists(key):
             os.remove(key)
