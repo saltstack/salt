@@ -29,7 +29,7 @@ def use_static_requirements_ids(value):
 @pytest.fixture(params=[True, False], ids=use_static_requirements_ids)
 def use_static_requirements(request):
     if not request.param and salt.utils.platform.is_windows():
-        pytest.skip("Windows installs with statis requirements only")
+        pytest.skip("Windows installs with static requirements only")
     return request.param
 
 
@@ -414,20 +414,20 @@ def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
 
         venv.run(
             venv.venv_python,
-            "setup.py",
-            "install",
-            "--prefix",
-            str(venv.venv_dir),
-            cwd=src_dir,
-        )
-
-        venv.run(
-            venv.venv_python,
             "-m",
             "pip",
             "install",
             "pip>=20.2.4,<21.2",
             "setuptools<58.0",
+        )
+
+        venv.run(
+            venv.venv_python,
+            "setup.py",
+            "install",
+            "--prefix",
+            str(venv.venv_dir),
+            cwd=src_dir,
         )
 
         venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
