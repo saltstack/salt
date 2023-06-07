@@ -27,9 +27,10 @@ def test_add():
     with patch(
         "salt.utils.path.which",
         MagicMock(side_effect=[None, "/bin/groupadd", "/bin/groupadd"]),
-    ):
+    ) as which_mock:
         with pytest.raises(CommandExecutionError):
             groupadd.add("test", 100)
+        which_mock.assert_called_once_with("groupadd")
 
         mock = MagicMock(return_value={"retcode": 0})
         with patch.dict(groupadd.__salt__, {"cmd.run_all": mock}):
@@ -38,6 +39,42 @@ def test_add():
         with patch.dict(groupadd.__grains__, {"kernel": "Linux"}):
             with patch.dict(groupadd.__salt__, {"cmd.run_all": mock}):
                 assert groupadd.add("test", 100, True) is True
+
+
+def test_add_local():
+    """
+    Tests if specified group was added with local flag
+    """
+    with patch(
+        "salt.utils.path.which",
+        MagicMock(return_value="/bin/lgroupadd"),
+    ) as which_mock:
+        mock = MagicMock(return_value={"retcode": 0})
+        with patch.dict(groupadd.__salt__, {"cmd.run_all": mock}):
+            assert groupadd.add("test", 100, local=True) is True
+        which_mock.assert_called_once_with("lgroupadd")
+        mock.assert_called_once_with(
+            ["/bin/lgroupadd", "-g 100", "test"], python_shell=False
+        )
+
+
+def test_add_local_with_params():
+    """
+    Tests if specified group was added with local flag and extra parameters
+    """
+    with patch(
+        "salt.utils.path.which",
+        MagicMock(return_value="/bin/lgroupadd"),
+    ):
+        mock = MagicMock(return_value={"retcode": 0})
+        with patch.dict(groupadd.__salt__, {"cmd.run_all": mock}):
+            assert (
+                groupadd.add("test", 100, local=True, non_unique=True, root="ignored")
+                is True
+            )
+        mock.assert_called_once_with(
+            ["/bin/lgroupadd", "-g 100", "test"], python_shell=False
+        )
 
 
 def test_info():
@@ -104,13 +141,43 @@ def test_delete():
     with patch(
         "salt.utils.path.which",
         MagicMock(side_effect=[None, "/bin/groupdel"]),
-    ):
+    ) as which_mock:
         with pytest.raises(CommandExecutionError):
             groupadd.delete("test")
+        which_mock.assert_called_once_with("groupdel")
 
         mock_ret = MagicMock(return_value={"retcode": 0})
         with patch.dict(groupadd.__salt__, {"cmd.run_all": mock_ret}):
             assert groupadd.delete("test") is True
+
+
+def test_delete_local():
+    """
+    Tests if the specified group was deleted with a local flag
+    """
+    with patch(
+        "salt.utils.path.which",
+        MagicMock(return_value="/bin/lgroupdel"),
+    ) as which_mock:
+        mock = MagicMock(return_value={"retcode": 0})
+        with patch.dict(groupadd.__salt__, {"cmd.run_all": mock}):
+            assert groupadd.delete("test", local=True) is True
+        which_mock.assert_called_once_with("lgroupdel")
+        mock.assert_called_once_with(["/bin/lgroupdel", "test"], python_shell=False)
+
+
+def test_delete_local_with_params():
+    """
+    Tests if the specified group was deleted with a local flag and params
+    """
+    with patch(
+        "salt.utils.path.which",
+        MagicMock(return_value="/bin/lgroupdel"),
+    ):
+        mock = MagicMock(return_value={"retcode": 0})
+        with patch.dict(groupadd.__salt__, {"cmd.run_all": mock}):
+            assert groupadd.delete("test", local=True, root="ignored") is True
+        mock.assert_called_once_with(["/bin/lgroupdel", "test"], python_shell=False)
 
 
 def test_adduser():
