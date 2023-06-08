@@ -2,7 +2,6 @@ import pytest
 
 import salt.modules.win_file as win_file
 import salt.modules.win_lgpo as win_lgpo
-import salt.utils.win_dacl as win_dacl
 import salt.utils.win_lgpo_auditpol as auditpol
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
@@ -29,19 +28,11 @@ def configure_loader_modules(tmp_path):
                 "file.remove": win_file.remove,
                 "file.write": win_file.write,
             },
-            "__utils__": {
-                "auditpol.get_auditpol_dump": auditpol.get_auditpol_dump,
-                "auditpol.set_setting": auditpol.set_setting,
-            },
         },
         auditpol: {
             "__context__": {},
         },
-        win_file: {
-            "__utils__": {
-                "dacl.set_perms": win_dacl.set_perms,
-            },
-        },
+        win_file: {},
     }
 
 
