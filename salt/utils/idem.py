@@ -17,20 +17,12 @@ except ImportError as e:
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = "idem"
 
-
-def __virtual__():
-    if not HAS_POP[0]:
-        return HAS_POP
-    return __virtualname__
-
-
-def hub():
+def hub(ctx):
     """
     Create a hub with idem ready to go and completely loaded
     """
-    if "idem.hub" not in __context__:
+    if "idem.hub" not in ctx:
         log.debug("Creating the POP hub")
         hub = pop.hub.Hub()
 
@@ -46,6 +38,6 @@ def hub():
         log.debug("Reading idem config options")
         hub.config.integrate.load(["acct", "idem"], "idem", parse_cli=False, logs=False)
 
-        __context__["idem.hub"] = hub
+        ctx["idem.hub"] = hub
 
-    return __context__["idem.hub"]
+    return ctx["idem.hub"]
