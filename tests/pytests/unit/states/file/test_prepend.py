@@ -36,7 +36,6 @@ def configure_loader_modules():
             "__opts__": {"test": False, "cachedir": ""},
             "__instance_id__": "",
             "__low__": {},
-            "__utils__": {},
         }
     }
 
@@ -86,13 +85,13 @@ def test_prepend():
         assert filestate.prepend(name, makedirs=True) == ret
 
         with patch.object(os.path, "isabs", mock_f):
-            comt = "Specified file {} is not an absolute path".format(name)
+            comt = f"Specified file {name} is not an absolute path"
             ret.update({"comment": comt, "changes": {}})
             assert filestate.prepend(name) == ret
 
         with patch.object(os.path, "isabs", mock_t):
             with patch.object(os.path, "exists", mock_t):
-                comt = "Failed to load template file {}".format(source)
+                comt = f"Failed to load template file {source}"
                 ret.update({"comment": comt, "name": source, "data": []})
                 assert filestate.prepend(name, source=source) == ret
 
@@ -100,17 +99,14 @@ def test_prepend():
                 ret.update({"name": name})
                 with patch.object(
                     salt.utils.files, "fopen", MagicMock(mock_open(read_data=""))
-                ):
-                    with patch.dict(filestate.__utils__, {"files.is_text": mock_f}):
-                        with patch.dict(filestate.__opts__, {"test": True}):
-                            change = {"diff": "Replace binary file"}
-                            comt = "File {} is set to be updated".format(name)
-                            ret.update(
-                                {"comment": comt, "result": None, "changes": change}
-                            )
-                            assert filestate.prepend(name, text=text) == ret
+                ), patch("salt.utils.files.is_text", mock_f):
+                    with patch.dict(filestate.__opts__, {"test": True}):
+                        change = {"diff": "Replace binary file"}
+                        comt = f"File {name} is set to be updated"
+                        ret.update({"comment": comt, "result": None, "changes": change})
+                        assert filestate.prepend(name, text=text) == ret
 
-                        with patch.dict(filestate.__opts__, {"test": False}):
-                            comt = "Prepended 1 lines"
-                            ret.update({"comment": comt, "result": True, "changes": {}})
-                            assert filestate.prepend(name, text=text) == ret
+                    with patch.dict(filestate.__opts__, {"test": False}):
+                        comt = "Prepended 1 lines"
+                        ret.update({"comment": comt, "result": True, "changes": {}})
+                        assert filestate.prepend(name, text=text) == ret
