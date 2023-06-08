@@ -24,7 +24,6 @@ def configure_loader_modules():
     return {
         chroot: {
             "__salt__": {},
-            "__utils__": {"files.rm_rf": MagicMock()},
             "__opts__": {"extension_modules": "", "cachedir": "/tmp/"},
             "__pillar__": salt.loader.context.NamedLoaderContext(
                 "__pillar__", loader_context, {}
@@ -103,25 +102,25 @@ def test_call_fails_untar():
         with patch("tempfile.mkdtemp") as mkdtemp:
             exist.return_value = True
             mkdtemp.return_value = "/chroot/tmp01"
-            utils_mock = {
-                "thin.gen_thin": MagicMock(return_value="/salt-thin.tgz"),
-                "files.rm_rf": MagicMock(),
-            }
             salt_mock = {
                 "cmd.run": MagicMock(return_value="Error"),
                 "config.option": MagicMock(),
             }
-            with patch.dict(chroot.__utils__, utils_mock), patch.dict(
+            with patch(
+                "salt.utils.thin.gen_thin", MagicMock(return_value="/salt-thin.tgz")
+            ) as gen_thin, patch(
+                "salt.utils.files.rm_rf", MagicMock()
+            ) as rm_rf, patch.dict(
                 chroot.__salt__, salt_mock
             ):
                 assert chroot.call("/chroot", "test.ping") == {
                     "result": False,
                     "comment": "Error",
                 }
-                utils_mock["thin.gen_thin"].assert_called_once()
+                gen_thin.assert_called_once()
                 salt_mock["config.option"].assert_called()
                 salt_mock["cmd.run"].assert_called_once()
-                utils_mock["files.rm_rf"].assert_called_once()
+                rm_rf.assert_called_once()
 
 
 def test_call_fails_salt_thin():
@@ -133,11 +132,6 @@ def test_call_fails_salt_thin():
         with patch("tempfile.mkdtemp") as mkdtemp:
             exist.return_value = True
             mkdtemp.return_value = "/chroot/tmp01"
-            utils_mock = {
-                "thin.gen_thin": MagicMock(return_value="/salt-thin.tgz"),
-                "files.rm_rf": MagicMock(),
-                "json.find_json": MagicMock(side_effect=ValueError()),
-            }
             salt_mock = {
                 "cmd.run": MagicMock(return_value=""),
                 "config.option": MagicMock(),
@@ -145,7 +139,11 @@ def test_call_fails_salt_thin():
                     return_value={"retcode": 1, "stdout": "", "stderr": "Error"}
                 ),
             }
-            with patch.dict(chroot.__utils__, utils_mock), patch.dict(
+            with patch(
+                "salt.utils.thin.gen_thin", MagicMock(return_value="/salt-thin.tgz")
+            ) as gen_thin, patch("salt.utils.files.rm_rf", MagicMock()) as rm_rf, patch(
+                "salt.utils.json.find_json", MagicMock(side_effect=ValueError())
+            ), patch.dict(
                 chroot.__salt__, salt_mock
             ):
                 assert chroot.call("/chroot", "test.ping") == {
@@ -153,13 +151,13 @@ def test_call_fails_salt_thin():
                     "retcode": 1,
                     "comment": {"stdout": "", "stderr": "Error"},
                 }
-                utils_mock["thin.gen_thin"].assert_called_once()
+                gen_thin.assert_called_once()
                 salt_mock["config.option"].assert_called()
                 salt_mock["cmd.run"].assert_called_once()
                 salt_mock["cmd.run_chroot"].assert_called_with(
                     "/chroot",
                     [
-                        "python{}".format(sys.version_info[0]),
+                        f"python{sys.version_info[0]}",
                         "/tmp01/salt-call",
                         "--metadata",
                         "--local",
@@ -175,7 +173,7 @@ def test_call_fails_salt_thin():
                         "test.ping",
                     ],
                 )
-                utils_mock["files.rm_rf"].assert_called_once()
+                rm_rf.assert_called_once()
 
 
 def test_call_success():
@@ -187,27 +185,27 @@ def test_call_success():
         with patch("tempfile.mkdtemp") as mkdtemp:
             exist.return_value = True
             mkdtemp.return_value = "/chroot/tmp01"
-            utils_mock = {
-                "thin.gen_thin": MagicMock(return_value="/salt-thin.tgz"),
-                "files.rm_rf": MagicMock(),
-                "json.find_json": MagicMock(return_value={"return": "result"}),
-            }
             salt_mock = {
                 "cmd.run": MagicMock(return_value=""),
                 "config.option": MagicMock(),
                 "cmd.run_chroot": MagicMock(return_value={"retcode": 0, "stdout": ""}),
             }
-            with patch.dict(chroot.__utils__, utils_mock), patch.dict(
+            with patch(
+                "salt.utils.thin.gen_thin", MagicMock(return_value="/salt-thin.tgz")
+            ) as gen_thin, patch("salt.utils.files.rm_rf", MagicMock()) as rm_rf, patch(
+                "salt.utils.json.find_json",
+                MagicMock(return_value={"return": "result"}),
+            ), patch.dict(
                 chroot.__salt__, salt_mock
             ):
                 assert chroot.call("/chroot", "test.ping") == "result"
-                utils_mock["thin.gen_thin"].assert_called_once()
+                gen_thin.assert_called_once()
                 salt_mock["config.option"].assert_called()
                 salt_mock["cmd.run"].assert_called_once()
                 salt_mock["cmd.run_chroot"].assert_called_with(
                     "/chroot",
                     [
-                        "python{}".format(sys.version_info[0]),
+                        f"python{sys.version_info[0]}",
                         "/tmp01/salt-call",
                         "--metadata",
                         "--local",
@@ -223,7 +221,7 @@ def test_call_success():
                         "test.ping",
                     ],
                 )
-                utils_mock["files.rm_rf"].assert_called_once()
+                rm_rf.assert_called_once()
 
 
 def test_call_success_parameters():
@@ -235,29 +233,29 @@ def test_call_success_parameters():
         with patch("tempfile.mkdtemp") as mkdtemp:
             exist.return_value = True
             mkdtemp.return_value = "/chroot/tmp01"
-            utils_mock = {
-                "thin.gen_thin": MagicMock(return_value="/salt-thin.tgz"),
-                "files.rm_rf": MagicMock(),
-                "json.find_json": MagicMock(return_value={"return": "result"}),
-            }
             salt_mock = {
                 "cmd.run": MagicMock(return_value=""),
                 "config.option": MagicMock(),
                 "cmd.run_chroot": MagicMock(return_value={"retcode": 0, "stdout": ""}),
             }
-            with patch.dict(chroot.__utils__, utils_mock), patch.dict(
+            with patch(
+                "salt.utils.thin.gen_thin", MagicMock(return_value="/salt-thin.tgz")
+            ) as gen_thin, patch("salt.utils.files.rm_rf", MagicMock()) as rm_rf, patch(
+                "salt.utils.json.find_json",
+                MagicMock(return_value={"return": "result"}),
+            ), patch.dict(
                 chroot.__salt__, salt_mock
             ):
                 assert (
                     chroot.call("/chroot", "module.function", key="value") == "result"
                 )
-                utils_mock["thin.gen_thin"].assert_called_once()
+                gen_thin.assert_called_once()
                 salt_mock["config.option"].assert_called()
                 salt_mock["cmd.run"].assert_called_once()
                 salt_mock["cmd.run_chroot"].assert_called_with(
                     "/chroot",
                     [
-                        "python{}".format(sys.version_info[0]),
+                        f"python{sys.version_info[0]}",
                         "/tmp01/salt-call",
                         "--metadata",
                         "--local",
@@ -274,7 +272,7 @@ def test_call_success_parameters():
                         "key=value",
                     ],
                 )
-                utils_mock["files.rm_rf"].assert_called_once()
+                rm_rf.assert_called_once()
 
 
 def test_sls():
