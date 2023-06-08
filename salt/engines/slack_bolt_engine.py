@@ -111,7 +111,7 @@ the desired command.
 .. code-block:: text
 
     engines:
-      - slack:
+      - slack_bolt:
           app_token: "xapp-x-xxxxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
           bot_token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
           control: True
@@ -149,7 +149,7 @@ must be quoted, or else PyYAML will fail to load the configuration.
 .. code-block:: text
 
     engines:
-      - slack:
+      - slack_bolt:
           groups_pillar: slack_engine_pillar
           app_token: "xapp-x-xxxxxxxxxxx-xxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
           bot_token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
