@@ -6,7 +6,7 @@ from tests.support.mock import MagicMock, mock_open, patch
 
 @pytest.fixture
 def configure_loader_modules():
-    return {s3_pillar: {"__utils__": {}}}
+    return {s3_pillar: {}}
 
 
 def test_refresh_buckets_cache_file():
@@ -41,7 +41,7 @@ def test_refresh_buckets_cache_file():
     first_range_end = 999
     second_range_end = 1200
     for i in range(0, first_range_end):
-        key_name = "{}/init.sls".format(i)
+        key_name = f"{i}/init.sls"
         tmp = {
             "Key": key_name,
             "LastModified": "2019-12-18T15:54:39.000Z",
@@ -52,7 +52,7 @@ def test_refresh_buckets_cache_file():
         mock_return_first.append(tmp)
 
     for i in range(first_range_end, second_range_end):
-        key_name = "{}/init.sls".format(i)
+        key_name = f"{i}/init.sls"
         tmp = {
             "Key": key_name,
             "LastModified": "2019-12-18T15:54:39.000Z",
@@ -64,7 +64,7 @@ def test_refresh_buckets_cache_file():
 
     _expected = {"base": {"dummy_bucket": []}}
     for i in range(0, second_range_end):
-        key_name = "{}/init.sls".format(i)
+        key_name = f"{i}/init.sls"
         tmp = {
             "Key": key_name,
             "LastModified": "2019-12-18T15:54:39.000Z",
@@ -75,7 +75,7 @@ def test_refresh_buckets_cache_file():
         _expected["base"]["dummy_bucket"].append(tmp)
 
     mock_s3_query = MagicMock(side_effect=[mock_return_first, mock_return_second])
-    with patch.dict(s3_pillar.__utils__, {"s3.query": mock_s3_query}):
+    with patch("salt.utils.s3.query", mock_s3_query):
         with patch("salt.utils.files.fopen", mock_open(read_data=b"")):
             ret = s3_pillar._refresh_buckets_cache_file(
                 s3_creds, cache_file, False, "base", ""
