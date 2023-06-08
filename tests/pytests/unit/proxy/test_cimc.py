@@ -182,7 +182,7 @@ def test_init_with_ssl(verify_ssl, opts):
     http_query_mock = MagicMock(side_effect=http_query_response)
     expected_verify_ssl_value = _get_expected_verify_ssl(verify_ssl)
 
-    with patch.dict(cimc.__utils__, {"http.query": http_query_mock}):
+    with patch("salt.utils.http.query", http_query_mock):
         cimc.init(opts)
 
     for idx, call in enumerate(http_query_mock.mock_calls, 1):
@@ -204,7 +204,7 @@ def test_logon(opts, verify_ssl):
     ):
         cimc.init(opts)
 
-    with patch.dict(cimc.__utils__, {"http.query": http_query_mock}):
+    with patch("salt.utils.http.query", http_query_mock):
         cimc.logon()
 
     for idx, call in enumerate(http_query_mock.mock_calls, 1):
@@ -226,7 +226,7 @@ def test_logout(opts, verify_ssl):
     ):
         cimc.init(opts)
 
-    with patch.dict(cimc.__utils__, {"http.query": http_query_mock}):
+    with patch("salt.utils.http.query", http_query_mock):
         cimc.logout()
 
     for idx, call in enumerate(http_query_mock.mock_calls, 1):
@@ -248,7 +248,7 @@ def test_grains(opts, verify_ssl):
     ):
         cimc.init(opts)
 
-    with patch.dict(cimc.__utils__, {"http.query": http_query_mock}):
+    with patch("salt.utils.http.query", http_query_mock):
         cimc.grains()
 
     for idx, call in enumerate(http_query_mock.mock_calls, 1):
@@ -270,7 +270,7 @@ def test_grains_refresh(opts, verify_ssl):
     ):
         cimc.init(opts)
 
-    with patch.dict(cimc.__utils__, {"http.query": http_query_mock}):
+    with patch("salt.utils.http.query", http_query_mock):
         cimc.grains_refresh()
 
     for idx, call in enumerate(http_query_mock.mock_calls, 1):
@@ -292,7 +292,7 @@ def test_ping(opts, verify_ssl):
     ):
         cimc.init(opts)
 
-    with patch.dict(cimc.__utils__, {"http.query": http_query_mock}):
+    with patch("salt.utils.http.query", http_query_mock):
         cimc.ping()
 
     for idx, call in enumerate(http_query_mock.mock_calls, 1):
@@ -314,7 +314,7 @@ def test_set_config_modify(opts, verify_ssl):
     ):
         cimc.init(opts)
 
-    with patch.dict(cimc.__utils__, {"http.query": http_query_mock}):
+    with patch("salt.utils.http.query", http_query_mock):
         cimc.set_config_modify(
             dn="sys/rack-unit-1/locator-led",
             inconfig=(
