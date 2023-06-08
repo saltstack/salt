@@ -112,7 +112,7 @@ def _find_chocolatey():
             os.environ.get("ProgramData"), "Chocolatey", "bin", "chocolatey.exe"
         ),
         os.path.join(
-            os.environ.get("ProgramData"), "Chocolatey", "bin", "choco.exe"
+            os.environ.get("ProgramDataChoco"), "Chocolatey", "bin", "choco.exe"
         ),
         os.path.join(
             os.environ.get("SystemDrive"), "Chocolatey", "bin", "chocolatey.bat"
