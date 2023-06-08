@@ -73,7 +73,8 @@ def _git_version():
 
 @pytest.fixture
 def configure_loader_modules():
-    return {git_mod: {"__utils__": {"ssh.key_is_encrypted": Mock(return_value=False)}}}
+    with patch("salt.utils.ssh.key_is_encrypted", Mock(return_value=False)):
+        yield {git_mod: {}}
 
 
 def test_list_worktrees(worktree_info, worktree_root):
