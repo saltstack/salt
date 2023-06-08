@@ -507,7 +507,7 @@ def setup_windows(
             assert ret.returncode == 0, ret
         else:
             # We are testing the onedir download
-            onedir_name = f"salt-{salt_release}-onedir-windows-{arch}.tar.xz"
+            onedir_name = f"salt-{salt_release}-onedir-windows-{arch}.zip"
             if repo_subpath == "minor":
                 repo_url_base = f"{root_url}/onedir/{repo_subpath}/{salt_release}"
             else:
@@ -521,7 +521,7 @@ def setup_windows(
             except Exception as exc:
                 pytest.fail(f"Failed to download {onedir_url}: {exc}")
 
-            shell.run("tar", "xvf", str(onedir_location), "-C", str(onedir_extracted))
+            shell.run("unzip", str(onedir_location), "-d", str(onedir_extracted))
         yield
     finally:
         # We need to uninstall the MSI packages, otherwise they will not install correctly
