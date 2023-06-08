@@ -25,9 +25,16 @@ def choco_path():
 
 
 @pytest.fixture(scope="module")
-def choco_path_pd():
+def chocolatey_path_pd():
     return os.path.join(
         os.environ.get("ProgramData"), "Chocolatey", "bin", "chocolatey.exe"
+    )
+
+
+@pytest.fixture(scope="module")
+def choco_path_pd():
+    return os.path.join(
+        os.environ.get("ProgramData"), "Chocolatey", "bin", "choco.exe"
     )
 
 
@@ -133,9 +140,24 @@ def test__find_chocolatey_which(choco_path):
         assert chocolatey.__context__["chocolatey._path"] == expected
 
 
-def test__find_chocolatey_programdata(mock_false, mock_true, choco_path_pd):
+def test__find_chocolatey_programdata(mock_false, mock_true, chocolatey_path_pd):
     """
-    Test _find_chocolatey when found in ProgramData
+    Test _find_chocolatey when found in ProgramData and named chocolatey.exe
+    """
+    with patch.dict(chocolatey.__salt__, {"cmd.which": mock_false}), patch(
+        "os.path.isfile", mock_true
+    ):
+        result = chocolatey._find_chocolatey()
+        expected = choco_path_pd
+        # Does it return the correct path
+        assert result == expected
+        # Does it populate __context__
+        assert chocolatey.__context__["chocolatey._path"] == expected
+
+
+def test__find_choco_programdata(mock_false, mock_true, choco_path_pd):
+    """
+    Test _find_chocolatey when found in ProgramData and named choco.exe
     """
     with patch.dict(chocolatey.__salt__, {"cmd.which": mock_false}), patch(
         "os.path.isfile", mock_true
