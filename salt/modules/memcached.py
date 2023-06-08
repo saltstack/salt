@@ -7,17 +7,11 @@ Module for Management of Memcached Keys
 import logging
 
 import salt.utils.functools
+import salt.utils.memcached
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-# TODO: use salt.utils.memcache
-
-
-try:
+if salt.utils.memcached.HAS_LIBS:
     import memcache
-
-    HAS_MEMCACHE = True
-except ImportError:
-    HAS_MEMCACHE = False
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 11211
@@ -36,7 +30,7 @@ def __virtual__():
     """
     Only load if python-memcache is installed
     """
-    if HAS_MEMCACHE:
+    if salt.utils.memcached.HAS_LIBS:
         return __virtualname__
     return (
         False,
@@ -51,7 +45,7 @@ def _connect(host=DEFAULT_HOST, port=DEFAULT_PORT):
     values assigned to missing values.
     """
     if str(port).isdigit():
-        return memcache.Client(["{}:{}".format(host, port)], debug=0)
+        return memcache.Client([f"{host}:{port}"], debug=0)
     raise SaltInvocationError("port must be an integer")
 
 
@@ -214,10 +208,10 @@ def increment(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
     cur = get(key)
 
     if cur is None:
-        raise CommandExecutionError("Key '{}' does not exist".format(key))
+        raise CommandExecutionError(f"Key '{key}' does not exist")
     elif not isinstance(cur, int):
         raise CommandExecutionError(
-            "Value for key '{}' must be an integer to be incremented".format(key)
+            f"Value for key '{key}' must be an integer to be incremented"
         )
 
     try:
@@ -245,10 +239,10 @@ def decrement(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
 
     cur = get(key)
     if cur is None:
-        raise CommandExecutionError("Key '{}' does not exist".format(key))
+        raise CommandExecutionError(f"Key '{key}' does not exist")
     elif not isinstance(cur, int):
         raise CommandExecutionError(
-            "Value for key '{}' must be an integer to be decremented".format(key)
+            f"Value for key '{key}' must be an integer to be decremented"
         )
 
     try:

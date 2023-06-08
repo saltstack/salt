@@ -35,11 +35,12 @@ def test_ast_inspect_loading(loader):
     loaded_functions = list(loader)
     # Check that utils modules defining __virtual__ are loaded by the loader
     # Of course, we can only check modules which load in most/all circumstances.
-    assert "ansible.targets" in loaded_functions
+    assert "boto3.get_connection" in loaded_functions
     # However, modules which do not define a __virtual__ function should not load,
     # at all!
     modules_which_do_not_define_dunder_virtual = (
         "args.",
+        "ansible.",
         "environment.",
         "entrypoints.",
         "process.",
