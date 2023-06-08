@@ -21,17 +21,13 @@ pytestmark = [
 
 
 @pytest.fixture
-def configure_loader_modules(tmp_path):
-    cachedir = tmp_path / "__test_admx_policy_cache_dir"
-    cachedir.mkdir(parents=True, exist_ok=True)
+def configure_loader_modules(minion_opts):
     return {
         win_lgpo: {
+            "__opts__": minion_opts,
             "__salt__": {
                 "file.file_exists": win_file.file_exists,
                 "file.makedirs": win_file.makedirs_,
-            },
-            "__opts__": {
-                "cachedir": str(cachedir),
             },
         },
         win_file: {
