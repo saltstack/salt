@@ -420,6 +420,14 @@ def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
             "pip>=20.2.4,<21.2",
             "setuptools<58.0",
         )
+        if "3.10" in sys.version:
+            venv.run(
+                venv.venv_python,
+                "-m",
+                "pip",
+                "install",
+                "packaging",
+            )
 
         venv.run(
             venv.venv_python,
