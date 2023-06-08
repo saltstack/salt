@@ -79,9 +79,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         """UT: nxos module:ping method - proxy"""
 
         with patch("salt.utils.platform.is_proxy", return_value=False, autospec=True):
-            with patch.dict(
-                nxos_module.__utils__, {"nxos.ping": MagicMock(return_value=True)}
-            ):
+            with patch("salt.utils.nxos.ping", MagicMock(return_value=True)):
                 result = nxos_module.ping()
                 self.assertTrue(result)
 
@@ -1094,9 +1092,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
             mock_cmd = MagicMock(return_value={"nxos": {"save_config": False}})
             with patch.dict(nxos_module.__salt__, {"config.get": mock_cmd}):
                 mock_request = create_autospec(nxos_utils.nxapi_request)
-                with patch.dict(
-                    nxos_module.__utils__, {"nxos.nxapi_request": mock_request}
-                ):
+                with patch("salt.utils.nxos.nxapi_request", mock_request):
                     result = nxos_module._nxapi_request("show version")
                     self.assertEqual(result, mock_request.return_value)
                     mock_request.assert_called_with(
