@@ -17,7 +17,6 @@ def configure_loader_modules():
     return {
         tu: {
             "__salt__": {},
-            "__utils__": {"files.rm_rf": MagicMock()},
             "__pillar__": salt.loader.context.NamedLoaderContext(
                 "__pillar__", loader_context, {}
             ),
@@ -126,11 +125,11 @@ def test_transactional_transactional():
     matrix = (("/usr/sbin/transactional-update", True), ("", False))
 
     for path_which, result in matrix:
-        utils_mock = {"path.which": MagicMock(return_value=path_which)}
-
-        with patch.dict(tu.__utils__, utils_mock):
+        with patch(
+            "salt.utils.path.which", MagicMock(return_value=path_which)
+        ) as which:
             assert tu.transactional() is result
-            utils_mock["path.which"].assert_called_with("transactional-update")
+            which.assert_called_with("transactional-update")
 
 
 def test_in_transaction():
@@ -143,12 +142,12 @@ def test_in_transaction():
     )
 
     for path_which, in_chroot, result in matrix:
-        utils_mock = {"path.which": MagicMock(return_value=path_which)}
         salt_mock = {"chroot.in_chroot": MagicMock(return_value=in_chroot)}
 
-        with patch.dict(tu.__utils__, utils_mock):
-            with patch.dict(tu.__salt__, salt_mock):
-                assert tu.in_transaction() is result
+        with patch(
+            "salt.utils.path.which", MagicMock(return_value=path_which)
+        ) as which, patch.dict(tu.__salt__, salt_mock):
+            assert tu.in_transaction() is result
 
 
 def test_commands_with_global_params():
@@ -355,15 +354,14 @@ def test_call_fails_input_validation():
 
 def test_call_fails_function():
     """Test transactional_update.chroot when fails the function"""
-    utils_mock = {
-        "json.find_json": MagicMock(side_effect=ValueError()),
-    }
     salt_mock = {
         "cmd.run_all": MagicMock(
             return_value={"retcode": 0, "stdout": "Not found", "stderr": ""}
         ),
     }
-    with patch.dict(tu.__utils__, utils_mock), patch.dict(tu.__salt__, salt_mock):
+    with patch(
+        "salt.utils.json.find_json", MagicMock(side_effect=ValueError())
+    ), patch.dict(tu.__salt__, salt_mock):
         assert tu.call("test.ping") == {
             "result": False,
             "retcode": 1,
@@ -393,13 +391,12 @@ def test_call_fails_function():
 
 def test_call_success_no_reboot():
     """Test transactional_update.chroot when succeed"""
-    utils_mock = {
-        "json.find_json": MagicMock(return_value={"return": "result"}),
-    }
     salt_mock = {
         "cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": ""}),
     }
-    with patch.dict(tu.__utils__, utils_mock), patch.dict(tu.__salt__, salt_mock):
+    with patch(
+        "salt.utils.json.find_json", MagicMock(return_value={"return": "result"})
+    ), patch.dict(tu.__salt__, salt_mock):
         assert tu.call("test.ping") == "result"
 
         salt_mock["cmd.run_all"].assert_called_with(
@@ -427,15 +424,12 @@ def test_call_success_reboot():
     """Test transactional_update.chroot when succeed and reboot"""
     pending_transaction_mock = MagicMock(return_value=True)
     reboot_mock = MagicMock()
-    utils_mock = {
-        "json.find_json": MagicMock(return_value={"return": "result"}),
-    }
     salt_mock = {
         "cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": ""}),
     }
-    with patch.dict(tu.__utils__, utils_mock), patch.dict(
-        tu.__salt__, salt_mock
-    ), patch.dict(tu.__salt__, salt_mock), patch(
+    with patch(
+        "salt.utils.json.find_json", MagicMock(return_value={"return": "result"})
+    ), patch.dict(tu.__salt__, salt_mock), patch.dict(tu.__salt__, salt_mock), patch(
         "salt.modules.transactional_update.pending_transaction",
         pending_transaction_mock,
     ), patch(
@@ -470,13 +464,12 @@ def test_call_success_reboot():
 
 def test_call_success_parameters():
     """Test transactional_update.chroot when succeed with parameters"""
-    utils_mock = {
-        "json.find_json": MagicMock(return_value={"return": "result"}),
-    }
     salt_mock = {
         "cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": ""}),
     }
-    with patch.dict(tu.__utils__, utils_mock), patch.dict(tu.__salt__, salt_mock):
+    with patch(
+        "salt.utils.json.find_json", MagicMock(return_value={"return": "result"})
+    ), patch.dict(tu.__salt__, salt_mock):
         assert tu.call("module.function", key="value") == "result"
 
         salt_mock["cmd.run_all"].assert_called_with(
