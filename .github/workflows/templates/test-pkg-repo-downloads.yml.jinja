@@ -31,7 +31,7 @@
 
 
   <%- for slug, display_name, arch, pkg_type in linux_pkg_tests %>
-    <%- set job_name = "{}-{}-pkg-download-tests".format(slug.replace(".", ""), pkg_type) %>
+    <%- set job_name = "{}-{}-download-tests".format(slug.replace(".", ""), pkg_type) %>
 
   <{ job_name }>:
     <%- do test_repo_needs.append(job_name) %>
@@ -67,7 +67,7 @@
                                         ("macos-12", "macOS 12", "x86_64", "Package"),
                                         ("macos-12", "macOS 12", "x86_64", "Onedir"),
                                       ) %>
-    <%- set job_name = "{}-{}-pkg-download-tests".format(slug.replace(".", ""), pkg_type) %>
+    <%- set job_name = "{}-{}-download-tests".format(slug.replace(".", ""), pkg_type) %>
 
   <{ job_name }>:
     <%- do test_repo_needs.append(job_name) %>
@@ -102,7 +102,7 @@
                                         ("windows-2022", "Windows 2022", "amd64"),
                                       ) %>
     <%- for pkg_type in ("NSIS", "MSI", "Onedir") %>
-    <%- set job_name = "{}-{}-{}-pkg-download-tests".format(slug.replace(".", ""), pkg_type, arch.lower()) %>
+    <%- set job_name = "{}-{}-{}-download-tests".format(slug.replace(".", ""), pkg_type, arch.lower()) %>
 
   <{ job_name }>:
     <%- do test_repo_needs.append(job_name) %>
