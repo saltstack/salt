@@ -167,7 +167,7 @@ def test__init_nxapi():
     nxapi_request = create_autospec(nxos_utils.nxapi_request, return_value="data")
 
     with patch("salt.proxy.nxos.DEVICE_DETAILS", {}) as device_details:
-        with patch("salt.proxy.nxos.__utils__", {"nxos.nxapi_request": nxapi_request}):
+        with patch("salt.utils.nxos.nxapi_request", nxapi_request):
             result = nxos_proxy._init_nxapi(opts)
 
             assert device_details["initialized"]
@@ -186,7 +186,7 @@ def test_bad__init_nxapi():
         nxos_utils.nxapi_request, side_effect=NXAPIException
     )
 
-    with patch("salt.proxy.nxos.__utils__", {"nxos.nxapi_request": nxapi_request}):
+    with patch("salt.utils.nxos.nxapi_request", nxapi_request):
         with patch("salt.proxy.nxos.log", autospec=True) as log:
             with pytest.raises(NXAPIException):
                 nxos_proxy._init_nxapi({"proxy": {"host": "HOST"}})
@@ -247,7 +247,7 @@ def test__nxapi_request_connect():
     nxapi_request = create_autospec(nxos_utils.nxapi_request, return_value="data")
 
     with patch("salt.proxy.nxos.DEVICE_DETAILS", {"conn_args": {"arg1": None}}):
-        with patch("salt.proxy.nxos.__utils__", {"nxos.nxapi_request": nxapi_request}):
+        with patch("salt.utils.nxos.nxapi_request", nxapi_request):
             result = nxos_proxy._nxapi_request(commands)
             assert "data" == result
             nxapi_request.assert_called_with(commands, method="cli_conf", arg1=None)
