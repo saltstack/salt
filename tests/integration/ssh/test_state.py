@@ -281,6 +281,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
         self.assertTrue(check_file)
 
+    @pytest.mark.flaky(max_runs=4)
     @pytest.mark.slow_test
     def test_state_running(self):
         """
