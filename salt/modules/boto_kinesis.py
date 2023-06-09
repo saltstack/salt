@@ -66,12 +66,7 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "boto_kinesis"
 
-__deprecated__ = (
-    3009,
-    "Potassium",
-    "boto",
-    "https://github.com/salt-extensions/saltext-boto"
-)
+__deprecated__ = (3009, "boto", "https://github.com/salt-extensions/saltext-boto")
 
 
 def __virtual__():
