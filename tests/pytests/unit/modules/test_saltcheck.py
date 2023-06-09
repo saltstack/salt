@@ -3,6 +3,11 @@ import pytest
 import salt.modules.saltcheck as saltcheck
 from tests.support.mock import MagicMock
 
+try:
+    from xmldiff import main
+except ImportError:
+    raise ImportError
+
 
 @pytest.fixture()
 def configure_loader_modules():
@@ -36,6 +41,6 @@ def test__generate_junit_out_list():
         + """\t\t<testcase name="echo_test_hello3">\n\t\t\t<skipped type="skipped" message="Skip"/>\n\t\t</testcase>\n"""
         + """\t</testsuite>\n</testsuites>\n"""
     )
-
     ret = saltcheck._generate_junit_out_list(results)
-    assert ret == expected
+    diff = main.diff_texts(ret, expected)
+    assert diff == []

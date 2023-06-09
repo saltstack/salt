@@ -225,6 +225,7 @@ lxml==4.9.2
     #   junos-eznc
     #   napalm
     #   ncclient
+    #   xmldiff
 mako==1.2.4
     # via -r requirements/static/ci/common.in
 markupsafe==2.1.2
@@ -547,6 +548,8 @@ werkzeug==2.2.3
     # via
     #   moto
     #   pytest-httpserver
+xmldiff==2.6.3
+    # via -r requirements/static/ci/common.in
 xmltodict==0.12.0
     # via moto
 yamllint==1.32.0
