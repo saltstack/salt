@@ -5,7 +5,6 @@ involves preparing the three listeners and the workers needed by the master.
 import collections
 import copy
 import ctypes
-import functools
 import logging
 import multiprocessing
 import os
@@ -15,6 +14,8 @@ import stat
 import sys
 import threading
 import time
+
+import tornado.gen
 
 import salt.acl
 import salt.auth
@@ -26,7 +27,6 @@ import salt.daemons.masterapi
 import salt.defaults.exitcodes
 import salt.engines
 import salt.exceptions
-import salt.ext.tornado.gen
 import salt.key
 import salt.minion
 import salt.payload
@@ -37,6 +37,7 @@ import salt.state
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.crypt
+import salt.utils.ctx
 import salt.utils.event
 import salt.utils.files
 import salt.utils.gitfs
@@ -56,10 +57,8 @@ import salt.utils.zeromq
 import salt.wheel
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.ext.tornado.stack_context import StackContext
 from salt.transport import TRANSPORTS
 from salt.utils.channel import iter_transport_opts
-from salt.utils.ctx import RequestContext
 from salt.utils.debug import (
     enable_sigusr1_handler,
     enable_sigusr2_handler,
@@ -1000,8 +999,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Bind to the local port
         """
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
-        self.io_loop.make_current()
+        self.io_loop = tornado.ioloop.IOLoop()
         for req_channel in self.req_channels:
             req_channel.post_fork(
                 self._handle_payload, io_loop=self.io_loop
@@ -1012,7 +1010,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             # Tornado knows what to do
             pass
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _handle_payload(self, payload):
         """
         The _handle_payload method is the key method used to figure out what
@@ -1037,7 +1035,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         key = payload["enc"]
         load = payload["load"]
         ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](load)
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)
 
     def _post_stats(self, start, cmd):
         """
@@ -1105,9 +1103,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         def run_func(data):
             return self.aes_funcs.run_func(data["cmd"], data)
 
-        with StackContext(
-            functools.partial(RequestContext, {"data": data, "opts": self.opts})
-        ):
+        with salt.utils.ctx.request_context({"data": data, "opts": self.opts}):
             ret = run_func(data)
 
         if self.opts["master_stats"]:

@@ -538,7 +538,6 @@ VALID_OPTS = immutabletypes.freeze(
         "proxy_keep_alive_interval": int,
         # Update intervals
         "roots_update_interval": int,
-        "azurefs_update_interval": int,
         "gitfs_update_interval": int,
         "git_pillar_update_interval": int,
         "hgfs_update_interval": int,
@@ -1093,7 +1092,6 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "gpg_decrypt_must_succeed": False,
         # Update intervals
         "roots_update_interval": DEFAULT_INTERVAL,
-        "azurefs_update_interval": DEFAULT_INTERVAL,
         "gitfs_update_interval": DEFAULT_INTERVAL,
         "git_pillar_update_interval": DEFAULT_INTERVAL,
         "hgfs_update_interval": DEFAULT_INTERVAL,
@@ -1346,7 +1344,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "local": True,
         # Update intervals
         "roots_update_interval": DEFAULT_INTERVAL,
-        "azurefs_update_interval": DEFAULT_INTERVAL,
         "gitfs_update_interval": DEFAULT_INTERVAL,
         "git_pillar_update_interval": DEFAULT_INTERVAL,
         "hgfs_update_interval": DEFAULT_INTERVAL,

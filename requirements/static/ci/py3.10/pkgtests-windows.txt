@@ -6,20 +6,21 @@
 #
 attrs==22.2.0
     # via
-    #   pytest
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-system-statistics
 autocommand==2.2.2
     # via jaraco.text
-certifi==2022.12.7
+certifi==2023.5.7
     # via requests
 cffi==1.15.1
-    # via clr-loader
-charset-normalizer==3.0.1
+    # via
+    #   clr-loader
+    #   cryptography
+charset-normalizer==2.1.1
     # via requests
-cheroot==9.0.0
+cheroot==10.0.0
     # via cherrypy
 cherrypy==18.8.0
     # via -r requirements/static/ci/pkgtests-windows.in
@@ -29,6 +30,8 @@ colorama==0.4.6
     # via pytest
 contextvars==2.4
     # via -r requirements/base.txt
+cryptography==40.0.2
+    # via -r requirements/crypto.txt
 distlib==0.3.6
     # via virtualenv
 distro==1.8.0
@@ -41,19 +44,17 @@ filelock==3.9.0
     # via virtualenv
 idna==3.4
     # via requests
-immutables==0.19
+immutables==0.15
     # via contextvars
 inflect==6.0.2
     # via jaraco.text
 iniconfig==2.0.0
     # via pytest
-jaraco.classes==3.2.3
-    # via jaraco.collections
-jaraco.collections==3.8.0
+jaraco.collections==4.1.0
     # via cherrypy
 jaraco.context==4.3.0
     # via jaraco.text
-jaraco.functools==3.5.2
+jaraco.functools==3.7.0
     # via
     #   cheroot
     #   jaraco.text
@@ -64,24 +65,23 @@ jinja2==3.1.2
     # via -r requirements/base.txt
 jmespath==1.0.1
     # via -r requirements/base.txt
-looseversion==1.0.3
+looseversion==1.2.0
     # via -r requirements/base.txt
 markupsafe==2.1.2
     # via
     #   -r requirements/base.txt
     #   jinja2
-more-itertools==9.0.0
+more-itertools==9.1.0
     # via
     #   cheroot
     #   cherrypy
-    #   jaraco.classes
     #   jaraco.functools
     #   jaraco.text
-msgpack==1.0.4
+msgpack==1.0.5
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
-packaging==23.0
+packaging==23.1
     # via
     #   -r requirements/base.txt
     #   pytest
@@ -91,7 +91,7 @@ pluggy==1.0.0
     # via pytest
 portend==3.1.0
     # via cherrypy
-psutil==5.9.4
+psutil==5.9.5
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
@@ -99,7 +99,7 @@ psutil==5.9.4
     #   pytest-system-statistics
 pycparser==2.21
     # via cffi
-pycryptodomex==3.17
+pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
 pydantic==1.10.4
     # via inflect
@@ -120,7 +120,7 @@ pytest-system-statistics==1.0.2
     # via pytest-salt-factories
 pytest-tempdir==2019.10.12
     # via pytest-salt-factories
-pytest==7.2.1
+pytest==7.3.1
     # via
     #   pytest-helpers-namespace
     #   pytest-salt-factories
@@ -128,29 +128,29 @@ pytest==7.2.1
     #   pytest-skip-markers
     #   pytest-system-statistics
     #   pytest-tempdir
-pythonnet==3.0.1 ; python_version >= "3.7"
+pythonnet==3.0.1
     # via -r requirements/static/ci/pkgtests-windows.in
-pytz==2022.7.1
+pytz==2023.3
     # via tempora
-pywin32==305
+pywin32==306
     # via
     #   pytest-skip-markers
     #   wmi
 pyyaml==6.0
     # via -r requirements/base.txt
-pyzmq==25.0.2 ; sys_platform == "win32"
+pyzmq==25.1.0
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-requests==2.28.2
+requests==2.31.0
     # via -r requirements/base.txt
-six==1.16.0
-    # via cheroot
-tempora==5.2.1
+tempora==5.2.2
     # via portend
 tomli==2.0.1
     # via pytest
-typing-extensions==4.4.0
+tornado==6.3.2 ; python_version >= "3.8"
+    # via -r requirements/base.txt
+typing-extensions==4.6.2
     # via
     #   pydantic
     #   pytest-shell-utilities
