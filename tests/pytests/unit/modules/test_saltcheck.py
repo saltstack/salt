@@ -13,3 +13,8 @@ def configure_loader_modules():
 def test__get_top_states_call_args(saltenv):
     saltcheck._get_top_states(saltenv=saltenv)
     saltcheck.__salt__["state.show_top"].assert_called_with(saltenv=saltenv)
+
+
+def test__generate_junit_out_list():
+    results = {}
+    ret = saltcheck._generate_junit_out_list(results)

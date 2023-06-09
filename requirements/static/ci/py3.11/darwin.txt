@@ -203,6 +203,8 @@ jmespath==1.0.1
     #   botocore
 jsonschema==3.2.0
     # via -r requirements/static/ci/common.in
+junit-xml==1.9
+    # via -r requirements/static/ci/common.in
 junos-eznc==2.6.7 ; sys_platform != "win32"
     # via
     #   -r requirements/static/ci/common.in
@@ -467,6 +469,7 @@ six==1.16.0
     #   geomet
     #   google-auth
     #   jsonschema
+    #   junit-xml
     #   junos-eznc
     #   kubernetes
     #   mock
