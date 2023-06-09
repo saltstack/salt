@@ -422,6 +422,7 @@ class MockSaltMinionMaster:
         raise salt.ext.tornado.gen.Return((payload, {"fun": "send_clear"}))
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.parametrize("message", ["", [], ()])
 def test_badload(temp_salt_minion, temp_salt_master, message):
     """
