@@ -580,7 +580,13 @@ def manage(
         # gather list potential ssh keys for removal comparison
         # options, enc, and comments could be in the mix
         all_potential_keys.extend(ssh_key.split(" "))
-    existing_keys = __salt__["ssh.auth_keys"](user=user).keys()
+
+    existing_keys = __salt__["ssh.auth_keys"](
+        user=user, 
+        config=config, 
+        fingerprint_hash_type=fingerprint_hash_type
+    ).keys()
+
     remove_keys = set(existing_keys).difference(all_potential_keys)
     for remove_key in remove_keys:
         if __opts__["test"]:
@@ -588,7 +594,17 @@ def manage(
             ret["comment"] = remove_comment
             ret["result"] = None
         else:
-            remove_comment = absent(remove_key, user)["comment"]
+            remove_comment = absent(
+                remove_key, 
+                user,
+                enc,
+                comment,
+                source,
+                options,
+                config,
+                fingerprint_hash_type,
+                **kwargs
+            )["comment"]
             ret["changes"][remove_key] = remove_comment
 
     for ssh_key in ssh_keys:
