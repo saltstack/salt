@@ -48,7 +48,6 @@ __virtualname__ = "boto_cfn"
 
 __deprecated__ = (
     3009,
-    "Potassium",
     "boto",
     "https://github.com/salt-extensions/saltext-boto"
 )

@@ -58,7 +58,6 @@ import salt.utils.json
 
 __deprecated__ = (
     3009,
-    "Potassium",
     "boto",
     "https://github.com/salt-extensions/saltext-boto"
 )
