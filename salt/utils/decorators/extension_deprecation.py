@@ -10,9 +10,7 @@ import salt.utils.versions
 log = logging.getLogger(__name__)
 
 
-def extension_deprecation_message(
-    version_number, version_name, extension_name, extension_repo
-):
+def extension_deprecation_message(version, extension_name, extension_repo):
     """
     Decorator wrapper to warn about deprecation
     """
@@ -21,9 +19,9 @@ def extension_deprecation_message(
         @wraps(function)
         def wrapper(*args, **kwargs):
             salt.utils.versions.warn_until(
-                f"{version_name}",
+                version,
                 f"The '{extension_name}' functionality in Salt has been deprecated and its "
-                f"functionality will be removed in version {version_number} in favor of the "
+                f"functionality will be removed in version {version} in favor of the "
                 f"saltext.{extension_name} Salt Extension. "
                 f"({extension_repo})",
                 category=FutureWarning,
