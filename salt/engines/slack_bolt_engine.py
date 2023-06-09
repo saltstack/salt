@@ -234,7 +234,7 @@ class SlackClient:
 
         self.msg_queue = collections.deque()
 
-        trigger_pattern = "(^{}.*)".format(trigger_string)
+        trigger_pattern = f"(^{trigger_string}.*)"
 
         # Register message_trigger when we see messages that start
         # with the trigger string
@@ -843,7 +843,7 @@ class SlackClient:
         results = {}
         for jid in outstanding_jids:
             # results[jid] = runner.cmd('jobs.lookup_jid', [jid])
-            if self.master_minion.returners["{}.get_jid".format(source)](jid):
+            if self.master_minion.returners[f"{source}.get_jid"](jid):
                 job_result = runner.cmd("jobs.list_job", [jid])
                 jid_result = job_result.get("Result", {})
                 jid_function = job_result.get("Function", {})
@@ -954,7 +954,7 @@ class SlackClient:
                     )
                     ts = time.time()
                     st = datetime.datetime.fromtimestamp(ts).strftime("%Y%m%d%H%M%S%f")
-                    filename = "salt-results-{}.yaml".format(st)
+                    filename = f"salt-results-{st}.yaml"
                     resp = self.app.client.files_upload(
                         channels=channel,
                         filename=filename,
@@ -1075,4 +1075,4 @@ def start(
         )
         client.run_commands_from_slack_async(message_generator, fire_all, tag, control)
     except Exception:  # pylint: disable=broad-except
-        raise Exception("{}".format(traceback.format_exc()))
+        raise Exception(f"{traceback.format_exc()}")
