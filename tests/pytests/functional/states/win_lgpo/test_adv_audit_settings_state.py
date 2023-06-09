@@ -1,7 +1,6 @@
 import pytest
 
-import salt.modules.win_lgpo as win_lgpo_module
-import salt.states.win_lgpo as win_lgpo_state
+import salt.utils.win_lgpo_auditpol
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -11,60 +10,49 @@ pytestmark = [
 ]
 
 
-@pytest.fixture
-def configure_loader_modules(minion_opts, modules):
-    return {
-        win_lgpo_state: {},
-        win_lgpo_module: {},
-    }
-
-
-@pytest.fixture(scope="module")
-def disable_legacy_auditing():
+@pytest.fixture(scope="module", autouse=True)
+def disable_legacy_auditing(modules):
     # To test and use these policy settings we have to set one of the policies to Enabled
     # Location: Windows Settings -> Security Settings -> Local Policies -> Security Options
     # Policy: "Audit: Force audit policy subcategory settings..."
     # Short Name: SceNoApplyLegacyAuditPolicy
-    from tests.support.sminion import create_sminion
-
-    salt_minion = create_sminion()
     test_setting = "Enabled"
-    pre_security_setting = salt_minion.functions.lgpo.get_policy(
+    pre_security_setting = modules.lgpo.get_policy(
         policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine"
     )
-    pre_audit_setting = salt_minion.functions.lgpo.get_policy(
+    pre_audit_setting = modules.lgpo.get_policy(
         policy_name="Audit User Account Management", policy_class="machine"
     )
     try:
         if pre_security_setting != test_setting:
-            salt_minion.functions.lgpo.set_computer_policy(
+            modules.lgpo.set_computer_policy(
                 name="SceNoApplyLegacyAuditPolicy", setting=test_setting
             )
             assert (
-                salt_minion.functions.lgpo.get_policy(
+                modules.lgpo.get_policy(
                     policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine"
                 )
                 == test_setting
             )
         yield
     finally:
-        salt_minion.functions.lgpo.set_computer_policy(
+        modules.lgpo.set_computer_policy(
             name="SceNoApplyLegacyAuditPolicy", setting=pre_security_setting
         )
-        salt_minion.functions.lgpo.set_computer_policy(
+        modules.lgpo.set_computer_policy(
             name="Audit User Account Management", setting=pre_audit_setting
         )
 
 
 @pytest.fixture
-def clear_policy():
+def clear_policy(modules):
     # Ensure the policy is not set
     test_setting = "No Auditing"
-    win_lgpo_module.set_computer_policy(
+    modules.lgpo.set_computer_policy(
         name="Audit User Account Management", setting=test_setting
     )
     assert (
-        win_lgpo_module.get_policy(
+        modules.lgpo.get_policy(
             policy_name="Audit User Account Management", policy_class="machine"
         )
         == test_setting
@@ -72,45 +60,49 @@ def clear_policy():
 
 
 @pytest.fixture
-def set_policy():
+def set_policy(modules):
     # Ensure the policy is set
     test_setting = "Success"
-    win_lgpo_module.set_computer_policy(
+    modules.lgpo.set_computer_policy(
         name="Audit User Account Management", setting=test_setting
     )
     assert (
-        win_lgpo_module.get_policy(
+        modules.lgpo.get_policy(
             policy_name="Audit User Account Management", policy_class="machine"
         )
         == test_setting
     )
 
 
-def _test_adv_auditing(setting, expected):
+def _test_adv_auditing(modules, states, setting, expected):
     """
     Helper function to set an audit setting and assert that it was successful
     """
-    win_lgpo_state.set_(
+    states.lgpo.set_(
         name="Audit User Account Management", setting=setting, policy_class="machine"
     )
     # Clear the context so we're getting the actual settings from the machine
-    result = win_lgpo_module._get_advaudit_value(
+    result = salt.utils.win_lgpo_auditpol.get_advaudit_value(
         "Audit User Account Management", refresh=True
     )
     assert result == expected
 
 
-def test_no_auditing(disable_legacy_auditing, set_policy):
-    _test_adv_auditing("No Auditing", "0")
+@pytest.mark.usefixtures("set_policy")
+def test_no_auditing(modules, states):
+    _test_adv_auditing(modules, states, "No Auditing", "0")
 
 
-def test_success(disable_legacy_auditing, clear_policy):
-    _test_adv_auditing("Success", "1")
+@pytest.mark.usefixtures("clear_policy")
+def test_success(modules, states):
+    _test_adv_auditing(modules, states, "Success", "1")
 
 
-def test_failure(disable_legacy_auditing, clear_policy):
-    _test_adv_auditing("Failure", "2")
+@pytest.mark.usefixtures("clear_policy")
+def test_failure(modules, states):
+    _test_adv_auditing(modules, states, "Failure", "2")
 
 
-def test_success_and_failure(disable_legacy_auditing, clear_policy):
-    _test_adv_auditing("Success and Failure", "3")
+@pytest.mark.usefixtures("clear_policy")
+def test_success_and_failure(modules, states):
+    _test_adv_auditing(modules, states, "Success and Failure", "3")

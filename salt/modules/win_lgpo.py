@@ -5332,166 +5332,6 @@ def _buildElementNsmap(using_elements):
     return thisMap
 
 
-def _get_advaudit_defaults(option=None):
-    """
-    Loads audit.csv defaults into a dict in __context__ called
-    'lgpo.audit_defaults'. The dictionary includes fieldnames and all
-    configurable policies as keys. The values are used to create/modify the
-    ``audit.csv`` file. The first entry is `fieldnames` used to create the
-    header for the csv file. The rest of the entries are the audit policy names.
-    Sample data follows:
-
-    {
-        'fieldnames': ['Machine Name',
-                       'Policy Target',
-                       'Subcategory',
-                       'Subcategory GUID',
-                       'Inclusion Setting',
-                       'Exclusion Setting',
-                       'Setting Value'],
-        'Audit Sensitive Privilege Use': {'Auditpol Name': 'Sensitive Privilege Use',
-                                          'Exclusion Setting': '',
-                                          'Inclusion Setting': 'No Auditing',
-                                          'Machine Name': 'WIN-8FGT3E045SE',
-                                          'Policy Target': 'System',
-                                          'Setting Value': '0',
-                                          'Subcategory': u'Audit Sensitive Privilege Use',
-                                          'Subcategory GUID': '{0CCE9228-69AE-11D9-BED3-505054503030}'},
-        'Audit Special Logon': {'Auditpol Name': 'Special Logon',
-                                'Exclusion Setting': '',
-                                'Inclusion Setting': 'No Auditing',
-                                'Machine Name': 'WIN-8FGT3E045SE',
-                                'Policy Target': 'System',
-                                'Setting Value': '0',
-                                'Subcategory': u'Audit Special Logon',
-                                'Subcategory GUID': '{0CCE921B-69AE-11D9-BED3-505054503030}'},
-        'Audit System Integrity': {'Auditpol Name': 'System Integrity',
-                                   'Exclusion Setting': '',
-                                   'Inclusion Setting': 'No Auditing',
-                                   'Machine Name': 'WIN-8FGT3E045SE',
-                                   'Policy Target': 'System',
-                                   'Setting Value': '0',
-                                   'Subcategory': u'Audit System Integrity',
-                                   'Subcategory GUID': '{0CCE9212-69AE-11D9-BED3-505054503030}'},
-        ...
-    }
-
-    .. note::
-        `Auditpol Name` designates the value to use when setting the value with
-        the auditpol command
-
-    Args:
-        option (str): The item from the dictionary to return. If ``None`` the
-            entire dictionary is returned. Default is ``None``
-
-    Returns:
-        dict: If ``None`` or one of the audit settings is passed
-        list: If ``fieldnames`` is passed
-    """
-    if "lgpo.audit_defaults" not in __context__:
-        # Get available setting names and GUIDs
-        # This is used to get the fieldnames and GUIDs for individual policies
-        log.debug("Loading auditpol defaults into __context__")
-        dump = salt.utils.win_lgpo_auditpol.get_auditpol_dump()
-        reader = csv.DictReader(dump)
-        audit_defaults = {"fieldnames": reader.fieldnames}
-        for row in reader:
-            row["Machine Name"] = ""
-            row["Auditpol Name"] = row["Subcategory"]
-            # Special handling for snowflake scenarios where the audit.csv names
-            # don't match the auditpol names
-            if row["Subcategory"] == "Central Policy Staging":
-                row["Subcategory"] = "Audit Central Access Policy Staging"
-            elif row["Subcategory"] == "Plug and Play Events":
-                row["Subcategory"] = "Audit PNP Activity"
-            elif row["Subcategory"] == "Token Right Adjusted Events":
-                row["Subcategory"] = "Audit Token Right Adjusted"
-            else:
-                row["Subcategory"] = "Audit {}".format(row["Subcategory"])
-            audit_defaults[row["Subcategory"]] = row
-
-        __context__["lgpo.audit_defaults"] = audit_defaults
-
-    if option:
-        return __context__["lgpo.audit_defaults"][option]
-    else:
-        return __context__["lgpo.audit_defaults"]
-
-
-def _advaudit_check_csv():
-    """
-    This function checks for the existence of the `audit.csv` file here:
-    `C:\\Windows\\security\\audit`
-
-    If the file does not exist, then it copies the `audit.csv` file from the
-    Group Policy location:
-    `C:\\Windows\\System32\\GroupPolicy\\Machine\\Microsoft\\Windows NT\\Audit`
-
-    If there is no `audit.csv` in either location, then a default `audit.csv`
-    file is created.
-    """
-    system_root = os.environ.get("SystemRoot", "C:\\Windows")
-    f_audit = os.path.join(system_root, "security", "audit", "audit.csv")
-    f_audit_gpo = os.path.join(
-        system_root,
-        "System32",
-        "GroupPolicy",
-        "Machine",
-        "Microsoft",
-        "Windows NT",
-        "Audit",
-        "audit.csv",
-    )
-    # Make sure there is an existing audit.csv file on the machine
-    if not __salt__["file.file_exists"](f_audit):
-        if __salt__["file.file_exists"](f_audit_gpo):
-            # If the GPO audit.csv exists, we'll use that one
-            __salt__["file.copy"](f_audit_gpo, f_audit)
-        else:
-            field_names = _get_advaudit_defaults("fieldnames")
-            # If the file doesn't exist anywhere, create it with default
-            # fieldnames
-            __salt__["file.makedirs"](f_audit)
-            __salt__["file.write"](f_audit, ",".join(field_names))
-
-
-def _get_advaudit_value(option, refresh=False):
-    """
-    Get the Advanced Auditing policy as configured in
-    ``C:\\Windows\\Security\\Audit\\audit.csv``
-
-    Args:
-
-        option (str):
-            The name of the setting as it appears in audit.csv
-
-        refresh (bool):
-            Refresh secedit data stored in __context__. This is needed for
-            testing where the state is setting the value, but the module that
-            is checking the value has its own __context__.
-
-    Returns:
-        bool: ``True`` if successful, otherwise ``False``
-    """
-    if "lgpo.adv_audit_data" not in __context__ or refresh is True:
-        system_root = os.environ.get("SystemRoot", "C:\\Windows")
-        f_audit = os.path.join(system_root, "security", "audit", "audit.csv")
-
-        # Make sure the csv file exists before trying to open it
-        _advaudit_check_csv()
-
-        audit_settings = {}
-        with salt.utils.files.fopen(f_audit, mode="r") as csv_file:
-            reader = csv.DictReader(csv_file)
-
-            for row in reader:
-                audit_settings.update({row["Subcategory"]: row["Setting Value"]})
-
-        __context__["lgpo.adv_audit_data"] = audit_settings
-
-    return __context__["lgpo.adv_audit_data"].get(option, None)
-
-
 def _set_advaudit_file_data(option, value):
     """
     Helper function that sets the Advanced Audit settings in the two .csv files
@@ -5533,7 +5373,7 @@ def _set_advaudit_file_data(option, value):
     }
 
     # Make sure the csv file exists before trying to open it
-    _advaudit_check_csv()
+    salt.utils.win_lgpo_auditpol.advaudit_check_csv()
 
     try:
         # Open the existing audit.csv and load the csv `reader`
@@ -5576,7 +5416,9 @@ def _set_advaudit_file_data(option, value):
                     if not value == "None":
                         # value is not None, write the new value
                         log.trace("LGPO: Setting %s to %s", option, value)
-                        defaults = _get_advaudit_defaults(option)
+                        defaults = salt.utils.win_lgpo_auditpol.get_advaudit_defaults(
+                            option
+                        )
                         writer.writerow(
                             {
                                 "Machine Name": defaults["Machine Name"],
@@ -5623,7 +5465,7 @@ def _set_advaudit_pol_data(option, value):
         "2": "Failure",
         "3": "Success and Failure",
     }
-    defaults = _get_advaudit_defaults(option)
+    defaults = salt.utils.win_lgpo_auditpol.get_advaudit_defaults(option)
     return salt.utils.win_lgpo_auditpol.set_setting(
         name=defaults["Auditpol Name"], value=auditpol_values[value]
     )
@@ -5662,8 +5504,7 @@ def _set_advaudit_value(option, value):
         )
 
     # Make sure lgpo.adv_audit_data is loaded
-    if "lgpo.adv_audit_data" not in __context__:
-        _get_advaudit_value(option)
+    salt.utils.win_lgpo_auditpol.get_advaudit_value(option)
 
     # Update __context__
     if value is None:
@@ -8928,7 +8769,9 @@ def _get_policy_info_setting(policy_definition):
         )
     elif "AdvAudit" in policy_definition:
         # Get value using the AuditPol mechanism
-        value = _get_advaudit_value(option=policy_definition["AdvAudit"]["Option"])
+        value = salt.utils.win_lgpo_auditpol.get_advaudit_value(
+            option=policy_definition["AdvAudit"]["Option"]
+        )
         log.trace(
             "Value %r found for AuditPol policy %s", value, policy_definition["Policy"]
         )
