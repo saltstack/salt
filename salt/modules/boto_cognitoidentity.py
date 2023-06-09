@@ -367,7 +367,7 @@ def set_identity_pool_roles(
             if role_arn is None:
                 return {
                     "set": False,
-                    "error": "invalid AuthenticatedRole {}".format(AuthenticatedRole),
+                    "error": f"invalid AuthenticatedRole {AuthenticatedRole}",
                 }
             AuthenticatedRole = role_arn
 

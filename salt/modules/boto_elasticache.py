@@ -158,7 +158,7 @@ def create_replication_group(
             if config["status"] == "available":
                 return True
     except boto.exception.BotoServerError as e:
-        msg = "Failed to create replication group {}.".format(name)
+        msg = f"Failed to create replication group {name}."
         log.error(msg)
         log.debug(e)
         return {}
@@ -180,12 +180,12 @@ def delete_replication_group(name, region=None, key=None, keyid=None, profile=No
         return False
     try:
         conn.delete_replication_group(name)
-        msg = "Deleted ElastiCache replication group {}.".format(name)
+        msg = f"Deleted ElastiCache replication group {name}."
         log.info(msg)
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = "Failed to delete ElastiCache replication group {}".format(name)
+        msg = f"Failed to delete ElastiCache replication group {name}"
         log.error(msg)
         return False
 
@@ -209,7 +209,7 @@ def describe_replication_group(
     try:
         cc = conn.describe_replication_groups(name)
     except boto.exception.BotoServerError as e:
-        msg = "Failed to get config for cache cluster {}.".format(name)
+        msg = f"Failed to get config for cache cluster {name}."
         log.error(msg)
         log.debug(e)
         return {}
@@ -279,7 +279,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
     try:
         cc = conn.describe_cache_clusters(name, show_cache_node_info=True)
     except boto.exception.BotoServerError as e:
-        msg = "Failed to get config for cache cluster {}.".format(name)
+        msg = f"Failed to get config for cache cluster {name}."
         log.error(msg)
         log.debug(e)
         return {}
@@ -358,7 +358,7 @@ def get_node_host(name, region=None, key=None, keyid=None, profile=None):
     try:
         cc = conn.describe_cache_clusters(name, show_cache_node_info=True)
     except boto.exception.BotoServerError as e:
-        msg = "Failed to get config for cache cluster {}.".format(name)
+        msg = f"Failed to get config for cache cluster {name}."
         log.error(msg)
         log.debug(e)
         return {}
@@ -385,7 +385,7 @@ def get_group_host(name, region=None, key=None, keyid=None, profile=None):
     try:
         cc = conn.describe_replication_groups(name)
     except boto.exception.BotoServerError as e:
-        msg = "Failed to get config for cache cluster {}.".format(name)
+        msg = f"Failed to get config for cache cluster {name}."
         log.error(msg)
         log.debug(e)
         return {}
@@ -466,7 +466,7 @@ def subnet_group_exists(
     try:
         ec = conn.describe_cache_subnet_groups(cache_subnet_group_name=name)
         if not ec:
-            msg = "ElastiCache subnet group does not exist in region {}".format(region)
+            msg = f"ElastiCache subnet group does not exist in region {region}"
             log.debug(msg)
             return False
         return True
@@ -517,14 +517,14 @@ def create_subnet_group(
     try:
         ec = conn.create_cache_subnet_group(name, description, subnet_ids)
         if not ec:
-            msg = "Failed to create ElastiCache subnet group {}".format(name)
+            msg = f"Failed to create ElastiCache subnet group {name}"
             log.error(msg)
             return False
         log.info("Created ElastiCache subnet group %s", name)
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = "Failed to create ElastiCache subnet group {}".format(name)
+        msg = f"Failed to create ElastiCache subnet group {name}"
         log.error(msg)
         return False
 
@@ -546,12 +546,12 @@ def get_cache_subnet_group(name, region=None, key=None, keyid=None, profile=None
         csg = csg["DescribeCacheSubnetGroupsResponse"]
         csg = csg["DescribeCacheSubnetGroupsResult"]["CacheSubnetGroups"][0]
     except boto.exception.BotoServerError as e:
-        msg = "Failed to get cache subnet group {}.".format(name)
+        msg = f"Failed to get cache subnet group {name}."
         log.error(msg)
         log.debug(e)
         return False
     except (IndexError, TypeError, KeyError):
-        msg = "Failed to get cache subnet group {} (2).".format(name)
+        msg = f"Failed to get cache subnet group {name} (2)."
         log.error(msg)
         return False
     ret = {}
@@ -591,12 +591,12 @@ def delete_subnet_group(name, region=None, key=None, keyid=None, profile=None):
         return False
     try:
         conn.delete_cache_subnet_group(name)
-        msg = "Deleted ElastiCache subnet group {}.".format(name)
+        msg = f"Deleted ElastiCache subnet group {name}."
         log.info(msg)
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = "Failed to delete ElastiCache subnet group {}".format(name)
+        msg = f"Failed to delete ElastiCache subnet group {name}"
         log.error(msg)
         return False
 
@@ -667,7 +667,7 @@ def create(
                 return True
         log.info("Created cache cluster %s.", name)
     except boto.exception.BotoServerError as e:
-        msg = "Failed to create cache cluster {}.".format(name)
+        msg = f"Failed to create cache cluster {name}."
         log.error(msg)
         log.debug(e)
         return False
@@ -700,7 +700,7 @@ def delete(name, wait=False, region=None, key=None, keyid=None, profile=None):
         log.info("Deleted cache cluster %s.", name)
         return True
     except boto.exception.BotoServerError as e:
-        msg = "Failed to delete cache cluster {}.".format(name)
+        msg = f"Failed to delete cache cluster {name}."
         log.error(msg)
         log.debug(e)
         return False
@@ -725,7 +725,7 @@ def create_cache_security_group(
         log.info("Created cache security group %s.", name)
         return True
     else:
-        msg = "Failed to create cache security group {}.".format(name)
+        msg = f"Failed to create cache security group {name}."
         log.error(msg)
         return False
 
@@ -747,7 +747,7 @@ def delete_cache_security_group(name, region=None, key=None, keyid=None, profile
         log.info("Deleted cache security group %s.", name)
         return True
     else:
-        msg = "Failed to delete cache security group {}.".format(name)
+        msg = f"Failed to delete cache security group {name}."
         log.error(msg)
         return False
 

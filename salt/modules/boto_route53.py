@@ -591,7 +591,7 @@ def get_record(
             else:
                 _zone = conn.get_zone(zone)
             if not _zone:
-                msg = "Failed to retrieve zone {}".format(zone)
+                msg = f"Failed to retrieve zone {zone}"
                 log.error(msg)
                 return None
             _type = record_type.upper()
@@ -700,7 +700,7 @@ def add_record(
             else:
                 _zone = conn.get_zone(zone)
             if not _zone:
-                msg = "Failed to retrieve zone {}".format(zone)
+                msg = f"Failed to retrieve zone {zone}"
                 log.error(msg)
                 return False
             _type = record_type.upper()
@@ -799,7 +799,7 @@ def update_record(
     else:
         _zone = conn.get_zone(zone)
     if not _zone:
-        msg = "Failed to retrieve zone {}".format(zone)
+        msg = f"Failed to retrieve zone {zone}"
         log.error(msg)
         return False
     _type = record_type.upper()
@@ -888,7 +888,7 @@ def delete_record(
     else:
         _zone = conn.get_zone(zone)
     if not _zone:
-        msg = "Failed to retrieve zone {}".format(zone)
+        msg = f"Failed to retrieve zone {zone}"
         log.error(msg)
         return False
     _type = record_type.upper()

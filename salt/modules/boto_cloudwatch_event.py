@@ -216,7 +216,7 @@ def describe(Name, region=None, key=None, keyid=None, profile=None):
     except ClientError as e:
         err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "RuleNotFoundException":
-            return {"error": "Rule {} not found".format(Rule)}
+            return {"error": f"Rule {Rule} not found"}
         return {"error": __utils__["boto3.get_error"](e)}
 
 
@@ -272,7 +272,7 @@ def list_targets(Rule, region=None, key=None, keyid=None, profile=None):
     except ClientError as e:
         err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "RuleNotFoundException":
-            return {"error": "Rule {} not found".format(Rule)}
+            return {"error": f"Rule {Rule} not found"}
         return {"error": __utils__["boto3.get_error"](e)}
 
 
@@ -301,7 +301,7 @@ def put_targets(Rule, Targets, region=None, key=None, keyid=None, profile=None):
     except ClientError as e:
         err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "RuleNotFoundException":
-            return {"error": "Rule {} not found".format(Rule)}
+            return {"error": f"Rule {Rule} not found"}
         return {"error": __utils__["boto3.get_error"](e)}
 
 
@@ -330,5 +330,5 @@ def remove_targets(Rule, Ids, region=None, key=None, keyid=None, profile=None):
     except ClientError as e:
         err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "RuleNotFoundException":
-            return {"error": "Rule {} not found".format(Rule)}
+            return {"error": f"Rule {Rule} not found"}
         return {"error": __utils__["boto3.get_error"](e)}

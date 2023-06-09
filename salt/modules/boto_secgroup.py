@@ -511,7 +511,7 @@ def create(
         log.info("Created security group %s.", name)
         return True
     else:
-        msg = "Failed to create security group {}.".format(name)
+        msg = f"Failed to create security group {name}."
         log.error(msg)
         return False
 
@@ -554,7 +554,7 @@ def delete(
             log.info("Deleted security group %s with id %s.", group.name, group.id)
             return True
         else:
-            msg = "Failed to delete security group {}.".format(name)
+            msg = f"Failed to delete security group {name}."
             log.error(msg)
             return False
     else:
@@ -778,7 +778,7 @@ def _find_vpcs(
 
     if tags:
         for tag_name, tag_value in tags.items():
-            filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
+            filter_parameters["filters"][f"tag:{tag_name}"] = tag_value
 
     vpcs = conn.get_all_vpcs(**filter_parameters)
     log.debug(

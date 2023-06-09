@@ -244,7 +244,7 @@ def _create_resource(
     key=None,
     keyid=None,
     profile=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Create a VPC resource. Returns the resource id if created, or False
@@ -267,9 +267,7 @@ def _create_resource(
         ):
             return {
                 "created": False,
-                "error": {
-                    "message": "A {} named {} already exists.".format(resource, name)
-                },
+                "error": {"message": f"A {resource} named {name} already exists."},
             }
 
         r = create_resource(**kwargs)
@@ -295,9 +293,9 @@ def _create_resource(
                 return {"created": True, "id": r.id}
         else:
             if name:
-                e = "{} {} was not created.".format(resource, name)
+                e = f"{resource} {name} was not created."
             else:
-                e = "{} was not created.".format(resource)
+                e = f"{resource} was not created."
             log.warning(e)
             return {"created": False, "error": {"message": e}}
     except BotoServerError as e:
@@ -312,7 +310,7 @@ def _delete_resource(
     key=None,
     keyid=None,
     profile=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Delete a VPC resource. Returns True if successful, otherwise False.
@@ -339,9 +337,7 @@ def _delete_resource(
             if not resource_id:
                 return {
                     "deleted": False,
-                    "error": {
-                        "message": "{} {} does not exist.".format(resource, name)
-                    },
+                    "error": {"message": f"{resource} {name} does not exist."},
                 }
 
         if delete_resource(resource_id, **kwargs):
@@ -358,9 +354,9 @@ def _delete_resource(
             return {"deleted": True}
         else:
             if name:
-                e = "{} {} was not deleted.".format(resource, name)
+                e = f"{resource} {name} was not deleted."
             else:
-                e = "{} was not deleted.".format(resource)
+                e = f"{resource} was not deleted."
             return {"deleted": False, "error": {"message": e}}
     except BotoServerError as e:
         return {"deleted": False, "error": __utils__["boto.get_error"](e)}
@@ -385,7 +381,7 @@ def _get_resource(
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    f = "get_all_{}".format(resource)
+    f = f"get_all_{resource}"
     if not f.endswith("s"):
         f = f + "s"
     get_resources = getattr(conn, f)
@@ -394,7 +390,7 @@ def _get_resource(
     if name:
         filter_parameters["filters"] = {"tag:Name": name}
     if resource_id:
-        filter_parameters["{}_ids".format(resource)] = resource_id
+        filter_parameters[f"{resource}_ids"] = resource_id
 
     try:
         r = get_resources(**filter_parameters)
@@ -418,7 +414,7 @@ def _get_resource(
             return r[0]
         else:
             raise CommandExecutionError(
-                'Found more than one {} named "{}"'.format(resource, name)
+                f'Found more than one {resource} named "{name}"'
             )
     else:
         return None
@@ -448,7 +444,7 @@ def _find_resources(
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    f = "get_all_{}".format(resource)
+    f = f"get_all_{resource}"
     if not f.endswith("s"):
         f = f + "s"
     get_resources = getattr(conn, f)
@@ -457,10 +453,10 @@ def _find_resources(
     if name:
         filter_parameters["filters"] = {"tag:Name": name}
     if resource_id:
-        filter_parameters["{}_ids".format(resource)] = resource_id
+        filter_parameters[f"{resource}_ids"] = resource_id
     if tags:
         for tag_name, tag_value in tags.items():
-            filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
+            filter_parameters["filters"][f"tag:{tag_name}"] = tag_value
 
     try:
         r = get_resources(**filter_parameters)
@@ -603,7 +599,7 @@ def _find_vpcs(
 
     if tags:
         for tag_name, tag_value in tags.items():
-            filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
+            filter_parameters["filters"][f"tag:{tag_name}"] = tag_value
 
     vpcs = conn.get_all_vpcs(**filter_parameters)
     log.debug(
@@ -870,7 +866,7 @@ def delete(
             if not vpc_id:
                 return {
                     "deleted": False,
-                    "error": {"message": "VPC {} not found".format(vpc_name)},
+                    "error": {"message": f"VPC {vpc_name} not found"},
                 }
 
         if conn.delete_vpc(vpc_id):
@@ -1015,7 +1011,7 @@ def describe_vpcs(
 
         if tags:
             for tag_name, tag_value in tags.items():
-                filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
+                filter_parameters["filters"][f"tag:{tag_name}"] = tag_value
 
         vpcs = conn.get_all_vpcs(**filter_parameters)
 
@@ -1057,7 +1053,7 @@ def _find_subnets(subnet_name=None, vpc_id=None, cidr=None, tags=None, conn=None
 
     if tags:
         for tag_name, tag_value in tags.items():
-            filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
+            filter_parameters["filters"][f"tag:{tag_name}"] = tag_value
 
     subnets = conn.get_all_subnets(**filter_parameters)
     log.debug(
@@ -1110,9 +1106,7 @@ def create_subnet(
         if not vpc_id:
             return {
                 "created": False,
-                "error": {
-                    "message": "VPC {} does not exist.".format(vpc_name or vpc_id)
-                },
+                "error": {"message": f"VPC {vpc_name or vpc_id} does not exist."},
             }
     except BotoServerError as e:
         return {"created": False, "error": __utils__["boto.get_error"](e)}
@@ -1224,7 +1218,7 @@ def subnet_exists(
         filter_parameters["filters"]["cidr"] = cidr
     if tags:
         for tag_name, tag_value in tags.items():
-            filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
+            filter_parameters["filters"][f"tag:{tag_name}"] = tag_value
     if zones:
         filter_parameters["filters"]["availability_zone"] = zones
 
@@ -1464,9 +1458,7 @@ def create_internet_gateway(
             if not vpc_id:
                 return {
                     "created": False,
-                    "error": {
-                        "message": "VPC {} does not exist.".format(vpc_name or vpc_id)
-                    },
+                    "error": {"message": f"VPC {vpc_name or vpc_id} does not exist."},
                 }
 
         r = _create_resource(
@@ -1624,7 +1616,7 @@ def _find_nat_gateways(
         conn3.describe_nat_gateways,
         marker_flag="NextToken",
         marker_arg="NextToken",
-        **filter_parameters
+        **filter_parameters,
     ):
         for gw in ret.get("NatGateways", []):
             if gw.get("State") in states:
@@ -1771,9 +1763,7 @@ def create_nat_gateway(
             if not subnet_id:
                 return {
                     "created": False,
-                    "error": {
-                        "message": "Subnet {} does not exist.".format(subnet_name)
-                    },
+                    "error": {"message": f"Subnet {subnet_name} does not exist."},
                 }
         else:
             if not _get_resource(
@@ -1786,7 +1776,7 @@ def create_nat_gateway(
             ):
                 return {
                     "created": False,
-                    "error": {"message": "Subnet {} does not exist.".format(subnet_id)},
+                    "error": {"message": f"Subnet {subnet_id} does not exist."},
                 }
 
         conn3 = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
@@ -2037,9 +2027,7 @@ def create_dhcp_options(
             if not vpc_id:
                 return {
                     "created": False,
-                    "error": {
-                        "message": "VPC {} does not exist.".format(vpc_name or vpc_id)
-                    },
+                    "error": {"message": f"VPC {vpc_name or vpc_id} does not exist."},
                 }
 
         r = _create_resource(
@@ -2179,9 +2167,7 @@ def associate_dhcp_options_to_vpc(
         if not vpc_id:
             return {
                 "associated": False,
-                "error": {
-                    "message": "VPC {} does not exist.".format(vpc_name or vpc_id)
-                },
+                "error": {"message": f"VPC {vpc_name or vpc_id} does not exist."},
             }
 
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -2286,7 +2272,7 @@ def create_network_acl(
     if not vpc_id:
         return {
             "created": False,
-            "error": {"message": "VPC {} does not exist.".format(_id)},
+            "error": {"message": f"VPC {_id} does not exist."},
         }
 
     if all((subnet_id, subnet_name)):
@@ -2300,7 +2286,7 @@ def create_network_acl(
         if not subnet_id:
             return {
                 "created": False,
-                "error": {"message": "Subnet {} does not exist.".format(subnet_name)},
+                "error": {"message": f"Subnet {subnet_name} does not exist."},
             }
     elif subnet_id:
         if not _get_resource(
@@ -2313,7 +2299,7 @@ def create_network_acl(
         ):
             return {
                 "created": False,
-                "error": {"message": "Subnet {} does not exist.".format(subnet_id)},
+                "error": {"message": f"Subnet {subnet_id} does not exist."},
             }
 
     r = _create_resource(
@@ -2470,9 +2456,7 @@ def associate_network_acl_to_subnet(
         if not network_acl_id:
             return {
                 "associated": False,
-                "error": {
-                    "message": "Network ACL {} does not exist.".format(network_acl_name)
-                },
+                "error": {"message": f"Network ACL {network_acl_name} does not exist."},
             }
     if subnet_name:
         subnet_id = _get_resource_id(
@@ -2481,7 +2465,7 @@ def associate_network_acl_to_subnet(
         if not subnet_id:
             return {
                 "associated": False,
-                "error": {"message": "Subnet {} does not exist.".format(subnet_name)},
+                "error": {"message": f"Subnet {subnet_name} does not exist."},
             }
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -2549,9 +2533,7 @@ def disassociate_network_acl(
             if not subnet_id:
                 return {
                     "disassociated": False,
-                    "error": {
-                        "message": "Subnet {} does not exist.".format(subnet_name)
-                    },
+                    "error": {"message": f"Subnet {subnet_name} does not exist."},
                 }
 
         if vpc_name or vpc_id:
@@ -2594,7 +2576,7 @@ def _create_network_acl_entry(
 
     for v in ("rule_number", "protocol", "rule_action", "cidr_block"):
         if locals()[v] is None:
-            raise SaltInvocationError("{} is required.".format(v))
+            raise SaltInvocationError(f"{v} is required.")
 
     if network_acl_name:
         network_acl_id = _get_resource_id(
@@ -2744,7 +2726,7 @@ def delete_network_acl_entry(
 
     for v in ("rule_number", "egress"):
         if locals()[v] is None:
-            raise SaltInvocationError("{} is required.".format(v))
+            raise SaltInvocationError(f"{v} is required.")
 
     if network_acl_name:
         network_acl_id = _get_resource_id(
@@ -2807,7 +2789,7 @@ def create_route_table(
     if not vpc_id:
         return {
             "created": False,
-            "error": {"message": "VPC {} does not exist.".format(vpc_name or vpc_id)},
+            "error": {"message": f"VPC {vpc_name or vpc_id} does not exist."},
         }
 
     return _create_resource(
@@ -2943,7 +2925,7 @@ def route_exists(
 
         if tags:
             for tag_name, tag_value in tags.items():
-                filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
+                filter_parameters["filters"][f"tag:{tag_name}"] = tag_value
 
         route_tables = conn.get_all_route_tables(**filter_parameters)
 
@@ -3015,7 +2997,7 @@ def associate_route_table(
         if not subnet_id:
             return {
                 "associated": False,
-                "error": {"message": "Subnet {} does not exist.".format(subnet_name)},
+                "error": {"message": f"Subnet {subnet_name} does not exist."},
             }
 
     if all((route_table_id, route_table_name)):
@@ -3034,9 +3016,7 @@ def associate_route_table(
         if not route_table_id:
             return {
                 "associated": False,
-                "error": {
-                    "message": "Route table {} does not exist.".format(route_table_name)
-                },
+                "error": {"message": f"Route table {route_table_name} does not exist."},
             }
 
     try:
@@ -3486,7 +3466,7 @@ def describe_route_tables(
         if tags:
             for tag_name, tag_value in tags.items():
                 filter_parameters["Filters"].append(
-                    {"Name": "tag:{}".format(tag_name), "Values": [tag_value]}
+                    {"Name": f"tag:{tag_name}", "Values": [tag_value]}
                 )
 
         route_tables = conn3.describe_route_tables(**filter_parameters).get(
@@ -3600,7 +3580,7 @@ def _maybe_name_route_table(conn, vpcid, vpc_name):
         log.warning("no default route table found")
         return
 
-    name = "{}-default-table".format(vpc_name)
+    name = f"{vpc_name}-default-table"
     _maybe_set_name_tag(name, default_table)
     log.debug("Default route table name was set to: %s on vpc %s", name, vpcid)
 
@@ -3757,9 +3737,7 @@ def request_vpc_peering_connection(
             vpc_name=peer_vpc_name, region=region, key=key, keyid=keyid, profile=profile
         )
         if not peer_vpc_id:
-            return {
-                "error": "Could not resolve VPC name {} to an ID".format(peer_vpc_name)
-            }
+            return {"error": f"Could not resolve VPC name {peer_vpc_name} to an ID"}
 
     peering_params = {
         "VpcId": requester_vpc_id,
@@ -3780,7 +3758,7 @@ def request_vpc_peering_connection(
             vpc_peering = conn.create_vpc_peering_connection(**peering_params)
         peering = vpc_peering.get("VpcPeeringConnection", {})
         peering_conn_id = peering.get("VpcPeeringConnectionId", "ERROR")
-        msg = "VPC peering {} requested.".format(peering_conn_id)
+        msg = f"VPC peering {peering_conn_id} requested."
         log.debug(msg)
 
         if name:
@@ -3789,7 +3767,7 @@ def request_vpc_peering_connection(
                 Resources=[peering_conn_id], Tags=[{"Key": "Name", "Value": name}]
             )
             log.debug("Applied name tag to vpc peering connection")
-            msg += " With name {}.".format(name)
+            msg += f" With name {name}."
 
         return {"msg": msg}
     except botocore.exceptions.ClientError as err:
@@ -3991,7 +3969,7 @@ def delete_vpc_peering_connection(
         conn_id = _vpc_peering_conn_id_for_name(conn_name, conn)
         if not conn_id:
             raise SaltInvocationError(
-                "Couldn't resolve VPC peering connection {} to an ID".format(conn_name)
+                f"Couldn't resolve VPC peering connection {conn_name} to an ID"
             )
     try:
         log.debug("Trying to delete vpc peering connection")

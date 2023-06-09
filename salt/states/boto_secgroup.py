@@ -114,7 +114,7 @@ log = logging.getLogger(__name__)
 __deprecated__ = (
     3009,
     "boto",
-    "https://github.com/salt-extensions/saltext-boto"
+    "https://github.com/salt-extensions/saltext-boto",
 )
 
 
@@ -289,7 +289,7 @@ def _security_group_present(
     )
     if not exists:
         if __opts__["test"]:
-            ret["comment"] = "Security group {} is set to be created.".format(name)
+            ret["comment"] = f"Security group {name} is set to be created."
             ret["result"] = None
             return ret
         created = __salt__["boto_secgroup.create"](
@@ -315,12 +315,12 @@ def _security_group_present(
                 vpc_name=vpc_name,
             )
             ret["changes"]["new"] = {"secgroup": sg}
-            ret["comment"] = "Security group {} created.".format(name)
+            ret["comment"] = f"Security group {name} created."
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create {} security group.".format(name)
+            ret["comment"] = f"Failed to create {name} security group."
     else:
-        ret["comment"] = "Security group {} present.".format(name)
+        ret["comment"] = f"Security group {name} present."
     return ret
 
 
@@ -428,7 +428,7 @@ def _get_rule_changes(rules, _rules):
             -1,
         ]
         if ip_protocol not in supported_protocols and (
-            not "{}".format(ip_protocol).isdigit() or int(ip_protocol) > 255
+            not f"{ip_protocol}".isdigit() or int(ip_protocol) > 255
         ):
             raise SaltInvocationError(
                 "Invalid ip_protocol {} specified in security group rule.".format(
@@ -515,9 +515,7 @@ def _rules_present(
         vpc_name=vpc_name,
     )
     if not sg:
-        ret[
-            "comment"
-        ] = "{} security group configuration could not be retrieved.".format(name)
+        ret["comment"] = f"{name} security group configuration could not be retrieved."
         ret["result"] = False
         return ret
     rules = _split_rules(rules)
@@ -574,12 +572,12 @@ def _rules_present(
                     key=key,
                     keyid=keyid,
                     profile=profile,
-                    **rule
+                    **rule,
                 )
                 if not _deleted:
                     deleted = False
             if deleted:
-                ret["comment"] = "Removed rules on {} security group.".format(name)
+                ret["comment"] = f"Removed rules on {name} security group."
             else:
                 ret["comment"] = "Failed to remove rules on {} security group.".format(
                     name
@@ -596,7 +594,7 @@ def _rules_present(
                     key=key,
                     keyid=keyid,
                     profile=profile,
-                    **rule
+                    **rule,
                 )
                 if not _created:
                     created = False
@@ -604,14 +602,14 @@ def _rules_present(
                 ret["comment"] = " ".join(
                     [
                         ret["comment"],
-                        "Created rules on {} security group.".format(name),
+                        f"Created rules on {name} security group.",
                     ]
                 )
             else:
                 ret["comment"] = " ".join(
                     [
                         ret["comment"],
-                        "Failed to create rules on {} security group.".format(name),
+                        f"Failed to create rules on {name} security group.",
                     ]
                 )
                 ret["result"] = False
@@ -660,9 +658,7 @@ def _rules_egress_present(
         vpc_name=vpc_name,
     )
     if not sg:
-        ret[
-            "comment"
-        ] = "{} security group configuration could not be retrieved.".format(name)
+        ret["comment"] = f"{name} security group configuration could not be retrieved."
         ret["result"] = False
         return ret
     rules_egress = _split_rules(rules_egress)
@@ -720,7 +716,7 @@ def _rules_egress_present(
                     keyid=keyid,
                     profile=profile,
                     egress=True,
-                    **rule
+                    **rule,
                 )
                 if not _deleted:
                     deleted = False
@@ -728,7 +724,7 @@ def _rules_egress_present(
                 ret["comment"] = " ".join(
                     [
                         ret["comment"],
-                        "Removed egress rule on {} security group.".format(name),
+                        f"Removed egress rule on {name} security group.",
                     ]
                 )
             else:
@@ -753,7 +749,7 @@ def _rules_egress_present(
                     keyid=keyid,
                     profile=profile,
                     egress=True,
-                    **rule
+                    **rule,
                 )
                 if not _created:
                     created = False
@@ -761,7 +757,7 @@ def _rules_egress_present(
                 ret["comment"] = " ".join(
                     [
                         ret["comment"],
-                        "Created egress rules on {} security group.".format(name),
+                        f"Created egress rules on {name} security group.",
                     ]
                 )
             else:
@@ -837,7 +833,7 @@ def absent(
 
     if sg:
         if __opts__["test"]:
-            ret["comment"] = "Security group {} is set to be removed.".format(name)
+            ret["comment"] = f"Security group {name} is set to be removed."
             ret["result"] = None
             return ret
         deleted = __salt__["boto_secgroup.delete"](
@@ -853,12 +849,12 @@ def absent(
         if deleted:
             ret["changes"]["old"] = {"secgroup": sg}
             ret["changes"]["new"] = {"secgroup": None}
-            ret["comment"] = "Security group {} deleted.".format(name)
+            ret["comment"] = f"Security group {name} deleted."
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to delete {} security group.".format(name)
+            ret["comment"] = f"Failed to delete {name} security group."
     else:
-        ret["comment"] = "{} security group does not exist.".format(name)
+        ret["comment"] = f"{name} security group does not exist."
     return ret
 
 
@@ -890,7 +886,7 @@ def _tags_present(
         if not sg:
             ret[
                 "comment"
-            ] = "{} security group configuration could not be retrieved.".format(name)
+            ] = f"{name} security group configuration could not be retrieved."
             ret["result"] = False
             return ret
         tags_to_add = tags
