@@ -275,7 +275,7 @@ def create(
                     except ValueError as e:
                         return {
                             "updated": False,
-                            "error": "Error parsing {}: {}".format(k, e.message),
+                            "error": f"Error parsing {k}: {e.message}",
                         }
                 kwargs[k] = val
         if "AccessPolicies" in kwargs:
@@ -366,7 +366,7 @@ def update(
                 except ValueError as e:
                     return {
                         "updated": False,
-                        "error": "Error parsing {}: {}".format(k, e.message),
+                        "error": f"Error parsing {k}: {e.message}",
                     }
             call_args[k] = val
     if "AccessPolicies" in call_args:

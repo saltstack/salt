@@ -1103,9 +1103,9 @@ def _build_tag_param_list(params, tags):
     i = 1
     for key in keys:
         value = tags[key]
-        params["Tags.member.{}.Key".format(i)] = key
+        params[f"Tags.member.{i}.Key"] = key
         if value is not None:
-            params["Tags.member.{}.Value".format(i)] = value
+            params[f"Tags.member.{i}.Value"] = value
         i += 1
 
 

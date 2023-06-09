@@ -493,7 +493,7 @@ def reshard(
             # merge
             next_shard_id = _get_next_open_shard(stream_details, shard_id)
             if not next_shard_id:
-                r["error"] = "failed to find next shard after {}".format(shard_id)
+                r["error"] = f"failed to find next shard after {shard_id}"
                 return r
             if force:
                 log.debug(

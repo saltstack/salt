@@ -257,7 +257,7 @@ def export_distributions(region=None, key=None, keyid=None, profile=None):
                 {"config": config},
                 {"tags": tags},
             ]
-            results["Manage CloudFront distribution {}".format(name)] = {
+            results[f"Manage CloudFront distribution {name}"] = {
                 "boto_cloudfront.present": distribution_sls_data,
             }
     except botocore.exceptions.ClientError as exc:

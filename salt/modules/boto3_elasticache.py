@@ -109,7 +109,7 @@ def _describe_resource(
     key=None,
     keyid=None,
     profile=None,
-    **args
+    **args,
 ):
     if conn is None:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -117,9 +117,7 @@ def _describe_resource(
         func = "describe_" + res_type + "s"
         f = getattr(conn, func)
     except (AttributeError, KeyError) as e:
-        raise SaltInvocationError(
-            "No function '{}()' found: {}".format(func, e.message)
-        )
+        raise SaltInvocationError(f"No function '{func}()' found: {e.message}")
     # Undocumented, but you can't pass 'Marker' if searching for a specific resource...
     args.update({name_param: name} if name else {"Marker": ""})
     args = {k: v for k, v in args.items() if not k.startswith("_")}
@@ -142,7 +140,7 @@ def _delete_resource(
     key=None,
     keyid=None,
     profile=None,
-    **args
+    **args,
 ):
     """
     Delete a generic Elasticache resource.
@@ -173,9 +171,7 @@ def _delete_resource(
             func = "describe_" + res_type + "s"
             s = globals()[func]
     except (AttributeError, KeyError) as e:
-        raise SaltInvocationError(
-            "No function '{}()' found: {}".format(func, e.message)
-        )
+        raise SaltInvocationError(f"No function '{func}()' found: {e.message}")
     try:
 
         f(**args)
@@ -213,7 +209,7 @@ def _create_resource(
     key=None,
     keyid=None,
     profile=None,
-    **args
+    **args,
 ):
     try:
         wait = int(wait)
@@ -241,9 +237,7 @@ def _create_resource(
             func = "describe_" + res_type + "s"
             s = globals()[func]
     except (AttributeError, KeyError) as e:
-        raise SaltInvocationError(
-            "No function '{}()' found: {}".format(func, e.message)
-        )
+        raise SaltInvocationError(f"No function '{func}()' found: {e.message}")
     try:
         f(**args)
         if not wait:
@@ -272,7 +266,7 @@ def _create_resource(
         )
         return False
     except botocore.exceptions.ClientError as e:
-        msg = "Failed to create {} {}: {}".format(desc, name, e)
+        msg = f"Failed to create {desc} {name}: {e}"
         log.error(msg)
         return False
 
@@ -289,7 +283,7 @@ def _modify_resource(
     key=None,
     keyid=None,
     profile=None,
-    **args
+    **args,
 ):
     try:
         wait = int(wait)
@@ -317,9 +311,7 @@ def _modify_resource(
             func = "describe_" + res_type + "s"
             s = globals()[func]
     except (AttributeError, KeyError) as e:
-        raise SaltInvocationError(
-            "No function '{}()' found: {}".format(func, e.message)
-        )
+        raise SaltInvocationError(f"No function '{func}()' found: {e.message}")
     try:
         f(**args)
         if not wait:
@@ -348,7 +340,7 @@ def _modify_resource(
         )
         return False
     except botocore.exceptions.ClientError as e:
-        msg = "Failed to modify {} {}: {}".format(desc, name, e)
+        msg = f"Failed to modify {desc} {name}: {e}"
         log.error(msg)
         return False
 
@@ -376,7 +368,7 @@ def describe_cache_clusters(
         key=key,
         keyid=keyid,
         profile=profile,
-        **args
+        **args,
     )
 
 
@@ -407,7 +399,7 @@ def create_cache_cluster(
     key=None,
     keyid=None,
     profile=None,
-    **args
+    **args,
 ):
     """
     Create a cache cluster.
@@ -444,7 +436,7 @@ def create_cache_cluster(
         key=key,
         keyid=keyid,
         profile=profile,
-        **args
+        **args,
     )
 
 
@@ -456,7 +448,7 @@ def modify_cache_cluster(
     key=None,
     keyid=None,
     profile=None,
-    **args
+    **args,
 ):
     """
     Update a cache cluster in place.
@@ -498,7 +490,7 @@ def modify_cache_cluster(
         key=key,
         keyid=keyid,
         profile=profile,
-        **args
+        **args,
     )
 
 
@@ -525,7 +517,7 @@ def delete_cache_cluster(
         key=key,
         keyid=keyid,
         profile=profile,
-        **args
+        **args,
     )
 
 
@@ -580,7 +572,7 @@ def create_replication_group(
     key=None,
     keyid=None,
     profile=None,
-    **args
+    **args,
 ):
     """
     Create a replication group.
@@ -617,7 +609,7 @@ def create_replication_group(
         key=key,
         keyid=keyid,
         profile=profile,
-        **args
+        **args,
     )
 
 
@@ -629,7 +621,7 @@ def modify_replication_group(
     key=None,
     keyid=None,
     profile=None,
-    **args
+    **args,
 ):
     """
     Modify a replication group.
@@ -663,7 +655,7 @@ def modify_replication_group(
         key=key,
         keyid=keyid,
         profile=profile,
-        **args
+        **args,
     )
 
 
@@ -690,7 +682,7 @@ def delete_replication_group(
         key=key,
         keyid=keyid,
         profile=profile,
-        **args
+        **args,
     )
 
 
@@ -785,13 +777,13 @@ def create_cache_subnet_group(
             ).get("subnets")
             if not sn:
                 raise SaltInvocationError(
-                    "Could not resolve Subnet Name {} to an ID.".format(subnet)
+                    f"Could not resolve Subnet Name {subnet} to an ID."
                 )
             if len(sn) == 1:
                 args["SubnetIds"] += [sn[0]["id"]]
             elif len(sn) > 1:
                 raise CommandExecutionError(
-                    "Subnet Name {} returned more than one ID.".format(subnet)
+                    f"Subnet Name {subnet} returned more than one ID."
                 )
     args = {k: v for k, v in args.items() if not k.startswith("_")}
     return _create_resource(
@@ -803,7 +795,7 @@ def create_cache_subnet_group(
         key=key,
         keyid=keyid,
         profile=profile,
-        **args
+        **args,
     )
 
 
@@ -838,14 +830,14 @@ def modify_cache_subnet_group(
                 args["SubnetIds"] += [sn[0]["id"]]
             elif len(sn) > 1:
                 raise CommandExecutionError(
-                    "Subnet Name {} returned more than one ID.".format(subnet)
+                    f"Subnet Name {subnet} returned more than one ID."
                 )
             elif subnet.startswith("subnet-"):
                 # Moderately safe assumption... :)  Will be caught later if incorrect.
                 args["SubnetIds"] += [subnet]
             else:
                 raise SaltInvocationError(
-                    "Could not resolve Subnet Name {} to an ID.".format(subnet)
+                    f"Could not resolve Subnet Name {subnet} to an ID."
                 )
     args = {k: v for k, v in args.items() if not k.startswith("_")}
     return _modify_resource(
@@ -857,7 +849,7 @@ def modify_cache_subnet_group(
         key=key,
         keyid=keyid,
         profile=profile,
-        **args
+        **args,
     )
 
 
@@ -882,7 +874,7 @@ def delete_cache_subnet_group(
         key=key,
         keyid=keyid,
         profile=profile,
-        **args
+        **args,
     )
 
 
@@ -950,7 +942,7 @@ def create_cache_security_group(
         key=key,
         keyid=keyid,
         profile=profile,
-        **args
+        **args,
     )
 
 
@@ -975,7 +967,7 @@ def delete_cache_security_group(
         key=key,
         keyid=keyid,
         profile=profile,
-        **args
+        **args,
     )
 
 
@@ -1266,7 +1258,7 @@ def create_cache_parameter_group(
         key=key,
         keyid=keyid,
         profile=profile,
-        **args
+        **args,
     )
 
 
@@ -1291,5 +1283,5 @@ def delete_cache_parameter_group(
         key=key,
         keyid=keyid,
         profile=profile,
-        **args
+        **args,
     )
