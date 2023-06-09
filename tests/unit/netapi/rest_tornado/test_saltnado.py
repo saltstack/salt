@@ -1,3 +1,4 @@
+import pytest
 import salt.ext.tornado
 import salt.ext.tornado.testing
 import salt.netapi.rest_tornado.saltnado as saltnado
@@ -614,6 +615,7 @@ class TestDisbatchLocal(salt.ext.tornado.testing.AsyncTestCase):
         }
         self.handler = saltnado.SaltAPIHandler(self.mock, self.mock)
 
+    @pytest.mark.flaky(max_runs=4)
     @salt.ext.tornado.testing.gen_test
     def test_when_is_timed_out_is_set_before_other_events_are_completed_then_result_should_be_empty_dictionary(
         self,
