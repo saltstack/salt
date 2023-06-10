@@ -61,6 +61,7 @@ def cert(
     http_01_address=None,
     dns_plugin=None,
     dns_plugin_credentials=None,
+    dns_plugin_propagate_seconds=10,
 ):
     """
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
@@ -91,6 +92,7 @@ def cert(
     :param https_01_address: The address the server listens to during http-01 challenge.
     :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare')
     :param dns_plugin_credentials: Path to the credentials file if required by the specified DNS plugin
+    :param dns_plugin_propagate_seconds: Number of seconds to wait for DNS propogations before asking ACME servers to verify the DNS record. (default 10)
     """
 
     if certname is None:
@@ -140,6 +142,7 @@ def cert(
                 http_01_address=http_01_address,
                 dns_plugin=dns_plugin,
                 dns_plugin_credentials=dns_plugin_credentials,
+                dns_plugin_propagate_seconds=dns_plugin_propagate_seconds,
             )
             ret["result"] = res["result"]
             ret["comment"].append(res["comment"])
