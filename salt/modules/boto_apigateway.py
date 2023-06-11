@@ -106,7 +106,11 @@ except ImportError:
 # pylint: enable=import-error
 
 
-__deprecated__ = (3009, "boto", "https://github.com/salt-extensions/saltext-boto")
+__deprecated__ = (
+    3009,
+    "boto",
+    "https://github.com/salt-extensions/saltext-boto",
+)
 
 
 def __virtual__():
