@@ -156,6 +156,9 @@ salt/state.py:
 salt/utils/decorators/*:
   - integration.modules.test_decorators
 
+salt/utils/dynamic_dict.py:
+  - pytests.unit.utils.test_dynamic_dict
+
 salt/(utils|renderers)/jinja\.py:
   - pytests.functional.modules.state.test_jinja_filters
   - integration.states.test_renderers
@@ -200,6 +203,7 @@ salt/client/ssh/wrapper/*:
 salt/config/*:
   - unit.test_config
   - pytests.unit.config.test__validate_opts
+  - pytests.integration.master.test_dynamic_config
 
 salt/loader/*:
   - integration.loader.test_ext_modules

@@ -3117,9 +3117,9 @@ is equivalent to this static configuration:
       prod:
         - /srv/prod/salt
 
-As of 3007.0, the ``file_roots`` option is dynamic expanded on each use, meaning
-directories or files may be added without restarting the Salt master. For
-instance, this configuration:
+As of 3007.0, the ``file_roots`` option is dynamically expanded on each use,
+meaning directories or files may be added without restarting the Salt master.
+For instance, this configuration:
 
 .. code-block:: yaml
 
@@ -4277,7 +4277,7 @@ is equivalent to this static configuration:
       prod:
         - /srv/prod/pillar
 
-As of 3007.0, the ``pillar_roots`` option is dynamic expanded on each use,
+As of 3007.0, the ``pillar_roots`` option is dynamically expanded on each use,
 meaning directories or files may be added without restarting the Salt master.
 For instance, this configuration:
 
