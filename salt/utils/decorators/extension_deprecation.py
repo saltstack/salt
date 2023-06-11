@@ -21,7 +21,7 @@ def extension_deprecation_message(version, extension_name, extension_repo):
             salt.utils.versions.warn_until(
                 version,
                 f"The '{extension_name}' functionality in Salt has been deprecated and its "
-                f"functionality will be removed in version {version} in favor of the "
+                "functionality will be removed in version {version} in favor of the "
                 f"saltext.{extension_name} Salt Extension. "
                 f"({extension_repo})",
                 category=FutureWarning,
