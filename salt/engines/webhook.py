@@ -78,8 +78,7 @@ def start(address=None, port=5000, ssl_crt=None, ssl_key=None):
     ssl_options = None
     if all([ssl_crt, ssl_key]):
         ssl_options = {"certfile": ssl_crt, "keyfile": ssl_key}
-    io_loop = tornado.ioloop.IOLoop(make_current=False)
-    io_loop.make_current()
+    io_loop = tornado.ioloop.IOLoop()
     http_server = tornado.httpserver.HTTPServer(application, ssl_options=ssl_options)
     http_server.listen(port, address=address)
     io_loop.start()

@@ -718,7 +718,10 @@ def get_release_changelog_target(ctx: Context, event_name: str):
     if event_name == "pull_request":
         if gh_event["pull_request"]["base"]["ref"] in release_branches:
             release_changelog_target = "next-minor-release"
-
+    elif event_name == "schedule":
+        branch_name = gh_event["repository"]["default_branch"]
+        if branch_name in release_branches:
+            release_changelog_target = "next-minor-release"
     else:
         for branch_name in release_branches:
             if branch_name in gh_event["ref"]:

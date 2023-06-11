@@ -48,11 +48,11 @@ def _which(cmd):
     """
     _cmd = salt.utils.path.which(cmd)
     if not _cmd:
-        raise CommandExecutionError("Command '{}' cannot be found".format(cmd))
+        raise CommandExecutionError(f"Command '{cmd}' cannot be found")
     return _cmd
 
 
-def add(name, gid=None, system=False, root=None, non_unique=False):
+def add(name, gid=None, system=False, root=None, non_unique=False, local=False):
     """
     .. versionchanged:: 3006.0
 
@@ -75,21 +75,26 @@ def add(name, gid=None, system=False, root=None, non_unique=False):
 
         .. versionadded:: 3006.0
 
+    local
+        Specifically add the group locally rather than through remote providers (e.g. LDAP)
+
+        .. versionadded:: 3007.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' group.add foo 3456
     """
-    cmd = [_which("groupadd")]
+    cmd = [_which("lgroupadd" if local else "groupadd")]
     if gid:
-        cmd.append("-g {}".format(gid))
-        if non_unique:
+        cmd.append(f"-g {gid}")
+        if non_unique and not local:
             cmd.append("-o")
     if system and __grains__["kernel"] != "OpenBSD":
         cmd.append("-r")
 
-    if root is not None:
+    if root is not None and not local:
         cmd.extend(("-R", root))
 
     cmd.append(name)
@@ -99,7 +104,7 @@ def add(name, gid=None, system=False, root=None, non_unique=False):
     return not ret["retcode"]
 
 
-def delete(name, root=None):
+def delete(name, root=None, local=False):
     """
     Remove the named group
 
@@ -109,15 +114,21 @@ def delete(name, root=None):
     root
         Directory to chroot into
 
+    local (Only on systems with lgroupdel available):
+        Ensure the group account is removed locally ignoring global
+        account management (default is False).
+
+        .. versionadded:: 3007.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' group.delete foo
     """
-    cmd = [_which("groupdel")]
+    cmd = [_which("lgroupdel" if local else "groupdel")]
 
-    if root is not None:
+    if root is not None and not local:
         cmd.extend(("-R", root))
 
     cmd.append(name)
@@ -349,11 +360,11 @@ def deluser(name, username, root=None):
                 retcode = __salt__["cmd.retcode"](cmd, python_shell=False)
             elif __grains__["kernel"] == "OpenBSD":
                 out = __salt__["cmd.run_stdout"](
-                    "id -Gn {}".format(username), python_shell=False
+                    f"id -Gn {username}", python_shell=False
                 )
                 cmd = [_which("usermod"), "-S"]
                 cmd.append(",".join([g for g in out.split() if g != str(name)]))
-                cmd.append("{}".format(username))
+                cmd.append(f"{username}")
                 retcode = __salt__["cmd.retcode"](cmd, python_shell=False)
             else:
                 log.error("group.deluser is not yet supported on this platform")
@@ -459,7 +470,7 @@ def _getgrnam(name, root=None):
                 comps[2] = int(comps[2])
                 comps[3] = comps[3].split(",") if comps[3] else []
                 return grp.struct_group(comps)
-    raise KeyError("getgrnam(): name not found: {}".format(name))
+    raise KeyError(f"getgrnam(): name not found: {name}")
 
 
 def _getgrall(root=None):
