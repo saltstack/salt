@@ -421,7 +421,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "waiting for ssh",
-        "salt/cloud/{}/waiting_for_ssh".format(name),
+        f"salt/cloud/{name}/waiting_for_ssh",
         sock_dir=__opts__["sock_dir"],
         args={"ip_address": vm_["ssh_host"]},
         transport=__opts__["transport"],
