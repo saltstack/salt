@@ -775,7 +775,7 @@ def read_secret(path, key=None, metadata=False, default=NOT_SET):
     except Exception as err:  # pylint: disable=broad-except
         if default is CommandExecutionError:
             raise CommandExecutionError(
-                "Failed to read secret! {}: {}".format(type(err).__name__, err)
+                f"Failed to read secret! {type(err).__name__}: {err}"
             ) from err
         return default
 
@@ -1027,7 +1027,7 @@ def list_secrets(path, default=NOT_SET, keys_only=False):
     except Exception as err:  # pylint: disable=broad-except
         if default is CommandExecutionError:
             raise CommandExecutionError(
-                "Failed to list secrets! {}: {}".format(type(err).__name__, err)
+                f"Failed to list secrets! {type(err).__name__}: {err}"
             ) from err
         return default
 
@@ -1124,7 +1124,7 @@ def policy_fetch(policy):
     except vault.VaultNotFoundError:
         return None
     except SaltException as err:
-        raise CommandExecutionError("{}: {}".format(type(err).__name__, err)) from err
+        raise CommandExecutionError(f"{type(err).__name__}: {err}") from err
 
 
 def policy_write(policy, rules):
@@ -1158,7 +1158,7 @@ def policy_write(policy, rules):
     try:
         return vault.query("POST", endpoint, __opts__, __context__, payload=payload)
     except SaltException as err:
-        raise CommandExecutionError("{}: {}".format(type(err).__name__, err)) from err
+        raise CommandExecutionError(f"{type(err).__name__}: {err}") from err
 
 
 def policy_delete(policy):
@@ -1191,7 +1191,7 @@ def policy_delete(policy):
     except vault.VaultNotFoundError:
         return False
     except SaltException as err:
-        raise CommandExecutionError("{}: {}".format(type(err).__name__, err)) from err
+        raise CommandExecutionError(f"{type(err).__name__}: {err}") from err
 
 
 def policies_list():
@@ -1217,7 +1217,7 @@ def policies_list():
     try:
         return vault.query("GET", "sys/policy", __opts__, __context__)["policies"]
     except SaltException as err:
-        raise CommandExecutionError("{}: {}".format(type(err).__name__, err)) from err
+        raise CommandExecutionError(f"{type(err).__name__}: {err}") from err
 
 
 def query(method, endpoint, payload=None):
@@ -1252,7 +1252,7 @@ def query(method, endpoint, payload=None):
     try:
         return vault.query(method, endpoint, __opts__, __context__, payload=payload)
     except SaltException as err:
-        raise CommandExecutionError("{}: {}".format(type(err).__name__, err)) from err
+        raise CommandExecutionError(f"{type(err).__name__}: {err}") from err
 
 
 def update_config(keep_session=False):
@@ -1296,4 +1296,4 @@ def get_server_config():
         client = vault.get_authd_client(__opts__, __context__)
         return client.get_config()
     except SaltException as err:
-        raise CommandExecutionError("{}: {}".format(type(err).__name__, err)) from err
+        raise CommandExecutionError(f"{type(err).__name__}: {err}") from err

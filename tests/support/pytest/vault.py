@@ -20,9 +20,8 @@ def _vault_cmd(cmd, textinput=None, raw=False):
         [vault_binary] + cmd,
         check=False,
         input=textinput,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
+        capture_output=True,
+        text=True,
     )
 
     ret = ProcessResult(
@@ -280,9 +279,8 @@ def vault_container_version(request, salt_factories, vault_port, vault_environ):
             proc = subprocess.run(
                 [vault_binary, "login", "token=testsecret"],
                 check=False,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                universal_newlines=True,
+                capture_output=True,
+                text=True,
             )
             if proc.returncode == 0:
                 break

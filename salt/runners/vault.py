@@ -159,7 +159,7 @@ def generate_token(
 
         return ret
     except Exception as err:  # pylint: disable=broad-except
-        return {"error": "{}: {}".format(type(err).__name__, str(err))}
+        return {"error": f"{type(err).__name__}: {str(err)}"}
 
 
 def generate_new_token(
@@ -215,7 +215,7 @@ def generate_new_token(
 
         return ret
     except Exception as err:  # pylint: disable=broad-except
-        return {"error": "{}: {}".format(type(err).__name__, str(err))}
+        return {"error": f"{type(err).__name__}: {str(err)}"}
 
 
 def _generate_token(minion_id, issue_params, wrap):
@@ -321,7 +321,7 @@ def get_config(
 
         return minion_config
     except Exception as err:  # pylint: disable=broad-except
-        return {"error": "{}: {}".format(type(err).__name__, str(err))}
+        return {"error": f"{type(err).__name__}: {str(err)}"}
 
 
 def get_role_id(minion_id, signature, impersonated_by_master=False, issue_params=None):
@@ -372,7 +372,7 @@ def get_role_id(minion_id, signature, impersonated_by_master=False, issue_params
             ret["data"]["role_id"] = role_id
         return ret
     except Exception as err:  # pylint: disable=broad-except
-        return {"error": "{}: {}".format(type(err).__name__, str(err))}
+        return {"error": f"{type(err).__name__}: {str(err)}"}
 
 
 def _get_role_id(minion_id, issue_params, wrap):
@@ -501,10 +501,10 @@ def generate_secret_id(
         # new configuration details to generate one
         return {
             "expire_cache": True,
-            "error": "{}: {}".format(type(err).__name__, str(err)),
+            "error": f"{type(err).__name__}: {str(err)}",
         }
     except Exception as err:  # pylint: disable=broad-except
-        return {"error": "{}: {}".format(type(err).__name__, str(err))}
+        return {"error": f"{type(err).__name__}: {str(err)}"}
 
 
 def unseal():
