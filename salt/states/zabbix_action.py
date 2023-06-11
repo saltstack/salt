@@ -1,7 +1,7 @@
 """
 Management of Zabbix Action object over Zabbix API.
 
-.. versionadded:: 2017.7
+.. versionadded:: 2017.7.0
 
 :codeauthor: Jakub Sliva <jakub.sliva@ultimum.io>
 """

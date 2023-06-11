@@ -135,13 +135,13 @@ def setenforce(mode):
     if isinstance(mode, str):
         if mode.lower() == "enforcing":
             mode = "1"
-            modestring = "Enforcing"
+            modestring = "enforcing"
         elif mode.lower() == "permissive":
             mode = "0"
-            modestring = "Permissive"
+            modestring = "permissive"
         elif mode.lower() == "disabled":
             mode = "0"
-            modestring = "Disabled"
+            modestring = "disabled"
         else:
             return "Invalid mode {}".format(mode)
     elif isinstance(mode, int):

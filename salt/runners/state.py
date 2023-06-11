@@ -86,7 +86,7 @@ def orchestrate(
 
         Runner uses the pillar variable
 
-    .. versionchanged:: 2017.5
+    .. versionchanged:: 2017.5.0
 
         Runner uses the pillar_enc variable that allows renderers to render the pillar.
         This is usable when supplying the contents of a file as pillar, and the file contains

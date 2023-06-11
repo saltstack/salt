@@ -1987,7 +1987,7 @@ def tidied(
     **kwargs
 ):
     """
-    .. versionchanged:: 3006.0,3005
+    .. versionchanged:: 3005,3006.0
 
     Remove unwanted files based on specific criteria.
 
