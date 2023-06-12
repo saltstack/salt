@@ -601,6 +601,8 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
+wempy==0.2.1
+    # via -r requirements/static/ci/common.in
 werkzeug==2.2.3
     # via
     #   moto
