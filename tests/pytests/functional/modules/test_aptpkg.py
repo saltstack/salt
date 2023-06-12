@@ -110,8 +110,6 @@ def get_current_repo(multiple_comps=False):
                 continue
             if "ubuntu.com" in line or "debian.org" in line:
                 test_repo = line.strip()
-                if "cdn-aws.debian.org" in test_repo:
-                    continue
                 comps = test_repo.split()[3:]
                 if multiple_comps:
                     if len(comps) > 1:
