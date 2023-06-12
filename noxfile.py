@@ -734,6 +734,10 @@ def _pytest(session, coverage, cmd_args):
             check=True,
         )
 
+    if "buster" in platform.node():
+        subprocess.run(["apt-get", "update"], check=True)
+        subprocess.run(["apt-get", "upgrade", "debian-keyring", "-y"], check=True)
+
     env = {"CI_RUN": "1" if CI_RUN else "0"}
 
     args = [
