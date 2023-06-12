@@ -3,11 +3,10 @@ Multi-Minion Setup on Windows
 =============================
 
 There may be a scenario where having a minion running in the context of the
-current logged in user would be useful. For example, the normal minion running
+current, logged-in user would be useful. For example, the normal minion running
 under the service account would perform machine-wide, administrative tasks. The
-minion runing under the user context could be launched when the user logs in
+minion running under the user context could be launched when the user logs in
 and would be able to perform configuration tasks as if it were the user itself.
-This would be useful for setting user registry settings, for example.
 
 The steps required to do this are as follows:
 
@@ -86,7 +85,7 @@ are present:
 
 The minion will need is own config, separate from the system minion config. This
 config tells the minion where everything is as well as defines the master and
-minion id. Create a minion config file named minion in the conf directory.
+minion id. Create a minion config file named ``minion`` in the conf directory.
 
 .. code-block:: powershell
 
