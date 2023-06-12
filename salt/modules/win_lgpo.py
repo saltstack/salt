@@ -5503,17 +5503,8 @@ def _set_advaudit_value(option, value):
             option,
         )
 
-    # Make sure lgpo.adv_audit_data is loaded
-    salt.utils.win_lgpo_auditpol.get_advaudit_value(option)
-
-    # Update __context__
-    if value is None:
-        log.debug("LGPO: Removing Advanced Audit data: %s", option)
-        __context__["lgpo.adv_audit_data"].pop(option)
-    else:
-        log.debug("LGPO: Updating Advanced Audit data: %s: %s", option, value)
-        __context__["lgpo.adv_audit_data"][option] = value
-
+    # Make sure lgpo.adv_audit_data is refreshed
+    salt.utils.win_lgpo_auditpol.get_advaudit_value(option, refresh=True)
     return True
 
 

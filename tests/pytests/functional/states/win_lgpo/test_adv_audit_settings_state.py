@@ -78,7 +78,7 @@ def _test_adv_auditing(modules, states, setting, expected):
     """
     Helper function to set an audit setting and assert that it was successful
     """
-    states.lgpo.set_(
+    states.lgpo.set(
         name="Audit User Account Management", setting=setting, policy_class="machine"
     )
     # Clear the context so we're getting the actual settings from the machine

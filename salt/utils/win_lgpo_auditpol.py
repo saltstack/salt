@@ -93,7 +93,6 @@ SETTINGS = {
     "Failure": "/success:disable /failure:enable",
     "Success and Failure": "/success:enable /failure:enable",
 }
-SETTINGS_LC_KEYS = tuple(k.lower() for k in SETTINGS)
 
 
 def _auditpol_cmd(cmd):
@@ -116,6 +115,11 @@ def _auditpol_cmd(cmd):
     msg = f"Error executing auditpol command: {cmd}\n"
     msg += "\n".join(ret["stdout"])
     raise CommandExecutionError(msg)
+
+
+@lru_cache
+def _get_valid_names():
+    return [k.lower() for k in get_settings()]
 
 
 def get_settings(category="All"):
@@ -249,7 +253,7 @@ def set_setting(name, value):
                                                  value='No Auditing')
     """
     # Input validation
-    if name.lower() not in SETTINGS_LC_KEYS:
+    if name.lower() not in _get_valid_names():
         raise KeyError(f"Invalid name: {name}")
     for setting in SETTINGS:
         if value.lower() == setting.lower():
