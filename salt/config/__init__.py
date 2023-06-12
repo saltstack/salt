@@ -1090,7 +1090,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "decrypt_pillar_delimiter": ":",
         "decrypt_pillar_default": "gpg",
         "decrypt_pillar_renderers": ["gpg"],
-        "gpg_decrypt_must_succeed": False,
+        "gpg_decrypt_must_succeed": True,
         # Update intervals
         "roots_update_interval": DEFAULT_INTERVAL,
         "azurefs_update_interval": DEFAULT_INTERVAL,
@@ -1331,7 +1331,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "decrypt_pillar_delimiter": ":",
         "decrypt_pillar_default": "gpg",
         "decrypt_pillar_renderers": ["gpg"],
-        "gpg_decrypt_must_succeed": False,
+        "gpg_decrypt_must_succeed": True,
         "thoriumenv": None,
         "thorium_top": "top.sls",
         "thorium_interval": 0.5,
