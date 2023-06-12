@@ -170,6 +170,7 @@ def test_init_client():
             assert (
                 mysql_cache.__context__["mysql_kwargs"]["max_allowed_packet"] == 100000
             )
+            assert not mysql_cache.__context__["mysql_fresh_connection"]
 
     with patch.dict(
         mysql_cache.__opts__,
@@ -177,6 +178,7 @@ def test_init_client():
             "mysql.max_allowed_packet": 100000,
             "mysql.db": "salt_mysql_db",
             "mysql.host": "mysql-host",
+            "mysql.fresh_connection": True,
         },
     ):
         with patch.object(mysql_cache, "_create_table") as mock_create_table:
@@ -193,6 +195,7 @@ def test_init_client():
             assert (
                 mysql_cache.__context__["mysql_kwargs"]["max_allowed_packet"] == 100000
             )
+            assert mysql_cache.__context__["mysql_fresh_connection"]
 
 
 def test_create_table():

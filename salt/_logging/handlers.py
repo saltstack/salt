@@ -87,7 +87,7 @@ class DeferredStreamHandler(StreamHandler):
     If anything goes wrong before logging is properly setup, all stored messages
     will be flushed to the handler's stream, ie, written to console.
 
-    .. versionadded:: 3005.0
+    .. versionadded:: 3005
     """
 
     def __init__(self, stream, max_queue_size=10000):

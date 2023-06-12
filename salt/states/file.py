@@ -1979,7 +1979,7 @@ def tidied(
     **kwargs,
 ):
     """
-    .. versionchanged:: 3006.0,3005
+    .. versionchanged:: 3005,3006.0
 
     Remove unwanted files based on specific criteria.
 
@@ -5570,7 +5570,7 @@ def keyvalue(
     try:
         with salt.utils.files.fopen(name, "r") as fd:
             file_contents = fd.readlines()
-    except FileNotFoundError as exc:
+    except FileNotFoundError:
         if create_if_missing:
             append_if_not_found = True
             file_contents = []
@@ -5578,7 +5578,7 @@ def keyvalue(
             ret["comment"] = f"unable to open {name}"
             ret["result"] = True if ignore_if_missing else False
             return ret
-    except OSError as exc:
+    except OSError:
         ret["comment"] = f"unable to open {name}"
         ret["result"] = True if ignore_if_missing else False
         return ret
