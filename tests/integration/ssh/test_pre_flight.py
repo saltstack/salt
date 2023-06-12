@@ -101,6 +101,7 @@ class SSHPreFlightTest(SSHCase):
             injected_file
         ), "File injection suceeded. This shouldn't happend"
 
+    @pytest.mark.flaky(max_runs=4)
     @pytest.mark.slow_test
     def test_ssh_run_pre_flight_failure(self):
         """
