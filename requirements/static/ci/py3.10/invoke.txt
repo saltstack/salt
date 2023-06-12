@@ -6,7 +6,7 @@
 #
 blessings==1.7
     # via -r requirements/static/ci/invoke.in
-invoke==1.4.1
+invoke==2.1.2
     # via -r requirements/static/ci/invoke.in
 pyyaml==6.0
     # via
