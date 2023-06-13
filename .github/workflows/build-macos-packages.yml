@@ -12,6 +12,10 @@ on:
         type: string
         required: true
         description: The relenv version to set prior to building packages.
+      python-version:
+        required: true
+        type: string
+        description: The version of python to use with relenv
       sign-packages:
         type: boolean
         default: false
@@ -108,7 +112,7 @@ jobs:
           APPLE_ACCT: "${{ secrets.MAC_SIGN_APPLE_ACCT }}"
           APP_SPEC_PWD: "${{ secrets.MAC_SIGN_APP_SPEC_PWD }}"
         run: |
-          tools pkg build macos --relenv-version=${{ inputs.relenv-version }}  ${{
+          tools pkg build macos --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
               matrix.source == 'onedir' &&
               format(
                 '--onedir salt-{0}-onedir-darwin-{1}.tar.xz --salt-version {0} {2}',
