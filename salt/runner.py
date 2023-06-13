@@ -289,7 +289,7 @@ class Runner(RunnerClient):
 
                 # otherwise run it in the main process
                 if self.opts.get("eauth"):
-                    ret = self.cmd_sync(low, full_return=True)
+                    ret = self.cmd_sync(low)
                     if isinstance(ret, dict) and set(ret) == {"data", "outputter"}:
                         outputter = ret["outputter"]
                         ret = ret["data"]
