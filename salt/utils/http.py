@@ -234,20 +234,17 @@ def query(
         proxy_username = None
         proxy_password = None
 
-    proxy_args = None
+    http_proxy_url = None
     if backend != "requests" and proxy_host and proxy_port:
         log.debug("Switching to request backend due to the use of proxies.")
         backend = "requests"
-        scheme = urllib.parse.urlparse(proxy_host).scheme
-        proxy_url = f"{proxy_host}:{proxy_port}"
+    if proxy_host and proxy_port:
         if proxy_username and proxy_password:
-            proxy_url = salt.utils.url.add_http_basic_auth(
-                proxy_url, proxy_username, proxy_password
+            http_proxy_url = (
+                f"http://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}"
             )
-        if scheme and proxy_url:
-            proxy_args = (scheme, proxy_url)
         else:
-            log.debug("Failed to set proxy details")
+            http_proxy_url = f"http://{proxy_host}:{proxy_port}"
 
     match = re.match(
         r"https?://((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)($|/)",
@@ -362,8 +359,8 @@ def query(
         log.trace("Request Headers: %s", sess.headers)
         sess_cookies = sess.cookies
         sess.verify = verify_ssl
-        if proxy_args:
-            sess.proxies = {proxy_args[0]: proxy_args[1]}
+        if http_proxy_url is not None:
+            sess.proxies = {"HTTP": http_proxy_url}
     elif backend == "urllib2":
         sess_cookies = None
     else:
