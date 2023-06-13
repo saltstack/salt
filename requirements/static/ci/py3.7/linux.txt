@@ -723,7 +723,7 @@ pyjwt==2.4.0
     #   twilio
 pymysql==1.0.2 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
-pynacl==1.3.0
+pynacl==1.3.0 ; python_version <= "3.7"
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko

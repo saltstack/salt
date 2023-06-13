@@ -707,7 +707,7 @@ pylint==2.4.4
     #   saltpylint
 pymysql==1.0.2 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
-pynacl==1.4.0
+pynacl==1.4.0 ; python_version == "3.8"
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
