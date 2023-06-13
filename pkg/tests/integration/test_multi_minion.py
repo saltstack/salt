@@ -19,7 +19,7 @@ def mm_script(install_salt):
 def mm_conf(mm_script):
     yield pathlib.Path(os.getenv("LocalAppData"), "Salt Project", "Salt", "conf")
     subprocess.run(
-        ["powershell", "-c", str(mm_script), "-d"],
+        ["powershell", str(mm_script).replace(" ", "' '"), "-d"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
@@ -40,7 +40,7 @@ def test_install(mm_script, mm_conf):
     file in Local AppData
     """
     ret = subprocess.run(
-        ["powershell", "-c", str(mm_script)],
+        ["powershell", str(mm_script).replace(" ", "' '")],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
@@ -57,7 +57,7 @@ def test_install_master(mm_script, mm_conf):
     Install a 2nd minion and set the master to spongebob
     """
     ret = subprocess.run(
-        ["powershell", "-c", str(mm_script), "-m", "spongebob"],
+        ["powershell", str(mm_script).replace(" ", "' '"), "-m", "spongebob"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
@@ -74,7 +74,7 @@ def test_install_prefix(mm_script, mm_conf):
     Install a 2nd minion and add a prefix to the minion id
     """
     ret = subprocess.run(
-        ["powershell", "-c", str(mm_script), "-p", "squarepants"],
+        ["powershell", str(mm_script).replace(" ", "' '"), "-p", "squarepants"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
@@ -91,7 +91,7 @@ def test_install_log_level(mm_script, mm_conf):
     Install a 2nd minion and set the log level in the log file to debug
     """
     ret = subprocess.run(
-        ["powershell", "-c", str(mm_script), "-l", "debug"],
+        ["powershell", str(mm_script).replace(" ", "' '"), "-l", "debug"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
@@ -108,7 +108,7 @@ def test_install_start(mm_script, mm_conf):
     Install a 2nd minion and start that minion in a hidden process
     """
     ret = subprocess.run(
-        ["powershell", "-c", str(mm_script), "-s"],
+        ["powershell", str(mm_script).replace(" ", "' '"), "-s"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
