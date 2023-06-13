@@ -700,7 +700,9 @@ def test_gen_modules_executors(minion_opts):
         with patch("salt.pillar.get_pillar", return_value=MockPillarCompiler()):
             with patch("salt.loader.executors") as execmock:
                 minion.gen_modules()
-        assert execmock.called_with(minion.opts, minion.functions)
+        execmock.assert_called_with(
+            minion.opts, functions=minion.functions, proxy=minion.proxy, context={}
+        )
     finally:
         minion.destroy()
 
