@@ -517,7 +517,7 @@ class AsyncClientMixin(ClientStateMixin):
             instance = cls(opts)
 
         try:
-            return instance.cmd_sync(low, full_return=False)
+            return instance.cmd_sync(low, full_return=full_return)
         except salt.exceptions.EauthAuthenticationError as exc:
             log.error(exc)
 
