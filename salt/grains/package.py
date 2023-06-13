@@ -20,6 +20,6 @@ def __virtual__():
 def package():
     """
     Function to determine if the user is currently using
-    onedir package or system level package of Salt.
+    onedir, pip or system level package of Salt.
     """
     return {"package": salt.utils.package.pkg_type()}

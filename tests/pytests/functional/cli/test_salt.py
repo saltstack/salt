@@ -1,7 +1,6 @@
 import logging
 import os
 import shutil
-import sys
 
 import pytest
 
@@ -81,15 +80,13 @@ def test_versions_report(salt_cli):
             assert key in expected_keys
             expected_keys.remove(key)
     assert not expected_keys
-    if hasattr(sys, "RELENV"):
-        assert "onedir" in ret_dict["Salt Package Information"]["Package Type"]
-    else:
-        assert "system" in ret_dict["Salt Package Information"]["Package Type"]
 
     if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
+        assert "pip" in ret_dict["Salt Package Information"]["Package Type"]
         # Stop any more testing
         return
 
+    assert "onedir" in ret_dict["Salt Package Information"]["Package Type"]
     assert "relenv" in ret_dict["Dependency Versions"]
     assert "Salt Extensions" in ret_dict
     assert "salt-analytics-framework" in ret_dict["Salt Extensions"]

@@ -1,4 +1,4 @@
-import sys
+import os
 
 import pytest
 
@@ -15,10 +15,10 @@ def test_grains_items(grains):
     the return
     """
     ret = grains.items()
-    if hasattr(sys, "RELENV"):
-        assert ret["package"] == "onedir"
+    if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
+        assert ret["package"] == "pip"
     else:
-        assert ret["package"] == "system"
+        assert ret["package"] == "onedir"
 
     for key in ["num_cpus", "cpu_model", "os_family"]:
         assert key in ret.keys()

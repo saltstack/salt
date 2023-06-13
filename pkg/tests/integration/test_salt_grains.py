@@ -39,3 +39,12 @@ def test_grains_setval_key_val(salt_cli, salt_minion):
     ret = salt_cli.run("grains.setval", "key", "val", minion_tgt=salt_minion.id)
     assert ret.data, ret
     assert "key" in ret.data
+
+
+def test_grains_package_onedir(salt_cli, salt_minion):
+    """
+    Test that the package grain returns onedir
+    """
+    ret = salt_cli.run("grains.get", "package", minion_tgt=salt_minion.id)
+    assert "onedir" == ret.data
+    assert ret.data, ret
