@@ -331,7 +331,7 @@ if ( Test-Path -path "$root_dir\conf\minion" ) {
 # Start the minion
 if ( $Start ) {
     Write-Host "Starting minion process: " -NoNewline
-    Start-Process -FilePath "$salt_bin" `
+    Start-Process -FilePath "`"$salt_bin`"" `
                   -ArgumentList "-c","`"$root_dir\conf`"" `
                   -WindowStyle Hidden
     # Verify running minion
