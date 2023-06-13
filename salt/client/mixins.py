@@ -481,17 +481,7 @@ class AsyncClientMixin(ClientStateMixin):
 
     @classmethod
     def _proc_function_remote(
-        cls,
-        *,
-        instance,
-        opts,
-        fun,
-        low,
-        user,
-        tag,
-        jid,
-        daemonize=True,
-        full_return=False
+        cls, *, instance, opts, fun, low, user, tag, jid, daemonize=True
     ):
         """
         Run this method in a multiprocess target to execute the function on the
@@ -517,7 +507,7 @@ class AsyncClientMixin(ClientStateMixin):
             instance = cls(opts)
 
         try:
-            return instance.cmd_sync(low, full_return=full_return)
+            return instance.cmd_sync(low)
         except salt.exceptions.EauthAuthenticationError as exc:
             log.error(exc)
 
