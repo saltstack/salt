@@ -8,6 +8,10 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages
+      relenv-version:
+        type: string
+        required: true
+        description: The relenv version to set prior to building packages.
       sign-packages:
         type: boolean
         default: false
@@ -99,7 +103,7 @@ jobs:
 
       - name: Build Windows Packages
         run: |
-          tools pkg build windows ${{
+          tools pkg build windows --relenv-version=${{ inputs.relenv-version }}  ${{
             matrix.source == 'onedir' &&
             format(
               '--onedir salt-{0}-onedir-windows-{1}.zip --salt-version {0} --arch {1} {2}',

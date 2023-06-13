@@ -8,6 +8,10 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages.
+      relenv-version:
+        type: string
+        required: true
+        description: The relenv version to set prior to building packages.
 
 env:
   COLUMNS: 190
@@ -68,7 +72,7 @@ jobs:
 
       - name: Build RPM
         run: |
-          tools pkg build rpm ${{
+          tools pkg build rpm  --relenv-version=${{ inputs.relenv-version }} ${{
               matrix.source == 'onedir' &&
               format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
               ||
