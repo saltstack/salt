@@ -748,6 +748,10 @@ def salt_onedir(
         ctx.info(f"Copying '{src.relative_to(tools.utils.REPO_ROOT)}' to '{dst}' ...")
         shutil.copyfile(src, dst)
 
+    # Add package type file for package grain
+    with open(pathlib.Path(site_packages) / "_pkg.txt", "w") as fp:
+        fp.write("onedir")
+
 
 def _check_pkg_build_files_exist(ctx: Context, **kwargs):
     for name, path in kwargs.items():

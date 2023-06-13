@@ -1,4 +1,4 @@
-import sys
+import os
 
 import salt.grains.package
 
@@ -8,7 +8,7 @@ def test_grain_package_type(tmp_path):
     Test grains.package_type for both package types
     """
     ret = salt.grains.package.package()["package"]
-    if hasattr(sys, "RELENV"):
-        assert ret == "onedir"
+    if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
+        assert ret == "pip"
     else:
-        assert ret == "system"
+        assert ret == "onedir"

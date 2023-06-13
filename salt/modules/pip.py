@@ -145,7 +145,7 @@ def _check_bundled():
     """
     Gather run-time information to indicate if we are running from source or bundled.
     """
-    if salt.utils.package.type() == "onedir":
+    if salt.utils.package.bundled():
         return True
     return False
 
