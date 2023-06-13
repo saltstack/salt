@@ -80,11 +80,18 @@ def debian(
             ctx.exit(1)
         ctx.info("Building the package from the source files")
         shared_constants = _get_shared_constants()
+        if not python_version:
+            python_version = shared_constants["python_version_linux"]
+        if not relenv_version:
+            relenv_version = shared_constants["relenv_version"]
+        if TYPE_CHECKING:
+            assert python_version
+            assert relenv_version
         new_env = {
-            "SALT_RELENV_VERSION": relenv_version or shared_constants["relenv_version"],
-            "SALT_PYTHON_VERSION": python_version
-            or shared_constants["python_version_linux"],
+            "SALT_RELENV_VERSION": relenv_version,
+            "SALT_PYTHON_VERSION": python_version,
             "SALT_PACKAGE_ARCH": str(arch),
+            "RELENV_FETCH_VERSION": relenv_version,
         }
         for key, value in new_env.items():
             os.environ[key] = value
@@ -140,11 +147,18 @@ def rpm(
             ctx.exit(1)
         ctx.info(f"Building the package from the source files")
         shared_constants = _get_shared_constants()
+        if not python_version:
+            python_version = shared_constants["python_version_linux"]
+        if not relenv_version:
+            relenv_version = shared_constants["relenv_version"]
+        if TYPE_CHECKING:
+            assert python_version
+            assert relenv_version
         new_env = {
-            "SALT_RELENV_VERSION": relenv_version or shared_constants["relenv_version"],
-            "SALT_PYTHON_VERSION": python_version
-            or shared_constants["python_version_linux"],
+            "SALT_RELENV_VERSION": relenv_version,
+            "SALT_PYTHON_VERSION": python_version,
             "SALT_PACKAGE_ARCH": str(arch),
+            "RELENV_FETCH_VERSION": relenv_version,
         }
         for key, value in new_env.items():
             os.environ[key] = value
@@ -171,10 +185,21 @@ def rpm(
         "sign": {
             "help": "Sign and notorize built package",
         },
+        "relenv_version": {
+            "help": "The version of relenv to use",
+        },
+        "python_version": {
+            "help": "The version of python to build with using relenv",
+        },
     },
 )
 def macos(
-    ctx: Context, onedir: str = None, salt_version: str = None, sign: bool = False
+    ctx: Context,
+    onedir: str = None,
+    salt_version: str = None,
+    sign: bool = False,
+    relenv_version: str = None,
+    python_version: str = None,
 ):
     """
     Build the macOS package.
@@ -201,10 +226,23 @@ def macos(
     if not onedir:
         # Prep the salt onedir if not building from an existing one
         shared_constants = _get_shared_constants()
-        py_ver = shared_constants["python_version_macos"]
+        if not python_version:
+            python_version = shared_constants["python_version_linux"]
+        if not relenv_version:
+            relenv_version = shared_constants["relenv_version"]
+        if TYPE_CHECKING:
+            assert python_version
+            assert relenv_version
+        os.environ["RELENV_FETCH_VERSION"] = relenv_version
         with ctx.chdir(checkout / "pkg" / "macos"):
             ctx.info("Fetching relenv python")
-            ctx.run("./build_python.sh", "--version", py_ver)
+            ctx.run(
+                "./build_python.sh",
+                "--version",
+                python_version,
+                "--relenv-version",
+                relenv_version,
+            )
 
             ctx.info("Installing salt into the relenv python")
             ctx.run("./install_salt.sh")
@@ -252,6 +290,12 @@ def macos(
         "sign": {
             "help": "Sign and notarize built package",
         },
+        "relenv_version": {
+            "help": "The version of relenv to use",
+        },
+        "python_version": {
+            "help": "The version of python to build with using relenv",
+        },
     },
 )
 def windows(
@@ -260,6 +304,8 @@ def windows(
     salt_version: str = None,
     arch: str = None,
     sign: bool = False,
+    relenv_version: str = None,
+    python_version: str = None,
 ):
     """
     Build the Windows package.
@@ -267,6 +313,16 @@ def windows(
     if TYPE_CHECKING:
         assert salt_version is not None
         assert arch is not None
+
+    shared_constants = _get_shared_constants()
+    if not python_version:
+        python_version = shared_constants["python_version_linux"]
+    if not relenv_version:
+        relenv_version = shared_constants["relenv_version"]
+    if TYPE_CHECKING:
+        assert python_version
+        assert relenv_version
+    os.environ["RELENV_FETCH_VERSION"] = relenv_version
 
     build_cmd = [
         "powershell.exe",
@@ -276,6 +332,10 @@ def windows(
         arch,
         "-Version",
         salt_version,
+        "-PythonVersion",
+        python_version,
+        "-RelenvVersion",
+        relenv_version,
         "-CICD",
     ]
 
@@ -383,6 +443,9 @@ def windows(
             "help": "The version of python to create an environment for using relenv",
             "required": True,
         },
+        "relenv_version": {
+            "help": "The version of relenv to use",
+        },
         "package_name": {
             "help": "The name of the relenv environment to be created",
             "required": True,
@@ -397,6 +460,7 @@ def onedir_dependencies(
     ctx: Context,
     arch: str = None,
     python_version: str = None,
+    relenv_version: str = None,
     package_name: str = None,
     platform: str = None,
 ):
@@ -410,6 +474,16 @@ def onedir_dependencies(
         assert python_version is not None
         assert package_name is not None
         assert platform is not None
+
+    shared_constants = _get_shared_constants()
+    if not python_version:
+        python_version = shared_constants[f"python_version_{platform}"]
+    if not relenv_version:
+        relenv_version = shared_constants["relenv_version"]
+    if TYPE_CHECKING:
+        assert python_version
+        assert relenv_version
+    os.environ["RELENV_FETCH_VERSION"] = relenv_version
 
     # We import relenv here because it is not a hard requirement for the rest of the tools commands
     try:
@@ -433,12 +507,11 @@ def onedir_dependencies(
         ctx.error(f"Failed to get the relenv version: {ret}")
         ctx.exit(1)
 
-    target_relenv_version = _get_shared_constants()["relenv_version"]
     env_relenv_version = ret.stdout.strip().decode()
-    if env_relenv_version != target_relenv_version:
+    if env_relenv_version != relenv_version:
         ctx.error(
             f"The onedir installed relenv version({env_relenv_version}) is not "
-            f"the relenv version which should be used({target_relenv_version})."
+            f"the relenv version which should be used({relenv_version})."
         )
         ctx.exit(1)
 
@@ -529,6 +602,9 @@ def onedir_dependencies(
             "help": "The name of the relenv environment to install salt into",
             "required": True,
         },
+        "relenv_version": {
+            "help": "The version of relenv to use",
+        },
     },
 )
 def salt_onedir(
@@ -536,6 +612,7 @@ def salt_onedir(
     salt_name: str,
     platform: str = None,
     package_name: str = None,
+    relenv_version: str = None,
 ):
     """
     Install salt into a relenv onedir environment.
@@ -543,6 +620,13 @@ def salt_onedir(
     if TYPE_CHECKING:
         assert platform is not None
         assert package_name is not None
+
+    shared_constants = _get_shared_constants()
+    if not relenv_version:
+        relenv_version = shared_constants["relenv_version"]
+    if TYPE_CHECKING:
+        assert relenv_version
+    os.environ["RELENV_FETCH_VERSION"] = relenv_version
 
     salt_archive = pathlib.Path(salt_name).resolve()
     onedir_env = pathlib.Path(package_name).resolve()
@@ -561,12 +645,11 @@ def salt_onedir(
         ctx.error(f"Failed to get the relenv version: {ret}")
         ctx.exit(1)
 
-    target_relenv_version = _get_shared_constants()["relenv_version"]
     env_relenv_version = ret.stdout.strip().decode()
-    if env_relenv_version != target_relenv_version:
+    if env_relenv_version != relenv_version:
         ctx.error(
             f"The onedir installed relenv version({env_relenv_version}) is not "
-            f"the relenv version which should be used({target_relenv_version})."
+            f"the relenv version which should be used({relenv_version})."
         )
         ctx.exit(1)
 

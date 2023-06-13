@@ -8,6 +8,10 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages.
+      relenv-version:
+        type: string
+        required: true
+        description: The relenv version to set prior to building packages.
       sign-packages:
         type: boolean
         default: false
@@ -104,7 +108,7 @@ jobs:
           APPLE_ACCT: "${{ secrets.MAC_SIGN_APPLE_ACCT }}"
           APP_SPEC_PWD: "${{ secrets.MAC_SIGN_APP_SPEC_PWD }}"
         run: |
-          tools pkg build macos ${{
+          tools pkg build macos --relenv-version=${{ inputs.relenv-version }}  ${{
               matrix.source == 'onedir' &&
               format(
                 '--onedir salt-{0}-onedir-darwin-{1}.tar.xz --salt-version {0} {2}',
