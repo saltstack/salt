@@ -1290,17 +1290,17 @@ def test_call_apt_dpkg_lock():
     ]
 
     cmd_mock = MagicMock(side_effect=cmd_side_effect)
-    cmd_call = (
+    cmd_call = [
         call(
             ["dpkg", "-l", "python"],
-            env={},
-            ignore_retcode=False,
             output_loglevel="quiet",
             python_shell=True,
+            env={},
+            ignore_retcode=False,
             username="Darth Vader",
         ),
-    )
-    expected_calls = [cmd_call * 5]
+    ]
+    expected_calls = cmd_call * 5
 
     with patch.dict(
         aptpkg.__salt__,
@@ -1320,7 +1320,7 @@ def test_call_apt_dpkg_lock():
 
             # We should attempt to call the cmd 5 times
             assert cmd_mock.call_count == 5
-            cmd_mock.has_calls(expected_calls)
+            cmd_mock.assert_has_calls(expected_calls)
 
 
 def test_services_need_restart_checkrestart_missing():
