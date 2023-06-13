@@ -289,7 +289,7 @@ class Runner(RunnerClient):
 
                 # otherwise run it in the main process
                 if self.opts.get("eauth"):
-                    ret = self.cmd_sync(low)
+                    ret = self.cmd_sync(low, full_return=True)
                     if isinstance(ret, dict) and set(ret) == {"data", "outputter"}:
                         outputter = ret["outputter"]
                         ret = ret["data"]
@@ -306,6 +306,7 @@ class Runner(RunnerClient):
                         tag=async_pub["tag"],
                         jid=async_pub["jid"],
                         daemonize=False,
+                        full_return=True,
                     )
             except salt.exceptions.SaltException as exc:
                 with salt.utils.event.get_event("master", opts=self.opts) as evt:

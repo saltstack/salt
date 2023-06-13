@@ -412,6 +412,7 @@ class SyncClientMixin(ClientStateMixin):
                         traceback.format_exc(),
                     )
                 data["success"] = False
+                data["retcode"] = 1
 
             if self.store_job:
                 try:
@@ -480,7 +481,17 @@ class AsyncClientMixin(ClientStateMixin):
 
     @classmethod
     def _proc_function_remote(
-        cls, *, instance, opts, fun, low, user, tag, jid, daemonize=True
+        cls,
+        *,
+        instance,
+        opts,
+        fun,
+        low,
+        user,
+        tag,
+        jid,
+        daemonize=True,
+        full_return=False
     ):
         """
         Run this method in a multiprocess target to execute the function on the
@@ -506,13 +517,23 @@ class AsyncClientMixin(ClientStateMixin):
             instance = cls(opts)
 
         try:
-            return instance.cmd_sync(low)
+            return instance.cmd_sync(low, full_return=False)
         except salt.exceptions.EauthAuthenticationError as exc:
             log.error(exc)
 
     @classmethod
     def _proc_function(
-        cls, *, instance, opts, fun, low, user, tag, jid, daemonize=True
+        cls,
+        *,
+        instance,
+        opts,
+        fun,
+        low,
+        user,
+        tag,
+        jid,
+        daemonize=True,
+        full_return=False
     ):
         """
         Run this method in a multiprocess target to execute the function
@@ -537,7 +558,7 @@ class AsyncClientMixin(ClientStateMixin):
         low["__user__"] = user
         low["__tag__"] = tag
 
-        return instance.low(fun, low)
+        return instance.low(fun, low, full_return=full_return)
 
     def cmd_async(self, low):
         """
