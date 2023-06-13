@@ -544,6 +544,7 @@ jobs:
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      relenv-version: "0.12.3"
 
   build-deb-pkgs:
     name: Build DEB Packages
@@ -554,6 +555,7 @@ jobs:
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      relenv-version: "0.12.3"
 
   build-windows-pkgs:
     name: Build Windows Packages
@@ -564,6 +566,7 @@ jobs:
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      relenv-version: "0.12.3"
 
   build-macos-pkgs:
     name: Build macOS Packages
@@ -574,6 +577,7 @@ jobs:
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      relenv-version: "0.12.3"
 
   amazonlinux-2-pkg-tests:
     name: Amazon Linux 2 Package Tests

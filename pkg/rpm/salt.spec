@@ -137,6 +137,7 @@ cd $RPM_BUILD_DIR
 %if "%{getenv:SALT_ONEDIR_ARCHIVE}" == ""
   python3 -m venv --clear --copies build/venv
   build/venv/bin/python3 -m pip install relenv==${SALT_RELENV_VERSION}
+  export FETCH_RELENV_VERSION=${SALT_RELENV_VERSION}
   export PY=$(build/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
   build/venv/bin/python3 -m pip install -r %{_salt_src}/requirements/static/ci/py${PY}/tools.txt
   build/venv/bin/relenv fetch

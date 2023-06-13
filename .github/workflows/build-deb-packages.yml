@@ -8,6 +8,10 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages.
+      relenv-version:
+        type: string
+        required: true
+        description: The relenv version to set prior to building packages.
 
 jobs:
   build:
@@ -80,7 +84,7 @@ jobs:
       - name: Build Deb
         working-directory: pkgs/checkout/
         run: |
-          tools pkg build deb ${{
+          tools pkg build deb --relenv-version=${{ inputs.relenv-version }} ${{
               matrix.source == 'onedir' &&
               format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
               ||

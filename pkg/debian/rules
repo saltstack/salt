@@ -18,6 +18,7 @@ override_dh_auto_build:
 	mkdir -p build/onedir
 	python3 -m venv --clear --copies build/onedir/venv
 	build/onedir/venv/bin/python3 -m pip install relenv==$${SALT_RELENV_VERSION}
+	export FETCH_RELENV_VERSION=$${SALT_RELENV_VERSION}
 	export PY=$$(build/onedir/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()') \
 		&& build/onedir/venv/bin/python3 -m pip install -r requirements/static/ci/py$${PY}/tools.txt
 	build/onedir/venv/bin/relenv fetch

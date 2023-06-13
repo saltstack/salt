@@ -46,6 +46,7 @@ _usage() {
      echo "  -h, --help      this message"
      echo "  -b, --build     build python instead of fetching"
      echo "  -v, --version   version of python to install, must be available with relenv"
+     echo "  -r, --relenv-version   version of python to install, must be available with relenv"
      echo ""
      echo "  To build python 3.10.11:"
      echo "      example: $0 --version 3.10.11"
@@ -85,7 +86,12 @@ while true; do
             ;;
         -v | --version )
             shift
-            PY_VERSION="$*"
+            PY_VERSION="$1"
+            shift
+            ;;
+        -r | --relenv-version )
+            shift
+            RELENV_VERSION="$1"
             shift
             ;;
         -b | --build )
@@ -99,8 +105,9 @@ while true; do
             exit 1
             ;;
         * )
-            PY_VERSION="$*"
-            shift
+            echo "Invalid Arguments: $*"
+            _usage
+            exit 1
             ;;
     esac
 done
@@ -183,8 +190,13 @@ fi
 # Installing Relenv
 #-------------------------------------------------------------------------------
 _msg "Installing relenv"
-pip install relenv >/dev/null 2>&1
-if [ -n "$(pip show relenv)" ]; then
+if [ -n "${RELENV_VERSION}" ]; then
+    pip install relenv==${RELENV_VERSION} >/dev/null 2>&1
+    export RELENV_FETCH_VERSION=${RELENV_VERSION}
+else
+    pip install relenv >/dev/null 2>&1
+fi
+if [ -n "$(relenv --version)" ]; then
     _success
 else
     _failure
