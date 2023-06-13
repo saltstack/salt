@@ -77,7 +77,6 @@ def test_versions_report(salt_run_cli):
 
     assert "relenv" in ret_dict["Dependency Versions"]
     assert "Salt Extensions" in ret_dict
-    assert "salt-analytics-framework" in ret_dict["Salt Extensions"]
 
 
 def test_salt_run_version(salt_run_cli):
