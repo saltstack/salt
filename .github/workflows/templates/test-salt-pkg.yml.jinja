@@ -50,7 +50,7 @@
       arch: <{ arch }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: <{ pkg_type }>
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
 
@@ -75,7 +75,7 @@
       arch: <{ arch }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: macos
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_macos }>
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
 
@@ -102,7 +102,7 @@
       arch: <{ arch }>
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       pkg-type: <{ pkg_type }>
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_windows }>
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
 

@@ -221,7 +221,7 @@ else
 fi
 
 _msg "Extracting python environment"
-relenv create "$BUILD_DIR/opt/salt"
+relenv create --python=$PY_VERSION "$BUILD_DIR/opt/salt"
 if [ -f "$BLD_PY_BIN" ]; then
     _success
 else
