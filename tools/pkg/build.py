@@ -78,7 +78,7 @@ def debian(
         ctx.info("Building the package from the source files")
         shared_constants = _get_shared_constants()
         if not python_version:
-            python_version = shared_constants["python_version_linux"]
+            python_version = shared_constants["python_version"]
         if not relenv_version:
             relenv_version = shared_constants["relenv_version"]
         if TYPE_CHECKING:
@@ -145,7 +145,7 @@ def rpm(
         ctx.info(f"Building the package from the source files")
         shared_constants = _get_shared_constants()
         if not python_version:
-            python_version = shared_constants["python_version_linux"]
+            python_version = shared_constants["python_version"]
         if not relenv_version:
             relenv_version = shared_constants["relenv_version"]
         if TYPE_CHECKING:
@@ -224,7 +224,7 @@ def macos(
         # Prep the salt onedir if not building from an existing one
         shared_constants = _get_shared_constants()
         if not python_version:
-            python_version = shared_constants["python_version_linux"]
+            python_version = shared_constants["python_version"]
         if not relenv_version:
             relenv_version = shared_constants["relenv_version"]
         if TYPE_CHECKING:
@@ -313,7 +313,7 @@ def windows(
 
     shared_constants = _get_shared_constants()
     if not python_version:
-        python_version = shared_constants["python_version_linux"]
+        python_version = shared_constants["python_version"]
     if not relenv_version:
         relenv_version = shared_constants["relenv_version"]
     if TYPE_CHECKING:
@@ -474,7 +474,7 @@ def onedir_dependencies(
 
     shared_constants = _get_shared_constants()
     if not python_version:
-        python_version = shared_constants[f"python_version_{platform}"]
+        python_version = shared_constants["python_version"]
     if not relenv_version:
         relenv_version = shared_constants["relenv_version"]
     if TYPE_CHECKING:
