@@ -3,7 +3,7 @@ import os
 import salt.grains.package
 
 
-def test_grain_package_type(tmp_path):
+def test_grain_package_type():
     """
     Test grains.package_type for both package types
     """
