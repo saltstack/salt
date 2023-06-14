@@ -33,7 +33,7 @@ import salt.syspaths as syspaths
 import salt.utils.args
 import salt.utils.crypt
 import salt.utils.data
-import salt.utils.decorators.state
+import salt.utils.decorators.state as state_decorators
 import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
@@ -2288,7 +2288,8 @@ class State:
         }
         return ret
 
-    @salt.utils.decorators.state.OutputUnifier("content_check", "unify")
+    @state_decorators.include_warnings_in_state_return
+    @state_decorators.OutputUnifier("content_check", "unify")
     def call(self, low, chunks=None, running=None, retries=1):
         """
         Call a state directly with the low data structure, verify data
