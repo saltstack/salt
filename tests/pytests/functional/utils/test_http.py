@@ -20,6 +20,11 @@ def test_decode_body(webserver, integration_files_dir, backend):
     )
     assert isinstance(ret["body"], bytes)
 
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.skip_if_binaries_missing("docker", "dockerd", check_all=False),
+]
+
 
 @pytest.fixture(scope="module")
 def tinyproxy_port():
@@ -36,34 +41,51 @@ def tinyproxy_pass():
     return random_string("tinyproxy-pass-")
 
 
+@pytest.fixture(params=[True, False], ids=lambda x: "basic-auth" if x else "no-auth")
+def tinyproxy_basic_auth(request):
+    return request.param
+
+
+@pytest.fixture(params=[True, False], ids=lambda x: "no-proxy" if x else "with-proxy")
+def no_proxy(request):
+    return request.param
+
+
+@pytest.fixture(params=["POST", "GET"], ids=lambda x: x)
+def http_method(request):
+    return request.param
+
+
 @pytest.fixture(scope="module")
 def tinyproxy_dir(tmp_path_factory):
     try:
         dirname = tmp_path_factory.mktemp("tinyproxy")
-        print(dirname)
         yield dirname
     finally:
         shutil.rmtree(dirname, ignore_errors=True)
 
 
-@pytest.fixture(scope="module")
-def tinyproxy_conf(tinyproxy_dir, tinyproxy_port, tinyproxy_user, tinyproxy_pass):
+@pytest.fixture
+def tinyproxy_conf(
+    tinyproxy_dir, tinyproxy_port, tinyproxy_user, tinyproxy_pass, tinyproxy_basic_auth
+):
+    basic_auth = (
+        f"\nBasicAuth {tinyproxy_user} {tinyproxy_pass}" if tinyproxy_basic_auth else ""
+    )
     conf = """Port {port}
 Listen 127.0.0.1
 Timeout 600
 Allow 127.0.0.1
-AddHeader "X-Tinyproxy-Header" "Test custom tinyproxy header"
-BasicAuth {uname} {passwd}
+AddHeader "X-Tinyproxy-Header" "Test custom tinyproxy header"{auth}
     """.format(
-        port=tinyproxy_port, uname=tinyproxy_user, passwd=tinyproxy_pass
+        port=tinyproxy_port, auth=basic_auth
     )
     (tinyproxy_dir / "tinyproxy.conf").write_text(conf)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def tinyproxy_container(
     salt_factories,
-    tinyproxy_port,
     tinyproxy_conf,
     tinyproxy_dir,
 ):
@@ -82,8 +104,6 @@ def tinyproxy_container(
         yield factory
 
 
-@pytest.mark.slow_test
-@pytest.mark.skip_if_binaries_missing("docker", "dockerd", check_all=False)
 @pytest.mark.parametrize("backend", ["requests", "tornado", "urllib2"])
 def test_real_proxy(
     tinyproxy_container,
@@ -92,23 +112,44 @@ def test_real_proxy(
     tinyproxy_user,
     tinyproxy_pass,
     backend,
+    tinyproxy_basic_auth,
+    no_proxy,
+    http_method,
 ):
-    data = "mydatahere"
+    data = b"mydatahere"
     opts = {
         "proxy_host": "localhost",
         "proxy_port": tinyproxy_port,
-        "proxy_username": tinyproxy_user,
-        "proxy_password": tinyproxy_pass,
     }
+    if tinyproxy_basic_auth:
+        opts.update(
+            {
+                "proxy_username": tinyproxy_user,
+                "proxy_password": tinyproxy_pass,
+            }
+        )
 
     # Expecting the headers allows verification that it went through the proxy without looking at the logs
-    httpserver.expect_request(
-        "/real_proxy_test",
-        headers={"X-Tinyproxy-Header": "Test custom tinyproxy header"},
-    ).respond_with_data(data)
+    if no_proxy:
+        opts["no_proxy"] = ["random.hostname.io", httpserver.host]
+        httpserver.expect_request(
+            "/real_proxy_test",
+        ).respond_with_data(data, content_type="application/octet-stream")
+    else:
+        httpserver.expect_request(
+            "/real_proxy_test",
+            headers={"X-Tinyproxy-Header": "Test custom tinyproxy header"},
+        ).respond_with_data(data, content_type="application/octet-stream")
     url = httpserver.url_for("/real_proxy_test")
 
     # We just want to be sure that it's using the proxy
-    ret = salt.utils.http.query(url, method="POST", data=data, backend=backend, opts=opts)
+    ret = salt.utils.http.query(
+        url,
+        method=http_method,
+        data=data,
+        backend=backend,
+        opts=opts,
+        decode_body=False,
+    )
     body = ret.get("body", "")
     assert body == data
