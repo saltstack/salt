@@ -1743,18 +1743,18 @@ def test_pkgs_onedir(session):
     chunks = {
         "install": ["pkg/tests/"],
         "upgrade": [
-            "pkg/tests/upgrade/test_salt_upgrade.py::test_salt_upgrade",
             "--upgrade",
             "--no-uninstall",
+            "pkg/tests/upgrade/",
         ],
         "upgrade-classic": [
-            "pkg/tests/upgrade/test_salt_upgrade.py::test_salt_upgrade",
             "--upgrade",
             "--no-uninstall",
+            "pkg/tests/upgrade/",
         ],
         "download-pkgs": [
             "--download-pkgs",
-            "pkg/tests/download/test_pkg_download.py",
+            "pkg/tests/download/",
         ],
     }
 
@@ -1802,6 +1802,8 @@ def test_pkgs_onedir(session):
     pytest_args = (
         cmd_args[:]
         + [
+            "-c",
+            str(REPO_ROOT / "pkg-tests-pytest.ini"),
             f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
             f"--log-file=artifacts/logs/{runtests_log_filename}.log",
         ]
@@ -1813,6 +1815,8 @@ def test_pkgs_onedir(session):
         pytest_args = (
             cmd_args[:]
             + [
+                "-c",
+                str(REPO_ROOT / "pkg-tests-pytest.ini"),
                 "--no-install",
                 f"--junitxml=artifacts/xml-unittests-output/{junit_report_filename}.xml",
                 f"--log-file=artifacts/logs/{runtests_log_filename}.log",
