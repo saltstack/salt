@@ -20,9 +20,12 @@ def test_symlink(file, tmp_path):
         "name": str(symlink),
         "changes": {"new": str(symlink)},
         "result": True,
-        "comment": "Created new symlink {} -> {}".format(symlink, target),
+        "comment": f"Created new symlink {symlink} -> {target}",
     }
-    assert ret.filtered == expected
+    filtered_return = ret.filtered
+    # Remove any warnings since that's not what we're testing
+    filtered_return.pop("warnings", None)
+    assert filtered_return == expected
     assert symlink.exists()
     assert symlink.is_symlink()
 
