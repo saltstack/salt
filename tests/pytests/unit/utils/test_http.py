@@ -250,7 +250,7 @@ def test_query_proxy(httpserver):
         )
 
         assert mock_session.return_value.proxies == {
-            "HTTP": "http://salt_test:super_secret@127.0.0.1:88"
+            "http": "http://salt_test:super_secret@127.0.0.1:88"
         }
 
     opts["no_proxy"] = [httpserver.host]
