@@ -91,7 +91,7 @@ def tinyproxy_container(
 ):
     container = salt_factories.get_container(
         "tinyproxy",
-        image_name="vimagick/tinyproxy",
+        image_name="ghcr.io/saltstack/salt-ci-containers/tinyproxy:latest",
         container_run_kwargs={
             "network_mode": "host",
             "volumes": {str(tinyproxy_dir): {"bind": "/etc/tinyproxy", "mode": "z"}},
