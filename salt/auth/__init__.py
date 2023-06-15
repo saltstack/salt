@@ -322,66 +322,27 @@ class LoadAuth:
         If the effective user id is the same as the passed one, return True on success or False on
         failure.
         """
-        log.warning(f"DGM auth authenticate_key load '{load}', key '{key}'")
         error_msg = 'Authentication failure of type "user" occurred.'
 
         auth_key = load.pop("key", None)
         if auth_key is None:
-            log.warning(
-                f"DGM auth authenticate_key auth_key is none, error_msg '{error_msg}'"
-            )
             log.warning(error_msg)
             return False
 
         if "user" in load:
             auth_user = AuthUser(load["user"])
-            log.warning(f"DGM auth auth_user '{auth_user}', load '{load}'")
             if auth_user.is_sudo():
-                # If someone sudos check to make sure there is no ACL's around their username
-                dgm_user = self.opts.get("user", "root")
-
-                ## dgm_opts_key = key[self.opts.get("user", "root")]
-                ## log.warning(f"DGM auth auth_key, user in load, dgm_user '{dgm_user}', '{auth_key}', dgm_opts_key '{dgm_opts_key}', opts '{self.opts}'")
-                ## if auth_key != key[self.opts.get("user", "root")]:
-                ##     log.warning(f"DGM auth error error_msg '{error_msg}'")
-                ##     log.warning(error_msg)
-                ##     return False
-                ## return auth_user.sudo_name()
-
                 for check_key in key:
-                    dgm_user = self.opts.get("user", "root")
-                    dgm_check_key = key[check_key]
-                    log.warning(
-                        f"DGM auth auth_key, user in load is_sudo, dgm_user '{dgm_user}', '{auth_key}', check_key '{check_key}', dgm_check_key '{dgm_check_key}'"
-                    )
                     if auth_key == key[check_key]:
-                        log.warning(
-                            f"DGM auth user successful auth_user.sudo_name '{auth_user.sudo_name()}'"
-                        )
                         return auth_user.sudo_name()
-
-                log.warning(f"DGM auth error error_msg '{error_msg}'")
-                log.warning(error_msg)
                 return False
             elif (
                 load["user"] == self.opts.get("user", "root") or load["user"] == "root"
             ):
-                ## if auth_key != key[self.opts.get("user", "root")]:
-                ##     log.warning(
-                ##         "Master runs as %r, but user in payload is %r",
-                ##         self.opts.get("user", "root"),
-                ##         load["user"],
-                ##     )
-                ##     log.warning(error_msg)
-                ##     return False
-
                 for check_key in key:
                     dgm_user = self.opts.get("user", "root")
                     dgm_check_key = key[check_key]
                     if auth_key == key[check_key]:
-                        log.warning(
-                            f"DGM auth user successful, auth_key matches check_key dgm_user '{dgm_user}', auth_key '{auth_key}', check_key '{check_key}', dgm_check_key '{dgm_check_key}', key[dgm_user] '{key[dgm_user]}'"
-                        )
                         return True
                 log.warning(
                     "Master runs as %r, but user in payload is %r",
@@ -394,16 +355,12 @@ class LoadAuth:
             elif auth_user.is_running_user():
                 if auth_key != key.get(load["user"]):
                     load_user = load["user"]
-                    log.warning(
-                        f"DGM auth user unsuccessful, auth_user is running useri and not present, load_user '{load_user}', auth_key '{auth_key}', key '{key}' "
-                    )
                     log.warning(error_msg)
                     return False
             elif auth_key == key.get("root"):
                 pass
-            # DGM TBD should we allow for salt ? here, sounds too breakable
-            # but there is nologin for salt, so maybe fine
             elif auth_key == key.get("salt"):
+                # there is nologin for salt
                 pass
             else:
                 if load["user"] in key:
@@ -416,28 +373,10 @@ class LoadAuth:
                     log.warning(error_msg)
                     return False
         else:
-            ## dgm_user = salt.utils.user.get_user()
-            ## dgm_key = key[salt.utils.user.get_user()]
-            ## log.warning(f"DGM authenticate_key, user '{dgm_user}', user key '{dgm_user_key}', auth_key '{auth_key}'")
-            ## if auth_key != key[salt.utils.user.get_user()]:
-            ##     log.warning(f"DGM authenticate_key, user '{dgm_user}', user key '{dgm_user_key}', auth_key '{auth_key}', keys not equal '{error_msg}'")
-            ##     log.warning(error_msg)
-            ##     return False
             for check_key in key:
-                dgm_user = salt.utils.user.get_user()
-                dgm_check_key = key[check_key]
-                log.warning(
-                    f"DGM authenticate_key, user '{dgm_user}', check_key '{check_key}', dgm_check_key '{dgm_check_key}', auth_key '{auth_key}'"
-                )
                 if auth_key == key[check_key]:
-                    log.warning(
-                        f"DGM authenticate_key, user '{dgm_user}', check_key '{check_key}', dgm_check_key '{dgm_check_key}', auth_key '{auth_key}', keys equal"
-                    )
                     return True
 
-            log.warning(
-                f"DGM authenticate_key, user '{dgm_user}', auth_key '{auth_key}', keys not equal '{error_msg}', key '{key}'"
-            )
             log.warning(error_msg)
             return False
 
@@ -504,14 +443,9 @@ class LoadAuth:
         If an error is encountered, return immediately with the relevant error dictionary
         as authentication has failed. Otherwise, return the username and valid auth_list.
         """
-        log.warning(
-            f"DGM check_authentication auth_type '{auth_type}', key '{key}', load '{load}'"
-        )
         auth_list = []
         username = load.get("username", "UNKNOWN")
         ret = {"auth_list": auth_list, "username": username, "error": {}}
-
-        log.warning(f"DGM check_authentication initial ret '{ret}'")
 
         # Authenticate
         if auth_type == "token":
@@ -528,7 +462,6 @@ class LoadAuth:
             ret["username"] = username
             auth_list = self.get_auth_list(load, token=token)
         elif auth_type == "eauth":
-            # DGM TBD needs to check how eauth handles the load and multiple users and their keys
             if not self.authenticate_eauth(load):
                 ret["error"] = {
                     "name": "EauthAuthenticationError",
