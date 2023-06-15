@@ -50,7 +50,6 @@ certifi==2023.07.22
     #   requests
 cffi==1.14.6
     # via
-    #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
     #   clr-loader
     #   cryptography

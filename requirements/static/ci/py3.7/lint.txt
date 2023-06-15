@@ -368,7 +368,6 @@ certvalidator==0.11.1
     # via vcert
 cffi==1.14.6
     # via
-    #   -r requirements/static/ci/common.in
     #   azure-datalake-store
     #   bcrypt
     #   cryptography
