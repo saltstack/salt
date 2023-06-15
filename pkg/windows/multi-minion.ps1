@@ -3,9 +3,9 @@
 Script for setting up an additional salt-minion on a machine with Salt installed
 
 .DESCRIPTION
-This script will configure an additional minion on a machine that already has a
-Salt installation using one of the Salt packages. It will set up the directory
-structure required by Salt. It will also lay down a minion config to be used
+This script configures an additional minion on a machine that already has a Salt
+installation using one of the Salt packages. It sets up the directory structure
+required by Salt. It also lays down a minion config to be used
 by the Salt minion. Additionaly, this script can start the new minion in a
 hidden window.
 
@@ -16,30 +16,30 @@ This script does not need to be run with Administrator privileges
 If a minion that was configured with this script is already running, the script
 will exit.
 
-The following example will set up a minion for the current logged in account. It
+The following example sets up a minion for the current logged in account. It
 configures the minion to connect to the master at 192.168.0.10
 
 .EXAMPLE
 PS>multi-minion.ps1 -Master 192.168.0.10
 PS>multi-minion.ps1 -m 192.168.0.10
 
-The following example will set up a minion for the current logged in account. It
-configures the minion to connect to the master at 192.168.0.10. It will also
-prefix the minion id with `spongebob`
+The following example sets up a minion for the current logged in account. It
+configures the minion to connect to the master at 192.168.0.10. It also prefixes
+the minion id with `spongebob`
 
 .EXAMPLE
 PS>multi-minion.ps1 -Master 192.168.0.10 -Prefix spongebob
 PS>multi-minion.ps1 -m 192.168.0.10 -p spongebob
 
-The following example will set up a minion for the current logged in account. It
-configures the minion to connect to the master at 192.168.0.10. It will also
-start the minion in a hidden window:
+The following example sets up a minion for the current logged in account. It
+configures the minion to connect to the master at 192.168.0.10. It also starts
+the minion in a hidden window:
 
 .EXAMPLE
 PS>multi-minion.ps1 -Master 192.168.0.10 -Start
 PS>multi-minion.ps1 -m 192.168.0.10 -s
 
-The following example will remove a multiminion for the current running account:
+The following example removes a multiminion for the current running account:
 
 .EXAMPLE
 PS>multi-minion.ps1 -Delete
@@ -60,7 +60,7 @@ param(
     [Alias("p")]
     # The prefix to the minion id to differentiate it from the installed system
     # minion. The default is $env:COMPUTERNAME. It might be helpful to use the
-    # minion id of the System minion if you know it
+    # minion id of the system minion if you know it
     [String] $Prefix = "$env:COMPUTERNAME",
 
     [Parameter(Mandatory=$false)]
@@ -82,7 +82,7 @@ param(
         "critical",
         "quiet"
     )]
-    # Start the minion in the background
+    # Set the log level for log file. Default is `warning`
     [String] $LogLevel = "warning",
 
     [Parameter(Mandatory=$false)]

@@ -36,7 +36,7 @@ def test_script_present(mm_script):
 
 def test_install(mm_script, mm_conf):
     """
-    Install a 2nd minion with default settings. Should create a minion config
+    Install a second minion with default settings. Should create a minion config
     file in Local AppData
     """
     ret = subprocess.run(
@@ -54,7 +54,7 @@ def test_install(mm_script, mm_conf):
 
 def test_install_master(mm_script, mm_conf):
     """
-    Install a 2nd minion and set the master to spongebob
+    Install a second minion and set the master to spongebob
     """
     ret = subprocess.run(
         ["powershell", str(mm_script).replace(" ", "' '"), "-m", "spongebob"],
@@ -71,7 +71,7 @@ def test_install_master(mm_script, mm_conf):
 
 def test_install_prefix(mm_script, mm_conf):
     """
-    Install a 2nd minion and add a prefix to the minion id
+    Install a second minion and add a prefix to the minion id
     """
     ret = subprocess.run(
         ["powershell", str(mm_script).replace(" ", "' '"), "-p", "squarepants"],
@@ -88,7 +88,7 @@ def test_install_prefix(mm_script, mm_conf):
 
 def test_install_log_level(mm_script, mm_conf):
     """
-    Install a 2nd minion and set the log level in the log file to debug
+    Install a second minion and set the log level in the log file to debug
     """
     ret = subprocess.run(
         ["powershell", str(mm_script).replace(" ", "' '"), "-l", "debug"],
@@ -105,7 +105,7 @@ def test_install_log_level(mm_script, mm_conf):
 
 def test_install_start(mm_script, mm_conf):
     """
-    Install a 2nd minion and start that minion in a hidden process
+    Install a second minion and start that minion in a hidden process
     """
     ret = subprocess.run(
         ["powershell", str(mm_script).replace(" ", "' '"), "-s"],
