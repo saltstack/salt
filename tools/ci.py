@@ -12,6 +12,7 @@ import sys
 import time
 from typing import TYPE_CHECKING, Any
 
+import requests
 from ptscripts import Context, command_group
 
 import tools.utils
@@ -674,7 +675,7 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
         and pkg_type != "MSI"
     ):
         # These OS's never had arm64 packages built for them
-        # with the tiamate onedir packages.
+        # with the tiamat onedir packages.
         # we will need to ensure when we release 3006.0
         # we allow for 3006.0 jobs to run, because then
         # we will have arm64 onedir packages to upgrade from
@@ -840,3 +841,67 @@ def _filter_test_labels(labels: list[dict[str, Any]]) -> list[tuple[str, str]]:
         for label in labels
         if label["name"].startswith("test:")
     ]
+
+
+@ci.command(
+    name="get-latest-releases",
+    arguments={
+        "salt_version": {
+            "help": "The version of salt being tested against",
+        },
+        "repository": {
+            "help": "The repository to query for releases, e.g. saltstack/salt",
+        },
+    },
+)
+def get_latest_releases(
+    ctx: Context, salt_version: str, repository: str = "saltstack/salt"
+):
+    """
+    Get a list of releases to use for the upgrade and downgrade tests.
+    """
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.exit(1, "The 'GITHUB_OUTPUT' variable is not set.")
+    else:
+        # We aren't testing upgrades from anything before 3006.0 except the latest 3005.x
+        threshold_major = 3006
+        parsed_salt_version = tools.utils.Version(salt_version)
+        releases = tools.utils.get_salt_releases(ctx, repository)
+        # We want the latest 4 major versions, removing the oldest if this version is a new major
+        num_major_versions = 4
+        if parsed_salt_version.minor == 0:
+            num_major_versions = 3
+        majors = sorted(
+            list(
+                {
+                    version.major
+                    for version in releases
+                    if version.major >= threshold_major
+                }
+            )
+        )[-num_major_versions:]
+        latest_releases = []
+        # Append the latest minor for each major
+        for major in majors:
+            minors_of_major = [
+                version for version in releases if version.major == major
+            ]
+            latest_releases.append(minors_of_major[-1])
+
+        # TODO: Remove this block when we reach version 3009.0
+        # Append the latest minor version of 3005 if we don't have enough major versions to test against
+        if len(latest_releases) != num_major_versions:
+            url = "https://repo.saltproject.io/salt/onedir/repo.json"
+            ret = requests.get(url)
+            repo_data = ret.json()
+            latest = list(repo_data["latest"].keys())[0]
+            version = repo_data["latest"][latest]["version"]
+            latest_releases = [version] + latest_releases
+
+        str_releases = [str(version) for version in latest_releases]
+
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"latest-releases={json.dumps(str_releases)}\n")
+
+        ctx.exit(0)
