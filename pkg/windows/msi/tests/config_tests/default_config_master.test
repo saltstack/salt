@@ -1,2 +1,2 @@
-properties CONFIG_TYPE=Default START_MINION="" MASTER=cli.master
+properties START_MINION="" CONFIG_TYPE=Default MASTER=cli.master
 dormant

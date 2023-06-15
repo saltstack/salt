@@ -1,0 +1,4 @@
+cherrypy
+pytest-salt-factories==1.0.0rc17
+pythonnet==3.0.1
+wmi==1.5.1; sys_platform == 'win32'

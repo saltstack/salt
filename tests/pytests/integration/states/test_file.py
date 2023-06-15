@@ -1340,3 +1340,32 @@ def test_state_skip_req(
             state_runs[1]["comment"]
             == "State was not run because requisites were skipped by another state"
         )
+
+
+def test_contents_file(salt_master, salt_call_cli, tmp_path):
+    """
+    test calling file.managed multiple times
+    with salt-call
+    """
+    target_path = tmp_path / "add-contents-file.txt"
+    sls_name = "file-contents"
+    sls_contents = """
+    add_contents_file_sls:
+      file.managed:
+        - name: {}
+        - contents: 1234
+    """.format(
+        target_path
+    )
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+    with sls_tempfile:
+        for i in range(1, 4):
+            ret = salt_call_cli.run("state.sls", sls_name)
+            assert ret.returncode == 0
+            assert ret.data
+            state_run = next(iter(ret.data.values()))
+            assert state_run["result"] is True
+            # Check to make sure the file was created
+            assert target_path.is_file()

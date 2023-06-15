@@ -6,8 +6,7 @@ import time
 import pytest
 
 pytestmark = [
-    pytest.mark.slow_test,
-    pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
     pytest.mark.skip_on_freebsd(reason="Processes are not properly killed on FreeBSD"),
 ]
 

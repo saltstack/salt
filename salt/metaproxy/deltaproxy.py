@@ -2,6 +2,7 @@
 #   Proxy minion metaproxy modules
 #
 
+import asyncio
 import concurrent.futures
 import logging
 import os
@@ -9,6 +10,9 @@ import signal
 import threading
 import traceback
 import types
+
+import tornado.gen
+import tornado.ioloop
 
 import salt
 import salt._logging
@@ -19,8 +23,6 @@ import salt.config
 import salt.crypt
 import salt.defaults.exitcodes
 import salt.engines
-import salt.ext.tornado.gen  # pylint: disable=F0401
-import salt.ext.tornado.ioloop  # pylint: disable=F0401
 import salt.loader
 import salt.minion
 import salt.payload
@@ -58,6 +60,7 @@ from salt.utils.process import SignalHandlingProcess, default_signals
 log = logging.getLogger(__name__)
 
 
+@tornado.gen.coroutine
 def post_master_init(self, master):
     """
     Function to finish init after a deltaproxy proxy
@@ -231,10 +234,11 @@ def post_master_init(self, master):
                 }
             },
             persist=True,
+            fire_event=False,
         )
         log.info("Added mine.update to scheduler")
     else:
-        self.schedule.delete_job("__mine_interval", persist=True)
+        self.schedule.delete_job("__mine_interval", persist=True, fire_event=False)
 
     # add master_alive job if enabled
     if self.opts["transport"] != "tcp" and self.opts["master_alive_interval"] > 0:
@@ -250,6 +254,7 @@ def post_master_init(self, master):
                 }
             },
             persist=True,
+            fire_event=False,
         )
         if (
             self.opts["master_failback"]
@@ -268,18 +273,24 @@ def post_master_init(self, master):
                     }
                 },
                 persist=True,
+                fire_event=False,
             )
         else:
             self.schedule.delete_job(
-                salt.minion.master_event(type="failback"), persist=True
+                salt.minion.master_event(type="failback"),
+                persist=True,
+                fire_event=False,
             )
     else:
         self.schedule.delete_job(
             salt.minion.master_event(type="alive", master=self.opts["master"]),
             persist=True,
+            fire_event=False,
         )
         self.schedule.delete_job(
-            salt.minion.master_event(type="failback"), persist=True
+            salt.minion.master_event(type="failback"),
+            persist=True,
+            fire_event=False,
         )
 
     # proxy keepalive
@@ -304,10 +315,15 @@ def post_master_init(self, master):
                 }
             },
             persist=True,
+            fire_event=False,
         )
-        self.schedule.enable_schedule()
+        self.schedule.enable_schedule(fire_event=False)
     else:
-        self.schedule.delete_job("__proxy_keepalive", persist=True)
+        self.schedule.delete_job(
+            "__proxy_keepalive",
+            persist=True,
+            fire_event=False,
+        )
 
     #  Sync the grains here so the proxy can communicate them to the master
     self.functions["saltutil.sync_grains"](saltenv="base")
@@ -321,24 +337,31 @@ def post_master_init(self, master):
     self.proxy_context = {}
     self.add_periodic_callback("cleanup", self.cleanup_subprocesses)
 
+    _failed = list()
     if self.opts["proxy"].get("parallel_startup"):
         log.debug("Initiating parallel startup for proxies")
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [
-                executor.submit(
-                    subproxy_post_master_init,
+        waitfor = []
+        for _id in self.opts["proxy"].get("ids", []):
+            waitfor.append(
+                subproxy_post_master_init(
                     _id,
                     uid,
                     self.opts,
                     self.proxy,
                     self.utils,
                 )
-                for _id in self.opts["proxy"].get("ids", [])
-            ]
+            )
 
-        for f in concurrent.futures.as_completed(futures):
-            sub_proxy_data = f.result()
+        try:
+            results = yield tornado.gen.multi(waitfor)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Errors loading sub proxies: %s", exc)
+
+        _failed = self.opts["proxy"].get("ids", [])[:]
+        for sub_proxy_data in results:
             minion_id = sub_proxy_data["proxy_opts"].get("id")
+            if minion_id in _failed:
+                _failed.remove(minion_id)
 
             if sub_proxy_data["proxy_minion"]:
                 self.deltaproxy_opts[minion_id] = sub_proxy_data["proxy_opts"]
@@ -347,16 +370,24 @@ def post_master_init(self, master):
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
                     self.deltaproxy_objs[
                         minion_id
-                    ].req_channel = salt.transport.client.AsyncReqChannel.factory(
+                    ].req_channel = salt.channel.client.AsyncReqChannel.factory(
                         sub_proxy_data["proxy_opts"], io_loop=self.io_loop
                     )
     else:
         log.debug("Initiating non-parallel startup for proxies")
         for _id in self.opts["proxy"].get("ids", []):
-            sub_proxy_data = subproxy_post_master_init(
-                _id, uid, self.opts, self.proxy, self.utils
-            )
-
+            try:
+                sub_proxy_data = yield subproxy_post_master_init(
+                    _id, uid, self.opts, self.proxy, self.utils
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                log.info(
+                    "An exception occured during initialization for %s, skipping: %s",
+                    _id,
+                    exc,
+                )
+                _failed.append(_id)
+                continue
             minion_id = sub_proxy_data["proxy_opts"].get("id")
 
             if sub_proxy_data["proxy_minion"]:
@@ -366,13 +397,16 @@ def post_master_init(self, master):
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
                     self.deltaproxy_objs[
                         minion_id
-                    ].req_channel = salt.transport.client.AsyncReqChannel.factory(
+                    ].req_channel = salt.channel.client.AsyncReqChannel.factory(
                         sub_proxy_data["proxy_opts"], io_loop=self.io_loop
                     )
 
+    if _failed:
+        log.info("Following sub proxies failed %s", _failed)
     self.ready = True
 
 
+@tornado.gen.coroutine
 def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     """
     Function to finish init after a deltaproxy proxy
@@ -381,6 +415,7 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     This is primarily loading modules, pillars, etc. (since they need
     to know which master they connected to) for the sub proxy minions.
     """
+
     proxy_grains = {}
     proxy_pillar = {}
 
@@ -399,7 +434,7 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     proxy_grains = salt.loader.grains(
         proxyopts, proxy=main_proxy, context=proxy_context
     )
-    proxy_pillar = salt.pillar.get_pillar(
+    proxy_pillar = yield salt.pillar.get_async_pillar(
         proxyopts,
         proxy_grains,
         minion_id,
@@ -535,12 +570,15 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
                 }
             },
             persist=True,
+            fire_event=False,
         )
-        _proxy_minion.schedule.enable_schedule()
+        _proxy_minion.schedule.enable_schedule(fire_event=False)
     else:
-        _proxy_minion.schedule.delete_job("__proxy_keepalive", persist=True)
+        _proxy_minion.schedule.delete_job(
+            "__proxy_keepalive", persist=True, fire_event=False
+        )
 
-    return {"proxy_minion": _proxy_minion, "proxy_opts": proxyopts}
+    raise tornado.gen.Return({"proxy_minion": _proxy_minion, "proxy_opts": proxyopts})
 
 
 def target(cls, minion_instance, opts, data, connected):
@@ -561,11 +599,10 @@ def target(cls, minion_instance, opts, data, connected):
         uid = salt.utils.user.get_uid(user=opts.get("user", None))
         minion_instance.proc_dir = salt.minion.get_proc_dir(opts["cachedir"], uid=uid)
 
-    with salt.ext.tornado.stack_context.StackContext(minion_instance.ctx):
-        if isinstance(data["fun"], tuple) or isinstance(data["fun"], list):
-            ProxyMinion._thread_multi_return(minion_instance, opts, data)
-        else:
-            ProxyMinion._thread_return(minion_instance, opts, data)
+    if isinstance(data["fun"], tuple) or isinstance(data["fun"], list):
+        ProxyMinion._thread_multi_return(minion_instance, opts, data)
+    else:
+        ProxyMinion._thread_return(minion_instance, opts, data)
 
 
 def thread_return(cls, minion_instance, opts, data):
@@ -1014,7 +1051,7 @@ def handle_decoded_payload(self, data):
                     data["jid"],
                 )
                 once_logged = True
-            yield salt.ext.tornado.gen.sleep(0.5)
+            yield tornado.gen.sleep(0.5)
             process_count = self.subprocess_list.count
 
     # We stash an instance references to allow for the socket
@@ -1093,7 +1130,9 @@ def tune_in(self, start=True):
     if self.opts["proxy"].get("parallel_startup"):
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = [
-                executor.submit(subproxy_tune_in, self.deltaproxy_objs[proxy_minion])
+                executor.submit(
+                    threaded_subproxy_tune_in, self.deltaproxy_objs[proxy_minion]
+                )
                 for proxy_minion in self.deltaproxy_objs
             ]
 
@@ -1107,6 +1146,17 @@ def tune_in(self, start=True):
     super(ProxyMinion, self).tune_in(start=start)
 
 
+def threaded_subproxy_tune_in(proxy_minion):
+    """
+    Run subproxy tune in with it's own event lopp.
+
+    This method needs to be the target of a thread.
+    """
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    return subproxy_tune_in(proxy_minion)
+
+
 def subproxy_tune_in(proxy_minion, start=True):
     """
     Tunein sub proxy minions
@@ -1115,5 +1165,4 @@ def subproxy_tune_in(proxy_minion, start=True):
     proxy_minion.setup_beacons()
     proxy_minion.add_periodic_callback("cleanup", proxy_minion.cleanup_subprocesses)
     proxy_minion._state_run()
-
     return proxy_minion

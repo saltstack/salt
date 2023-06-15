@@ -14,6 +14,7 @@ class StatusModuleTest(ModuleCase):
 
     @pytest.mark.skip_on_windows
     @pytest.mark.flaky(max_runs=4)
+    @pytest.mark.slow_test
     def test_status_pid(self):
         """
         status.pid

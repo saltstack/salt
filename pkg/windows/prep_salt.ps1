@@ -153,7 +153,8 @@ if ( $PKG ) {
     }
 }
 
-if ( $PKG ) {
+# Make sure ssm.exe is present. This is needed for VMtools
+if ( ! (Test-Path -Path "$BUILD_DIR\ssm.exe") ) {
     Write-Host "Copying SSM to Root: " -NoNewline
     Invoke-WebRequest -Uri "$SALT_DEP_URL/ssm-2.24-103-gdee49fc.exe" -OutFile "$BUILD_DIR\ssm.exe"
     if ( Test-Path -Path "$BUILD_DIR\ssm.exe" ) {
@@ -359,7 +360,6 @@ $modules = "acme",
            "runit",
            "s6",
            "scsi",
-           "seed",
            "sensors",
            "service",
            "shadow",
@@ -466,20 +466,70 @@ $states | ForEach-Object {
 }
 Write-Result "Success" -ForegroundColor Green
 
-Write-Host "Removing unneeded files (.pyc, .chm): " -NoNewline
-$remove = "__pycache__",
-          "*.pyc",
+Write-Host "Removing __pycache__ directories: " -NoNewline
+$found = Get-ChildItem -Path "$BUILD_DIR" -Filter "__pycache__" -Recurse
+$found | ForEach-Object {
+    Remove-Item -Path "$($_.FullName)" -Recurse -Force
+    if ( Test-Path -Path "$($_.FullName)" ) {
+        Write-Result "Failed" -ForegroundColor Red
+        Write-Host "Failed to remove: $($_.FullName)"
+        exit 1
+    }
+}
+Write-Result "Success" -ForegroundColor Green
+
+# If we try to remove *.pyc with the same Get-ChildItem that we used to remove
+# __pycache__ directories, it won't be able to find them because they are no
+# longer present
+# This probably won't find any *.pyc files, but just in case
+$remove = "*.pyc",
           "*.chm"
 $remove | ForEach-Object {
-    $found = Get-ChildItem -Path "$BUILD_DIR\$_" -Recurse
+    Write-Host "Removing unneeded $_ files: " -NoNewline
+    $found = Get-ChildItem -Path "$BUILD_DIR" -Filter $_ -Recurse
     $found | ForEach-Object {
-        Remove-Item -Path "$_" -Recurse -Force
-        if ( Test-Path -Path $_ ) {
+        Remove-Item -Path "$($_.FullName)" -Recurse -Force
+        if ( Test-Path -Path "$($_.FullName)" ) {
             Write-Result "Failed" -ForegroundColor Red
-            Write-Host "Failed to remove: $_"
+            Write-Host "Failed to remove: $($_.FullName)"
             exit 1
         }
     }
+    Write-Result "Success" -ForegroundColor Green
+}
+
+#-------------------------------------------------------------------------------
+# Set timestamps on Files
+#-------------------------------------------------------------------------------
+
+# We're doing this again in this script because we use python above to get the
+# build architecture and that adds back some __pycache__ and *.pyc files
+Write-Host "Getting commit time stamp: " -NoNewline
+[DateTime]$origin = "1970-01-01 00:00:00"
+$hash_time = $(git show -s --format=%at)
+$time_stamp = $origin.AddSeconds($hash_time)
+if ( $hash_time ) {
+    Write-Result "Success" -ForegroundColor Green
+} else {
+    Write-Result "Failed" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "Setting time stamp on all salt files: " -NoNewline
+$found = Get-ChildItem -Path $BUILD_DIR -Recurse
+$found | ForEach-Object {
+    $_.CreationTime = $time_stamp
+    $_.LastAccessTime = $time_stamp
+    $_.LastWriteTime = $time_stamp
+}
+Write-Result "Success" -ForegroundColor Green
+
+Write-Host "Setting time stamp on all prereq files: " -NoNewline
+$found = Get-ChildItem -Path $PREREQ_DIR -Recurse
+$found | ForEach-Object {
+    $_.CreationTime = $time_stamp
+    $_.LastAccessTime = $time_stamp
+    $_.LastWriteTime = $time_stamp
 }
 Write-Result "Success" -ForegroundColor Green
 

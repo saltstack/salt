@@ -1,16 +1,19 @@
-import functools
 import os
 import socket
 
 import attr
 import pytest
+import tornado
 from pytestshellutils.utils import ports
 
 import salt.channel.server
 import salt.exceptions
-import salt.ext.tornado
 import salt.transport.tcp
 from tests.support.mock import MagicMock, PropertyMock, patch
+
+pytestmark = [
+    pytest.mark.core_test,
+]
 
 
 @pytest.fixture
@@ -27,9 +30,9 @@ def fake_crypto():
 
 @pytest.fixture
 def fake_authd():
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def return_nothing():
-        raise salt.ext.tornado.gen.Return()
+        raise tornado.gen.Return()
 
     with patch(
         "salt.crypt.AsyncAuth.authenticated", new_callable=PropertyMock
@@ -81,7 +84,7 @@ def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
     """
     test message client cleanup on close
     """
-    orig_loop = salt.ext.tornado.ioloop.IOLoop()
+    orig_loop = tornado.ioloop.IOLoop()
     orig_loop.make_current()
 
     opts = dict(temp_salt_master.config.copy(), transport="tcp")
@@ -237,7 +240,8 @@ def test_tcp_pub_server_channel_publish_filtering_str_list(temp_salt_master):
 
 @pytest.fixture(scope="function")
 def salt_message_client():
-    io_loop_mock = MagicMock(spec=salt.ext.tornado.ioloop.IOLoop)
+    io_loop_mock = MagicMock(spec=tornado.ioloop.IOLoop)
+    io_loop_mock.asyncio_loop = None
     io_loop_mock.call_later.side_effect = lambda *args, **kwargs: (args, kwargs)
 
     client = salt.transport.tcp.MessageClient(
@@ -342,7 +346,7 @@ def test_timeout_message_unknown_future(salt_message_client):
     # if we do have the actual future stored under the id, but it's none
     # we shouldn't fail as well
     message_id = 1
-    future = salt.ext.tornado.concurrent.Future()
+    future = tornado.concurrent.Future()
     future.attempts = 1
     future.tries = 1
     salt_message_client.send_future_map[message_id] = future
@@ -363,16 +367,16 @@ def xtest_client_reconnect_backoff(client_socket):
         client.close()
         assert t == 5
         return
-        # return salt.ext.tornado.gen.sleep()
+        # return tornado.gen.sleep()
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def connect(*args, **kwargs):
         raise Exception("err")
 
     client._tcp_client.connect = connect
 
     try:
-        with patch("salt.ext.tornado.gen.sleep", side_effect=_sleep):
+        with patch("tornado.gen.sleep", side_effect=_sleep):
             client.io_loop.run_sync(client.connect)
     finally:
         client.close()
@@ -449,23 +453,21 @@ def test_presence_events_callback_passed(temp_salt_master, salt_message_client):
         )
 
 
-def test_presence_removed_on_stream_closed():
+async def test_presence_removed_on_stream_closed():
     opts = {"presence_events": True}
 
-    io_loop_mock = MagicMock(spec=salt.ext.tornado.ioloop.IOLoop)
+    io_loop_mock = MagicMock(spec=tornado.ioloop.IOLoop)
 
     with patch("salt.master.AESFuncs.__init__", return_value=None):
         server = salt.transport.tcp.PubServer(opts, io_loop=io_loop_mock)
         server._closing = True
         server.remove_presence_callback = MagicMock()
 
-    client = salt.transport.tcp.Subscriber(
-        salt.ext.tornado.iostream.IOStream, "1.2.3.4"
-    )
+    client = salt.transport.tcp.Subscriber(tornado.iostream.IOStream, "1.2.3.4")
     client._closing = True
     server.clients = {client}
 
-    io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+    io_loop = tornado.ioloop.IOLoop.current()
     package = {
         "topic_lst": [],
         "payload": "test-payload",
@@ -473,9 +475,9 @@ def test_presence_removed_on_stream_closed():
 
     with patch("salt.transport.frame.frame_msg", return_value="framed-payload"):
         with patch(
-            "salt.ext.tornado.iostream.BaseIOStream.write",
-            side_effect=salt.ext.tornado.iostream.StreamClosedError(),
+            "tornado.iostream.BaseIOStream.write",
+            side_effect=tornado.iostream.StreamClosedError(),
         ):
-            io_loop.run_sync(functools.partial(server.publish_payload, package, None))
+            await server.publish_payload(package, None)
 
             server.remove_presence_callback.assert_called_with(client)

@@ -74,7 +74,7 @@ function VerifyOrDownload ($local_file, $URL, $SHA256) {
 #-------------------------------------------------------------------------------
 
 $WEBCACHE_DIR = "$env:TEMP\msi_build_cache_dir"
-$DEPS_URL     = "http://repo.saltproject.io/windows/dependencies"
+$DEPS_URL     = "https://repo.saltproject.io/windows/dependencies"
 $PROJECT_DIR  = $(git rev-parse --show-toplevel)
 $BUILD_DIR    = "$PROJECT_DIR\pkg\windows\build"
 $BUILDENV_DIR = "$PROJECT_DIR\pkg\windows\buildenv"
@@ -262,6 +262,82 @@ Write-Host "Packaging *.dll's to *.CA.dll: " -NoNewline
     "$($ENV:WIX)bin\Microsoft.Deployment.Resources.dll" `
     "$SCRIPT_DIR\CustomAction01\CustomAction.config" > build.tmp
 CheckExitCode
+
+#-------------------------------------------------------------------------------
+# Remove compiled files
+#-------------------------------------------------------------------------------
+# We have to do this again because we use the Relenv Python to get the build
+# architecture. This recreates some of the pycache files that were removed
+# in the prep_salt script
+Write-Host "Removing __pycache__ directories: " -NoNewline
+$found = Get-ChildItem -Path "$BUILDENV_DIR" -Filter "__pycache__" -Recurse
+$found | ForEach-Object {
+    Remove-Item -Path "$($_.FullName)" -Recurse -Force
+    if ( Test-Path -Path "$($_.FullName)" ) {
+        Write-Result "Failed" -ForegroundColor Red
+        Write-Host "Failed to remove: $($_.FullName)"
+        exit 1
+    }
+}
+Write-Result "Success" -ForegroundColor Green
+
+# If we try to remove *.pyc with the same Get-ChildItem that we used to remove
+# __pycache__ directories, it won't be able to find them because they are no
+# longer present
+# This probably won't find any *.pyc files, but just in case
+$remove = "*.pyc",
+          "*.chm"
+$remove | ForEach-Object {
+    Write-Host "Removing unneeded $_ files: " -NoNewline
+    $found = Get-ChildItem -Path "$BUILDENV_DIR" -Filter $_ -Recurse
+    $found | ForEach-Object {
+        Remove-Item -Path "$($_.FullName)" -Recurse -Force
+        if ( Test-Path -Path "$($_.FullName)" ) {
+            Write-Result "Failed" -ForegroundColor Red
+            Write-Host "Failed to remove: $($_.FullName)"
+            exit 1
+        }
+    }
+    Write-Result "Success" -ForegroundColor Green
+}
+
+#-------------------------------------------------------------------------------
+# Set timestamps on Files
+#-------------------------------------------------------------------------------
+# We're doing this on the dlls that were created abive
+
+Write-Host "Getting commit time stamp: " -NoNewline
+[DateTime]$origin = "1970-01-01 00:00:00"
+$hash_time = $(git show -s --format=%at)
+$time_stamp = $origin.AddSeconds($hash_time)
+if ( $hash_time ) {
+    Write-Result "Success" -ForegroundColor Green
+} else {
+    Write-Result "Failed" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "Setting time stamp on all files: " -NoNewline
+$found = Get-ChildItem -Path $BUILDENV_DIR -Recurse
+$found | ForEach-Object {
+    $_.CreationTime = $time_stamp
+    $_.LastAccessTime = $time_stamp
+    $_.LastWriteTime = $time_stamp
+}
+Write-Result "Success" -ForegroundColor Green
+
+Write-Host "Setting time stamp on installer dlls: " -NoNewline
+$found = Get-ChildItem -Path $SCRIPT_DIR -Filter "*.dll" -Recurse
+$found | ForEach-Object {
+    $_.CreationTime = $time_stamp
+    $_.LastAccessTime = $time_stamp
+    $_.LastWriteTime = $time_stamp
+}
+Write-Result "Success" -ForegroundColor Green
+
+#-------------------------------------------------------------------------------
+# Let's start building the MSI
+#-------------------------------------------------------------------------------
 
 # move conf folder up one dir because it must not be discovered twice and xslt is difficult
 Write-Host "Remove configs from discovery: " -NoNewline

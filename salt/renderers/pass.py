@@ -145,23 +145,17 @@ def _fetch_secret(pass_path):
         env["GNUPGHOME"] = pass_gnupghome
 
     try:
-        proc = Popen(cmd, stdout=PIPE, stderr=PIPE, env=env)
+        proc = Popen(cmd, stdout=PIPE, stderr=PIPE, env=env, encoding="utf-8")
         pass_data, pass_error = proc.communicate()
         pass_returncode = proc.returncode
-    except OSError as e:
+    except (OSError, UnicodeDecodeError) as e:
         pass_data, pass_error = "", str(e)
         pass_returncode = 1
 
     # The version of pass used during development sent output to
     # stdout instead of stderr even though its returncode was non zero.
     if pass_returncode or not pass_data:
-        try:
-            pass_error = pass_error.decode("utf-8")
-        except (AttributeError, ValueError):
-            pass
-        msg = "Could not fetch secret '{}' from the password store: {}".format(
-            pass_path, pass_error
-        )
+        msg = f"Could not fetch secret '{pass_path}' from the password store: {pass_error}"
         if pass_strict_fetch:
             raise SaltRenderError(msg)
         else:

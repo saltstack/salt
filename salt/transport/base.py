@@ -1,4 +1,4 @@
-import salt.ext.tornado.gen
+import tornado.gen
 
 TRANSPORTS = (
     "zeromq",
@@ -103,7 +103,7 @@ class RequestClient:
     def __init__(self, opts, io_loop, **kwargs):
         pass
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def send(self, load, timeout=60):
         """
         Send a request message and return the reply from the server.
@@ -211,7 +211,7 @@ class PublishClient:
         """
         raise NotImplementedError
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
         """
         Create a network connection to the the PublishServer or broker.

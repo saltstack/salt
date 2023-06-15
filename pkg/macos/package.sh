@@ -71,7 +71,7 @@ _usage() {
      echo ""
      echo "  -h, --help      this message"
      echo "  -v, --version   version of Salt display in the package"
-     echo "  -n, --nightly   don't sign the package"
+     echo "  -s, --sign   Sign the package"
      echo ""
      echo "  To build the Salt package:"
      echo "      example: $0 3006.1-1"
@@ -105,6 +105,7 @@ _failure() {
 #-------------------------------------------------------------------------------
 # Get Parameters
 #-------------------------------------------------------------------------------
+SIGN=0
 while true; do
     if [[ -z "$1" ]]; then break; fi
     case "$1" in
@@ -112,8 +113,8 @@ while true; do
             _usage
             exit 0
             ;;
-        -n | --nightly )
-            NIGHTLY=1
+        -s | --sign )
+            SIGN=1
             shift
             ;;
         -v | --version )
@@ -249,17 +250,18 @@ else
 fi
 
 
-if [ -z "${NIGHTLY}" ]; then
+PKG_FILE="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH.pkg"
+if [ "${SIGN}" -eq 1 ]; then
     _msg "Building the product package (signed)"
     # This is not a nightly build, so we want to sign it
-    FILE="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
+    FILE="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH.pkg"
     if productbuild --resources="$SCRIPT_DIR/pkg-resources" \
                     --distribution="$DIST_XML" \
                     --package-path="$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg" \
                     --version="$VERSION" \
                     --sign "$DEV_INSTALL_CERT" \
                     --timestamp \
-                    "$FILE" > "$CMD_OUTPUT" 2>&1; then
+                    "$PKG_FILE" > "$CMD_OUTPUT" 2>&1; then
         _success
     else
         _failure
@@ -267,12 +269,11 @@ if [ -z "${NIGHTLY}" ]; then
 else
     _msg "Building the product package (unsigned)"
     # This is a nightly build, so we don't sign it
-    FILE="$SCRIPT_DIR/salt-$VERSION-py3-$CPU_ARCH-unsigned.pkg"
     if productbuild --resources="$SCRIPT_DIR/pkg-resources" \
                     --distribution="$DIST_XML" \
                     --package-path="$SCRIPT_DIR/salt-src-$VERSION-py3-$CPU_ARCH.pkg" \
                     --version="$VERSION" \
-                    "$FILE" > "$CMD_OUTPUT" 2>&1; then
+                    "$PKG_FILE" > "$CMD_OUTPUT" 2>&1; then
         _success
     else
         _failure

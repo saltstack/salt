@@ -1,7 +1,7 @@
 """
 These commands are used in the CI pipeline.
 """
-# pylint: disable=resource-leakage,broad-except
+# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
 import json
@@ -11,11 +11,12 @@ import pathlib
 import time
 from typing import TYPE_CHECKING
 
+import yaml
 from ptscripts import Context, command_group
 
-log = logging.getLogger(__name__)
+import tools.utils
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+log = logging.getLogger(__name__)
 
 # Define the command group
 ci = command_group(name="ci", help="CI Related Commands", description=__doc__)
@@ -107,7 +108,11 @@ def process_changed_files(ctx: Context, event_name: str, changed_files: pathlib.
                 if not entry:
                     loaded_data.remove(entry)
                 try:
-                    entry = REPO_ROOT.joinpath(entry).resolve().relative_to(REPO_ROOT)
+                    entry = (
+                        tools.utils.REPO_ROOT.joinpath(entry)
+                        .resolve()
+                        .relative_to(tools.utils.REPO_ROOT)
+                    )
                 except ValueError:
                     ctx.error(
                         f"While processing the changed files key {key!r}, the "
@@ -192,7 +197,10 @@ def runner_types(ctx: Context, event_name: str):
 
     # This is a push or a scheduled event
     ctx.info(f"Running from a {event_name!r} event")
-    if gh_event["repository"]["fork"] is True:
+    if (
+        gh_event["repository"]["fork"] is True
+        and os.environ.get("FORK_HAS_SELF_HOSTED_RUNNERS", "0") == "1"
+    ):
         # This is running on a forked repository, don't run tests
         ctx.info("The push event is on a forked repository")
         runners["github-hosted"] = True
@@ -201,7 +209,7 @@ def runner_types(ctx: Context, event_name: str):
             wfh.write(f"runners={json.dumps(runners)}\n")
         ctx.exit(0)
 
-    # Not running on a fork, run everything
+    # Not running on a fork, or the fork has self hosted runners, run everything
     ctx.info(f"The {event_name!r} event is from the main repository")
     runners["github-hosted"] = runners["self-hosted"] = True
     ctx.info("Writing 'runners' to the github outputs file")
@@ -216,6 +224,15 @@ def runner_types(ctx: Context, event_name: str):
         "event_name": {
             "help": "The name of the GitHub event being processed.",
         },
+        "skip_tests": {
+            "help": "Skip running the Salt tests",
+        },
+        "skip_pkg_tests": {
+            "help": "Skip running the Salt Package tests",
+        },
+        "skip_pkg_download_tests": {
+            "help": "Skip running the Salt Package download tests",
+        },
         "changed_files": {
             "help": (
                 "Path to '.json' file containing the payload of changed files "
@@ -224,7 +241,14 @@ def runner_types(ctx: Context, event_name: str):
         },
     },
 )
-def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
+def define_jobs(
+    ctx: Context,
+    event_name: str,
+    changed_files: pathlib.Path,
+    skip_tests: bool = False,
+    skip_pkg_tests: bool = False,
+    skip_pkg_download_tests: bool = False,
+):
     """
     Set GH Actions 'jobs' output to know which jobs should run.
     """
@@ -247,12 +271,23 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
     jobs = {
         "lint": True,
         "test": True,
+        "test-pkg": True,
+        "test-pkg-download": True,
         "prepare-release": True,
+        "build-docs": True,
         "build-source-tarball": True,
         "build-deps-onedir": True,
         "build-salt-onedir": True,
         "build-pkgs": True,
     }
+
+    if skip_tests:
+        jobs["test"] = False
+    if skip_pkg_tests:
+        jobs["test-pkg"] = False
+    if skip_pkg_download_tests:
+        jobs["test-pkg-download"] = False
+
     if event_name != "pull_request":
         # In this case, all defined jobs should run
         ctx.info("Writing 'jobs' to the github outputs file")
@@ -261,7 +296,7 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
 
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(
-                f"All defined jobs will run due to event type of {event_name!r}.\n"
+                f"All defined jobs will run due to event type of `{event_name}`.\n"
             )
         return
 
@@ -290,36 +325,57 @@ def define_jobs(ctx: Context, event_name: str, changed_files: pathlib.Path):
             wfh.write("De-selecting the 'lint' job.\n")
         jobs["lint"] = False
 
+    required_docs_changes: set[str] = {
+        changed_files_contents["salt"],
+        changed_files_contents["docs"],
+    }
+    if required_docs_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'build-docs' job.\n")
+        jobs["build-docs"] = False
+
     required_test_changes: set[str] = {
         changed_files_contents["testrun"],
+        changed_files_contents["workflows"],
         changed_files_contents["golden_images"],
     }
-    if required_test_changes == {"false"}:
+    if jobs["test"] and required_test_changes == {"false"}:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("De-selecting the 'test' jobs.\n")
+            wfh.write("De-selecting the 'test' job.\n")
         jobs["test"] = False
 
-    if not jobs["test"]:
+    required_pkg_test_changes: set[str] = {
+        changed_files_contents["pkg_tests"],
+        changed_files_contents["workflows"],
+    }
+    if jobs["test-pkg"] and required_pkg_test_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'test-pkg' job.\n")
+        jobs["test-pkg"] = False
+
+    if jobs["test-pkg-download"] and required_pkg_test_changes == {"false"}:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("De-selecting the 'test-pkg-download' job.\n")
+        jobs["test-pkg-download"] = False
+
+    if not jobs["test"] and not jobs["test-pkg"] and not jobs["test-pkg-download"]:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             for job in (
-                "build-source-tarball",
                 "build-deps-onedir",
                 "build-salt-onedir",
                 "build-pkgs",
             ):
                 wfh.write(f"De-selecting the '{job}' job.\n")
                 jobs[job] = False
+            if not jobs["build-docs"]:
+                with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                    wfh.write("De-selecting the 'build-source-tarball' job.\n")
+                jobs["build-source-tarball"] = False
 
     with open(github_step_summary, "a", encoding="utf-8") as wfh:
         wfh.write("Selected Jobs:\n")
         for name, value in sorted(jobs.items()):
             wfh.write(f" - {name}: {value}\n")
-        wfh.write(
-            "\n<details>\n<summary>All Changed Files (click me)</summary>\n<pre>\n"
-        )
-        for path in sorted(json.loads(changed_files_contents["repo_files"])):
-            wfh.write(f"{path}\n")
-        wfh.write("</pre>\n</details>\n")
 
     ctx.info("Writing 'jobs' to the github outputs file")
     with open(github_output, "a", encoding="utf-8") as wfh:
@@ -368,7 +424,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             wfh.write(f"testrun={json.dumps(testrun)}\n")
 
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write(f"Full test run chosen due to event type of {event_name!r}.\n")
+            wfh.write(f"Full test run chosen due to event type of `{event_name}`.\n")
         return
 
     if not changed_files.exists():
@@ -417,10 +473,12 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             wfh.write("</pre>\n</details>\n")
         testrun = {"type": "full"}
     else:
-        testrun_changed_files_path = REPO_ROOT / "testrun-changed-files.txt"
+        testrun_changed_files_path = tools.utils.REPO_ROOT / "testrun-changed-files.txt"
         testrun = {
             "type": "changed",
-            "from-filenames": str(testrun_changed_files_path.relative_to(REPO_ROOT)),
+            "from-filenames": str(
+                testrun_changed_files_path.relative_to(tools.utils.REPO_ROOT)
+            ),
         }
         ctx.info(f"Writing {testrun_changed_files_path.name} ...")
         selected_changed_files = []
@@ -475,7 +533,11 @@ def matrix(ctx: Context, distro_slug: str):
     _matrix = []
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
-            if distro_slug not in ("centosstream-9", "ubuntu-22.04-arm64"):
+            if distro_slug not in (
+                "centosstream-9",
+                "ubuntu-22.04",
+                "ubuntu-22.04-arm64",
+            ):
                 # Only run TCP transport tests on these distributions
                 continue
         for chunk in ("unit", "functional", "integration", "scenarios"):
@@ -505,7 +567,11 @@ def transport_matrix(ctx: Context, distro_slug: str):
     _matrix = []
     for transport in ("zeromq", "tcp"):
         if transport == "tcp":
-            if distro_slug not in ("centosstream-9", "ubuntu-22.04-arm64"):
+            if distro_slug not in (
+                "centosstream-9",
+                "ubuntu-22.04",
+                "ubuntu-22.04-arm64",
+            ):
                 # Only run TCP transport tests on these distributions
                 continue
         _matrix.append({"transport": transport})
@@ -514,13 +580,112 @@ def transport_matrix(ctx: Context, distro_slug: str):
 
 
 @ci.command(
-    name="rerun-workflow",
+    name="pkg-matrix",
+    arguments={
+        "distro_slug": {
+            "help": "The distribution slug to generate the matrix for",
+        },
+        "pkg_type": {
+            "help": "The distribution slug to generate the matrix for",
+        },
+    },
 )
-def rerun_workflow(ctx: Context):
+def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
     """
-    Re-run failed workflows, up to a maximum of 3 times.
+    Generate the test matrix.
+    """
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
 
-    Only restarts workflows for which less than 25% of the jobs failed.
+    matrix = []
+    sessions = [
+        "install",
+    ]
+    if (
+        distro_slug
+        not in [
+            "debian-11-arm64",
+            "ubuntu-20.04-arm64",
+            "ubuntu-22.04-arm64",
+            "photonos-3",
+            "photonos-4",
+        ]
+        and pkg_type != "MSI"
+    ):
+        # These OS's never had arm64 packages built for them
+        # with the tiamate onedir packages.
+        # we will need to ensure when we release 3006.0
+        # we allow for 3006.0 jobs to run, because then
+        # we will have arm64 onedir packages to upgrade from
+        sessions.append("upgrade")
+    if (
+        distro_slug
+        not in [
+            "centosstream-9",
+            "ubuntu-22.04",
+            "ubuntu-22.04-arm64",
+            "photonos-3",
+            "photonos-4",
+        ]
+        and pkg_type != "MSI"
+    ):
+        # Packages for these OSs where never built for classic previously
+        sessions.append("upgrade-classic")
+
+    for session in sessions:
+        matrix.append(
+            {
+                "test-chunk": session,
+            }
+        )
+    ctx.info("Generated matrix:")
+    ctx.print(matrix, soft_wrap=True)
+
+    if github_output is not None:
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"matrix={json.dumps(matrix)}\n")
+    ctx.exit(0)
+
+
+@ci.command(
+    name="get-releases",
+    arguments={
+        "repository": {
+            "help": "The repository to query for releases, e.g. saltstack/salt",
+        },
+    },
+)
+def get_releases(ctx: Context, repository: str = "saltstack/salt"):
+    """
+    Generate the latest salt release.
+    """
+    github_output = os.environ.get("GITHUB_OUTPUT")
+
+    if github_output is None:
+        ctx.exit(1, "The 'GITHUB_OUTPUT' variable is not set.")
+    else:
+        releases = tools.utils.get_salt_releases(ctx, repository)
+        str_releases = [str(version) for version in releases]
+        latest = str_releases[-1]
+
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"latest-release={latest}\n")
+            wfh.write(f"releases={json.dumps(str_releases)}\n")
+        ctx.exit(0)
+
+
+@ci.command(
+    name="get-release-changelog-target",
+    arguments={
+        "event_name": {
+            "help": "The name of the GitHub event being processed.",
+        },
+    },
+)
+def get_release_changelog_target(ctx: Context, event_name: str):
+    """
+    Define which kind of release notes should be generated, next minor or major.
     """
     gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
     if gh_event_path is None:
@@ -536,63 +701,32 @@ def rerun_workflow(ctx: Context):
         ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
         ctx.exit(1)
 
-    workflow_run = gh_event["workflow_run"]
-    ctx.info(
-        f"Processing Workflow ID {workflow_run['id']}, attempt {workflow_run['run_attempt']}..."
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    shared_context = yaml.safe_load(
+        tools.utils.SHARED_WORKFLOW_CONTEXT_FILEPATH.read_text()
     )
-    if workflow_run["run_attempt"] >= 3:
-        ctx.info(
-            f"This workflow has failed for the past {workflow_run['run_attempt']} attempts. "
-            "Not re-running it."
-        )
-        ctx.exit(0)
+    release_branches = shared_context["release-branches"]
 
-    run_id = str(workflow_run["id"])
-    repository = workflow_run["repository"]["full_name"]
-    page = 1
-    total = failed = 0
-    # Get all jobs from workflow run to see how many failed
-    while True:
-        cmdline = [
-            "gh",
-            "api",
-            "-H",
-            "Accept: application/vnd.github+json",
-            f"/repos/{repository}/actions/runs/{run_id}/jobs?filter=latest&per_page=100&page={page}",
-        ]
-        ret = ctx.run(*cmdline, capture=True, check=False)
-        if ret.returncode:
-            ctx.error("Failed to get the jobs for the workflow run")
-            ctx.exit(0)
-
-        jobs = json.loads(ret.stdout.strip().decode())["jobs"]
-        if not jobs:
-            break
-
-        for job in jobs:
-            total += 1
-            if job["conclusion"] == "failure":
-                failed += 1
-        page += 1
-
-    ctx.info(f"{failed} out of {total} jobs failed.")
-    if failed > total / 2:
-        ctx.info("More than half of the jobs failed. Not automatically restarting.")
-        ctx.exit(0)
-
-    cmdline = [
-        "gh",
-        "run",
-        "-R",
-        repository,
-        "rerun",
-        run_id,
-        "--failed",
-    ]
-    ctx.info(f"Running {' '.join(cmdline)!r} ...")
-    ret = ctx.run(*cmdline, check=False)
-    if ret.returncode:
-        ctx.error("Failed to re-run workflow")
+    release_changelog_target = "next-major-release"
+    if event_name == "pull_request":
+        if gh_event["pull_request"]["base"]["ref"] in release_branches:
+            release_changelog_target = "next-minor-release"
+    elif event_name == "schedule":
+        branch_name = gh_event["repository"]["default_branch"]
+        if branch_name in release_branches:
+            release_changelog_target = "next-minor-release"
     else:
-        ctx.info("Restarted workflow successfully")
+        for branch_name in release_branches:
+            if branch_name in gh_event["ref"]:
+                release_changelog_target = "next-minor-release"
+                break
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"release-changelog-target={release_changelog_target}\n")
     ctx.exit(0)

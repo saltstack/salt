@@ -7,8 +7,6 @@ A module for working with the Windows Event log system.
 import collections
 import logging
 
-import xmltodict
-
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
@@ -18,6 +16,9 @@ try:
     import win32evtlog
     import win32evtlogutil
     import winerror
+
+    # Only windows needs this dependency at runtime
+    import xmltodict
 
     IMPORT_STATUS = True
 except ImportError:

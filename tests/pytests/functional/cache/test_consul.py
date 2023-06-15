@@ -67,5 +67,6 @@ def cache(minion_opts, consul_container):
     return cache
 
 
+@pytest.mark.slow_test
 def test_caching(subtests, cache):
     run_common_cache_tests(subtests, cache)
