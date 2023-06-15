@@ -10,6 +10,7 @@ Support for APT (Advanced Packaging Tool)
     For repository management, the ``python-apt`` package must be installed.
 """
 
+import collections
 import copy
 import datetime
 import fnmatch
@@ -189,7 +190,7 @@ if not HAS_APT:
                 self.file = str(pathlib.Path(os.sep, "etc", "apt", "sources.list"))
             self._parse_sources(line)
 
-        def str(self):
+        def __str__(self):
             return self.repo_line()
 
         def repo_line(self):
@@ -1728,31 +1729,22 @@ def _get_opts(line):
     Return all opts in [] for a repo line
     """
     get_opts = re.search(r"\[(.*=.*)\]", line)
-    ret = {
-        "arch": {"full": "", "value": "", "index": 0},
-        "signedby": {"full": "", "value": "", "index": 0},
-    }
-
+    ret = collections.defaultdict(lambda: {"full": "", "value": "", "index": 0})
     if not get_opts:
         return ret
     opts = get_opts.group(0).strip("[]")
-    architectures = []
+    # From the sources.list manpage
+    multivalue_options = "arch lang target".split()
     for idx, opt in enumerate(opts.split()):
-        if opt.startswith("arch"):
-            architectures.extend(opt.split("=", 1)[1].split(","))
-            ret["arch"]["full"] = opt
-            ret["arch"]["value"] = architectures
-            ret["arch"]["index"] = idx
-        elif opt.startswith("signed-by"):
-            ret["signedby"]["full"] = opt
-            ret["signedby"]["value"] = opt.split("=", 1)[1]
-            ret["signedby"]["index"] = idx
-        else:
-            other_opt = opt.split("=", 1)[0]
-            ret[other_opt] = {}
-            ret[other_opt]["full"] = opt
-            ret[other_opt]["value"] = opt.split("=", 1)[1]
-            ret[other_opt]["index"] = idx
+        # Note, += and -= are also allowed options that we don't (yet) parse
+        key, value = opt.split('=')
+        # Optionally, we could rename keys that have a - in them, but I don't
+        # see the reason
+        if key in multivalue_options or ',' in value:
+            value = value.split(',')
+        ret[key]['full'] = opt
+        ret[key]['value'] = value
+        ret[key]['index'] = idx
     return ret
 
 
@@ -1761,17 +1753,14 @@ def _split_repo_str(repo):
     Return APT source entry as a tuple.
     """
     split = SourceEntry(repo)
-    if not HAS_APT:
-        signedby = split.signedby
-    else:
-        signedby = _get_opts(line=repo)["signedby"].get("value", "")
+    options = _get_opts(line=repo)
     return (
         split.type,
         split.architectures,
         split.uri,
         split.dist,
         split.comps,
-        signedby,
+        options,
     )
 
 
@@ -1989,7 +1978,7 @@ def get_repo(repo, **kwargs):
                 repo_uri,
                 repo_dist,
                 repo_comps,
-                repo_signedby,
+                repo_options,
             ) = _split_repo_str(repo)
             if ppa_auth:
                 uri_match = re.search("(http[s]?://)(.+)", repo_uri)
@@ -2066,7 +2055,7 @@ def del_repo(repo, **kwargs):
                 repo_uri,
                 repo_dist,
                 repo_comps,
-                repo_signedby,
+                repo_options,
             ) = _split_repo_str(repo)
         except SyntaxError:
             raise SaltInvocationError(
@@ -2764,7 +2753,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
             repo_uri,
             repo_dist,
             repo_comps,
-            repo_signedby,
+            repo_options,
         ) = _split_repo_str(repo)
     except SyntaxError:
         raise SyntaxError(f"Error: repo '{repo}' not a well formatted definition")
@@ -2772,10 +2761,10 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     full_comp_list = {comp.strip() for comp in repo_comps}
     no_proxy = __salt__["config.option"]("no_proxy")
 
-    kwargs["signedby"] = pathlib.Path(repo_signedby) if repo_signedby else ""
+    kwargs["signedby"] = pathlib.Path(repo_options['signed-by']['value']) if repo_options['signed-by']['value'] else ''
 
-    if not aptkey and not kwargs["signedby"]:
-        raise SaltInvocationError("missing 'signedby' option when apt-key is missing")
+    if not aptkey and not kwargs["signedby"] and repo_options['trusted']['value'] != 'yes':
+        raise SaltInvocationError("missing 'signedby' option when apt-key is missing for untrusted repository")
 
     if "keyid" in kwargs:
         keyid = kwargs.pop("keyid", None)
@@ -2954,18 +2943,14 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     if mod_source.uri != repo_uri:
         mod_source.uri = repo_uri
-        mod_source.line = mod_source.str()
+        mod_source.line = str(mod_source)
 
     sources.save()
     # on changes, explicitly refresh
     if refresh:
         refresh_db()
 
-    if not HAS_APT:
-        signedby = mod_source.signedby
-    else:
-        signedby = _get_opts(repo)["signedby"].get("value", "")
-
+    signedby = _get_opts(repo)["signed-by"]["value"]
     return {
         repo: {
             "architectures": getattr(mod_source, "architectures", []),

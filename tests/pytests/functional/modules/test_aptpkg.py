@@ -255,6 +255,17 @@ def test_mod_repo(revert_repo_file):
     assert "#{}".format(msg) in ret["stdout"]
 
 
+def test_mod_repo_unsigned_trusted(tmp_path):
+    """
+    Test aptpkg.mod_repo for a trusted but unsigned repo.
+    """
+    repo = "deb [trusted=yes] http://apt.local/ stable main"
+    with patch.dict(aptpkg.__salt__, {"config.option": Mock()}):
+        with patch.object(aptpkg.SourcesList, 'save', lambda *x: None):
+            ret = aptpkg.mod_repo(repo=repo, file=str(tmp_path/'test.list'), aptkey=False, refresh=False)
+    assert repo.strip() == ret[repo]['line'].strip()
+
+
 @pytest.mark.destructive_test
 def test_mod_repo_no_file(tmp_path, revert_repo_file):
     """
