@@ -8,7 +8,8 @@ boto3>=1.17.67; python_version >= '3.6'
 boto>=2.46.0
 cassandra-driver>=2.0
 certifi>=2022.12.07
-cffi>=1.12.2
+cffi>=1.12.2, <= 1.14.6; python_version < '3.7'
+cffi>=1.15.1; python_version > '3.7'
 cherrypy>=17.4.1
 clustershell
 croniter>=0.3.0,!=0.3.22"; sys_platform != 'win32'

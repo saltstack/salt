@@ -370,7 +370,7 @@ certifi==2022.12.7
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.14.6
+cffi==1.15.1 ; python_version > "3.7"
     # via
     #   -r requirements/static/ci/common.in
     #   azure-datalake-store
