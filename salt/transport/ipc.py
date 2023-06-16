@@ -676,7 +676,6 @@ class IPCMessageSubscriber(IPCClient):
                         self._read_stream_future = self.stream.read_bytes(
                             4096, partial=True
                         )
-
                     if timeout is None:
                         wire_bytes = yield self._read_stream_future
                     else:

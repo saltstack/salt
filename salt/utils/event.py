@@ -352,17 +352,27 @@ class SaltEvent:
         if self.cpub:
             return True
 
+        log.error("EVENT AT LEAS")
         if self._run_io_loop_sync:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if self.subscriber is None:
+                    #self.subscriber = salt.utils.asynchronous.SyncWrapper(
+                    #    salt.transport.ipc.IPCMessageSubscriber,
+                    #    args=(self.puburi,),
+                    #    kwargs={"io_loop": self.io_loop},
+                    #    loop_kwarg="io_loop",
+                    #)
+                    #self.subscriber = salt.transport.publish_client(self.opts)
                     self.subscriber = salt.utils.asynchronous.SyncWrapper(
-                        salt.transport.ipc.IPCMessageSubscriber,
-                        args=(self.puburi,),
+                        salt.transport.publish_client,
+                        args=(self.opts,),
                         kwargs={"io_loop": self.io_loop},
                         loop_kwarg="io_loop",
                     )
                 try:
-                    self.subscriber.connect(timeout=timeout)
+                    #self.subscriber.connect(timeout=timeout)
+                    puburi = "ipc://{}".format(self.puburi)
+                    self.subscriber.connect_uri(puburi)
                     self.cpub = True
                 except tornado.iostream.StreamClosedError:
                     log.error("Encountered StreamClosedException")
@@ -378,9 +388,15 @@ class SaltEvent:
                     )
         else:
             if self.subscriber is None:
-                self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
-                    self.puburi, io_loop=self.io_loop
-                )
+                if "master_ip" not in self.opts:
+                    self.opts["master_ip"] = ""
+                self.subscriber = salt.transport.publish_client(self.opts, self.io_loop)
+                puburi = "ipc://{}".format(self.puburi)
+                self.subscriber.connect_uri(puburi)
+                #self.io_loop.spawn_callback(self.subscriber.connect_uri, self.puburi)
+                #self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
+                #    self.puburi, io_loop=self.io_loop
+                #)
 
             # For the asynchronous case, the connect will be defered to when
             # set_event_handler() is invoked.
@@ -410,11 +426,12 @@ class SaltEvent:
         if self._run_io_loop_sync:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if self.pusher is None:
-                    self.pusher = salt.utils.asynchronous.SyncWrapper(
-                        salt.transport.ipc.IPCMessageClient,
-                        args=(self.pulluri,),
-                        kwargs={"io_loop": self.io_loop},
-                        loop_kwarg="io_loop",
+                    self.pusher = salt.transport.publish_server(self.opts)
+                    self.pusher.pub_uri = "ipc://{}".format(
+                        os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
+                    )
+                    self.pusher.pull_uri = "ipc://{}".format(
+                        os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
                     )
                     #self.pusher = salt.utils.asynchronous.SyncWrapper(
                     #    salt.transport.ipc.IPCMessageClient,
@@ -423,7 +440,8 @@ class SaltEvent:
                     #    loop_kwarg="io_loop",
                     #)
                 try:
-                    self.pusher.connect(timeout=timeout)
+                    #self.pusher.connect(timeout=timeout)
+                    self.pusher.connect()
                     self.cpush = True
                 except tornado.iostream.StreamClosedError as exc:
                     log.debug("Unable to connect pusher: %s", exc)
@@ -435,8 +453,15 @@ class SaltEvent:
                     )
         else:
             if self.pusher is None:
-                self.pusher = salt.transport.ipc.IPCMessageClient(
-                    self.pulluri, io_loop=self.io_loop
+                #self.pusher = salt.transport.ipc.IPCMessageClient(
+                #    self.pulluri, io_loop=self.io_loop
+                #)
+                self.pusher = salt.transport.publish_server(self.opts)
+                self.pusher.pub_uri = "ipc://{}".format(
+                    os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
+                )
+                self.pusher.pull_uri = "ipc://{}".format(
+                    os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
                 )
             # For the asynchronous case, the connect will be deferred to when
             # fire_event() is invoked.
@@ -449,7 +474,6 @@ class SaltEvent:
         """
         if not self.cpush:
             return
-
         self.pusher.close()
         self.pusher = None
         self.cpush = False
@@ -570,9 +594,12 @@ class SaltEvent:
             try:
                 if not self.cpub and not self.connect_pub(timeout=wait):
                     break
-                raw = self.subscriber.read(timeout=wait)
+                #riraw = self.subscriber.read(timeout=wait)
+                print(repr(self.subscriber))
+                raw = self.subscriber.recv(timeout=wait)
                 if raw is None:
                     break
+                print(raw)
                 mtag, data = self.unpack(raw)
                 ret = {"data": data, "tag": mtag}
             except KeyboardInterrupt:
@@ -693,7 +720,7 @@ class SaltEvent:
         if not self.cpub:
             if not self.connect_pub():
                 return None
-        raw = self.subscriber._read(timeout=0)
+        raw = self.subscriber.recv(timeout=0)
         if raw is None:
             return None
         mtag, data = self.unpack(raw)
@@ -709,7 +736,7 @@ class SaltEvent:
         if not self.cpub:
             if not self.connect_pub():
                 return None
-        raw = self.subscriber._read(timeout=None)
+        raw = self.subscriber.recv(timeout=None)
         if raw is None:
             return None
         mtag, data = self.unpack(raw)
@@ -767,7 +794,7 @@ class SaltEvent:
             is_msgpacked=True,
             use_bin_type=True,
         )
-        log.debug("Sending event: tag = %s; data = %s", tag, data)
+        log.error("Sending event(fire_event_async): tag = %s; data = %s %r", tag, data, self.pusher)
         event = b"".join(
             [
                 salt.utils.stringutils.to_bytes(tag),
@@ -820,7 +847,7 @@ class SaltEvent:
             is_msgpacked=True,
             use_bin_type=True,
         )
-        log.debug("Sending event: tag = %s; data = %s", tag, data)
+        log.error("Sending event(fire_event): tag = %s; data = %s %s", tag, data, self.pusher.pull_uri)
         event = b"".join(
             [
                 salt.utils.stringutils.to_bytes(tag),
@@ -829,11 +856,12 @@ class SaltEvent:
             ]
         )
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
+        log.error("FIRE EVENT %r", msg)
         if self._run_io_loop_sync:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 try:
-                    self.pusher.send(msg)
                     #self.pusher.send(msg)
+                    self.pusher.publish(msg, noserial=True)
                 except Exception as exc:  # pylint: disable=broad-except
                     log.debug(
                         "Publisher send failed with exception: %s",
@@ -842,7 +870,8 @@ class SaltEvent:
                     )
                     raise
         else:
-            self.io_loop.spawn_callback(self.pusher.send, msg)
+            self.pusher.publish(msg, noserial=True)
+            #self.io_loop.spawn_callback(self.pusher.send, msg)
         return True
 
     def fire_master(self, data, tag, timeout=1000):
@@ -956,7 +985,8 @@ class SaltEvent:
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        return self.subscriber.read_async(event_handler)
+        #return self.subscriber.read_async(event_handler)
+        self.subscriber.on_recv(event_handler)
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1055,205 +1085,205 @@ class MinionEvent(SaltEvent):
         )
 
 
-class AsyncEventPublisher:
-    """
-    An event publisher class intended to run in an ioloop (within a single process)
-
-    TODO: remove references to "minion_event" whenever we need to use this for other things
-    """
-
-    def __init__(self, opts, io_loop=None):
-        self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        default_minion_sock_dir = self.opts["sock_dir"]
-        self.opts.update(opts)
-
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
-        self._closing = False
-        self.publisher = None
-        self.puller = None
-
-        hash_type = getattr(hashlib, self.opts["hash_type"])
-        # Only use the first 10 chars to keep longer hashes from exceeding the
-        # max socket path length.
-        id_hash = hash_type(
-            salt.utils.stringutils.to_bytes(self.opts["id"])
-        ).hexdigest()[:10]
-        epub_sock_path = os.path.join(
-            self.opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
-        )
-        if os.path.exists(epub_sock_path):
-            os.unlink(epub_sock_path)
-        epull_sock_path = os.path.join(
-            self.opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
-        )
-        if os.path.exists(epull_sock_path):
-            os.unlink(epull_sock_path)
-
-        if self.opts["ipc_mode"] == "tcp":
-            epub_uri = int(self.opts["tcp_pub_port"])
-            epull_uri = int(self.opts["tcp_pull_port"])
-        else:
-            epub_uri = epub_sock_path
-            epull_uri = epull_sock_path
-
-        log.debug("%s PUB socket URI: %s", self.__class__.__name__, epub_uri)
-        log.debug("%s PULL socket URI: %s", self.__class__.__name__, epull_uri)
-
-        minion_sock_dir = self.opts["sock_dir"]
-
-        if not os.path.isdir(minion_sock_dir):
-            # Let's try to create the directory defined on the configuration
-            # file
-            try:
-                os.makedirs(minion_sock_dir, 0o755)
-            except OSError as exc:
-                log.error("Could not create SOCK_DIR: %s", exc)
-                # Let's not fail yet and try using the default path
-                if minion_sock_dir == default_minion_sock_dir:
-                    # We're already trying the default system path, stop now!
-                    raise
-
-                if not os.path.isdir(default_minion_sock_dir):
-                    try:
-                        os.makedirs(default_minion_sock_dir, 0o755)
-                    except OSError as exc:
-                        log.error("Could not create SOCK_DIR: %s", exc)
-                        # Let's stop at this stage
-                        raise
-
-        self.publisher = salt.transport.ipc.IPCMessagePublisher(
-            self.opts, epub_uri, io_loop=self.io_loop
-        )
-
-        self.puller = salt.transport.ipc.IPCMessageServer(
-            epull_uri, io_loop=self.io_loop, payload_handler=self.handle_publish
-        )
-
-        log.info("Starting pull socket on %s", epull_uri)
-        with salt.utils.files.set_umask(0o177):
-            self.publisher.start()
-            self.puller.start()
-
-    def handle_publish(self, package, _):
-        """
-        Get something from epull, publish it out epub, and return the package (or None)
-        """
-        try:
-            self.publisher.publish(package)
-            return package
-        # Add an extra fallback in case a forked process leeks through
-        except Exception:  # pylint: disable=broad-except
-            log.critical("Unexpected error while polling minion events", exc_info=True)
-            return None
-
-    def close(self):
-        if self._closing:
-            return
-        self._closing = True
-        if self.publisher is not None:
-            self.publisher.close()
-        if self.puller is not None:
-            self.puller.close()
-
-
-class EventPublisher(salt.utils.process.SignalHandlingProcess):
-    """
-    The interface that takes master events and republishes them out to anyone
-    who wants to listen
-    """
-
-    def __init__(self, opts, **kwargs):
-        super().__init__(**kwargs)
-        self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
-        self.opts.update(opts)
-        self._closing = False
-        self.io_loop = None
-        self.puller = None
-        self.publisher = None
-
-    def run(self):
-        """
-        Bind the pub and pull sockets for events
-        """
-        if (
-            self.opts["event_publisher_niceness"]
-            and not salt.utils.platform.is_windows()
-        ):
-            log.info(
-                "setting EventPublisher niceness to %i",
-                self.opts["event_publisher_niceness"],
-            )
-            os.nice(self.opts["event_publisher_niceness"])
-
-        self.io_loop = tornado.ioloop.IOLoop()
-        with salt.utils.asynchronous.current_ioloop(self.io_loop):
-            if self.opts["ipc_mode"] == "tcp":
-                epub_uri = int(self.opts["tcp_master_pub_port"])
-                epull_uri = int(self.opts["tcp_master_pull_port"])
-            else:
-                epub_uri = os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
-                epull_uri = os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
-
-            self.publisher = salt.transport.ipc.IPCMessagePublisher(
-                self.opts, epub_uri, io_loop=self.io_loop
-            )
-
-            self.puller = salt.transport.ipc.IPCMessageServer(
-                epull_uri,
-                io_loop=self.io_loop,
-                payload_handler=self.handle_publish,
-            )
-
-            # Start the master event publisher
-            with salt.utils.files.set_umask(0o177):
-                self.publisher.start()
-                self.puller.start()
-                if self.opts["ipc_mode"] != "tcp" and (
-                    self.opts["publisher_acl"] or self.opts["external_auth"]
-                ):
-                    os.chmod(  # nosec
-                        os.path.join(self.opts["sock_dir"], "master_event_pub.ipc"),
-                        0o660,
-                    )
-
-            atexit.register(self.close)
-            with contextlib.suppress(KeyboardInterrupt):
-                try:
-                    self.io_loop.start()
-                finally:
-                    # Make sure the IO loop and respective sockets are closed and destroyed
-                    self.close()
-
-    def handle_publish(self, package, _):
-        """
-        Get something from epull, publish it out epub, and return the package (or None)
-        """
-        try:
-            self.publisher.publish(package)
-            return package
-        # Add an extra fallback in case a forked process leeks through
-        except Exception:  # pylint: disable=broad-except
-            log.critical("Unexpected error while polling master events", exc_info=True)
-            return None
-
-    def close(self):
-        if self._closing:
-            return
-        self._closing = True
-        atexit.unregister(self.close)
-        if self.publisher is not None:
-            self.publisher.close()
-            self.publisher = None
-        if self.puller is not None:
-            self.puller.close()
-            self.puller = None
-        if self.io_loop is not None:
-            self.io_loop.close()
-            self.io_loop = None
-
-    def _handle_signals(self, signum, sigframe):
-        self.close()
-        super()._handle_signals(signum, sigframe)
+#class AsyncEventPublisher:
+#    """
+#    An event publisher class intended to run in an ioloop (within a single process)
+#
+#    TODO: remove references to "minion_event" whenever we need to use this for other things
+#    """
+#
+#    def __init__(self, opts, io_loop=None):
+#        self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
+#        default_minion_sock_dir = self.opts["sock_dir"]
+#        self.opts.update(opts)
+#
+#        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+#        self._closing = False
+#        self.publisher = None
+#        self.puller = None
+#
+#        hash_type = getattr(hashlib, self.opts["hash_type"])
+#        # Only use the first 10 chars to keep longer hashes from exceeding the
+#        # max socket path length.
+#        id_hash = hash_type(
+#            salt.utils.stringutils.to_bytes(self.opts["id"])
+#        ).hexdigest()[:10]
+#        epub_sock_path = os.path.join(
+#            self.opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
+#        )
+#        if os.path.exists(epub_sock_path):
+#            os.unlink(epub_sock_path)
+#        epull_sock_path = os.path.join(
+#            self.opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
+#        )
+#        if os.path.exists(epull_sock_path):
+#            os.unlink(epull_sock_path)
+#
+#        if self.opts["ipc_mode"] == "tcp":
+#            epub_uri = int(self.opts["tcp_pub_port"])
+#            epull_uri = int(self.opts["tcp_pull_port"])
+#        else:
+#            epub_uri = epub_sock_path
+#            epull_uri = epull_sock_path
+#
+#        log.debug("%s PUB socket URI: %s", self.__class__.__name__, epub_uri)
+#        log.debug("%s PULL socket URI: %s", self.__class__.__name__, epull_uri)
+#
+#        minion_sock_dir = self.opts["sock_dir"]
+#
+#        if not os.path.isdir(minion_sock_dir):
+#            # Let's try to create the directory defined on the configuration
+#            # file
+#            try:
+#                os.makedirs(minion_sock_dir, 0o755)
+#            except OSError as exc:
+#                log.error("Could not create SOCK_DIR: %s", exc)
+#                # Let's not fail yet and try using the default path
+#                if minion_sock_dir == default_minion_sock_dir:
+#                    # We're already trying the default system path, stop now!
+#                    raise
+#
+#                if not os.path.isdir(default_minion_sock_dir):
+#                    try:
+#                        os.makedirs(default_minion_sock_dir, 0o755)
+#                    except OSError as exc:
+#                        log.error("Could not create SOCK_DIR: %s", exc)
+#                        # Let's stop at this stage
+#                        raise
+#
+#        self.publisher = salt.transport.ipc.IPCMessagePublisher(
+#            self.opts, epub_uri, io_loop=self.io_loop
+#        )
+#
+#        self.puller = salt.transport.ipc.IPCMessageServer(
+#            epull_uri, io_loop=self.io_loop, payload_handler=self.handle_publish
+#        )
+#
+#        log.info("Starting pull socket on %s", epull_uri)
+#        with salt.utils.files.set_umask(0o177):
+#            self.publisher.start()
+#            self.puller.start()
+#
+#    def handle_publish(self, package, _):
+#        """
+#        Get something from epull, publish it out epub, and return the package (or None)
+#        """
+#        try:
+#            self.publisher.publish(package)
+#            return package
+#        # Add an extra fallback in case a forked process leeks through
+#        except Exception:  # pylint: disable=broad-except
+#            log.critical("Unexpected error while polling minion events", exc_info=True)
+#            return None
+#
+#    def close(self):
+#        if self._closing:
+#            return
+#        self._closing = True
+#        if self.publisher is not None:
+#            self.publisher.close()
+#        if self.puller is not None:
+#            self.puller.close()
+#
+#
+#class EventPublisher(salt.utils.process.SignalHandlingProcess):
+#    """
+#    The interface that takes master events and republishes them out to anyone
+#    who wants to listen
+#    """
+#
+#    def __init__(self, opts, **kwargs):
+#        super().__init__(**kwargs)
+#        self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
+#        self.opts.update(opts)
+#        self._closing = False
+#        self.io_loop = None
+#        self.puller = None
+#        self.publisher = None
+#
+#    def run(self):
+#        """
+#        Bind the pub and pull sockets for events
+#        """
+#        if (
+#            self.opts["event_publisher_niceness"]
+#            and not salt.utils.platform.is_windows()
+#        ):
+#            log.info(
+#                "setting EventPublisher niceness to %i",
+#                self.opts["event_publisher_niceness"],
+#            )
+#            os.nice(self.opts["event_publisher_niceness"])
+#
+#        self.io_loop = tornado.ioloop.IOLoop()
+#        with salt.utils.asynchronous.current_ioloop(self.io_loop):
+#            if self.opts["ipc_mode"] == "tcp":
+#                epub_uri = int(self.opts["tcp_master_pub_port"])
+#                epull_uri = int(self.opts["tcp_master_pull_port"])
+#            else:
+#                epub_uri = os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
+#                epull_uri = os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
+#
+#            self.publisher = salt.transport.ipc.IPCMessagePublisher(
+#                self.opts, epub_uri, io_loop=self.io_loop
+#            )
+#
+#            self.puller = salt.transport.ipc.IPCMessageServer(
+#                epull_uri,
+#                io_loop=self.io_loop,
+#                payload_handler=self.handle_publish,
+#            )
+#
+#            # Start the master event publisher
+#            with salt.utils.files.set_umask(0o177):
+#                self.publisher.start()
+#                self.puller.start()
+#                if self.opts["ipc_mode"] != "tcp" and (
+#                    self.opts["publisher_acl"] or self.opts["external_auth"]
+#                ):
+#                    os.chmod(  # nosec
+#                        os.path.join(self.opts["sock_dir"], "master_event_pub.ipc"),
+#                        0o660,
+#                    )
+#
+#            atexit.register(self.close)
+#            with contextlib.suppress(KeyboardInterrupt):
+#                try:
+#                    self.io_loop.start()
+#                finally:
+#                    # Make sure the IO loop and respective sockets are closed and destroyed
+#                    self.close()
+#
+#    def handle_publish(self, package, _):
+#        """
+#        Get something from epull, publish it out epub, and return the package (or None)
+#        """
+#        try:
+#            self.publisher.publish(package)
+#            return package
+#        # Add an extra fallback in case a forked process leeks through
+#        except Exception:  # pylint: disable=broad-except
+#            log.critical("Unexpected error while polling master events", exc_info=True)
+#            return None
+#
+#    def close(self):
+#        if self._closing:
+#            return
+#        self._closing = True
+#        atexit.unregister(self.close)
+#        if self.publisher is not None:
+#            self.publisher.close()
+#            self.publisher = None
+#        if self.puller is not None:
+#            self.puller.close()
+#            self.puller = None
+#        if self.io_loop is not None:
+#            self.io_loop.close()
+#            self.io_loop = None
+#
+#    def _handle_signals(self, signum, sigframe):
+#        self.close()
+#        super()._handle_signals(signum, sigframe)
 
 
 class EventReturn(salt.utils.process.SignalHandlingProcess):
