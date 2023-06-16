@@ -253,7 +253,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
         yield self.message_client.connect()  # wait for the client to be connected
         self.connected = True
 
-    @tornado.gen.coroutine
     def _decode_messages(self, messages):
         if not isinstance(messages, dict):
             # TODO: For some reason we need to decode here for things
@@ -262,7 +261,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
             body = salt.transport.frame.decode_embedded_strs(body)
         else:
             body = messages
-        raise tornado.gen.Return(body)
+        return body
 
     @tornado.gen.coroutine
     def send(self, msg):
