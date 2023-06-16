@@ -19,7 +19,7 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="module", params=["tcp", "zeromq"])
+@pytest.fixture(scope="module", params=["zeromq", "tcp"])
 def transport(request):
     yield request.param
 
