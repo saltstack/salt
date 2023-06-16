@@ -12,7 +12,6 @@ import sys
 import time
 from typing import TYPE_CHECKING, Any
 
-import requests
 from ptscripts import Context, command_group
 
 import tools.utils
@@ -848,6 +847,7 @@ def _filter_test_labels(labels: list[dict[str, Any]]) -> list[tuple[str, str]]:
     arguments={
         "salt_version": {
             "help": "The version of salt being tested against",
+            "required": True,
         },
         "repository": {
             "help": "The repository to query for releases, e.g. saltstack/salt",
@@ -855,7 +855,7 @@ def _filter_test_labels(labels: list[dict[str, Any]]) -> list[tuple[str, str]]:
     },
 )
 def get_latest_releases(
-    ctx: Context, salt_version: str, repository: str = "saltstack/salt"
+    ctx: Context, salt_version: str = None, repository: str = "saltstack/salt"
 ):
     """
     Get a list of releases to use for the upgrade and downgrade tests.
@@ -893,7 +893,7 @@ def get_latest_releases(
         # Append the latest minor version of 3005 if we don't have enough major versions to test against
         if len(latest_releases) != num_major_versions:
             url = "https://repo.saltproject.io/salt/onedir/repo.json"
-            ret = requests.get(url)
+            ret = ctx.web.get(url)
             repo_data = ret.json()
             latest = list(repo_data["latest"].keys())[0]
             version = repo_data["latest"][latest]["version"]
