@@ -13,7 +13,6 @@ import sys
 import time
 from typing import TYPE_CHECKING, Any
 
-import requests
 from ptscripts import Context, command_group
 
 import tools.utils
