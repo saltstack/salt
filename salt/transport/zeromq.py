@@ -108,6 +108,14 @@ class PublishClient(salt.transport.base.PublishClient):
 
     ttype = "zeromq"
 
+    async_methods = [
+        "connect",
+        "recv",
+    ]
+    close_methods = [
+        "close",
+    ]
+
     def __init__(self, opts, io_loop, **kwargs):
         super().__init__(opts, io_loop, **kwargs)
         self.callbacks = {}
@@ -149,18 +157,19 @@ class PublishClient(salt.transport.base.PublishClient):
                 zmq.TCP_KEEPALIVE_INTVL, self.opts["tcp_keepalive_intvl"]
             )
 
-        recon_delay = self.opts["recon_default"]
+        recon_delay = self.opts.get("recon_default", 1)
+        recon_max = self.opts.get("recon_max", 1)
 
-        if self.opts["recon_randomize"]:
+        if self.opts.get("recon_randomize"):
             recon_delay = randint(
-                self.opts["recon_default"],
-                self.opts["recon_default"] + self.opts["recon_max"],
+                recon_delay,
+                recon_delay + recon_max,
             )
 
             log.debug(
                 "Generated random reconnect delay between '%sms' and '%sms' (%s)",
-                self.opts["recon_default"],
-                self.opts["recon_default"] + self.opts["recon_max"],
+                recon_delay,
+                recon_delay + recon_max,
                 recon_delay,
             )
 
@@ -170,12 +179,12 @@ class PublishClient(salt.transport.base.PublishClient):
         if hasattr(zmq, "RECONNECT_IVL_MAX"):
             log.debug(
                 "Setting zmq_reconnect_ivl_max to '%sms'",
-                self.opts["recon_default"] + self.opts["recon_max"],
+                recon_delay + recon_max,
             )
 
-            self._socket.setsockopt(zmq.RECONNECT_IVL_MAX, self.opts["recon_max"])
+            self._socket.setsockopt(zmq.RECONNECT_IVL_MAX, recon_max)
 
-        if (self.opts["ipv6"] is True or ":" in self.opts["master_ip"]) and hasattr(
+        if (self.opts["ipv6"] is True or ":" in self.opts.get("master_ip", "")) and hasattr(
             zmq, "IPV4ONLY"
         ):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
@@ -213,12 +222,23 @@ class PublishClient(salt.transport.base.PublishClient):
         self, publish_port, connect_callback=None, disconnect_callback=None
     ):
         self.publish_port = publish_port
-        log.debug(
+        log.error(
             "Connecting the Minion to the Master publish port, using the URI: %s",
             self.master_pub,
         )
         self._socket.connect(self.master_pub)
         # await connect_callback(True)
+
+    @tornado.gen.coroutine
+    def connect_uri(self, uri, connect_callback=None, disconnect_callback=None):
+        log.error(
+            "Connecting the Minion to the Master publish port, using the URI: %s",
+            uri
+        )
+        #log.debug("%r connecting to %s", self, self.master_pub)
+        self._socket.connect(uri)
+        if connect_callback:
+            connect_callback(True)
 
     @property
     def master_pub(self):
@@ -273,6 +293,9 @@ class PublishClient(salt.transport.base.PublishClient):
         """
         running = asyncio.Event()
         running.set()
+
+    async def recv(self, timeout=None):
+        return await self._socket.recv()
 
     async def recv(self, timeout=None):
         return await self._socket.recv()
@@ -690,6 +713,15 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
     def __init__(self, opts):
         self.opts = opts
+        if self.opts.get("ipc_mode", "") == "tcp":
+            self.pull_uri = "tcp://127.0.0.1:{}".format(
+                self.opts.get("tcp_master_publish_pull", 4514)
+            )
+        else:
+            self.pull_uri = "ipc://{}".format(
+                os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
+            )
+        self.pub_uri = "tcp://{interface}:{publish_port}".format(**self.opts)
 
     def connect(self):
         return tornado.gen.sleep(5)
@@ -742,7 +774,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
         async def on_recv(packages):
             for package in packages:
-                payload = salt.payload.loads(package)
+                log.error("PACAKGE %s %s %r", self.pull_uri, self.pub_uri, package)
+#                payload = salt.payload.loads(package)
                 await publish_payload(payload)
 
         self.task = None
@@ -757,25 +790,22 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             if self.task:
                 self.task.cancel()
 
-    @property
-    def pull_uri(self):
-        if self.opts.get("ipc_mode", "") == "tcp":
-            pull_uri = "tcp://127.0.0.1:{}".format(
-                self.opts.get("tcp_master_publish_pull", 4514)
-            )
-        else:
-            pull_uri = "ipc://{}".format(
-                os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
-            )
-        return pull_uri
+#    @property
+#    def pull_uri(self):
+#        if self.opts.get("ipc_mode", "") == "tcp":
+#            pull_uri = "tcp://127.0.0.1:{}".format(
+#                self.opts.get("tcp_master_publish_pull", 4514)
+#            )
+#        else:
+#            pull_uri = "ipc://{}".format(
+#                os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
+#            )
+#        return pull_uri
+#
+#    @property
+#    def pub_uri(self):
+#        return "tcp://{interface}:{publish_port}".format(**self.opts)
 
-    @property
-    def pub_uri(self):
-        return "tcp://{interface}:{publish_port}".format(**self.opts)
-
-    @tornado.gen.coroutine
-    def publish_payload(self, payload, topic_list=None):
-        payload = salt.payload.dumps(payload)
 
     async def publisher(self, pull_sock, publish_payload):
         while True:
@@ -803,7 +833,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         return "tcp://{interface}:{publish_port}".format(**self.opts)
 
     async def publish_payload(self, payload, topic_list=None):
-        payload = salt.payload.dumps(payload)
+        #payload = salt.payload.dumps(payload)
         if self.opts["zmq_filtering"]:
             if topic_list:
                 for topic in topic_list:
@@ -870,16 +900,16 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         ctx = zmq.Context()
         self._sock_data.sock = ctx.socket(zmq.PUSH)
         self.pub_sock.setsockopt(zmq.LINGER, -1)
-        if self.opts.get("ipc_mode", "") == "tcp":
-            pull_uri = "tcp://127.0.0.1:{}".format(
-                self.opts.get("tcp_master_publish_pull", 4514)
-            )
-        else:
-            pull_uri = "ipc://{}".format(
-                os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
-            )
-        log.debug("Connecting to pub server: %s", pull_uri)
-        self.pub_sock.connect(pull_uri)
+        #if self.opts.get("ipc_mode", "") == "tcp":
+        #    pull_uri = "tcp://127.0.0.1:{}".format(
+        #        self.opts.get("tcp_master_publish_pull", 4514)
+        #    )
+        #else:
+        #    pull_uri = "ipc://{}".format(
+        #        os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
+        #    )
+        log.debug("Connecting to pub server: %s", self.pull_uri)
+        self.pub_sock.connect(self.pull_uri)
         return self._sock_data.sock
 
     def pub_close(self):
@@ -900,8 +930,13 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         """
         if not self.pub_sock:
             self.pub_connect()
-        serialized = salt.payload.dumps(payload)
-        self.pub_sock.send(serialized)
+        log.error("Payload %r", payload)
+        if "noserial" not in kwargs:
+            serialized = salt.payload.dumps(payload)
+            log.error("Serialized %r", serialized)
+            self.pub_sock.send(serialized)
+        else:
+            self.pub_sock.send(payload)
         log.debug("Sent payload to publish daemon.")
 
     @property

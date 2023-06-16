@@ -1048,6 +1048,28 @@ class MinionManager(MinionBase):
             self.opts,
             io_loop=self.io_loop,
         )
+        def target():
+            import hashlib
+            self.opts['publish_port'] = 12321
+            hash_type = getattr(hashlib, self.opts["hash_type"])
+            ipc_publisher = salt.transport.publish_server(self.opts)
+            id_hash = hash_type(
+                salt.utils.stringutils.to_bytes(self.opts["id"])
+            ).hexdigest()[:10]
+            epub_sock_path = "ipc://{}".format(os.path.join(
+                self.opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
+            ))
+            if os.path.exists(epub_sock_path):
+                os.unlink(epub_sock_path)
+            epull_sock_path = "ipc://{}".format(os.path.join(
+                self.opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
+            ))
+            ipc_publisher.pub_uri = epub_sock_path
+            ipc_publisher.pull_uri = epull_sock_path
+            ipc_publisher.publish_daemon(ipc_publisher.publish_payload)
+
+        thread = threading.Thread(target=target)
+        thread.start()
         self.event = salt.utils.event.get_event(
             "minion", opts=self.opts, io_loop=self.io_loop
         )

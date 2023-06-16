@@ -722,10 +722,22 @@ class Master(SMaster):
                 pub_channels.append(chan)
 
             log.info("Creating master event publisher process")
+            #self.process_manager.add_process(
+            #    salt.utils.event.EventPublisher,
+            #    args=(self.opts,),
+            #    name="EventPublisher",
+            #)
+
+            ipc_publisher = salt.transport.publish_server(self.opts)
+            ipc_publisher.pub_uri = "ipc://{}".format(
+                os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
+            )
+            ipc_publisher.pull_uri = "ipc://{}".format(
+                os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
+            )
             self.process_manager.add_process(
-                salt.utils.event.EventPublisher,
-                args=(self.opts,),
-                name="EventPublisher",
+                ipc_publisher.publish_daemon,
+                args=[ipc_publisher.publish_payload,],
             )
 
             if self.opts.get("reactor"):
@@ -2359,6 +2371,7 @@ class ClearFuncs(TransportMethods):
                 chan = salt.channel.server.PubServerChannel.factory(opts)
                 self.channels.append(chan)
         for chan in self.channels:
+            log.error("SEND PUB %r", load)
             chan.publish(load)
 
     @property

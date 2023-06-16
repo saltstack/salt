@@ -32,6 +32,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         import salt.client
 
         self.parse_args()
+        print("A")
 
         try:
             # We don't need to bail on config file permission errors
@@ -47,6 +48,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             self.exit(2, "{}\n".format(exc))
             return
 
+        print("B")
         if self.options.batch or self.options.static:
             # _run_batch() will handle all output and
             # exit with the appropriate error condition
@@ -63,6 +65,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         if self.options.timeout <= 0:
             self.options.timeout = self.local_client.opts["timeout"]
 
+        print("C")
         kwargs = {
             "tgt": self.config["tgt"],
             "fun": self.config["fun"],
@@ -90,6 +93,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         else:
             kwargs["tgt_type"] = "glob"
 
+        print("D")
         # If batch_safe_limit is set, check minions matching target and
         # potentially switch to batch execution
         if self.options.batch_safe_limit > 1:
@@ -151,6 +155,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             )
             return
 
+        print("E")
         # local will be None when there was an error
         if not self.local_client:
             return
@@ -222,8 +227,9 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             AuthorizationError,
             SaltInvocationError,
             EauthAuthenticationError,
-            SaltClientError,
+            #SaltClientError,
         ) as exc:
+            print(repr(exc))
             ret = str(exc)
             self._output_ret(ret, "", retcode=1)
         finally:
