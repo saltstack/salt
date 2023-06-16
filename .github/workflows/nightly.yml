@@ -92,6 +92,7 @@ jobs:
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
       releases: ${{ steps.get-salt-releases.outputs.releases }}
+      release-changelog-target: ${{ steps.get-release-changelog-target.outputs.release-changelog-target }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -296,6 +297,11 @@ jobs:
         id: set-cache-seed
         run: |
           echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
+
+      - name: Get Release Changelog Target
+        id: get-release-changelog-target
+        run: |
+          tools ci get-release-changelog-target ${{ github.event_name }}
   pre-commit:
     name: Pre-Commit
     if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
@@ -369,11 +375,21 @@ jobs:
           tools changelog update-rpm --draft
           tools changelog update-rpm
 
+      - name: Create Release Notes Template
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          if [ "${{ needs.prepare-workflow.outputs.release-changelog-target }}" == "next-major-release" ]; then
+            tools changelog update-release-notes --next-release --template-only
+          else
+            tools changelog update-release-notes --template-only
+          fi
+
       - name: Update Release Notes
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          if [ "${{ contains(fromJSON('["master"]'), github.ref_name) }}" == "true" ]; then
+          if [ "${{ needs.prepare-workflow.outputs.release-changelog-target }}" == "next-major-release" ]; then
               tools changelog update-release-notes --draft --next-release
               tools changelog update-release-notes --next-release
           else
@@ -507,9 +523,7 @@ jobs:
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
       relenv-version: "0.12.3"
-      python-version-linux: "3.10.11"
-      python-version-macos: "3.10.11"
-      python-version-windows: "3.10.11"
+      python-version: "3.10.11"
 
   build-salt-onedir:
     name: Build Salt Onedir
@@ -525,9 +539,7 @@ jobs:
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
       relenv-version: "0.12.3"
-      python-version-linux: "3.10.11"
-      python-version-macos: "3.10.11"
-      python-version-windows: "3.10.11"
+      python-version: "3.10.11"
 
   build-rpm-pkgs:
     name: Build RPM Packages
@@ -538,6 +550,8 @@ jobs:
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      relenv-version: "0.12.3"
+      python-version: "3.10.11"
 
   build-deb-pkgs:
     name: Build DEB Packages
@@ -548,6 +562,8 @@ jobs:
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      relenv-version: "0.12.3"
+      python-version: "3.10.11"
 
   build-windows-pkgs:
     name: Build Windows Packages
@@ -558,6 +574,8 @@ jobs:
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      relenv-version: "0.12.3"
+      python-version: "3.10.11"
       environment: nightly
       sign-packages: false
     secrets: inherit
@@ -571,6 +589,8 @@ jobs:
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      relenv-version: "0.12.3"
+      python-version: "3.10.11"
       environment: nightly
       sign-packages: true
     secrets: inherit

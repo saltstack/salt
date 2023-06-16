@@ -1,8 +1,12 @@
 import importlib
+import os
+import shutil
+import tempfile
 
 import pytest
 
 import salt.exceptions
+import salt.utils.files
 from tests.support.mock import MagicMock, patch
 
 # "pass" is a reserved keyword, we need to import it differently
@@ -17,6 +21,47 @@ def configure_loader_modules(master_opts):
             "_get_pass_exec": MagicMock(return_value="/usr/bin/pass"),
         }
     }
+
+
+@pytest.fixture()
+def pass_executable(request):
+    tmp_dir = tempfile.mkdtemp(prefix="salt_pass_")
+    pass_path = os.path.join(tmp_dir, "pass")
+    with salt.utils.files.fopen(pass_path, "w") as f:
+        f.write("#!/bin/sh\n")
+        # return path path wrapped into unicode characters
+        # pass args ($1, $2) are ("show", <pass_path>)
+        f.write('echo "α>>> $2 <<<β"\n')
+    os.chmod(pass_path, 0o755)
+    yield pass_path
+    shutil.rmtree(tmp_dir)
+
+
+@pytest.fixture()
+def pass_executable_error(request):
+    tmp_dir = tempfile.mkdtemp(prefix="salt_pass_")
+    pass_path = os.path.join(tmp_dir, "pass")
+    with salt.utils.files.fopen(pass_path, "w") as f:
+        f.write("#!/bin/sh\n")
+        # return error message with unicode characters
+        f.write('echo "ERROR: αβγ" >&2\n')
+        f.write("exit 1\n")
+    os.chmod(pass_path, 0o755)
+    yield pass_path
+    shutil.rmtree(tmp_dir)
+
+
+@pytest.fixture()
+def pass_executable_invalid_utf8(request):
+    tmp_dir = tempfile.mkdtemp(prefix="salt_pass_")
+    pass_path = os.path.join(tmp_dir, "pass")
+    with salt.utils.files.fopen(pass_path, "wb") as f:
+        f.write(b"#!/bin/sh\n")
+        # return invalid utf-8 sequence
+        f.write(b'echo "\x80\x81"\n')
+    os.chmod(pass_path, 0o755)
+    yield pass_path
+    shutil.rmtree(tmp_dir)
 
 
 # The default behavior is that if fetching a secret from pass fails,
@@ -161,3 +206,57 @@ def test_env():
     call_args, call_kwargs = popen_mock.call_args_list[0]
     assert call_kwargs["env"]["GNUPGHOME"] == config["pass_gnupghome"]
     assert call_kwargs["env"]["PASSWORD_STORE_DIR"] == config["pass_dir"]
+
+
+@pytest.mark.skip_on_windows(reason="Not supported on Windows")
+def test_utf8(pass_executable):
+    config = {
+        "pass_variable_prefix": "pass:",
+        "pass_strict_fetch": True,
+    }
+    mocks = {
+        "_get_pass_exec": MagicMock(return_value=pass_executable),
+    }
+
+    pass_path = "pass:secret"
+    with patch.dict(pass_.__opts__, config), patch.dict(pass_.__dict__, mocks):
+        result = pass_.render(pass_path)
+    assert result == "α>>> secret <<<β"
+
+
+@pytest.mark.skip_on_windows(reason="Not supported on Windows")
+def test_utf8_error(pass_executable_error):
+    config = {
+        "pass_variable_prefix": "pass:",
+        "pass_strict_fetch": True,
+    }
+    mocks = {
+        "_get_pass_exec": MagicMock(return_value=pass_executable_error),
+    }
+
+    pass_path = "pass:secret"
+    with patch.dict(pass_.__opts__, config), patch.dict(pass_.__dict__, mocks):
+        with pytest.raises(
+            salt.exceptions.SaltRenderError,
+            match=r"Could not fetch secret 'secret' from the password store: ERROR: αβγ",
+        ):
+            result = pass_.render(pass_path)
+
+
+@pytest.mark.skip_on_windows(reason="Not supported on Windows")
+def test_invalid_utf8(pass_executable_invalid_utf8):
+    config = {
+        "pass_variable_prefix": "pass:",
+        "pass_strict_fetch": True,
+    }
+    mocks = {
+        "_get_pass_exec": MagicMock(return_value=pass_executable_invalid_utf8),
+    }
+
+    pass_path = "pass:secret"
+    with patch.dict(pass_.__opts__, config), patch.dict(pass_.__dict__, mocks):
+        with pytest.raises(
+            salt.exceptions.SaltRenderError,
+            match=r"Could not fetch secret 'secret' from the password store: 'utf-8' codec can't decode byte 0x80 in position 0: invalid start byte",
+        ):
+            result = pass_.render(pass_path)

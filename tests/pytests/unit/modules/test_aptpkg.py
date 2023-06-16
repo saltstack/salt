@@ -1290,17 +1290,17 @@ def test_call_apt_dpkg_lock():
     ]
 
     cmd_mock = MagicMock(side_effect=cmd_side_effect)
-    cmd_call = (
+    cmd_call = [
         call(
             ["dpkg", "-l", "python"],
-            env={},
-            ignore_retcode=False,
             output_loglevel="quiet",
             python_shell=True,
+            env={},
+            ignore_retcode=False,
             username="Darth Vader",
         ),
-    )
-    expected_calls = [cmd_call * 5]
+    ]
+    expected_calls = cmd_call * 5
 
     with patch.dict(
         aptpkg.__salt__,
@@ -1320,7 +1320,7 @@ def test_call_apt_dpkg_lock():
 
             # We should attempt to call the cmd 5 times
             assert cmd_mock.call_count == 5
-            cmd_mock.has_calls(expected_calls)
+            cmd_mock.assert_has_calls(expected_calls)
 
 
 def test_services_need_restart_checkrestart_missing():
@@ -1401,3 +1401,39 @@ def test_sourceslist_architectures(repo_line):
                     assert source.architectures == ["amd64", "armel"]
                 else:
                     assert source.architectures == ["amd64"]
+
+
+def test_latest_version_calls_aptcache_once_per_run():
+    """
+    Performance Test - don't call apt-cache once for each pkg, call once and parse output
+    """
+    mock_list_pkgs = MagicMock(return_value={"sudo": "1.8.27-1+deb10u5"})
+    apt_cache_ret = {
+        "stdout": textwrap.dedent(
+            """sudo:
+              Installed: 1.8.27-1+deb10u5
+              Candidate: 1.8.27-1+deb10u5
+              Version table:
+             *** 1.8.27-1+deb10u5 500
+                    500 http://security.debian.org/debian-security buster/updates/main amd64 Packages
+                    100 /var/lib/dpkg/status
+                 1.8.27-1+deb10u3 500
+                    500 http://deb.debian.org/debian buster/main amd64 Packages
+            unzip:
+              Installed: (none)
+              Candidate: 6.0-23+deb10u3
+              Version table:
+                 6.0-23+deb10u3 500
+                    500 http://security.debian.org/debian-security buster/updates/main amd64 Packages
+                 6.0-23+deb10u2 500
+                    500 http://deb.debian.org/debian buster/main amd64 Packages
+            """
+        )
+    }
+    mock_apt_cache = MagicMock(return_value=apt_cache_ret)
+    with patch("salt.modules.aptpkg._call_apt", mock_apt_cache), patch(
+        "salt.modules.aptpkg.list_pkgs", mock_list_pkgs
+    ):
+        ret = aptpkg.latest_version("sudo", "unzip", refresh=False)
+    mock_apt_cache.assert_called_once()
+    assert ret == {"sudo": "6.0-23+deb10u3", "unzip": ""}

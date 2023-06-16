@@ -5,11 +5,11 @@ import time
 from pathlib import Path
 
 import pytest
+import tornado.ioloop
+import tornado.iostream
 import zmq.eventloop.ioloop
 
 import salt.config
-import salt.ext.tornado.ioloop
-import salt.ext.tornado.iostream
 import salt.utils.event
 import salt.utils.stringutils
 from salt.utils.event import SaltEvent
@@ -38,7 +38,7 @@ def sock_dir(tmp_path):
 def _assert_got_event(evt, data, msg=None, expected_failure=False):
     assert evt is not None, msg
     for key in data:
-        assert key in evt, "{}: Key {} missing".format(msg, key)
+        assert key in evt, f"{msg}: Key {key} missing"
         assertMsg = "{0}: Key {1} value mismatch, {2} != {3}"
         assertMsg = assertMsg.format(msg, key, data[key], evt[key])
         if not expected_failure:
@@ -59,8 +59,8 @@ def test_minion_event(sock_dir):
         :10
     ]
     with salt.utils.event.MinionEvent(opts, listen=False) as me:
-        assert me.puburi == str(sock_dir / "minion_event_{}_pub.ipc".format(id_hash))
-        assert me.pulluri == str(sock_dir / "minion_event_{}_pull.ipc".format(id_hash))
+        assert me.puburi == str(sock_dir / f"minion_event_{id_hash}_pub.ipc")
+        assert me.pulluri == str(sock_dir / f"minion_event_{id_hash}_pull.ipc")
 
 
 def test_minion_event_tcp_ipc_mode():
@@ -73,8 +73,8 @@ def test_minion_event_tcp_ipc_mode():
 def test_minion_event_no_id(sock_dir):
     with salt.utils.event.MinionEvent(dict(sock_dir=str(sock_dir)), listen=False) as me:
         id_hash = hashlib.sha256(salt.utils.stringutils.to_bytes("")).hexdigest()[:10]
-        assert me.puburi == str(sock_dir / "minion_event_{}_pub.ipc".format(id_hash))
-        assert me.pulluri == str(sock_dir / "minion_event_{}_pull.ipc".format(id_hash))
+        assert me.puburi == str(sock_dir / f"minion_event_{id_hash}_pub.ipc")
+        assert me.pulluri == str(sock_dir / f"minion_event_{id_hash}_pull.ipc")
 
 
 @pytest.mark.slow_test
@@ -256,9 +256,9 @@ def test_event_many(sock_dir):
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
             for i in range(500):
-                me.fire_event({"data": "{}".format(i)}, "testevents")
+                me.fire_event({"data": f"{i}"}, "testevents")
                 evt = me.get_event(tag="testevents")
-                _assert_got_event(evt, {"data": "{}".format(i)}, "Event {}".format(i))
+                _assert_got_event(evt, {"data": f"{i}"}, f"Event {i}")
 
 
 @pytest.mark.slow_test
@@ -268,10 +268,10 @@ def test_event_many_backlog(sock_dir):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
             # Must not exceed zmq HWM
             for i in range(500):
-                me.fire_event({"data": "{}".format(i)}, "testevents")
+                me.fire_event({"data": f"{i}"}, "testevents")
             for i in range(500):
                 evt = me.get_event(tag="testevents")
-                _assert_got_event(evt, {"data": "{}".format(i)}, "Event {}".format(i))
+                _assert_got_event(evt, {"data": f"{i}"}, f"Event {i}")
 
 
 # Test the fire_master function. As it wraps the underlying fire_event,
@@ -300,15 +300,13 @@ def test_connect_pull_should_debug_log_on_StreamClosedError():
     event = SaltEvent(node=None)
     with patch.object(event, "pusher") as mock_pusher:
         with patch.object(
-            salt.utils.event.log, "debug", auto_spec=True
+            salt.utils.event.log, "debug", autospec=True
         ) as mock_log_debug:
-            mock_pusher.connect.side_effect = (
-                salt.ext.tornado.iostream.StreamClosedError
-            )
+            mock_pusher.connect.side_effect = tornado.iostream.StreamClosedError
             event.connect_pull()
             call = mock_log_debug.mock_calls[0]
             assert call.args[0] == "Unable to connect pusher: %s"
-            assert isinstance(call.args[1], salt.ext.tornado.iostream.StreamClosedError)
+            assert isinstance(call.args[1], tornado.iostream.StreamClosedError)
             assert call.args[1].args[0] == "Stream is closed"
 
 
@@ -317,19 +315,17 @@ def test_connect_pull_should_error_log_on_other_errors(error):
     event = SaltEvent(node=None)
     with patch.object(event, "pusher") as mock_pusher:
         with patch.object(
-            salt.utils.event.log, "debug", auto_spec=True
+            salt.utils.event.log, "debug", autospec=True
         ) as mock_log_debug:
             with patch.object(
-                salt.utils.event.log, "error", auto_spec=True
+                salt.utils.event.log, "error", autospec=True
             ) as mock_log_error:
                 mock_pusher.connect.side_effect = error
                 event.connect_pull()
                 mock_log_debug.assert_not_called()
                 call = mock_log_error.mock_calls[0]
                 assert call.args[0] == "Unable to connect pusher: %s"
-                assert not isinstance(
-                    call.args[1], salt.ext.tornado.iostream.StreamClosedError
-                )
+                assert not isinstance(call.args[1], tornado.iostream.StreamClosedError)
 
 
 @pytest.mark.slow_test

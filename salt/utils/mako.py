@@ -70,7 +70,7 @@ if HAS_MAKO:
             if scheme in ("salt", "file"):
                 return uri
             elif scheme:
-                raise ValueError("Unsupported URL scheme({}) in {}".format(scheme, uri))
+                raise ValueError(f"Unsupported URL scheme({scheme}) in {uri}")
             return self.lookup.adjust_uri(uri, filename)
 
         def get_template(self, uri, relativeto=None):

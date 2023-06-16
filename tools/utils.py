@@ -38,6 +38,9 @@ SPB_ENVIRONMENT = os.environ.get("SPB_ENVIRONMENT") or "prod"
 STAGING_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-staging"
 RELEASE_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-release"
 BACKUP_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-backup"
+SHARED_WORKFLOW_CONTEXT_FILEPATH = (
+    REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
+)
 
 
 class UpdateProgress:
