@@ -416,6 +416,12 @@ class SaltEvent:
                         kwargs={"io_loop": self.io_loop},
                         loop_kwarg="io_loop",
                     )
+                    #self.pusher = salt.utils.asynchronous.SyncWrapper(
+                    #    salt.transport.ipc.IPCMessageClient,
+                    #    args=(self.pulluri,),
+                    #    kwargs={"io_loop": self.io_loop},
+                    #    loop_kwarg="io_loop",
+                    #)
                 try:
                     self.pusher.connect(timeout=timeout)
                     self.cpush = True
@@ -770,9 +776,10 @@ class SaltEvent:
             ]
         )
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
-        ret = yield self.pusher.send(msg)
-        if cb is not None:
-            cb(ret)
+        self.pusher.publish(msg, noserial=True)
+        #ret = yield self.pusher.send(msg)
+        #if cb is not None:
+        #    cb(ret)
 
     def fire_event(self, data, tag, timeout=1000):
         """
@@ -826,6 +833,7 @@ class SaltEvent:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 try:
                     self.pusher.send(msg)
+                    #self.pusher.send(msg)
                 except Exception as exc:  # pylint: disable=broad-except
                     log.debug(
                         "Publisher send failed with exception: %s",

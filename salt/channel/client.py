@@ -469,7 +469,7 @@ class AsyncPubChannel:
 
         @tornado.gen.coroutine
         def wrap_callback(messages):
-            payload = yield self.transport._decode_messages(messages)
+            payload = self.transport._decode_messages(messages)
             decoded = yield self._decode_payload(payload)
             log.debug("PubChannel received: %r", decoded)
             if decoded is not None:
