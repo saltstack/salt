@@ -38,6 +38,12 @@ class SaltRun(salt.utils.parsers.SaltRunOptionParser):
                     # runners might still use it. For this reason, we
                     # also check ret['data']['retcode'] if
                     # ret['retcode'] is not available.
+                    if (
+                        isinstance(ret, dict)
+                        and "return" in ret
+                        and "retcode" not in ret
+                    ):
+                        ret = ret["return"]
                     if isinstance(ret, dict) and "retcode" in ret:
                         self.exit(ret["retcode"])
                     elif isinstance(ret, dict) and "retcode" in ret.get("data", {}):
