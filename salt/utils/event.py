@@ -352,8 +352,9 @@ class SaltEvent:
         if self.cpub:
             return True
 
-        log.error("EVENT AT LEAS")
+        log.error("WTF A")
         if self._run_io_loop_sync:
+            log.error("WTF B")
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if self.subscriber is None:
                     #self.subscriber = salt.utils.asynchronous.SyncWrapper(
@@ -392,8 +393,9 @@ class SaltEvent:
                     self.opts["master_ip"] = ""
                 self.subscriber = salt.transport.publish_client(self.opts, self.io_loop)
                 puburi = "ipc://{}".format(self.puburi)
-                self.subscriber.connect_uri(puburi)
-                #self.io_loop.spawn_callback(self.subscriber.connect_uri, self.puburi)
+                #self.io_loop.run_sync(self.subscriber.connect_uri, puburi)
+                self.io_loop.spawn_callback(self.subscriber.connect_uri, puburi)
+                log.error("WTF")
                 #self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
                 #    self.puburi, io_loop=self.io_loop
                 #)
@@ -595,7 +597,7 @@ class SaltEvent:
                 if not self.cpub and not self.connect_pub(timeout=wait):
                     break
                 #riraw = self.subscriber.read(timeout=wait)
-                print(repr(self.subscriber))
+                log.warning("Subscriber %r", self.subscriber)
                 raw = self.subscriber.recv(timeout=wait)
                 if raw is None:
                     break
