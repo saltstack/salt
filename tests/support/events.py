@@ -10,12 +10,32 @@ import time
 from contextlib import contextmanager
 
 import salt.utils.event
-from salt.utils.process import clean_proc
+from salt.utils.process import clean_proc, Process
 
 
 @contextmanager
 def eventpublisher_process(sock_dir):
-    proc = salt.utils.event.EventPublisher({"sock_dir": sock_dir})
+    opts = {
+        "sock_dir": sock_dir,
+        "interface": "127.0.0.1",
+        "publish_port": 4506,
+        "ipv6": None,
+        "zmq_filtering": None,
+    }
+    ipc_publisher = salt.transport.publish_server(opts)
+    ipc_publisher.pub_uri = "ipc://{}".format(
+        os.path.join(opts["sock_dir"], "master_event_pub.ipc")
+    )
+    ipc_publisher.pull_uri = "ipc://{}".format(
+        os.path.join(opts["sock_dir"], "master_event_pull.ipc")
+    )
+    proc = Process(
+        target=ipc_publisher.publish_daemon,
+        args=[
+            ipc_publisher.publish_payload,
+        ],
+    )
+    #proc = salt.utils.event.EventPublisher({"sock_dir": sock_dir})
     proc.start()
     try:
         if os.environ.get("TRAVIS_PYTHON_VERSION", None) is not None:
