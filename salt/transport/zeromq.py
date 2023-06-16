@@ -999,12 +999,12 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if not self.pub_sock:
             self.pub_connect()
         log.error("Payload %r", payload)
-        if "noserial" not in kwargs:
-            serialized = salt.payload.dumps(payload)
-            log.error("Serialized %r", serialized)
-            self.pub_sock.send(serialized)
-        else:
-            self.pub_sock.send(payload)
+#        if "noserial" not in kwargs:
+#            serialized = salt.payload.dumps(payload)
+#            log.error("Serialized %r", serialized)
+#            self.pub_sock.send(serialized)
+#        else:
+        self.pub_sock.send(payload)
         log.debug("Sent payload to publish daemon.")
 
     @property

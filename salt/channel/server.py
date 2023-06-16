@@ -839,12 +839,14 @@ class PubServerChannel:
 
     @tornado.gen.coroutine
     def publish_payload(self, load, *args):
+        load = salt.payload.loads(load)
         unpacked_package = self.wrap_payload(load)
         try:
             payload = salt.payload.loads(unpacked_package["payload"])
         except KeyError:
             log.error("Invalid package %r", unpacked_package)
             raise
+        payload = salt.payload.dumps(payload)
         if "topic_lst" in unpacked_package:
             topic_list = unpacked_package["topic_lst"]
             ret = yield self.transport.publish_payload(payload, topic_list)
@@ -894,4 +896,5 @@ class PubServerChannel:
             load.get("jid", None),
             repr(load)[:40],
         )
+        load = salt.payload.dumps(load)
         self.transport.publish(load)

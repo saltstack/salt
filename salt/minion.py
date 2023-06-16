@@ -1044,10 +1044,10 @@ class MinionManager(MinionBase):
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
-        self.event_publisher = salt.utils.event.AsyncEventPublisher(
-            self.opts,
-            io_loop=self.io_loop,
-        )
+        #self.event_publisher = salt.utils.event.AsyncEventPublisher(
+        #    self.opts,
+        #    io_loop=self.io_loop,
+        #)
         def target():
             import hashlib
             self.opts['publish_port'] = 12321
