@@ -722,6 +722,7 @@ class SaltEvent:
         if not self.cpub:
             if not self.connect_pub():
                 return None
+        log.error("GET EVENT NOBLOCK %r", self.subscriber)
         raw = self.subscriber.recv(timeout=0)
         if raw is None:
             return None
@@ -738,6 +739,7 @@ class SaltEvent:
         if not self.cpub:
             if not self.connect_pub():
                 return None
+        log.error("GET EVENT BLOCK %r", self.subscriber)
         raw = self.subscriber.recv(timeout=None)
         if raw is None:
             return None
@@ -858,12 +860,12 @@ class SaltEvent:
             ]
         )
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
-        log.error("FIRE EVENT %r", msg)
         if self._run_io_loop_sync:
+            log.error("FIRE EVENT A %r %r", msg, self.pusher)
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 try:
                     #self.pusher.send(msg)
-                    self.pusher.publish(msg, noserial=True)
+                    self.pusher.publish(msg)
                 except Exception as exc:  # pylint: disable=broad-except
                     log.debug(
                         "Publisher send failed with exception: %s",
@@ -872,7 +874,8 @@ class SaltEvent:
                     )
                     raise
         else:
-            self.pusher.publish(msg, noserial=True)
+            log.error("FIRE EVENT B %r %r", msg, self.pusher)
+            self.pusher.publish(msg)
             #self.io_loop.spawn_callback(self.pusher.send, msg)
         return True
 

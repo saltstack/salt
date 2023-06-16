@@ -234,6 +234,7 @@ class PublishClient(salt.transport.base.PublishClient):
             **opts,
         )
         self.connect_called = False
+        self.callbacks = {}
 
     def close(self):
         if self._closing is True:
@@ -325,17 +326,21 @@ class PublishClient(salt.transport.base.PublishClient):
         # the decoded payload to 'ret' and resume operation
         return payload
 
-    def on_recv(self, callback):
-        """
-        Register a callback for received messages (that we didn't initiate)
+    #@property
+    #def stream(self):
+    #    """
+    #    Return the current zmqstream, creating one if necessary
+    #    """
+    #    if not hasattr(self, "_stream"):
+    #        self._stream = zmq.eventloop.zmqstream.ZMQStream(
+    #            self._socket, io_loop=self.io_loop
+    #        )
+    #    return self._stream
 
-        :param func callback: A function which should be called when data is received
-        """
-        running = asyncio.Event()
-        running.set()
+    #def on_recv(self, callback):
+    #    """
+    #    Register a callback for received messages (that we didn't initiate)
 
-    async def recv(self, timeout=None):
-        return await self._socket.recv()
 
     async def recv(self, timeout=None):
         log.error("SOCK %r %s", self._socket, self.connect_called)
@@ -352,9 +357,20 @@ class PublishClient(salt.transport.base.PublishClient):
         else:
             return await self._socket.recv()
 
-    @tornado.gen.coroutine
-    def send(self, msg):
-        self.stream.send(msg, noblock=True)
+    async def send(self, msg):
+        return
+        await self._socket.send(msg)
+
+    def on_recv(self, callback):
+
+        """
+        Register a callback for received messages (that we didn't initiate)
+
+        :param func callback: A function which should be called when data is received
+        """
+        running = asyncio.Event()
+        running.set()
+
         async def consume(running):
             while running.is_set():
                 try:
@@ -371,12 +387,8 @@ class PublishClient(salt.transport.base.PublishClient):
                     log.error("Exception while running callback", exc_info=True)
                 log.debug("Callback done %r", callback)
 
-        task = self.io_loop.create_task(consume(running))
+        task = self.io_loop.spawn_callback(consume, running)
         self.callbacks[callback] = running, task
-
-    async def send(self, msg):
-        await self._socket.send(msg)
-
 
 class RequestServer(salt.transport.base.DaemonizedRequestServer):
     def __init__(self, opts):  # pylint: disable=W0231
@@ -773,7 +785,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.pull_uri = "ipc://{}".format(
                 os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
             )
-        self.pub_uri = "tcp://{interface}:{publish_port}".format(**self.opts)
+        interface = self.opts.get("interface", "127.0.0.1")
+        publish_port = self.opts.get("publish_port", 4560)
+        self.pub_uri = f"tcp://{interface}:{publish_port}"
 
     def connect(self):
         return tornado.gen.sleep(5)
@@ -788,7 +802,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         This method represents the Publish Daemon process. It is intended to be
         run in a thread or process as it creates and runs an it's own ioloop.
         """
-        ioloop = tornado.ioloop.IOLoop.current()
+        ioloop = tornado.ioloop.IOLoop()
+        ioloop.asyncio_loop.set_debug(True)
         self.io_loop = ioloop
         context = zmq.asyncio.Context()
         pub_sock = context.socket(zmq.PUB)
@@ -999,11 +1014,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if not self.pub_sock:
             self.pub_connect()
         log.error("Payload %r", payload)
-#        if "noserial" not in kwargs:
-#            serialized = salt.payload.dumps(payload)
-#            log.error("Serialized %r", serialized)
-#            self.pub_sock.send(serialized)
-#        else:
         self.pub_sock.send(payload)
         log.debug("Sent payload to publish daemon.")
 

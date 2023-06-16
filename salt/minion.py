@@ -285,7 +285,7 @@ def get_proc_dir(cachedir, **kwargs):
     mode = kwargs.pop("mode", None)
 
     if mode is None:
-        mode = {}
+        eode = {}
     else:
         mode = {"mode": mode}
 
@@ -1068,7 +1068,7 @@ class MinionManager(MinionBase):
             ipc_publisher.pull_uri = epull_sock_path
             ipc_publisher.publish_daemon(ipc_publisher.publish_payload)
 
-        thread = threading.Thread(target=target)
+        thread = salt.utils.process.Process(target=target)
         thread.start()
         self.event = salt.utils.event.get_event(
             "minion", opts=self.opts, io_loop=self.io_loop
