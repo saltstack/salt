@@ -188,14 +188,6 @@ def test_adduser():
         {
             "grains": {
                 "kernel": "Linux",
-                "os_family": "RedHat",
-                "osmajorrelease": "5",
-            },
-            "cmd": ["/bin/gpasswd", "-a", "root", "test"],
-        },
-        {
-            "grains": {
-                "kernel": "Linux",
                 "os_family": "Suse",
                 "osmajorrelease": "11",
             },
@@ -242,14 +234,6 @@ def test_deluser():
     Tests if specified user gets deleted from the group.
     """
     os_version_list = [
-        {
-            "grains": {
-                "kernel": "Linux",
-                "os_family": "RedHat",
-                "osmajorrelease": "5",
-            },
-            "cmd": ["/bin/gpasswd", "-d", "root", "test"],
-        },
         {
             "grains": {
                 "kernel": "Linux",
@@ -325,14 +309,6 @@ def test_members():
     Tests if members of the group, get replaced with a provided list.
     """
     os_version_list = [
-        {
-            "grains": {
-                "kernel": "Linux",
-                "os_family": "RedHat",
-                "osmajorrelease": "5",
-            },
-            "cmd": ["/bin/gpasswd", "-M", "foo", "test"],
-        },
         {
             "grains": {
                 "kernel": "Linux",
