@@ -24,7 +24,7 @@ attrs==20.3.0
 backports.entry-points-selectable==1.1.0
     # via virtualenv
 bcrypt==4.0.1
-    # via passlib
+    # via -r requirements/static/ci/common.in
 boto3==1.21.46
     # via
     #   -r requirements/static/ci/common.in
@@ -100,7 +100,7 @@ dnspython==1.16.0
 docker-pycreds==0.4.0
     # via docker
 docker==2.7.0
-    # via -r requirements/static/ci/common.in
+    # via -r requirements/pytest.txt
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 exceptiongroup==1.0.4
@@ -212,7 +212,7 @@ packaging==21.3
     # via
     #   -r requirements/base.txt
     #   pytest
-passlib[bcrypt]==1.7.4
+passlib==1.7.4
     # via -r requirements/static/ci/common.in
 patch==1.16
     # via -r requirements/static/ci/windows.in
@@ -270,7 +270,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc21 ; sys_platform == "win32"
+pytest-salt-factories==1.0.0rc21
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.6.0
     # via pytest-salt-factories
