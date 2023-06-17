@@ -2107,13 +2107,13 @@ jobs:
         with:
           payload: |
             {
-              "text": "Nightly Workflow build result for the ${{ github.ref_name }} branch: ${{ steps.get-workflow-info.outputs.conclusion }}\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "text": "Nightly Workflow build result for the `${{ github.ref_name }}` branch(attempt: ${{ github.run_attempt }}): `${{ steps.get-workflow-info.outputs.conclusion }}`\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
               "blocks": [
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "Nightly Workflow build result for the ${{ github.ref_name }} branch: ${{ steps.get-workflow-info.outputs.conclusion }}\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\nThis is attempt #${{ github.run_attempt }}"
+                    "text": "Nightly Workflow build result for the `${{ github.ref_name }}` branch(attempt: ${{ github.run_attempt }})\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                   }
                 }
               ]
