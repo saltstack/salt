@@ -334,8 +334,8 @@ backports.entry-points-selectable==1.1.0
     # via virtualenv
 bcrypt==3.2.0
     # via
+    #   -r requirements/static/ci/common.in
     #   paramiko
-    #   passlib
 boto3==1.21.46
     # via
     #   -r requirements/static/ci/common.in
@@ -418,7 +418,7 @@ dnspython==2.1.0
     #   ciscoconfparse
     #   python-etcd
 docker==5.0.0
-    # via -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/lint.in
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 filelock==3.0.12
@@ -663,7 +663,7 @@ paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     #   ncclient
     #   netmiko
     #   scp
-passlib[bcrypt]==1.7.4
+passlib==1.7.4
     # via
     #   -r requirements/static/ci/common.in
     #   ciscoconfparse
