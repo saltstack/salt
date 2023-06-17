@@ -31,7 +31,7 @@ def __virtual__():
     """
     if __grains__["os"] != "MacOS":
         return False, "brew module is macos specific"
-    if not salt.utils.path.which("brew"):
+    if not _homebrew_bin():
         return False, "The 'brew' binary was not found"
     return __virtualname__
 
@@ -97,7 +97,7 @@ def _homebrew_bin():
     """
     Returns the full path to the homebrew binary in the PATH
     """
-    ret = __salt__["cmd.run"]("brew --prefix", output_loglevel="trace")
+    ret = __salt__["cmd.run"](salt.utils.path.which("brew")+" --prefix", output_loglevel="trace")
     ret += "/bin/brew"
     return ret
 
@@ -111,7 +111,7 @@ def _call_brew(*cmd, failhard=True):
     _cmd = []
     if runas:
         _cmd = ["sudo -i -n -H -u {} -- ".format(runas)]
-    _cmd = _cmd + [salt.utils.path.which("brew")] + list(cmd)
+    _cmd = _cmd + [_homebrew_bin()] + list(cmd)
     _cmd = " ".join(_cmd)
 
     runas = None
