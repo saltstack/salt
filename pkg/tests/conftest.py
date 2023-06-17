@@ -44,7 +44,7 @@ def grains(sminion):
     return sminion.opts["grains"].copy()
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def _system_up_to_date(
     grains,
     shell,
