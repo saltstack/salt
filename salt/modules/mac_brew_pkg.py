@@ -100,9 +100,7 @@ def _homebrew_bin():
     # Fetch PATH binary brew full path eg: /usr/local/bin/brew (symbolic link)
     brew = salt.utils.path.which("brew")
     # Fetch and ret brew installation folder full path eg: /opt/homebrew/bin/brew
-    ret = __salt__["cmd.run"](
-        f"{brew} --prefix", output_loglevel="trace"
-    )
+    ret = __salt__["cmd.run"](f"{brew} --prefix", output_loglevel="trace")
     ret += "/bin/brew"
     return ret
 
