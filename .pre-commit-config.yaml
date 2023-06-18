@@ -1191,13 +1191,13 @@ repos:
 
   - repo: https://github.com/s0undt3ch/salt-rewrite
     # Automatically rewrite code with known rules
-    rev: 2.4.4
+    rev: 2.5.2
     hooks:
       - id: salt-rewrite
-        alias: rewrite-docstrings
-        name: Salt docstrings auto-fixes
+        alias: rewrite-salt
+        name: Salt code auto-fixes
         files: ^salt/.*\.py$
-        args: [--silent, -F, fix_docstrings]
+        args: [--silent, -F, fix_docstrings, -F, fix_warn_until]
         exclude: >
             (?x)^(
                 salt/ext/.*

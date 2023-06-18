@@ -815,7 +815,7 @@ def runner(name, **kwargs):
     if features.get("enable_deprecated_orchestration_flag", False):
         ret["__orchestration__"] = True
         salt.utils.versions.warn_until(
-            "Argon",
+            3008,
             "The __orchestration__ return flag will be removed in Salt Argon. "
             "For more information see https://github.com/saltstack/salt/pull/59917.",
         )
@@ -1064,7 +1064,7 @@ def wheel(name, **kwargs):
     if features.get("enable_deprecated_orchestration_flag", False):
         ret["__orchestration__"] = True
         salt.utils.versions.warn_until(
-            "Argon",
+            3008,
             "The __orchestration__ return flag will be removed in Salt Argon. "
             "For more information see https://github.com/saltstack/salt/pull/59917.",
         )

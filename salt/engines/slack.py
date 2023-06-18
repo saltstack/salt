@@ -928,7 +928,7 @@ def start(
     """
 
     salt.utils.versions.warn_until(
-        "Argon",
+        3008,
         "This 'slack' engine will be deprecated and "
         "will be replace by the slack_bolt engine. This new "
         "engine will use the new Bolt library from Slack and requires "
