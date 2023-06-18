@@ -699,6 +699,9 @@ class PubServerChannel:
     Factory class to create subscription channels to the master's Publisher
     """
 
+    def __repr__(self):
+        return f"<PubServerChannel pub_uri={self.transport.pub_uri} pull_uri={self.transport.pull_uri} at {id(self)}>"
+
     @classmethod
     def factory(cls, opts, **kwargs):
         if "master_uri" not in opts and "master_uri" in kwargs:
@@ -837,8 +840,7 @@ class PubServerChannel:
                     data, salt.utils.event.tagify("present", "presence")
                 )
 
-    @tornado.gen.coroutine
-    def publish_payload(self, load, *args):
+    async def publish_payload(self, load, *args):
         load = salt.payload.loads(load)
         unpacked_package = self.wrap_payload(load)
         try:
@@ -849,10 +851,10 @@ class PubServerChannel:
         payload = salt.payload.dumps(payload)
         if "topic_lst" in unpacked_package:
             topic_list = unpacked_package["topic_lst"]
-            ret = yield self.transport.publish_payload(payload, topic_list)
+            ret = await self.transport.publish_payload(payload, topic_list)
         else:
-            ret = yield self.transport.publish_payload(payload)
-        raise tornado.gen.Return(ret)
+            ret = await self.transport.publish_payload(payload)
+        return ret
 
     def wrap_payload(self, load):
         payload = {"enc": "aes"}
@@ -887,7 +889,7 @@ class PubServerChannel:
 
         return int_payload
 
-    def publish(self, load):
+    async def publish(self, load):
         """
         Publish "load" to minions
         """
@@ -896,5 +898,5 @@ class PubServerChannel:
             load.get("jid", None),
             repr(load)[:40],
         )
-        load = salt.payload.dumps(load)
-        self.transport.publish(load)
+        payload = salt.payload.dumps(load)
+        await self.transport.publish(payload)

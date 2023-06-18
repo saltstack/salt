@@ -2,6 +2,7 @@
 This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 """
+import asyncio
 import collections
 import copy
 import ctypes
@@ -722,11 +723,11 @@ class Master(SMaster):
                 pub_channels.append(chan)
 
             log.info("Creating master event publisher process")
-            #self.process_manager.add_process(
+            # self.process_manager.add_process(
             #    salt.utils.event.EventPublisher,
             #    args=(self.opts,),
             #    name="EventPublisher",
-            #)
+            # )
 
             ipc_publisher = salt.transport.publish_server(self.opts)
             ipc_publisher.pub_uri = "ipc://{}".format(
@@ -737,7 +738,9 @@ class Master(SMaster):
             )
             self.process_manager.add_process(
                 ipc_publisher.publish_daemon,
-                args=[ipc_publisher.publish_payload,],
+                args=[
+                    ipc_publisher.publish_payload,
+                ],
             )
 
             if self.opts.get("reactor"):
@@ -1020,8 +1023,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             # Tornado knows what to do
             pass
 
-    @tornado.gen.coroutine
-    def _handle_payload(self, payload):
+    async def _handle_payload(self, payload):
         """
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
@@ -1045,7 +1047,10 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         key = payload["enc"]
         load = payload["load"]
         ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](load)
-        raise tornado.gen.Return(ret)
+        while self.clear_funcs.tasks:
+            # dequeue
+            await self.clear_funcs.tasks.pop(0)
+        return ret
 
     def _post_stats(self, start, cmd):
         """
@@ -1997,6 +2002,8 @@ class ClearFuncs(TransportMethods):
         # Make a masterapi object
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
         self.channels = []
+        self.tasks = []
+        # self.task_group = asyncio.TaskGroup()
 
     def runner(self, clear_load):
         """
@@ -2371,8 +2378,8 @@ class ClearFuncs(TransportMethods):
                 chan = salt.channel.server.PubServerChannel.factory(opts)
                 self.channels.append(chan)
         for chan in self.channels:
-            log.error("SEND PUB %r", load)
-            chan.publish(load)
+            task = asyncio.create_task(chan.publish(load))
+            self.tasks.append(task)
 
     @property
     def ssh_client(self):

@@ -285,7 +285,7 @@ def get_proc_dir(cachedir, **kwargs):
     mode = kwargs.pop("mode", None)
 
     if mode is None:
-        eode = {}
+        mode = {}
     else:
         mode = {"mode": mode}
 
@@ -1044,26 +1044,31 @@ class MinionManager(MinionBase):
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
-        #self.event_publisher = salt.utils.event.AsyncEventPublisher(
+        # self.event_publisher = salt.utils.event.AsyncEventPublisher(
         #    self.opts,
         #    io_loop=self.io_loop,
-        #)
+        # )
         def target():
             import hashlib
-            self.opts['publish_port'] = 12321
+
+            self.opts["publish_port"] = 12321
             hash_type = getattr(hashlib, self.opts["hash_type"])
             ipc_publisher = salt.transport.publish_server(self.opts)
             id_hash = hash_type(
                 salt.utils.stringutils.to_bytes(self.opts["id"])
             ).hexdigest()[:10]
-            epub_sock_path = "ipc://{}".format(os.path.join(
-                self.opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
-            ))
+            epub_sock_path = "ipc://{}".format(
+                os.path.join(
+                    self.opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
+                )
+            )
             if os.path.exists(epub_sock_path):
                 os.unlink(epub_sock_path)
-            epull_sock_path = "ipc://{}".format(os.path.join(
-                self.opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
-            ))
+            epull_sock_path = "ipc://{}".format(
+                os.path.join(
+                    self.opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
+                )
+            )
             ipc_publisher.pub_uri = epub_sock_path
             ipc_publisher.pull_uri = epull_sock_path
             ipc_publisher.publish_daemon(ipc_publisher.publish_payload)

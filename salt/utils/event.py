@@ -49,6 +49,7 @@ Namespaced tag
 
 """
 
+import asyncio
 import atexit
 import contextlib
 import datetime
@@ -352,18 +353,16 @@ class SaltEvent:
         if self.cpub:
             return True
 
-        log.error("WTF A")
         if self._run_io_loop_sync:
-            log.error("WTF B")
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if self.subscriber is None:
-                    #self.subscriber = salt.utils.asynchronous.SyncWrapper(
+                    # self.subscriber = salt.utils.asynchronous.SyncWrapper(
                     #    salt.transport.ipc.IPCMessageSubscriber,
                     #    args=(self.puburi,),
                     #    kwargs={"io_loop": self.io_loop},
                     #    loop_kwarg="io_loop",
-                    #)
-                    #self.subscriber = salt.transport.publish_client(self.opts)
+                    # )
+                    # self.subscriber = salt.transport.publish_client(self.opts)
                     self.subscriber = salt.utils.asynchronous.SyncWrapper(
                         salt.transport.publish_client,
                         args=(self.opts,),
@@ -371,7 +370,7 @@ class SaltEvent:
                         loop_kwarg="io_loop",
                     )
                 try:
-                    #self.subscriber.connect(timeout=timeout)
+                    # self.subscriber.connect(timeout=timeout)
                     puburi = "ipc://{}".format(self.puburi)
                     self.subscriber.connect_uri(puburi)
                     self.cpub = True
@@ -393,12 +392,12 @@ class SaltEvent:
                     self.opts["master_ip"] = ""
                 self.subscriber = salt.transport.publish_client(self.opts, self.io_loop)
                 puburi = "ipc://{}".format(self.puburi)
-                #self.io_loop.run_sync(self.subscriber.connect_uri, puburi)
+                # self.io_loop.run_sync(self.subscriber.connect_uri, puburi)
                 self.io_loop.spawn_callback(self.subscriber.connect_uri, puburi)
                 log.error("WTF")
-                #self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
+                # self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
                 #    self.puburi, io_loop=self.io_loop
-                #)
+                # )
 
             # For the asynchronous case, the connect will be defered to when
             # set_event_handler() is invoked.
@@ -426,45 +425,39 @@ class SaltEvent:
             return True
 
         if self._run_io_loop_sync:
-            with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                if self.pusher is None:
-                    self.pusher = salt.transport.publish_server(self.opts)
-                    self.pusher.pub_uri = "ipc://{}".format(
-                        os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
-                    )
-                    self.pusher.pull_uri = "ipc://{}".format(
-                        os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
-                    )
-                    #self.pusher = salt.utils.asynchronous.SyncWrapper(
-                    #    salt.transport.ipc.IPCMessageClient,
-                    #    args=(self.pulluri,),
-                    #    kwargs={"io_loop": self.io_loop},
-                    #    loop_kwarg="io_loop",
-                    #)
-                try:
-                    #self.pusher.connect(timeout=timeout)
-                    self.pusher.connect()
-                    self.cpush = True
-                except tornado.iostream.StreamClosedError as exc:
-                    log.debug("Unable to connect pusher: %s", exc)
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.error(
-                        "Unable to connect pusher: %s",
-                        exc,
-                        exc_info_on_loglevel=logging.DEBUG,
-                    )
+            if self.pusher is None:
+                self.pusher = salt.utils.asynchronous.SyncWrapper(
+                    salt.transport.publish_server,
+                    args=(self.opts,),
+                )
+                self.pusher.obj.pub_uri = "ipc://{}".format(self.puburi)
+                self.pusher.obj.pull_uri = "ipc://{}".format(self.pulluri)
+                # self.pusher = salt.utils.asynchronous.SyncWrapper(
+                #    salt.transport.ipc.IPCMessageClient,
+                #    args=(self.pulluri,),
+                #    kwargs={"io_loop": self.io_loop},
+                #    loop_kwarg="io_loop",
+                # )
+            try:
+                # self.pusher.connect(timeout=timeout)
+                self.pusher.connect()
+                self.cpush = True
+            except tornado.iostream.StreamClosedError as exc:
+                log.debug("Unable to connect pusher: %s", exc)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Unable to connect pusher: %s",
+                    exc,
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
         else:
             if self.pusher is None:
-                #self.pusher = salt.transport.ipc.IPCMessageClient(
+                # self.pusher = salt.transport.ipc.IPCMessageClient(
                 #    self.pulluri, io_loop=self.io_loop
-                #)
+                # )
                 self.pusher = salt.transport.publish_server(self.opts)
-                self.pusher.pub_uri = "ipc://{}".format(
-                    os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
-                )
-                self.pusher.pull_uri = "ipc://{}".format(
-                    os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
-                )
+                self.pusher.pub_uri = "ipc://{}".format(self.puburi)
+                self.pusher.pull_uri = "ipc://{}".format(self.pulluri)
             # For the asynchronous case, the connect will be deferred to when
             # fire_event() is invoked.
             self.cpush = True
@@ -596,12 +589,10 @@ class SaltEvent:
             try:
                 if not self.cpub and not self.connect_pub(timeout=wait):
                     break
-                #riraw = self.subscriber.read(timeout=wait)
-                log.warning("Subscriber %r", self.subscriber)
+                # riraw = self.subscriber.read(timeout=wait)
                 raw = self.subscriber.recv(timeout=wait)
                 if raw is None:
                     break
-                print(raw)
                 mtag, data = self.unpack(raw)
                 ret = {"data": data, "tag": mtag}
             except KeyboardInterrupt:
@@ -798,7 +789,12 @@ class SaltEvent:
             is_msgpacked=True,
             use_bin_type=True,
         )
-        log.error("Sending event(fire_event_async): tag = %s; data = %s %r", tag, data, self.pusher)
+        log.error(
+            "Sending event(fire_event_async): tag = %s; data = %s %r",
+            tag,
+            data,
+            self.pusher,
+        )
         event = b"".join(
             [
                 salt.utils.stringutils.to_bytes(tag),
@@ -807,9 +803,9 @@ class SaltEvent:
             ]
         )
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
-        self.pusher.publish(msg, noserial=True)
-        #ret = yield self.pusher.send(msg)
-        #if cb is not None:
+        self.pusher.publish(msg)
+        # ret = yield self.pusher.send(msg)
+        # if cb is not None:
         #    cb(ret)
 
     def fire_event(self, data, tag, timeout=1000):
@@ -851,7 +847,12 @@ class SaltEvent:
             is_msgpacked=True,
             use_bin_type=True,
         )
-        log.error("Sending event(fire_event): tag = %s; data = %s %s", tag, data, self.pusher.pull_uri)
+        log.error(
+            "Sending event(fire_event): tag = %s; data = %s %s",
+            tag,
+            data,
+            self.pusher.pull_uri,
+        )
         event = b"".join(
             [
                 salt.utils.stringutils.to_bytes(tag),
@@ -864,7 +865,7 @@ class SaltEvent:
             log.error("FIRE EVENT A %r %r", msg, self.pusher)
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 try:
-                    #self.pusher.send(msg)
+                    # self.pusher.send(msg)
                     self.pusher.publish(msg)
                 except Exception as exc:  # pylint: disable=broad-except
                     log.debug(
@@ -875,8 +876,8 @@ class SaltEvent:
                     raise
         else:
             log.error("FIRE EVENT B %r %r", msg, self.pusher)
-            self.pusher.publish(msg)
-            #self.io_loop.spawn_callback(self.pusher.send, msg)
+            asyncio.create_task(self.pusher.publish(msg))
+            # self.io_loop.spawn_callback(self.pusher.send, msg)
         return True
 
     def fire_master(self, data, tag, timeout=1000):
@@ -990,7 +991,7 @@ class SaltEvent:
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        #return self.subscriber.read_async(event_handler)
+        # return self.subscriber.read_async(event_handler)
         self.subscriber.on_recv(event_handler)
 
     # pylint: disable=W1701
@@ -1090,7 +1091,7 @@ class MinionEvent(SaltEvent):
         )
 
 
-#class AsyncEventPublisher:
+# class AsyncEventPublisher:
 #    """
 #    An event publisher class intended to run in an ioloop (within a single process)
 #
@@ -1191,7 +1192,7 @@ class MinionEvent(SaltEvent):
 #            self.puller.close()
 #
 #
-#class EventPublisher(salt.utils.process.SignalHandlingProcess):
+# class EventPublisher(salt.utils.process.SignalHandlingProcess):
 #    """
 #    The interface that takes master events and republishes them out to anyone
 #    who wants to listen
