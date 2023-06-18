@@ -764,7 +764,7 @@ def netmiko_conn(**kwargs):
         conn.disconnect()
     """
     salt.utils.versions.warn_until(
-        "Chlorine",
+        3007,
         "This 'napalm_mod.netmiko_conn' function as been deprecated and "
         "will be removed in the {version} release, as such, it has been "
         "made an internal function since it is not suitable for CLI usage",
@@ -1161,7 +1161,7 @@ def pyeapi_conn(**kwargs):
         res2 = conn.get_config(as_string=True)
     """
     salt.utils.versions.warn_until(
-        "Chlorine",
+        3007,
         "This 'napalm_mod.pyeapi_conn' function as been deprecated and "
         "will be removed in the {version} release, as such, it has been "
         "made an internal function since it is not suitable for CLI usage",
