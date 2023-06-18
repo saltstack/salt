@@ -390,7 +390,7 @@ def certificate_managed(
     if days_valid is None and not_after is None:
         try:
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The default value for `days_valid` will change to 30. Please adapt your code accordingly.",
             )
             days_valid = 365
@@ -400,7 +400,7 @@ def certificate_managed(
     if days_remaining is None:
         try:
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The default value for `days_remaining` will change to 7. Please adapt your code accordingly.",
             )
             days_remaining = 90
@@ -409,7 +409,7 @@ def certificate_managed(
 
     if "algorithm" in kwargs:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "`algorithm` has been renamed to `digest`. Please update your code.",
         )
         digest = kwargs.pop("algorithm")
@@ -782,7 +782,7 @@ def crl_managed(
     if days_valid is None:
         try:
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The default value for `days_valid` will change to 7. Please adapt your code accordingly.",
             )
             days_valid = 100
@@ -792,7 +792,7 @@ def crl_managed(
     if days_remaining is None:
         try:
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The default value for `days_remaining` will change to 3. Please adapt your code accordingly.",
             )
             days_remaining = 30
@@ -804,14 +804,14 @@ def crl_managed(
         parsed = {}
         if len(rev) == 1 and isinstance(rev[next(iter(rev))], list):
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "Revoked certificates should be specified as a simple list of dicts.",
             )
             for val in rev[next(iter(rev))]:
                 parsed.update(val)
         if "reason" in (parsed or rev):
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The `reason` parameter for revoked certificates should be specified in extensions:CRLReason.",
             )
             salt.utils.dictupdate.set_dict_key_value(
@@ -1056,7 +1056,7 @@ def csr_managed(
     # Deprecation checks vs the old x509 module
     if "algorithm" in kwargs:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "`algorithm` has been renamed to `digest`. Please update your code.",
         )
         digest = kwargs.pop("algorithm")
@@ -1323,7 +1323,7 @@ def private_key_managed(
     # Deprecation checks vs the old x509 module
     if "bits" in kwargs:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "`bits` has been renamed to `keysize`. Please update your code.",
         )
         keysize = kwargs.pop("bits")

@@ -241,7 +241,7 @@ class Serial:
 
     def __init__(self, *args, **kwargs):
         salt.utils.versions.warn_until(
-            "Chlorine",
+            3007,
             "The `salt.payload.Serial` class has been deprecated, "
             "and is set to be removed in {version}. "
             "Please use `salt.payload.loads` and `salt.payload.dumps`.",

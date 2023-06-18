@@ -96,7 +96,7 @@ def __virtual__():
         return (False, "Superseded, using x509_v2")
     if HAS_M2:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "The x509 modules are deprecated. Please migrate to the replacement "
             "modules (x509_v2). They are the default from Salt 3008 (Argon) onwards.",
         )
