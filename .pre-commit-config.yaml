@@ -88,6 +88,7 @@ repos:
           - pyyaml==6.0
           - jinja2==3.1.2
           - packaging==23.0
+          - virustotal3==1.0.8
 
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
     rev: "4.8"
