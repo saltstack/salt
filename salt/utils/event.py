@@ -410,7 +410,10 @@ class SaltEvent:
         """
         if not self.cpub:
             return
-
+        #if isinstance(self.subscriber, salt.utils.asynchronous.SyncWrapper):
+        #    self.subscriber.close()
+        #else:
+        #    asyncio.create_task(self.subscriber.close())
         self.subscriber.close()
         self.subscriber = None
         self.pending_events = []
@@ -862,18 +865,17 @@ class SaltEvent:
         )
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         if self._run_io_loop_sync:
-            log.error("FIRE EVENT A %r %r", msg, self.pusher)
-            with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                try:
-                    # self.pusher.send(msg)
-                    self.pusher.publish(msg)
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.debug(
-                        "Publisher send failed with exception: %s",
-                        exc,
-                        exc_info_on_loglevel=logging.DEBUG,
-                    )
-                    raise
+            log.error("FIRE EVENT A %r %r", msg, self.pusher.obj)
+            try:
+                # self.pusher.send(msg)
+                self.pusher.publish(msg)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.debug(
+                    "Publisher send failed with exception: %s",
+                    exc,
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
+                raise
         else:
             log.error("FIRE EVENT B %r %r", msg, self.pusher)
             asyncio.create_task(self.pusher.publish(msg))

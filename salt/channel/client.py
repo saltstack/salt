@@ -376,6 +376,7 @@ class AsyncPubChannel:
     async_methods = [
         "connect",
         "_decode_messages",
+      #  "close",
     ]
     close_methods = [
         "close",
@@ -455,8 +456,11 @@ class AsyncPubChannel:
         """
         Close the channel
         """
+        log.error("AsyncPubChannel.close called")
         self.transport.close()
+        log.error("Transport closed")
         if self.event is not None:
+            log.error("Event destroy called")
             self.event.destroy()
             self.event = None
 

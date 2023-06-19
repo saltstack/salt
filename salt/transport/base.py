@@ -85,7 +85,6 @@ def publish_client(opts, io_loop):
     # switch on available ttypes
     if ttype == "zeromq":
         import salt.transport.zeromq
-
         return salt.transport.zeromq.PublishClient(opts, io_loop)
     elif ttype == "tcp":
         import salt.transport.tcp
