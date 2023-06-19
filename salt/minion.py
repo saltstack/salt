@@ -1048,33 +1048,27 @@ class MinionManager(MinionBase):
         #    self.opts,
         #    io_loop=self.io_loop,
         # )
-        def target():
-            import hashlib
-
-            self.opts["publish_port"] = 12321
-            hash_type = getattr(hashlib, self.opts["hash_type"])
-            ipc_publisher = salt.transport.publish_server(self.opts)
-            id_hash = hash_type(
-                salt.utils.stringutils.to_bytes(self.opts["id"])
-            ).hexdigest()[:10]
-            epub_sock_path = "ipc://{}".format(
-                os.path.join(
-                    self.opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
-                )
+        import hashlib
+        ipc_publisher = salt.transport.publish_server(self.opts)
+        hash_type = getattr(hashlib, self.opts["hash_type"])
+        id_hash = hash_type(
+            salt.utils.stringutils.to_bytes(self.opts["id"])
+        ).hexdigest()[:10]
+        epub_sock_path = "ipc://{}".format(
+            os.path.join(
+                self.opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
             )
-            if os.path.exists(epub_sock_path):
-                os.unlink(epub_sock_path)
-            epull_sock_path = "ipc://{}".format(
-                os.path.join(
-                    self.opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
-                )
+        )
+        if os.path.exists(epub_sock_path):
+            os.unlink(epub_sock_path)
+        epull_sock_path = "ipc://{}".format(
+            os.path.join(
+                self.opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
             )
-            ipc_publisher.pub_uri = epub_sock_path
-            ipc_publisher.pull_uri = epull_sock_path
-            ipc_publisher.publish_daemon(ipc_publisher.publish_payload)
-
-        thread = salt.utils.process.Process(target=target)
-        thread.start()
+        )
+        ipc_publisher.pub_uri = epub_sock_path
+        ipc_publisher.pull_uri = epull_sock_path
+        self.io_loop.add_callback(ipc_publisher.publisher, ipc_publisher.publish_payload, self.io_loop)
         self.event = salt.utils.event.get_event(
             "minion", opts=self.opts, io_loop=self.io_loop
         )
@@ -3265,17 +3259,29 @@ class Minion(MinionBase):
         if self._running is False:
             return
 
+        log.error("Loop status %r %r", self, self.io_loop.asyncio_loop.is_running())
+        self.io_loop.asyncio_loop.stop()
+        log.error("Loop status %r %r", self, self.io_loop.asyncio_loop.is_running())
         self._running = False
         if hasattr(self, "schedule"):
             del self.schedule
         if hasattr(self, "pub_channel") and self.pub_channel is not None:
             self.pub_channel.on_recv(None)
-            if hasattr(self.pub_channel, "close"):
-                self.pub_channel.close()
-            del self.pub_channel
-        if hasattr(self, "periodic_callbacks"):
-            for cb in self.periodic_callbacks.values():
-                cb.stop()
+            log.error("create pub_channel.close task %r", self)
+            self.pub_channel.close()
+            #self.io_loop.asyncio_loop.run_until_complete(self.pub_channel.close())
+            #if hasattr(self.pub_channel, "close"):
+            #    asyncio.create_task(
+            #        self.pub_channel.close()
+            #    )
+            #    #self.pub_channel.close()
+            #del self.pub_channel
+        if hasattr(self, "event"):
+            log.error("HAS EVENT")
+        #if hasattr(self, "periodic_callbacks"):
+        #    for cb in self.periodic_callbacks.values():
+        #        cb.stop()
+        log.error("%r destroy method finished", self)
 
     # pylint: disable=W1701
     def __del__(self):
