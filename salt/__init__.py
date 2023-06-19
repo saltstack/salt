@@ -5,6 +5,8 @@ Salt package
 import importlib
 import sys
 import warnings
+import logging
+log = logging.getLogger()
 
 if sys.version_info < (3,):
     sys.stderr.write(
@@ -16,6 +18,7 @@ USE_VENDORED_TORNADO = True
 
 
 class TornadoImporter:
+
     def find_module(self, module_name, package_path=None):
         if USE_VENDORED_TORNADO:
             if module_name.startswith("tornado"):
@@ -25,24 +28,63 @@ class TornadoImporter:
                 return self
         return None
 
-    def load_module(self, name):
+    def create_module(self, spec):
         if USE_VENDORED_TORNADO:
-            mod = importlib.import_module("salt.ext.{}".format(name))
+            mod = importlib.import_module("salt.ext.{}".format(sepc.name))
         else:
             # Remove 'salt.ext.' from the module
-            mod = importlib.import_module(name[9:])
+            mod = importlib.import_module(sepc.name[9:])
         sys.modules[name] = mod
         return mod
 
-    def create_module(self, spec):
-        return self.load_module(spec.name)
-
     def exec_module(self, module):
+        log.error("exec_module %r", module)
         return None
 
 
+class NaclImporter:
+    """
+    Import hook to force PyNaCl to perform dlopen on libsodium with the
+    RTLD_DEEPBIND flag. This is to work around an issue where pyzmq does a dlopen
+    with RTLD_GLOBAL which the causes calls to libsodium to resolve to
+    tweetnacl when it's been bundled with pyzmq.
+
+    See:  https://github.com/zeromq/pyzmq/issues/1878
+    """
+    loading = False
+
+    def find_module(self, module_name, package_path=None):
+        if not NaclImporter.loading and module_name == "nacl":
+            NaclImporter.loading = True
+            return self
+        return None
+
+    def create_module(self, spec):
+        dlopen = hasattr(sys, "getdlopenflags")
+        if dlopen:
+            dlflags = sys.getdlopenflags()
+            # Use RTDL_DEEPBIND in case pyzmq was compiled with ZMQ_USE_TWEETNACL. This is
+            # needed because pyzmq imports libzmq with RTLD_GLOBAL.
+            if hasattr(os, "RTLD_DEEPBIND"):
+                flags = os.RTLD_DEEPBIND | dlflags
+            else:
+                flags = dlflags
+            sys.setdlopenflags(dlflags)
+        try:
+            mod = importlib.import_module(spec.name)
+        finally:
+            if dlopen:
+                sys.setdlopenflags(dlflags)
+        NaclImporter.loading = False
+        sys.modules[name] = mod
+        return mod
+
+    def exec_module(self, module):
+        log.error("exec_module %r", module)
+        return None
+
 # Try our importer first
-sys.meta_path = [TornadoImporter()] + sys.meta_path
+sys.meta_path = [TornadoImporter(), NaclImporter] + sys.meta_path
 
 
 # All salt related deprecation warnings should be shown once each!

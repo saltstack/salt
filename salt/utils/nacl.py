@@ -20,16 +20,6 @@ log = logging.getLogger(__name__)
 
 
 REQ_ERROR = None
-dlopen = hasattr(sys, "getdlopenflags")
-if dlopen:
-    dlflags = sys.getdlopenflags()
-    # Use RTDL_DEEPBIND in case pyzmq was compiled with ZMQ_USE_TWEETNACL. This is
-    # needed because pyzmq imports libzmq with RTLD_GLOBAL.
-    if hasattr(os, "RTLD_DEEPBIND"):
-        flags = os.RTLD_DEEPBIND | dlflags
-    else:
-        flags = dlflags
-    sys.setdlopenflags(dlflags)
 try:
     import nacl.public
     import nacl.secret
@@ -37,9 +27,6 @@ except (ImportError, OSError) as e:
     REQ_ERROR = (
         "PyNaCl import error, perhaps missing python PyNaCl package or should update."
     )
-finally:
-    if dlopen:
-        sys.setdlopenflags(dlflags)
 
 __virtualname__ = "nacl"
 
