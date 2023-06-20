@@ -6,7 +6,6 @@ Common code shared between the nacl module and runner.
 import base64
 import logging
 import os
-import sys
 
 import salt.syspaths
 import salt.utils.files
