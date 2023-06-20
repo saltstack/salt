@@ -2072,7 +2072,7 @@ def del_repo(repo, **kwargs):
 
                 s_comps = set(source.comps)
                 r_comps = set(repo_comps)
-                if s_comps.intersection(r_comps):
+                if s_comps.intersection(r_comps) or (not s_comps and not r_comps):
                     deleted_from[source.file] = 0
                     source.comps = list(s_comps.difference(r_comps))
                     if not source.comps:
@@ -2093,7 +2093,7 @@ def del_repo(repo, **kwargs):
 
                 s_comps = set(source.comps)
                 r_comps = set(repo_comps)
-                if s_comps.intersection(r_comps):
+                if s_comps.intersection(r_comps) or (not s_comps and not r_comps):
                     deleted_from[source.file] = 0
                     source.comps = list(s_comps.difference(r_comps))
                     if not source.comps:
