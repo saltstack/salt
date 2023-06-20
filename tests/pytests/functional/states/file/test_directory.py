@@ -113,6 +113,34 @@ def test_directory_max_depth(file, tmp_path):
             assert _mode == _get_oct_mode(untouched_dir)
 
 
+def test_directory_children_only(file, tmp_path):
+    """
+    file.directory with children_only=True
+    """
+    name = tmp_path / "directory_children_only_dir"
+    name.mkdir(0o0700)
+
+    strayfile = name / "strayfile"
+    strayfile.touch()
+    os.chmod(strayfile, 0o700)
+
+    straydir = name / "straydir"
+    straydir.mkdir(0o0700)
+
+    # none of the children nor parent are currently set to the correct mode
+    ret = file.directory(
+        name=str(name),
+        file_mode="0644",
+        dir_mode="0755",
+        recurse=["mode"],
+        children_only=True,
+    )
+    assert ret.result is True
+    assert name.stat().st_mode is 0o0700
+    assert strayfile.stat().st_mode is 0o0644
+    assert straydir.stat().st_mode is 0o0755
+
+
 def test_directory_clean(file, tmp_path):
     """
     file.directory with clean=True
