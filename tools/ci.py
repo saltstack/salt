@@ -843,7 +843,7 @@ def _filter_test_labels(labels: list[dict[str, Any]]) -> list[tuple[str, str]]:
 
 
 @ci.command(
-    name="get-latest-releases",
+    name="get-testing-releases",
     arguments={
         "releases": {
             "help": "The list of releases of salt",
@@ -855,7 +855,7 @@ def _filter_test_labels(labels: list[dict[str, Any]]) -> list[tuple[str, str]]:
         },
     },
 )
-def get_latest_releases(
+def get_testing_releases(
     ctx: Context,
     releases: list[tools.utils.Version],
     salt_version: str = None,
@@ -883,27 +883,27 @@ def get_latest_releases(
                 }
             )
         )[-num_major_versions:]
-        latest_releases = []
+        testing_releases = []
         # Append the latest minor for each major
         for major in majors:
             minors_of_major = [
                 version for version in releases if version.major == major
             ]
-            latest_releases.append(minors_of_major[-1])
+            testing_releases.append(minors_of_major[-1])
 
         # TODO: Remove this block when we reach version 3009.0
         # Append the latest minor version of 3005 if we don't have enough major versions to test against
-        if len(latest_releases) != num_major_versions:
+        if len(testing_releases) != num_major_versions:
             url = "https://repo.saltproject.io/salt/onedir/repo.json"
             ret = ctx.web.get(url)
             repo_data = ret.json()
             latest = list(repo_data["latest"].keys())[0]
             version = repo_data["latest"][latest]["version"]
-            latest_releases = [version] + latest_releases
+            testing_releases = [version] + testing_releases
 
-        str_releases = [str(version) for version in latest_releases]
+        str_releases = [str(version) for version in testing_releases]
 
         with open(github_output, "a", encoding="utf-8") as wfh:
-            wfh.write(f"latest-releases={json.dumps(str_releases)}\n")
+            wfh.write(f"testing-releases={json.dumps(str_releases)}\n")
 
         ctx.exit(0)

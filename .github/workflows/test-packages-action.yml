@@ -27,6 +27,10 @@ on:
         required: true
         type: string
         description: Seed used to invalidate caches
+      testing-releases:
+        required: true
+        type: string
+        description: A JSON list of releases to test upgrades against
       package-name:
         required: false
         type: string
