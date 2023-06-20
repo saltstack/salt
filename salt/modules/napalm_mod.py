@@ -322,7 +322,7 @@ def call(method, *args, **kwargs):
         napalm_device,  # pylint: disable=undefined-variable
         method,
         *args,
-        **clean_kwargs
+        **clean_kwargs,
     )
 
 
@@ -561,7 +561,7 @@ def netmiko_fun(fun, *args, **kwargs):
         salt '*' napalm.netmiko_fun send_command 'show version'
     """
     if "netmiko." not in fun:
-        fun = "netmiko.{fun}".format(fun=fun)
+        fun = f"netmiko.{fun}"
     netmiko_kwargs = netmiko_args()
     kwargs.update(netmiko_kwargs)
     return __salt__[fun](*args, **kwargs)
@@ -1008,14 +1008,14 @@ def junos_call(fun, *args, **kwargs):
     if not prep["result"]:
         return prep
     if "junos." not in fun:
-        mod_fun = "junos.{}".format(fun)
+        mod_fun = f"junos.{fun}"
     else:
         mod_fun = fun
     if mod_fun not in __salt__:
         return {
             "out": None,
             "result": False,
-            "comment": "{} is not a valid function".format(fun),
+            "comment": f"{fun} is not a valid function",
         }
     return __salt__[mod_fun](*args, **kwargs)
 
@@ -1117,7 +1117,7 @@ def pyeapi_config(
     context=None,
     defaults=None,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -1211,7 +1211,7 @@ def nxos_api_config(
     context=None,
     defaults=None,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
      .. versionadded:: 2019.2.0
@@ -1779,7 +1779,7 @@ def config_diff_text(
 
 @depends(HAS_SCP)
 def scp_get(
-    remote_path, local_path="", recursive=False, preserve_times=False, **kwargs
+    remote_path, local_path="", recursive=False, preserve_times=False, **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -1866,7 +1866,7 @@ def scp_put(
     recursive=False,
     preserve_times=False,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
