@@ -3,9 +3,11 @@ Salt package
 """
 
 import importlib
+import logging
+import os
 import sys
 import warnings
-import logging
+
 log = logging.getLogger()
 
 if sys.version_info < (3,):
@@ -18,7 +20,6 @@ USE_VENDORED_TORNADO = True
 
 
 class TornadoImporter:
-
     def find_module(self, module_name, package_path=None):
         if USE_VENDORED_TORNADO:
             if module_name.startswith("tornado"):
@@ -30,11 +31,11 @@ class TornadoImporter:
 
     def create_module(self, spec):
         if USE_VENDORED_TORNADO:
-            mod = importlib.import_module("salt.ext.{}".format(sepc.name))
+            mod = importlib.import_module("salt.ext.{}".format(spec.name))
         else:
             # Remove 'salt.ext.' from the module
-            mod = importlib.import_module(sepc.name[9:])
-        sys.modules[name] = mod
+            mod = importlib.import_module(spec.name[9:])
+        sys.modules[spec.name] = mod
         return mod
 
     def exec_module(self, module):
@@ -51,6 +52,7 @@ class NaclImporter:
 
     See:  https://github.com/zeromq/pyzmq/issues/1878
     """
+
     loading = False
 
     def find_module(self, module_name, package_path=None):
@@ -76,12 +78,13 @@ class NaclImporter:
             if dlopen:
                 sys.setdlopenflags(dlflags)
         NaclImporter.loading = False
-        sys.modules[name] = mod
+        sys.modules[spec.name] = mod
         return mod
 
     def exec_module(self, module):
         log.error("exec_module %r", module)
         return None
+
 
 # Try our importer first
 sys.meta_path = [TornadoImporter(), NaclImporter] + sys.meta_path
