@@ -16,6 +16,8 @@
     uses: ./.github/workflows/build-<{ pkg_type }>-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      relenv-version: "<{ relenv_version }>"
+      python-version: "<{ python_version }>"
     <%- if pkg_type in ("macos", "windows") and gh_environment %>
       environment: <{ gh_environment }>
       <%- if pkg_type == "macos" %>

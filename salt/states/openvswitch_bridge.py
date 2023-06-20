@@ -22,11 +22,11 @@ def present(name, parent=None, vlan=None):
         parent : string
             name of the parent bridge (if the bridge shall be created as a fake
             bridge). If specified, vlan must also be specified.
-        .. versionadded:: 3006
+        .. versionadded:: 3006.0
         vlan: int
             VLAN ID of the bridge (if the bridge shall be created as a fake
             bridge). If specified, parent must also be specified.
-        .. versionadded:: 3006
+        .. versionadded:: 3006.0
 
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}

@@ -193,11 +193,11 @@ def bridge_create(br, may_exist=True, parent=None, vlan=None):
         parent : string
             name of the parent bridge (if the bridge shall be created as a fake
             bridge). If specified, vlan must also be specified.
-        .. versionadded:: 3006
+        .. versionadded:: 3006.0
         vlan : int
             VLAN ID of the bridge (if the bridge shall be created as a fake
             bridge). If specified, parent must also be specified.
-        .. versionadded:: 3006
+        .. versionadded:: 3006.0
 
     Returns:
         True on success, else False.
@@ -252,7 +252,7 @@ def bridge_delete(br, if_exists=True):
 
 def bridge_to_parent(br):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     Returns the parent bridge of a bridge.
 
@@ -280,7 +280,7 @@ def bridge_to_parent(br):
 
 def bridge_to_vlan(br):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     Returns the VLAN ID of a bridge.
 
@@ -599,7 +599,7 @@ def port_create_vxlan(br, port, id, remote, dst_port=None):
 
 def db_get(table, record, column, if_exists=False):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     Gets a column's value for a specific record.
 
@@ -638,7 +638,7 @@ def db_get(table, record, column, if_exists=False):
 
 def db_set(table, record, column, value, if_exists=False):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     Sets a column's value for a specific record.
 
