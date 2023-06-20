@@ -15,6 +15,7 @@ import stat
 import sys
 import threading
 import time
+import json
 
 import salt.acl
 import salt.auth
@@ -258,7 +259,13 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         now = int(time.time())
 
         git_pillar_update_interval = self.opts.get("git_pillar_update_interval", 0)
-        old_present = set()
+        # load the presence data from the cache on disk
+        presence_fpath = os.path.join(self.opts["cachedir"], "presence-data")
+        try:
+            with salt.utils.files.fopen(presence_fpath, "rb") as fpath:
+                old_present = set(json.loads(fpath.read()))
+        except (FileNotFoundError, TypeError, json.JSONDecodeError):
+            old_present = set()
         while time.time() - start < self.restart_interval:
             log.trace("Running maintenance routines")
             if not last or (now - last) >= self.loop_interval:
@@ -374,6 +381,13 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.event.fire_event(data, tagify("present", "presence"))
             old_present.clear()
             old_present.update(present)
+
+            # update the cache on disk
+            presence_fpath = os.path.join(self.opts["cachedir"], "presence-data")
+            with salt.utils.files.fopen(presence_fpath, "wb") as fpath:
+                fpath.write(
+                    salt.utils.stringutils.to_bytes(json.dumps(list(set(present))))
+                )
 
 
 class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
@@ -698,7 +712,6 @@ class Master(SMaster):
         # manager. We don't want the processes being started to inherit those
         # signal handlers
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.secrets["aes"] = {
