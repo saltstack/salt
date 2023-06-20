@@ -734,7 +734,7 @@ def _pytest(session, coverage, cmd_args):
             check=True,
         )
 
-    if "buster" in platform.node():
+    if platform.dist()[0] == "debian" and platform.dist()[1].startswith("10"):
         subprocess.run(["apt-get", "update"], check=True)
         subprocess.run(["apt-get", "upgrade", "debian-keyring", "-y"], check=True)
 
