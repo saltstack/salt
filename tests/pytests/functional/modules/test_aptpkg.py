@@ -106,7 +106,7 @@ def build_repo_file():
             "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring-2023.gpg arch=amd64] https://repo.saltproject.io/salt/py3/ubuntu/22.04/amd64/latest jammy main",
             "deb http://dist.list stable/all/",
         ]
-        with salt.utils.files.fopen(source_path, "wr+") as fp:
+        with salt.utils.files.fopen(source_path, "w+") as fp:
             fp.write("\n".join(test_repos))
         yield source_path
     finally:
