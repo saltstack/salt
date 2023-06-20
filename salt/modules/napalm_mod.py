@@ -741,7 +741,7 @@ def netmiko_config(*config_commands, **kwargs):
     kwargs.update(netmiko_kwargs)
     return __salt__["netmiko.send_config"](config_commands=config_commands, **kwargs)
 
-  
+
 def junos_rpc(cmd=None, dest=None, format=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1778,7 +1778,11 @@ def config_diff_text(
 
 @depends(HAS_SCP)
 def scp_get(
-    remote_path, local_path="", recursive=False, preserve_times=False, **kwargs,
+    remote_path,
+    local_path="",
+    recursive=False,
+    preserve_times=False,
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
