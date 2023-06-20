@@ -1,26 +1,10 @@
 import logging
-import os
 import shutil
 
 import pytest
 from saltfactories.utils.functional import Loaders
 
 log = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="package", autouse=True)
-def onedir_env():
-    """
-    Functional tests cannot currently test the
-    onedir artifact. This will need to be removed
-    when we do add onedir support for functional tests.
-    """
-    if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
-        try:
-            os.environ["ONEDIR_TESTRUN"] = "0"
-            yield
-        finally:
-            os.environ["ONEDIR_TESTRUN"] = "1"
 
 
 @pytest.fixture(scope="package")
