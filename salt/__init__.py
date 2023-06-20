@@ -56,7 +56,8 @@ class NaclImporter:
     loading = False
 
     def find_module(self, module_name, package_path=None):
-        if not NaclImporter.loading and module_name == "nacl":
+        print(f"{self} {module_name}")
+        if not NaclImporter.loading and module_name.startswith("nacl"):
             NaclImporter.loading = True
             return self
         return None
@@ -87,7 +88,7 @@ class NaclImporter:
 
 
 # Try our importer first
-sys.meta_path = [TornadoImporter(), NaclImporter] + sys.meta_path
+sys.meta_path = [TornadoImporter(), NaclImporter()] + sys.meta_path
 
 
 # All salt related deprecation warnings should be shown once each!
