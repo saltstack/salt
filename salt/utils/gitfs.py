@@ -26,6 +26,7 @@ from datetime import datetime
 import tornado.ioloop
 
 import salt.fileserver
+import salt.syspaths
 import salt.utils.configparser
 import salt.utils.data
 import salt.utils.files
@@ -38,7 +39,6 @@ import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.user
 import salt.utils.versions
-import salt.syspaths
 from salt.config import DEFAULT_MASTER_OPTS as _DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError, GitLockError, get_error_message
 from salt.utils.event import tagify
