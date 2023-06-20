@@ -71,7 +71,7 @@ class NaclImporter:
                 flags = os.RTLD_DEEPBIND | dlflags
             else:
                 flags = dlflags
-            sys.setdlopenflags(dlflags)
+            sys.setdlopenflags(flags)
         try:
             mod = importlib.import_module(spec.name)
         finally:
