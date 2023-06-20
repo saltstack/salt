@@ -845,17 +845,20 @@ def _filter_test_labels(labels: list[dict[str, Any]]) -> list[tuple[str, str]]:
 @ci.command(
     name="get-latest-releases",
     arguments={
+        "releases": {
+            "help": "The list of releases of salt",
+            "nargs": "*",
+        },
         "salt_version": {
             "help": "The version of salt being tested against",
             "required": True,
         },
-        "repository": {
-            "help": "The repository to query for releases, e.g. saltstack/salt",
-        },
     },
 )
 def get_latest_releases(
-    ctx: Context, salt_version: str = None, repository: str = "saltstack/salt"
+    ctx: Context,
+    releases: list[tools.utils.Version],
+    salt_version: str = None,
 ):
     """
     Get a list of releases to use for the upgrade and downgrade tests.
@@ -867,7 +870,6 @@ def get_latest_releases(
         # We aren't testing upgrades from anything before 3006.0 except the latest 3005.x
         threshold_major = 3006
         parsed_salt_version = tools.utils.Version(salt_version)
-        releases = tools.utils.get_salt_releases(ctx, repository)
         # We want the latest 4 major versions, removing the oldest if this version is a new major
         num_major_versions = 4
         if parsed_salt_version.minor == 0:
