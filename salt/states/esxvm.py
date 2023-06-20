@@ -247,7 +247,7 @@ def _deprecation_message(function):
     @wraps(function)
     def wrapped(*args, **kwargs):
         salt.utils.versions.warn_until(
-            "Argon",
+            3008,
             "The 'esxvm' functionality in Salt has been deprecated and its "
             "functionality will be removed in version 3008 in favor of the "
             "saltext.vmware Salt Extension. "
@@ -467,7 +467,7 @@ def vm_updated(
             {
                 "result": True,
                 "changes": {},
-                "comment": "Virtual machine {} is already up to date".format(vm_name),
+                "comment": f"Virtual machine {vm_name} is already up to date",
             }
         )
         return result
@@ -532,7 +532,7 @@ def vm_updated(
         "name": name,
         "result": True,
         "changes": changes,
-        "comment": "Virtual machine {} was updated successfully".format(vm_name),
+        "comment": f"Virtual machine {vm_name} was updated successfully",
     }
 
     return result
@@ -565,7 +565,7 @@ def vm_created(
     result = {"name": name, "result": None, "changes": {}, "comment": ""}
 
     if __opts__["test"]:
-        result["comment"] = "Virtual machine {} will be created".format(vm_name)
+        result["comment"] = f"Virtual machine {vm_name} will be created"
         return result
 
     service_instance = __salt__["vsphere.get_service_instance_via_proxy"]()
@@ -615,7 +615,7 @@ def vm_created(
         "name": name,
         "result": True,
         "changes": changes,
-        "comment": "Virtual machine {} created successfully".format(vm_name),
+        "comment": f"Virtual machine {vm_name} created successfully",
     }
 
     return result
@@ -629,7 +629,7 @@ def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
     """
     result = {"name": vm_name, "result": None, "changes": {}, "comment": ""}
 
-    vmx_path = "{}{}".format(vm_file.folderPath, vm_file.file[0].path)
+    vmx_path = f"{vm_file.folderPath}{vm_file.file[0].path}"
     log.trace("Registering virtual machine with vmx file: %s", vmx_path)
     service_instance = __salt__["vsphere.get_service_instance_via_proxy"]()
     try:
@@ -665,7 +665,7 @@ def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
         {
             "result": True,
             "changes": {"name": vm_name, "power_on": power_on},
-            "comment": "Virtual machine {} registered successfully".format(vm_name),
+            "comment": f"Virtual machine {vm_name} registered successfully",
         }
     )
 
