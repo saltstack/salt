@@ -132,6 +132,9 @@ class Version(packaging.version.Version):
             other = self.__class__(other)
         return super().__ne__(other)
 
+    def __str__(self):
+        return super().__str__().replace(".post", "-")
+
     def __hash__(self):
         return hash(str(self))
 
@@ -177,12 +180,12 @@ def get_salt_releases(ctx: Context, repository: str) -> list[Version]:
             name = release["name"]
             if name.startswith("v"):
                 name = name[1:]
-            if name and "-" not in name and "docs" not in name:
-                # We're not going to parse dash or docs releases
+            if name and "docs" not in name:
+                # We're not going to parse docs releases
                 versions.add(Version(name))
             name = release["tag_name"]
-            if "-" not in name and "docs" not in name:
-                # We're not going to parse dash or docs releases
+            if "docs" not in name:
+                # We're not going to parse docs releases
                 versions.add(Version(name))
     return sorted(versions)
 

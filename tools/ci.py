@@ -646,18 +646,29 @@ def transport_matrix(ctx: Context, distro_slug: str):
             "help": "The distribution slug to generate the matrix for",
         },
         "pkg_type": {
-            "help": "The distribution slug to generate the matrix for",
+            "help": "The type of package we are testing against",
+        },
+        "testing_releases": {
+            "help": "The salt releases to test upgrades against",
+            "nargs": "+",
+            "required": True,
         },
     },
 )
-def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
+def pkg_matrix(
+    ctx: Context,
+    distro_slug: str,
+    pkg_type: str,
+    testing_releases: list[tools.utils.Version] = None,
+):
     """
     Generate the test matrix.
     """
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output is None:
         ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
-
+    if TYPE_CHECKING:
+        assert testing_releases
     matrix = []
     sessions = [
         "install",
@@ -679,6 +690,7 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
         # we allow for 3006.0 jobs to run, because then
         # we will have arm64 onedir packages to upgrade from
         sessions.append("upgrade")
+    # TODO: Remove this block when we reach version 3009.0, we will no longer be testing upgrades from classic packages
     if (
         distro_slug
         not in [
@@ -694,11 +706,22 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
         sessions.append("upgrade-classic")
 
     for session in sessions:
-        matrix.append(
-            {
-                "test-chunk": session,
-            }
-        )
+        versions: list[str | None] = [None]
+        if session == "upgrade":
+            versions = [str(version) for version in testing_releases]
+        elif session == "upgrade-classic":
+            versions = [
+                str(version)
+                for version in testing_releases
+                if version < tools.utils.Version("3006.0")
+            ]
+        for version in versions:
+            matrix.append(
+                {
+                    "test-chunk": session,
+                    "version": version,
+                }
+            )
     ctx.info("Generated matrix:")
     ctx.print(matrix, soft_wrap=True)
 

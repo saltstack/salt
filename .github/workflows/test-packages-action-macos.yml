@@ -83,7 +83,7 @@ jobs:
       - name: Generate Package Test Matrix
         id: generate-pkg-matrix
         run: |
-          tools ci pkg-matrix ${{ inputs.distro-slug }} ${{ inputs.pkg-type }}
+          tools ci pkg-matrix ${{ inputs.distro-slug }} ${{ inputs.pkg-type }}  --testing-releases ${{ join(fromJSON(inputs.testing-releases), ' ') }}
 
   dependencies:
     name: Setup Test Dependencies
