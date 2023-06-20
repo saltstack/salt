@@ -582,7 +582,7 @@ def pytest_runtest_setup(item):
         for group in ("core_test", "slow_test", "flaky_jail")
     )
     if test_group_count > 1:
-        raise pytest.UsageError("Tests can only be in one test group.")
+        raise pytest.UsageError("Tests can only be in one test group. ('core_test', 'slow_test', 'flaky_jail')")
 
     if item.get_closest_marker("core_test"):
         if not item.config.getoption("--core-tests"):
