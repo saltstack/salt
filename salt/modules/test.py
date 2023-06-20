@@ -78,7 +78,7 @@ def module_report():
             if hasattr(__salt__, ref):
                 ret["module_attrs"].append(ref)
             for func in __salt__[ref]:
-                full = "{}.{}".format(ref, func)
+                full = f"{ref}.{func}"
                 if hasattr(getattr(__salt__, ref), func):
                     ret["function_attrs"].append(full)
                 if func in __salt__[ref]:
@@ -426,7 +426,7 @@ def provider(module):
     """
     func = ""
     for key in __salt__:
-        if not key.startswith("{}.".format(module)):
+        if not key.startswith(f"{module}."):
             continue
         func = key
         break
@@ -692,7 +692,7 @@ def deprecation_warning():
     """
     # This warn should always stay in Salt.
     salt.utils.versions.warn_until(
-        "Oganesson",
+        3108,
         "This is a test deprecation warning by version.",
     )
     salt.utils.versions.warn_until_date(

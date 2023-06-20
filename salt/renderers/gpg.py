@@ -441,7 +441,7 @@ def _decrypt_ciphertext(cipher):
             )
         else:
             salt.utils.versions.warn_until(
-                "Chlorine",
+                3007,
                 "After the Chlorine release of Salt, gpg_decrypt_must_succeed will default to True.",
             )
         return cipher
