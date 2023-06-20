@@ -741,8 +741,7 @@ def netmiko_config(*config_commands, **kwargs):
     kwargs.update(netmiko_kwargs)
     return __salt__["netmiko.send_config"](config_commands=config_commands, **kwargs)
 
-
-@proxy_napalm_wrap
+  
 def junos_rpc(cmd=None, dest=None, format=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -1175,7 +1174,7 @@ def pyeapi_config(
         context=context,
         defaults=defaults,
         saltenv=saltenv,
-        **pyeapi_kwargs
+        **pyeapi_kwargs,
     )
 
 
@@ -1267,7 +1266,7 @@ def nxos_api_config(
         context=context,
         defaults=defaults,
         saltenv=saltenv,
-        **nxos_api_kwargs
+        **nxos_api_kwargs,
     )
 
 
@@ -1855,7 +1854,7 @@ def scp_get(
         local_path=local_path,
         recursive=recursive,
         preserve_times=preserve_times,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1961,5 +1960,5 @@ def scp_put(
         recursive=recursive,
         preserve_times=preserve_times,
         saltenv=saltenv,
-        **kwargs
+        **kwargs,
     )
