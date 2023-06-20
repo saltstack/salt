@@ -1791,9 +1791,11 @@ def symlink(
 
     if __salt__["file.is_link"](name):
         # The link exists, verify that it matches the target
-        if os.path.normpath(__salt__["file.readlink"](name)) == os.path.normpath(
+        if os.path.normpath(__salt__["file.readlink"](name)) != os.path.normpath(
             target
         ):
+            __salt__["file.remove"](name)
+        else:
             if _check_symlink_ownership(name, user, group, win_owner):
                 # The link looks good!
                 if salt.utils.platform.is_windows():
