@@ -9,6 +9,7 @@ import pytest
 
 import salt.utils.files
 import salt.utils.yaml
+from salt.defaults.exitcodes import EX_AGGREGATE
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -100,3 +101,26 @@ def test_tty(salt_ssh_cli, tmp_path, salt_ssh_roster_file):
     ret = salt_ssh_cli.run("--roster-file={}".format(roster_file), "test.ping")
     assert ret.returncode == 0
     assert ret.data is True
+
+
+def test_retcode_exe_run_fail(salt_ssh_cli):
+    """
+    Verify salt-ssh passes through the retcode it receives.
+    """
+    ret = salt_ssh_cli.run("file.touch", "/tmp/non/ex/is/tent")
+    assert ret.returncode == EX_AGGREGATE
+    assert isinstance(ret.data, dict)
+    assert ret.data["stderr"] == "Error running 'file.touch': No such file or directory"
+    assert ret.data["retcode"] == 1
+
+
+def test_retcode_exe_run_exception(salt_ssh_cli):
+    """
+    Verify salt-ssh passes through the retcode it receives
+    when an exception is thrown. (Ref #50727)
+    """
+    ret = salt_ssh_cli.run("salttest.jinja_error")
+    assert ret.returncode == EX_AGGREGATE
+    assert isinstance(ret.data, dict)
+    assert ret.data["stderr"].endswith("Exception: hehehe")
+    assert ret.data["retcode"] == 1
