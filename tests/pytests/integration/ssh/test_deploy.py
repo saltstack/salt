@@ -75,15 +75,13 @@ def test_set_path(salt_ssh_cli, tmp_path, salt_ssh_roster_file):
         roster_data = salt.utils.yaml.safe_load(rfh)
         roster_data["localhost"].update(
             {
-                "set_path": "$PATH:/usr/local/bin/:{}".format(path),
+                "set_path": f"$PATH:/usr/local/bin/:{path}",
             }
         )
     with salt.utils.files.fopen(roster_file, "w") as wfh:
         salt.utils.yaml.safe_dump(roster_data, wfh)
 
-    ret = salt_ssh_cli.run(
-        "--roster-file={}".format(roster_file), "environ.get", "PATH"
-    )
+    ret = salt_ssh_cli.run(f"--roster-file={roster_file}", "environ.get", "PATH")
     assert ret.returncode == 0
     assert path in ret.data
 
@@ -98,7 +96,7 @@ def test_tty(salt_ssh_cli, tmp_path, salt_ssh_roster_file):
         roster_data["localhost"].update({"tty": True})
     with salt.utils.files.fopen(roster_file, "w") as wfh:
         salt.utils.yaml.safe_dump(roster_data, wfh)
-    ret = salt_ssh_cli.run("--roster-file={}".format(roster_file), "test.ping")
+    ret = salt_ssh_cli.run(f"--roster-file={roster_file}", "test.ping")
     assert ret.returncode == 0
     assert ret.data is True
 
