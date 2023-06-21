@@ -109,11 +109,11 @@ def get_minion_data(minion, opts):
         cache = salt.cache.factory(opts)
         if minion is None:
             for id_ in cache.list("minions"):
-                data = cache.fetch("minions/{}".format(id_), "data")
+                data = cache.fetch(f"minions/{id_}", "data")
                 if data is None:
                     continue
         else:
-            data = cache.fetch("minions/{}".format(minion), "data")
+            data = cache.fetch(f"minions/{minion}", "data")
         if data is not None:
             grains = data.get("grains", None)
             pillar = data.get("pillar", None)
@@ -257,7 +257,7 @@ class CkMinions:
 
     def _pki_minions(self):
         """
-        Retreive complete minion list from PKI dir.
+        Retrieve complete minion list from PKI dir.
         Respects cache if configured
         """
         minions = []
@@ -275,9 +275,7 @@ class CkMinions:
                 for fn_ in salt.utils.data.sorted_ignorecase(
                     os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
                 ):
-                    if not fn_.startswith(".") and os.path.isfile(
-                        os.path.join(self.opts["pki_dir"], self.acc, fn_)
-                    ):
+                    if not fn_.startswith("."):
                         minions.append(fn_)
             return minions
         except OSError as exc:
@@ -305,9 +303,7 @@ class CkMinions:
             for fn_ in salt.utils.data.sorted_ignorecase(
                 os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
             ):
-                if not fn_.startswith(".") and os.path.isfile(
-                    os.path.join(self.opts["pki_dir"], self.acc, fn_)
-                ):
+                if not fn_.startswith("."):
                     minions.append(fn_)
         elif cache_enabled:
             minions = list_cached_minions()
@@ -325,7 +321,7 @@ class CkMinions:
             for id_ in cminions:
                 if greedy and id_ not in minions:
                     continue
-                mdata = self.cache.fetch("minions/{}".format(id_), "data")
+                mdata = self.cache.fetch(f"minions/{id_}", "data")
                 if mdata is None:
                     if not greedy:
                         minions.remove(id_)
@@ -410,11 +406,11 @@ class CkMinions:
                 except Exception:  # pylint: disable=broad-except
                     log.error("Invalid IP/CIDR target: %s", tgt)
                     return {"minions": [], "missing": []}
-            proto = "ipv{}".format(tgt.version)
+            proto = f"ipv{tgt.version}"
 
             minions = set(minions)
             for id_ in cminions:
-                mdata = self.cache.fetch("minions/{}".format(id_), "data")
+                mdata = self.cache.fetch(f"minions/{id_}", "data")
                 if mdata is None:
                     if not greedy:
                         minions.remove(id_)
@@ -453,9 +449,7 @@ class CkMinions:
                 for fn_ in salt.utils.data.sorted_ignorecase(
                     os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
                 ):
-                    if not fn_.startswith(".") and os.path.isfile(
-                        os.path.join(self.opts["pki_dir"], self.acc, fn_)
-                    ):
+                    if not fn_.startswith("."):
                         mlist.append(fn_)
                 return {"minions": mlist, "missing": []}
             elif cache_enabled:
@@ -651,7 +645,7 @@ class CkMinions:
                 search = subset
             for id_ in search:
                 try:
-                    mdata = self.cache.fetch("minions/{}".format(id_), "data")
+                    mdata = self.cache.fetch(f"minions/{id_}", "data")
                 except SaltCacheError:
                     # If a SaltCacheError is explicitly raised during the fetch operation,
                     # permission was denied to open the cached data.p file. Continue on as
@@ -685,9 +679,7 @@ class CkMinions:
         for fn_ in salt.utils.data.sorted_ignorecase(
             os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
         ):
-            if not fn_.startswith(".") and os.path.isfile(
-                os.path.join(self.opts["pki_dir"], self.acc, fn_)
-            ):
+            if not fn_.startswith("."):
                 mlist.append(fn_)
         return {"minions": mlist, "missing": []}
 
@@ -704,7 +696,7 @@ class CkMinions:
         try:
             if expr is None:
                 expr = ""
-            check_func = getattr(self, "_check_{}_minions".format(tgt_type), None)
+            check_func = getattr(self, f"_check_{tgt_type}_minions", None)
             if tgt_type in (
                 "grain",
                 "grain_pcre",
@@ -1050,11 +1042,7 @@ class CkMinions:
         for ind in auth_list:
             if isinstance(ind, str):
                 if ind[0] == "@":
-                    if (
-                        ind[1:] == mod_name
-                        or ind[1:] == form
-                        or ind == "@{}s".format(form)
-                    ):
+                    if ind[1:] == mod_name or ind[1:] == form or ind == f"@{form}s":
                         return True
             elif isinstance(ind, dict):
                 if len(ind) != 1:
@@ -1066,7 +1054,7 @@ class CkMinions:
                             ind[valid], fun_name, args.get("arg"), args.get("kwarg")
                         ):
                             return True
-                    if valid[1:] == form or valid == "@{}s".format(form):
+                    if valid[1:] == form or valid == f"@{form}s":
                         if self.__fun_check(
                             ind[valid], fun, args.get("arg"), args.get("kwarg")
                         ):

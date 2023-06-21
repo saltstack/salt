@@ -498,6 +498,7 @@ execution modules
     vmctl
     vsphere
     webutil
+    win_appx
     win_auditpol
     win_autoruns
     win_certutil
