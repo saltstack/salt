@@ -770,10 +770,8 @@ class SaltPkgInstall:
                 win_pkg_url = f"https://repo.saltproject.io/windows/{win_pkg}"
             pkg_path = pathlib.Path(r"C:\TEMP", win_pkg)
             pkg_path.parent.mkdir(exist_ok=True)
-            ret = requests.get(win_pkg_url)
+            download_file(win_pkg_url, pkg_path)
 
-            with open(pkg_path, "wb") as fp:
-                fp.write(ret.content)
             if self.file_ext == "msi":
                 # Write a batch file to run the installer. It is impossible to
                 # perform escaping of the START_MINION property that the MSI
