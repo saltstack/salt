@@ -1016,6 +1016,55 @@ def sync_executors(
     return ret
 
 
+def sync_wrapper(
+    saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None
+):
+    """
+    .. versionadded:: 3007.0
+
+    Sync salt-ssh wrapper modules from ``salt://_wrapper`` to the minion.
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for wrappers to sync. If no top files
+        are found, then the ``base`` environment will be synced.
+
+    refresh : True
+        If ``True``, refresh the available wrapper modules on the minion.
+        This refresh will be performed even if no wrappers are synced.
+        Set to ``False`` to prevent this refresh.
+
+    extmod_whitelist : None
+        comma-seperated list of modules to sync
+
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
+    .. note::
+        This function will raise an error if executed on a traditional (i.e.
+        not masterless) minion.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_wrapper
+        salt '*' saltutil.sync_wrapper saltenv=dev
+        salt '*' saltutil.sync_wrapper saltenv=base,dev
+    """
+    if __opts__["file_client"] != "local":
+        raise CommandExecutionError(
+            "Wrapper modules can only be synced to masterless minions"
+        )
+    ret = _sync("wrapper", saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
 def sync_all(
     saltenv=None,
     refresh=True,
@@ -1105,6 +1154,7 @@ def sync_all(
     ret["matchers"] = sync_matchers(saltenv, False, extmod_whitelist, extmod_blacklist)
     if __opts__["file_client"] == "local":
         ret["pillar"] = sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
+        ret["wrapper"] = sync_wrapper(saltenv, False, extmod_whitelist, extmod_blacklist)
     if refresh:
         # we don't need to call refresh_modules here because it's done by refresh_pillar
         refresh_pillar(clean_cache=clean_pillar_cache)
