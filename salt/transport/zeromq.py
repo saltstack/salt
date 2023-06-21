@@ -635,7 +635,7 @@ class AsyncReqMessageClient:
 
         self._closing = False
 
-    def connect(self):
+    async def connect(self):
         # wire up sockets
         self._init_socket()
 
@@ -979,10 +979,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         Disconnect an existing publisher socket and remove it from the local
         thread's cache.
         """
-        sock = self.sock
-        self.sock = None
-        log.error("Socket close %r", self)
-        sock.close()
+        if self.sock is not None:
+            sock = self.sock
+            self.sock = None
+            log.error("Socket close %r", self)
+            sock.close()
         log.error("Socket closed %r", self)
         if self.ctx and self.ctx.closed is False:
             ctx = self.ctx
@@ -1035,8 +1036,8 @@ class RequestClient(salt.transport.base.RequestClient):
             io_loop=io_loop,
         )
 
-    def connect(self):
-        self.message_client.connect()
+    async def connect(self):
+        await self.message_client.connect()
 
     async def send(self, load, timeout=60):
         self.connect()
