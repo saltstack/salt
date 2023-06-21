@@ -2,6 +2,8 @@ import json
 
 import pytest
 
+from salt.defaults.exitcodes import EX_AGGREGATE
+
 pytestmark = [
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
 ]
@@ -72,6 +74,129 @@ def state_tree_dir(base_env_state_tree_root_dir):
     )
 
     with top_tempfile, map_tempfile, state_tempfile:
+        yield
+
+
+@pytest.fixture(scope="class")
+def state_tree_render_fail(base_env_state_tree_root_dir):
+    top_file = """
+    base:
+      'localhost':
+        - fail_render
+      '127.0.0.1':
+        - fail_render
+    """
+    state_file = r"""
+    abc var is not defined {{ abc }}:
+      test.nop
+    """
+    top_tempfile = pytest.helpers.temp_file(
+        "top.sls", top_file, base_env_state_tree_root_dir
+    )
+    state_tempfile = pytest.helpers.temp_file(
+        "fail_render.sls", state_file, base_env_state_tree_root_dir
+    )
+    with top_tempfile, state_tempfile:
+        yield
+
+
+@pytest.fixture(scope="class")
+def state_tree_req_fail(base_env_state_tree_root_dir):
+    top_file = """
+    base:
+      'localhost':
+        - fail_req
+      '127.0.0.1':
+        - fail_req
+    """
+    state_file = """
+    This has an invalid requisite:
+      test.nop:
+        - name: foo
+        - require_in:
+          - file.managed: invalid_requisite
+    """
+    top_tempfile = pytest.helpers.temp_file(
+        "top.sls", top_file, base_env_state_tree_root_dir
+    )
+    state_tempfile = pytest.helpers.temp_file(
+        "fail_req.sls", state_file, base_env_state_tree_root_dir
+    )
+    with top_tempfile, state_tempfile:
+        yield
+
+
+@pytest.fixture(scope="class")
+def state_tree_structure_fail(base_env_state_tree_root_dir):
+    top_file = """
+    base:
+      'localhost':
+        - fail_structure
+      '127.0.0.1':
+        - fail_structure
+    """
+    state_file = """
+    extend:
+      Some file state:
+        file:
+            - name: /tmp/bar
+            - contents: bar
+    """
+    top_tempfile = pytest.helpers.temp_file(
+        "top.sls", top_file, base_env_state_tree_root_dir
+    )
+    state_tempfile = pytest.helpers.temp_file(
+        "fail_structure.sls", state_file, base_env_state_tree_root_dir
+    )
+    with top_tempfile, state_tempfile:
+        yield
+
+
+@pytest.fixture(scope="class")
+def state_tree_run_fail(base_env_state_tree_root_dir):
+    top_file = """
+    base:
+      'localhost':
+        - fail_run
+      '127.0.0.1':
+        - fail_run
+    """
+    state_file = """
+    This file state fails:
+      file.managed:
+        - name: /tmp/non/ex/is/tent
+        - makedirs: false
+        - contents: foo
+    """
+    top_tempfile = pytest.helpers.temp_file(
+        "top.sls", top_file, base_env_state_tree_root_dir
+    )
+    state_tempfile = pytest.helpers.temp_file(
+        "fail_run.sls", state_file, base_env_state_tree_root_dir
+    )
+    with top_tempfile, state_tempfile:
+        yield
+
+
+@pytest.fixture(scope="class")
+def pillar_tree_render_fail(base_env_pillar_tree_root_dir):
+    top_file = """
+    base:
+      'localhost':
+        - fail_render
+      '127.0.0.1':
+        - fail_render
+    """
+    pillar_file = r"""
+    not_defined: {{ abc }}
+    """
+    top_tempfile = pytest.helpers.temp_file(
+        "top.sls", top_file, base_env_pillar_tree_root_dir
+    )
+    pillar_tempfile = pytest.helpers.temp_file(
+        "fail_render.sls", pillar_file, base_env_pillar_tree_root_dir
+    )
+    with top_tempfile, pillar_tempfile:
         yield
 
 
@@ -220,3 +345,219 @@ def test_state_high(salt_ssh_cli):
         ]["stdout"]
         == "blah"
     )
+
+
+@pytest.mark.slow_test
+@pytest.mark.usefixtures("state_tree_render_fail")
+class TestRenderExceptionRetcode:
+    """
+    Verify salt-ssh fails with a retcode > 0 when a state rendering fails.
+    """
+
+    def test_retcode_state_sls_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.sls", "fail_render")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_highstate_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.highstate")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_sls_id_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.sls_id", "foo", "fail_render")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_show_sls_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_sls", "fail_render")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_show_low_sls_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_low_sls", "fail_render")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_show_highstate_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_highstate")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_show_lowstate_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_lowstate")
+        # state.show_lowstate exits with 0 for non-ssh as well
+        self._assert_ret(ret, 0)
+
+    def test_retcode_state_top_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.top", "top.sls")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_single_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.single", "file")
+        assert ret.returncode == EX_AGGREGATE
+        assert isinstance(ret.data, str)
+        assert "single() missing 1 required positional argument" in ret.data
+
+    def _assert_ret(self, ret, retcode):
+        assert ret.returncode == retcode
+        assert isinstance(ret.data, list)
+        assert ret.data
+        assert isinstance(ret.data[0], str)
+        assert ret.data[0].startswith(
+            "Rendering SLS 'base:fail_render' failed: Jinja variable 'abc' is undefined;"
+        )
+
+
+@pytest.mark.slow_test
+@pytest.mark.usefixtures("pillar_tree_render_fail")
+class TestPillarRenderExceptionRetcode:
+    """
+    Verify salt-ssh fails with a retcode > 0 when a pillar rendering fails.
+    """
+
+    def test_retcode_state_sls_pillar_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.sls", "basic")
+        self._assert_ret(ret)
+
+    def test_retcode_state_highstate_pillar_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.highstate")
+        self._assert_ret(ret)
+
+    def test_retcode_state_sls_id_pillar_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.sls_id", "foo", "basic")
+        self._assert_ret(ret)
+
+    def test_retcode_state_show_sls_pillar_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_sls", "basic")
+        self._assert_ret(ret)
+
+    def test_retcode_state_show_low_sls_pillar_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_low_sls", "basic")
+        self._assert_ret(ret)
+
+    def test_retcode_state_show_highstate_pillar_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_highstate")
+        self._assert_ret(ret)
+
+    def test_retcode_state_show_lowstate_pillar_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_lowstate")
+        self._assert_ret(ret)
+
+    def test_retcode_state_top_pillar_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.top", "top.sls")
+        self._assert_ret(ret)
+
+    def _assert_ret(self, ret):
+        assert ret.returncode == EX_AGGREGATE
+        assert isinstance(ret.data, list)
+        assert ret.data
+        assert isinstance(ret.data[0], str)
+        assert ret.data[0] == "Pillar failed to render with the following messages:"
+        assert ret.data[1].startswith("Rendering SLS 'fail_render' failed.")
+
+
+@pytest.mark.slow_test
+@pytest.mark.usefixtures("state_tree_req_fail")
+class TestStateReqFailRetcode:
+    """
+    Verify salt-ssh fails with a retcode > 0 when a highstate verification fails.
+    ``state.show_highstate`` does not validate this.
+    """
+
+    def test_retcode_state_sls_invalid_requisite(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.sls", "fail_req")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_highstate_invalid_requisite(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.highstate")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_show_sls_invalid_requisite(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_sls", "fail_req")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_show_low_sls_invalid_requisite(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_low_sls", "fail_req")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_show_lowstate_invalid_requisite(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_lowstate")
+        # state.show_lowstate exits with 0 for non-ssh as well
+        self._assert_ret(ret, 0)
+
+    def test_retcode_state_top_invalid_requisite(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.top", "top.sls")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def _assert_ret(self, ret, retcode):
+        assert ret.returncode == retcode
+        assert isinstance(ret.data, list)
+        assert ret.data
+        assert isinstance(ret.data[0], str)
+        assert ret.data[0].startswith(
+            "Invalid requisite in require: file.managed for invalid_requisite"
+        )
+
+
+@pytest.mark.slow_test
+@pytest.mark.usefixtures("state_tree_structure_fail")
+class TestStateStructureFailRetcode:
+    """
+    Verify salt-ssh fails with a retcode > 0 when a highstate verification fails.
+    This targets another step of the verification.
+    ``state.sls_id`` does not seem to support extends.
+    ``state.show_highstate`` does not validate this.
+    """
+
+    def test_retcode_state_sls_invalid_structure(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.sls", "fail_structure")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_highstate_invalid_structure(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.highstate")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_show_sls_invalid_structure(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_sls", "fail_structure")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_show_low_sls_invalid_structure(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_low_sls", "fail_structure")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_show_lowstate_invalid_structure(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_lowstate")
+        # state.show_lowstate exits with 0 for non-ssh as well
+        self._assert_ret(ret, 0)
+
+    def test_retcode_state_top_invalid_structure(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.top", "top.sls")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def _assert_ret(self, ret, retcode):
+        assert ret.returncode == retcode
+        assert isinstance(ret.data, list)
+        assert ret.data
+        assert isinstance(ret.data[0], str)
+        assert ret.data[0].startswith(
+            "Cannot extend ID 'Some file state' in 'base:fail_structure"
+        )
+
+
+@pytest.mark.slow_test
+@pytest.mark.usefixtures("state_tree_run_fail")
+class TestStateRunFailRetcode:
+    """
+    Verify salt-ssh passes on a failing retcode from state execution.
+    """
+
+    def test_retcode_state_sls_run_fail(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.sls", "fail_run")
+        assert ret.returncode == EX_AGGREGATE
+
+    def test_retcode_state_highstate_run_fail(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.highstate")
+        assert ret.returncode == EX_AGGREGATE
+
+    def test_retcode_state_sls_id_render_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.sls_id", "This file state fails", "fail_run")
+        assert ret.returncode == EX_AGGREGATE
+
+    def test_retcode_state_top_run_fail(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.top", "top.sls")
+        assert ret.returncode == EX_AGGREGATE
