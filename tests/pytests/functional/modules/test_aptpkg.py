@@ -85,6 +85,8 @@ def configure_loader_modules(minion_opts):
 
 
 @pytest.fixture()
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def revert_repo_file(tmp_path):
     try:
         repo_file = pathlib.Path("/etc") / "apt" / "sources.list"
@@ -99,6 +101,8 @@ def revert_repo_file(tmp_path):
 
 
 @pytest.fixture
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def build_repo_file():
     source_path = "/etc/apt/sources.list.d/source_test_list.list"
     try:
@@ -227,6 +231,7 @@ def test_get_repos_doesnot_exist():
 
 
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def test_del_repo(build_repo_file):
     """
     Test aptpkg.del_repo when passing repo
@@ -275,6 +280,7 @@ def test__expand_repo_def(grains):
 
 
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def test_mod_repo(revert_repo_file):
     """
     Test aptpkg.mod_repo when the repo exists.
@@ -289,6 +295,7 @@ def test_mod_repo(revert_repo_file):
 
 
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def test_mod_repo_no_file(tmp_path, revert_repo_file):
     """
     Test aptpkg.mod_repo when the file does not exist.
@@ -317,6 +324,7 @@ def add_key(request, get_key_file):
 @pytest.mark.parametrize("get_key_file", KEY_FILES, indirect=True)
 @pytest.mark.parametrize("add_key", [False, True], indirect=True)
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def test_get_repo_keys(get_key_file, add_key):
     """
     Test aptpkg.get_repo_keys when aptkey is False and True
@@ -330,6 +338,7 @@ def test_get_repo_keys(get_key_file, add_key):
 
 @pytest.mark.parametrize("key", [False, True])
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def test_get_repo_keys_keydir_not_exist(key):
     """
     Test aptpkg.get_repo_keys when aptkey is False and True
