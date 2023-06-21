@@ -235,10 +235,11 @@ def query(
         proxy_password = None
 
     http_proxy_url = None
-    if backend != "requests" and proxy_host and proxy_port:
-        log.debug("Switching to request backend due to the use of proxies.")
-        backend = "requests"
     if proxy_host and proxy_port:
+        if backend != "requests":
+            log.debug("Switching to request backend due to the use of proxies.")
+            backend = "requests"
+
         if proxy_username and proxy_password:
             http_proxy_url = (
                 f"http://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}"
