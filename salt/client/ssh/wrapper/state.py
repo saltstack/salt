@@ -8,6 +8,7 @@ import time
 
 import salt.client.ssh.shell
 import salt.client.ssh.state
+import salt.defaults.exitcodes
 import salt.loader
 import salt.minion
 import salt.roster
@@ -54,7 +55,7 @@ def _ssh_state(chunks, st_kwargs, kwargs, test=False):
         cmd,
         fsclient=__context__["fileclient"],
         minion_opts=__salt__.minion_opts,
-        **st_kwargs
+        **st_kwargs,
     )
     single.shell.send(trans_tar, "{}/salt_state.tgz".format(__opts__["thin_dir"]))
     stdout, stderr, _ = single.cmd_block()
@@ -84,14 +85,14 @@ def _set_retcode(ret, highstate=None):
     """
 
     # Set default retcode to 0
-    __context__["retcode"] = 0
+    __context__["retcode"] = salt.defaults.exitcodes.EX_OK
 
     if isinstance(ret, list):
-        __context__["retcode"] = 1
+        __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return
     if not salt.utils.state.check_result(ret, highstate=highstate):
 
-        __context__["retcode"] = 2
+        __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_FAILURE
 
 
 def _check_pillar(kwargs, pillar=None):
@@ -182,6 +183,11 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
         __context__["fileclient"],
         context=__context__.value(),
     ) as st_:
+        if not _check_pillar(kwargs, st_.opts["pillar"]):
+            __context__["retcode"] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
+            err = ["Pillar failed to render with the following messages:"]
+            err += st_.opts["pillar"]["_errors"]
+            return err
         st_.push_active()
         mods = _parse_mods(mods)
         high_data, errors = st_.render_highstate(
@@ -198,12 +204,14 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
         errors += ext_errors
         errors += st_.state.verify_high(high_data)
         if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
         high_data, req_in_errors = st_.state.requisite_in(high_data)
         errors += req_in_errors
         high_data = st_.state.apply_exclude(high_data)
         # Verify that the high data is structurally sound
         if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
         # Compile and verify the raw chunks
         chunks = st_.state.compile_high_data(high_data)
@@ -236,7 +244,7 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
             cmd,
             fsclient=__context__["fileclient"],
             minion_opts=__salt__.minion_opts,
-            **st_kwargs
+            **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
         stdout, stderr, _ = single.cmd_block()
@@ -316,7 +324,7 @@ def _check_queue(queue, kwargs):
     else:
         conflict = running(concurrent=kwargs.get("concurrent", False))
         if conflict:
-            __context__["retcode"] = 1
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return conflict
 
 
@@ -384,7 +392,7 @@ def low(data, **kwargs):
             cmd,
             fsclient=__context__["fileclient"],
             minion_opts=__salt__.minion_opts,
-            **st_kwargs
+            **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(__opts__["thin_dir"]))
         stdout, stderr, _ = single.cmd_block()
@@ -474,7 +482,7 @@ def high(data, **kwargs):
             cmd,
             fsclient=__context__["fileclient"],
             minion_opts=__salt__.minion_opts,
-            **st_kwargs
+            **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
         stdout, stderr, _ = single.cmd_block()
@@ -550,7 +558,7 @@ def request(mods=None, **kwargs):
         try:
             if salt.utils.platform.is_windows():
                 # Make sure cache file isn't read-only
-                __salt__["cmd.run"]('attrib -R "{}"'.format(notify_path))
+                __salt__["cmd.run"](f'attrib -R "{notify_path}"')
             with salt.utils.files.fopen(notify_path, "w+b") as fp_:
                 salt.payload.dump(req, fp_)
         except OSError:
@@ -614,7 +622,7 @@ def clear_request(name=None):
             try:
                 if salt.utils.platform.is_windows():
                     # Make sure cache file isn't read-only
-                    __salt__["cmd.run"]('attrib -R "{}"'.format(notify_path))
+                    __salt__["cmd.run"](f'attrib -R "{notify_path}"')
                 with salt.utils.files.fopen(notify_path, "w+b") as fp_:
                     salt.payload.dump(req, fp_)
             except OSError:
@@ -681,6 +689,11 @@ def highstate(test=None, **kwargs):
         __context__["fileclient"],
         context=__context__.value(),
     ) as st_:
+        if not _check_pillar(kwargs, st_.opts["pillar"]):
+            __context__["retcode"] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
+            err = ["Pillar failed to render with the following messages:"]
+            err += st_.opts["pillar"]["_errors"]
+            return err
         st_.push_active()
         chunks = st_.compile_low_chunks(context=__context__.value())
         file_refs = salt.client.ssh.state.lowstate_file_refs(
@@ -692,7 +705,7 @@ def highstate(test=None, **kwargs):
         # Check for errors
         for chunk in chunks:
             if not isinstance(chunk, dict):
-                __context__["retcode"] = 1
+                __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
                 return chunks
 
         roster = salt.roster.Roster(opts, opts.get("roster", "flat"))
@@ -717,7 +730,7 @@ def highstate(test=None, **kwargs):
             cmd,
             fsclient=__context__["fileclient"],
             minion_opts=__salt__.minion_opts,
-            **st_kwargs
+            **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
         stdout, stderr, _ = single.cmd_block()
@@ -766,9 +779,19 @@ def top(topfn, test=None, **kwargs):
         __context__["fileclient"],
         context=__context__.value(),
     ) as st_:
+        if not _check_pillar(kwargs, st_.opts["pillar"]):
+            __context__["retcode"] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
+            err = ["Pillar failed to render with the following messages:"]
+            err += st_.opts["pillar"]["_errors"]
+            return err
         st_.opts["state_top"] = os.path.join("salt://", topfn)
         st_.push_active()
         chunks = st_.compile_low_chunks(context=__context__.value())
+        # Check for errors
+        for chunk in chunks:
+            if not isinstance(chunk, dict):
+                __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+                return chunks
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
@@ -798,7 +821,7 @@ def top(topfn, test=None, **kwargs):
             cmd,
             fsclient=__context__["fileclient"],
             minion_opts=__salt__.minion_opts,
-            **st_kwargs
+            **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
         stdout, stderr, _ = single.cmd_block()
@@ -839,8 +862,17 @@ def show_highstate(**kwargs):
         __context__["fileclient"],
         context=__context__.value(),
     ) as st_:
+        if not _check_pillar(kwargs, st_.opts["pillar"]):
+            __context__["retcode"] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
+            err = ["Pillar failed to render with the following messages:"]
+            err += st_.opts["pillar"]["_errors"]
+            return err
         st_.push_active()
         chunks = st_.compile_highstate(context=__context__.value())
+        # Check for errors
+        if not isinstance(chunks, dict):
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+            return chunks
         _cleanup_slsmod_high_data(chunks)
         return chunks
 
@@ -864,6 +896,11 @@ def show_lowstate(**kwargs):
         __context__["fileclient"],
         context=__context__.value(),
     ) as st_:
+        if not _check_pillar(kwargs, st_.opts["pillar"]):
+            __context__["retcode"] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
+            err = ["Pillar failed to render with the following messages:"]
+            err += st_.opts["pillar"]["_errors"]
+            return err
         st_.push_active()
         chunks = st_.compile_low_chunks(context=__context__.value())
         _cleanup_slsmod_low_data(chunks)
@@ -925,7 +962,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     ) as st_:
 
         if not _check_pillar(kwargs, st_.opts["pillar"]):
-            __context__["retcode"] = 5
+            __context__["retcode"] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
             err = ["Pillar failed to render with the following messages:"]
             err += __pillar__["_errors"]
             return err
@@ -943,7 +980,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
             # but it is required to get the unit tests to pass.
             errors.extend(req_in_errors)
         if errors:
-            __context__["retcode"] = 1
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
         chunks = st_.state.compile_high_data(high_)
         chunk = [x for x in chunks if x.get("__id__", "") == id_]
@@ -988,6 +1025,11 @@ def show_sls(mods, saltenv="base", test=None, **kwargs):
         __context__["fileclient"],
         context=__context__.value(),
     ) as st_:
+        if not _check_pillar(kwargs, st_.opts["pillar"]):
+            __context__["retcode"] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
+            err = ["Pillar failed to render with the following messages:"]
+            err += st_.opts["pillar"]["_errors"]
+            return err
         st_.push_active()
         mods = _parse_mods(mods)
         high_data, errors = st_.render_highstate(
@@ -997,12 +1039,14 @@ def show_sls(mods, saltenv="base", test=None, **kwargs):
         errors += ext_errors
         errors += st_.state.verify_high(high_data)
         if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
         high_data, req_in_errors = st_.state.requisite_in(high_data)
         errors += req_in_errors
         high_data = st_.state.apply_exclude(high_data)
         # Verify that the high data is structurally sound
         if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
         _cleanup_slsmod_high_data(high_data)
         return high_data
@@ -1036,6 +1080,11 @@ def show_low_sls(mods, saltenv="base", test=None, **kwargs):
         __context__["fileclient"],
         context=__context__.value(),
     ) as st_:
+        if not _check_pillar(kwargs, st_.opts["pillar"]):
+            __context__["retcode"] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
+            err = ["Pillar failed to render with the following messages:"]
+            err += st_.opts["pillar"]["_errors"]
+            return err
         st_.push_active()
         mods = _parse_mods(mods)
         high_data, errors = st_.render_highstate(
@@ -1045,12 +1094,14 @@ def show_low_sls(mods, saltenv="base", test=None, **kwargs):
         errors += ext_errors
         errors += st_.state.verify_high(high_data)
         if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
         high_data, req_in_errors = st_.state.requisite_in(high_data)
         errors += req_in_errors
         high_data = st_.state.apply_exclude(high_data)
         # Verify that the high data is structurally sound
         if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
         ret = st_.state.compile_high_data(high_data)
         _cleanup_slsmod_low_data(ret)
@@ -1080,6 +1131,7 @@ def show_top(**kwargs):
         errors = []
         errors += st_.verify_tops(top_data)
         if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
         matches = st_.top_matches(top_data)
         return matches
@@ -1110,7 +1162,7 @@ def single(fun, name, test=None, **kwargs):
     # state.fun -> [state, fun]
     comps = fun.split(".")
     if len(comps) < 2:
-        __context__["retcode"] = 1
+        __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return "Invalid function passed"
 
     # Create the low chunk, using kwargs as a base
@@ -1133,7 +1185,7 @@ def single(fun, name, test=None, **kwargs):
     # Verify the low chunk
     err = st_.verify_data(kwargs)
     if err:
-        __context__["retcode"] = 1
+        __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return err
 
     # Must be a list of low-chunks
@@ -1175,7 +1227,7 @@ def single(fun, name, test=None, **kwargs):
         cmd,
         fsclient=__context__["fileclient"],
         minion_opts=__salt__.minion_opts,
-        **st_kwargs
+        **st_kwargs,
     )
 
     # Copy the tar down
