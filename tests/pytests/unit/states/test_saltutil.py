@@ -142,4 +142,4 @@ def test_saltutil_sync_states_should_match_saltutil_module():
     for fn in module_functions:
         assert (
             fn in state_functions
-        ), "modules.saltutil.{} has no matching state in states.saltutil".format(fn)
+        ), f"modules.saltutil.{fn} has no matching state in states.saltutil"
