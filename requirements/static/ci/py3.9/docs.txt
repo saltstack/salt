@@ -40,7 +40,7 @@ idna==2.8
     #   requests
 imagesize==1.4.1
     # via sphinx
-immutables==0.15
+immutables==0.19
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   contextvars
