@@ -451,7 +451,7 @@ idna==2.8
     #   etcd3-py
     #   requests
     #   yarl
-immutables==0.16
+immutables==0.19
     # via contextvars
 importlib-metadata==4.8.1
     # via -r requirements/static/pkg/linux.in
