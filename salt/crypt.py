@@ -20,9 +20,10 @@ import traceback
 import uuid
 import weakref
 
+import tornado.gen
+
 import salt.channel.client
 import salt.defaults.exitcodes
-import salt.ext.tornado.gen
 import salt.payload
 import salt.utils.crypt
 import salt.utils.decorators
@@ -495,7 +496,7 @@ class AsyncAuth:
         Only create one instance of AsyncAuth per __key()
         """
         # do we have any mapping for this io_loop
-        io_loop = io_loop or salt.ext.tornado.ioloop.IOLoop.current()
+        io_loop = io_loop or tornado.ioloop.IOLoop.current()
         if io_loop not in AsyncAuth.instance_map:
             AsyncAuth.instance_map[io_loop] = weakref.WeakValueDictionary()
         loop_instance_map = AsyncAuth.instance_map[io_loop]
@@ -546,7 +547,7 @@ class AsyncAuth:
         if not os.path.isfile(self.pub_path):
             self.get_keys()
 
-        self.io_loop = io_loop or salt.ext.tornado.ioloop.IOLoop.current()
+        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
         salt.utils.crypt.reinit_crypto()
         key = self.__key(self.opts)
@@ -555,10 +556,8 @@ class AsyncAuth:
             creds = AsyncAuth.creds_map[key]
             self._creds = creds
             self._crypticle = Crypticle(self.opts, creds["aes"])
-            self._authenticate_future = salt.ext.tornado.concurrent.Future()
+            self._authenticate_future = tornado.concurrent.Future()
             self._authenticate_future.set_result(True)
-        else:
-            self.authenticate()
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -610,7 +609,7 @@ class AsyncAuth:
         ):
             future = self._authenticate_future
         else:
-            future = salt.ext.tornado.concurrent.Future()
+            future = tornado.concurrent.Future()
             self._authenticate_future = future
             self.io_loop.add_callback(self._authenticate)
 
@@ -624,7 +623,7 @@ class AsyncAuth:
 
         return future
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _authenticate(self):
         """
         Authenticate with the master, this method breaks the functional
@@ -675,7 +674,7 @@ class AsyncAuth:
                         log.info(
                             "Waiting %s seconds before retry.", acceptance_wait_time
                         )
-                        yield salt.ext.tornado.gen.sleep(acceptance_wait_time)
+                        yield tornado.gen.sleep(acceptance_wait_time)
                     if acceptance_wait_time < acceptance_wait_time_max:
                         acceptance_wait_time += acceptance_wait_time
                         log.debug(
@@ -721,7 +720,7 @@ class AsyncAuth:
                             salt.utils.event.tagify(prefix="auth", suffix="creds"),
                         )
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         """
         Send a sign in request to the master, sets the key information and
@@ -762,9 +761,9 @@ class AsyncAuth:
         except SaltReqTimeoutError as e:
             if safe:
                 log.warning("SaltReqTimeoutError: %s", e)
-                raise salt.ext.tornado.gen.Return("retry")
+                raise tornado.gen.Return("retry")
             if self.opts.get("detect_mode") is True:
-                raise salt.ext.tornado.gen.Return("retry")
+                raise tornado.gen.Return("retry")
             else:
                 raise SaltClientError(
                     "Attempt to authenticate with the salt master failed with timeout"
@@ -774,7 +773,7 @@ class AsyncAuth:
             if close_channel:
                 channel.close()
         ret = self.handle_signin_response(sign_in_payload, payload)
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)
 
     def handle_signin_response(self, sign_in_payload, payload):
         auth = {}

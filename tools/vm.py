@@ -2,6 +2,7 @@
 These commands are used to create/destroy VMs, sync the local checkout
 to the VM and to run commands on the VM.
 """
+# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
 from __future__ import annotations
 
 import hashlib
@@ -21,6 +22,9 @@ from functools import lru_cache
 from typing import TYPE_CHECKING, cast
 
 from ptscripts import Context, command_group
+from requests.exceptions import ConnectTimeout
+
+import tools.utils
 
 try:
     import attr
@@ -52,12 +56,11 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-REPO_ROOT = pathlib.Path(__file__).parent.parent
-STATE_DIR = REPO_ROOT / ".vms-state"
-with REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
+STATE_DIR = tools.utils.REPO_ROOT / ".vms-state"
+with tools.utils.REPO_ROOT.joinpath("cicd", "golden-images.json").open() as rfh:
     AMIS = json.load(rfh)
 REPO_CHECKOUT_ID = hashlib.sha256(
-    "|".join(list(platform.uname()) + [str(REPO_ROOT)]).encode()
+    "|".join(list(platform.uname()) + [str(tools.utils.REPO_ROOT)]).encode()
 ).hexdigest()
 AWS_REGION = (
     os.environ.get("AWS_DEFAULT_REGION") or os.environ.get("AWS_REGION") or "us-west-2"
@@ -93,6 +96,15 @@ vm.add_argument("--region", help="The AWS region.", default=AWS_REGION)
         "retries": {
             "help": "How many times to retry creating and connecting to a vm",
         },
+        "environment": {
+            "help": (
+                "The AWS environment to use. When the value is auto, an "
+                "attempt will be made to get the right environment from the "
+                "AWS instance metadata endpoint. This only works for bastion "
+                "VMs."
+            ),
+            "choices": ("prod", "test", "auto"),
+        },
     }
 )
 def create(
@@ -103,6 +115,7 @@ def create(
     no_delete: bool = False,
     no_destroy_on_failure: bool = False,
     retries: int = 0,
+    environment: str = None,
 ):
     """
     Create VM.
@@ -111,12 +124,37 @@ def create(
         ctx.exit(1, "We need a key name to spin a VM")
     if not retries:
         retries = 1
+    if environment == "auto":
+        # Lets get the environment from the instance profile if we're on a bastion VM
+        with ctx.web as web:
+            try:
+                ret = web.put(
+                    "http://169.254.169.254/latest/api/token",
+                    headers={"X-aws-ec2-metadata-token-ttl-seconds": "10"},
+                    timeout=1,
+                )
+                token = ret.text.strip()
+                ret = web.get(
+                    "http://169.254.169.254/latest/meta-data/tags/instance/spb:environment",
+                    headers={"X-aws-ec2-metadata-token": token},
+                )
+                spb_environment = ret.text.strip()
+                if spb_environment:
+                    ctx.info(f"Discovered VM environment: {spb_environment}")
+                    environment = spb_environment
+            except ConnectTimeout:
+                # We're apparently not in bastion VM
+                environment = None
+
     attempts = 0
     while True:
         attempts += 1
         vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
         created = vm.create(
-            key_name=key_name, instance_type=instance_type, no_delete=no_delete
+            key_name=key_name,
+            instance_type=instance_type,
+            no_delete=no_delete,
+            environment=environment,
         )
         if created is True:
             break
@@ -137,14 +175,20 @@ def create(
             "help": "The VM Name",
             "metavar": "VM_NAME",
         },
+        "no_wait": {
+            "help": (
+                "Don't wait for the destroy process to complete. "
+                "Just confirm it started and exit."
+            )
+        },
     }
 )
-def destroy(ctx: Context, name: str):
+def destroy(ctx: Context, name: str, no_wait: bool = False):
     """
     Destroy VM.
     """
     vm = VM(ctx=ctx, name=name, region_name=ctx.parser.options.region)
-    vm.destroy()
+    vm.destroy(no_wait=no_wait)
 
 
 @vm.command(
@@ -234,6 +278,17 @@ def rsync(ctx: Context, name: str):
                 "--skip-code-coverage",
             ],
         },
+        "envvars": {
+            "action": "append",
+            "flags": [
+                "-E",
+                "--env",
+            ],
+            "help": (
+                "Environment variable name to forward when running tests. Example: "
+                "'-E VAR1 -E VAR2'."
+            ),
+        },
     }
 )
 def test(
@@ -246,6 +301,7 @@ def test(
     print_tests_selection: bool = False,
     print_system_info: bool = False,
     skip_code_coverage: bool = False,
+    envvars: list[str] = None,
 ):
     """
     Run test in the VM.
@@ -256,6 +312,8 @@ def test(
         "SKIP_INITIAL_ONEDIR_FAILURES": "1",
         "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
     }
+    if "LANG" in os.environ:
+        env["LANG"] = os.environ["LANG"]
     if rerun_failures:
         env["RERUN_FAILURES"] = "1"
     if print_tests_selection:
@@ -278,6 +336,12 @@ def test(
     if "photonos" in name:
         skip_known_failures = os.environ.get("SKIP_INITIAL_PHOTONOS_FAILURES", "1")
         env["SKIP_INITIAL_PHOTONOS_FAILURES"] = skip_known_failures
+    if envvars:
+        for key in envvars:
+            if key not in os.environ:
+                ctx.warn(f"Environment variable {key!r} not set. Not forwarding")
+                continue
+            env[key] = os.environ[key]
     returncode = vm.run_nox(
         nox_session=nox_session,
         session_args=nox_session_args,
@@ -312,6 +376,17 @@ def test(
                 "--skip-requirements-install",
             ],
         },
+        "envvars": {
+            "action": "append",
+            "flags": [
+                "-E",
+                "--env",
+            ],
+            "help": (
+                "Environment variable name to forward when running tests. Example: "
+                "'-E VAR1 -E VAR2'."
+            ),
+        },
     }
 )
 def testplan(
@@ -320,6 +395,7 @@ def testplan(
     nox_session_args: list[str] = None,
     nox_session: str = "ci-test-3",
     skip_requirements_install: bool = False,
+    envvars: list[str] = None,
 ):
     """
     Run test in the VM.
@@ -339,6 +415,12 @@ def testplan(
     if "photonos" in name:
         skip_known_failures = os.environ.get("SKIP_INITIAL_PHOTONOS_FAILURES", "1")
         env["SKIP_INITIAL_PHOTONOS_FAILURES"] = skip_known_failures
+    if envvars:
+        for key in envvars:
+            if key not in os.environ:
+                ctx.warn(f"Environment variable {key!r} not set. Not forwarding")
+                continue
+            env[key] = os.environ[key]
     returncode = vm.run_nox(
         nox_session=nox_session,
         session_args=nox_session_args,
@@ -548,21 +630,32 @@ class VM:
                     self.ctx.error(str(exc))
                     self.ctx.exit(1)
                 instance_id_path.unlink()
+            except AttributeError:
+                # This machine no longer exists?!
+                instance_id_path.unlink()
+                self.ctx.info("It appears the cached image no longer exists...")
+                self.ctx.exit(1)
         if not instance_id_path.exists():
             filters = [
                 {"Name": "tag:vm-name", "Values": [self.name]},
                 {"Name": "tag:instance-client-id", "Values": [REPO_CHECKOUT_ID]},
             ]
             log.info(f"Checking existing instance of {self.name}({self.config.ami})...")
-            instances = list(
-                self.ec2.instances.filter(
-                    Filters=filters,
+            try:
+                instances = list(
+                    self.ec2.instances.filter(
+                        Filters=filters,
+                    )
                 )
-            )
-            for _instance in instances:
-                if _instance.state["Name"] == "running":
-                    instance = _instance
-                    break
+                for _instance in instances:
+                    if _instance.state["Name"] == "running":
+                        instance = _instance
+                        break
+            except ClientError as exc:
+                if "RequestExpired" not in str(exc):
+                    raise
+                self.ctx.error(str(exc))
+                self.ctx.exit(1)
         if instance:
             self.instance = instance
 
@@ -597,11 +690,20 @@ class VM:
         )
         self.ssh_config_file.write_text(ssh_config)
 
-    def create(self, key_name=None, instance_type=None, no_delete=False):
+    def create(
+        self,
+        key_name=None,
+        instance_type=None,
+        no_delete=False,
+        environment=None,
+    ):
         if self.is_running:
             log.info(f"{self!r} is already running...")
             return True
         self.get_ec2_resource.cache_clear()
+
+        if environment is None:
+            environment = "prod"
 
         create_timeout = self.config.create_timeout
         create_timeout_progress = 0
@@ -618,37 +720,50 @@ class VM:
         client = boto3.client("ec2", region_name=self.region_name)
         # Let's search for the launch template corresponding to this AMI
         launch_template_name = None
+        next_token = ""
         try:
-            response = response = client.describe_launch_templates(
-                Filters=[
-                    {
-                        "Name": "tag:spb:is-golden-image-template",
-                        "Values": ["true"],
-                    },
-                    {
-                        "Name": "tag:spb:project",
-                        "Values": ["salt-project"],
-                    },
-                    {
-                        "Name": "tag:spb:image-id",
-                        "Values": [self.config.ami],
-                    },
-                ]
-            )
-            log.debug(
-                "Search for launch template response:\n%s", pprint.pformat(response)
-            )
-            for details in response.get("LaunchTemplates"):
-                if launch_template_name is not None:
-                    log.info(
-                        "Multiple launch templates for the same AMI. This is not "
-                        "supposed to happen. Picked the first one listed: %s",
-                        response,
-                    )
-                    break
-                launch_template_name = details["LaunchTemplateName"]
+            while True:
+                response = response = client.describe_launch_templates(
+                    Filters=[
+                        {
+                            "Name": "tag:spb:is-golden-image-template",
+                            "Values": ["true"],
+                        },
+                        {
+                            "Name": "tag:spb:project",
+                            "Values": ["salt-project"],
+                        },
+                        {
+                            "Name": "tag:spb:environment",
+                            "Values": [environment],
+                        },
+                        {
+                            "Name": "tag:spb:image-id",
+                            "Values": [self.config.ami],
+                        },
+                    ],
+                    NextToken=next_token,
+                )
+                log.debug(
+                    "Search for launch template response:\n%s",
+                    pprint.pformat(response),
+                )
+                for details in response.get("LaunchTemplates"):
+                    if launch_template_name is not None:
+                        log.warning(
+                            "Multiple launch templates for the same AMI. This is not "
+                            "supposed to happen. Picked the first one listed: %s",
+                            response,
+                        )
+                        break
+                    launch_template_name = details["LaunchTemplateName"]
 
-            if launch_template_name is None:
+                if launch_template_name is not None:
+                    break
+
+                next_token = response.get("NextToken")
+                if next_token:
+                    continue
                 self.ctx.error(f"Could not find a launch template for {self.name!r}")
                 self.ctx.exit(1)
         except ClientError as exc:
@@ -678,10 +793,12 @@ class VM:
                 for tag in subnet.tags:
                     if tag["Key"] != "Name":
                         continue
-                    if started_in_ci and "-private-" in tag["Value"]:
+                    private_value = f"-{environment}-vpc-private-"
+                    if started_in_ci and private_value in tag["Value"]:
                         subnets[subnet.id] = subnet.available_ip_address_count
                         break
-                    if started_in_ci is False and "-public-" in tag["Value"]:
+                    public_value = f"-{environment}-vpc-public-"
+                    if started_in_ci is False and public_value in tag["Value"]:
                         subnets[subnet.id] = subnet.available_ip_address_count
                         break
             if subnets:
@@ -932,13 +1049,13 @@ class VM:
                 return error
             return True
 
-    def destroy(self):
+    def destroy(self, no_wait: bool = False):
         try:
             if not self.is_running:
                 log.info(f"{self!r} is not running...")
                 return
             timeout = self.config.terminate_timeout
-            timeout_progress = 0
+            timeout_progress = 0.0
             progress = create_progress_bar()
             task = progress.add_task(f"Terminatting {self!r}...", total=timeout)
             self.instance.terminate()
@@ -947,6 +1064,12 @@ class VM:
                     while timeout_progress <= timeout:
                         start = time.time()
                         time.sleep(1)
+                        if no_wait and not self.is_running:
+                            log.info(
+                                f"{self!r} started the destroy process. "
+                                "Not waiting for completion of that process."
+                            )
+                            break
                         if self.state == "terminated":
                             progress.update(
                                 task,
@@ -982,7 +1105,7 @@ class VM:
             "--exclude",
             ".pytest_cache/",
             "--exclude",
-            f"{STATE_DIR.relative_to(REPO_ROOT)}{os.path.sep}",
+            f"{STATE_DIR.relative_to(tools.utils.REPO_ROOT)}{os.path.sep}",
             "--exclude",
             "*.py~",
             # We need to include artifacts/ to be able to include artifacts/salt
@@ -990,6 +1113,8 @@ class VM:
             "artifacts/",
             "--include",
             "artifacts/salt",
+            "--include",
+            "pkg/artifacts/*",
             # But we also want to exclude all other entries under artifacts/
             "--exclude",
             "artifacts/*",
@@ -999,22 +1124,32 @@ class VM:
             # symlink with a copy of what's getting symlinked.
             rsync_flags.append("--copy-links")
         # Local repo path
-        source = f"{REPO_ROOT}{os.path.sep}"
+        source = f"{tools.utils.REPO_ROOT}{os.path.sep}"
         # Remote repo path
         remote_path = self.upload_path.as_posix()
+        rsync_remote_path = remote_path
         if self.is_windows:
             for drive in ("c:", "C:"):
-                remote_path = remote_path.replace(drive, "/cygdrive/c")
-        destination = f"{self.name}:{remote_path}"
+                source = source.replace(drive, "/cygdrive/c")
+                rsync_remote_path = rsync_remote_path.replace(drive, "/cygdrive/c")
+            source = source.replace("\\", "/")
+        destination = f"{self.name}:{rsync_remote_path}"
         description = "Rsync local checkout to VM..."
         self.rsync(source, destination, description, rsync_flags)
+        if self.is_windows:
+            # rsync sets very strict file permissions and disables inheritance
+            # we only need to reset permissions so they inherit from the parent
+            cmd = ["icacls", remote_path, "/T", "/reset"]
+            ret = self.run(cmd, capture=True, check=False, utf8=False)
+            if ret.returncode != 0:
+                self.ctx.exit(ret.returncode, ret.stderr.strip())
 
     def write_and_upload_dot_env(self, env: dict[str, str]):
         if not env:
             return
         write_env = {k: str(v) for (k, v) in env.items()}
         write_env_filename = ".ci-env"
-        write_env_filepath = REPO_ROOT / ".ci-env"
+        write_env_filepath = tools.utils.REPO_ROOT / ".ci-env"
         write_env_filepath.write_text(json.dumps(write_env))
 
         # Local path
@@ -1038,12 +1173,14 @@ class VM:
         pseudo_terminal: bool = False,
         env: list[str] = None,
         log_command_level: int = logging.INFO,
+        utf8: bool = True,
     ):
         if not self.is_running:
             self.ctx.exit(1, message=f"{self!r} is not running")
         if env is None:
             env = []
-        env.append("PYTHONUTF8=1")
+        if utf8:
+            env.append("PYTHONUTF8=1")
         self.write_ssh_config()
         try:
             ssh_command = self.ssh_command_args(
@@ -1080,7 +1217,7 @@ class VM:
             "-f",
             f"{self.upload_path.joinpath('noxfile.py').as_posix()}",
             "-e",
-            f"'{nox_session}'",
+            f'"{nox_session}"',
         ]
         if nox_args:
             cmd += nox_args
@@ -1124,7 +1261,10 @@ class VM:
         """
         Decompress nox.<vm-name>.tar.* if it exists in the VM
         """
-        return self.run_nox("decompress-dependencies", session_args=[self.name])
+        env = {"DELETE_NOX_ARCHIVE": "1"}
+        return self.run_nox(
+            "decompress-dependencies", session_args=[self.name], env=env
+        )
 
     def download_dependencies(self):
         """
@@ -1241,7 +1381,7 @@ class VM:
         _ssh_command_args = [
             ssh,
             "-F",
-            str(self.ssh_config_file.relative_to(REPO_ROOT)),
+            str(self.ssh_config_file.relative_to(tools.utils.REPO_ROOT)),
         ]
         if ssh_options:
             _ssh_command_args.extend(ssh_options)

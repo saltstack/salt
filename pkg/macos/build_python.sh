@@ -21,26 +21,6 @@
 # The default version to be built
 # TODO: The is not selectable via RELENV yet. This has to match whatever relenv
 # TODO: is building
-PY_VERSION="3.10.9"
-
-# Valid versions supported by macOS
-PY_VERSIONS=(
-    "3.10.9"
-    "3.10.8"
-    "3.10.7"
-    "3.9.16"
-    "3.9.15"
-    "3.9.14"
-    "3.9.13"
-    "3.9.12"
-    "3.9.11"
-    "3.8.16"
-    "3.8.15"
-    "3.8.14"
-    "3.8.13"
-    "3.8.12"
-    "3.8.11"
-)
 
 # Locations
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -65,14 +45,11 @@ _usage() {
      echo ""
      echo "  -h, --help      this message"
      echo "  -b, --build     build python instead of fetching"
-     echo "  -v, --version   version of python to install"
-     echo "                  python version must be one of:"
-     for i in "${PY_VERSIONS[@]}"; do
-         echo "                  - $i"
-     done
+     echo "  -v, --version   version of python to install, must be available with relenv"
+     echo "  -r, --relenv-version   version of python to install, must be available with relenv"
      echo ""
-     echo "  To build python 3.9.15:"
-     echo "      example: $0 --version 3.9.15"
+     echo "  To build python 3.10.11:"
+     echo "      example: $0 --version 3.10.11"
 }
 
 # _msg
@@ -109,7 +86,12 @@ while true; do
             ;;
         -v | --version )
             shift
-            PY_VERSION="$*"
+            PY_VERSION="$1"
+            shift
+            ;;
+        -r | --relenv-version )
+            shift
+            RELENV_VERSION="$1"
             shift
             ;;
         -b | --build )
@@ -123,18 +105,12 @@ while true; do
             exit 1
             ;;
         * )
-            PY_VERSION="$*"
-            shift
+            echo "Invalid Arguments: $*"
+            _usage
+            exit 1
             ;;
     esac
 done
-
-if ! [[ " ${PY_VERSIONS[*]} " =~ " $PY_VERSION " ]]; then
-    echo "Invalid Python Version: $PY_VERSION"
-    echo ""
-    _usage
-    exit 1
-fi
 
 #-------------------------------------------------------------------------------
 # Script Start
@@ -214,12 +190,17 @@ fi
 # Installing Relenv
 #-------------------------------------------------------------------------------
 _msg "Installing relenv"
-pip install relenv >/dev/null 2>&1
-if [ -n "$(pip show relenv)" ]; then
+if [ -n "${RELENV_VERSION}" ]; then
+    pip install relenv==${RELENV_VERSION}
+else
+    pip install relenv
+fi
+if [ -n "$(relenv --version)" ]; then
     _success
 else
     _failure
 fi
+export RELENV_FETCH_VERSION=$(relenv --version)
 
 #-------------------------------------------------------------------------------
 # Building Python with Relenv
@@ -231,8 +212,8 @@ else
     # We want to suppress the output here so it looks nice
     # To see the output, remove the output redirection
     _msg "Fetching python (relenv)"
-    relenv fetch >/dev/null 2>&1
-    if [ -f "$RELENV_DIR/build/x86_64-macos.tar.xz" ]; then
+    relenv fetch --python=$PY_VERSION
+    if [ -f "$RELENV_DIR/build/$PY_VERSION-x86_64-macos.tar.xz" ]; then
         _success
     else
         _failure
@@ -240,7 +221,7 @@ else
 fi
 
 _msg "Extracting python environment"
-relenv create "$BUILD_DIR/opt/salt"
+relenv create --python=$PY_VERSION "$BUILD_DIR/opt/salt"
 if [ -f "$BLD_PY_BIN" ]; then
     _success
 else

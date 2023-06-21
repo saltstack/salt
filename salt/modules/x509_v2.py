@@ -458,7 +458,7 @@ def create_certificate(
     # Deprecation checks vs the old x509 module
     if "algorithm" in kwargs:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "`algorithm` has been renamed to `digest`. Please update your code.",
         )
         kwargs["digest"] = kwargs.pop("algorithm")
@@ -473,7 +473,7 @@ def create_certificate(
     if "days_valid" not in kwargs and "not_after" not in kwargs:
         try:
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The default value for `days_valid` will change to 30. Please adapt your code accordingly.",
             )
             kwargs["days_valid"] = 365
@@ -901,13 +901,16 @@ def create_crl(
             salt.utils.versions.kwargs_warn_until(["text"], "Potassium")
             kwargs.pop("text")
 
-        if kwargs:
-            raise SaltInvocationError(f"Unrecognized keyword arguments: {list(kwargs)}")
+        unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
+        if unknown:
+            raise SaltInvocationError(
+                f"Unrecognized keyword arguments: {list(unknown)}"
+            )
 
     if days_valid is None:
         try:
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The default value for `days_valid` will change to 7. Please adapt your code accordingly.",
             )
             days_valid = 100
@@ -919,14 +922,14 @@ def create_crl(
         parsed = {}
         if len(rev) == 1 and isinstance(rev[next(iter(rev))], list):
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "Revoked certificates should be specified as a simple list of dicts.",
             )
             for val in rev[next(iter(rev))]:
                 parsed.update(val)
         if "reason" in (parsed or rev):
             salt.utils.versions.warn_until(
-                "Potassium",
+                3009,
                 "The `reason` parameter for revoked certificates should be specified in extensions:CRLReason.",
             )
             salt.utils.dictupdate.set_dict_key_value(
@@ -1076,7 +1079,7 @@ def create_csr(
     # Deprecation checks vs the old x509 module
     if "algorithm" in kwargs:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "`algorithm` has been renamed to `digest`. Please update your code.",
         )
         digest = kwargs.pop("algorithm")
@@ -1222,7 +1225,7 @@ def create_private_key(
     # Deprecation checks vs the old x509 module
     if "bits" in kwargs:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "`bits` has been renamed to `keysize`. Please update your code.",
         )
         keysize = kwargs.pop("bits")
@@ -1235,8 +1238,9 @@ def create_private_key(
         for x in ignored_params:
             kwargs.pop(x)
 
-    if kwargs:
-        raise SaltInvocationError(f"Unrecognized keyword arguments: {list(kwargs)}")
+    unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
+    if unknown:
+        raise SaltInvocationError(f"Unrecognized keyword arguments: {list(unknown)}")
 
     if encoding not in ["der", "pem", "pkcs12"]:
         raise CommandExecutionError(
@@ -1597,7 +1601,7 @@ def get_signing_policy(signing_policy, ca_server=None):
         for long_name in long_names:
             if long_name in policy:
                 salt.utils.versions.warn_until(
-                    "Potassium",
+                    3009,
                     f"Found {long_name} in {signing_policy}. Please migrate to the short name: {name}",
                 )
                 policy[name] = policy.pop(long_name)
@@ -1607,7 +1611,7 @@ def get_signing_policy(signing_policy, ca_server=None):
         for long_name in long_names:
             if long_name in policy:
                 salt.utils.versions.warn_until(
-                    "Potassium",
+                    3009,
                     f"Found {long_name} in {signing_policy}. Please migrate to the short name: {extname}",
                 )
                 policy[extname] = policy.pop(long_name)

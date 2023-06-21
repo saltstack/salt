@@ -20,7 +20,7 @@ __virtualname__ = "dism"
 # host machine. On 32bit boxes that will always be System32. On 64bit boxes that
 # are running 64bit salt that will always be System32. On 64bit boxes that are
 # running 32bit salt the 64bit dism will be found in SysNative
-# Sysnative is a virtual folder, a special alias, that can be used to access the
+# SysNative is a virtual folder, a special alias, that can be used to access the
 # 64-bit System32 folder from a 32-bit application
 try:
     # This does not apply to Non-Windows platforms
@@ -52,11 +52,14 @@ def _get_components(type_regex, plural_type, install_value, image=None):
     cmd = [
         bin_dism,
         "/English",
-        "/Image:{}".format(image) if image else "/Online",
-        "/Get-{}".format(plural_type),
+        f"/Image:{image}" if image else "/Online",
+        f"/Get-{plural_type}",
     ]
     out = __salt__["cmd.run"](cmd)
-    pattern = r"{} : (.*)\r\n.*State : {}\r\n".format(type_regex, install_value)
+    if install_value:
+        pattern = rf"{type_regex} : (.*)\r\n.*State : {install_value}\r\n"
+    else:
+        pattern = rf"{type_regex} : (.*)\r\n.*"
     capabilities = re.findall(pattern, out, re.MULTILINE)
     capabilities.sort()
     return capabilities
@@ -95,19 +98,19 @@ def add_capability(
     if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
             "`install_capability` is not available on this version of Windows: "
-            "{}".format(__grains__["osversion"])
+            f'{__grains__["osversion"]}'
         )
 
     cmd = [
         bin_dism,
         "/Quiet",
-        "/Image:{}".format(image) if image else "/Online",
+        f"/Image:{image}" if image else "/Online",
         "/Add-Capability",
-        "/CapabilityName:{}".format(capability),
+        f"/CapabilityName:{capability}",
     ]
 
     if source:
-        cmd.append("/Source:{}".format(source))
+        cmd.append(f"/Source:{source}")
     if limit_access:
         cmd.append("/LimitAccess")
     if not restart:
@@ -143,15 +146,15 @@ def remove_capability(capability, image=None, restart=False):
     if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
             "`uninstall_capability` is not available on this version of "
-            "Windows: {}".format(__grains__["osversion"])
+            f'Windows: {__grains__["osversion"]}'
         )
 
     cmd = [
         bin_dism,
         "/Quiet",
-        "/Image:{}".format(image) if image else "/Online",
+        f"/Image:{image}" if image else "/Online",
         "/Remove-Capability",
-        "/CapabilityName:{}".format(capability),
+        f"/CapabilityName:{capability}",
     ]
 
     if not restart:
@@ -185,13 +188,13 @@ def get_capabilities(image=None):
     if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
             "`installed_capabilities` is not available on this version of "
-            "Windows: {}".format(__grains__["osversion"])
+            f'Windows: {__grains__["osversion"]}'
         )
 
     cmd = [
         bin_dism,
         "/English",
-        "/Image:{}".format(image) if image else "/Online",
+        f"/Image:{image}" if image else "/Online",
         "/Get-Capabilities",
     ]
     out = __salt__["cmd.run"](cmd)
@@ -228,7 +231,7 @@ def installed_capabilities(image=None):
     if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
             "`installed_capabilities` is not available on this version of "
-            "Windows: {}".format(__grains__["osversion"])
+            f'Windows: {__grains__["osversion"]}'
         )
     return _get_components("Capability Identity", "Capabilities", "Installed")
 
@@ -258,7 +261,7 @@ def available_capabilities(image=None):
     if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
             "`installed_capabilities` is not available on this version of "
-            "Windows: {}".format(__grains__["osversion"])
+            f'Windows: {__grains__["osversion"]}'
         )
     return _get_components("Capability Identity", "Capabilities", "Not Present")
 
@@ -303,14 +306,14 @@ def add_feature(
     cmd = [
         bin_dism,
         "/Quiet",
-        "/Image:{}".format(image) if image else "/Online",
+        f"/Image:{image}" if image else "/Online",
         "/Enable-Feature",
-        "/FeatureName:{}".format(feature),
+        f"/FeatureName:{feature}",
     ]
     if package:
-        cmd.append("/PackageName:{}".format(package))
+        cmd.append(f"/PackageName:{package}")
     if source:
-        cmd.append("/Source:{}".format(source))
+        cmd.append(f"/Source:{source}")
     if limit_access:
         cmd.append("/LimitAccess")
     if enable_parent:
@@ -346,9 +349,9 @@ def remove_feature(feature, remove_payload=False, image=None, restart=False):
     cmd = [
         bin_dism,
         "/Quiet",
-        "/Image:{}".format(image) if image else "/Online",
+        f"/Image:{image}" if image else "/Online",
         "/Disable-Feature",
-        "/FeatureName:{}".format(feature),
+        f"/FeatureName:{feature}",
     ]
 
     if remove_payload:
@@ -394,15 +397,15 @@ def get_features(package=None, image=None):
     cmd = [
         bin_dism,
         "/English",
-        "/Image:{}".format(image) if image else "/Online",
+        f"/Image:{image}" if image else "/Online",
         "/Get-Features",
     ]
 
     if package:
         if "~" in package:
-            cmd.append("/PackageName:{}".format(package))
+            cmd.append(f"/PackageName:{package}")
         else:
-            cmd.append("/PackagePath:{}".format(package))
+            cmd.append(f"/PackagePath:{package}")
 
     out = __salt__["cmd.run"](cmd)
 
@@ -496,15 +499,69 @@ def add_package(
     cmd = [
         bin_dism,
         "/Quiet",
-        "/Image:{}".format(image) if image else "/Online",
+        f"/Image:{image}" if image else "/Online",
         "/Add-Package",
-        "/PackagePath:{}".format(package),
+        f"/PackagePath:{package}",
     ]
 
     if ignore_check:
         cmd.append("/IgnoreCheck")
     if prevent_pending:
         cmd.append("/PreventPending")
+    if not restart:
+        cmd.append("/NoRestart")
+
+    return __salt__["cmd.run_all"](cmd)
+
+
+def add_provisioned_package(package, image=None, restart=False):
+    """
+    Provision a package using DISM. A provisioned package will install for new
+    users on the system. It will also be reinstalled on each user if the system
+    is updated.
+
+    .. versionadded:: 3007.0
+
+    Args:
+
+        package (str):
+            The package to install. Can be one of the following:
+
+            - ``.appx`` or ``.appxbundle``
+            - ``.msix`` or ``.msixbundle``
+            - ``.ppkg``
+
+        image (Optional[str]):
+            The path to the root directory of an offline Windows image. If
+            ``None`` is passed, the running operating system is targeted.
+            Default is ``None``.
+
+        restart (Optional[bool]):
+            Reboot the machine if required by the installation. Default is
+            ``False``
+
+    Returns:
+        dict: A dictionary containing the results of the command
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dism.add_provisioned_package C:\\Packages\\package.appx
+        salt '*' dism.add_provisioned_package C:\\Packages\\package.appxbundle
+        salt '*' dism.add_provisioned_package C:\\Packages\\package.msix
+        salt '*' dism.add_provisioned_package C:\\Packages\\package.msixbundle
+        salt '*' dism.add_provisioned_package C:\\Packages\\package.ppkg
+    """
+    cmd = [
+        bin_dism,
+        "/Quiet",
+        f"/Image:{image}" if image else "/Online",
+        "/Add-ProvisionedAppxPackage",
+        f"/PackagePath:{package}",
+        "/SkipLicense",
+    ]
+
     if not restart:
         cmd.append("/NoRestart")
 
@@ -542,7 +599,7 @@ def remove_package(package, image=None, restart=False):
     cmd = [
         bin_dism,
         "/Quiet",
-        "/Image:{}".format(image) if image else "/Online",
+        f"/Image:{image}" if image else "/Online",
         "/Remove-Package",
     ]
 
@@ -550,9 +607,9 @@ def remove_package(package, image=None, restart=False):
         cmd.append("/NoRestart")
 
     if "~" in package:
-        cmd.append("/PackageName:{}".format(package))
+        cmd.append(f"/PackageName:{package}")
     else:
-        cmd.append("/PackagePath:{}".format(package))
+        cmd.append(f"/PackagePath:{package}")
 
     return __salt__["cmd.run_all"](cmd)
 
@@ -584,9 +641,9 @@ def get_kb_package_name(kb, image=None):
         salt '*' dism.get_kb_package_name 1231231
     """
     packages = installed_packages(image=image)
-    search = kb.upper() if kb.lower().startswith("kb") else "KB{}".format(kb)
+    search = kb.upper() if kb.lower().startswith("kb") else f"KB{kb}"
     for package in packages:
-        if "_{}~".format(search) in package:
+        if f"_{search}~" in package:
             return package
     return None
 
@@ -622,7 +679,7 @@ def remove_kb(kb, image=None, restart=False):
     """
     pkg_name = get_kb_package_name(kb=kb, image=image)
     if pkg_name is None:
-        msg = "{} not installed".format(kb)
+        msg = f"{kb} not installed"
         raise CommandExecutionError(msg)
     log.debug("Found: %s", pkg_name)
     return remove_package(package=pkg_name, image=image, restart=restart)
@@ -654,6 +711,34 @@ def installed_packages(image=None):
     )
 
 
+def provisioned_packages(image=None):
+    """
+    List the packages installed on the system
+
+    .. versionadded:: 3007.0
+
+    Args:
+        image (Optional[str]): The path to the root directory of an offline
+            Windows image. If `None` is passed, the running operating system is
+            targeted. Default is None.
+
+    Returns:
+        list: A list of installed packages
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dism.installed_packages
+    """
+    return _get_components(
+        type_regex="PackageName",
+        plural_type="ProvisionedAppxPackages",
+        install_value="",
+        image=image,
+    )
+
+
 def package_info(package, image=None):
     """
     Display information about a package
@@ -674,19 +759,19 @@ def package_info(package, image=None):
 
     .. code-block:: bash
 
-        salt '*' dism. package_info C:\\packages\\package.cab
+        salt '*' dism.package_info C:\\packages\\package.cab
     """
     cmd = [
         bin_dism,
         "/English",
-        "/Image:{}".format(image) if image else "/Online",
+        f"/Image:{image}" if image else "/Online",
         "/Get-PackageInfo",
     ]
 
     if "~" in package:
-        cmd.append("/PackageName:{}".format(package))
+        cmd.append(f"/PackageName:{package}")
     else:
-        cmd.append("/PackagePath:{}".format(package))
+        cmd.append(f"/PackagePath:{package}")
 
     out = __salt__["cmd.run_all"](cmd)
 

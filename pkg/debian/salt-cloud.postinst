@@ -1,0 +1,6 @@
+case "$1" in
+  configure)
+    PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush;")
+    chown -R salt:salt /etc/salt/cloud.deploy.d /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
+  ;;
+esac

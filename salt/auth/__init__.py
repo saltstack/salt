@@ -267,7 +267,7 @@ class LoadAuth:
 
     def list_tokens(self):
         """
-        List all tokens in eauth_tokn storage.
+        List all tokens in eauth_tokens storage.
         """
         return self.tokens["{}.list_tokens".format(self.opts["eauth_tokens"])](
             self.opts
@@ -605,7 +605,7 @@ class AuthUser:
         """
         Instantiate an AuthUser object.
 
-        Takes a user to reprsent, as a string.
+        Takes a user to represent, as a string.
         """
         self.user = user
 

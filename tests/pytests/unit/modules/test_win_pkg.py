@@ -241,6 +241,33 @@ def test_pkg_install_name():
         assert "-e True -test_flag True" in str(mock_cmd_run_all.call_args[0])
 
 
+def test_pkg_install_verify_ssl_false():
+    """
+    test pkg.install using verify_ssl=False
+    """
+    ret_reg = {"Nullsoft Install System": "3.03"}
+    # The 2nd time it's run, pkg.list_pkgs uses with stringify
+    se_list_pkgs = [{"nsis": ["3.03"]}, {"nsis": "3.02"}]
+    mock_cp = MagicMock(return_value="C:\\fake\\path.exe")
+    with patch.object(win_pkg, "list_pkgs", side_effect=se_list_pkgs), patch.object(
+        win_pkg, "_get_reg_software", return_value=ret_reg
+    ), patch.dict(
+        win_pkg.__salt__, {"cp.is_cached": MagicMock(return_value=False)}
+    ), patch.dict(
+        win_pkg.__salt__, {"cp.cache_file": mock_cp}
+    ), patch.dict(
+        win_pkg.__salt__, {"cmd.run_all": MagicMock(return_value={"retcode": 0})}
+    ):
+        expected = {"nsis": {"new": "3.02", "old": "3.03"}}
+        result = win_pkg.install(name="nsis", version="3.02", verify_ssl=False)
+        mock_cp.assert_called_once_with(
+            "http://download.sourceforge.net/project/nsis/NSIS%203/3.02/nsis-3.02-setup.exe",
+            saltenv="base",
+            verify_ssl=False,
+        )
+        assert expected == result
+
+
 def test_pkg_install_single_pkg():
     """
     test pkg.install pkg with extra_install_flags
@@ -321,7 +348,7 @@ def test_pkg_install_log_message(caplog):
             extra_install_flags="-e True -test_flag True",
         )
         assert (
-            'PKG : cmd: C:\\WINDOWS\\system32\\cmd.exe /s /c "runme.exe" /s -e '
+            'PKG : cmd: C:\\WINDOWS\\system32\\cmd.exe /c "runme.exe" /s -e '
             "True -test_flag True"
         ).lower() in [x.lower() for x in caplog.messages]
         assert "PKG : pwd: ".lower() in [x.lower() for x in caplog.messages]
@@ -501,6 +528,51 @@ def test_pkg_install_minion_error_salt_cache_dir():
         assert ret == expected
 
 
+def test_pkg_remove_log_message(caplog):
+    """
+    test pkg.remove pkg logging
+    """
+    ret__get_package_info = {
+        "3.03": {
+            "uninstaller": "%program.exe",
+            "reboot": False,
+            "msiexec": False,
+            "installer": "runme.exe",
+            "uninstall_flags": "/S",
+            "locale": "en_US",
+            "install_flags": "/s",
+            "full_name": "Firebox 3.03 (x86 en-US)",
+        }
+    }
+
+    mock_cmd_run_all = MagicMock(return_value={"retcode": 0})
+    se_list_pkgs = {"firebox": ["3.03"]}
+    with patch.object(win_pkg, "list_pkgs", return_value=se_list_pkgs), patch.object(
+        salt.utils.data, "is_true", MagicMock(return_value=True)
+    ), patch.object(
+        win_pkg, "_get_package_info", MagicMock(return_value=ret__get_package_info)
+    ), patch.dict(
+        win_pkg.__salt__,
+        {
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=[{"firebox": "3.03"}, None]
+            ),
+            "cp.is_cached": MagicMock(return_value="C:\\fake\\path.exe"),
+            "cmd.run_all": mock_cmd_run_all,
+        },
+    ), caplog.at_level(
+        logging.DEBUG
+    ):
+        win_pkg.remove(
+            pkgs=["firebox"],
+        )
+        assert (
+            'PKG : cmd: C:\\WINDOWS\\system32\\cmd.exe /c "%program.exe" /S'
+        ).lower() in [x.lower() for x in caplog.messages]
+        assert "PKG : pwd: ".lower() in [x.lower() for x in caplog.messages]
+        assert "PKG : retcode: 0" in caplog.messages
+
+
 def test_pkg_remove_minion_error_salt_cache_dir():
     """
     Test pkg.remove when cp.cache_dir encounters a minion error
@@ -584,3 +656,17 @@ def test_pkg_remove_minion_error_salt():
         )
 
         assert ret == expected
+
+
+@pytest.mark.parametrize(
+    "v1,v2,expected",
+    (
+        ("2.24.0", "2.23.0.windows.1", 1),
+        ("2.23.0.windows.2", "2.23.0.windows.1", 1),
+    ),
+)
+def test__reverse_cmp_pkg_versions(v1, v2, expected):
+    result = win_pkg._reverse_cmp_pkg_versions(v1, v2)
+    assert result == expected, "cmp({}, {}) should be {}, got {}".format(
+        v1, v2, expected, result
+    )
