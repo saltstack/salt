@@ -161,9 +161,6 @@ def get_salt_releases(ctx: Context, repository: str) -> list[Version]:
             name = tag["name"]
             if name.startswith("v"):
                 name = name[1:]
-            if "-" in name:
-                # We're not going to parse dash tags
-                continue
             if "docs" in name:
                 # We're not going to consider doc tags
                 continue
