@@ -552,6 +552,11 @@ class SSH(MultiprocessingStateMixin):
             data = salt.utils.json.find_json(stdout)
             if len(data) < 2 and "local" in data:
                 ret["ret"] = data["local"]
+                try:
+                    # Ensure a reported local retcode is kept
+                    retcode = data["local"]["retcode"]
+                except (KeyError, TypeError):
+                    pass
             else:
                 ret["ret"] = {
                     "stdout": stdout,
@@ -564,7 +569,7 @@ class SSH(MultiprocessingStateMixin):
                 "stderr": stderr,
                 "retcode": retcode,
             }
-        que.put(ret)
+        que.put((ret, retcode))
 
     def handle_ssh(self, mine=False):
         """
@@ -608,7 +613,7 @@ class SSH(MultiprocessingStateMixin):
                         "fun": "",
                         "id": host,
                     }
-                    yield {host: no_ret}
+                    yield {host: no_ret}, 1
                     continue
                 args = (
                     que,
@@ -622,11 +627,12 @@ class SSH(MultiprocessingStateMixin):
                 running[host] = {"thread": routine}
                 continue
             ret = {}
+            retcode = 0
             try:
-                ret = que.get(False)
+                ret, retcode = que.get(False)
                 if "id" in ret:
                     returned.add(ret["id"])
-                    yield {ret["id"]: ret["ret"]}
+                    yield {ret["id"]: ret["ret"]}, retcode
             except queue.Empty:
                 pass
             for host in running:
@@ -636,10 +642,10 @@ class SSH(MultiprocessingStateMixin):
                         # last checked
                         try:
                             while True:
-                                ret = que.get(False)
+                                ret, retcode = que.get(False)
                                 if "id" in ret:
                                     returned.add(ret["id"])
-                                    yield {ret["id"]: ret["ret"]}
+                                    yield {ret["id"]: ret["ret"]}, retcode
                         except queue.Empty:
                             pass
 
@@ -650,7 +656,7 @@ class SSH(MultiprocessingStateMixin):
                             )
                             ret = {"id": host, "ret": error}
                             log.error(error)
-                            yield {ret["id"]: ret["ret"]}
+                            yield {ret["id"]: ret["ret"]}, 1
                     running[host]["thread"].join()
                     rets.add(host)
             for host in rets:
@@ -705,8 +711,8 @@ class SSH(MultiprocessingStateMixin):
                 jid, job_load
             )
 
-        for ret in self.handle_ssh(mine=mine):
-            host = next(iter(ret.keys()))
+        for ret, _ in self.handle_ssh(mine=mine):
+            host = next(iter(ret))
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
                 id_, data = next(iter(ret.items()))
@@ -799,15 +805,9 @@ class SSH(MultiprocessingStateMixin):
         sret = {}
         outputter = self.opts.get("output", "nested")
         final_exit = 0
-        for ret in self.handle_ssh():
-            host = next(iter(ret.keys()))
-            if isinstance(ret[host], dict):
-                host_ret = ret[host].get("retcode", 0)
-                if host_ret != 0:
-                    final_exit = 1
-            else:
-                # Error on host
-                final_exit = 1
+        for ret, retcode in self.handle_ssh():
+            host = next(iter(ret))
+            final_exit = max(final_exit, retcode)
 
             self.cache_job(jid, host, ret[host], fun)
             ret = self.key_deploy(host, ret)
@@ -1274,6 +1274,10 @@ class Single:
             )
             log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
+
+        # Ensure retcode from wrappers is respected, especially state render exceptions
+        retcode = max(retcode, self.context.get("retcode", 0))
+
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
         if isinstance(result, dict) and "local" in result:
