@@ -200,6 +200,30 @@ def pillar_tree_render_fail(base_env_pillar_tree_root_dir):
         yield
 
 
+@pytest.fixture(scope="class")
+def state_tree_render_module_exception(base_env_state_tree_root_dir):
+    top_file = """
+    base:
+      'localhost':
+        - fail_module_exception
+      '127.0.0.1':
+        - fail_module_exception
+    """
+    state_file = r"""
+    This should fail being rendered:
+      test.show_notification:
+        - text: {{ salt["disk.usage"]("c") | yaml_dquote }}
+    """
+    top_tempfile = pytest.helpers.temp_file(
+        "top.sls", top_file, base_env_state_tree_root_dir
+    )
+    state_tempfile = pytest.helpers.temp_file(
+        "fail_module_exception.sls", state_file, base_env_state_tree_root_dir
+    )
+    with top_tempfile, state_tempfile:
+        yield
+
+
 @pytest.mark.slow_test
 def test_state_with_import(salt_ssh_cli, state_tree):
     """
@@ -561,3 +585,56 @@ class TestStateRunFailRetcode:
     def test_retcode_state_top_run_fail(self, salt_ssh_cli):
         ret = salt_ssh_cli.run("state.top", "top.sls")
         assert ret.returncode == EX_AGGREGATE
+
+
+@pytest.mark.slow_test
+@pytest.mark.usefixtures("state_tree_render_module_exception")
+class TestRenderModuleException:
+    """
+    Verify salt-ssh stops state execution and fails with a retcode > 0
+    when a state rendering fails because an execution module throws an exception.
+    """
+
+    def test_retcode_state_sls_render_module_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.sls", "fail_module_exception")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_highstate_render_module_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.highstate")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_sls_id_render_module_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.sls_id", "foo", "fail_module_exception")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_show_sls_render_module_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_sls", "fail_module_exception")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_show_low_sls_render_module_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_low_sls", "fail_module_exception")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_show_highstate_render_module_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_highstate")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def test_retcode_state_show_lowstate_render_module_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.show_lowstate")
+        # state.show_lowstate exits with 0 for non-ssh as well
+        self._assert_ret(ret, 0)
+
+    def test_retcode_state_top_render_module_exception(self, salt_ssh_cli):
+        ret = salt_ssh_cli.run("state.top", "top.sls")
+        self._assert_ret(ret, EX_AGGREGATE)
+
+    def _assert_ret(self, ret, retcode):
+        assert ret.returncode == retcode
+        assert isinstance(ret.data, list)
+        assert ret.data
+        assert isinstance(ret.data[0], str)
+        assert ret.data[0].startswith(
+            "Rendering SLS 'base:fail_module_exception' failed: "
+            "Problem running salt function in Jinja template: "
+            "Error running 'disk.usage': Invalid flag passed to disk.usage"
+        )
