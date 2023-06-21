@@ -661,7 +661,7 @@ class SaltPkgInstall:
         minor_ver = self.minor
         pkg_version = self.pkg_version
         full_version = f"{self.major}.{self.minor}-{pkg_version}"
-        relenv = major_ver >= 3006
+        relenv = int(major_ver) >= 3006
 
         min_ver = f"{major_ver}"
         distro_name = self.distro_name
