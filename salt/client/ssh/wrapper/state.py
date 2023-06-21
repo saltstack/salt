@@ -55,7 +55,7 @@ def _ssh_state(chunks, st_kwargs, kwargs, test=False):
         cmd,
         fsclient=__context__["fileclient"],
         minion_opts=__salt__.minion_opts,
-        **st_kwargs
+        **st_kwargs,
     )
     single.shell.send(trans_tar, "{}/salt_state.tgz".format(__opts__["thin_dir"]))
     stdout, stderr, _ = single.cmd_block()
@@ -244,7 +244,7 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
             cmd,
             fsclient=__context__["fileclient"],
             minion_opts=__salt__.minion_opts,
-            **st_kwargs
+            **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
         stdout, stderr, _ = single.cmd_block()
@@ -392,7 +392,7 @@ def low(data, **kwargs):
             cmd,
             fsclient=__context__["fileclient"],
             minion_opts=__salt__.minion_opts,
-            **st_kwargs
+            **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(__opts__["thin_dir"]))
         stdout, stderr, _ = single.cmd_block()
@@ -482,7 +482,7 @@ def high(data, **kwargs):
             cmd,
             fsclient=__context__["fileclient"],
             minion_opts=__salt__.minion_opts,
-            **st_kwargs
+            **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
         stdout, stderr, _ = single.cmd_block()
@@ -558,7 +558,7 @@ def request(mods=None, **kwargs):
         try:
             if salt.utils.platform.is_windows():
                 # Make sure cache file isn't read-only
-                __salt__["cmd.run"]('attrib -R "{}"'.format(notify_path))
+                __salt__["cmd.run"](f'attrib -R "{notify_path}"')
             with salt.utils.files.fopen(notify_path, "w+b") as fp_:
                 salt.payload.dump(req, fp_)
         except OSError:
@@ -622,7 +622,7 @@ def clear_request(name=None):
             try:
                 if salt.utils.platform.is_windows():
                     # Make sure cache file isn't read-only
-                    __salt__["cmd.run"]('attrib -R "{}"'.format(notify_path))
+                    __salt__["cmd.run"](f'attrib -R "{notify_path}"')
                 with salt.utils.files.fopen(notify_path, "w+b") as fp_:
                     salt.payload.dump(req, fp_)
             except OSError:
@@ -730,7 +730,7 @@ def highstate(test=None, **kwargs):
             cmd,
             fsclient=__context__["fileclient"],
             minion_opts=__salt__.minion_opts,
-            **st_kwargs
+            **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
         stdout, stderr, _ = single.cmd_block()
@@ -821,7 +821,7 @@ def top(topfn, test=None, **kwargs):
             cmd,
             fsclient=__context__["fileclient"],
             minion_opts=__salt__.minion_opts,
-            **st_kwargs
+            **st_kwargs,
         )
         single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
         stdout, stderr, _ = single.cmd_block()
@@ -1227,7 +1227,7 @@ def single(fun, name, test=None, **kwargs):
         cmd,
         fsclient=__context__["fileclient"],
         minion_opts=__salt__.minion_opts,
-        **st_kwargs
+        **st_kwargs,
     )
 
     # Copy the tar down
