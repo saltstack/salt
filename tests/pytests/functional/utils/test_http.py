@@ -140,7 +140,7 @@ def test_real_proxy(
             "/real_proxy_test",
             headers={"X-Tinyproxy-Header": "Test custom tinyproxy header"},
         ).respond_with_data(data, content_type="application/octet-stream")
-    url = httpserver.url_for("/real_proxy_test")
+    url = httpserver.url_for("/real_proxy_test").replace("localhost", "127.0.0.1")
 
     # We just want to be sure that it's using the proxy
     ret = salt.utils.http.query(
