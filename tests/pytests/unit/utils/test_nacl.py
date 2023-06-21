@@ -1,7 +1,6 @@
 """
     Unit tests for the salt.utils.nacl module
 """
-import logging
 import os
 
 import pytest
@@ -17,8 +16,6 @@ try:
     HAS_PYNACL = nacl.check_requirements
 except (ImportError, OSError, AttributeError):
     HAS_PYNACL = False
-
-log = logging.getLogger(__name__)
 
 
 @pytest.mark.skipif(
@@ -40,7 +37,6 @@ def test_keygen():
     Note: nacl.keygen returns base64 encoded values
     """
     ret = nacl.keygen()
-    log.warning(f"DGM test_keygen ret '{ret}'")
     assert "sk" in ret
     assert "pk" in ret
     return ret
@@ -90,7 +86,6 @@ def test_enc_keyfile(test_keygen):
     test nacl.enc function
     with keyfile and pk_file set
     """
-    log.warning(f"DGM test_enc_keyfile test_keygen '{test_keygen}'")
     with temp_file("test_enc_keyfile") as fpath:
         with salt.utils.files.fopen(fpath, "wb") as wfh:
             wfh.write(test_keygen["sk"])
@@ -102,7 +97,6 @@ def test_enc_keyfile(test_keygen):
             "keyfile": str(fpath),
             "pk_file": str(fpath) + ".pub",
         }
-        log.warning(f"DGM test_enc_keyfile nacl enc with kwargs '{kwargs}'")
         ret = nacl.enc("blah", **kwargs)
         assert isinstance(ret, bytes)
         salt.utils.files.remove(str(fpath) + ".pub")
@@ -113,7 +107,6 @@ def test_enc_sk_file(test_keygen):
     test nacl.enc function
     with sk_file and pk_file set
     """
-    log.warning(f"DGM test_enc_sk_file test_keygen '{test_keygen}'")
     with temp_file("test_enc_sk_file") as fpath:
         with salt.utils.files.fopen(fpath, "wb") as wfh:
             wfh.write(test_keygen["sk"])
@@ -125,7 +118,6 @@ def test_enc_sk_file(test_keygen):
             "sk_file": str(fpath),
             "pk_file": str(fpath) + ".pub",
         }
-        log.warning(f"DGM test_enc_sk_file nacl enc with kwargs '{kwargs}'")
         ret = nacl.enc("blah", **kwargs)
         assert isinstance(ret, bytes)
         salt.utils.files.remove(str(fpath) + ".pub")
