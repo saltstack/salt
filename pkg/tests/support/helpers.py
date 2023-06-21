@@ -758,9 +758,11 @@ class SaltPkgInstall:
                     win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{full_version}/{win_pkg}"
                 else:
                     if self.file_ext == "msi":
-                        win_pkg = f"Salt-Minion-{self.prev_version}-1-Py3-AMD64.{self.file_ext}"
+                        win_pkg = (
+                            f"Salt-Minion-{self.prev_version}-Py3-AMD64.{self.file_ext}"
+                        )
                     elif self.file_ext == "exe":
-                        win_pkg = f"Salt-Minion-{self.prev_version}-1-Py3-AMD64-Setup.{self.file_ext}"
+                        win_pkg = f"Salt-Minion-{self.prev_version}-Py3-AMD64-Setup.{self.file_ext}"
                     win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{major_ver}/{win_pkg}"
             else:
                 if self.file_ext == "msi":
@@ -803,7 +805,7 @@ class SaltPkgInstall:
                     mac_pkg = f"salt-{self.prev_version}-macos-x86_64.pkg"
                     mac_pkg_url = f"https://repo.saltproject.io/salt/py3/macos/{self.prev_version}/{mac_pkg}"
                 else:
-                    mac_pkg = f"salt-{self.prev_version}-x86_64.pkg"
+                    mac_pkg = f"salt-{self.prev_version}-py3-x86_64.pkg"
                     mac_pkg_url = f"https://repo.saltproject.io/salt/py3/macos/{major_ver}/{mac_pkg}"
 
             mac_pkg_path = f"/tmp/{mac_pkg}"
