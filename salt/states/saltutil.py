@@ -349,3 +349,17 @@ def sync_serializers(name, **kwargs):
             - refresh: True
     """
     return _sync_single(name, "serializers", **kwargs)
+
+
+def sync_wrapper(name, **kwargs):
+    """
+    Performs the same task as saltutil.sync_wrapper module
+    See :mod:`saltutil module for full list of options <salt.modules.saltutil>`
+
+    .. code-block:: yaml
+
+        sync_everything:
+          saltutil.sync_wrapper:
+            - refresh: True
+    """
+    return _sync_single(name, "wrapper", **kwargs)
