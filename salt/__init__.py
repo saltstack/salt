@@ -56,7 +56,6 @@ class NaclImporter:
     loading = False
 
     def find_module(self, module_name, package_path=None):
-        print(f"{self} {module_name}")
         if not NaclImporter.loading and module_name.startswith("nacl"):
             NaclImporter.loading = True
             return self
