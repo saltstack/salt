@@ -2941,10 +2941,6 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         if key in _MODIFY_OK and hasattr(mod_source, key):
             setattr(mod_source, key, kwargs[key])
 
-    if mod_source.uri != repo_uri:
-        mod_source.uri = repo_uri
-        mod_source.line = str(mod_source)
-
     sources.save()
     # on changes, explicitly refresh
     if refresh:
