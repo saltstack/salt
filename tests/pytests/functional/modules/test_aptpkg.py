@@ -99,8 +99,6 @@ def revert_repo_file(tmp_path):
 
 
 @pytest.fixture
-@pytest.mark.destructive_test
-@pytest.mark.skip_if_not_root
 def build_repo_file():
     source_path = "/etc/apt/sources.list.d/source_test_list.list"
     try:
