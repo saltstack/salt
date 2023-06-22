@@ -24,7 +24,7 @@ asn1crypto==1.4.0
     # via
     #   certvalidator
     #   oscrypto
-astroid==2.15.5
+astroid==2.5
     # via pylint
 async-timeout==4.0.2
     # via aiohttp
@@ -410,8 +410,6 @@ cryptography==41.0.2
     #   paramiko
     #   pyopenssl
     #   vcert
-dill==0.3.6
-    # via pylint
 distlib==0.3.2
     # via virtualenv
 distro==1.6.0
@@ -676,9 +674,7 @@ passlib[bcrypt]==1.7.4
 pathspec==0.9.0
     # via yamllint
 platformdirs==2.2.0
-    # via
-    #   pylint
-    #   virtualenv
+    # via virtualenv
 portend==2.7.1
     # via cherrypy
 psutil==5.8.0
@@ -707,7 +703,7 @@ pyjwt==2.4.0
     # via
     #   adal
     #   twilio
-pylint==2.17.4
+pylint==2.5.3
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
@@ -875,20 +871,13 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/ci/lint.in
-tomli==2.0.1
-    # via pylint
-tomlkit==0.11.8
-    # via pylint
+    #   pylint
 tornado==6.1
     # via python-telegram-bot
 transitions==0.8.8
     # via junos-eznc
 twilio==7.9.2
     # via -r requirements/static/ci/linux.in
-typing-extensions==4.6.3
-    # via
-    #   astroid
-    #   pylint
 tzlocal==3.0
     # via apscheduler
 urllib3==1.26.6
