@@ -844,7 +844,7 @@ def sync_executors(saltenv="base", extmod_whitelist=None, extmod_blacklist=None)
 
 def sync_wrapper(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
     """
-    .. versionadded:: 3000
+    .. versionadded:: 3007.0
 
     Sync salt-ssh wrapper modules from ``salt://_wrapper`` to the master.
 
