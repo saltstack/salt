@@ -742,6 +742,7 @@ def netmiko_config(*config_commands, **kwargs):
     return __salt__["netmiko.send_config"](config_commands=config_commands, **kwargs)
 
 
+@proxy_napalm_wrap
 def junos_rpc(cmd=None, dest=None, format=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
