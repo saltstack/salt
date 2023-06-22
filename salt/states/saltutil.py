@@ -353,6 +353,8 @@ def sync_serializers(name, **kwargs):
 
 def sync_wrapper(name, **kwargs):
     """
+    .. versionadded:: 3007.0
+
     Performs the same task as saltutil.sync_wrapper module
     See :mod:`saltutil module for full list of options <salt.modules.saltutil>`
 
