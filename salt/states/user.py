@@ -127,7 +127,7 @@ def _changes(
             if _gid not in dupe_groups:
                 dupe_groups[_gid] = []
             dupe_groups[_gid].append(lusr["groups"][idx])
-    if not remove_groups:
+    if not remove_groups or groups is None and not optional_groups:
         wanted_groups = sorted(set(wanted_groups + lusr["groups"]))
     if uid and lusr["uid"] != uid:
         change["uid"] = uid
