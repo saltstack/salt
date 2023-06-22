@@ -633,8 +633,11 @@ class TestRenderModuleException:
         assert isinstance(ret.data, list)
         assert ret.data
         assert isinstance(ret.data[0], str)
-        assert ret.data[0].startswith(
-            "Rendering SLS 'base:fail_module_exception' failed: "
-            "Problem running salt function in Jinja template: "
+        # While these three should usually follow each other, there
+        # can be warnings in between that would break such a logic.
+        assert "Rendering SLS 'base:fail_module_exception' failed:" in ret.data[0]
+        assert "Problem running salt function in Jinja template:" in ret.data[0]
+        assert (
             "Error running 'disk.usage': Invalid flag passed to disk.usage"
+            in ret.data[0]
         )
