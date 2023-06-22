@@ -429,3 +429,75 @@ def test_user_present_change_optional_groups(
     user_info = modules.user.info(username)
     assert user_info
     assert user_info["groups"] == [group_1.name]
+
+
+@pytest.mark.skip_unless_on_linux(reason="underlying functionality only runs on Linux")
+def test_user_present_no_groups(modules, states, username):
+    """
+    test user.present when groups arg is not
+    included by the group is created in another
+    state. Re-run the states to ensure there are
+    not changes and it is idempotent.
+    """
+    groups = ["testgroup1", "testgroup2"]
+    try:
+        ret = states.group.present(name=username, gid=61121)
+        assert ret.result is True
+
+        ret = states.user.present(
+            name=username,
+            uid=61121,
+            gid=61121,
+        )
+        assert ret.result is True
+        assert ret.changes["groups"] == [username]
+        assert ret.changes["name"] == username
+
+        ret = states.group.present(
+            name=groups[0],
+            members=[username],
+        )
+        assert ret.changes["members"] == [username]
+
+        ret = states.group.present(
+            name=groups[1],
+            members=[username],
+        )
+        assert ret.changes["members"] == [username]
+
+        user_info = modules.user.info(username)
+        assert user_info
+        assert user_info["groups"] == [username, groups[0], groups[1]]
+
+        # run again, expecting no changes
+        ret = states.group.present(name=username)
+        assert ret.result is True
+        assert ret.changes == {}
+
+        ret = states.user.present(
+            name=username,
+        )
+        assert ret.result is True
+        assert ret.changes == {}
+
+        ret = states.group.present(
+            name=groups[0],
+            members=[username],
+        )
+        assert ret.result is True
+        assert ret.changes == {}
+
+        ret = states.group.present(
+            name=groups[1],
+            members=[username],
+        )
+        assert ret.result is True
+        assert ret.changes == {}
+
+        user_info = modules.user.info(username)
+        assert user_info
+        assert user_info["groups"] == [username, groups[0], groups[1]]
+    finally:
+        for group in groups:
+            ret = states.group.absent(name=group)
+            assert ret.result is True
