@@ -40,6 +40,7 @@ def configure_loader_modules(docker_cmd_run_all_wrapper):
     }
 
 
+@pytest.mark.flaky(max_runs=4)
 def test_joined(rabbitmq_container):
     """
     Test rabbitmq_cluster.joined

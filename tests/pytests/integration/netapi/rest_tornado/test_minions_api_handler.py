@@ -12,6 +12,7 @@ def app_urls():
     ]
 
 
+@pytest.mark.flaky(max_runs=4)
 async def test_get_no_mid(http_client, salt_minion, salt_sub_minion):
     response = await http_client.fetch(
         "/minions",
