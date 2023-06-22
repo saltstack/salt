@@ -85,8 +85,6 @@ def configure_loader_modules(minion_opts):
 
 
 @pytest.fixture()
-@pytest.mark.destructive_test
-@pytest.mark.skip_if_not_root
 def revert_repo_file(tmp_path):
     try:
         repo_file = pathlib.Path("/etc") / "apt" / "sources.list"
