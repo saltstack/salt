@@ -152,28 +152,34 @@ def test_check_managed_changes_follow_symlinks(a_link, tfile):
 
 
 @pytest.mark.skip_on_windows(reason="os.symlink is not available on Windows")
-@patch("os.path.exists", Mock(return_value=True))
-def test_check_perms_user_group_name_and_id():
-    filename = "/path/to/fnord"
-
-    tests = [
+@pytest.mark.parametrize(
+    "input,expected",
+    [
         # user/group changes needed by name
-        {
-            "input": {"user": "cuser", "group": "cgroup"},
-            "expected": {"user": "cuser", "group": "cgroup"},
-        },
+        (
+            {"user": "cuser", "group": "cgroup"},
+            {"user": "cuser", "group": "cgroup"},
+        ),
         # no changes needed by name
-        {"input": {"user": "luser", "group": "lgroup"}, "expected": {}},
+        (
+            {"user": "luser", "group": "lgroup"},
+            {},
+        ),
         # user/group changes needed by id
-        {
-            "input": {"user": 1001, "group": 2001},
-            "expected": {"user": 1001, "group": 2001},
-        },
+        (
+            {"user": 1001, "group": 2001},
+            {"user": 1001, "group": 2001},
+        ),
         # no user/group changes needed by id
-        {"input": {"user": 3001, "group": 4001}, "expected": {}},
-    ]
-
-    for test in tests:
+        (
+            {"user": 3001, "group": 4001},
+            {},
+        ),
+    ],
+)
+def test_check_perms_user_group_name_and_id(input, expected):
+    filename = "/path/to/fnord"
+    with patch("os.path.exists", Mock(return_value=True)):
         # Consistent initial file stats
         stat_out = {
             "user": "luser",
@@ -191,7 +197,7 @@ def test_check_perms_user_group_name_and_id():
         # "chown" the file to the permissions we want in test["input"]
         # pylint: disable=W0640
         def fake_chown(cmd, *args, **kwargs):
-            for k, v in test["input"].items():
+            for k, v in input.items():
                 stat_out.update({k: v})
 
         patch_chown = patch(
@@ -203,9 +209,9 @@ def test_check_perms_user_group_name_and_id():
             ret, pre_post = filemod.check_perms(
                 name=filename,
                 ret={},
-                user=test["input"]["user"],
-                group=test["input"]["group"],
+                user=input["user"],
+                group=input["group"],
                 mode="123",
                 follow_symlinks=False,
             )
-            assert ret["changes"] == test["expected"]
+            assert ret["changes"] == expected

@@ -2,7 +2,15 @@
 Glues the VMware vSphere Execution Module to the VMware ESXi Proxy Minions to the
 :mod:`esxi proxymodule <salt.proxy.esxi>`.
 
-.. versionadded:: 2015.8.4
+.. Warning::
+    This module will be deprecated in a future release of Salt. VMware strongly
+    recommends using the
+    `VMware Salt extensions <https://docs.saltproject.io/salt/extensions/salt-ext-modules-vmware/en/latest/all.html>`_
+    instead of the ESXi module. Because the Salt extensions are newer and
+    actively supported by VMware, they are more compatible with current versions
+    of ESXi and they work well with the latest features in the VMware product
+    line.
+
 
 Depends: :mod:`vSphere Remote Execution Module (salt.modules.vsphere)
 <salt.modules.vsphere>`
@@ -58,7 +66,7 @@ def _deprecation_message(function):
     @wraps(function)
     def wrapped(*args, **kwargs):
         salt.utils.versions.warn_until(
-            "Argon",
+            3008,
             "The 'esxi' functionality in Salt has been deprecated and its "
             "functionality will be removed in version 3008 in favor of the "
             "saltext.vmware Salt Extension. "

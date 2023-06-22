@@ -2,6 +2,7 @@
     tests.pytests.conftest
     ~~~~~~~~~~~~~~~~~~~~~~
 """
+import asyncio
 import functools
 import inspect
 import logging
@@ -16,10 +17,10 @@ import types
 
 import attr
 import pytest
+import tornado.ioloop
 from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
 
-import salt.ext.tornado.ioloop
 import salt.utils.files
 import salt.utils.platform
 from salt.serializers import yaml
@@ -289,7 +290,7 @@ def salt_master_factory(
         master_id,
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     return factory
 
@@ -324,7 +325,7 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vaul
         salt_minion_id,
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
@@ -354,7 +355,7 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
         salt_sub_minion_id,
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
@@ -374,7 +375,7 @@ def salt_proxy_factory(salt_master_factory):
     factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         start_timeout=240,
     )
     factory.before_start(pytest.helpers.remove_stale_proxy_minion_cache_file, factory)
@@ -410,7 +411,7 @@ def salt_delta_proxy_factory(salt_factories, salt_master_factory):
     factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
         defaults=config_defaults,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         start_timeout=240,
     )
 
@@ -439,7 +440,7 @@ def temp_salt_master(
     factory = salt_factories.salt_master_daemon(
         random_string("temp-master-"),
         defaults=config_defaults,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     return factory
 
@@ -453,7 +454,7 @@ def temp_salt_minion(temp_salt_master):
     factory = temp_salt_master.salt_minion_daemon(
         random_string("temp-minion-"),
         defaults=config_defaults,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, temp_salt_master, factory.id
@@ -602,7 +603,7 @@ def pytest_pyfunc_call(pyfuncitem):
     try:
         loop = funcargs["io_loop"]
     except KeyError:
-        loop = salt.ext.tornado.ioloop.IOLoop.current()
+        loop = tornado.ioloop.IOLoop.current()
 
     __tracebackhide__ = True
 
@@ -617,7 +618,9 @@ def io_loop():
     """
     Create new io loop for each test, and tear it down after.
     """
-    loop = salt.ext.tornado.ioloop.IOLoop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop = tornado.ioloop.IOLoop.current()
     loop.make_current()
     try:
         yield loop

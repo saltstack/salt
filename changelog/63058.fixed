@@ -1,3 +1,0 @@
-Fix mongo authentication for mongo ext_pillar and mongo returner
-
-This fix also include the ability to use the mongo connection string for mongo ext_pillar

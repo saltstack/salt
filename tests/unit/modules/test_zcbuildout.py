@@ -19,6 +19,15 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
+pytestmark = [
+    pytest.mark.skip_on_windows(
+        reason=(
+            "Special steps are required for proper SSL validation because "
+            "`easy_install` is too old(and deprecated)."
+        )
+    )
+]
+
 KNOWN_VIRTUALENV_BINARY_NAMES = (
     "virtualenv",
     "virtualenv2",
@@ -243,8 +252,16 @@ class BuildoutTestCase(Base):
             "",
             buildout._get_bootstrap_content(os.path.join(self.tdir, "var", "tb", "1")),
         )
+
+        if (
+            salt.utils.platform.is_windows()
+            and os.environ.get("GITHUB_ACTIONS_PIPELINE", "0") == "0"
+        ):
+            line_break = "\r\n"
+        else:
+            line_break = "\n"
         self.assertEqual(
-            "foo{}".format(os.linesep),
+            f"foo{line_break}",
             buildout._get_bootstrap_content(os.path.join(self.tdir, "var", "tb", "2")),
         )
 

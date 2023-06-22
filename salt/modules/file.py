@@ -44,10 +44,10 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.user
-import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 from salt.exceptions import get_error_message as _get_error_message
 from salt.utils.files import HASHES, HASHES_REVMAP
+from salt.utils.versions import Version
 
 try:
     import grp
@@ -192,8 +192,8 @@ def _chattr_has_extended_attrs():
     if ver is None:
         return False
 
-    needed_version = salt.utils.versions.LooseVersion("1.41.12")
-    chattr_version = salt.utils.versions.LooseVersion(ver)
+    needed_version = Version("1.41.12")
+    chattr_version = Version(ver)
     return chattr_version > needed_version
 
 

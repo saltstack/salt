@@ -50,10 +50,6 @@ def configure_loader_modules():
         }
 
 
-@patch(
-    "salt.runners.vault._get_policies_cached",
-    Mock(return_value=["saltstack/minion/test-minion", "saltstack/minions"]),
-)
 def test_generate_token():
     """
     Basic test for test_generate_token with approle (two vault calls)
@@ -61,7 +57,10 @@ def test_generate_token():
     mock = _mock_json_response(
         {"auth": {"client_token": "test", "renewable": False, "lease_duration": 0}}
     )
-    with patch("requests.post", mock):
+    with patch(
+        "salt.runners.vault._get_policies_cached",
+        Mock(return_value=["saltstack/minion/test-minion", "saltstack/minions"]),
+    ), patch("requests.post", mock):
         result = vault.generate_token("test-minion", "signature")
         log.debug("generate_token result: %s", result)
         assert isinstance(result, dict)

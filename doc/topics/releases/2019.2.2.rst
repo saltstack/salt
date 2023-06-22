@@ -115,7 +115,7 @@ Changelog for v2019.2.1..v2019.2.2
 
 * **ISSUE** `#54521`_: (`Oloremo`_) [Regression] Failhard, batch and retcodes (refs: `#54806`_)
 
-* **PR** `#54806`_: (`Oloremo`_) [Regression] Batch with failhard fix 
+* **PR** `#54806`_: (`Oloremo`_) [Regression] Batch with failhard fix
   @ *2019-10-01 14:51:47 UTC*
 
   * 433b6fa Merge pull request `#54806`_ from Oloremo/failhard-batch-fix-2019.2.1

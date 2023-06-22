@@ -854,7 +854,6 @@ def test_nested_output():
                 "salt_|-nested_|-state.orchestrate_|-runner": {
                     "comment": "Runner function 'state.orchestrate' executed.",
                     "name": "state.orchestrate",
-                    "__orchestration__": True,
                     "start_time": "09:22:53.158742",
                     "result": True,
                     "duration": 980.694,

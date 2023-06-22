@@ -26,8 +26,9 @@ def test_add():
     mock = MagicMock(return_value={"retcode": 0})
     with patch(
         "salt.utils.path.which", MagicMock(return_value="/sbin/useradd")
-    ), patch.dict(useradd.__salt__, {"cmd.run_all": mock}):
+    ) as which_mock, patch.dict(useradd.__salt__, {"cmd.run_all": mock}):
         assert useradd.add("Salt") is True
+        which_mock.assert_called_once_with("useradd")
     mock.assert_called_once_with(["/sbin/useradd", "-m", "Salt"], python_shell=False)
 
     # command found and unsuccessful run
@@ -48,13 +49,33 @@ def test_add():
     mock.assert_not_called()
 
 
+def test_add_local():
+    mock = MagicMock(return_value={"retcode": 0})
+    with patch(
+        "salt.utils.path.which", MagicMock(return_value="/sbin/luseradd")
+    ) as which_mock, patch.dict(useradd.__salt__, {"cmd.run_all": mock}):
+        assert useradd.add("Salt", local=True) is True
+        which_mock.assert_called_once_with("luseradd")
+    mock.assert_called_once_with(["/sbin/luseradd", "Salt"], python_shell=False)
+
+
+def test_add_local_with_params():
+    mock = MagicMock(return_value={"retcode": 0})
+    with patch(
+        "salt.utils.path.which", MagicMock(return_value="/sbin/luseradd")
+    ), patch.dict(useradd.__salt__, {"cmd.run_all": mock}):
+        assert useradd.add("Salt", local=True, usergroup=False, root="ignored") is True
+    mock.assert_called_once_with(["/sbin/luseradd", "-n", "Salt"], python_shell=False)
+
+
 def test_delete():
     # command found and successful run
     mock = MagicMock(return_value={"retcode": 0})
     with patch(
         "salt.utils.path.which", MagicMock(return_value="/sbin/userdel")
-    ), patch.dict(useradd.__salt__, {"cmd.run_all": mock}):
+    ) as which_mock, patch.dict(useradd.__salt__, {"cmd.run_all": mock}):
         assert useradd.delete("Salt") is True
+        which_mock.assert_called_once_with("userdel")
     mock.assert_called_once_with(["/sbin/userdel", "Salt"], python_shell=False)
 
     # command found and unsuccessful run
@@ -73,6 +94,28 @@ def test_delete():
         with pytest.raises(CommandExecutionError):
             useradd.delete("Salt")
     mock.assert_not_called()
+
+
+def test_delete_local():
+    # command found and successful run
+    mock = MagicMock(return_value={"retcode": 0})
+    with patch(
+        "salt.utils.path.which", MagicMock(return_value="/sbin/luserdel")
+    ) as which_mock, patch.dict(useradd.__salt__, {"cmd.run_all": mock}):
+        assert useradd.delete("Salt", local=True) is True
+        which_mock.assert_called_once_with("luserdel")
+    mock.assert_called_once_with(["/sbin/luserdel", "Salt"], python_shell=False)
+
+
+def test_delete_local_with_params():
+    # command found and successful run
+    mock = MagicMock(return_value={"retcode": 0})
+    with patch(
+        "salt.utils.path.which", MagicMock(return_value="/sbin/luserdel")
+    ) as which_mock, patch.dict(useradd.__salt__, {"cmd.run_all": mock}):
+        assert useradd.delete("Salt", local=True, force=True, root="ignored") is True
+        which_mock.assert_called_once_with("luserdel")
+    mock.assert_called_once_with(["/sbin/luserdel", "Salt"], python_shell=False)
 
 
 def test_chgroups():

@@ -18,7 +18,14 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
 ]
+
+
+def _check_skip(grains):
+    if grains["os"] == "SUSE":
+        return True
+    return False
 
 
 def test_show_highstate(state, state_testfile_dest_path):
@@ -672,6 +679,7 @@ def test_retry_option(state, state_tree):
             assert state_return.full_return["duration"] >= 3
 
 
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_retry_option_success(state, state_tree, tmp_path):
     """
     test a state with the retry option that should return True immediately (i.e. no retries)
@@ -1002,3 +1010,31 @@ def test_issue_62264_requisite_not_found(state, state_tree):
         for state_return in ret:
             assert state_return.result is True
             assert "The following requisites were not found" not in state_return.comment
+
+
+def test_state_sls_defaults(state, state_tree):
+    """ """
+    json_contents = """
+    {
+        "users": {
+            "root": 1
+        }
+    }
+    """
+    sls_contents = """
+    {% set test = salt['defaults.get']('core:users:root') %}
+
+    echo {{ test }}:
+      cmd.run
+    """
+    state_id = "cmd_|-echo 1_|-echo 1_|-run"
+    core_dir = state_tree / "core"
+    with pytest.helpers.temp_file(
+        core_dir / "defaults.json", json_contents, state_tree
+    ):
+        with pytest.helpers.temp_file(core_dir / "test.sls", sls_contents, state_tree):
+            ret = state.sls("core.test")
+            assert state_id in ret
+            for state_return in ret:
+                assert state_return.result is True
+                assert "echo 1" in state_return.comment

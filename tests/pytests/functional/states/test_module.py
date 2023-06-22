@@ -7,7 +7,7 @@ from tests.support.helpers import dedent
 log = logging.getLogger(__name__)
 
 
-@pytest.mark.slow_test
+@pytest.mark.core_test
 def test_issue_58763(tmp_path, modules, state_tree, caplog):
 
     venv_dir = tmp_path / "issue-2028-pip-installed"
@@ -39,7 +39,7 @@ def test_issue_58763(tmp_path, modules, state_tree, caplog):
             assert "Using new style module.run syntax: run_new" in caplog.messages
 
 
-@pytest.mark.slow_test
+@pytest.mark.core_test
 def test_issue_58763_a(tmp_path, modules, state_tree, caplog):
 
     venv_dir = tmp_path / "issue-2028-pip-installed"
@@ -65,7 +65,7 @@ def test_issue_58763_a(tmp_path, modules, state_tree, caplog):
             )
 
 
-@pytest.mark.slow_test
+@pytest.mark.core_test
 def test_issue_58763_b(tmp_path, modules, state_tree, caplog):
 
     venv_dir = tmp_path / "issue-2028-pip-installed"
@@ -87,7 +87,7 @@ def test_issue_58763_b(tmp_path, modules, state_tree, caplog):
             assert "Detected legacy module.run syntax: test.ping" in caplog.messages
 
 
-@pytest.mark.slow_test
+@pytest.mark.core_test
 def test_issue_62988_a(tmp_path, modules, state_tree, caplog):
 
     venv_dir = tmp_path / "issue-2028-pip-installed"
@@ -117,7 +117,7 @@ def test_issue_62988_a(tmp_path, modules, state_tree, caplog):
             assert "Using new style module.run syntax: run_new" in caplog.messages
 
 
-@pytest.mark.slow_test
+@pytest.mark.core_test
 def test_issue_62988_b(tmp_path, modules, state_tree, caplog):
 
     venv_dir = tmp_path / "issue-2028-pip-installed"

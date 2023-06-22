@@ -123,7 +123,7 @@ This example takes the key value pairs returned from vault as follows:
                 minion-passwd:
                     minionbadpasswd1
 
-.. versionadded:: 3006
+.. versionadded:: 3006.0
 
     Pillar values from previously rendered pillars can be used to template
     vault ext_pillar paths.

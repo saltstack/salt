@@ -71,7 +71,7 @@ import logging
 import pprint
 
 import salt.returners
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 HAS_LIBS = False
 try:
@@ -127,8 +127,8 @@ def __virtual__():
         import sleekxmpp  # pylint: disable=3rd-party-module-not-gated
 
         # Certain XMPP functionaility we're using doesn't work with versions under 1.3.1
-        sleekxmpp_version = _LooseVersion(sleekxmpp.__version__)
-        valid_version = _LooseVersion(min_version)
+        sleekxmpp_version = Version(sleekxmpp.__version__)
+        valid_version = Version(min_version)
         if sleekxmpp_version >= valid_version:
             return __virtualname__
     return (

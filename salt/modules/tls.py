@@ -111,7 +111,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 # pylint: disable=C0103
 
@@ -122,7 +122,7 @@ try:
     import OpenSSL
 
     HAS_SSL = True
-    OpenSSL_version = _LooseVersion(OpenSSL.__dict__.get("__version__", "0.0"))
+    OpenSSL_version = Version(OpenSSL.__dict__.get("__version__", "0.0"))
 except ImportError:
     pass
 
@@ -138,14 +138,14 @@ def __virtual__():
     Only load this module if the ca config options are set
     """
     global X509_EXT_ENABLED
-    if HAS_SSL and OpenSSL_version >= _LooseVersion("0.10"):
-        if OpenSSL_version < _LooseVersion("0.14"):
+    if HAS_SSL and OpenSSL_version >= Version("0.10"):
+        if OpenSSL_version < Version("0.14"):
             X509_EXT_ENABLED = False
             log.debug(
                 "You should upgrade pyOpenSSL to at least 0.14.1 to "
                 "enable the use of X509 extensions in the tls module"
             )
-        elif OpenSSL_version <= _LooseVersion("0.15"):
+        elif OpenSSL_version <= Version("0.15"):
             log.debug(
                 "You should upgrade pyOpenSSL to at least 0.15.1 to "
                 "enable the full use of X509 extensions in the tls module"

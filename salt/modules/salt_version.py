@@ -163,7 +163,11 @@ def _check_release_cmp(name):
         log.info("Release code name %s was not found.", name)
         return None
 
-    current_version = str(salt.version.SaltStackVersion(*salt.version.__version_info__))
+    current_version = str(
+        salt.version.SaltStackVersion(  # pylint: disable=no-value-for-parameter
+            *salt.version.__version_info__
+        )
+    )
     current_version = current_version.rsplit(".", 1)[0]
     version_cmp = salt.utils.versions.version_cmp(current_version, map_version)
     return version_cmp

@@ -1,8 +1,7 @@
 """
 the locale utils used by salt
 """
-
-
+import locale
 import sys
 
 from salt.utils.decorators import memoize as real_memoize
@@ -83,3 +82,39 @@ def normalize_locale(loc):
     comps["codeset"] = comps["codeset"].lower().replace("-", "")
     comps["charmap"] = ""
     return join_locale(comps)
+
+
+def getdefaultlocale(envvars=("LC_ALL", "LC_CTYPE", "LANG", "LANGUAGE")):
+    """
+    This function was backported from Py3.11 which started triggering a
+    deprecation warning about it's removal in 3.13.
+    """
+    try:
+        # check if it's supported by the _locale module
+        import _locale
+
+        code, encoding = _locale._getdefaultlocale()
+    except (ImportError, AttributeError):
+        pass
+    else:
+        # make sure the code/encoding values are valid
+        if sys.platform == "win32" and code and code[:2] == "0x":
+            # map windows language identifier to language name
+            code = locale.windows_locale.get(int(code, 0))
+        # ...add other platform-specific processing here, if
+        # necessary...
+        return code, encoding
+
+    # fall back on POSIX behaviour
+    import os
+
+    lookup = os.environ.get
+    for variable in envvars:
+        localename = lookup(variable, None)
+        if localename:
+            if variable == "LANGUAGE":
+                localename = localename.split(":")[0]
+            break
+    else:
+        localename = "C"
+    return locale._parse_localename(localename)

@@ -1,6 +1,6 @@
 """
-Manage a GPG keychains, add keys, create keys, retrieve keys from keyservers.
-Sign, encrypt and sign plus encrypt text and files.
+Manage GPG keychains, add keys, create keys, retrieve keys from keyservers.
+Sign, encrypt, sign plus encrypt and verify text and files.
 
 .. versionadded:: 2015.5.0
 
@@ -22,6 +22,7 @@ import time
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -65,6 +66,8 @@ VERIFY_TRUST_LEVELS = {
     "3": "Fully",
     "4": "Ultimate",
 }
+
+_DEFAULT_KEY_SERVER = "keys.openpgp.org"
 
 try:
     import gnupg
@@ -216,7 +219,7 @@ def search_keys(text, keyserver=None, user=None):
         Text to search the keyserver for, e.g. email address, keyID or fingerprint.
 
     keyserver
-        Keyserver to use for searching for GPG keys, defaults to pgp.mit.edu.
+        Keyserver to use for searching for GPG keys, defaults to keys.openpgp.org.
 
     user
         Which user's keychain to access, defaults to user Salt is running as.
@@ -235,7 +238,7 @@ def search_keys(text, keyserver=None, user=None):
 
     """
     if not keyserver:
-        keyserver = "pgp.mit.edu"
+        keyserver = _DEFAULT_KEY_SERVER
 
     _keys = []
     for _key in _search_keys(text, keyserver, user):
@@ -501,7 +504,7 @@ def delete_key(
     use_passphrase=True,
 ):
     """
-    Get a key from the GPG keychain
+    Delete a key from the GPG keychain.
 
     keyid
         The keyid of the key to be deleted.
@@ -881,7 +884,7 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
     Receive key(s) from keyserver and add them to keychain
 
     keyserver
-        Keyserver to use for searching for GPG keys, defaults to pgp.mit.edu
+        Keyserver to use for searching for GPG keys, defaults to keys.openpgp.org
 
     keys
         The keyID(s) to retrieve from the keyserver.  Can be specified as a comma
@@ -911,7 +914,7 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
     gpg = _create_gpg(user, gnupghome)
 
     if not keyserver:
-        keyserver = "pgp.mit.edu"
+        keyserver = _DEFAULT_KEY_SERVER
 
     if isinstance(keys, str):
         keys = keys.split(",")
@@ -1100,7 +1103,14 @@ def sign(
 
 
 def verify(
-    text=None, user=None, filename=None, gnupghome=None, signature=None, trustmodel=None
+    text=None,
+    user=None,
+    filename=None,
+    gnupghome=None,
+    signature=None,
+    trustmodel=None,
+    signed_by_any=None,
+    signed_by_all=None,
 ):
     """
     Verify a message or file
@@ -1136,6 +1146,22 @@ def verify(
 
         .. versionadded:: 2019.2.0
 
+    signed_by_any
+        A list of key fingerprints from which any valid signature
+        will mark verification as passed. If none of the provided
+        keys signed the data, verification will fail. Optional.
+        Note that this does not take into account trust.
+
+        .. versionadded:: 3007.0
+
+    signed_by_all
+        A list of key fingerprints whose signatures are required
+        for verification to pass. If a single provided key did
+        not sign the data, verification will fail. Optional.
+        Note that this does not take into account trust.
+
+        .. versionadded:: 3007.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -1146,7 +1172,7 @@ def verify(
         salt '*' gpg.verify filename='/path/to/important.file' trustmodel=direct
 
     """
-    gpg = _create_gpg(user)
+    gpg = _create_gpg(user, gnupghome)
     trustmodels = ("pgp", "classic", "tofu", "tofu+pgp", "direct", "always", "auto")
 
     if trustmodel and trustmodel not in trustmodels:
@@ -1160,6 +1186,15 @@ def verify(
 
     if trustmodel:
         extra_args.extend(["--trust-model", trustmodel])
+
+    if signed_by_any or signed_by_all:
+        # batch mode stops processing on the first invalid signature.
+        # This ensures all signatures are evaluated for validity.
+        extra_args.append("--no-batch")
+        # workaround https://github.com/vsajip/python-gnupg/issues/214
+        # This issue should be fixed in versions greater than 0.5.0.
+        if salt.utils.versions.version_cmp(gnupg.__version__, "0.5.0") <= 0:
+            gpg.result_map["verify"] = FixedVerify
 
     if text:
         verified = gpg.verify(text, extra_args=extra_args)
@@ -1175,16 +1210,90 @@ def verify(
     else:
         raise SaltInvocationError("filename or text must be passed.")
 
-    ret = {}
-    if verified.trust_level is not None:
+    if not (signed_by_any or signed_by_all):
+        ret = {}
+        if verified.trust_level is not None:
+            ret["res"] = True
+            ret["username"] = verified.username
+            ret["key_id"] = verified.key_id
+            ret["trust_level"] = VERIFY_TRUST_LEVELS[str(verified.trust_level)]
+            ret["message"] = "The signature is verified."
+        else:
+            ret["res"] = False
+            ret["message"] = "The signature could not be verified."
+
+        return ret
+
+    signatures = [
+        {
+            "username": sig.get("username"),
+            "key_id": sig["keyid"],
+            "fingerprint": sig["pubkey_fingerprint"],
+            "trust_level": VERIFY_TRUST_LEVELS[str(sig["trust_level"])]
+            if "trust_level" in sig
+            else None,
+            "status": sig["status"],
+        }
+        for sig in verified.sig_info.values()
+    ]
+    ret = {"res": False, "message": "", "signatures": signatures}
+
+    # be very explicit and do not default to result = True below
+    any_check = all_check = False
+
+    if signed_by_any:
+        if not isinstance(signed_by_any, list):
+            signed_by_any = [signed_by_any]
+        any_signed = False
+        for signer in signed_by_any:
+            signer = str(signer)
+            try:
+                if any(
+                    x["trust_level"] is not None and str(x["fingerprint"]) == signer
+                    for x in signatures
+                ):
+                    any_signed = True
+                    break
+            except (KeyError, IndexError):
+                pass
+
+        if not any_signed:
+            ret["res"] = False
+            ret[
+                "message"
+            ] = "None of the public keys listed in signed_by_any provided a valid signature"
+            return ret
+        any_check = True
+
+    if signed_by_all:
+        if not isinstance(signed_by_all, list):
+            signed_by_all = [signed_by_all]
+        for signer in signed_by_all:
+            signer = str(signer)
+            try:
+                if any(
+                    x["trust_level"] is not None and str(x["fingerprint"]) == signer
+                    for x in signatures
+                ):
+                    continue
+            except (KeyError, IndexError):
+                pass
+            ret["res"] = False
+            ret[
+                "message"
+            ] = f"Public key {signer} has not provided a valid signature, but was listed in signed_by_all"
+            return ret
+        all_check = True
+
+    if bool(signed_by_any) is any_check and bool(signed_by_all) is all_check:
         ret["res"] = True
-        ret["username"] = verified.username
-        ret["key_id"] = verified.key_id
-        ret["trust_level"] = VERIFY_TRUST_LEVELS[str(verified.trust_level)]
-        ret["message"] = "The signature is verified."
-    else:
-        ret["res"] = False
-        ret["message"] = "The signature could not be verified."
+        ret["message"] = "All required keys have provided a signature"
+        return ret
+
+    ret["res"] = False
+    ret[
+        "message"
+    ] = "Something went wrong while checking for specific signers. This is most likely a bug"
     return ret
 
 
@@ -1393,3 +1502,22 @@ def decrypt(
         log.error(result.stderr)
 
     return ret
+
+
+if HAS_GPG_BINDINGS:
+
+    class FixedVerify(gnupg.Verify):
+        """
+        This is a workaround for https://github.com/vsajip/python-gnupg/issues/214.
+        It ensures invalid or otherwise unverified signatures are not
+        merged into sig_info in any way.
+
+        https://github.com/vsajip/python-gnupg/commit/ee94a7ecc1a86484c9f02337e2bbdd05fd32b383
+        """
+
+        def handle_status(self, key, value):
+            if "NEWSIG" == key:
+                self.signature_id = None
+            super().handle_status(key, value)
+            if key in self.TRUST_LEVELS:
+                self.signature_id = None

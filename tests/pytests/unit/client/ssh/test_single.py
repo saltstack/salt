@@ -10,6 +10,7 @@ import salt.config
 import salt.roster
 import salt.utils.files
 import salt.utils.path
+import salt.utils.platform
 import salt.utils.thin
 import salt.utils.yaml
 from salt.client import ssh
@@ -405,6 +406,13 @@ def test_cmd_block_python_version_error(opts, target):
         assert "ERROR: Python version error. Recommendation(s) follow:" in ret[0]
 
 
+def _check_skip(grains):
+    if grains["os"] == "MacOS":
+        return True
+    return False
+
+
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 @pytest.mark.skip_on_windows(reason="pre_flight_args is not implemented for Windows")
 @pytest.mark.parametrize(
     "test_opts",

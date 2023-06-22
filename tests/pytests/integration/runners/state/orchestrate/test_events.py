@@ -4,16 +4,93 @@ Tests for orchestration events
 import concurrent.futures
 import functools
 import json
+import logging
 import time
 
+import attr
 import pytest
+from saltfactories.utils import random_string
 
 import salt.utils.jid
 import salt.utils.platform
+import salt.utils.pycrypto
 
-pytestmark = [
-    pytest.mark.slow_test,
-]
+log = logging.getLogger(__name__)
+
+
+@attr.s(kw_only=True, slots=True)
+class TestMasterAccount:
+    username = attr.ib()
+    password = attr.ib()
+    _delete_account = attr.ib(init=False, repr=False, default=False)
+
+    @username.default
+    def _default_username(self):
+        return random_string("account-", uppercase=False)
+
+    @password.default
+    def _default_password(self):
+        return random_string("pwd-", size=8)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
+
+@pytest.fixture(scope="session")
+def salt_auth_account_m_factory():
+    return TestMasterAccount(username="saltdev-auth-m")
+
+
+@pytest.fixture(scope="module")
+def salt_auth_account_m(salt_auth_account_m_factory):
+    with salt_auth_account_m_factory as account:
+        yield account
+
+
+@pytest.fixture(scope="module")
+def runner_master_config(salt_auth_account_m):
+    return {
+        "external_auth": {
+            "pam": {salt_auth_account_m.username: [{"*": [".*"]}, "@runner", "@wheel"]}
+        }
+    }
+
+
+@pytest.fixture(scope="module")
+def runner_salt_master(salt_factories, runner_master_config):
+    factory = salt_factories.salt_master_daemon(
+        "runner-master", defaults=runner_master_config
+    )
+    with factory.started():
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def runner_salt_run_cli(runner_salt_master):
+    return runner_salt_master.salt_run_cli()
+
+
+@pytest.fixture(scope="module")
+def runner_salt_call_cli(runner_salt_minion):
+    return runner_salt_minion.salt_call_cli()
+
+
+@pytest.fixture(scope="module")
+def runner_add_user(runner_salt_run_cli, salt_auth_account_m):
+    ## create user on master to use
+    ret = runner_salt_run_cli.run("salt.cmd", "user.add", salt_auth_account_m.username)
+    assert ret.returncode == 0
+
+    yield
+
+    ## remove user on master
+    ret = runner_salt_run_cli.run(
+        "salt.cmd", "user.delete", salt_auth_account_m.username
+    )
+    assert ret.returncode == 0
 
 
 def test_state_event(salt_run_cli, salt_cli, salt_minion):
@@ -335,3 +412,106 @@ def test_orchestration_onchanges_and_prereq(
                 # After the file was created, running again in test mode should have
                 # shown no changes.
                 assert not state_data["changes"]
+
+
+@pytest.mark.slow_test
+@pytest.mark.skip_if_not_root
+@pytest.mark.skip_on_windows
+@pytest.mark.skip_on_darwin
+def test_unknown_in_runner_event(
+    runner_salt_run_cli,
+    runner_salt_master,
+    salt_minion,
+    salt_auth_account_m,
+    runner_add_user,
+    event_listener,
+):
+    """
+    Test to confirm that the ret event for the orchestration contains the
+    jid for the jobs spawned.
+    """
+    file_roots_base_dir = runner_salt_master.config["file_roots"]["base"][0]
+    test_top_file_contents = """
+    base:
+      '{minion_id}':
+        - {file_roots}
+    """.format(
+        minion_id=salt_minion.id, file_roots=file_roots_base_dir
+    )
+    test_init_state_contents = """
+    always-passes-with-any-kwarg:
+      test.nop:
+        - name: foo
+        - something: else
+        - foo: bar
+    always-passes:
+      test.succeed_without_changes:
+        - name: foo
+    always-changes-and-succeeds:
+      test.succeed_with_changes:
+        - name: foo
+    {{slspath}}:
+      test.nop
+    """
+    test_orch_contents = """
+    test_highstate:
+      salt.state:
+        - tgt: {minion_id}
+        - highstate: True
+    test_runner_metasyntetic:
+      salt.runner:
+        - name: test.metasyntactic
+        - locality: us
+    """.format(
+        minion_id=salt_minion.id
+    )
+    with runner_salt_master.state_tree.base.temp_file(
+        "top.sls", test_top_file_contents
+    ), runner_salt_master.state_tree.base.temp_file(
+        "init.sls", test_init_state_contents
+    ), runner_salt_master.state_tree.base.temp_file(
+        "orch.sls", test_orch_contents
+    ):
+        ret = runner_salt_run_cli.run(
+            "salt.cmd", "shadow.gen_password", salt_auth_account_m.password
+        )
+        assert ret.returncode == 0
+
+        gen_pwd = ret.stdout
+        ret = runner_salt_run_cli.run(
+            "salt.cmd", "shadow.set_password", salt_auth_account_m.username, gen_pwd
+        )
+        assert ret.returncode == 0
+
+        jid = salt.utils.jid.gen_jid(runner_salt_master.config)
+        start_time = time.time()
+
+        ret = runner_salt_run_cli.run(
+            "--jid",
+            jid,
+            "-a",
+            "pam",
+            "--username",
+            salt_auth_account_m.username,
+            "--password",
+            salt_auth_account_m.password,
+            "state.orchestrate",
+            "orch",
+        )
+        assert not ret.stdout.startswith("Authentication failure")
+
+        expected_new_event_tag = "salt/run/*/new"
+        event_pattern = (runner_salt_master.id, expected_new_event_tag)
+        found_events = event_listener.get_events([event_pattern], after_time=start_time)
+
+        for event in found_events:
+            if event.data["fun"] == "runner.test.metasyntactic":
+                assert event.data["user"] == salt_auth_account_m.username
+
+        expected_ret_event_tag = "salt/run/*/ret"
+        event_pattern = (runner_salt_master.id, expected_ret_event_tag)
+        found_events = event_listener.get_events([event_pattern], after_time=start_time)
+
+        for event in found_events:
+            if event.data["fun"] == "runner.test.metasyntactic":
+                assert event.data["user"] == salt_auth_account_m.username

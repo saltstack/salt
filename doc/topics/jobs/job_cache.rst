@@ -68,5 +68,3 @@ register of executed jobs. Salt comes with two main mechanisms to do this, the
 master job cache and the external job cache.
 
 See :ref:`Storing Job Results in an External System <external-job-cache>`.
-
-

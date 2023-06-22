@@ -11,7 +11,7 @@ import salt.loader
 import salt.modules.boto_lambda as boto_lambda
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -89,9 +89,9 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
+    elif Version(boto3.__version__) < Version(required_boto3_version):
         return False
-    elif LooseVersion(found_botocore_version) < LooseVersion(required_botocore_version):
+    elif Version(found_botocore_version) < Version(required_botocore_version):
         return False
     else:
         return True

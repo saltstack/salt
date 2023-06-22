@@ -17,6 +17,7 @@ from tests.support.mock import Mock, patch
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("apt-cache", "grep"),
+    pytest.mark.slow_test,
 ]
 
 KEY_FILES = (
@@ -310,6 +311,7 @@ def test_get_repo_keys_keydir_not_exist(key):
 
 @pytest.mark.parametrize("get_key_file", KEY_FILES, indirect=True)
 @pytest.mark.parametrize("aptkey", [False, True])
+@pytest.mark.skip_if_not_root
 def test_add_del_repo_key(get_key_file, aptkey):
     """
     Test both add_repo_key and del_repo_key when

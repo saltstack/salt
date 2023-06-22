@@ -22,7 +22,6 @@ def _load_matchers():
     """
     Store matchers in __context__ so they're only loaded once
     """
-    __context__["matchers"] = {}
     __context__["matchers"] = salt.loader.matchers(__opts__)
 
 
@@ -438,7 +437,7 @@ def ifelse(
     merge_lists=False,
 ):
     """
-    .. versionadded:: 3006
+    .. versionadded:: 3006.0
 
     Evaluate each pair of arguments up to the last one as a (matcher, value)
     tuple, returning ``value`` if matched.  If none match, returns the last

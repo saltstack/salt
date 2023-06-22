@@ -7,7 +7,7 @@ import base64
 import urllib.parse
 
 import salt.utils.json
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 try:
     import OpenSSL
@@ -30,8 +30,8 @@ def __virtual__():
                 OPENSSL_MIN_VER
             ),
         )
-    cur_version = _LooseVersion(OpenSSL.__version__)
-    min_version = _LooseVersion(OPENSSL_MIN_VER)
+    cur_version = Version(OpenSSL.__version__)
+    min_version = Version(OPENSSL_MIN_VER)
     if cur_version < min_version:
         return (
             False,

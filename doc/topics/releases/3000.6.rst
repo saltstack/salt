@@ -10,4 +10,3 @@ Fixed
 -----
 
 - Fixes salt-ssh authentication when using tty (#58922)
-

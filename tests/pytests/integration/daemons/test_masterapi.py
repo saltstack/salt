@@ -12,7 +12,9 @@ import salt.utils.files
 import salt.utils.stringutils
 from tests.support.runtests import RUNTIME_VARS
 
-pytestmark = [pytest.mark.slow_test]
+pytestmark = [
+    pytest.mark.slow_test,
+]
 
 
 @pytest.fixture

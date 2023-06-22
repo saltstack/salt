@@ -55,10 +55,13 @@ on_saltstack = "SALT_ON_SALTSTACK" in os.environ
 project = "Salt"
 # This is the default branch on GitHub for the Salt project
 repo_primary_branch = "master"
-latest_release = (
-    # Use next unreleased version if LATEST_RELEASE is undefined env var
-    os.environ.get("LATEST_RELEASE", str(salt.version.__saltstack_version__.major))
-)  # latest release (3003)
+if "LATEST_RELEASE" not in os.environ:
+    salt_version = salt.version.__saltstack_version__
+else:
+    salt_version = salt.version.SaltStackVersion.parse(os.environ["LATEST_RELEASE"])
+
+major_version = str(salt_version.major)
+latest_release = ".".join([str(x) for x in salt_version.info])
 previous_release = os.environ.get(
     "PREVIOUS_RELEASE", "previous_release"
 )  # latest release from previous branch (3002.5)
@@ -128,6 +131,7 @@ else:  # latest or something else
 needs_sphinx = "1.3"
 
 spelling_lang = "en_US"
+spelling_show_suggestions = True
 language = "en"
 locale_dirs = [
     "_locale",
@@ -145,19 +149,12 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.imgconverter",
     "sphinx.ext.intersphinx",
-    "httpdomain",
-    "youtube",
-    "saltrepo"
+    "sphinxcontrib.httpdomain",
+    "saltrepo",
+    "myst_parser",
+    "sphinxcontrib.spelling",
     #'saltautodoc', # Must be AFTER autodoc
-    #'shorturls',
 ]
-
-try:
-    import sphinxcontrib.spelling  # false positive, pylint: disable=unused-import
-except ImportError:
-    pass
-else:
-    extensions += ["sphinxcontrib.spelling"]
 
 modindex_common_prefix = ["salt."]
 
@@ -201,13 +198,14 @@ rst_prolog = """\
 extlinks = {
     "blob": (
         "https://github.com/saltstack/salt/blob/%s/%%s" % repo_primary_branch,
-        None,
+        "%s",
     ),
-    "issue": ("https://github.com/saltstack/salt/issues/%s", "issue #"),
-    "pull": ("https://github.com/saltstack/salt/pull/%s", "PR #"),
-    "formula_url": ("https://github.com/saltstack-formulas/%s", ""),
+    "issue": ("https://github.com/saltstack/salt/issues/%s", "issue %s"),
+    "pull": ("https://github.com/saltstack/salt/pull/%s", "PR %s"),
+    "formula_url": ("https://github.com/saltstack-formulas/%s", "url %s"),
 }
 
+myst_gfm_only = True
 
 # ----- Localization -------------------------------------------------------->
 locale_dirs = ["locale/"]
@@ -323,19 +321,34 @@ linkcheck_ignore = [
     r"https://salt-cloud.readthedocs.io",
     r"https://salt.readthedocs.io",
     r"http://www.pip-installer.org/",
-    r"http://www.windowsazure.com/",
     r"https://github.com/watching",
     r"dash-feed://",
     r"https://github.com/saltstack/salt/",
-    r"http://bootstrap.saltstack.org",
     r"https://bootstrap.saltproject.io",
     r"https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh",
     r"media.readthedocs.org/dash/salt/latest/salt.xml",
     r"https://portal.aws.amazon.com/gp/aws/securityCredentials",
-    r"https://help.github.com/articles/fork-a-repo",
     r"dash-feed://https%3A//media.readthedocs.org/dash/salt/latest/salt.xml",
+    r"(?i)dns:.*",
+    r"TCP:4506",
+    r"https?://",
+    r"https://cloud.github.com/downloads/saltstack/.*",
+    r"https://INFOBLOX/.*",
+    r"https://SOMESERVERIP:.*",
+    r"https://community.saltstack.com/.*",
+    # GitHub Users
+    r"https://github.com/[^/]$",
+    # GitHub Salt Forks
+    r"https://github.com/[^/]/salt$",
+    r"tag:key=value",
+    r"jdbc:mysql:.*",
+    r"http:post",
 ]
-
+linkcheck_exclude_documents = [
+    r"topics/releases/(2015|2016)\..*\.rst",
+    r"topics/releases/saltapi/0\.8\.0.*",
+]
+linkcheck_timeout = 10
 linkcheck_anchors = False
 
 ### Manpage options

@@ -413,7 +413,7 @@ class PipStateInstallationErrorTest(TestCase):
     def test_importable_installation_error(self):
         extra_requirements = []
         for name, version in salt.version.dependency_information():
-            if name in ["PyYAML"]:
+            if name in ["PyYAML", "packaging", "looseversion"]:
                 extra_requirements.append("{}=={}".format(name, version))
         failures = {}
         pip_version_requirements = [

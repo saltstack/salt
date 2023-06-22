@@ -25,7 +25,7 @@ def logging_master(salt_factories):
     factory = salt_factories.salt_master_daemon(
         random_string("master-logging-"),
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     process_pid = None
     with factory.started("--log-level=debug"):

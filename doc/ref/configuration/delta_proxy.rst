@@ -433,4 +433,3 @@ For reference, see:
 
 * `Netmiko Salt proxy module
   <https://docs.saltproject.io/en/latest/ref/proxy/all/salt.proxy.netmiko_px.html#module-salt.proxy.netmiko_px>`_
-

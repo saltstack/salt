@@ -88,7 +88,7 @@ def test_pillar_cache_items(pillar_cache_tree_no_refresh, pillar_salt_call_cli):
     Test pillar cache does not refresh pillar when using pillar.items
     """
     # pillar.items should be empty
-    assert not pillar_salt_call_cli.run("pillar.items").data
+    pillar_before = pillar_salt_call_cli.run("pillar.items").data
     pillar_salt_call_cli.run("saltutil.refresh_pillar", wait=True)
     # pillar.items should contain the new pillar data
     ret = pillar_salt_call_cli.run("pillar.items")
@@ -96,3 +96,16 @@ def test_pillar_cache_items(pillar_cache_tree_no_refresh, pillar_salt_call_cli):
     assert ret.data
     assert "test" in ret.data
     assert "test2" in ret.data
+    assert ret.data != pillar_before
+
+
+def test_pillar_cache_passes_extra_minion_data(pillar_salt_call_cli):
+    """
+    Test that pillar cache does not disable passing of
+    extra_minion_data to external pillars
+    """
+    ret = pillar_salt_call_cli.run("pillar.items")
+    assert ret.returncode == 0
+    assert ret.data
+    assert "hi" in ret.data
+    assert ret.data["hi"] == "there"

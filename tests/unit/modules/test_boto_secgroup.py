@@ -10,7 +10,7 @@ import salt.config
 import salt.loader
 import salt.modules.boto_secgroup as boto_secgroup
 from salt.utils.odict import OrderedDict
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
@@ -88,7 +88,7 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
+    elif Version(boto.__version__) < Version(required_boto_version):
         return False
     else:
         return True

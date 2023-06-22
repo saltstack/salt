@@ -2,7 +2,7 @@
 LGPO - Registry.pol
 ===================
 
-.. versionadded:: 3006
+.. versionadded:: 3006.0
 
 A module for working with registry based policies in Windows Local Group Policy
 (LGPO). This module contains functions for working with the ``Registry.pol``
@@ -137,9 +137,10 @@ def write_reg_pol(data, policy_class="Machine"):
 
     Raises:
         SaltInvocationError: Invalid policy class
+        CommandExecutionError: On failure
 
     Returns:
-        None
+        bool: True if successful
 
     CLI Example:
 
@@ -175,7 +176,6 @@ def get_value(key, v_name, policy_class="Machine"):
     file.
 
     Args:
-
         key (str): The registry key where the value name resides
 
         v_name (str): The value name to retrieve
@@ -228,7 +228,6 @@ def get_key(key, policy_class="Machine"):
     Get all the values set in a key in the ``Registry.pol`` file.
 
     Args:
-
         key (str): The registry key where the values reside
 
         policy_class (str): The registry class to read from. Can be one of the
@@ -278,7 +277,6 @@ def set_value(
     style policies. This is the equivalent of setting a policy to ``Enabled``
 
     Args:
-
         key (str): The registry key path
 
         v_name (str): The registry value name within the key
@@ -305,13 +303,13 @@ def set_value(
 
             Default is ``Machine``
 
-    Returns:
-        bool: ``True`` if successful, otherwise ``False``
-
     Raises:
         SaltInvocationError: Invalid policy_class
         SaltInvocationError: Invalid v_type
         SaltInvocationError: v_data doesn't match v_type
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -343,22 +341,22 @@ def set_value(
         "REG_SZ",
     ]
     if v_type not in valid_types:
-        msg = "Invalid type: {}".format(v_type)
+        msg = f"Invalid type: {v_type}"
         raise SaltInvocationError(msg)
 
     if v_type in ["REG_SZ", "REG_EXPAND_SZ"]:
         if not isinstance(v_data, str):
-            msg = "{} data must be a string".format(v_type)
+            msg = f"{v_type} data must be a string"
             raise SaltInvocationError(msg)
     elif v_type == "REG_MULTI_SZ":
         if not isinstance(v_data, list):
-            msg = "{} data must be a list".format(v_type)
+            msg = f"{v_type} data must be a list"
             raise SaltInvocationError(msg)
     elif v_type in ["REG_DWORD", "REG_QWORD"]:
         try:
             int(v_data)
         except (TypeError, ValueError):
-            msg = "{} data must be an integer".format(v_type)
+            msg = f"{v_type} data must be an integer"
             raise SaltInvocationError(msg)
 
     pol_data = read_reg_pol(policy_class=policy_class)
@@ -369,29 +367,40 @@ def set_value(
         if key.lower() == p_key.lower():
             found_key = p_key
             for p_name in pol_data[p_key]:
-                if v_name.lower() in p_name.lower():
+                if v_name.lower() == p_name.lower().lstrip("**del."):
                     found_name = p_name
 
     if found_key:
         if found_name:
             if "**del." in found_name:
+                log.debug(f"LGPO_REG Mod: Found disabled name: {found_name}")
                 pol_data[found_key][v_name] = pol_data[found_key].pop(found_name)
                 found_name = v_name
+            log.debug(f"LGPO_REG Mod: Updating value: {found_name}")
             pol_data[found_key][found_name] = {"data": v_data, "type": v_type}
         else:
+            log.debug(f"LGPO_REG Mod: Setting new value: {found_name}")
             pol_data[found_key][v_name] = {"data": v_data, "type": v_type}
     else:
+        log.debug(f"LGPO_REG Mod: Adding new key and value: {found_name}")
         pol_data[key] = {v_name: {"data": v_data, "type": v_type}}
 
-    write_reg_pol(pol_data)
+    success = True
+    if not write_reg_pol(pol_data, policy_class=policy_class):
+        log.error("LGPO_REG Mod: Failed to write registry.pol file")
+        success = False
 
-    salt.utils.win_reg.set_value(
+    if not salt.utils.win_reg.set_value(
         hive=hive,
         key=key,
         vname=v_name,
         vdata=v_data,
         vtype=v_type,
-    )
+    ):
+        log.error("LGPO_REG Mod: Failed to set registry entry")
+        success = False
+
+    return success
 
 
 def disable_value(key, v_name, policy_class="machine"):
@@ -401,7 +410,6 @@ def disable_value(key, v_name, policy_class="machine"):
     to ``Disabled`` in the Group Policy editor (``gpedit.msc``)
 
     Args:
-
         key (str): The registry key path
 
         v_name (str): The registry value name within the key
@@ -415,12 +423,13 @@ def disable_value(key, v_name, policy_class="machine"):
 
             Default is ``Machine``
 
+    Raises:
+        SaltInvocationError: Invalid policy_class
+        CommandExecutionError: On failure
+
     Returns:
         bool: ``True`` if successful, otherwise ``False``
         None: If already disabled
-
-    Raises:
-        SaltInvocationError: Invalid policy_class
 
     CLI Example:
 
@@ -447,28 +456,42 @@ def disable_value(key, v_name, policy_class="machine"):
         if key.lower() == p_key.lower():
             found_key = p_key
             for p_name in pol_data[p_key]:
-                if v_name.lower() in p_name.lower():
+                if v_name.lower() == p_name.lower().lstrip("**del."):
                     found_name = p_name
 
     if found_key:
         if found_name:
             if "**del." in found_name:
-                # Already set to delete... do nothing
+                log.debug(f"LGPO_REG Mod: Already disabled: {v_name}")
                 return None
+            log.debug(f"LGPO_REG Mod: Disabling value name: {v_name}")
             pol_data[found_key].pop(found_name)
-            found_name = "**del.{}".format(found_name)
+            found_name = f"**del.{found_name}"
             pol_data[found_key][found_name] = {"data": " ", "type": "REG_SZ"}
         else:
-            pol_data[found_key]["**del.{}".format(v_name)] = {
+            log.debug(f"LGPO_REG Mod: Setting new disabled value name: {v_name}")
+            pol_data[found_key][f"**del.{v_name}"] = {
                 "data": " ",
                 "type": "REG_SZ",
             }
     else:
-        pol_data[key] = {"**del.{}".format(v_name): {"data": " ", "type": "REG_SZ"}}
+        log.debug(f"LGPO_REG Mod: Adding new key and disabled value name: {found_name}")
+        pol_data[key] = {f"**del.{v_name}": {"data": " ", "type": "REG_SZ"}}
 
-    write_reg_pol(pol_data)
+    success = True
+    if not write_reg_pol(pol_data, policy_class=policy_class):
+        log.error("LGPO_REG Mod: Failed to write registry.pol file")
+        success = False
 
-    salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
+    ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
+    if not ret:
+        if ret is None:
+            log.debug("LGPO_REG Mod: Registry key/value already missing")
+        else:
+            log.error("LGPO_REG Mod: Failed to remove registry entry")
+            success = False
+
+    return success
 
 
 def delete_value(key, v_name, policy_class="Machine"):
@@ -478,7 +501,6 @@ def delete_value(key, v_name, policy_class="Machine"):
     ``Not Configured``.
 
     Args:
-
         key (str): The registry key path
 
         v_name (str): The registry value name within the key
@@ -492,12 +514,13 @@ def delete_value(key, v_name, policy_class="Machine"):
 
             Default is ``Machine``
 
+    Raises:
+        SaltInvocationError: Invalid policy_class
+        CommandExecutionError: On failure
+
     Returns:
         bool: ``True`` if successful, otherwise ``False``
         None: Key/value not present
-
-    Raises:
-        SaltInvocationError: Invalid policy_class
 
     CLI Example:
 
@@ -525,20 +548,37 @@ def delete_value(key, v_name, policy_class="Machine"):
         if key.lower() == p_key.lower():
             found_key = p_key
             for p_name in pol_data[p_key]:
-                if v_name.lower() in p_name.lower():
+                if v_name.lower() == p_name.lower().lstrip("**del."):
                     found_name = p_name
 
     if found_key:
         if found_name:
+            log.debug(f"LGPO_REG Mod: Removing value name: {found_name}")
             pol_data[found_key].pop(found_name)
+        else:
+            log.debug(f"LGPO_REG Mod: Value name not found: {v_name}")
+            return None
         if len(pol_data[found_key]) == 0:
+            log.debug(f"LGPO_REG Mod: Removing empty key: {found_key}")
             pol_data.pop(found_key)
     else:
+        log.debug(f"LGPO_REG Mod: Key not found: {key}")
         return None
 
-    write_reg_pol(pol_data)
+    success = True
+    if not write_reg_pol(pol_data, policy_class=policy_class):
+        log.error("LGPO_REG Mod: Failed to write registry.pol file")
+        success = False
 
-    salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
+    ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
+    if not ret:
+        if ret is None:
+            log.debug("LGPO_REG Mod: Registry key/value already missing")
+        else:
+            log.error("LGPO_REG Mod: Failed to remove registry entry")
+            success = False
+
+    return success
 
 
 # This is for testing different settings and verifying that we are writing the

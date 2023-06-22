@@ -261,6 +261,7 @@ class VTTestCase(TestCase):
     def generate_multibyte_stderr_unicode(block_size):
         return b"\x2E" + VTTestCase.generate_multibyte_stdout_unicode(block_size)
 
+    @pytest.mark.skip_initial_onedir_failure
     @pytest.mark.skip_on_windows(reason="Skip VT tests on windows, due to issue 54290")
     @fixStdOutErrFileNoIfNeeded
     def test_split_multibyte_characters_unicode(self):
@@ -331,6 +332,7 @@ class VTTestCase(TestCase):
     def generate_multibyte_stderr_shiftjis(block_size):
         return b"\x2E" + VTTestCase.generate_multibyte_stdout_shiftjis(block_size)
 
+    @pytest.mark.skip_initial_onedir_failure
     @pytest.mark.skip_on_windows(reason="Skip VT tests on windows, due to issue 54290")
     @fixStdOutErrFileNoIfNeeded
     def test_split_multibyte_characters_shiftjis(self):

@@ -34,6 +34,7 @@ class MacShadowModuleTest(ModuleCase):
         self.run_function("user.delete", [TEST_USER])
 
     @pytest.mark.slow_test
+    @pytest.mark.skip_initial_gh_actions_failure
     def test_info(self):
         """
         Test shadow.info
@@ -66,6 +67,7 @@ class MacShadowModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
+    @pytest.mark.skip_initial_gh_actions_failure
     def test_get_last_change(self):
         """
         Test shadow.get_last_change
@@ -84,6 +86,7 @@ class MacShadowModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
+    @pytest.mark.skip_initial_gh_actions_failure
     def test_get_login_failed_last(self):
         """
         Test shadow.get_login_failed_last
@@ -102,6 +105,7 @@ class MacShadowModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
+    @pytest.mark.skip_initial_gh_actions_failure
     def test_get_login_failed_count(self):
         """
         Test shadow.get_login_failed_count

@@ -9,10 +9,10 @@ import logging
 import os
 import sys
 import traceback
-import uuid
+
+import tornado.gen
 
 import salt.channel.client
-import salt.ext.tornado.gen
 import salt.fileclient
 import salt.loader
 import salt.minion
@@ -81,6 +81,7 @@ def get_pillar(
             pillar_override=pillar_override,
             pillarenv=pillarenv,
             clean_cache=clean_cache,
+            extra_minion_data=extra_minion_data,
         )
     return ptype(
         opts,
@@ -239,7 +240,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         self._closing = False
         self.clean_cache = clean_cache
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def compile_pillar(self):
         """
         Return a future which will contain the pillar data from the master
@@ -277,7 +278,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.error(msg)
             # raise an exception! Pillar isn't empty, we can't sync it!
             raise SaltClientError(msg)
-        raise salt.ext.tornado.gen.Return(ret_pillar)
+        raise tornado.gen.Return(ret_pillar)
 
     def destroy(self):
         if self._closing:
@@ -419,6 +420,7 @@ class PillarCache:
         self.pillar_override = pillar_override
         self.pillarenv = pillarenv
         self.clean_cache = clean_cache
+        self.extra_minion_data = extra_minion_data
 
         if saltenv is None:
             self.saltenv = "base"
@@ -455,6 +457,7 @@ class PillarCache:
             functions=self.functions,
             pillar_override=self.pillar_override,
             pillarenv=self.pillarenv,
+            extra_minion_data=self.extra_minion_data,
         )
         return fresh_pillar.compile_pillar()
 
@@ -1338,6 +1341,11 @@ class Pillar:
         if self._closing:
             return
         self._closing = True
+        if self.client:
+            try:
+                self.client.destroy()
+            except AttributeError:
+                pass
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1349,7 +1357,7 @@ class Pillar:
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in
 # ext_pillar etc.
 class AsyncPillar(Pillar):
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def compile_pillar(self, ext=True):
         ret = super().compile_pillar(ext=ext)
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)

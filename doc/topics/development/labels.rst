@@ -220,7 +220,7 @@ Test Status
 -----------
 
 These labels relate to the status of the automated tests that run on pull
-requests.  
+requests.
 
 - ``has-failing-test`` - The PR currently has one or more failing tests that
   prevent the PR from being merged.

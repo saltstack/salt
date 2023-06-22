@@ -1,8 +1,8 @@
 import textwrap
 
 import pytest
+import tornado.ioloop
 
-import salt.ext.tornado.ioloop
 import salt.fileserver.gitfs as gitfs
 import salt.utils.files
 import salt.utils.gitfs
@@ -18,7 +18,7 @@ try:
 
     # We still need to use GitPython here for temp repo setup, so we do need to
     # actually import it. But we don't need import pygit2 in this module, we
-    # can just use the LooseVersion instances imported along with
+    # can just use the Version instances imported along with
     # salt.utils.gitfs to check if we have a compatible version.
     HAS_GITPYTHON = GITPYTHON_VERSION >= GITPYTHON_MINVER
 except (ImportError, AttributeError):
@@ -73,9 +73,7 @@ def configure_loader_modules(tmp_path):
 @pytest.fixture(scope="module", autouse=True)
 def clear_instance_map():
     try:
-        del salt.utils.gitfs.GitFS.instance_map[
-            salt.ext.tornado.ioloop.IOLoop.current()
-        ]
+        del salt.utils.gitfs.GitFS.instance_map[tornado.ioloop.IOLoop.current()]
     except KeyError:
         pass
 

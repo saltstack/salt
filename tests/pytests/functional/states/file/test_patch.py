@@ -9,6 +9,7 @@ import pytest
 import salt.utils.hashutils
 import salt.utils.platform
 import salt.utils.versions
+from salt.utils.versions import Version
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -125,11 +126,11 @@ class Patches:
 
 @pytest.fixture(scope="module")
 def _check_min_patch_version(shell):
-    min_patch_ver = salt.utils.versions.LooseVersion("2.6")
+    min_patch_ver = Version("2.6")
     ret = shell.run("patch", "--version")
     assert ret.returncode == 0
-    version = ret.stdout.strip().split()[2]
-    if salt.utils.versions.LooseVersion(version) < min_patch_ver:
+    version = ret.stdout.strip().splitlines()[0].split()[-1]
+    if Version(version) < min_patch_ver:
         pytest.xfail(
             "Minimum version of patch not found, expecting {}, found {}".format(
                 min_patch_ver, version

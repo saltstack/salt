@@ -682,7 +682,7 @@ def highstate(test=None, **kwargs):
         context=__context__.value(),
     ) as st_:
         st_.push_active()
-        chunks = st_.compile_low_chunks()
+        chunks = st_.compile_low_chunks(context=__context__.value())
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
@@ -768,7 +768,7 @@ def top(topfn, test=None, **kwargs):
     ) as st_:
         st_.opts["state_top"] = os.path.join("salt://", topfn)
         st_.push_active()
-        chunks = st_.compile_low_chunks()
+        chunks = st_.compile_low_chunks(context=__context__.value())
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
@@ -834,13 +834,13 @@ def show_highstate(**kwargs):
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     with salt.client.ssh.state.SSHHighState(
         opts,
-        __pillar__,
+        __pillar__.value(),
         __salt__,
         __context__["fileclient"],
         context=__context__.value(),
     ) as st_:
         st_.push_active()
-        chunks = st_.compile_highstate()
+        chunks = st_.compile_highstate(context=__context__.value())
         _cleanup_slsmod_high_data(chunks)
         return chunks
 
@@ -865,7 +865,7 @@ def show_lowstate(**kwargs):
         context=__context__.value(),
     ) as st_:
         st_.push_active()
-        chunks = st_.compile_low_chunks()
+        chunks = st_.compile_low_chunks(context=__context__.value())
         _cleanup_slsmod_low_data(chunks)
         return chunks
 
@@ -932,7 +932,9 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
 
         split_mods = _parse_mods(mods)
         st_.push_active()
-        high_, errors = st_.render_highstate({opts["saltenv"]: split_mods})
+        high_, errors = st_.render_highstate(
+            {opts["saltenv"]: split_mods}, context=__context__.value()
+        )
         errors += st_.state.verify_high(high_)
         # Apply requisites to high data
         high_, req_in_errors = st_.state.requisite_in(high_)
@@ -988,7 +990,9 @@ def show_sls(mods, saltenv="base", test=None, **kwargs):
     ) as st_:
         st_.push_active()
         mods = _parse_mods(mods)
-        high_data, errors = st_.render_highstate({saltenv: mods})
+        high_data, errors = st_.render_highstate(
+            {saltenv: mods}, context=__context__.value()
+        )
         high_data, ext_errors = st_.state.reconcile_extend(high_data)
         errors += ext_errors
         errors += st_.state.verify_high(high_data)
@@ -1015,7 +1019,7 @@ def show_low_sls(mods, saltenv="base", test=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' state.show_sls core,edit.vim dev
+        salt '*' state.show_low_sls core,edit.vim dev
     """
     __pillar__.update(kwargs.get("pillar", {}))
     __opts__["grains"] = __grains__.value()
@@ -1034,7 +1038,9 @@ def show_low_sls(mods, saltenv="base", test=None, **kwargs):
     ) as st_:
         st_.push_active()
         mods = _parse_mods(mods)
-        high_data, errors = st_.render_highstate({saltenv: mods})
+        high_data, errors = st_.render_highstate(
+            {saltenv: mods}, context=__context__.value()
+        )
         high_data, ext_errors = st_.state.reconcile_extend(high_data)
         errors += ext_errors
         errors += st_.state.verify_high(high_data)
@@ -1070,7 +1076,7 @@ def show_top(**kwargs):
         __context__["fileclient"],
         context=__context__.value(),
     ) as st_:
-        top_data = st_.get_top()
+        top_data = st_.get_top(context=__context__.value())
         errors = []
         errors += st_.verify_tops(top_data)
         if errors:

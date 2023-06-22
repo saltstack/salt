@@ -4,10 +4,14 @@
 
     Docstrings related tasks
 """
+# pylint: disable=resource-leakage
 
 import ast
+import os
 import pathlib
 import re
+import sys
+from typing import TYPE_CHECKING
 
 from invoke import task  # pylint: disable=3rd-party-module-not-gated
 
@@ -782,6 +786,72 @@ MISSING_EXAMPLES = {
     ],
 }
 
+SUMMARY = """\
+### Hi! I'm your friendly PR bot!
+
+You might be wondering what I'm doing commenting here on your PR.
+
+**Yes, as a matter of fact, I am...**
+
+I'm just here to help us improve the documentation. I can't respond to
+questions or anything, but what I *can* do, I do well!
+
+**Okay... so what do you do?**
+
+I detect modules that are missing docstrings or "CLI Example" on existing docstrings!
+When I was created we had a *lot* of these. The documentation for these
+modules need some love and attention to make Salt better for our users.
+
+**So what does that have to do with my PR?**
+
+I noticed that in this PR there are some files changed that have some of these
+issues. So I'm leaving this comment to let you know your options.
+
+**Okay, what are they?**
+
+Well, my favorite, is that since you were making changes here I'm hoping that
+you would be the most familiar with this module and be able to add some other
+examples or fix any of the reported issues.
+
+**If I can, then what?**
+
+Well, you can either add them to this PR or add them to another PR. Either way is fine!
+
+**Well... what if I can't, or don't want to?**
+
+That's also fine! We appreciate *all* contributions to the Salt Project. If you
+can't add those other examples, either because you're too busy, or unfamiliar,
+or you just aren't interested, we still appreciate the contributions that
+you've made already.
+
+Whatever approach you decide to take, just drop a comment in the PR letting us know!
+"""
+
+
+def annotate(kind: str, fpath: str, start_lineno: int, end_lineno: int, message: str):
+    if kind not in ("warning", "error"):
+        raise RuntimeError("The annotation kind can only be one of 'warning', 'error'.")
+    if os.environ.get("GH_ACTIONS_ANNOTATE") is None:
+        return
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        utils.warn("The 'GITHUB_OUTPUT' variable is not set. Not adding annotations.")
+        return
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    message = (
+        message.rstrip().replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+    )
+    # Print it to stdout so that the GitHub runner pick's it up and adds the annotation
+    print(
+        f"::{kind} file={fpath},line={start_lineno},endLine={end_lineno}::{message}",
+        file=sys.stdout,
+        flush=True,
+    )
+
 
 @task(iterable=["files"], positional=["files"])
 def check(ctx, files, check_proper_formatting=False, error_on_known_failures=False):
@@ -839,6 +909,13 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
                             path.relative_to(CODE_DIR),
                             *error,
                         )
+                        annotate(
+                            "error",
+                            path.relative_to(CODE_DIR),
+                            funcdef.lineno,
+                            funcdef.body[0].lineno,
+                            "Version {1:r!} is not valid for {0!r}".format(*error),
+                        )
 
                 if not str(path).startswith(SALT_INTERNAL_LOADERS_PATHS):
                     # No further docstrings checks are needed
@@ -863,6 +940,13 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
                             funcname,
                             relpath,
                         )
+                        annotate(
+                            "warning",
+                            path.relative_to(CODE_DIR),
+                            funcdef.lineno,
+                            funcdef.body[0].lineno,
+                            "Missing docstring",
+                        )
                         continue
                     errors += 1
                     exitcode = 1
@@ -870,6 +954,13 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
                         "The function '{}' on '{}' does not have a docstring",
                         funcname,
                         relpath,
+                    )
+                    annotate(
+                        "error",
+                        path.relative_to(CODE_DIR),
+                        funcdef.lineno,
+                        funcdef.body[0].lineno,
+                        "Missing docstring",
                     )
                     continue
                 elif funcname in MISSING_DOCSTRINGS.get(relpath, ()):
@@ -907,6 +998,13 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
                             funcname,
                             relpath,
                         )
+                        annotate(
+                            "warning",
+                            path.relative_to(CODE_DIR),
+                            funcdef.lineno,
+                            funcdef.body[0].lineno,
+                            "Missing 'CLI Example:' in docstring",
+                        )
                         continue
                     errors += 1
                     exitcode = 1
@@ -914,6 +1012,13 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
                         "The function '{}' on '{}' does not have a 'CLI Example:' in its docstring",
                         funcname,
                         relpath,
+                    )
+                    annotate(
+                        "error",
+                        path.relative_to(CODE_DIR),
+                        funcdef.lineno,
+                        funcdef.body[0].lineno,
+                        "Missing 'CLI Example:' in docstring",
                     )
                     continue
                 elif funcname in MISSING_EXAMPLES.get(relpath, ()):
@@ -948,6 +1053,19 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
                         funcdef.name,
                         path.relative_to(CODE_DIR),
                     )
+                    annotate(
+                        "warning",
+                        path.relative_to(CODE_DIR),
+                        funcdef.lineno,
+                        funcdef.body[0].lineno,
+                        "Wrong format in 'CLI Example:' in docstring.\n"
+                        "The proper format is:\n```"
+                        "CLI Example:\n"
+                        "\n"
+                        ".. code-block:: bash\n"
+                        "\n"
+                        "    salt '*' <insert example here>\n```",
+                    )
                     continue
         finally:
             if contents != path.read_text():
@@ -957,6 +1075,11 @@ def check(ctx, files, check_proper_formatting=False, error_on_known_failures=Fal
         utils.warn("Found {} warnings", warnings)
     if exitcode:
         utils.error("Found {} errors", errors)
+    if os.environ.get("GH_ACTIONS_ANNOTATE") and (warnings or errors):
+        github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+        if github_step_summary:
+            with open(github_step_summary, "w", encoding="utf-8") as wfh:
+                wfh.write(SUMMARY)
     utils.exit_invoke(exitcode)
 
 

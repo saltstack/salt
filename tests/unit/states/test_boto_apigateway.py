@@ -11,7 +11,7 @@ import salt.loader
 import salt.states.boto_apigateway as boto_apigateway
 import salt.utils.files
 import salt.utils.yaml
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -374,7 +374,7 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
+    elif Version(boto3.__version__) < Version(required_boto3_version):
         return False
     else:
         return True
@@ -386,7 +386,7 @@ def _has_required_botocore():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(botocore.__version__) < LooseVersion(required_botocore_version):
+    elif Version(botocore.__version__) < Version(required_botocore_version):
         return False
     else:
         return True

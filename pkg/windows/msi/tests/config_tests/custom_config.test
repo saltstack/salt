@@ -1,0 +1,2 @@
+properties START_MINION="" CONFIG_TYPE=Custom CUSTOM_CONFIG=tests\config_tests\custom_config.conf
+dormant

@@ -29,23 +29,25 @@ log = logging.getLogger(__name__)
 
 
 def _git_version():
-    try:
-        git_version = subprocess.Popen(
-            ["git", "--version"],
-            shell=False,
-            close_fds=False if salt.utils.platform.is_windows() else True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        ).communicate()[0]
-    except OSError:
-        return False
-    if not git_version:
+    git = shutil.which("git")
+    if not git:
         log.debug("Git not installed")
         return False
-    git_version = git_version.strip().split()[-1]
-    git_version = git_version.decode(__salt_system_encoding__)
+    ret = subprocess.run(
+        ["git", "--version"],
+        stdout=subprocess.PIPE,
+        check=False,
+        shell=False,
+        universal_newlines=True,
+    )
+    # On macOS, the git version is displayed in a different format
+    #  git version 2.21.1 (Apple Git-122.3)
+    # As opposed to:
+    #  git version 2.21.1
+    version_str = ret.stdout.strip().split("(")[0].strip().split()[-1]
+    git_version = LooseVersion(version_str)
     log.debug("Detected git version: %s", git_version)
-    return LooseVersion(git_version)
+    return git_version
 
 
 def _worktrees_supported():

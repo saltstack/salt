@@ -24,22 +24,14 @@ import os
 import pathlib
 
 import pytest
+import tornado.ioloop
 
-import salt.ext.tornado.ioloop
 import salt.fileserver.gitfs as gitfs
 import salt.utils.files
 import salt.utils.gitfs
 import salt.utils.platform
 import salt.utils.win_functions
 import salt.utils.yaml
-from salt.utils.gitfs import (
-    GITPYTHON_MINVER,
-    GITPYTHON_VERSION,
-    LIBGIT2_MINVER,
-    LIBGIT2_VERSION,
-    PYGIT2_MINVER,
-    PYGIT2_VERSION,
-)
 from tests.support.helpers import patched_environ
 from tests.support.mock import patch
 
@@ -54,14 +46,22 @@ try:
 
     # We still need to use GitPython here for temp repo setup, so we do need to
     # actually import it. But we don't need import pygit2 in this module, we
-    # can just use the LooseVersion instances imported along with
+    # can just use the Version instances imported along with
     # salt.utils.gitfs to check if we have a compatible version.
-    HAS_GITPYTHON = GITPYTHON_VERSION >= GITPYTHON_MINVER
+    HAS_GITPYTHON = (
+        salt.utils.gitfs.GITPYTHON_VERSION
+        and salt.utils.gitfs.GITPYTHON_VERSION >= salt.utils.gitfs.GITPYTHON_MINVER
+    )
 except (ImportError, AttributeError):
     HAS_GITPYTHON = False
 
 try:
-    HAS_PYGIT2 = PYGIT2_VERSION >= PYGIT2_MINVER and LIBGIT2_VERSION >= LIBGIT2_MINVER
+    HAS_PYGIT2 = (
+        salt.utils.gitfs.PYGIT2_VERSION
+        and salt.utils.gitfs.PYGIT2_VERSION >= salt.utils.gitfs.PYGIT2_MINVER
+        and salt.utils.gitfs.LIBGIT2_VERSION
+        and salt.utils.gitfs.LIBGIT2_VERSION >= salt.utils.gitfs.LIBGIT2_MINVER
+    )
 except AttributeError:
     HAS_PYGIT2 = False
 
@@ -72,13 +72,15 @@ log = logging.getLogger(__name__)
 def provider(request):
     if not HAS_GITPYTHON:
         pytest.skip(
-            "GitPython >= {} required for temp repo setup".format(GITPYTHON_MINVER)
+            "GitPython >= {} required for temp repo setup".format(
+                salt.utils.gitfs.GITPYTHON_MINVER
+            )
         )
     if request.param == "pygit2":
         if not HAS_PYGIT2:
             pytest.skip(
                 "pygit2 >= {} and libgit2 >= {} required".format(
-                    PYGIT2_MINVER, LIBGIT2_MINVER
+                    salt.utils.gitfs.PYGIT2_MINVER, salt.utils.gitfs.LIBGIT2_MINVER
                 )
             )
         if salt.utils.platform.is_windows():
@@ -124,9 +126,7 @@ def testfile(tmp_path):
 @pytest.fixture
 def repo_dir(tmp_path, unicode_dirname, tag_name, unicode_filename):
     try:
-        del salt.utils.gitfs.GitFS.instance_map[
-            salt.ext.tornado.ioloop.IOLoop.current()
-        ]
+        del salt.utils.gitfs.GitFS.instance_map[tornado.ioloop.IOLoop.current()]
     except KeyError:
         pass
 

@@ -486,12 +486,16 @@ def status(name, *args, **kwargs):
     .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
+    .. versionchanged:: 3006.0
+        Returns "Not Found" if the service is not found on the system
+
     Args:
         name (str): The name of the service to check
 
     Returns:
         bool: True if running, False otherwise
         dict: Maps service name to True if running, False otherwise
+        str: Not Found if the service is not found on the system
 
     CLI Example:
 
@@ -508,7 +512,10 @@ def status(name, *args, **kwargs):
     else:
         services = [name]
     for service in services:
-        results[service] = info(service)["Status"] in ["Running", "Stop Pending"]
+        try:
+            results[service] = info(service)["Status"] in ["Running", "Stop Pending"]
+        except CommandExecutionError:
+            results[service] = "Not Found"
     if contains_globbing:
         return results
     return results[name]

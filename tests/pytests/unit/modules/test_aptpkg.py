@@ -434,6 +434,45 @@ def test_install(install_var):
         kwargs = {"force_conf_new": True}
         assert aptpkg.install(name="tmux", **kwargs) == install_var
 
+    patch_kwargs = {
+        "__salt__": {
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=({"tmux": None}, "repository")
+            ),
+            "pkg_resource.sort_pkglist": MagicMock(),
+            "pkg_resource.stringify": MagicMock(),
+            "cmd.run_stdout": MagicMock(return_value="install ok installed python3\n"),
+        }
+    }
+    mock_call_apt_ret = {
+        "pid": 48174,
+        "retcode": 0,
+        "stdout": "Reading package lists...\nBuilding dependency tree...\nReading state information...\nvim is already the newest version (2:8.2.3995-1ubuntu2.4).\n",
+        "stderr": "Running scope as unit: run-rc2803bccd0b445a5b00788cd74b4e635.scope",
+    }
+    mock_call_apt = MagicMock(return_value=mock_call_apt_ret)
+    expected_call = call(
+        [
+            "apt-get",
+            "-q",
+            "-y",
+            "-o",
+            "DPkg::Options::=--force-confold",
+            "-o",
+            "DPkg::Options::=--force-confdef",
+            "install",
+            "tmux",
+        ],
+        scope=True,
+    )
+    with patch.multiple(aptpkg, **patch_kwargs):
+        with patch(
+            "salt.modules.aptpkg.get_selections", MagicMock(return_value={"hold": []})
+        ):
+            with patch("salt.modules.aptpkg._call_apt", mock_call_apt):
+                ret = aptpkg.install(name="tmux", scope=True)
+                assert expected_call in mock_call_apt.mock_calls
+
 
 def test_remove(uninstall_var):
     """
@@ -781,13 +820,6 @@ def test_mod_repo_match():
                                 )
 
 
-@patch("salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")]))
-@patch("os.path.getsize", MagicMock(return_value=123456))
-@patch("os.path.getctime", MagicMock(return_value=1234567890.123456))
-@patch(
-    "fnmatch.filter",
-    MagicMock(return_value=["/var/cache/apt/archive/test_package.rpm"]),
-)
 def test_list_downloaded():
     """
     Test downloaded packages listing.
@@ -803,8 +835,14 @@ def test_list_downloaded():
             }
         }
     }
-
-    with patch.dict(
+    with patch(
+        "salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")])
+    ), patch("os.path.getsize", MagicMock(return_value=123456)), patch(
+        "os.path.getctime", MagicMock(return_value=1234567890.123456)
+    ), patch(
+        "fnmatch.filter",
+        MagicMock(return_value=["/var/cache/apt/archive/test_package.rpm"]),
+    ), patch.dict(
         aptpkg.__salt__,
         {
             "lowpkg.bin_pkg_info": MagicMock(
@@ -1184,13 +1222,14 @@ def test_call_apt_default():
         )
 
 
-@patch("salt.utils.systemd.has_scope", MagicMock(return_value=True))
 def test_call_apt_in_scope():
     """
     Call apt within the scope.
     :return:
     """
-    with patch.dict(
+    with patch(
+        "salt.utils.systemd.has_scope", MagicMock(return_value=True)
+    ), patch.dict(
         aptpkg.__salt__,
         {"cmd.run_all": MagicMock(), "config.get": MagicMock(return_value=True)},
     ):
@@ -1251,17 +1290,17 @@ def test_call_apt_dpkg_lock():
     ]
 
     cmd_mock = MagicMock(side_effect=cmd_side_effect)
-    cmd_call = (
+    cmd_call = [
         call(
             ["dpkg", "-l", "python"],
-            env={},
-            ignore_retcode=False,
             output_loglevel="quiet",
             python_shell=True,
+            env={},
+            ignore_retcode=False,
             username="Darth Vader",
         ),
-    )
-    expected_calls = [cmd_call * 5]
+    ]
+    expected_calls = cmd_call * 5
 
     with patch.dict(
         aptpkg.__salt__,
@@ -1281,7 +1320,7 @@ def test_call_apt_dpkg_lock():
 
             # We should attempt to call the cmd 5 times
             assert cmd_mock.call_count == 5
-            cmd_mock.has_calls(expected_calls)
+            cmd_mock.assert_has_calls(expected_calls)
 
 
 def test_services_need_restart_checkrestart_missing():
@@ -1292,7 +1331,6 @@ def test_services_need_restart_checkrestart_missing():
             aptpkg.services_need_restart()
 
 
-@patch("salt.utils.path.which_bin", Mock(return_value="/usr/sbin/checkrestart"))
 def test_services_need_restart():
     """
     Test that checkrestart output is parsed correctly
@@ -1304,8 +1342,9 @@ PACKAGES: 8
 SERVICE:rsyslog,385,/usr/sbin/rsyslogd
 SERVICE:cups-daemon,390,/usr/sbin/cupsd
     """
-
-    with patch.dict(aptpkg.__salt__, {"cmd.run_stdout": Mock(return_value=cr_output)}):
+    with patch(
+        "salt.utils.path.which_bin", Mock(return_value="/usr/sbin/checkrestart")
+    ), patch.dict(aptpkg.__salt__, {"cmd.run_stdout": Mock(return_value=cr_output)}):
         assert sorted(aptpkg.services_need_restart()) == [
             "cups-daemon",
             "rsyslog",
@@ -1362,3 +1401,39 @@ def test_sourceslist_architectures(repo_line):
                     assert source.architectures == ["amd64", "armel"]
                 else:
                     assert source.architectures == ["amd64"]
+
+
+def test_latest_version_calls_aptcache_once_per_run():
+    """
+    Performance Test - don't call apt-cache once for each pkg, call once and parse output
+    """
+    mock_list_pkgs = MagicMock(return_value={"sudo": "1.8.27-1+deb10u5"})
+    apt_cache_ret = {
+        "stdout": textwrap.dedent(
+            """sudo:
+              Installed: 1.8.27-1+deb10u5
+              Candidate: 1.8.27-1+deb10u5
+              Version table:
+             *** 1.8.27-1+deb10u5 500
+                    500 http://security.debian.org/debian-security buster/updates/main amd64 Packages
+                    100 /var/lib/dpkg/status
+                 1.8.27-1+deb10u3 500
+                    500 http://deb.debian.org/debian buster/main amd64 Packages
+            unzip:
+              Installed: (none)
+              Candidate: 6.0-23+deb10u3
+              Version table:
+                 6.0-23+deb10u3 500
+                    500 http://security.debian.org/debian-security buster/updates/main amd64 Packages
+                 6.0-23+deb10u2 500
+                    500 http://deb.debian.org/debian buster/main amd64 Packages
+            """
+        )
+    }
+    mock_apt_cache = MagicMock(return_value=apt_cache_ret)
+    with patch("salt.modules.aptpkg._call_apt", mock_apt_cache), patch(
+        "salt.modules.aptpkg.list_pkgs", mock_list_pkgs
+    ):
+        ret = aptpkg.latest_version("sudo", "unzip", refresh=False)
+    mock_apt_cache.assert_called_once()
+    assert ret == {"sudo": "6.0-23+deb10u3", "unzip": ""}

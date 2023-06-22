@@ -5,7 +5,7 @@ import pytest
 import salt.utils.boto3mod as boto3mod
 import salt.utils.botomod as botomod
 from salt.exceptions import SaltInvocationError
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -97,7 +97,7 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
+    elif Version(boto.__version__) < Version(required_boto_version):
         return False
     else:
         return True
@@ -111,7 +111,7 @@ def _has_required_boto3():
     try:
         if not HAS_BOTO3:
             return False
-        elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
+        elif Version(boto3.__version__) < Version(required_boto3_version):
             return False
         else:
             return True
@@ -131,9 +131,7 @@ def _has_required_moto():
     else:
         import pkg_resources
 
-        if LooseVersion(pkg_resources.get_distribution("moto").version) < LooseVersion(
-            "0.3.7"
-        ):
+        if Version(pkg_resources.get_distribution("moto").version) < Version("0.3.7"):
             return False
         return True
 

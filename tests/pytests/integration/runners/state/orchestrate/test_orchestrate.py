@@ -1,8 +1,3 @@
-"""
-Tests for state.orchestrate
-"""
-import os
-
 import pytest
 
 pytestmark = [
@@ -484,12 +479,22 @@ def test_orchestrate_batch_with_failhard_error(
     assert len(changes["ret"]) == 1
 
 
+def _check_skip(grains):
+    if grains["os"] == "Fedora":
+        return True
+    if grains["os"] == "VMware Photon OS" and grains["osmajorrelease"] == 4:
+        return True
+    if grains["os"] == "Ubuntu" and grains["osmajorrelease"] in (20, 22):
+        return True
+    return False
+
+
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_orchestrate_subset(
     salt_run_cli,
     salt_master,
     salt_minion,
     salt_sub_minion,
-    grains,
 ):
     """
     test orchestration state using subset
@@ -506,17 +511,10 @@ def test_orchestrate_subset(
       test.succeed_without_changes:
         - name: test
     """
-    if os.environ.get("CI_RUN", "0") == "1":
-        if grains["os"] == "Fedora" and int(grains["osrelease"]) == 35:
-            # This test is flaky on Fedora 35 - Don't really know why, because,
-            # of course, this test module passes when running locally on a
-            # Fedora 35 container.
-            pytest.skip("Skipping flaky Fedora 35 test for now, on CI runs.")
-
     with salt_master.state_tree.base.temp_file(
         "orch/subset.sls", sls_contents
     ), salt_master.state_tree.base.temp_file("test.sls", test_sls):
-        ret = salt_run_cli.run("state.orchestrate", "orch.subset")
+        ret = salt_run_cli.run("state.orchestrate", "orch.subset", _timeout=60)
         assert ret.returncode == 0
 
     for state_data in ret.data["data"][salt_master.id].values():

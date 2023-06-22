@@ -740,7 +740,19 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
             except AttributeError:
                 log.debug("rpmUtils.miscutils.compareEVR is not available")
 
+        # If one EVR is missing a release but not the other and they
+        # otherwise would be equal, ignore the release. This can happen if
+        # e.g. you are checking if a package version 3.2 is satisfied by
+        # 3.2-1.
+        (ver1_e, ver1_v, ver1_r) = salt.utils.pkg.rpm.version_to_evr(ver1)
+        (ver2_e, ver2_v, ver2_r) = salt.utils.pkg.rpm.version_to_evr(ver2)
+
+        if not ver1_r or not ver2_r:
+            ver1_r = ver2_r = ""
+
         if cmp_func is None:
+            ver1 = f"{ver1_e}:{ver1_v}-{ver1_r}"
+            ver2 = f"{ver2_e}:{ver2_v}-{ver2_r}"
             if salt.utils.path.which("rpmdev-vercmp"):
                 log.warning(
                     "Installing the rpmdevtools package may surface dev tools in"
@@ -790,16 +802,10 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                     " comparisons"
                 )
         else:
-            # If one EVR is missing a release but not the other and they
-            # otherwise would be equal, ignore the release. This can happen if
-            # e.g. you are checking if a package version 3.2 is satisfied by
-            # 3.2-1.
-            (ver1_e, ver1_v, ver1_r) = salt.utils.pkg.rpm.version_to_evr(ver1)
-            (ver2_e, ver2_v, ver2_r) = salt.utils.pkg.rpm.version_to_evr(ver2)
-            if not ver1_r or not ver2_r:
-                ver1_r = ver2_r = ""
-
             if HAS_PY_RPM:
+                ver1 = f"{ver1_v}-{ver1_r}"
+                ver2 = f"{ver2_v}-{ver2_r}"
+
                 # handle epoch version comparison first
                 # rpm_vercmp.vercmp does not handle epoch version comparison
                 ret = salt.utils.versions.version_cmp(ver1_e, ver2_e)

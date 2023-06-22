@@ -1,1 +1,0 @@
-Add postgres.timeout option to postgres module for limiting postgres query times

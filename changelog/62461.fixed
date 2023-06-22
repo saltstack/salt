@@ -1,1 +1,0 @@
-sysctl.persist now updates the in-memory value on FreeBSD even if the on-disk value was already correct.

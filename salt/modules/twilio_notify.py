@@ -27,14 +27,20 @@ try:
 
     # Grab version, ensure elements are ints
     twilio_version = tuple(int(x) for x in twilio.__version_info__)
-    if twilio_version > (5,):
-        TWILIO_5 = False
+    TWILIO_LT_5 = False
+    if twilio_version > (6,):
+        from twilio.base.exceptions import TwilioRestException
+        from twilio.rest import Client as TwilioRestClient
+    elif twilio_version > (5,):
+        # pylint: disable=no-name-in-module
         from twilio.rest import Client as TwilioRestClient
         from twilio.rest import TwilioException as TwilioRestException
+
+        # pylint: enable=no-name-in-module
     else:
-        TWILIO_5 = True
+        TWILIO_LT_5 = True
         from twilio import TwilioRestException  # pylint: disable=no-name-in-module
-        from twilio.rest import TwilioRestClient
+        from twilio.rest import TwilioRestClient  # pylint: disable=no-name-in-module
     HAS_LIBS = True
 except ImportError:
     pass
@@ -84,7 +90,7 @@ def send_sms(profile, body, to, from_):
     ret["message"]["sid"] = None
     client = _get_twilio(profile)
     try:
-        if TWILIO_5:
+        if TWILIO_LT_5:
             message = client.sms.messages.create(body=body, to=to, from_=from_)
         else:
             message = client.messages.create(body=body, to=to, from_=from_)

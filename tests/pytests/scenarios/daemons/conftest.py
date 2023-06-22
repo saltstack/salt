@@ -16,7 +16,7 @@ def salt_master_factory(request, salt_factories):
         random_string("master-daemonized-"),
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
 
 
@@ -29,5 +29,5 @@ def salt_minion_factory(salt_master_factory):
     return salt_master_factory.salt_minion_daemon(
         random_string("minion-daemonized-"),
         defaults=config_defaults,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )

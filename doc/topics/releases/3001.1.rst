@@ -14,7 +14,7 @@ Changed
   to address some issues with slowness. (#56296, #57529)
 - Handle the UCRT libraries the same way they are handled in the Python 3
   installer (#57594)
-- Changes the 'SSDs' grain name to 'ssds' as all grains needs to be 
+- Changes the 'SSDs' grain name to 'ssds' as all grains needs to be
   resolved in lowered case. (#57612)
 
 
@@ -32,7 +32,7 @@ Fixed
   anything in stdout. This causes the JSON parser to fail because an empty string
   is not valid JSON. This changes an empty string to `{}` which is valid JSON and
   will not cause the JSON loader to stacktrace. (#57493)
-- Improves performance. Profiling `test.ping` on Windows shows that 13 of 17 
+- Improves performance. Profiling `test.ping` on Windows shows that 13 of 17
   seconds are wasted when the esxi grain loads vsphere before noting that
   the OS is not a esxi host. (#57529)
 - Fixed permissions issue with certain pip/virtualenv states/modules when configured for non-root user. (#57550)
@@ -60,4 +60,3 @@ Added
 -----
 
 - Added docs demonstrating how to apply an MSI patch with winrepo (#32780)
-

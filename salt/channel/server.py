@@ -10,8 +10,9 @@ import logging
 import os
 import shutil
 
+import tornado.gen
+
 import salt.crypt
-import salt.ext.tornado.gen
 import salt.master
 import salt.payload
 import salt.transport.frame
@@ -100,7 +101,7 @@ class ReqServerChannel:
         if hasattr(self.transport, "post_fork"):
             self.transport.post_fork(self.handle_message, io_loop)
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def handle_message(self, payload):
         try:
             payload = self._decode_payload(payload)
@@ -115,7 +116,7 @@ class ReqServerChannel:
                 )
             else:
                 log.error("Bad load from minion: %s: %s", exc_type, exc)
-            raise salt.ext.tornado.gen.Return("bad load")
+            raise tornado.gen.Return("bad load")
 
         # TODO helper functions to normalize payload?
         if not isinstance(payload, dict) or not isinstance(payload.get("load"), dict):
@@ -124,18 +125,16 @@ class ReqServerChannel:
                 payload,
                 payload.get("load"),
             )
-            raise salt.ext.tornado.gen.Return("payload and load must be a dict")
+            raise tornado.gen.Return("payload and load must be a dict")
 
         try:
             id_ = payload["load"].get("id", "")
             if "\0" in id_:
                 log.error("Payload contains an id with a null byte: %s", payload)
-                raise salt.ext.tornado.gen.Return("bad load: id contains a null byte")
+                raise tornado.gen.Return("bad load: id contains a null byte")
         except TypeError:
             log.error("Payload contains non-string id: %s", payload)
-            raise salt.ext.tornado.gen.Return(
-                "bad load: id {} is not a string".format(id_)
-            )
+            raise tornado.gen.Return("bad load: id {} is not a string".format(id_))
 
         version = 0
         if "version" in payload:
@@ -148,9 +147,7 @@ class ReqServerChannel:
         # intercept the "_auth" commands, since the main daemon shouldn't know
         # anything about our key auth
         if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
-            raise salt.ext.tornado.gen.Return(
-                self._auth(payload["load"], sign_messages)
-            )
+            raise tornado.gen.Return(self._auth(payload["load"], sign_messages))
 
         nonce = None
         if version > 1:
@@ -164,15 +161,15 @@ class ReqServerChannel:
         except Exception as e:  # pylint: disable=broad-except
             # always attempt to return an error to the minion
             log.error("Some exception handling a payload from minion", exc_info=True)
-            raise salt.ext.tornado.gen.Return("Some exception handling minion payload")
+            raise tornado.gen.Return("Some exception handling minion payload")
 
         req_fun = req_opts.get("fun", "send")
         if req_fun == "send_clear":
-            raise salt.ext.tornado.gen.Return(ret)
+            raise tornado.gen.Return(ret)
         elif req_fun == "send":
-            raise salt.ext.tornado.gen.Return(self.crypticle.dumps(ret, nonce))
+            raise tornado.gen.Return(self.crypticle.dumps(ret, nonce))
         elif req_fun == "send_private":
-            raise salt.ext.tornado.gen.Return(
+            raise tornado.gen.Return(
                 self._encrypt_private(
                     ret,
                     req_opts["key"],
@@ -183,7 +180,7 @@ class ReqServerChannel:
             )
         log.error("Unknown req_fun %s", req_fun)
         # always attempt to return an error to the minion
-        raise salt.ext.tornado.gen.Return("Server-side exception handling payload")
+        raise tornado.gen.Return("Server-side exception handling payload")
 
     def _encrypt_private(self, ret, dictkey, target, nonce=None, sign_messages=True):
         """
@@ -774,7 +771,9 @@ class PubServerChannel:
         secrets = kwargs.get("secrets", None)
         if secrets is not None:
             salt.master.SMaster.secrets = secrets
-        self.transport.publish_daemon(self.publish_payload, self.presence_callback)
+        self.transport.publish_daemon(
+            self.publish_payload, self.presence_callback, self.remove_presence_callback
+        )
 
     def presence_callback(self, subscriber, msg):
         if msg["enc"] != "aes":
@@ -838,7 +837,7 @@ class PubServerChannel:
                     data, salt.utils.event.tagify("present", "presence")
                 )
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def publish_payload(self, load, *args):
         unpacked_package = self.wrap_payload(load)
         try:
@@ -851,7 +850,7 @@ class PubServerChannel:
             ret = yield self.transport.publish_payload(payload, topic_list)
         else:
             ret = yield self.transport.publish_payload(payload)
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)
 
     def wrap_payload(self, load):
         payload = {"enc": "aes"}

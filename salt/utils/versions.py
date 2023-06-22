@@ -1,13 +1,10 @@
 """
-    :copyright: Copyright 2017 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
-
-
     salt.utils.versions
     ~~~~~~~~~~~~~~~~~~~
 
-    Version parsing based on distutils.version which works under python 3
-    because on python 3 you can no longer compare strings against integers.
+    Version parsing based on `packaging.version` and `looseversion.LooseVersion`
+    which works under python 3 because on python 3 you can no longer compare
+    strings against integers.
 """
 
 
@@ -18,30 +15,63 @@ import numbers
 import sys
 import warnings
 
-# pylint: disable=blacklisted-module
-from distutils.version import LooseVersion as _LooseVersion
-from distutils.version import StrictVersion as _StrictVersion
+import looseversion
+import packaging.version
 
-# pylint: enable=blacklisted-module
 import salt.version
 
 log = logging.getLogger(__name__)
 
 
-class StrictVersion(_StrictVersion):
-    def parse(self, vstring):
-        _StrictVersion.parse(self, vstring)
-
-    def _cmp(self, other):
+class Version(packaging.version.Version):
+    def __lt__(self, other):
         if isinstance(other, str):
-            other = StrictVersion(other)
-        return _StrictVersion._cmp(self, other)
+            other = Version(other)
+        return super().__lt__(other)
+
+    def __le__(self, other):
+        if isinstance(other, str):
+            other = Version(other)
+        return super().__le__(other)
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            other = Version(other)
+        return super().__eq__(other)
+
+    def __ge__(self, other):
+        if isinstance(other, str):
+            other = Version(other)
+        return super().__ge__(other)
+
+    def __gt__(self, other):
+        if isinstance(other, str):
+            other = Version(other)
+        return super().__gt__(other)
+
+    def __ne__(self, other):
+        if isinstance(other, str):
+            other = Version(other)
+        return super().__ne__(other)
 
 
-class LooseVersion(_LooseVersion):
+class StrictVersion(Version):
+    def __init__(self, *args, **kwargs):
+        warn_until(
+            3008,
+            f"'{__name__}.StrictVersion' is no longer a subclass of "
+            "'distutils.versions.StrictVersion'. It's usage has been "
+            "deprecated and should no longer be used. Please switch to "
+            f"'{__name__}.Version' which is a subclass of "
+            f"'packaging.version.Version'. '{__name__}.StrictVersion' will "
+            "be removed in {version}.",
+        )
+        super().__init__(*args, **kwargs)
+
+
+class LooseVersion(looseversion.LooseVersion):
     def parse(self, vstring):
-        _LooseVersion.parse(self, vstring)
-
+        super().parse(vstring)
         # Convert every part of the version to string in order to be able to compare
         self._str_version = [
             str(vp).zfill(8) if isinstance(vp, int) else vp for vp in self.version
@@ -58,7 +88,7 @@ class LooseVersion(_LooseVersion):
                 break
 
         if string_in_version is False:
-            return _LooseVersion._cmp(self, other)
+            return super()._cmp(other)
 
         # If we reached this far, it means at least a part of the version contains a string
         # In python 3, strings and integers are not comparable
@@ -75,7 +105,7 @@ def _format_warning(message, category, filename, lineno, line=None):
     Replacement for warnings.formatwarning that disables the echoing of
     the 'line' parameter.
     """
-    return "{}:{}: {}: {}\n".format(filename, lineno, category.__name__, message)
+    return f"{filename}:{lineno}: {category.__name__}: {message}\n"
 
 
 def warn_until(
@@ -287,7 +317,7 @@ def kwargs_warn_until(
     _version_ = salt.version.SaltStackVersion(*_version_info_)
 
     if kwargs or _version_.info >= version.info:
-        arg_names = ", ".join("'{}'".format(key) for key in kwargs)
+        arg_names = ", ".join(f"'{key}'" for key in kwargs)
         warn_until(
             version,
             message=(
@@ -303,7 +333,7 @@ def kwargs_warn_until(
 
 def version_cmp(pkg1, pkg2, ignore_epoch=False):
     """
-    Compares two version strings using salt.utils.versions.LooseVersion. This
+    Compares two version strings using `LooseVersion`. This
     is a fallback for providers which don't have a version comparison utility
     built into them.  Return -1 if version1 < version2, 0 if version1 ==
     version2, and 1 if version1 > version2. Return None if there was a problem
@@ -403,7 +433,7 @@ def check_boto_reqs(
             boto_ver = "2.0.0"
 
         if not has_boto or version_cmp(boto.__version__, boto_ver) == -1:
-            return False, "A minimum version of boto {} is required.".format(boto_ver)
+            return False, f"A minimum version of boto {boto_ver} is required."
 
     if check_boto3 is True:
         try:
@@ -425,12 +455,12 @@ def check_boto_reqs(
         if not has_boto3 or version_cmp(boto3.__version__, boto3_ver) == -1:
             return (
                 False,
-                "A minimum version of boto3 {} is required.".format(boto3_ver),
+                f"A minimum version of boto3 {boto3_ver} is required.",
             )
         elif version_cmp(botocore.__version__, botocore_ver) == -1:
             return (
                 False,
-                "A minimum version of botocore {} is required".format(botocore_ver),
+                f"A minimum version of botocore {botocore_ver} is required",
             )
 
     return True

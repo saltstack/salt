@@ -1,0 +1,71 @@
+---
+name: cached-virtualenv
+description: Setup a cached python virtual environment
+
+inputs:
+  name:
+    required: true
+    type: string
+    description: The Virtualenv Name
+  cache-seed:
+    required: true
+    type: string
+    description: Seed used to invalidate caches
+outputs:
+  cache-hit:
+    value: ${{ steps.cache-virtualenv.outputs.cache-hit }}
+  cache-key:
+    value: ${{ steps.setup-cache-key.outputs.cache-key }}
+  python-executable:
+    value: ${{ steps.define-python-executable.outputs.python-executable }}
+
+
+env:
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Get Python Version
+      id: get-python-version
+      uses: ./.github/actions/get-python-version
+      with:
+        python-binary: python3
+
+    - name: Setup Cache Key
+      shell: bash
+      id: setup-cache-key
+      run: |
+        echo "cache-key=${{ inputs.cache-seed }}|${{ runner.os }}|${{ runner.arch }}|cached-venv|${{ steps.get-python-version.outputs.version }}|${{ inputs.name }}" >> "${GITHUB_OUTPUT}"
+
+    - name: Cache VirtualEnv
+      id: cache-virtualenv
+      uses: actions/cache@v3
+      with:
+        key: ${{ steps.setup-cache-key.outputs.cache-key }}
+        path: ${{ github.workspace }}/.venvs/py${{ steps.get-python-version.outputs.version }}/${{ inputs.name }}
+
+    - name: Create Virtualenv
+      shell: bash
+      if: ${{ steps.cache-virtualenv.outputs.cache-hit != 'true' }}
+      run: |
+        mkdir -p ${{ github.workspace }}/.venvs/py${{ steps.get-python-version.outputs.version }}
+        python3 -m venv --upgrade ${{ github.workspace }}/.venvs/py${{ steps.get-python-version.outputs.version }}/${{ inputs.name }}
+
+    - name: Define python executable output
+      shell: bash
+      id: define-python-executable
+      run: |
+        shopt -s nocasematch
+        if [[ "${{ runner.os }}" =~ "win" ]]; then
+          BIN_DIR="${{ github.workspace }}/.venvs/py${{ steps.get-python-version.outputs.version }}/${{ inputs.name }}/Scripts"
+        else
+          BIN_DIR="${{ github.workspace }}/.venvs/py${{ steps.get-python-version.outputs.version }}/${{ inputs.name }}/bin"
+        fi
+        shopt -u nocasematch
+        echo "python-executable=$BIN_DIR/python" >> "${GITHUB_OUTPUT}"
+        echo "${BIN_DIR}" >> "${GITHUB_PATH}"

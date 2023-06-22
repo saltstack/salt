@@ -1,5 +1,6 @@
 import os
 import sys
+from textwrap import dedent
 
 import pytest
 
@@ -78,7 +79,15 @@ def test__pip_bin_env_no_bin_env():
     assert ret is None
 
 
-def test_install_frozen_app():
+@pytest.fixture
+def python_binary():
+    binary = [sys.executable, "-m", "pip"]
+    if hasattr(sys, "RELENV"):
+        binary = [str(sys.RELENV / "salt-pip")]
+    return binary
+
+
+def test_install_frozen_app(python_binary):
     pkg = "pep8"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch("sys.frozen", True, create=True):
@@ -86,8 +95,7 @@ def test_install_frozen_app():
             with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
                 pip.install(pkg)
                 expected = [
-                    sys.executable,
-                    "pip",
+                    *python_binary,
                     "install",
                     pkg,
                 ]
@@ -100,7 +108,7 @@ def test_install_frozen_app():
                 )
 
 
-def test_install_source_app():
+def test_install_source_app(python_binary):
     pkg = "pep8"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch("sys.frozen", False, create=True):
@@ -108,9 +116,7 @@ def test_install_source_app():
             with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
                 pip.install(pkg)
                 expected = [
-                    sys.executable,
-                    "-m",
-                    "pip",
+                    *python_binary,
                     "install",
                     pkg,
                 ]
@@ -123,14 +129,12 @@ def test_install_source_app():
                 )
 
 
-def test_fix4361():
+def test_fix4361(python_binary):
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(requirements="requirements.txt")
         expected_cmd = [
-            sys.executable,
-            "-m",
-            "pip",
+            *python_binary,
             "install",
             "--requirement",
             "requirements.txt",
@@ -154,13 +158,13 @@ def test_install_editable_without_egg_fails():
         )
 
 
-def test_install_multiple_editable():
+def test_install_multiple_editable(python_binary):
     editables = [
-        "git+https://github.com/jek/blinker.git#egg=Blinker",
+        "git+https://github.com/saltstack/istr.git@v1.0.1#egg=iStr",
         "git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting",
     ]
 
-    expected = [sys.executable, "-m", "pip", "install"]
+    expected = [*python_binary, "install"]
     for item in editables:
         expected.extend(["--editable", item])
 
@@ -189,14 +193,14 @@ def test_install_multiple_editable():
         )
 
 
-def test_install_multiple_pkgs_and_editables():
+def test_install_multiple_pkgs_and_editables(python_binary):
     pkgs = ["pep8", "salt"]
     editables = [
-        "git+https://github.com/jek/blinker.git#egg=Blinker",
+        "git+https://github.com/saltstack/istr.git@v1.0.1#egg=iStr",
         "git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting",
     ]
 
-    expected = [sys.executable, "-m", "pip", "install"]
+    expected = [*python_binary, "install"]
     expected.extend(pkgs)
     for item in editables:
         expected.extend(["--editable", item])
@@ -230,9 +234,7 @@ def test_install_multiple_pkgs_and_editables():
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkgs=pkgs[0], editable=editables[0])
         expected = [
-            sys.executable,
-            "-m",
-            "pip",
+            *python_binary,
             "install",
             pkgs[0],
             "--editable",
@@ -247,7 +249,7 @@ def test_install_multiple_pkgs_and_editables():
         )
 
 
-def test_issue5940_install_multiple_pip_mirrors():
+def test_issue5940_install_multiple_pip_mirrors(python_binary):
     """
     test multiple pip mirrors.  This test only works with pip < 7.0.0
     """
@@ -258,7 +260,7 @@ def test_issue5940_install_multiple_pip_mirrors():
             "http://pypi.crate.io",
         ]
 
-        expected = [sys.executable, "-m", "pip", "install", "--use-mirrors"]
+        expected = [*python_binary, "install", "--use-mirrors"]
         for item in mirrors:
             expected.extend(["--mirrors", item])
         expected.append("pep8")
@@ -288,9 +290,7 @@ def test_issue5940_install_multiple_pip_mirrors():
             )
 
         expected = [
-            sys.executable,
-            "-m",
-            "pip",
+            *python_binary,
             "install",
             "--use-mirrors",
             "--mirrors",
@@ -311,7 +311,7 @@ def test_issue5940_install_multiple_pip_mirrors():
             )
 
 
-def test_install_with_multiple_find_links():
+def test_install_with_multiple_find_links(python_binary):
     find_links = [
         "http://g.pypi.python.org",
         "http://c.pypi.python.org",
@@ -319,7 +319,7 @@ def test_install_with_multiple_find_links():
     ]
     pkg = "pep8"
 
-    expected = [sys.executable, "-m", "pip", "install"]
+    expected = [*python_binary, "install"]
     for item in find_links:
         expected.extend(["--find-links", item])
     expected.append(pkg)
@@ -361,9 +361,7 @@ def test_install_with_multiple_find_links():
         )
 
     expected = [
-        sys.executable,
-        "-m",
-        "pip",
+        *python_binary,
         "install",
         "--find-links",
         find_links[0],
@@ -421,16 +419,14 @@ def test_install_failed_cached_requirements():
         assert "my_test_reqs" in ret["comment"]
 
 
-def test_install_cached_requirements_used():
+def test_install_cached_requirements_used(python_binary):
     with patch("salt.modules.pip._get_cached_requirements") as get_cached_requirements:
         get_cached_requirements.return_value = "my_cached_reqs"
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(requirements="salt://requirements.txt")
             expected = [
-                sys.executable,
-                "-m",
-                "pip",
+                *python_binary,
                 "install",
                 "--requirement",
                 "my_cached_reqs",
@@ -478,7 +474,7 @@ def test_install_venv():
             )
 
 
-def test_install_log_argument_in_resulting_command():
+def test_install_log_argument_in_resulting_command(python_binary):
     with patch("os.access") as mock_path:
         pkg = "pep8"
         log_path = "/tmp/pip-install.log"
@@ -486,9 +482,7 @@ def test_install_log_argument_in_resulting_command():
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(pkg, log=log_path)
             expected = [
-                sys.executable,
-                "-m",
-                "pip",
+                *python_binary,
                 "install",
                 "--log",
                 log_path,
@@ -514,10 +508,10 @@ def test_non_writeable_log():
             pytest.raises(IOError, pip.install, pkg, log=log_path)
 
 
-def test_install_timeout_argument_in_resulting_command():
+def test_install_timeout_argument_in_resulting_command(python_binary):
     # Passing an int
     pkg = "pep8"
-    expected = [sys.executable, "-m", "pip", "install", "--timeout"]
+    expected = [*python_binary, "install", "--timeout"]
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, timeout=10)
@@ -547,16 +541,14 @@ def test_install_timeout_argument_in_resulting_command():
         pytest.raises(ValueError, pip.install, pkg, timeout="a")
 
 
-def test_install_index_url_argument_in_resulting_command():
+def test_install_index_url_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     index_url = "http://foo.tld"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, index_url=index_url)
         expected = [
-            sys.executable,
-            "-m",
-            "pip",
+            *python_binary,
             "install",
             "--index-url",
             index_url,
@@ -571,16 +563,14 @@ def test_install_index_url_argument_in_resulting_command():
         )
 
 
-def test_install_extra_index_url_argument_in_resulting_command():
+def test_install_extra_index_url_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     extra_index_url = "http://foo.tld"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, extra_index_url=extra_index_url)
         expected = [
-            sys.executable,
-            "-m",
-            "pip",
+            *python_binary,
             "install",
             "--extra-index-url",
             extra_index_url,
@@ -595,12 +585,12 @@ def test_install_extra_index_url_argument_in_resulting_command():
         )
 
 
-def test_install_no_index_argument_in_resulting_command():
+def test_install_no_index_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, no_index=True)
-        expected = [sys.executable, "-m", "pip", "install", "--no-index", pkg]
+        expected = [*python_binary, "install", "--no-index", pkg]
         mock.assert_called_with(
             expected,
             saltenv="base",
@@ -610,13 +600,13 @@ def test_install_no_index_argument_in_resulting_command():
         )
 
 
-def test_install_build_argument_in_resulting_command():
+def test_install_build_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     build = "/tmp/foo"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, build=build)
-        expected = [sys.executable, "-m", "pip", "install", "--build", build, pkg]
+        expected = [*python_binary, "install", "--build", build, pkg]
         mock.assert_called_with(
             expected,
             saltenv="base",
@@ -626,13 +616,13 @@ def test_install_build_argument_in_resulting_command():
         )
 
 
-def test_install_target_argument_in_resulting_command():
+def test_install_target_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     target = "/tmp/foo"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, target=target)
-        expected = [sys.executable, "-m", "pip", "install", "--target", target, pkg]
+        expected = [*python_binary, "install", "--target", target, pkg]
         mock.assert_called_with(
             expected,
             saltenv="base",
@@ -642,16 +632,14 @@ def test_install_target_argument_in_resulting_command():
         )
 
 
-def test_install_download_argument_in_resulting_command():
+def test_install_download_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     download = "/tmp/foo"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, download=download)
         expected = [
-            sys.executable,
-            "-m",
-            "pip",
+            *python_binary,
             "install",
             "--download",
             download,
@@ -666,12 +654,12 @@ def test_install_download_argument_in_resulting_command():
         )
 
 
-def test_install_no_download_argument_in_resulting_command():
+def test_install_no_download_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, no_download=True)
-        expected = [sys.executable, "-m", "pip", "install", "--no-download", pkg]
+        expected = [*python_binary, "install", "--no-download", pkg]
         mock.assert_called_with(
             expected,
             saltenv="base",
@@ -681,7 +669,7 @@ def test_install_no_download_argument_in_resulting_command():
         )
 
 
-def test_install_download_cache_dir_arguments_in_resulting_command():
+def test_install_download_cache_dir_arguments_in_resulting_command(python_binary):
     pkg = "pep8"
     cache_dir_arg_mapping = {
         "1.5.6": "--download-cache",
@@ -696,9 +684,7 @@ def test_install_download_cache_dir_arguments_in_resulting_command():
                 # test `download_cache` kwarg
                 pip.install(pkg, download_cache="/tmp/foo")
                 expected = [
-                    sys.executable,
-                    "-m",
-                    "pip",
+                    *python_binary,
                     "install",
                     cmd_arg,
                     download_cache,
@@ -723,13 +709,13 @@ def test_install_download_cache_dir_arguments_in_resulting_command():
                 )
 
 
-def test_install_source_argument_in_resulting_command():
+def test_install_source_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     source = "/tmp/foo"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, source=source)
-        expected = [sys.executable, "-m", "pip", "install", "--source", source, pkg]
+        expected = [*python_binary, "install", "--source", source, pkg]
         mock.assert_called_with(
             expected,
             saltenv="base",
@@ -739,16 +725,14 @@ def test_install_source_argument_in_resulting_command():
         )
 
 
-def test_install_exists_action_argument_in_resulting_command():
+def test_install_exists_action_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     for action in ("s", "i", "w", "b"):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(pkg, exists_action=action)
             expected = [
-                sys.executable,
-                "-m",
-                "pip",
+                *python_binary,
                 "install",
                 "--exists-action",
                 action,
@@ -768,11 +752,11 @@ def test_install_exists_action_argument_in_resulting_command():
         pytest.raises(CommandExecutionError, pip.install, pkg, exists_action="d")
 
 
-def test_install_install_options_argument_in_resulting_command():
+def test_install_install_options_argument_in_resulting_command(python_binary):
     install_options = ["--exec-prefix=/foo/bar", "--install-scripts=/foo/bar/bin"]
     pkg = "pep8"
 
-    expected = [sys.executable, "-m", "pip", "install"]
+    expected = [*python_binary, "install"]
     for item in install_options:
         expected.extend(["--install-option", item])
     expected.append(pkg)
@@ -806,9 +790,7 @@ def test_install_install_options_argument_in_resulting_command():
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, install_options=install_options[0])
         expected = [
-            sys.executable,
-            "-m",
-            "pip",
+            *python_binary,
             "install",
             "--install-option",
             install_options[0],
@@ -823,11 +805,11 @@ def test_install_install_options_argument_in_resulting_command():
         )
 
 
-def test_install_global_options_argument_in_resulting_command():
+def test_install_global_options_argument_in_resulting_command(python_binary):
     global_options = ["--quiet", "--no-user-cfg"]
     pkg = "pep8"
 
-    expected = [sys.executable, "-m", "pip", "install"]
+    expected = [*python_binary, "install"]
     for item in global_options:
         expected.extend(["--global-option", item])
     expected.append(pkg)
@@ -861,9 +843,7 @@ def test_install_global_options_argument_in_resulting_command():
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, global_options=global_options[0])
         expected = [
-            sys.executable,
-            "-m",
-            "pip",
+            *python_binary,
             "install",
             "--global-option",
             global_options[0],
@@ -878,12 +858,12 @@ def test_install_global_options_argument_in_resulting_command():
         )
 
 
-def test_install_upgrade_argument_in_resulting_command():
+def test_install_upgrade_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, upgrade=True)
-        expected = [sys.executable, "-m", "pip", "install", "--upgrade", pkg]
+        expected = [*python_binary, "install", "--upgrade", pkg]
         mock.assert_called_with(
             expected,
             saltenv="base",
@@ -893,15 +873,13 @@ def test_install_upgrade_argument_in_resulting_command():
         )
 
 
-def test_install_force_reinstall_argument_in_resulting_command():
+def test_install_force_reinstall_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, force_reinstall=True)
         expected = [
-            sys.executable,
-            "-m",
-            "pip",
+            *python_binary,
             "install",
             "--force-reinstall",
             pkg,
@@ -915,15 +893,13 @@ def test_install_force_reinstall_argument_in_resulting_command():
         )
 
 
-def test_install_ignore_installed_argument_in_resulting_command():
+def test_install_ignore_installed_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, ignore_installed=True)
         expected = [
-            sys.executable,
-            "-m",
-            "pip",
+            *python_binary,
             "install",
             "--ignore-installed",
             pkg,
@@ -937,12 +913,12 @@ def test_install_ignore_installed_argument_in_resulting_command():
         )
 
 
-def test_install_no_deps_argument_in_resulting_command():
+def test_install_no_deps_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, no_deps=True)
-        expected = [sys.executable, "-m", "pip", "install", "--no-deps", pkg]
+        expected = [*python_binary, "install", "--no-deps", pkg]
         mock.assert_called_with(
             expected,
             saltenv="base",
@@ -952,12 +928,12 @@ def test_install_no_deps_argument_in_resulting_command():
         )
 
 
-def test_install_no_install_argument_in_resulting_command():
+def test_install_no_install_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, no_install=True)
-        expected = [sys.executable, "-m", "pip", "install", "--no-install", pkg]
+        expected = [*python_binary, "install", "--no-install", pkg]
         mock.assert_called_with(
             expected,
             saltenv="base",
@@ -967,13 +943,13 @@ def test_install_no_install_argument_in_resulting_command():
         )
 
 
-def test_install_proxy_argument_in_resulting_command():
+def test_install_proxy_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     proxy = "salt-user:salt-passwd@salt-proxy:3128"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, proxy=proxy)
-        expected = [sys.executable, "-m", "pip", "install", "--proxy", proxy, pkg]
+        expected = [*python_binary, "install", "--proxy", proxy, pkg]
         mock.assert_called_with(
             expected,
             saltenv="base",
@@ -983,7 +959,7 @@ def test_install_proxy_argument_in_resulting_command():
         )
 
 
-def test_install_proxy_false_argument_in_resulting_command():
+def test_install_proxy_false_argument_in_resulting_command(python_binary):
     """
     Checking that there is no proxy set if proxy arg is set to False
     even if the global proxy is set.
@@ -1000,7 +976,7 @@ def test_install_proxy_false_argument_in_resulting_command():
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch.dict(pip.__opts__, config_mock):
             pip.install(pkg, proxy=proxy)
-            expected = [sys.executable, "-m", "pip", "install", pkg]
+            expected = [*python_binary, "install", pkg]
             mock.assert_called_with(
                 expected,
                 saltenv="base",
@@ -1010,7 +986,7 @@ def test_install_proxy_false_argument_in_resulting_command():
             )
 
 
-def test_install_global_proxy_in_resulting_command():
+def test_install_global_proxy_in_resulting_command(python_binary):
     """
     Checking that there is proxy set if global proxy is set.
     """
@@ -1027,9 +1003,7 @@ def test_install_global_proxy_in_resulting_command():
         with patch.dict(pip.__opts__, config_mock):
             pip.install(pkg)
             expected = [
-                sys.executable,
-                "-m",
-                "pip",
+                *python_binary,
                 "install",
                 "--proxy",
                 proxy,
@@ -1044,13 +1018,13 @@ def test_install_global_proxy_in_resulting_command():
             )
 
 
-def test_install_multiple_requirements_arguments_in_resulting_command():
+def test_install_multiple_requirements_arguments_in_resulting_command(python_binary):
     with patch("salt.modules.pip._get_cached_requirements") as get_cached_requirements:
         cached_reqs = ["my_cached_reqs-1", "my_cached_reqs-2"]
         get_cached_requirements.side_effect = cached_reqs
         requirements = ["salt://requirements-1.txt", "salt://requirements-2.txt"]
 
-        expected = [sys.executable, "-m", "pip", "install"]
+        expected = [*python_binary, "install"]
         for item in cached_reqs:
             expected.extend(["--requirement", item])
 
@@ -1085,9 +1059,7 @@ def test_install_multiple_requirements_arguments_in_resulting_command():
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(requirements=requirements[0])
             expected = [
-                sys.executable,
-                "-m",
-                "pip",
+                *python_binary,
                 "install",
                 "--requirement",
                 cached_reqs[0],
@@ -1101,7 +1073,7 @@ def test_install_multiple_requirements_arguments_in_resulting_command():
             )
 
 
-def test_install_extra_args_arguments_in_resulting_command():
+def test_install_extra_args_arguments_in_resulting_command(python_binary):
     pkg = "pep8"
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
@@ -1109,9 +1081,7 @@ def test_install_extra_args_arguments_in_resulting_command():
             pkg, extra_args=[{"--latest-pip-kwarg": "param"}, "--latest-pip-arg"]
         )
         expected = [
-            sys.executable,
-            "-m",
-            "pip",
+            *python_binary,
             "install",
             pkg,
             "--latest-pip-kwarg",
@@ -1147,13 +1117,13 @@ def test_install_extra_args_arguments_recursion_error():
         )
 
 
-def test_uninstall_multiple_requirements_arguments_in_resulting_command():
+def test_uninstall_multiple_requirements_arguments_in_resulting_command(python_binary):
     with patch("salt.modules.pip._get_cached_requirements") as get_cached_requirements:
         cached_reqs = ["my_cached_reqs-1", "my_cached_reqs-2"]
         get_cached_requirements.side_effect = cached_reqs
         requirements = ["salt://requirements-1.txt", "salt://requirements-2.txt"]
 
-        expected = [sys.executable, "-m", "pip", "uninstall", "-y"]
+        expected = [*python_binary, "uninstall", "-y"]
         for item in cached_reqs:
             expected.extend(["--requirement", item])
 
@@ -1190,9 +1160,7 @@ def test_uninstall_multiple_requirements_arguments_in_resulting_command():
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.uninstall(requirements=requirements[0])
             expected = [
-                sys.executable,
-                "-m",
-                "pip",
+                *python_binary,
                 "uninstall",
                 "-y",
                 "--requirement",
@@ -1208,7 +1176,7 @@ def test_uninstall_multiple_requirements_arguments_in_resulting_command():
             )
 
 
-def test_uninstall_global_proxy_in_resulting_command():
+def test_uninstall_global_proxy_in_resulting_command(python_binary):
     """
     Checking that there is proxy set if global proxy is set.
     """
@@ -1225,9 +1193,7 @@ def test_uninstall_global_proxy_in_resulting_command():
         with patch.dict(pip.__opts__, config_mock):
             pip.uninstall(pkg)
             expected = [
-                sys.executable,
-                "-m",
-                "pip",
+                *python_binary,
                 "uninstall",
                 "-y",
                 "--proxy",
@@ -1244,7 +1210,7 @@ def test_uninstall_global_proxy_in_resulting_command():
             )
 
 
-def test_uninstall_proxy_false_argument_in_resulting_command():
+def test_uninstall_proxy_false_argument_in_resulting_command(python_binary):
     """
     Checking that there is no proxy set if proxy arg is set to False
     even if the global proxy is set.
@@ -1261,7 +1227,7 @@ def test_uninstall_proxy_false_argument_in_resulting_command():
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch.dict(pip.__opts__, config_mock):
             pip.uninstall(pkg, proxy=proxy)
-            expected = [sys.executable, "-m", "pip", "uninstall", "-y", pkg]
+            expected = [*python_binary, "uninstall", "-y", pkg]
             mock.assert_called_with(
                 expected,
                 saltenv="base",
@@ -1272,7 +1238,7 @@ def test_uninstall_proxy_false_argument_in_resulting_command():
             )
 
 
-def test_uninstall_log_argument_in_resulting_command():
+def test_uninstall_log_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     log_path = "/tmp/pip-install.log"
 
@@ -1280,9 +1246,7 @@ def test_uninstall_log_argument_in_resulting_command():
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.uninstall(pkg, log=log_path)
         expected = [
-            sys.executable,
-            "-m",
-            "pip",
+            *python_binary,
             "uninstall",
             "-y",
             "--log",
@@ -1306,9 +1270,9 @@ def test_uninstall_log_argument_in_resulting_command():
             pytest.raises(IOError, pip.uninstall, pkg, log=log_path)
 
 
-def test_uninstall_timeout_argument_in_resulting_command():
+def test_uninstall_timeout_argument_in_resulting_command(python_binary):
     pkg = "pep8"
-    expected = [sys.executable, "-m", "pip", "uninstall", "-y", "--timeout"]
+    expected = [*python_binary, "uninstall", "-y", "--timeout"]
     # Passing an int
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
@@ -1341,8 +1305,8 @@ def test_uninstall_timeout_argument_in_resulting_command():
         pytest.raises(ValueError, pip.uninstall, pkg, timeout="a")
 
 
-def test_freeze_command():
-    expected = [sys.executable, "-m", "pip", "freeze"]
+def test_freeze_command(python_binary):
+    expected = [*python_binary, "freeze"]
     eggs = [
         "M2Crypto==0.21.1",
         "-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev",
@@ -1388,7 +1352,7 @@ def test_freeze_command():
             )
 
 
-def test_freeze_command_with_all():
+def test_freeze_command_with_all(python_binary):
     eggs = [
         "M2Crypto==0.21.1",
         "-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev",
@@ -1402,7 +1366,7 @@ def test_freeze_command_with_all():
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch("salt.modules.pip.version", MagicMock(return_value="9.0.1")):
             ret = pip.freeze()
-            expected = [sys.executable, "-m", "pip", "freeze", "--all"]
+            expected = [*python_binary, "freeze", "--all"]
             mock.assert_called_with(
                 expected,
                 cwd=None,
@@ -1422,7 +1386,7 @@ def test_freeze_command_with_all():
             )
 
 
-def test_list_command():
+def test_list_freeze_parse_command(python_binary):
     eggs = [
         "M2Crypto==0.21.1",
         "-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev",
@@ -1434,8 +1398,8 @@ def test_list_command():
     mock = MagicMock(return_value={"retcode": 0, "stdout": "\n".join(eggs)})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch("salt.modules.pip.version", MagicMock(return_value=mock_version)):
-            ret = pip.list_()
-            expected = [sys.executable, "-m", "pip", "freeze"]
+            ret = pip.list_freeze_parse()
+            expected = [*python_binary, "freeze"]
             mock.assert_called_with(
                 expected,
                 cwd=None,
@@ -1458,11 +1422,11 @@ def test_list_command():
         with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
             pytest.raises(
                 CommandExecutionError,
-                pip.list_,
+                pip.list_freeze_parse,
             )
 
 
-def test_list_command_with_all():
+def test_list_freeze_parse_command_with_all(python_binary):
     eggs = [
         "M2Crypto==0.21.1",
         "-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev",
@@ -1479,8 +1443,8 @@ def test_list_command_with_all():
     mock = MagicMock(return_value={"retcode": 0, "stdout": "\n".join(eggs)})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch("salt.modules.pip.version", MagicMock(return_value=mock_version)):
-            ret = pip.list_()
-            expected = [sys.executable, "-m", "pip", "freeze", "--all"]
+            ret = pip.list_freeze_parse()
+            expected = [*python_binary, "freeze", "--all"]
             mock.assert_called_with(
                 expected,
                 cwd=None,
@@ -1504,11 +1468,11 @@ def test_list_command_with_all():
         with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
             pytest.raises(
                 CommandExecutionError,
-                pip.list_,
+                pip.list_freeze_parse,
             )
 
 
-def test_list_command_with_prefix():
+def test_list_freeze_parse_command_with_prefix(python_binary):
     eggs = [
         "M2Crypto==0.21.1",
         "-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev",
@@ -1519,8 +1483,8 @@ def test_list_command_with_prefix():
     mock = MagicMock(return_value={"retcode": 0, "stdout": "\n".join(eggs)})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
-            ret = pip.list_(prefix="bb")
-            expected = [sys.executable, "-m", "pip", "freeze"]
+            ret = pip.list_freeze_parse(prefix="bb")
+            expected = [*python_binary, "freeze"]
             mock.assert_called_with(
                 expected,
                 cwd=None,
@@ -1531,7 +1495,7 @@ def test_list_command_with_prefix():
             assert ret == {"bbfreeze-loader": "1.1.0", "bbfreeze": "1.1.0"}
 
 
-def test_list_upgrades_legacy():
+def test_list_upgrades_legacy(python_binary):
     eggs = [
         "apache-libcloud (Current: 1.1.0 Latest: 2.2.1 [wheel])",
         "appdirs (Current: 1.4.1 Latest: 1.4.3 [wheel])",
@@ -1542,7 +1506,7 @@ def test_list_upgrades_legacy():
         with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
             ret = pip.list_upgrades()
             mock.assert_called_with(
-                [sys.executable, "-m", "pip", "list", "--outdated"],
+                [*python_binary, "list", "--outdated"],
                 cwd=None,
                 runas=None,
             )
@@ -1553,7 +1517,7 @@ def test_list_upgrades_legacy():
             }
 
 
-def test_list_upgrades_gt9():
+def test_list_upgrades_gt9(python_binary):
     eggs = """[{"latest_filetype": "wheel", "version": "1.1.0", "name": "apache-libcloud", "latest_version": "2.2.1"},
             {"latest_filetype": "wheel", "version": "1.4.1", "name": "appdirs", "latest_version": "1.4.3"},
             {"latest_filetype": "sdist", "version": "1.11.63", "name": "awscli", "latest_version": "1.12.1"}
@@ -1564,9 +1528,7 @@ def test_list_upgrades_gt9():
             ret = pip.list_upgrades()
             mock.assert_called_with(
                 [
-                    sys.executable,
-                    "-m",
-                    "pip",
+                    *python_binary,
                     "list",
                     "--outdated",
                     "--format=json",
@@ -1581,7 +1543,7 @@ def test_list_upgrades_gt9():
             }
 
 
-def test_is_installed_true():
+def test_is_installed_true(python_binary):
     eggs = [
         "M2Crypto==0.21.1",
         "-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev",
@@ -1594,7 +1556,7 @@ def test_is_installed_true():
         with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
             ret = pip.is_installed(pkgname="bbfreeze")
             mock.assert_called_with(
-                [sys.executable, "-m", "pip", "freeze"],
+                [*python_binary, "freeze"],
                 cwd=None,
                 runas=None,
                 python_shell=False,
@@ -1603,7 +1565,7 @@ def test_is_installed_true():
             assert ret
 
 
-def test_is_installed_false():
+def test_is_installed_false(python_binary):
     eggs = [
         "M2Crypto==0.21.1",
         "-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev",
@@ -1616,7 +1578,7 @@ def test_is_installed_false():
         with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
             ret = pip.is_installed(pkgname="notexist")
             mock.assert_called_with(
-                [sys.executable, "-m", "pip", "freeze"],
+                [*python_binary, "freeze"],
                 cwd=None,
                 runas=None,
                 python_shell=False,
@@ -1625,7 +1587,7 @@ def test_is_installed_false():
             assert not ret
 
 
-def test_install_pre_argument_in_resulting_command():
+def test_install_pre_argument_in_resulting_command(python_binary):
     pkg = "pep8"
     # Lower than 1.4 versions don't end up with `--pre` in the resulting output
     mock = MagicMock(
@@ -1637,7 +1599,7 @@ def test_install_pre_argument_in_resulting_command():
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch("salt.modules.pip.version", MagicMock(return_value="1.3")):
             pip.install(pkg, pre_releases=True)
-            expected = [sys.executable, "-m", "pip", "install", pkg]
+            expected = [*python_binary, "install", pkg]
             mock.assert_called_with(
                 expected,
                 saltenv="base",
@@ -1680,7 +1642,7 @@ def test_resolve_requirements_chain_function():
 def test_when_upgrade_is_called_and_there_are_available_upgrades_it_should_call_correct_command(
     expected_user,
 ):
-    fake_run_all = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    fake_run_all = MagicMock(return_value={"retcode": 0, "stdout": "{}"})
     pip_user = expected_user
     with patch.dict(pip.__salt__, {"cmd.run_all": fake_run_all}), patch(
         "salt.modules.pip.list_upgrades", autospec=True, return_value=[pip_user]
@@ -1692,7 +1654,7 @@ def test_when_upgrade_is_called_and_there_are_available_upgrades_it_should_call_
         pip.upgrade(user=pip_user)
 
         fake_run_all.assert_any_call(
-            ["some-other-pip", "install", "-U", "freeze", "--all", pip_user],
+            ["some-other-pip", "install", "-U", "list", "--format=json", pip_user],
             runas=pip_user,
             cwd=None,
             use_vt=False,
@@ -1776,7 +1738,7 @@ def test_when_version_is_called_with_a_user_it_should_be_passed_to_undelying_run
         )
 
 
-def test_install_target_from_VENV_PIP_TARGET_in_resulting_command():
+def test_install_target_from_VENV_PIP_TARGET_in_resulting_command(python_binary):
     pkg = "pep8"
     target = "/tmp/foo"
     target_env = "/tmp/bar"
@@ -1787,7 +1749,7 @@ def test_install_target_from_VENV_PIP_TARGET_in_resulting_command():
         os, "environ", environment
     ):
         pip.install(pkg)
-        expected = [sys.executable, "-m", "pip", "install", "--target", target_env, pkg]
+        expected = [*python_binary, "install", "--target", target_env, pkg]
         mock.assert_called_with(
             expected,
             saltenv="base",
@@ -1797,7 +1759,7 @@ def test_install_target_from_VENV_PIP_TARGET_in_resulting_command():
         )
         mock.reset_mock()
         pip.install(pkg, target=target)
-        expected = [sys.executable, "-m", "pip", "install", "--target", target, pkg]
+        expected = [*python_binary, "install", "--target", target, pkg]
         mock.assert_called_with(
             expected,
             saltenv="base",
@@ -1805,3 +1767,76 @@ def test_install_target_from_VENV_PIP_TARGET_in_resulting_command():
             use_vt=False,
             python_shell=False,
         )
+
+
+def test_list(python_binary):
+    json_out = dedent(
+        """
+    [
+      {
+        "name": "idemenv",
+        "version": "0.2.0",
+        "editable_project_location": "/home/debian/idemenv"
+      },
+      {
+        "name": "MarkupSafe",
+        "version": "2.1.1"
+      },
+      {
+        "name": "pip",
+        "version": "22.3.1"
+      },
+      {
+        "name": "pop",
+        "version": "23.0.0"
+      },
+      {
+        "name": "salt",
+        "version": "3006.0+0na.5b18e86"
+      },
+      {
+        "name": "typing_extensions",
+        "version": "4.4.0"
+      },
+      {
+        "name": "unattended-upgrades",
+        "version": "0.1"
+      },
+      {
+        "name": "yarl",
+        "version": "1.8.2"
+      }
+    ]
+    """
+    )
+    mock_version = "22.3.1"
+    mock = MagicMock(return_value={"retcode": 0, "stdout": json_out})
+    with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+        with patch("salt.modules.pip.version", MagicMock(return_value=mock_version)):
+            ret = pip.list_()
+            expected = [*python_binary, "list", "--format=json"]
+            mock.assert_called_with(
+                expected,
+                cwd=None,
+                runas=None,
+                python_shell=False,
+            )
+            assert ret == {
+                "MarkupSafe": "2.1.1",
+                "idemenv": "0.2.0",
+                "pip": "22.3.1",
+                "pop": "23.0.0",
+                "salt": "3006.0+0na.5b18e86",
+                "typing_extensions": "4.4.0",
+                "unattended-upgrades": "0.1",
+                "yarl": "1.8.2",
+            }
+
+    # Non zero returncode raises exception?
+    mock = MagicMock(return_value={"retcode": 1, "stderr": "CABOOOOMMM!"})
+    with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+        with patch("salt.modules.pip.version", MagicMock(return_value="22.3.1")):
+            pytest.raises(
+                CommandExecutionError,
+                pip.list_,
+            )

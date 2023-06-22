@@ -10,7 +10,7 @@ import salt.defaults.exitcodes
 from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
 ]
 
@@ -70,7 +70,7 @@ def test_exit_status_unknown_argument(salt_master, syndic_id):
 def test_exit_status_correct_usage(salt_master, syndic_id):
     factory = salt_master.salt_syndic_daemon(
         syndic_id,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         defaults={"transport": salt_master.config["transport"]},
     )
     factory.start()

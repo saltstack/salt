@@ -1,5 +1,5 @@
 """
-.. deprecated:: 3006
+.. deprecated:: 3006.0
 
 .. warning::
 

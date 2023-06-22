@@ -30,4 +30,3 @@ guidelines for filing bug reports:
 **SaltStack Support** - If you need dedicated, prioritized support, please
 consider a SaltStack Support package that fits your needs:
 `<http://www.saltstack.com/support>`_
-

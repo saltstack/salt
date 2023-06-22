@@ -129,7 +129,7 @@ class RSAX931Test(TestCase):
         Test _find_libcrypto on Windows hosts.
         """
         lib_path = _find_libcrypto()
-        self.assertEqual(lib_path, "libeay32")
+        self.assertIn("libcrypto", lib_path)
 
     @pytest.mark.skip_unless_on_smartos
     def test_find_libcrypto_smartos(self):

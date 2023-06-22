@@ -1,8 +1,15 @@
+---
 name: New Issues Triage Assignment
 concurrency: 1
 on:
   issues:
     types: [opened]
+
+
+env:
+  PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+  PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+
 
 permissions:
   contents: read

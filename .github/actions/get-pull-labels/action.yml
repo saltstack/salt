@@ -1,0 +1,23 @@
+---
+name: get-pull-labels
+description: Get Pull Labels
+inputs:
+  pull-request:
+    type: string
+
+outputs:
+    labels:
+      value: ${{ steps.get-pull-labels.outputs.labels }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get Pull Labels
+      id: get-pull-labels
+      shell: bash
+      env:
+        PULL_REQUEST: ${{ inputs.pull-request }}
+      run: |
+        labels=$(jq -c '[.labels[].name]' <<< $PULL_REQUEST)
+        echo $labels
+        echo "labels=$labels" >> "$GITHUB_OUTPUT"
