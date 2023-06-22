@@ -12,6 +12,62 @@ import salt.client.ssh
 import salt.loader
 import salt.utils.data
 import salt.utils.json
+from salt.exceptions import CommandExecutionError, SaltException
+
+
+class SSHException(SaltException):
+    """
+    Base class for exceptions thrown while executing salt-ssh funcs.
+    """
+
+
+class SSHCommandExecutionError(SSHException, CommandExecutionError):
+    """
+    Indicates general command failure via salt-ssh.
+    Thrown whenever a non-zero exit code is returned.
+    This was introduced to make the salt-ssh FunctionWrapper behave
+    more like the usual one, in particular to force template rendering
+    to stop when a function call results in an exception.
+    """
+
+    _error = ""
+
+    def __init__(self, stdout, stderr, retcode, ret=None, *args, **kwargs):
+        super().__init__(stderr, *args, **kwargs)
+        self.stdout = stdout
+        self.stderr = stderr
+        self.retcode = retcode
+        self.ret = ret
+
+    def to_dict(self):
+        ret = {
+            "stdout": self.stdout,
+            "stderr": self.stderr,
+            "retcode": self.retcode,
+        }
+        if self._error:
+            ret["_error"] = self._error
+        # This should usually not matter since salt-call commands
+        # usually do not print valid JSON while failing.
+        if self.ret is not None:
+            ret["return"] = self.ret
+        return ret
+
+
+class SSHPermissionDeniedError(SSHCommandExecutionError):
+    """
+    Thrown when "Permission denied" is found in stderr
+    """
+
+    _error = "Permission Denied"
+
+
+class SSHReturnDecodeError(SSHCommandExecutionError):
+    """
+    Thrown when JSON-decoding stdout fails and the retcode is 0 otherwise
+    """
+
+    _error = "Failed to return clean data"
 
 
 class FunctionWrapper:
@@ -120,24 +176,29 @@ class FunctionWrapper:
             )
             stdout, stderr, retcode = single.cmd_block()
             if stderr.count("Permission Denied"):
-                return {
-                    "_error": "Permission Denied",
-                    "stdout": stdout,
-                    "stderr": stderr,
-                    "retcode": retcode,
-                }
+                raise SSHPermissionDeniedError(
+                    stdout=stdout, stderr=stderr, retcode=retcode
+                )
+
+            ret = None
             try:
                 ret = salt.utils.json.loads(stdout)
                 if len(ret) < 2 and "local" in ret:
                     ret = ret["local"]
                 ret = ret.get("return", {})
             except ValueError:
-                ret = {
-                    "_error": "Failed to return clean data",
-                    "stderr": stderr,
-                    "stdout": stdout,
-                    "retcode": retcode,
-                }
+                ret = SSHReturnDecodeError
+            if retcode:
+                raise SSHCommandExecutionError(
+                    stdout=stdout,
+                    stderr=stderr,
+                    retcode=retcode,
+                    ret=ret if not isinstance(ret, SSHReturnDecodeError) else None,
+                )
+            if isinstance(ret, SSHReturnDecodeError):
+                raise SSHReturnDecodeError(
+                    stdout=stdout, stderr=stderr, retcode=retcode, ret=None
+                )
             return ret
 
         return caller

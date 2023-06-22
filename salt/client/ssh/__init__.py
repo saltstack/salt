@@ -47,6 +47,7 @@ import salt.utils.url
 import salt.utils.verify
 from salt._logging import LOG_LEVELS
 from salt._logging.mixins import MultiprocessingStateMixin
+from salt.client.ssh.wrapper import SSHCommandExecutionError, SSHException
 from salt.template import compile_template
 from salt.utils.process import Process
 from salt.utils.zeromq import zmq
@@ -1132,10 +1133,10 @@ class Single:
                 **self.target,
             )
 
-            opts_pkg = pre_wrapper["test.opts_pkg"]()  # pylint: disable=E1102
-            if "_error" in opts_pkg:
-                # Refresh failed
-                retcode = opts_pkg["retcode"]
+            try:
+                opts_pkg = pre_wrapper["test.opts_pkg"]()  # pylint: disable=E1102
+            except SSHException as err:
+                retcode = getattr(err, "retcode", 1)
                 ret = salt.utils.json.dumps({"local": opts_pkg})
                 return ret, retcode
 
@@ -1262,6 +1263,9 @@ class Single:
                 result = wrapper[mine_fun](*self.args, **self.kwargs)
             else:
                 result = self.wfuncs[self.fun](*self.args, **self.kwargs)
+        except SSHCommandExecutionError as err:
+            result = err.to_dict()
+            retcode = err.retcode
         except TypeError as exc:
             result = f"TypeError encountered executing {self.fun}: {exc}"
             log.error(result, exc_info_on_loglevel=logging.DEBUG)
