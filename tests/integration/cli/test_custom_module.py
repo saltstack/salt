@@ -46,7 +46,7 @@ class SSHCustomModuleTest(SSHCase):
         Test regular module work using SSHCase environment
         """
         expected = "hello"
-        cmd = self.run_function("test.echo", arg=["hello"])
+        cmd = self.run_function("test.echo", args=["hello"])
         self.assertEqual(expected, cmd)
 
     @pytest.mark.slow_test
@@ -55,7 +55,7 @@ class SSHCustomModuleTest(SSHCase):
         Test custom module work using SSHCase environment
         """
         expected = "hello"[::-1]
-        cmd = self.run_function("test.recho", arg=["hello"])
+        cmd = self.run_function("test.recho", args=["hello"])
         self.assertEqual(expected, cmd)
 
     @pytest.mark.slow_test
@@ -67,11 +67,14 @@ class SSHCustomModuleTest(SSHCase):
             "module_|-regular-module_|-test.echo_|-run": "hello",
             "module_|-custom-module_|-test.recho_|-run": "olleh",
         }
-        cmd = self.run_function("state.sls", arg=["custom_module"])
+        cmd = self.run_function("state.sls", args=["custom_module"])
         for key in cmd:
             if not isinstance(cmd, dict) or not isinstance(cmd[key], dict):
                 raise AssertionError("{} is not a proper state return".format(cmd))
             elif not cmd[key]["result"]:
                 raise AssertionError(cmd[key]["comment"])
-            cmd_ret = cmd[key]["changes"].get("ret", None)
+            try:
+                cmd_ret = cmd[key]["changes"].get("ret")
+            except KeyError:
+                cmd_ret = cmd[key]["result"]
             self.assertEqual(cmd_ret, expected[key])
