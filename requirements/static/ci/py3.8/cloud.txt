@@ -445,7 +445,7 @@ idna==2.8
     #   etcd3-py
     #   requests
     #   yarl
-immutables==0.16
+immutables==0.19
     # via contextvars
 importlib-metadata==4.8.1 ; python_version >= "3.6" and python_version < "3.10"
     # via -r requirements/static/pkg/linux.in
