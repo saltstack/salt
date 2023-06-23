@@ -73,6 +73,16 @@ class DaemonsMixin:  # pylint: disable=no-init
                 self.__class__.__name__,
             )
 
+    def verify_user(self):
+        """
+        Verify Salt configured user for Salt and shutdown daemon if not valid.
+
+        :return:
+        """
+        if not check_user(self.config["user"]):
+            self.action_log_info("Cannot switch to configured user for Salt. Exiting")
+            self.shutdown(1)
+
     def action_log_info(self, action):
         """
         Say daemon starting.
@@ -177,6 +187,10 @@ class Master(
             self.shutdown(4, "The ports are not available to bind")
         self.config["interface"] = ip_bracket(self.config["interface"])
         migrations.migrate_paths(self.config)
+
+        # Ensure configured user is valid and environment is properly set
+        # before initializating rest of the stack.
+        self.verify_user()
 
         # Late import so logging works correctly
         import salt.master
@@ -289,6 +303,10 @@ class Minion(
             self.shutdown(1)
 
         transport = self.config.get("transport").lower()
+
+        # Ensure configured user is valid and environment is properly set
+        # before initializating rest of the stack.
+        self.verify_user()
 
         try:
             # Late import so logging works correctly
@@ -478,6 +496,10 @@ class ProxyMinion(
             self.action_log_info("An instance is already running. Exiting")
             self.shutdown(1)
 
+        # Ensure configured user is valid and environment is properly set
+        # before initializating rest of the stack.
+        self.verify_user()
+
         # TODO: AIO core is separate from transport
         # Late import so logging works correctly
         import salt.minion
@@ -575,6 +597,10 @@ class Syndic(
             self.environment_failure(error)
 
         self.action_log_info('Setting up "{}"'.format(self.config["id"]))
+
+        # Ensure configured user is valid and environment is properly set
+        # before initializating rest of the stack.
+        self.verify_user()
 
         # Late import so logging works correctly
         import salt.minion
