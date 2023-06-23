@@ -117,7 +117,6 @@ def test_user_present_when_home_dir_does_not_18843(states, existing_account):
     ret = states.user.present(
         name=existing_account.username,
         home=existing_account.info.home,
-        remove_groups=False,
     )
     assert ret.result is True
     assert pathlib.Path(existing_account.info.home).is_dir()
@@ -228,7 +227,6 @@ def test_user_present_unicode(states, username, subtests):
             roomnumber="①②③",
             workphone="١٢٣٤",
             homephone="६७८",
-            remove_groups=False,
         )
         assert ret.result is True
 
