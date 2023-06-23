@@ -335,8 +335,8 @@ def check_user(user):
 
         # We could just reset the whole environment but let's just override
         # the variables we can get from pwuser
-        if "HOME" in os.environ:
-            os.environ["HOME"] = pwuser.pw_dir
+        # We ensure HOME is always present and set according to pwuser
+        os.environ["HOME"] = pwuser.pw_dir
 
         if "SHELL" in os.environ:
             os.environ["SHELL"] = pwuser.pw_shell
