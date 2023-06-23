@@ -412,10 +412,17 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
     factory.after_terminate(pytest.helpers.remove_stale_master_key, factory)
     if test_user:
         # Salt factories calls salt.utils.verify.verify_env
-        # which sets root perms on /var/log/salt since we are running
+        # which sets root perms on /etc/salt/pki/master since we are running
         # the test suite as root, but we want to run Salt master as salt
         # We ensure those permissions where set by the package earlier
-        shutil.chown(pathlib.Path("/var", "log", "salt"), "salt", "salt")
+        subprocess.run(
+            [
+                "chown",
+                "-R",
+                "salt:salt",
+                str(pathlib.Path("/etc", "salt", "pki", "master")),
+            ]
+        )
         # The engines_dirs is created in .nox path. We need to set correct perms
         # for the user running the Salt Master
         subprocess.run(["chown", "-R", "salt:salt", str(CODE_DIR.parent / ".nox")])
