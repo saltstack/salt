@@ -10,7 +10,7 @@ exist on the subject, to either execute in an imperative fashion where things
 are executed in the order in which they are defined, or in a declarative
 fashion where dependencies need to be mapped between objects.
 
-Imperative ordering is deterministic generally considered easier to write, but
+Imperative ordering is deterministic and generally considered easier to write, but
 declarative ordering is much more powerful and flexible but generally considered
 more difficult to create.
 
