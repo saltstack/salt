@@ -490,7 +490,11 @@ if [ ! -e "/var/log/salt/master" ]; then
   touch /var/log/salt/master
   chmod 640 /var/log/salt/master
 fi
-chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/cache/salt/master /var/run/salt/master
+if [ ! -e "/var/log/salt/key" ]; then
+  touch /var/log/salt/key
+  chmod 640 /var/log/salt/key
+fi
+chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
 
 
 %posttrans api
