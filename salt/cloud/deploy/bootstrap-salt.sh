@@ -991,6 +991,8 @@ __derive_debian_numeric_version() {
             NUMERIC_VERSION=$(__parse_version_string "10.0")
         elif [ "$INPUT_VERSION" = "bullseye/sid" ]; then
             NUMERIC_VERSION=$(__parse_version_string "11.0")
+        elif [ "$INPUT_VERSION" = "bookworm/sid" ]; then
+            NUMERIC_VERSION=$(__parse_version_string "12.0")
         else
             echowarn "Unable to parse the Debian Version (codename: '$INPUT_VERSION')"
         fi
