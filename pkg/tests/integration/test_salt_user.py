@@ -43,8 +43,20 @@ def pkg_paths_salt_user():
         "/etc/salt/minion.d",
         "/var/log/salt/master",
         "/var/log/salt/api",
+        "/var/log/salt/key",
         "/var/cache/salt/master",
         "/var/run/salt/master",
+    ]
+    return paths
+
+
+@pytest.fixture
+def pkg_paths_salt_user_exclusions():
+    """
+    Exclusions from paths created by package installs and owned by salt user
+    """
+    paths = [
+        "/var/cache/salt/master/.root_key"  # written by salt, salt-run and salt-key as root
     ]
     return paths
 
@@ -110,7 +122,9 @@ def test_salt_cloud_dirs(install_salt):
         assert path.group() == "salt"
 
 
-def test_pkg_paths(install_salt, pkg_paths, pkg_paths_salt_user):
+def test_pkg_paths(
+    install_salt, pkg_paths, pkg_paths_salt_user, pkg_paths_salt_user_exclusions
+):
     """
     Test package paths ownership
     """
@@ -121,7 +135,9 @@ def test_pkg_paths(install_salt, pkg_paths, pkg_paths_salt_user):
         for dirpath, sub_dirs, files in os.walk(pkg_path):
             path = pathlib.Path(dirpath)
             # Directories owned by salt:salt or their subdirs/files
-            if str(path) in pkg_paths_salt_user or str(path) in salt_user_subdirs:
+            if (
+                str(path) in pkg_paths_salt_user or str(path) in salt_user_subdirs
+            ) and str(path) not in pkg_paths_salt_user_exclusions:
                 assert path.owner() == "salt"
                 assert path.group() == "salt"
                 salt_user_subdirs.extend(
@@ -130,7 +146,8 @@ def test_pkg_paths(install_salt, pkg_paths, pkg_paths_salt_user):
                 # Individual files owned by salt user
                 for file in files:
                     file_path = path.joinpath(file)
-                    assert file_path.owner() == "salt"
+                    if str(file_path) not in pkg_paths_salt_user_exclusions:
+                        assert file_path.owner() == "salt"
             # Directories owned by root:root
             else:
                 assert path.owner() == "root"
