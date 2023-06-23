@@ -16,6 +16,9 @@ Support for python 3.7 has been dropped since it reached end-of-line in 27 Jun 2
 
 Starting from Salt version 3007.0, the Azure functionality previously available in the Salt code base is fully removed. To continue using Salt's features for interacting with Azure resources, users are required to utilize the Azure Salt extension. For more information, refer to the [Azure Salt Extension GitHub repository](https://github.com/salt-extensions/saltext-azurerm).
 
+## Salt Cloud - OpenNebula
+A new action has been added (vm_disk_resize) to resize disks in virtual servers.
+
 <!--
 Do not edit the changelog below.
 This is auto generated

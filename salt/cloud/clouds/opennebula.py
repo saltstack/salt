@@ -3177,6 +3177,75 @@ def vm_disk_save(name, kwargs=None, call=None):
 
     return data
 
+def vm_disk_resize(name, kwargs=None, call=None):
+    """
+    Changes the capacity of the virtual machine disk.
+
+    .. versionadded:: TBD
+
+    name
+        The name of the VM to resize.
+
+    disk_id
+        ID of the disk to be resized.
+
+    disk_size
+        The new size in MB of the disk.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_disk_resize my-vm disk_id=0 disk_size=10240
+    """
+    if call != "action":
+        raise SaltCloudSystemExit(
+            "The vm_disk_resize action must be called with -a or --action."
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    disk_id = kwargs.get("disk_id", None)
+    disk_size = kwargs.get("disk_size", None)
+
+    if not disk_id:
+        raise SaltCloudSystemExit(
+            "The disk ID must be specified"
+        )
+
+    disk_id = int(disk_id)
+
+    if not disk_size:
+       raise SaltCloudSystemExit(
+           "The disk size must be specified"
+       )
+
+    disk_size = int(disk_size)
+
+    if not disk_size >= 0:
+        raise SaltCloudSystemExit(
+            "The disk size must be a positive integer"
+        )
+
+    disk_size = str(disk_size)
+
+    server, user, password = _get_xml_rpc()
+    auth = ":".join([user, password])
+    vm_id = int(get_vm_id(kwargs={"name": name}))
+    response = server.one.vm.diskresize(
+        auth, vm_id, disk_id, disk_size
+    )
+
+    ret = {
+        "action": "vm.disk_resize",
+        "resized": response[0],
+        "vm_id": response[1],
+        "error_code": response[2],
+    }
+
+    return ret
+
 
 def vm_disk_snapshot_create(name, kwargs=None, call=None):
     """

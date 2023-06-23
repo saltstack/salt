@@ -1261,6 +1261,32 @@ def test_vm_detach_nic_no_nic_id():
     pytest.raises(SaltCloudSystemExit, opennebula.vm_detach_nic, VM_NAME, call="action")
 
 
+def test_vm_disk_resize_no_disk_id():
+    """
+    Tests that a SaltCloudSystemExit is raised when the disk_id arg is missing.
+    """
+    pytest.raises(
+        SaltCloudSystemExit,
+        opennebula.vm_disk_resize,
+        VM_NAME,
+        call="action",
+        kwargs={"disk_size": "1024"},
+    )
+
+
+def test_vm_disk_resize_no_disk_size():
+    """
+    Tests that a SaltCloudSystemExit is raised when the disk_size arg is missing.
+    """
+    pytest.raises(
+        SaltCloudSystemExit,
+        opennebula.vm_disk_resize,
+        VM_NAME,
+        call="action",
+        kwargs={"disk_id": "0"},
+    )
+
+
 def test_vm_disk_save_action_error():
     """
     Tests that a SaltCloudSystemExit is raised when something other than
