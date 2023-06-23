@@ -1185,6 +1185,44 @@ jobs:
       skip-code-coverage: false
       skip-junit-reports: false
 
+  debian-12:
+    name: Debian 12
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-12
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: false
+      skip-junit-reports: false
+
+  debian-12-arm64:
+    name: Debian 12 Arm64
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-12-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: false
+      skip-junit-reports: false
+
   fedora-37:
     name: Fedora 37
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -1473,6 +1511,12 @@ jobs:
             arch: x86_64
           - distro: debian
             version: "11"
+            arch: aarch64
+          - distro: debian
+            version: "12"
+            arch: x86_64
+          - distro: debian
+            version: "12"
             arch: aarch64
           - distro: ubuntu
             version: "20.04"
@@ -2015,6 +2059,8 @@ jobs:
       - debian-10
       - debian-11
       - debian-11-arm64
+      - debian-12
+      - debian-12-arm64
       - fedora-37
       - fedora-38
       - opensuse-15

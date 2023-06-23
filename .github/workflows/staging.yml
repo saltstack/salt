@@ -1170,6 +1170,44 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
 
+  debian-12:
+    name: Debian 12
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-12
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
+
+  debian-12-arm64:
+    name: Debian 12 Arm64
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-12-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      skip-code-coverage: true
+      skip-junit-reports: true
+
   fedora-37:
     name: Fedora 37
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -1458,6 +1496,12 @@ jobs:
             arch: x86_64
           - distro: debian
             version: "11"
+            arch: aarch64
+          - distro: debian
+            version: "12"
+            arch: x86_64
+          - distro: debian
+            version: "12"
             arch: aarch64
           - distro: ubuntu
             version: "20.04"
@@ -2373,6 +2417,44 @@ jobs:
       pkg-type: package
     secrets: inherit
 
+  debian-12-package-download-tests:
+    name: Test Debian 12 package Downloads
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: debian-12
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: staging
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  debian-12-arm64-package-download-tests:
+    name: Test Debian 12 Arm64 package Downloads
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: debian-12-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: staging
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
   fedora-37-package-download-tests:
     name: Test Fedora 37 package Downloads
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg-download'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2716,6 +2798,8 @@ jobs:
       - debian-10
       - debian-11
       - debian-11-arm64
+      - debian-12
+      - debian-12-arm64
       - fedora-37
       - fedora-38
       - opensuse-15
@@ -2760,6 +2844,8 @@ jobs:
       - debian-10-package-download-tests
       - debian-11-package-download-tests
       - debian-11-arm64-package-download-tests
+      - debian-12-package-download-tests
+      - debian-12-arm64-package-download-tests
       - fedora-37-package-download-tests
       - fedora-37-arm64-package-download-tests
       - fedora-38-package-download-tests
