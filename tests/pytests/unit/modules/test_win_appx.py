@@ -1,7 +1,7 @@
 import pytest
 
 import salt.modules.win_appx as win_appx
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, call, patch
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -134,6 +134,51 @@ def test_remove():
         assert win_appx.remove("*test*") is True
     cmd = "Remove-AppxPackage -AllUsers -Package Microsoft.BingWeather_full_name"
     mock_run_dict.assert_called_with(cmd)
+
+
+def test_remove_duplicate():
+    mock_run_dict = MagicMock()
+    mock_list_return_1 = [
+        {
+            "Name": "Microsoft.BingWeather",
+            "PackageFullName": "Microsoft.BingWeather_full_name_1",
+            "IsBundle": False,
+        },
+        {
+            "Name": "Microsoft.BingWeather",
+            "PackageFullName": "Microsoft.BingWeather_full_name_2",
+            "IsBundle": False,
+        },
+    ]
+    mock_list_return_2 = [
+        {
+            "Name": "Microsoft.BingWeather",
+            "PackageFullName": "Microsoft.BingWeather_full_name_1",
+            "IsBundle": True,
+        },
+        {
+            "Name": "Microsoft.BingWeather",
+            "PackageFullName": "Microsoft.BingWeather_full_name_2",
+            "IsBundle": True,
+        },
+    ]
+    mock_list_return_3 = [
+        {
+            "Name": "Microsoft.BingWeather",
+            "PackageFullName": "Microsoft.BingWeather_full_name_2",
+            "IsBundle": True,
+        },
+    ]
+    mock_list = MagicMock(
+        side_effect=[mock_list_return_1, mock_list_return_2, mock_list_return_3]
+    )
+    with patch("salt.utils.win_pwsh.run_dict", mock_run_dict), patch.object(
+        win_appx, "list_", mock_list
+    ):
+        assert win_appx.remove("*bingweather*") is True
+    cmd_1 = "Remove-AppxPackage -AllUsers -Package Microsoft.BingWeather_full_name_1"
+    cmd_2 = "Remove-AppxPackage -AllUsers -Package Microsoft.BingWeather_full_name_2"
+    mock_run_dict.assert_has_calls([call(cmd_1), call(cmd_2)])
 
 
 def test_remove_deprovision_only():
