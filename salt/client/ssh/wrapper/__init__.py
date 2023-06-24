@@ -7,11 +7,94 @@ as ZeroMQ salt, but via ssh.
 
 
 import copy
+import logging
 
 import salt.client.ssh
 import salt.loader
 import salt.utils.data
 import salt.utils.json
+from salt.defaults import NOT_SET
+from salt.exceptions import CommandExecutionError, SaltException
+
+log = logging.getLogger(__name__)
+
+
+class SSHException(SaltException):
+    """
+    Indicates general command failure via salt-ssh.
+    """
+
+    _error = ""
+
+    def __init__(
+        self, stdout, stderr, retcode, result=NOT_SET, data=None, *args, **kwargs
+    ):
+        super().__init__(stderr, *args, **kwargs)
+        self.stdout = stdout
+        self.stderr = stderr
+        self.result = result
+        self.data = data
+        self.retcode = retcode
+        if args:
+            self._error = args.pop(0)
+
+    def to_ret(self):
+        ret = {
+            "stdout": self.stdout,
+            "stderr": self.stderr,
+            "retcode": self.retcode,
+            "data": self.data,
+        }
+        if self._error:
+            ret["_error"] = self._error
+        if self.result is not NOT_SET:
+            ret["return"] = self.result
+        return ret
+
+
+class SSHCommandExecutionError(SSHException, CommandExecutionError):
+    """
+    Thrown whenever a non-zero exit code is returned.
+    This was introduced to make the salt-ssh FunctionWrapper behave
+    more like the usual one, in particular to force template rendering
+    to stop when a function call results in an exception.
+    """
+
+    _error = "The command resulted in a non-zero exit code"
+
+    def to_ret(self):
+        if self.data and "local" in self.data:
+            # Wrapped commands that indicate a non-zero retcode
+            return self.data["local"]
+        elif self.stderr:
+            # Remote executions that indicate a non-zero retcode
+            return self.stderr
+        return super().to_ret()
+
+
+class SSHPermissionDeniedError(SSHException):
+    """
+    Thrown when "Permission denied" is found in stderr
+    """
+
+    _error = "Permission Denied"
+
+
+class SSHReturnDecodeError(SSHException):
+    """
+    Thrown when JSON-decoding stdout fails and the retcode is 0 otherwise
+    """
+
+    _error = "Failed to return clean data"
+
+
+class SSHMalformedReturnError(SSHException):
+    """
+    Thrown when a decoded return dict is not formed as
+    {"local": {"return": ...}}
+    """
+
+    _error = "Return dict was malformed"
 
 
 class FunctionWrapper:
@@ -119,26 +202,7 @@ class FunctionWrapper:
                 **self.kwargs
             )
             stdout, stderr, retcode = single.cmd_block()
-            if stderr.count("Permission Denied"):
-                return {
-                    "_error": "Permission Denied",
-                    "stdout": stdout,
-                    "stderr": stderr,
-                    "retcode": retcode,
-                }
-            try:
-                ret = salt.utils.json.loads(stdout)
-                if len(ret) < 2 and "local" in ret:
-                    ret = ret["local"]
-                ret = ret.get("return", {})
-            except ValueError:
-                ret = {
-                    "_error": "Failed to return clean data",
-                    "stderr": stderr,
-                    "stdout": stdout,
-                    "retcode": retcode,
-                }
-            return ret
+            return parse_ret(stdout, stderr, retcode, result_only=True)
 
         return caller
 
@@ -176,3 +240,67 @@ class FunctionWrapper:
             return self[cmd]
         else:
             return default
+
+
+def parse_ret(stdout, stderr, retcode, result_only=False):
+    """
+    Parse the output of a remote or local command and return its
+    result. Raise exceptions if the command has a non-zero exitcode
+    or its output is not valid JSON or is not in the expected format,
+    usually ``{"local": {"return": value}}`` (+ optional keys in the "local" dict).
+    """
+    try:
+        retcode = int(retcode)
+    except (TypeError, ValueError):
+        log.warning(f"Got an invalid retcode for host: '{retcode}'")
+        retcode = 1
+
+    if retcode and stderr.count("Permission Denied"):
+        raise SSHPermissionDeniedError(stdout=stdout, stderr=stderr, retcode=retcode)
+
+    result = NOT_SET
+    error = None
+    data = None
+    local_data = None
+
+    try:
+        data = salt.utils.json.loads(stdout)
+        if len(data) < 2 and "local" in data:
+            try:
+                result = data["local"]
+                try:
+                    # Ensure a reported local retcode is kept (at least)
+                    retcode = max(retcode, result["retcode"])
+                except (KeyError, TypeError):
+                    pass
+                if not isinstance(data["local"], dict):
+                    # When a command has failed, the return is dumped as-is
+                    # without declaring it as a result, usually a string or list.
+                    error = SSHCommandExecutionError
+                elif result_only:
+                    result = result["return"]
+            except KeyError:
+                error = SSHMalformedReturnError
+        else:
+            error = SSHMalformedReturnError
+
+    except ValueError:
+        # No valid JSON output was found
+        error = SSHReturnDecodeError
+    if retcode:
+        raise SSHCommandExecutionError(
+            stdout=stdout,
+            stderr=stderr,
+            retcode=retcode,
+            result=result,
+            data=local_data if local_data is not None else data,
+        )
+    if error is not None:
+        raise error(
+            stdout=stdout,
+            stderr=stderr,
+            retcode=retcode,
+            result=result,
+            data=local_data if local_data is not None else data,
+        )
+    return result

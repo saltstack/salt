@@ -555,41 +555,37 @@ class SSH(MultiprocessingStateMixin):
             **target,
         )
         ret = {"id": single.id}
-        stdout, stderr, retcode = single.run()
+        stdout = stderr = ""
+        retcode = 0
         try:
-            retcode = int(retcode)
-        except (TypeError, ValueError):
-            log.warning(f"Got an invalid retcode for host '{host}': '{retcode}'")
-            retcode = 1
-        # This job is done, yield
-        try:
-            data = salt.utils.json.find_json(stdout)
-            if len(data) < 2 and "local" in data:
-                ret["ret"] = data["local"]
-                try:
-                    # Ensure a reported local retcode is kept
-                    remote_retcode = data["local"]["retcode"]
-                    try:
-                        retcode = int(remote_retcode)
-                    except (TypeError, ValueError):
-                        log.warning(
-                            f"Host '{host}' reported an invalid retcode: '{remote_retcode}'"
-                        )
-                        retcode = max(retcode, 1)
-                except (KeyError, TypeError):
-                    pass
-            else:
-                ret["ret"] = {
-                    "stdout": stdout,
-                    "stderr": stderr,
-                    "retcode": retcode,
-                }
-        except Exception:  # pylint: disable=broad-except
+            stdout, stderr, retcode = single.run()
+            ret["ret"] = salt.client.ssh.wrapper.parse_ret(stdout, stderr, retcode)
+        except (
+            salt.client.ssh.wrapper.SSHPermissionDeniedError,
+            salt.client.ssh.wrapper.SSHCommandExecutionError,
+        ) as err:
+            ret["ret"] = err.to_ret()
+            # All caught errors always indicate the retcode is/should be > 0
+            retcode = max(retcode, err.retcode, 1)
+        except salt.client.ssh.wrapper.SSHException as err:
+            ret["ret"] = err.to_ret()
+            if not self.opts.get("raw_shell"):
+                # We only expect valid JSON output from Salt
+                retcode = max(retcode, err.retcode, 1)
+                ret["ret"].pop("_error", None)
+        except Exception as err:  # pylint: disable=broad-except
+            log.error(
+                f"Error while parsing the command output: {err}",
+                exc_info_on_loglevel=logging.DEBUG,
+            )
             ret["ret"] = {
+                "_error": f"Internal error while parsing the command output: {err}",
                 "stdout": stdout,
                 "stderr": stderr,
                 "retcode": retcode,
+                "data": None,
             }
+            retcode = max(retcode, 1)
         que.put((ret, retcode))
 
     def handle_ssh(self, mine=False):
@@ -737,7 +733,7 @@ class SSH(MultiprocessingStateMixin):
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
                 id_, data = next(iter(ret.items()))
-                if isinstance(data, str):
+                if not isinstance(data, dict):
                     data = {"return": data}
                 if "id" not in data:
                     data["id"] = id_
@@ -854,7 +850,7 @@ class SSH(MultiprocessingStateMixin):
                 salt.output.display_output(p_data, outputter, self.opts)
             if self.event:
                 id_, data = next(iter(ret.items()))
-                if isinstance(data, str):
+                if not isinstance(data, dict):
                     data = {"return": data}
                 if "id" not in data:
                     data["id"] = id_
@@ -1037,7 +1033,7 @@ class Single:
             # NamedTemporaryFile
             try:
                 shutil.copyfile(self.ssh_pre_flight, temp.name)
-            except OSError as err:
+            except OSError:
                 return (
                     "",
                     "Could not copy pre flight script to temporary path",
@@ -1099,7 +1095,8 @@ class Single:
 
         Returns tuple of (stdout, stderr, retcode)
         """
-        stdout = stderr = retcode = None
+        stdout = stderr = ""
+        retcode = 0
 
         if self.ssh_pre_flight:
             if not self.opts.get("ssh_run_pre_flight", False) and self.check_thin_dir():
@@ -1176,11 +1173,6 @@ class Single:
             )
 
             opts_pkg = pre_wrapper["test.opts_pkg"]()  # pylint: disable=E1102
-            if "_error" in opts_pkg:
-                # Refresh failed
-                retcode = opts_pkg["retcode"]
-                ret = salt.utils.json.dumps({"local": opts_pkg})
-                return ret, retcode
 
             opts_pkg["file_roots"] = self.opts["file_roots"]
             opts_pkg["pillar_roots"] = self.opts["pillar_roots"]
@@ -1307,14 +1299,18 @@ class Single:
                 result = wrapper[mine_fun](*self.args, **self.kwargs)
             else:
                 result = self.wfuncs[self.fun](*self.args, **self.kwargs)
+        except salt.client.ssh.wrapper.SSHException:
+            # SSHExceptions indicating remote command failure or
+            # parsing issues are handled centrally in SSH.handle_routine
+            raise
         except TypeError as exc:
-            result = f"TypeError encountered executing {self.fun}: {exc}"
+            result = {"local": f"TypeError encountered executing {self.fun}: {exc}"}
             log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
         except Exception as exc:  # pylint: disable=broad-except
-            result = "An Exception occurred while executing {}: {}".format(
-                self.fun, exc
-            )
+            result = {
+                "local": f"An Exception occurred while executing {self.fun}: {exc}"
+            }
             log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
 
@@ -1325,6 +1321,10 @@ class Single:
         # emit (as seen in ssh_py_shim.py)
         if isinstance(result, dict) and "local" in result:
             ret = salt.utils.json.dumps({"local": result["local"]})
+        elif self.context.get("retcode"):
+            # The wrapped command failed, the usual behavior is that
+            # the return is dumped as-is without declaring it as a result.
+            ret = salt.utils.json.dumps({"local": result})
         else:
             ret = salt.utils.json.dumps({"local": {"return": result}})
         return ret, retcode
