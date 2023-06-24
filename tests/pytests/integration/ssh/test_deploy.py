@@ -232,9 +232,8 @@ def test_retcode_exe_run_exception(salt_ssh_cli):
     """
     ret = salt_ssh_cli.run("salttest.jinja_error")
     assert ret.returncode == EX_AGGREGATE
-    assert isinstance(ret.data, dict)
-    assert ret.data["stderr"].endswith("Exception: hehehe")
-    assert ret.data["retcode"] == 1
+    assert isinstance(ret.data, str)
+    assert ret.data.endswith("Exception: hehehe")
 
 
 @pytest.mark.usefixtures("invalid_json_exe_mod")
