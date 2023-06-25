@@ -81,7 +81,7 @@ def test_mine_get(salt_ssh_cli, salt_minion, tgts):
         assert ret.data[id_] is True
 
 
-def test_ssh_mine_get_error(salt_ssh_cli):
+def test_ssh_mine_get_error(salt_ssh_cli, caplog):
     """
     Test that a mine function returning an error is not
     included in the output.
@@ -89,3 +89,4 @@ def test_ssh_mine_get_error(salt_ssh_cli):
     ret = salt_ssh_cli.run("mine.get", "localhost", "disk.usage")
     assert ret.returncode == 0
     assert not ret.data
+    assert "Error executing mine func disk.usage" in caplog.text
