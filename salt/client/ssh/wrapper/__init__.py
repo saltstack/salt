@@ -31,12 +31,30 @@ class SSHException(SaltException):
     ):
         super().__init__(stderr, *args, **kwargs)
         self.stdout = stdout
-        self.stderr = stderr
+        self.stderr = self._filter_stderr(stderr)
         self.result = result
         self.data = data
         self.retcode = retcode
         if args:
             self._error = args.pop(0)
+
+    def _filter_stderr(self, stderr):
+        stderr_lines = []
+        skip_next = False
+        for line in stderr.splitlines():
+            if skip_next:
+                skip_next = False
+                continue
+            # Filter out deprecation warnings from stderr to the best of
+            # our ability since they are irrelevant to the command output and cause noise.
+            parts = line.split(":")
+            if len(parts) > 2 and "DeprecationWarning" in parts[2]:
+                # DeprecationWarnings print two lines, the second one being the
+                # line that caused the warning.
+                skip_next = True
+                continue
+            stderr_lines.append(line)
+        return "\n".join(stderr_lines)
 
     def to_ret(self):
         ret = {
