@@ -761,7 +761,7 @@ class SSH(MultiprocessingStateMixin):
                 jid, job_load
             )
 
-        for ret, _ in self.handle_ssh(mine=mine):
+        for ret, retcode in self.handle_ssh(mine=mine):
             host = next(iter(ret))
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
@@ -772,6 +772,17 @@ class SSH(MultiprocessingStateMixin):
                     data["id"] = id_
                 if "fun" not in data:
                     data["fun"] = fun
+                if "fun_args" not in data:
+                    data["fun_args"] = args
+                if "retcode" not in data:
+                    data["retcode"] = retcode
+                if "success" not in data:
+                    data["success"] = data["retcode"] == salt.defaults.exitcodes.EX_OK
+                if "return" not in data:
+                    if data["success"]:
+                        data["return"] = data.get("stdout")
+                    else:
+                        data["return"] = data.get("stderr", data.get("stdout"))
                 data[
                     "jid"
                 ] = jid  # make the jid in the payload the same as the jid in the tag
@@ -893,6 +904,17 @@ class SSH(MultiprocessingStateMixin):
                     data["id"] = id_
                 if "fun" not in data:
                     data["fun"] = fun
+                if "fun_args" not in data:
+                    data["fun_args"] = args
+                if "retcode" not in data:
+                    data["retcode"] = retcode
+                if "success" not in data:
+                    data["success"] = data["retcode"] == salt.defaults.exitcodes.EX_OK
+                if "return" not in data:
+                    if data["success"]:
+                        data["return"] = data.get("stdout")
+                    else:
+                        data["return"] = data.get("stderr", data.get("stdout"))
                 data[
                     "jid"
                 ] = jid  # make the jid in the payload the same as the jid in the tag
