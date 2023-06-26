@@ -583,7 +583,7 @@ class SSH(MultiprocessingStateMixin):
         )
         ret = {"id": single.id}
         stdout = stderr = ""
-        retcode = 0
+        retcode = salt.defaults.exitcodes.EX_OK
         try:
             stdout, stderr, retcode = single.run()
             try:
@@ -677,7 +677,7 @@ class SSH(MultiprocessingStateMixin):
                 running[host] = {"thread": routine}
                 continue
             ret = {}
-            retcode = 0
+            retcode = salt.defaults.exitcodes.EX_OK
             try:
                 ret, retcode = que.get(False)
                 if "id" in ret:
@@ -865,7 +865,7 @@ class SSH(MultiprocessingStateMixin):
             print("")
         sret = {}
         outputter = self.opts.get("output", "nested")
-        final_exit = 0
+        final_exit = salt.defaults.exitcodes.EX_OK
         for ret, retcode in self.handle_ssh():
             host = next(iter(ret))
             if not isinstance(retcode, int):
@@ -877,7 +877,6 @@ class SSH(MultiprocessingStateMixin):
             ret, deploy_retcode = self.key_deploy(host, ret)
             if deploy_retcode is not None:
                 retcode = deploy_retcode
-
             final_exit = max(final_exit, retcode)
 
             if isinstance(ret[host], dict) and (
@@ -1155,7 +1154,7 @@ class Single:
         Returns tuple of (stdout, stderr, retcode)
         """
         stdout = stderr = ""
-        retcode = 0
+        retcode = salt.defaults.exitcodes.EX_OK
 
         if self.ssh_pre_flight:
             if not self.opts.get("ssh_run_pre_flight", False) and self.check_thin_dir():
@@ -1169,7 +1168,7 @@ class Single:
                 )
             else:
                 stdout, stderr, retcode = self.run_ssh_pre_flight()
-                if retcode != 0:
+                if retcode != salt.defaults.exitcodes.EX_OK:
                     log.error(
                         "Error running ssh_pre_flight script %s", self.ssh_pre_file
                     )
@@ -1252,7 +1251,7 @@ class Single:
             # Use the ID defined in the roster file
             opts_pkg["id"] = self.id
 
-            retcode = 0
+            retcode = salt.defaults.exitcodes.EX_OK
 
             # Restore master grains
             for grain in conf_grains:
@@ -1374,7 +1373,9 @@ class Single:
             retcode = 1
 
         # Ensure retcode from wrappers is respected, especially state render exceptions
-        retcode = max(retcode, self.context.get("retcode", 0))
+        retcode = max(
+            retcode, self.context.get("retcode", salt.defaults.exitcodes.EX_OK)
+        )
 
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
