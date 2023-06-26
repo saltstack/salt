@@ -1287,6 +1287,23 @@ def test_vm_disk_resize_no_disk_size():
     )
 
 
+@pytest.mark.skip(reason="Need to figure out how to mock calls to the O.N. API first.")
+def test_vm_disk_resize_success():
+    """
+    Tests that disk_resize returns successfully
+    """
+    with patch("salt.cloud.clouds.opennebula.vm_disk_resize", MagicMock(return_value={"action": "vm.disk_resize", "resized": "True", "vm_id": "1", "error_code": "0"})):
+        name = "test-vm"
+        expected = {
+            "action": "vm.disk_resize",
+            "resized": "True",
+            "vm_id": "1",
+            "error_code": "0",
+        }
+        ret = opennebula.vm_disk_resize("function", kwargs={"name": name, "disk_id": 0, "disk_size": "1024"})
+        assert expected == ret
+
+
 def test_vm_disk_save_action_error():
     """
     Tests that a SaltCloudSystemExit is raised when something other than

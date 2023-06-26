@@ -3181,7 +3181,7 @@ def vm_disk_resize(name, kwargs=None, call=None):
     """
     Changes the capacity of the virtual machine disk.
 
-    .. versionadded:: TBD
+    .. versionadded:: 3007.0
 
     name
         The name of the VM to resize.
