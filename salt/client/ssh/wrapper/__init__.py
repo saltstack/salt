@@ -90,6 +90,12 @@ class SSHCommandExecutionError(SSHException, CommandExecutionError):
             return self.stderr
         return super().to_ret()
 
+    def __str__(self):
+        ret = self.to_ret()
+        if isinstance(ret, str):
+            return f"{self._error}: {ret}"
+        return self._error
+
 
 class SSHPermissionDeniedError(SSHException):
     """
