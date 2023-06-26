@@ -572,6 +572,7 @@ class SSH(MultiprocessingStateMixin):
             if not self.opts.get("raw_shell"):
                 # We only expect valid JSON output from Salt
                 retcode = max(retcode, err.retcode, 1)
+            else:
                 ret["ret"].pop("_error", None)
         except Exception as err:  # pylint: disable=broad-except
             log.error(

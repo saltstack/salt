@@ -27,16 +27,17 @@ class SSHException(SaltException):
     _error = ""
 
     def __init__(
-        self, stdout, stderr, retcode, result=NOT_SET, data=None, *args, **kwargs
+        self, stdout, stderr, retcode, result=NOT_SET, parsed=None, *args, **kwargs
     ):
         super().__init__(stderr, *args, **kwargs)
         self.stdout = stdout
         self.stderr = self._filter_stderr(stderr)
         self.result = result
-        self.data = data
+        self.parsed = parsed
         self.retcode = retcode
         if args:
             self._error = args.pop(0)
+        super().__init__(self._error)
 
     def _filter_stderr(self, stderr):
         stderr_lines = []
@@ -61,7 +62,7 @@ class SSHException(SaltException):
             "stdout": self.stdout,
             "stderr": self.stderr,
             "retcode": self.retcode,
-            "data": self.data,
+            "parsed": self.parsed,
         }
         if self._error:
             ret["_error"] = self._error
@@ -81,9 +82,9 @@ class SSHCommandExecutionError(SSHException, CommandExecutionError):
     _error = "The command resulted in a non-zero exit code"
 
     def to_ret(self):
-        if self.data and "local" in self.data:
+        if self.parsed and "local" in self.parsed:
             # Wrapped commands that indicate a non-zero retcode
-            return self.data["local"]
+            return self.parsed["local"]
         elif self.stderr:
             # Remote executions that indicate a non-zero retcode
             return self.stderr
@@ -95,7 +96,7 @@ class SSHPermissionDeniedError(SSHException):
     Thrown when "Permission denied" is found in stderr
     """
 
-    _error = "Permission Denied"
+    _error = "Permission denied"
 
 
 class SSHReturnDecodeError(SSHException):
@@ -271,13 +272,12 @@ def parse_ret(stdout, stderr, retcode, result_only=False):
         log.warning(f"Got an invalid retcode for host: '{retcode}'")
         retcode = 1
 
-    if retcode and stderr.count("Permission Denied"):
+    if retcode and stderr.count("Permission denied"):
         raise SSHPermissionDeniedError(stdout=stdout, stderr=stderr, retcode=retcode)
 
     result = NOT_SET
     error = None
     data = None
-    local_data = None
 
     try:
         data = salt.utils.json.loads(stdout)
@@ -297,6 +297,7 @@ def parse_ret(stdout, stderr, retcode, result_only=False):
                     result = result["return"]
             except KeyError:
                 error = SSHMalformedReturnError
+                result = NOT_SET
         else:
             error = SSHMalformedReturnError
 
@@ -304,19 +305,13 @@ def parse_ret(stdout, stderr, retcode, result_only=False):
         # No valid JSON output was found
         error = SSHReturnDecodeError
     if retcode:
-        raise SSHCommandExecutionError(
-            stdout=stdout,
-            stderr=stderr,
-            retcode=retcode,
-            result=result,
-            data=local_data if local_data is not None else data,
-        )
+        error = SSHCommandExecutionError
     if error is not None:
         raise error(
             stdout=stdout,
             stderr=stderr,
             retcode=retcode,
             result=result,
-            data=local_data if local_data is not None else data,
+            parsed=data,
         )
     return result
