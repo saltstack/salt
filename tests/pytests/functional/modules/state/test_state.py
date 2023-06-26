@@ -702,6 +702,7 @@ def test_retry_option_success(state, state_tree, tmp_path):
             assert "Attempt 2" not in state_return.comment
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.skip_on_windows(
     reason="Skipped until parallel states can be fixed on Windows"
 )

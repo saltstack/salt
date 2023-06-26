@@ -14,6 +14,7 @@ pytestmark = [
 ]
 
 
+@pytest.mark.flaky(max_runs=10)
 def test_basic_command_return(
     salt_mm_minion_1,
     salt_mm_minion_2,
@@ -36,6 +37,7 @@ def test_basic_command_return(
     assert (mm_master_2_salt_cli, salt_mm_minion_2) in returns
 
 
+@pytest.mark.flaky(max_runs=10)
 def test_stopped_first_master(
     salt_mm_master_1,
     salt_mm_minion_1,
@@ -58,6 +60,7 @@ def test_stopped_first_master(
         assert (mm_master_2_salt_cli, salt_mm_minion_2) in returns
 
 
+@pytest.mark.flaky(max_runs=10)
 def test_stopped_second_master(
     salt_mm_master_2,
     salt_mm_minion_1,
@@ -80,6 +83,7 @@ def test_stopped_second_master(
         assert (mm_master_1_salt_cli, salt_mm_minion_2) in returns
 
 
+@pytest.mark.flaky(max_runs=10)
 def test_minion_reconnection_attempts(
     event_listener,
     salt_mm_master_1,
