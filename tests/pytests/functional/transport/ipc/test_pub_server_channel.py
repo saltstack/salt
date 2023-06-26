@@ -76,10 +76,12 @@ def test_publish_to_pubserv_ipc(salt_master, salt_minion, transport):
     with PubServerChannelProcess(opts, minion_opts) as server_channel:
         send_num = 10000
         expect = []
+        log.error("Sending %d messages", send_num)
         for idx in range(send_num):
             expect.append(idx)
             load = {"tgt_type": "glob", "tgt": "*", "jid": idx}
             server_channel.publish(load)
+        log.error("Finished sending messages")
     results = server_channel.collector.results
     assert len(results) == send_num, "{} != {}, difference: {}".format(
         len(results), send_num, set(expect).difference(results)
