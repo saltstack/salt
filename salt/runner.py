@@ -207,7 +207,7 @@ class Runner(RunnerClient):
             print(docs[fun])
 
     # TODO: move to mixin whenever we want a salt-wheel cli
-    def run(self):
+    def run(self, full_return=False):
         """
         Execute the runner sequence
         """
@@ -306,7 +306,7 @@ class Runner(RunnerClient):
                         tag=async_pub["tag"],
                         jid=async_pub["jid"],
                         daemonize=False,
-                        full_return=True,
+                        full_return=full_return,
                     )
             except salt.exceptions.SaltException as exc:
                 with salt.utils.event.get_event("master", opts=self.opts) as evt:
