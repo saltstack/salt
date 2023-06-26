@@ -708,8 +708,19 @@ def absent(name, **kwargs):
         ret["comment"] = f"Failed to configure repo '{name}': {exc}"
         return ret
 
-    if repo and "pkg.apt_source_entry" in __salt__:
-        if set(__salt__["pkg.apt_source_entry"](stripname)["architectures"]) != set(
+    if repo and (
+        __grains__["os_family"].lower() == "debian"
+        or __opts__.get("providers", {}).get("pkg") == "aptpkg"
+    ):
+        # On Debian/Ubuntu, pkg.get_repo will return a match for the repo
+        # even if the architectures do not match. However, changing get_repo
+        # breaks idempotency for pkgrepo.managed states. So, compare the
+        # architectures of the matched repo to the architectures specified in
+        # the repo string passed to this state. If the architectures do not
+        # match, then invalidate the match by setting repo to an empty dict.
+        import salt.modules.aptpkg
+
+        if set(salt.modules.aptpkg._split_repo_str(stripname)["architectures"]) != set(
             repo["architectures"]
         ):
             repo = {}
