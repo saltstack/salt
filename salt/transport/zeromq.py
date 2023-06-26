@@ -807,19 +807,38 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         "close",
     ]
 
-    def __init__(self, opts):
+    def __init__(self, opts, **kwargs):
         self.opts = opts
-        if self.opts.get("ipc_mode", "") == "tcp":
-            self.pull_uri = "tcp://127.0.0.1:{}".format(
-                self.opts.get("tcp_master_publish_pull", 4514)
-            )
+        #if self.opts.get("ipc_mode", "") == "tcp":
+        #    self.pull_uri = "tcp://127.0.0.1:{}".format(
+        #        self.opts.get("tcp_master_publish_pull", 4514)
+        #    )
+        #else:
+        #    self.pull_uri = "ipc://{}".format(
+        #        os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
+        #    )
+        #interface = self.opts.get("interface", "127.0.0.1")
+        #publish_port = self.opts.get("publish_port", 4560)
+        #self.pub_uri = f"tcp://{interface}:{publish_port}"
+
+        pub_host = kwargs.get("pub_host", None)
+        pub_port = kwargs.get("pub_port", None)
+        pub_path = kwargs.get("pub_path", None)
+        if pub_path:
+            self.pub_uri = f"ipc://{pub_path}"
         else:
-            self.pull_uri = "ipc://{}".format(
-                os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
-            )
-        interface = self.opts.get("interface", "127.0.0.1")
-        publish_port = self.opts.get("publish_port", 4560)
-        self.pub_uri = f"tcp://{interface}:{publish_port}"
+            self.pub_uri = f"tcp://{pub_host}:{pub_port}"
+
+
+        pull_host = kwargs.get("pull_host", None)
+        pull_port = kwargs.get("pull_port", None)
+        pull_path = kwargs.get("pull_path", None)
+        if pull_path:
+            self.pull_uri = f"ipc://{pull_path}"
+        else:
+            self.pull_uri = f"tcp://{pull_host}:{pull_port}"
+
+
         self.ctx = None
         self.sock = None
         self.daemon_context = None
@@ -876,6 +895,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         salt.utils.zeromq.check_ipc_path_max_len(self.pull_uri)
         # Start the minion command publisher
         # Securely create socket
+        log.error("PULL URI %r PUB URI %r", self.pull_uri, self.pub_uri)
         with salt.utils.files.set_umask(0o177):
             log.info("Starting the Salt Publisher on %s", self.pub_uri)
             pub_sock.bind(self.pub_uri)
