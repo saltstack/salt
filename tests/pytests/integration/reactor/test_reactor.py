@@ -119,21 +119,21 @@ def test_reactor_is_leader(
     When leader is set to false reactor should timeout/not do anything.
     """
     ret = salt_run_cli.run("reactor.is_leader")
-    assert ret.returncode == 0
+    assert ret.returncode == 1
     assert (
         "salt.exceptions.CommandExecutionError: Reactor system is not running."
         in ret.stdout
     )
 
     ret = salt_run_cli.run("reactor.set_leader", value=True)
-    assert ret.returncode == 0
+    assert ret.returncode == 1
     assert (
         "salt.exceptions.CommandExecutionError: Reactor system is not running."
         in ret.stdout
     )
 
     ret = salt_run_cli.run("reactor.is_leader")
-    assert ret.returncode == 0
+    assert ret.returncode == 1
     assert (
         "salt.exceptions.CommandExecutionError: Reactor system is not running."
         in ret.stdout
@@ -220,7 +220,7 @@ def test_reactor_is_leader(
 
     # Let's just confirm the engine is not running once again(because the config file is deleted by now)
     ret = salt_run_cli.run("reactor.is_leader")
-    assert ret.returncode == 0
+    assert ret.returncode == 1
     assert (
         "salt.exceptions.CommandExecutionError: Reactor system is not running."
         in ret.stdout
