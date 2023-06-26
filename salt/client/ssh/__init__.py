@@ -464,19 +464,15 @@ class SSH(MultiprocessingStateMixin):
         """
         Deploy the SSH key if the minions don't auth
         """
+        # `or` initially was `and`, but was changed to be able to "deploy
+        # to multiple hosts" in #22661. Why? On each command error, this checks
+        # if a key deploy can be attempted without it being requested.
         if not isinstance(ret[host], dict) or self.opts.get("ssh_key_deploy"):
             target = self.targets[host]
             if target.get("passwd", False) or self.opts["ssh_passwd"]:
                 self._key_deploy_run(host, target, False)
-            return ret
-        stderr = ret[host].get("stderr", "")
-        # -failed to upload file- is detecting scp errors
-        # Errors to ignore when Permission denied is in the stderr. For example
-        # scp can get a permission denied on the target host, but they where
-        # able to accurate authenticate against the box
-        ignore_err = ["failed to upload file"]
-        check_err = [x for x in ignore_err if stderr.count(x)]
-        if "Permission denied" in stderr and not check_err:
+            return ret, None
+        if "_error" in ret[host] and ret[host]["_error"] == "Permission denied":
             target = self.targets[host]
             # permission denied, attempt to auto deploy ssh key
             print(
@@ -490,7 +486,7 @@ class SSH(MultiprocessingStateMixin):
                 "Password for {}@{}: ".format(target["user"], host)
             )
             return self._key_deploy_run(host, target, True)
-        return ret
+        return ret, None
 
     def _key_deploy_run(self, host, target, re_run=True):
         """
@@ -529,15 +525,46 @@ class SSH(MultiprocessingStateMixin):
             )
             stdout, stderr, retcode = single.cmd_block()
             try:
-                data = salt.utils.json.find_json(stdout)
-                return {host: data.get("local", data)}
-            except Exception:  # pylint: disable=broad-except
-                if stderr:
-                    return {host: stderr}
-                return {host: "Bad Return"}
+                retcode = int(retcode)
+            except (TypeError, ValueError):
+                log.warning(f"Got an invalid retcode for host '{host}': '{retcode}'")
+                retcode = 1
+            try:
+                ret = (
+                    salt.client.ssh.wrapper.parse_ret(stdout, stderr, retcode),
+                    salt.defaults.exitcodes.EX_OK,
+                )
+            except (
+                salt.client.ssh.wrapper.SSHPermissionDeniedError,
+                salt.client.ssh.wrapper.SSHCommandExecutionError,
+            ) as err:
+                ret = err.to_ret()
+                retcode = max(retcode, err.retcode, 1)
+            except salt.client.ssh.wrapper.SSHException as err:
+                ret = err.to_ret()
+                if not self.opts.get("raw_shell"):
+                    # We only expect valid JSON output from Salt
+                    retcode = max(retcode, err.retcode, 1)
+                else:
+                    ret.pop("_error", None)
+            except Exception as err:  # pylint: disable=broad-except
+                log.error(
+                    f"Error while parsing the command output: {err}",
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
+                ret = {
+                    "_error": f"Internal error while parsing the command output: {err}",
+                    "stdout": stdout,
+                    "stderr": stderr,
+                    "retcode": retcode,
+                    "data": None,
+                }
+                retcode = max(retcode, 1)
+            return {host: ret}, retcode
+
         if salt.defaults.exitcodes.EX_OK != retcode:
-            return {host: stderr}
-        return {host: stdout}
+            return {host: stderr}, retcode
+        return {host: stdout}, retcode
 
     def handle_routine(self, que, opts, host, target, mine=False):
         """
@@ -559,6 +586,11 @@ class SSH(MultiprocessingStateMixin):
         retcode = 0
         try:
             stdout, stderr, retcode = single.run()
+            try:
+                retcode = int(retcode)
+            except (TypeError, ValueError):
+                log.warning(f"Got an invalid retcode for host '{host}': '{retcode}'")
+                retcode = 1
             ret["ret"] = salt.client.ssh.wrapper.parse_ret(stdout, stderr, retcode)
         except (
             salt.client.ssh.wrapper.SSHPermissionDeniedError,
@@ -831,7 +863,11 @@ class SSH(MultiprocessingStateMixin):
             final_exit = max(final_exit, retcode)
 
             self.cache_job(jid, host, ret[host], fun)
-            ret = self.key_deploy(host, ret)
+            ret, deploy_retcode = self.key_deploy(host, ret)
+            if deploy_retcode is not None:
+                retcode = deploy_retcode
+
+            final_exit = max(final_exit, retcode)
 
             if isinstance(ret[host], dict) and (
                 ret[host].get("stderr") or ""
