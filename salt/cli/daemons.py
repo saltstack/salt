@@ -7,6 +7,7 @@ import logging
 import os
 import warnings
 
+import salt.defaults.exitcodes
 import salt.utils.kinds as kinds
 from salt.exceptions import SaltClientError, SaltSystemExit, get_error_message
 from salt.utils import migrations
@@ -81,7 +82,7 @@ class DaemonsMixin:  # pylint: disable=no-init
         """
         if not check_user(self.config["user"]):
             self.action_log_info("Cannot switch to configured user for Salt. Exiting")
-            self.shutdown(1)
+            self.shutdown(salt.defaults.exitcodes.EX_NOUSER)
 
     def action_log_info(self, action):
         """
