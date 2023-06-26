@@ -788,7 +788,7 @@ def test_mod_repo_match():
                         create=True,
                     ):
                         with patch(
-                            "salt.modules.aptpkg.apt_source_entry",
+                            "salt.modules.aptpkg._split_repo_str",
                             MagicMock(
                                 return_value={
                                     "type": "deb",

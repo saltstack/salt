@@ -1745,18 +1745,9 @@ def _get_opts(line):
     return ret
 
 
-def apt_source_entry(repo):
+def _split_repo_str(repo):
     """
-    .. versionadded:: 3006.2
-
-    Parse a single source entry from a source list and return its components in
-    a dictionary.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' pkg.apt_source_entry "deb [arch=amd64] http://www.deb-multimedia.org stable main"
+    Return APT source entry as a dictionary
     """
     entry = SourceEntry(repo)
     if not HAS_APT:
@@ -1981,7 +1972,7 @@ def get_repo(repo, **kwargs):
 
     if repos:
         try:
-            repo_entry = apt_source_entry(repo)
+            repo_entry = _split_repo_str(repo)
             if ppa_auth:
                 uri_match = re.search("(http[s]?://)(.+)", repo_entry["uri"])
                 if uri_match:
@@ -2051,7 +2042,7 @@ def del_repo(repo, **kwargs):
     if repos:
         deleted_from = dict()
         try:
-            repo_entry = apt_source_entry(repo)
+            repo_entry = _split_repo_str(repo)
         except SyntaxError:
             raise SaltInvocationError(
                 "Error: repo '{}' not a well formatted definition".format(repo)
@@ -2744,7 +2735,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     mod_source = None
     try:
-        repo_entry = apt_source_entry(repo)
+        repo_entry = _split_repo_str(repo)
     except SyntaxError:
         raise SyntaxError(
             "Error: repo '{}' not a well formatted definition".format(repo)
