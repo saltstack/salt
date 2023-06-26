@@ -9,7 +9,7 @@ import logging
 import os
 import pathlib
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ptscripts import Context, command_group
 
@@ -672,3 +672,110 @@ def get_releases(ctx: Context, repository: str = "saltstack/salt"):
             wfh.write(f"latest-release={latest}\n")
             wfh.write(f"releases={json.dumps(str_releases)}\n")
         ctx.exit(0)
+
+
+@ci.command(
+    name="get-pr-test-labels",
+    arguments={
+        "pr": {
+            "help": "Pull request number",
+        },
+        "repository": {
+            "help": "Github repository.",
+        },
+    },
+)
+def get_pr_test_labels(
+    ctx: Context, repository: str = "saltstack/salt", pr: int = None
+):
+    """
+    Set the pull-request labels.
+    """
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is None:
+        labels = _get_pr_test_labels_from_api(ctx, repository, pr=pr)
+    else:
+        if TYPE_CHECKING:
+            assert gh_event_path is not None
+
+        try:
+            gh_event = json.loads(open(gh_event_path).read())
+        except Exception as exc:
+            ctx.error(
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+            )
+            ctx.exit(1)
+
+        if "pull_request" not in gh_event:
+            ctx.warning("The 'pull_request' key was not found on the event payload.")
+            ctx.exit(1)
+
+        pr = gh_event["pull_request"]["number"]
+        labels = _get_pr_test_labels_from_event_payload(gh_event)
+
+    if labels:
+        ctx.info(f"Test labels for pull-request #{pr} on {repository}:")
+        for name, description in labels:
+            ctx.info(f" * [yellow]{name}[/yellow]: {description}")
+    else:
+        ctx.info(f"No test labels for pull-request #{pr} on {repository}")
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.exit(0)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    ctx.info("Writing 'labels' to the github outputs file")
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"labels={json.dumps([label[0] for label in labels])}\n")
+    ctx.exit(0)
+
+
+def _get_pr_test_labels_from_api(
+    ctx: Context, repository: str = "saltstack/salt", pr: int = None
+) -> list[tuple[str, str]]:
+    """
+    Set the pull-request labels.
+    """
+    if pr is None:
+        ctx.error(
+            "Could not find the 'GITHUB_EVENT_PATH' variable and the "
+            "--pr flag was not passed. Unable to detect pull-request number."
+        )
+        ctx.exit(1)
+    with ctx.web as web:
+        headers = {
+            "Accept": "application/vnd.github+json",
+        }
+        if "GITHUB_TOKEN" in os.environ:
+            headers["Authorization"] = f"Bearer {os.environ['GITHUB_TOKEN']}"
+        web.headers.update(headers)
+        ret = web.get(f"https://api.github.com/repos/{repository}/pulls/{pr}")
+        if ret.status_code != 200:
+            ctx.error(
+                f"Failed to get the #{pr} pull-request details on repository {repository!r}: {ret.reason}"
+            )
+            ctx.exit(1)
+        pr_details = ret.json()
+        return _filter_test_labels(pr_details["labels"])
+
+
+def _get_pr_test_labels_from_event_payload(
+    gh_event: dict[str, Any]
+) -> list[tuple[str, str]]:
+    """
+    Get the pull-request test labels.
+    """
+    if "pull_request" not in gh_event:
+        return []
+    return _filter_test_labels(gh_event["pull_request"]["labels"])
+
+
+def _filter_test_labels(labels: list[dict[str, Any]]) -> list[tuple[str, str]]:
+    return [
+        (label["name"], label["description"])
+        for label in labels
+        if label["name"].startswith("test:")
+    ]
