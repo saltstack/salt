@@ -1,5 +1,6 @@
 import logging
 import time
+import tracemalloc
 from concurrent.futures.thread import ThreadPoolExecutor
 
 import pytest
@@ -8,6 +9,8 @@ from saltfactories.utils import random_string
 import salt.channel.server
 import salt.master
 from tests.support.pytest.transport import PubServerChannelProcess
+
+tracemalloc.start()
 
 log = logging.getLogger(__name__)
 
@@ -61,6 +64,8 @@ def test_publish_to_pubserv_ipc(salt_master, salt_minion, transport):
 
     ZMQ's ipc transport not supported on Windows
     """
+    import asyncio
+
     opts = dict(
         salt_master.config.copy(),
         ipc_mode="ipc",
@@ -91,28 +96,51 @@ def test_issue_36469_tcp(salt_master, salt_minion, transport):
     """
     if transport == "tcp":
         pytest.skip("Test not applicable to the ZeroMQ transport.")
+    import asyncio
 
     def _send_small(opts, sid, num=10):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         server_channel = salt.channel.server.PubServerChannel.factory(opts)
-        for idx in range(num):
-            load = {"tgt_type": "glob", "tgt": "*", "jid": "{}-s{}".format(sid, idx)}
-            server_channel.publish(load)
+
+        async def send():
+            await asyncio.sleep(0.3)
+            for idx in range(num):
+                load = {
+                    "tgt_type": "glob",
+                    "tgt": "*",
+                    "jid": "{}-s{}".format(sid, idx),
+                }
+                await server_channel.publish(load)
+
+        asyncio.run(send())
         time.sleep(0.3)
         time.sleep(3)
-        server_channel.close_pub()
+        server_channel.close()
+        loop.close()
+        asyncio.set_event_loop(None)
 
     def _send_large(opts, sid, num=10, size=250000 * 3):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         server_channel = salt.channel.server.PubServerChannel.factory(opts)
-        for idx in range(num):
-            load = {
-                "tgt_type": "glob",
-                "tgt": "*",
-                "jid": "{}-l{}".format(sid, idx),
-                "xdata": "0" * size,
-            }
-            server_channel.publish(load)
+
+        async def send():
+            await asyncio.sleep(0.3)
+            for idx in range(num):
+                load = {
+                    "tgt_type": "glob",
+                    "tgt": "*",
+                    "jid": "{}-l{}".format(sid, idx),
+                    "xdata": "0" * size,
+                }
+                await server_channel.publish(load)
+
+        asyncio.run(send())
         time.sleep(0.3)
-        server_channel.close_pub()
+        server_channel.close()
+        loop.close()
+        asyncio.set_event_loop(None)
 
     opts = dict(salt_master.config.copy(), ipc_mode="tcp", pub_hwm=0)
     send_num = 10 * 4

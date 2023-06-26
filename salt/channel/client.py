@@ -103,6 +103,7 @@ class AsyncReqChannel:
         "_uncrypted_transfer",
         "send",
         "connect",
+        # "close",
     ]
     close_methods = [
         "close",
@@ -314,9 +315,8 @@ class AsyncReqChannel:
 
         raise tornado.gen.Return(ret)
 
-    @tornado.gen.coroutine
-    def connect(self):
-        yield self.transport.connect()
+    async def connect(self):
+        await self.transport.connect()
 
     @tornado.gen.coroutine
     def send(self, load, tries=None, timeout=None, raw=False):
@@ -367,6 +367,14 @@ class AsyncReqChannel:
     def __exit__(self, *args):
         self.close()
 
+    async def __aenter__(self):
+        await self.connect()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        # print("AEXIT")
+        self.close()
+
 
 class AsyncPubChannel:
     """
@@ -376,7 +384,7 @@ class AsyncPubChannel:
     async_methods = [
         "connect",
         "_decode_messages",
-      #  "close",
+        #  "close",
     ]
     close_methods = [
         "close",
@@ -406,7 +414,9 @@ class AsyncPubChannel:
             io_loop = tornado.ioloop.IOLoop.current()
 
         auth = salt.crypt.AsyncAuth(opts, io_loop=io_loop)
-        transport = salt.transport.publish_client(opts, io_loop)
+        host = opts.get("master_ip", "127.0.0.1")
+        port = int(opts.get("publish_port", 4506))
+        transport = salt.transport.publish_client(opts, io_loop, host=host, port=port)
         return cls(opts, transport, auth, io_loop)
 
     def __init__(self, opts, transport, auth, io_loop=None):
@@ -432,6 +442,7 @@ class AsyncPubChannel:
         try:
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
+            # log.error("*** Creds %r", self.auth.creds)
             # if this is changed from the default, we assume it was intentional
             if int(self.opts.get("publish_port", 4506)) != 4506:
                 publish_port = self.opts.get("publish_port")
@@ -447,6 +458,8 @@ class AsyncPubChannel:
         except KeyboardInterrupt:  # pylint: disable=try-except-raise
             raise
         except Exception as exc:  # pylint: disable=broad-except
+            # TODO: Basing re-try logic off exception messages is brittle and
+            # prone to errors; use exception types or some other method.
             if "-|RETRY|-" not in str(exc):
                 raise salt.exceptions.SaltClientError(
                     f"Unable to sign_in to master: {exc}"
@@ -456,11 +469,8 @@ class AsyncPubChannel:
         """
         Close the channel
         """
-        log.error("AsyncPubChannel.close called")
         self.transport.close()
-        log.error("Transport closed")
         if self.event is not None:
-            log.error("Event destroy called")
             self.event.destroy()
             self.event = None
 
@@ -616,7 +626,13 @@ class AsyncPubChannel:
         return self
 
     def __exit__(self, *args):
-        self.close()
+        self.io_loop.spawn_callback(self.close)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.close()
 
 
 class AsyncPushChannel:

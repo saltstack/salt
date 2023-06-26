@@ -94,6 +94,9 @@ class DeferredStreamHandler(StreamHandler):
         super().__init__(stream)
         self.__messages = deque(maxlen=max_queue_size)
         self.__emitting = False
+        import traceback
+
+        self.stack = "".join(traceback.format_stack())
 
     def handle(self, record):
         self.acquire()
@@ -115,6 +118,7 @@ class DeferredStreamHandler(StreamHandler):
                 super().handle(record)
             finally:
                 self.__emitting = False
+        # This will raise a ValueError if the file handle has been closed.
         super().flush()
 
     def sync_with_handlers(self, handlers=()):
