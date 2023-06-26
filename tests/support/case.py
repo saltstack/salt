@@ -191,12 +191,6 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         with RedirectStdStreams():
             runner = salt.runner.Runner(opts)
             ret["return"] = runner.run()
-            if (
-                isinstance(ret["return"], dict)
-                and "return" in ret["return"]
-                and "retcode" not in ret["return"]
-            ):
-                ret["return"] = ret["return"]["return"]
             try:
                 ret["jid"] = runner.jid
             except AttributeError:

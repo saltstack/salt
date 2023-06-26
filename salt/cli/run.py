@@ -31,7 +31,7 @@ class SaltRun(salt.utils.parsers.SaltRunOptionParser):
             if check_user(self.config["user"]):
                 pr = salt.utils.profile.activate_profile(profiling_enabled)
                 try:
-                    ret = runner.run()
+                    ret = runner.run(full_return=True)
                     # In older versions ret['data']['retcode'] was used
                     # for signaling the return code. This has been
                     # changed for the orchestrate runner, but external
