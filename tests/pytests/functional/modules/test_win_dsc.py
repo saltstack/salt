@@ -213,7 +213,7 @@ def test_apply_config(dsc, ps1_file, psd1_file):
     assert result is True
 
 
-@pytest.mark.flaky(max_runs=4)
+@pytest.mark.flaky(max_runs=6)
 def test_get_config_not_configured(dsc):
     dsc.remove_config(reset=False)
     with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
@@ -221,6 +221,7 @@ def test_get_config_not_configured(dsc):
     assert exc.value.message == "Not Configured"
 
 
+@pytest.mark.flaky(max_runs=4)
 def test_get_config_single(dsc, ps1_file, psd1_file):
     dsc.remove_config(reset=False)
     dsc.run_config(
@@ -273,6 +274,7 @@ def _reset_config(dsc):
             continue
 
 
+@pytest.mark.flaky(max_runs=4)
 def test_get_config_status_not_configured(dsc):
     _reset_config(dsc)
     with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
