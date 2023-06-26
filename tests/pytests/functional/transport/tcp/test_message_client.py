@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import pytest
@@ -26,16 +27,26 @@ def server(config):
         disconnect = False
 
         async def handle_stream(self, stream, address):
-            while self.disconnect is False:
-                for msg in self.send[:]:
-                    msg = self.send.pop(0)
-                    try:
-                        await stream.write(msg)
-                    except tornado.iostream.StreamClosedError:
-                        break
-                else:
-                    await tornado.gen.sleep(1)
-            stream.close()
+            try:
+                log.error("Got stream")
+                while self.disconnect is False:
+                    for msg in self.send[:]:
+                        msg = self.send.pop(0)
+                        try:
+                            log.error("Write %r", msg)
+                            await stream.write(msg)
+                        except tornado.iostream.StreamClosedError:
+                            log.error("Stream Closed Error From Test Server")
+                            break
+                    else:
+                        log.error("SLEEP")
+                        await asyncio.sleep(1)
+                log.error("Close stream")
+                log.error("After close stream")
+            except:
+                log.error("WTFSON", exc_info=True)
+            finally:
+                stream.close()
 
     server = TestServer()
     try:
@@ -47,14 +58,16 @@ def server(config):
 
 @pytest.fixture
 def client(io_loop, config):
-    client = salt.transport.tcp.TCPPubClient(config.copy(), io_loop)
+    client = salt.transport.tcp.TCPPubClient(
+        config.copy(), io_loop, host=config["master_ip"], port=config["publish_port"]
+    )
     try:
         yield client
     finally:
         client.close()
 
 
-async def test_message_client_reconnect(io_loop, config, client, server):
+async def test_message_client_reconnect(config, client, server):
     """
     Verify that the tcp MessageClient class re-sets it's unpacker after a
     stream disconnect.
@@ -69,7 +82,7 @@ async def test_message_client_reconnect(io_loop, config, client, server):
         received.append(msg)
 
     client.on_recv(handler)
-
+    await asyncio.sleep(0.03)
     # Prepare two packed messages
     msg = salt.utils.msgpack.dumps({"test": "test1"})
     pmsg = salt.utils.msgpack.dumps({"head": {}, "body": msg})
@@ -78,24 +91,40 @@ async def test_message_client_reconnect(io_loop, config, client, server):
 
     # Send one full and one partial msg to the client.
     partial = pmsg[:40]
+    log.error("Send partial %r", partial)
     server.send.append(partial)
 
     while not received:
-        await tornado.gen.sleep(1)
+        log.error("wait received")
+        await asyncio.sleep(1)
+    log.error("assert received")
     assert received == [msg]
+    # log.error("sleep")
+    # await asyncio.sleep(1)
 
     # The message client has unpacked one msg and there is a partial msg left in
     # the unpacker. Closing the stream now leaves the unpacker in a bad state
     # since the rest of the partil message will never be received.
+    log.error("disconnect")
     server.disconnect = True
-    await tornado.gen.sleep(1)
+    log.error("sleep")
+    await asyncio.sleep(1)
+    log.error("after sleep")
+    log.error("disconnect false")
     server.disconnect = False
+    log.error("sleep")
+    await asyncio.sleep(1)
+    log.error("after sleep")
+    log.error("Disconnect False")
     received = []
 
     # Prior to the fix for #60831, the unpacker would be left in a broken state
     # resulting in either a TypeError or BufferFull error from msgpack. The
     # rest of this test would fail.
+    log.error("Send pmsg %r", pmsg)
     server.send.append(pmsg)
     while not received:
         await tornado.gen.sleep(1)
     assert received == [msg, msg]
+    server.disconnect = True
+    await tornado.gen.sleep(1)
