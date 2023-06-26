@@ -50,3 +50,8 @@ def state_tree_run_fail(base_env_state_tree_root_dir):
 def test_it(salt_ssh_cli, args):
     ret = salt_ssh_cli.run(*args)
     assert ret.returncode == EX_AGGREGATE
+    assert isinstance(ret.data, dict)
+    state = next(iter(ret.data))
+    assert isinstance(ret.data[state], dict)
+    assert "result" in ret.data[state]
+    assert ret.data[state]["result"] is False
