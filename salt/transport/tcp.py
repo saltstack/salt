@@ -1207,24 +1207,43 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         "close",
     ]
 
-    def __init__(self, opts):
+    def __init__(self, opts, **kwargs):
         self.opts = opts
         self.pub_sock = None
         # Set up Salt IPC server
-        if self.opts.get("ipc_mode", "") == "tcp":
-            self.pull_uri = int(self.opts.get("tcp_master_publish_pull", 4514))
-        else:
-            self.pull_uri = os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
-        interface = self.opts.get("interface", "127.0.0.1")
-        self.publish_port = self.opts.get("publish_port", 4560)
-        self.pub_uri = f"tcp://{interface}:{self.publish_port}"
-        log.error(
-            "TCPPubServer %r %s %s %s",
-            self,
-            self.pull_uri,
-            self.publish_port,
-            self.pub_uri,
-        )
+        #if self.opts.get("ipc_mode", "") == "tcp":
+        #    self.pull_uri = int(self.opts.get("tcp_master_publish_pull", 4514))
+        #else:
+        #    self.pull_uri = os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
+        #interface = self.opts.get("interface", "127.0.0.1")
+        #self.publish_port = self.opts.get("publish_port", 4560)
+        #self.pub_uri = f"tcp://{interface}:{self.publish_port}"
+        self.pub_host = kwargs.get("pub_host", None)
+        self.pub_port = kwargs.get("pub_port", None)
+        self.pub_path = kwargs.get("pub_path", None)
+        #if pub_path:
+        #    self.pub_path = pub_path
+        #    self.pub_uri = f"ipc://{pub_path}"
+        #else:
+        #    self.pub_uri = f"tcp://{pub_host}:{pub_port}"
+
+        #self.publish_port = self.opts.get("publish_port", 4560)
+
+
+        self.pull_host = kwargs.get("pull_host", None)
+        self.pull_port = kwargs.get("pull_port", None)
+        self.pull_path = kwargs.get("pull_path", None)
+        #if pull_path:
+        #    self.pull_uri = f"ipc://{pull_path}"
+        #else:
+        #    self.pull_uri = f"tcp://{pub_host}:{pub_port}"
+        #log.error(
+        #    "TCPPubServer %r %s %s",
+        #    self,
+        #    self.pull_uri,
+        #    #self.publish_port,
+        #    self.pub_uri,
+        #)
 
     @property
     def topic_support(self):
@@ -1246,13 +1265,13 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         Bind to the interface specified in the configuration file
         """
         io_loop = tornado.ioloop.IOLoop()
-        log.error(
-            "TCPPubServer daemon %r %s %s %s",
-            self,
-            self.pull_uri,
-            self.publish_port,
-            self.pub_uri,
-        )
+        #log.error(
+        #    "TCPPubServer daemon %r %s %s %s",
+        #    self,
+        #    self.pull_uri,
+        #    self.publish_port,
+        #    self.pub_uri,
+        #)
 
         # Spin up the publisher
         self.pub_server = pub_server = PubServer(
@@ -1261,15 +1280,14 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
             presence_callback=presence_callback,
             remove_presence_callback=remove_presence_callback,
         )
-        if self.pub_uri.startswith("ipc://"):
-            pub_path = self.pub_uri.replace("ipc://", "")
-            sock = tornado.netutil.bind_unix_socket(pub_path)
+        if self.pub_path:
+            sock = tornado.netutil.bind_unix_socket(self.pub_path)
         else:
             sock = _get_socket(self.opts)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             _set_tcp_keepalive(sock, self.opts)
             sock.setblocking(0)
-            sock.bind(_get_bind_addr(self.opts, "publish_port"))
+            sock.bind((self.pub_host, self.pub_port))
         sock.listen(self.backlog)
         # pub_server will take ownership of the socket
         pub_server.add_socket(sock)
@@ -1280,14 +1298,18 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         # else:
         #    pull_uri = os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
         self.pub_server = pub_server
-        if "ipc://" in self.pull_uri:
-            pull_uri = pull_uri = self.pull_uri.replace("ipc://", "")
-            log.error("WTF PULL URI %r", pull_uri)
-        elif "tcp://" in self.pull_uri:
-            log.error("Fallback to publish port %r", self.pull_uri)
-            pull_uri = self.publish_port
+        #if "ipc://" in self.pull_uri:
+        #    pull_uri = pull_uri = self.pull_uri.replace("ipc://", "")
+        #    log.error("WTF PULL URI %r", pull_uri)
+        #elif "tcp://" in self.pull_uri:
+        #    log.error("Fallback to publish port %r", self.pull_uri)
+        #    pull_uri = self.publish_port
+        #else:
+        #    pull_uri = self.pull_uri
+        if self.pull_path:
+            pull_uri = self.pull_path
         else:
-            pull_uri = self.pull_uri
+            pull_uri = self.pull_port
 
         pull_sock = salt.transport.ipc.IPCMessageServer(
             pull_uri,
@@ -1296,7 +1318,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         )
 
         # Securely create socket
-        log.warning("Starting the Salt Puller on %s", self.pull_uri)
+        log.warning("Starting the Salt Puller on %s", pull_uri)
         with salt.utils.files.set_umask(0o177):
             pull_sock.start()
 
@@ -1323,8 +1345,8 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         raise tornado.gen.Return(ret)
 
     def connect(self):
-        path = self.pull_uri.replace("ipc://", "")
-        log.error("Connect pusher %s", path)
+        #path = self.pull_uri.replace("ipc://", "")
+        log.error("Connect pusher %s", self.pull_path)
         # self.pub_sock = salt.utils.asynchronous.SyncWrapper(
         #    salt.transport.ipc.IPCMessageClient,
         #    (path,),
@@ -1332,7 +1354,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         # )
         self.pub_sock = salt.utils.asynchronous.SyncWrapper(
             salt.transport.ipc.IPCMessageClient,
-            (path,),
+            (self.pull_path,),
             loop_kwarg="io_loop",
         )
         # self.pub_sock = salt.transport.ipc.IPCMessageClient(path)

@@ -1,3 +1,4 @@
+import os
 import tornado.gen
 
 TRANSPORTS = (
@@ -58,6 +59,19 @@ def publish_server(opts, **kwargs):
         ttype = opts["transport"]
     elif "transport" in opts.get("pillar", {}).get("master", {}):
         ttype = opts["pillar"]["master"]["transport"]
+
+    if "pub_host" not in kwargs and "pub_path" not in kwargs:
+        kwargs["pub_host"] = opts["interface"]
+    if "pub_port" not in kwargs and "pub_path" not in kwargs:
+        kwargs["pub_port"] = opts["publish_port"]
+
+    if "pull_host" not in kwargs and "pull_path" not in kwargs:
+        if opts.get("ipc_mode", "") == "tcp":
+            kwargs["pull_host"] = "127.0.0.1"
+            kwargs["pull_port"] = opts.get("tcp_master_publish_pull", 4514)
+        else:
+            kwargs["pull_path"] = os.path.join(opts["sock_dir"], "publish_pull.ipc")
+
     # switch on available ttypes
     if ttype == "zeromq":
         import salt.transport.zeromq
@@ -66,7 +80,7 @@ def publish_server(opts, **kwargs):
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPPublishServer(opts)
+        return salt.transport.tcp.TCPPublishServer(opts, **kwargs)
     elif ttype == "local":  # TODO:
         import salt.transport.local
 

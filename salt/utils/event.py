@@ -353,7 +353,7 @@ class SaltEvent:
         if self.cpub:
             return True
 
-        kwargs = {"io_loop": self.io_loop}
+        kwargs = {}
         if isinstance(self.puburi, int):
             kwargs.update(host="127.0.0.1", port=self.puburi)
         else:
@@ -387,6 +387,7 @@ class SaltEvent:
             if self.subscriber is None:
                 if "master_ip" not in self.opts:
                     self.opts["master_ip"] = ""
+                kwargs["io_loop"] = self.io_loop
                 self.subscriber = salt.transport.publish_client(self.opts, **kwargs)
                 log.debug("Event connect subscriber %r", self.puburi)
                 self.io_loop.spawn_callback(self.subscriber.connect)
@@ -427,8 +428,11 @@ class SaltEvent:
                 self.pusher = salt.utils.asynchronous.SyncWrapper(
                     salt.transport.publish_server,
                     args=(self.opts,),
+                    kwargs={
+                        "pub_path": self.puburi,
+                        "pull_path": self.pulluri,
+                    }
                 )
-                log.error("PUSHER %r %r", self, self.pusher.io_loop.asyncio_loop)
                 self.pusher.obj.pub_uri = "ipc://{}".format(self.puburi)
                 self.pusher.obj.pull_uri = "ipc://{}".format(self.pulluri)
                 # self.pusher = salt.utils.asynchronous.SyncWrapper(
@@ -454,7 +458,11 @@ class SaltEvent:
                 # self.pusher = salt.transport.ipc.IPCMessageClient(
                 #    self.pulluri, io_loop=self.io_loop
                 # )
-                self.pusher = salt.transport.publish_server(self.opts)
+                self.pusher = salt.transport.publish_server(
+                    self.opts,
+                    pub_path=self.puburi,
+                    pull_path=self.pulluri
+                )
                 self.pusher.pub_uri = "ipc://{}".format(self.puburi)
                 self.pusher.pull_uri = "ipc://{}".format(self.pulluri)
             # For the asynchronous case, the connect will be deferred to when
@@ -682,21 +690,20 @@ class SaltEvent:
 
         ret = self._check_pending(tag, match_func)
         if ret is None:
-            with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                if auto_reconnect:
-                    raise_errors = self.raise_errors
-                    self.raise_errors = True
-                    while True:
-                        try:
-                            ret = self._get_event(wait, tag, match_func, no_block)
-                            break
-                        except tornado.iostream.StreamClosedError:
-                            self.close_pub()
-                            self.connect_pub(timeout=wait)
-                            continue
-                    self.raise_errors = raise_errors
-                else:
-                    ret = self._get_event(wait, tag, match_func, no_block)
+            if auto_reconnect:
+                raise_errors = self.raise_errors
+                self.raise_errors = True
+                while True:
+                    try:
+                        ret = self._get_event(wait, tag, match_func, no_block)
+                        break
+                    except tornado.iostream.StreamClosedError:
+                        self.close_pub()
+                        self.connect_pub(timeout=wait)
+                        continue
+                self.raise_errors = raise_errors
+            else:
+                ret = self._get_event(wait, tag, match_func, no_block)
 
         if ret is None or full:
             return ret

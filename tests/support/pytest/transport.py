@@ -142,6 +142,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         self.start = last_msg
         serial = salt.payload.Serial(self.minion_config)
         crypticle = salt.crypt.Crypticle(self.minion_config, self.aes_key)
+        self.gotone = False
         try:
             while True:
                 curr_time = time.time()
@@ -175,6 +176,10 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                         if not self.zmq_filtering:
                             log.exception("Failed to deserialize...")
                             break
+                    if self.gotone is False:
+                        log.error("Collector started recieving")
+                    self.gotone = True
+            log.error("Collector finished recieving")
             self.end = time.time()
             print(f"Total time {self.end - self.start}")
         finally:
