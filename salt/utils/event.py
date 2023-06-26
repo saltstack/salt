@@ -230,7 +230,7 @@ class SaltEvent:
             self.io_loop = io_loop
             self._run_io_loop_sync = False
         else:
-            self.io_loop = tornado.ioloop.IOLoop()
+            # self.io_loop = tornado.ioloop.IOLoop()
             self._run_io_loop_sync = True
         self.cpub = False
         self.cpush = False
@@ -353,48 +353,43 @@ class SaltEvent:
         if self.cpub:
             return True
 
+        kwargs = {"io_loop": self.io_loop}
+        if isinstance(self.puburi, int):
+            kwargs.update(host="127.0.0.1", port=self.puburi)
+        else:
+            kwargs.update(path=self.puburi)
         if self._run_io_loop_sync:
-            with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                if self.subscriber is None:
-                    # self.subscriber = salt.utils.asynchronous.SyncWrapper(
-                    #    salt.transport.ipc.IPCMessageSubscriber,
-                    #    args=(self.puburi,),
-                    #    kwargs={"io_loop": self.io_loop},
-                    #    loop_kwarg="io_loop",
-                    # )
-                    # self.subscriber = salt.transport.publish_client(self.opts)
-                    self.subscriber = salt.utils.asynchronous.SyncWrapper(
-                        salt.transport.publish_client,
-                        args=(self.opts,),
-                        kwargs={"io_loop": self.io_loop},
-                        loop_kwarg="io_loop",
-                    )
-                try:
-                    # self.subscriber.connect(timeout=timeout)
-                    puburi = "ipc://{}".format(self.puburi)
-                    self.subscriber.connect_uri(puburi)
-                    self.cpub = True
-                except tornado.iostream.StreamClosedError:
-                    log.error("Encountered StreamClosedException")
-                except OSError as exc:
-                    if exc.errno != errno.ENOENT:
-                        raise
-                    log.error("Error opening stream, file does not exist")
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.info(
-                        "An exception occurred connecting publisher: %s",
-                        exc,
-                        exc_info_on_loglevel=logging.DEBUG,
-                    )
+            if self.subscriber is None:
+                self.subscriber = salt.utils.asynchronous.SyncWrapper(
+                    salt.transport.publish_client,
+                    args=(self.opts,),
+                    kwargs=kwargs,
+                    loop_kwarg="io_loop",
+                )
+            try:
+                # self.subscriber.connect(timeout=timeout)
+                log.debug("Event connect subscriber %r", self.puburi)
+                self.subscriber.connect()
+                self.cpub = True
+            except tornado.iostream.StreamClosedError:
+                log.error("Encountered StreamClosedException")
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                    raise
+                log.error("Error opening stream, file does not exist")
+            except Exception as exc:  # pylint: disable=broad-except
+                log.info(
+                    "An exception occurred connecting publisher: %s",
+                    exc,
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
         else:
             if self.subscriber is None:
                 if "master_ip" not in self.opts:
                     self.opts["master_ip"] = ""
-                self.subscriber = salt.transport.publish_client(self.opts, self.io_loop)
-                puburi = "ipc://{}".format(self.puburi)
-                # self.io_loop.run_sync(self.subscriber.connect_uri, puburi)
-                self.io_loop.spawn_callback(self.subscriber.connect_uri, puburi)
-                log.error("WTF")
+                self.subscriber = salt.transport.publish_client(self.opts, **kwargs)
+                log.debug("Event connect subscriber %r", self.puburi)
+                self.io_loop.spawn_callback(self.subscriber.connect)
                 # self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
                 #    self.puburi, io_loop=self.io_loop
                 # )
@@ -410,9 +405,9 @@ class SaltEvent:
         """
         if not self.cpub:
             return
-        #if isinstance(self.subscriber, salt.utils.asynchronous.SyncWrapper):
+        # if isinstance(self.subscriber, salt.utils.asynchronous.SyncWrapper):
         #    self.subscriber.close()
-        #else:
+        # else:
         #    asyncio.create_task(self.subscriber.close())
         self.subscriber.close()
         self.subscriber = None
@@ -433,6 +428,7 @@ class SaltEvent:
                     salt.transport.publish_server,
                     args=(self.opts,),
                 )
+                log.error("PUSHER %r %r", self, self.pusher.io_loop.asyncio_loop)
                 self.pusher.obj.pub_uri = "ipc://{}".format(self.puburi)
                 self.pusher.obj.pull_uri = "ipc://{}".format(self.pulluri)
                 # self.pusher = salt.utils.asynchronous.SyncWrapper(
@@ -716,7 +712,6 @@ class SaltEvent:
         if not self.cpub:
             if not self.connect_pub():
                 return None
-        log.error("GET EVENT NOBLOCK %r", self.subscriber)
         raw = self.subscriber.recv(timeout=0)
         if raw is None:
             return None
@@ -733,7 +728,6 @@ class SaltEvent:
         if not self.cpub:
             if not self.connect_pub():
                 return None
-        log.error("GET EVENT BLOCK %r", self.subscriber)
         raw = self.subscriber.recv(timeout=None)
         if raw is None:
             return None
@@ -792,7 +786,7 @@ class SaltEvent:
             is_msgpacked=True,
             use_bin_type=True,
         )
-        log.error(
+        log.debug(
             "Sending event(fire_event_async): tag = %s; data = %s %r",
             tag,
             data,
@@ -850,7 +844,7 @@ class SaltEvent:
             is_msgpacked=True,
             use_bin_type=True,
         )
-        log.error(
+        log.debug(
             "Sending event(fire_event): tag = %s; data = %s %s",
             tag,
             data,
@@ -865,7 +859,6 @@ class SaltEvent:
         )
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         if self._run_io_loop_sync:
-            log.error("FIRE EVENT A %r %r", msg, self.pusher.obj)
             try:
                 # self.pusher.send(msg)
                 self.pusher.publish(msg)
@@ -877,7 +870,6 @@ class SaltEvent:
                 )
                 raise
         else:
-            log.error("FIRE EVENT B %r %r", msg, self.pusher)
             asyncio.create_task(self.pusher.publish(msg))
             # self.io_loop.spawn_callback(self.pusher.send, msg)
         return True
@@ -897,8 +889,8 @@ class SaltEvent:
             self.close_pub()
         if self.pusher is not None:
             self.close_pull()
-        if self._run_io_loop_sync and not self.keep_loop:
-            self.io_loop.close()
+        # if self._run_io_loop_sync and not self.keep_loop:
+        #    self.io_loop.close()
 
     def _fire_ret_load_specific_fun(self, load, fun_index=0):
         """
@@ -989,12 +981,11 @@ class SaltEvent:
         Invoke the event_handler callback each time an event arrives.
         """
         assert not self._run_io_loop_sync
-
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
         # return self.subscriber.read_async(event_handler)
-        self.subscriber.on_recv(event_handler)
+        self.io_loop.spawn_callback(self.subscriber.on_recv, event_handler)
 
     # pylint: disable=W1701
     def __del__(self):

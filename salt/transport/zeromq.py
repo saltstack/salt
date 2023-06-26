@@ -113,7 +113,7 @@ class PublishClient(salt.transport.base.PublishClient):
         "connect",
         "connect_uri",
         "recv",
-        #"close",
+        # "close",
     ]
     close_methods = [
         "close",
@@ -139,7 +139,6 @@ class PublishClient(salt.transport.base.PublishClient):
         self.hexid = hashlib.sha1(salt.utils.stringutils.to_bytes(_id)).hexdigest()
         self._closing = False
         self.context = zmq.asyncio.Context()
-        log.error("ZMQ Context creat %r", self)
         self._socket = self.context.socket(zmq.SUB)
         self._socket.setsockopt(zmq.LINGER, -1)
         if zmq_filtering:
@@ -211,6 +210,18 @@ class PublishClient(salt.transport.base.PublishClient):
         self.connect_called = False
         self.callbacks = {}
 
+        self.host = kwargs.get("host", None)
+        self.port = kwargs.get("port", None)
+        self.path = kwargs.get("path", None)
+        self.source_ip = self.opts.get("source_ip")
+        self.source_port = self.opts.get("source_publish_port")
+        if self.host is None and self.port is None:
+            if self.path is None:
+                raise Exception("A host and port or a path must be provided")
+        elif self.host and self.port:
+            if self.path:
+                raise Exception("A host and port or a path must be provided, not both")
+
     async def close(self):
         if self._closing is True:
             return
@@ -223,9 +234,7 @@ class PublishClient(salt.transport.base.PublishClient):
         elif hasattr(self, "_socket"):
             self._socket.close(0)
         if hasattr(self, "context") and self.context.closed is False:
-            log.error("ZMQ Context term %r", self)
             self.context.term()
-            log.error("ZMQ Context after term %r", self)
         if self.callbacks:
             for cb in self.callbacks:
                 running, task = self.callbacks[cb]
@@ -243,9 +252,7 @@ class PublishClient(salt.transport.base.PublishClient):
         elif hasattr(self, "_socket"):
             self._socket.close(0)
         if hasattr(self, "context") and self.context.closed is False:
-            log.error("ZMQ Context term %r", self)
             self.context.term()
-            log.error("ZMQ Context after term %r", self)
 
     # pylint: enable=W1701
     def __enter__(self):
@@ -255,18 +262,26 @@ class PublishClient(salt.transport.base.PublishClient):
         self.close()
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
-    async def connect(
-        self, publish_port, connect_callback=None, disconnect_callback=None
-    ):
+    async def connect(self, port=None, connect_callback=None, disconnect_callback=None):
         self.connect_called = True
-        self.publish_port = publish_port
-        self.uri = self.master_pub
-        log.debug(
-            "Connecting the Minion to the Master publish port, using the URI: %s",
-            self.master_pub,
-        )
-        self._socket.connect(self.master_pub)
-        # await connect_callback(True)
+        if self.path:
+            pub_uri = f"ipc://{self.path}"
+            log.debug("Connecting the publisher client to: %s", pub_uri)
+            self._socket.connect(pub_uri)
+        else:
+            # host = self.opts["master_ip"],
+            if port is not None:
+                self.port = port
+            master_pub_uri = _get_master_uri(
+                self.host, self.port, self.source_ip, self.source_port
+            )
+            log.debug(
+                "Connecting the Minion to the Master publish port, using the URI: %s",
+                master_pub_uri,
+            )
+            self._socket.connect(master_pub_uri)
+        if connect_callback:
+            await connect_callback(True)
 
     async def connect_uri(self, uri, connect_callback=None, disconnect_callback=None):
         self.connect_called = True
@@ -275,19 +290,19 @@ class PublishClient(salt.transport.base.PublishClient):
         self.uri = uri
         self._socket.connect(uri)
         if connect_callback:
-            connect_callback(True)
+            await connect_callback(True)
 
-    @property
-    def master_pub(self):
-        """
-        Return the master publish port
-        """
-        return _get_master_uri(
-            self.opts["master_ip"],
-            self.publish_port,
-            source_ip=self.opts.get("source_ip"),
-            source_port=self.opts.get("source_publish_port"),
-        )
+    #  @property
+    #  def master_pub(self):
+    #      """
+    #      Return the master publish port
+    #      """
+    #      return _get_master_uri(
+    #          self.opts["master_ip"],
+    #          self.publish_port,
+    #          source_ip=self.opts.get("source_ip"),
+    #          source_port=self.opts.get("source_publish_port"),
+    #      )
 
     def _decode_messages(self, messages):
         """
@@ -359,27 +374,23 @@ class PublishClient(salt.transport.base.PublishClient):
             try:
                 while running.is_set():
                     try:
-                        log.error("Waiting for pyaload from %r", self.uri)
                         msg = await self.recv(timeout=None)
-                        log.error("Got for pyaload from %r", self.uri)
                     except zmq.error.ZMQError as exc:
-                        log.error("ZMQERROR, %s", exc)
                         # We've disconnected just die
                         break
-                    except Exception:  # pylint: disable=broad-except
-                        log.error("WTF", exc_info=True)
-                        break
+                    # except Exception:  # pylint: disable=broad-except
+                    #    log.error("WTF", exc_info=True)
+                    #    break
                     if msg:
                         try:
-                            log.error("Running callback for pyaload from %r", self.uri)
                             await callback(msg)
-                            log.error("Finished callback for pyaload from %r", self.uri)
                         except Exception:  # pylint: disable=broad-except
                             log.error("Exception while running callback", exc_info=True)
-                    #log.debug("Callback done %r", callback)
+                    # log.debug("Callback done %r", callback)
             except Exception as exc:  # pylint: disable=broad-except
-                log.error("CONSUME Exception %s %s", self.uri, exc, exc_info=True)
-            log.error("CONSUME ENDING %s", self.uri)
+                log.error(
+                    "Exception while consuming%s %s", self.uri, exc, exc_info=True
+                )
 
         task = self.io_loop.spawn_callback(consume, running)
         self.callbacks[callback] = running, task
@@ -400,7 +411,6 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         """
         self.__setup_signals()
         context = zmq.Context(self.opts["worker_threads"])
-        log.error("ZMQ Context create %r", self)
         # Prepare the zeromq sockets
         self.uri = "tcp://{interface}:{ret_port}".format(**self.opts)
         self.clients = context.socket(zmq.ROUTER)
@@ -448,9 +458,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 raise
             except (KeyboardInterrupt, SystemExit):
                 break
-        log.error("ZMQ Context term %r", self)
         context.term()
-        log.error("ZMQ Context after term %r", self)
 
     def close(self):
         """
@@ -476,9 +484,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         if hasattr(self, "_socket") and self._socket.closed is False:
             self._socket.close()
         if hasattr(self, "context") and self.context.closed is False:
-            log.error("ZMQ Context term %r", self)
             self.context.term()
-            log.error("ZMQ Context after term %r", self)
 
     def pre_fork(self, process_manager):
         """
@@ -596,6 +602,7 @@ def _set_tcp_keepalive(zmq_socket, opts):
         if "tcp_keepalive_intvl" in opts:
             zmq_socket.setsockopt(zmq.TCP_KEEPALIVE_INTVL, opts["tcp_keepalive_intvl"])
 
+
 ctx = zmq.asyncio.Context()
 
 # TODO: unit tests!
@@ -627,13 +634,13 @@ class AsyncReqMessageClient:
             self.io_loop = io_loop
 
         self.context = zmq.asyncio.Context()
-        log.error("ZMQ Context create %r", self)
 
         self.send_queue = []
         # mapping of message -> future
         self.send_future_map = {}
 
         self._closing = False
+        self.socket = None
 
     async def connect(self):
         # wire up sockets
@@ -650,15 +657,14 @@ class AsyncReqMessageClient:
             return
         else:
             self._closing = True
-            self.socket.close()
+            if self.socket:
+                self.socket.close()
             if self.context.closed is False:
                 # This hangs if closing the stream causes an import error
-                log.error("ZMQ Context term %r", self)
                 self.context.term()
-                log.error("ZMQ Context after term %r", self)
 
     def _init_socket(self):
-        if hasattr(self, "socket"):
+        if self.socket is not None:
             self.socket.close()  # pylint: disable=E0203
             del self.socket
 
@@ -693,6 +699,8 @@ class AsyncReqMessageClient:
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     async def _send_recv(self, message):
+        if not self.socket:
+            await self.connect()
         message = salt.payload.dumps(message)
         await self.socket.send(message)
         ret = await self.socket.recv()
@@ -793,7 +801,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     # _sock_data = threading.local()
     async_methods = [
         "publish",
-        #"close",
+        # "close",
     ]
     close_methods = [
         "close",
@@ -814,10 +822,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_uri = f"tcp://{interface}:{publish_port}"
         self.ctx = None
         self.sock = None
-        self.deamon_context = None
-        self.deamon_pub_sock = None
-        self.deamon_pull_sock = None
-        self.deamon_monitor = None
+        self.daemon_context = None
+        self.daemon_pub_sock = None
+        self.daemon_pull_sock = None
+        self.daemon_monitor = None
 
     def __repr__(self):
         return f"<PublishServer pub_uri={self.pub_uri} pull_uri={self.pull_uri} at {hex(id(self))}>"
@@ -837,10 +845,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         try:
             ioloop.start()
         finally:
-            self.close()
+            self.daemon_context.term()
 
     def _get_sockets(self, context, ioloop):
-        log.error("ZMQ Context create %r", self)
         pub_sock = context.socket(zmq.PUB)
         monitor = ZeroMQSocketMonitor(pub_sock)
         monitor.start_io_loop(ioloop)
@@ -893,12 +900,14 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             ioloop = tornado.ioloop.IOLoop.current()
             ioloop.asyncio_loop.set_debug(True)
         self.daemon_context = zmq.asyncio.Context()
-        self.daemon_pull_sock, self.daemon_pub_sock, self.deamon_monitor = self._get_sockets(self.daemon_context, ioloop)
+        (
+            self.daemon_pull_sock,
+            self.daemon_pub_sock,
+            self.daemon_monitor,
+        ) = self._get_sockets(self.daemon_context, ioloop)
         while True:
             try:
-                log.error("Publisher wait package %s", self.pull_uri)
                 package = await self.daemon_pull_sock.recv()
-                log.error("Publisher got package %s %r", self.pull_uri, package)
                 # payload = salt.payload.loads(package)
                 await publish_payload(package)
             except Exception as exc:  # pylint: disable=broad-except
@@ -907,8 +916,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 )
 
     async def publish_payload(self, payload, topic_list=None):
-        log.error(f"Publish payload %s %r", self.pub_uri, payload)
         try:
+            log.trace("Publish payload %r", payload)
             # payload = salt.payload.dumps(payload)
             if self.opts["zmq_filtering"]:
                 if topic_list:
@@ -967,7 +976,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         already exists "pub_close" is called before creating and connecting a
         new socket.
         """
-        log.debug("Connecting to pub server: %s", self.pull_uri)
+        log.error("Connecting to pub server: %s", self.pull_uri)
         self.ctx = zmq.asyncio.Context()
         self.sock = self.ctx.socket(zmq.PUSH)
         self.sock.setsockopt(zmq.LINGER, 300)
@@ -982,23 +991,19 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if self.sock is not None:
             sock = self.sock
             self.sock = None
-            log.error("Socket close %r", self)
             sock.close()
-        log.error("Socket closed %r", self)
         if self.ctx and self.ctx.closed is False:
             ctx = self.ctx
             self.ctx = None
-            log.error("Context term %r", self)
             ctx.term()
-            log.error("After context term %r", self)
-        if self.deamon_pub_sock:
-            self.deamon_pub_sock.close()
-        if self.deamon_pull_sock:
-            self.deamon_pull_sock.close()
+        if self.daemon_pub_sock:
+            self.daemon_pub_sock.close()
+        if self.daemon_pull_sock:
+            self.daemon_pull_sock.close()
         if self.daemon_monitor:
-            self.daemon_monitor.close()
-        if self.deamon_context:
-            self.deamon_context.term()
+            self.daemon_monitor.stop()
+        if self.daemon_context:
+            self.daemon_context.term()
 
     async def publish(self, payload, **kwargs):
         """
@@ -1009,7 +1014,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         """
         if not self.sock:
             self.connect()
-        log.error("%r send %r", self, payload)
         await self.sock.send(payload)
 
     @property
@@ -1040,7 +1044,7 @@ class RequestClient(salt.transport.base.RequestClient):
         await self.message_client.connect()
 
     async def send(self, load, timeout=60):
-        self.connect()
+        await self.connect()
         return await self.message_client.send(load, timeout=timeout)
 
     def close(self):

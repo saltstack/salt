@@ -74,7 +74,7 @@ def publish_server(opts, **kwargs):
     raise Exception("Transport type not found: {}".format(ttype))
 
 
-def publish_client(opts, io_loop):
+def ipc_publish_client(opts, io_loop):
     # Default to ZeroMQ for now
     ttype = "zeromq"
     # determine the ttype
@@ -85,11 +85,36 @@ def publish_client(opts, io_loop):
     # switch on available ttypes
     if ttype == "zeromq":
         import salt.transport.zeromq
+
         return salt.transport.zeromq.PublishClient(opts, io_loop)
     elif ttype == "tcp":
         import salt.transport.tcp
 
         return salt.transport.tcp.TCPPubClient(opts, io_loop)
+    raise Exception("Transport type not found: {}".format(ttype))
+
+
+def publish_client(opts, io_loop, host=None, port=None, path=None):
+    # Default to ZeroMQ for now
+    ttype = "zeromq"
+    # determine the ttype
+    if "transport" in opts:
+        ttype = opts["transport"]
+    elif "transport" in opts.get("pillar", {}).get("master", {}):
+        ttype = opts["pillar"]["master"]["transport"]
+    # switch on available ttypes
+    if ttype == "zeromq":
+        import salt.transport.zeromq
+
+        return salt.transport.zeromq.PublishClient(
+            opts, io_loop, host=host, port=port, path=path
+        )
+    elif ttype == "tcp":
+        import salt.transport.tcp
+
+        return salt.transport.tcp.TCPPubClient(
+            opts, io_loop, host=host, port=port, path=path
+        )
     raise Exception("Transport type not found: {}".format(ttype))
 
 

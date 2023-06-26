@@ -699,9 +699,6 @@ class PubServerChannel:
     Factory class to create subscription channels to the master's Publisher
     """
 
-    def __repr__(self):
-        return f"<PubServerChannel pub_uri={self.transport.pub_uri} pull_uri={self.transport.pull_uri} at {id(self)}>"
-
     @classmethod
     def factory(cls, opts, **kwargs):
         if "master_uri" not in opts and "master_uri" in kwargs:
@@ -719,6 +716,9 @@ class PubServerChannel:
                 presence_events = True
         transport = salt.transport.publish_server(opts, **kwargs)
         return cls(opts, transport, presence_events=presence_events)
+
+    def __repr__(self):
+        return f"<PubServerChannel pub_uri={self.transport.pub_uri} pull_uri={self.transport.pull_uri} at {id(self)}>"
 
     def __init__(self, opts, transport, presence_events=False):
         self.opts = opts
@@ -774,6 +774,7 @@ class PubServerChannel:
         secrets = kwargs.get("secrets", None)
         if secrets is not None:
             salt.master.SMaster.secrets = secrets
+        log.error("RUN TRANSPORT PUBD")
         self.transport.publish_daemon(
             self.publish_payload, self.presence_callback, self.remove_presence_callback
         )

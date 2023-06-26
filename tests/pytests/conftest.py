@@ -30,6 +30,10 @@ from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
+import tracemalloc
+
+tracemalloc.start()
+
 
 @pytest.fixture(scope="session")
 def salt_auth_account_1_factory():
@@ -607,8 +611,14 @@ def pytest_pyfunc_call(pyfuncitem):
 
     __tracebackhide__ = True
 
-    loop.run_sync(
-        CoroTestFunction(pyfuncitem.obj, testargs), timeout=get_test_timeout(pyfuncitem)
+    # loop.run_sync(
+    #    CoroTestFunction(pyfuncitem.obj, testargs), timeout=get_test_timeout(pyfuncitem)
+    # )
+    loop.asyncio_loop.run_until_complete(
+        asyncio.wait_for(
+            CoroTestFunction(pyfuncitem.obj, testargs)(),
+            timeout=get_test_timeout(pyfuncitem),
+        )
     )
     return True
 

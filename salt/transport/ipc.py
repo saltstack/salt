@@ -134,11 +134,10 @@ class IPCServer:
         else:
             self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
 
-        with salt.utils.asynchronous.current_ioloop(self.io_loop):
-            tornado.netutil.add_accept_handler(
-                self.sock,
-                self.handle_connection,
-            )
+        tornado.netutil.add_accept_handler(
+            self.sock,
+            self.handle_connection,
+        )
         self._started = True
 
     @tornado.gen.coroutine
@@ -208,7 +207,7 @@ class IPCServer:
                 log.error("Exception occurred while handling stream: %s", exc)
 
     def handle_connection(self, connection, address):
-        log.trace(
+        log.error(
             "IPCServer: Handling connection to address: %s",
             address if address else connection,
         )
@@ -338,8 +337,8 @@ class IPCClient:
                 break
 
             if self.stream is None:
-                with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                    self.stream = IOStream(socket.socket(sock_type, socket.SOCK_STREAM))
+                # with salt.utils.asynchronous.current_ioloop(self.io_loop):
+                self.stream = IOStream(socket.socket(sock_type, socket.SOCK_STREAM))
             try:
                 log.trace("IPCClient: Connecting to socket: %s", self.socket_path)
                 yield self.stream.connect(sock_addr)
@@ -440,8 +439,8 @@ class IPCMessageClient(IPCClient):
 
     # FIXME timeout unimplemented
     # FIXME tries unimplemented
-    @tornado.gen.coroutine
-    def send(self, msg, timeout=None, tries=None):
+    # @tornado.gen.coroutine
+    async def send(self, msg, timeout=None, tries=None):
         """
         Send a message to an IPC socket
 
@@ -451,9 +450,9 @@ class IPCMessageClient(IPCClient):
         :param int timeout: Timeout when sending message (Currently unimplemented)
         """
         if not self.connected():
-            yield self.connect()
+            await self.connect()
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
-        yield self.stream.write(pack)
+        await self.stream.write(pack)
 
 
 class IPCMessageServer(IPCServer):

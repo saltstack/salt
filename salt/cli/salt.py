@@ -222,7 +222,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             AuthorizationError,
             SaltInvocationError,
             EauthAuthenticationError,
-            SaltClientError,
+            # SaltClientError,
         ) as exc:
             print(repr(exc))
             ret = str(exc)
