@@ -272,38 +272,55 @@ def parse_ret(stdout, stderr, retcode, result_only=False):
         log.warning(f"Got an invalid retcode for host: '{retcode}'")
         retcode = 1
 
-    if retcode and stderr.count("Permission denied"):
-        raise SSHPermissionDeniedError(stdout=stdout, stderr=stderr, retcode=retcode)
+    if "Permission denied" in stderr:
+        # -failed to upload file- is detecting scp errors
+        # Errors to ignore when Permission denied is in the stderr. For example
+        # scp can get a permission denied on the target host, but they where
+        # able to accurate authenticate against the box
+        ignore_err = ["failed to upload file"]
+        check_err = [x for x in ignore_err if stderr.count(x)]
+        if not check_err:
+            raise SSHPermissionDeniedError(
+                stdout=stdout, stderr=stderr, retcode=retcode
+            )
 
     result = NOT_SET
     error = None
     data = None
 
     try:
-        data = salt.utils.json.loads(stdout)
-        if len(data) < 2 and "local" in data:
-            try:
-                result = data["local"]
-                try:
-                    # Ensure a reported local retcode is kept (at least)
-                    retcode = max(retcode, result["retcode"])
-                except (KeyError, TypeError):
-                    pass
-                if not isinstance(data["local"], dict):
-                    # When a command has failed, the return is dumped as-is
-                    # without declaring it as a result, usually a string or list.
-                    error = SSHCommandExecutionError
-                elif result_only:
-                    result = result["return"]
-            except KeyError:
-                error = SSHMalformedReturnError
-                result = NOT_SET
-        else:
-            error = SSHMalformedReturnError
-
+        data = salt.utils.json.find_json(stdout)
     except ValueError:
         # No valid JSON output was found
         error = SSHReturnDecodeError
+    else:
+        if isinstance(data, dict) and len(data) < 2 and "local" in data:
+            result = data["local"]
+            try:
+                remote_retcode = result["retcode"]
+            except (KeyError, TypeError):
+                pass
+            else:
+                try:
+                    # Ensure a reported local retcode is kept (at least)
+                    retcode = max(retcode, remote_retcode)
+                except (TypeError, ValueError):
+                    log.warning(f"Host reported an invalid retcode: '{remote_retcode}'")
+                    retcode = max(retcode, 1)
+
+            if not isinstance(result, dict):
+                # When a command has failed, the return is dumped as-is
+                # without declaring it as a result, usually a string or list.
+                error = SSHCommandExecutionError
+            elif result_only:
+                try:
+                    result = result["return"]
+                except KeyError:
+                    error = SSHMalformedReturnError
+                    result = NOT_SET
+        else:
+            error = SSHMalformedReturnError
+
     if retcode:
         error = SSHCommandExecutionError
     if error is not None:
