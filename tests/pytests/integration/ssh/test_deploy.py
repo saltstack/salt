@@ -251,6 +251,7 @@ def test_retcode_json_decode_error(salt_ssh_cli):
         ret.data["stdout"]
         == '{  "local": {    "whoops": "hrhrhr"  }Warning: Chaos is not a letter\n}'
     )
+    assert ret.data["_error"] == "Failed to return clean data"
     assert ret.data["retcode"] == 0
 
 
@@ -264,7 +265,9 @@ def test_retcode_invalid_return(salt_ssh_cli):
     assert ret.returncode == EX_AGGREGATE
     assert isinstance(ret.data, dict)
     assert ret.data["stdout"] == '{"no_local_key_present": "Chaos is a ladder though"}'
+    assert ret.data["_error"] == "Return dict was malformed"
     assert ret.data["retcode"] == 0
+    assert ret.data["parsed"] == {"no_local_key_present": "Chaos is a ladder though"}
 
 
 @pytest.mark.usefixtures("remote_exception_wrap_mod")
@@ -273,9 +276,11 @@ def test_wrapper_unwrapped_command_exception(salt_ssh_cli):
     Verify salt-ssh does not return unexpected exception output to wrapper modules.
     """
     ret = salt_ssh_cli.run("check_exception.failure")
+    assert ret.returncode == EX_AGGREGATE
+    assert isinstance(ret.data, str)
     assert ret.data
     assert "Probably got garbage" not in ret.data
-    assert ret.returncode == EX_AGGREGATE
+    assert "Error running 'disk.usage': Invalid flag passed to disk.usage" in ret.data
 
 
 @pytest.mark.usefixtures("remote_parsing_failure_wrap_mod", "invalid_json_exe_mod")
@@ -284,9 +289,16 @@ def test_wrapper_unwrapped_command_parsing_failure(salt_ssh_cli):
     Verify salt-ssh does not return unexpected unparsable output to wrapper modules.
     """
     ret = salt_ssh_cli.run("check_parsing.failure", "whoops")
+    assert ret.returncode == EX_AGGREGATE
     assert ret.data
     assert "Probably got garbage" not in ret.data
-    assert ret.returncode == EX_AGGREGATE
+    assert isinstance(ret.data, dict)
+    assert ret.data["_error"] == "Failed to return clean data"
+    assert ret.data["retcode"] == 0
+    assert (
+        ret.data["stdout"]
+        == '{  "local": {    "whoops": "hrhrhr"  }Warning: Chaos is not a letter\n}'
+    )
 
 
 @pytest.mark.usefixtures("remote_parsing_failure_wrap_mod", "invalid_return_exe_mod")
@@ -295,6 +307,16 @@ def test_wrapper_unwrapped_command_invalid_return(salt_ssh_cli):
     Verify salt-ssh does not return unexpected unparsable output to wrapper modules.
     """
     ret = salt_ssh_cli.run("check_parsing.failure", "whoopsiedoodle")
+    assert ret.returncode == EX_AGGREGATE
     assert ret.data
     assert "Probably got garbage" not in ret.data
-    assert ret.returncode == EX_AGGREGATE
+    assert isinstance(ret.data, dict)
+    assert ret.data["_error"] == "Return dict was malformed"
+    assert ret.data["retcode"] == 0
+    assert (
+        ret.data["stdout"]
+        == '{"local": {"no_return_key_present": "Chaos is a ladder though"}}'
+    )
+    assert ret.data["parsed"] == {
+        "local": {"no_return_key_present": "Chaos is a ladder though"}
+    }
