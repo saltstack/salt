@@ -8,6 +8,7 @@
 import collections
 import compileall
 import copy
+import imp
 import inspect
 import logging
 import os
@@ -34,15 +35,15 @@ log = logging.getLogger(__name__)
 
 def remove_bytecode(module_path):
     paths = [module_path + "c"]
-    cache_tag = sys.implementation.cache_tag
-    modname, ext = os.path.splitext(module_path.split(os.sep)[-1])
-    paths.append(
-        os.path.join(
-            os.path.dirname(module_path),
-            "__pycache__",
-            f"{modname}.{cache_tag}.pyc",
+    if hasattr(imp, "get_tag"):
+        modname, ext = os.path.splitext(module_path.split(os.sep)[-1])
+        paths.append(
+            os.path.join(
+                os.path.dirname(module_path),
+                "__pycache__",
+                "{}.{}.pyc".format(modname, imp.get_tag()),
+            )
         )
-    )
     for path in paths:
         if os.path.exists(path):
             os.unlink(path)
@@ -83,7 +84,9 @@ class LazyLoaderTest(TestCase):
         # Setup the module
         self.module_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.module_dir, ignore_errors=True)
-        self.module_file = os.path.join(self.module_dir, f"{self.module_name}.py")
+        self.module_file = os.path.join(
+            self.module_dir, "{}.py".format(self.module_name)
+        )
         with salt.utils.files.fopen(self.module_file, "w") as fh:
             fh.write(salt.utils.stringutils.to_str(loader_template))
             fh.flush()
@@ -160,14 +163,16 @@ class LazyLoaderUtilsTest(TestCase):
     def setUp(self):
         # Setup the module
         self.module_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        self.module_file = os.path.join(self.module_dir, f"{self.module_name}.py")
+        self.module_file = os.path.join(
+            self.module_dir, "{}.py".format(self.module_name)
+        )
         with salt.utils.files.fopen(self.module_file, "w") as fh:
             fh.write(salt.utils.stringutils.to_str(loader_template_module))
             fh.flush()
             os.fsync(fh.fileno())
 
         self.utils_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        self.utils_file = os.path.join(self.utils_dir, f"{self.utils_name}.py")
+        self.utils_file = os.path.join(self.utils_dir, "{}.py".format(self.utils_name))
         with salt.utils.files.fopen(self.utils_file, "w") as fh:
             fh.write(salt.utils.stringutils.to_str(loader_template_utils))
             fh.flush()
@@ -511,7 +516,7 @@ class LazyLoaderSingleItem(TestCase):
         Checks that a KeyError is raised when the function key does not contain a '.'
         """
         key = "testing_no_dot"
-        expected = f"The key '{key}' should contain a '.'"
+        expected = "The key '{}' should contain a '.'".format(key)
         with self.assertRaises(KeyError) as err:
             inspect.isfunction(self.loader["testing_no_dot"])
 
@@ -614,7 +619,7 @@ class LazyLoaderReloadingTest(TestCase):
 
     @property
     def module_path(self):
-        return os.path.join(self.tmp_dir, f"{self.module_name}.py")
+        return os.path.join(self.tmp_dir, "{}.py".format(self.module_name))
 
     @pytest.mark.slow_test
     def test_alias(self):
@@ -625,15 +630,17 @@ class LazyLoaderReloadingTest(TestCase):
         self.assertNotIn(self.module_key, self.loader)
 
         self.update_module()
-        self.assertNotIn(f"{self.module_name}.test_alias", self.loader)
+        self.assertNotIn("{}.test_alias".format(self.module_name), self.loader)
         self.assertTrue(
             isinstance(
-                self.loader[f"{self.module_name}.working_alias"],
+                self.loader["{}.working_alias".format(self.module_name)],
                 salt.loader.lazy.LoadedFunc,
             )
         )
         self.assertTrue(
-            inspect.isfunction(self.loader[f"{self.module_name}.working_alias"].func)
+            inspect.isfunction(
+                self.loader["{}.working_alias".format(self.module_name)].func
+            )
         )
 
     @pytest.mark.slow_test
@@ -795,7 +802,7 @@ class LazyLoaderVirtualAliasTest(TestCase):
 
     @property
     def module_path(self):
-        return os.path.join(self.tmp_dir, f"{self.module_name}.py")
+        return os.path.join(self.tmp_dir, "{}.py".format(self.module_name))
 
     @pytest.mark.slow_test
     def test_virtual_alias(self):
@@ -1192,7 +1199,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
                 "__salt__": self.minion_mods,
             },
         )
-        self.assertIn(f"{self.module_name}.top", self.loader)
+        self.assertIn("{}.top".format(self.module_name), self.loader)
 
     def tearDown(self):
         del self.tmp_dir
@@ -1234,7 +1241,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
 
     @pytest.mark.slow_test
     def test_basic(self):
-        self.assertIn(f"{self.module_name}.top", self.loader)
+        self.assertIn("{}.top".format(self.module_name), self.loader)
 
     def _verify_libs(self):
         for lib in self.libs:
@@ -1542,7 +1549,9 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         # Setup the module
         self.module_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.module_dir, ignore_errors=True)
-        self.module_file = os.path.join(self.module_dir, f"{self.module_name}.py")
+        self.module_file = os.path.join(
+            self.module_dir, "{}.py".format(self.module_name)
+        )
 
     def tearDown(self):
         try:
@@ -1576,7 +1585,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         return "lazyloadertest.cpython-{}{}{}.pyc".format(
             sys.version_info[0],
             sys.version_info[1],
-            "" if not optimize else f".opt-{optimize}",
+            "" if not optimize else ".opt-{}".format(optimize),
         )
 
     def _write_module_file(self):
