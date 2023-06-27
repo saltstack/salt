@@ -8,11 +8,13 @@ These functions are not designed to be called directly, but instead from the
 :mod:`docker <salt.modules.docker>` execution modules. They provide for
 common logic to be re-used for common actions.
 """
+
+
 import copy
 import functools
 import logging
 import os
-import shlex
+import pipes
 import time
 import traceback
 
@@ -66,14 +68,14 @@ def _nsenter(pid):
     """
     Return the nsenter command to attach to the named container
     """
-    return f"nsenter --target {pid} --mount --uts --ipc --net --pid"
+    return "nsenter --target {} --mount --uts --ipc --net --pid".format(pid)
 
 
 def _get_md5(name, path, run_func):
     """
     Get the MD5 checksum of a file from a container
     """
-    output = run_func(name, f"md5sum {shlex.quote(path)}", ignore_retcode=True)[
+    output = run_func(name, "md5sum {}".format(pipes.quote(path)), ignore_retcode=True)[
         "stdout"
     ]
     try:
@@ -100,10 +102,10 @@ def cache_file(source):
         if source.startswith("salt://"):
             cached_source = __salt__["cp.cache_file"](source)
             if not cached_source:
-                raise CommandExecutionError(f"Unable to cache {source}")
+                raise CommandExecutionError("Unable to cache {}".format(source))
             return cached_source
     except AttributeError:
-        raise SaltInvocationError(f"Invalid source file {source}")
+        raise SaltInvocationError("Invalid source file {}".format(source))
     return source
 
 
@@ -162,47 +164,55 @@ def run(
     if exec_driver == "lxc-attach":
         full_cmd = "lxc-attach "
         if path:
-            full_cmd += f"-P {shlex.quote(path)} "
+            full_cmd += "-P {} ".format(pipes.quote(path))
         if keep_env is not True:
             full_cmd += "--clear-env "
             if "PATH" not in to_keep:
-                full_cmd += f"--set-var {PATH} "
+                full_cmd += "--set-var {} ".format(PATH)
                 # --clear-env results in a very restrictive PATH
                 # (/bin:/usr/bin), use a good fallback.
         full_cmd += " ".join(
             [
-                f"--set-var {x}={shlex.quote(os.environ[x])}"
+                "--set-var {}={}".format(x, pipes.quote(os.environ[x]))
                 for x in to_keep
                 if x in os.environ
             ]
         )
-        full_cmd += f" -n {shlex.quote(name)} -- {cmd}"
+        full_cmd += " -n {} -- {}".format(pipes.quote(name), cmd)
     elif exec_driver == "nsenter":
-        pid = __salt__[f"{container_type}.pid"](name)
-        full_cmd = f"nsenter --target {pid} --mount --uts --ipc --net --pid -- "
+        pid = __salt__["{}.pid".format(container_type)](name)
+        full_cmd = "nsenter --target {} --mount --uts --ipc --net --pid -- ".format(pid)
         if keep_env is not True:
             full_cmd += "env -i "
             if "PATH" not in to_keep:
-                full_cmd += f"{PATH} "
+                full_cmd += "{} ".format(PATH)
         full_cmd += " ".join(
-            [f"{x}={shlex.quote(os.environ[x])}" for x in to_keep if x in os.environ]
+            [
+                "{}={}".format(x, pipes.quote(os.environ[x]))
+                for x in to_keep
+                if x in os.environ
+            ]
         )
-        full_cmd += f" {cmd}"
+        full_cmd += " {}".format(cmd)
     elif exec_driver == "docker-exec":
         # We're using docker exec on the CLI as opposed to via docker-py, since
         # the Docker API doesn't return stdout and stderr separately.
         full_cmd = "docker exec "
         if stdin:
             full_cmd += "-i "
-        full_cmd += f"{name} "
+        full_cmd += "{} ".format(name)
         if keep_env is not True:
             full_cmd += "env -i "
             if "PATH" not in to_keep:
-                full_cmd += f"{PATH} "
+                full_cmd += "{} ".format(PATH)
         full_cmd += " ".join(
-            [f"{x}={shlex.quote(os.environ[x])}" for x in to_keep if x in os.environ]
+            [
+                "{}={}".format(x, pipes.quote(os.environ[x]))
+                for x in to_keep
+                if x in os.environ
+            ]
         )
-        full_cmd += f" {cmd}"
+        full_cmd += " {}".format(cmd)
 
     if not use_vt:
         ret = __salt__[cmd_func](
@@ -289,13 +299,13 @@ def copy_to(
         salt myminion container_resource.copy_to mycontainer /local/file/path /container/file/path container_type=docker exec_driver=nsenter
     """
     # Get the appropriate functions
-    state = __salt__[f"{container_type}.state"]
+    state = __salt__["{}.state".format(container_type)]
 
     def run_all(*args, **akwargs):
         akwargs = copy.deepcopy(akwargs)
         if container_type in ["lxc"] and "path" not in akwargs:
             akwargs["path"] = path
-        return __salt__[f"{container_type}.run_all"](*args, **akwargs)
+        return __salt__["{}.run_all".format(container_type)](*args, **akwargs)
 
     state_kwargs = {}
     cmd_kwargs = {"ignore_retcode": True}
@@ -311,7 +321,7 @@ def copy_to(
 
     c_state = _state(name)
     if c_state != "running":
-        raise CommandExecutionError(f"Container '{name}' is not running")
+        raise CommandExecutionError("Container '{}' is not running".format(name))
 
     local_file = cache_file(source)
     source_dir, source_name = os.path.split(local_file)
@@ -320,14 +330,17 @@ def copy_to(
     if not os.path.isabs(local_file):
         raise SaltInvocationError("Source path must be absolute")
     elif not os.path.exists(local_file):
-        raise SaltInvocationError(f"Source file {local_file} does not exist")
+        raise SaltInvocationError("Source file {} does not exist".format(local_file))
     elif not os.path.isfile(local_file):
         raise SaltInvocationError("Source must be a regular file")
 
     # Destination file sanity checks
     if not os.path.isabs(dest):
         raise SaltInvocationError("Destination path must be absolute")
-    if run_all(name, f"test -d {shlex.quote(dest)}", **cmd_kwargs)["retcode"] == 0:
+    if (
+        run_all(name, "test -d {}".format(pipes.quote(dest)), **cmd_kwargs)["retcode"]
+        == 0
+    ):
         # Destination is a directory, full path to dest file will include the
         # basename of the source file.
         dest = os.path.join(dest, source_name)
@@ -337,12 +350,14 @@ def copy_to(
         # parent directory.
         dest_dir, dest_name = os.path.split(dest)
         if (
-            run_all(name, f"test -d {shlex.quote(dest_dir)}", **cmd_kwargs)["retcode"]
+            run_all(name, "test -d {}".format(pipes.quote(dest_dir)), **cmd_kwargs)[
+                "retcode"
+            ]
             != 0
         ):
             if makedirs:
                 result = run_all(
-                    name, f"mkdir -p {shlex.quote(dest_dir)}", **cmd_kwargs
+                    name, "mkdir -p {}".format(pipes.quote(dest_dir)), **cmd_kwargs
                 )
                 if result["retcode"] != 0:
                     error = (
@@ -360,7 +375,10 @@ def copy_to(
                 )
     if (
         not overwrite
-        and run_all(name, f"test -e {shlex.quote(dest)}", **cmd_kwargs)["retcode"] == 0
+        and run_all(name, "test -e {}".format(pipes.quote(dest)), **cmd_kwargs)[
+            "retcode"
+        ]
+        == 0
     ):
         raise CommandExecutionError(
             "Destination path {} already exists. Use overwrite=True to "
@@ -383,14 +401,14 @@ def copy_to(
     if exec_driver == "lxc-attach":
         lxcattach = "lxc-attach"
         if path:
-            lxcattach += f" -P {shlex.quote(path)}"
+            lxcattach += " -P {}".format(pipes.quote(path))
         copy_cmd = (
             'cat "{0}" | {4} --clear-env --set-var {1} -n {2} -- tee "{3}"'.format(
                 local_file, PATH, name, dest, lxcattach
             )
         )
     elif exec_driver == "nsenter":
-        pid = __salt__[f"{container_type}.pid"](name)
+        pid = __salt__["{}.pid".format(container_type)](name)
         copy_cmd = 'cat "{}" | {} env -i {} tee "{}"'.format(
             local_file, _nsenter(pid), PATH, dest
         )

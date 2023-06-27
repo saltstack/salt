@@ -12,9 +12,9 @@ import datetime
 import difflib
 import logging
 import os
+import pipes
 import random
 import re
-import shlex
 import shutil
 import string
 import tempfile
@@ -1834,7 +1834,7 @@ def _after_ignition_network_profile(cmd, ret, name, network_profile, path, nic_o
             # destroy the container if it was partially created
             cmd = "lxc-destroy"
             if path:
-                cmd += f" -P {shlex.quote(path)}"
+                cmd += f" -P {pipes.quote(path)}"
             cmd += f" -n {name}"
             __salt__["cmd.retcode"](cmd, python_shell=False)
         raise CommandExecutionError(
@@ -1997,7 +1997,7 @@ def create(
         )
         options["imgtar"] = img_tar
     if path:
-        cmd += f" -P {shlex.quote(path)}"
+        cmd += f" -P {pipes.quote(path)}"
         if not os.path.exists(path):
             os.makedirs(path)
     if config:
@@ -2136,7 +2136,7 @@ def clone(name, orig, profile=None, network_profile=None, nic_opts=None, **kwarg
         cmd = "lxc-clone"
         cmd += f" {snapshot} -o {orig} -n {name}"
     if path:
-        cmd += f" -P {shlex.quote(path)}"
+        cmd += f" -P {pipes.quote(path)}"
         if not os.path.exists(path):
             os.makedirs(path)
     if backing:
@@ -2184,7 +2184,7 @@ def ls_(active=None, cache=True, path=None):
         ret = []
         cmd = "lxc-ls"
         if path:
-            cmd += f" -P {shlex.quote(path)}"
+            cmd += f" -P {pipes.quote(path)}"
         if active:
             cmd += " --active"
         output = __salt__["cmd.run_stdout"](cmd, python_shell=False)
@@ -2240,7 +2240,7 @@ def list_(extra=False, limit=None, path=None):
     for container in ctnrs:
         cmd = "lxc-info"
         if path:
-            cmd += f" -P {shlex.quote(path)}"
+            cmd += f" -P {pipes.quote(path)}"
         cmd += f" -n {container}"
         c_info = __salt__["cmd.run"](cmd, python_shell=False, output_loglevel="debug")
         c_state = None
@@ -2299,12 +2299,12 @@ def _change_state(
         # Kill the container first
         scmd = "lxc-stop"
         if path:
-            scmd += f" -P {shlex.quote(path)}"
+            scmd += f" -P {pipes.quote(path)}"
         scmd += f" -k -n {name}"
         __salt__["cmd.run"](scmd, python_shell=False)
 
     if path and " -P " not in cmd:
-        cmd += f" -P {shlex.quote(path)}"
+        cmd += f" -P {pipes.quote(path)}"
     cmd += f" -n {name}"
 
     # certain lxc commands need to be taken with care (lxc-start)
@@ -2335,7 +2335,7 @@ def _change_state(
         # some commands do not wait, so we will
         rcmd = "lxc-wait"
         if path:
-            rcmd += f" -P {shlex.quote(path)}"
+            rcmd += f" -P {pipes.quote(path)}"
         rcmd += f" -n {name} -s {expected.upper()}"
         __salt__["cmd.run"](rcmd, python_shell=False, timeout=30)
     _clear_context()
@@ -2457,7 +2457,7 @@ def start(name, **kwargs):
         lxc_config = os.path.join(cpath, name, "config")
     # we try to start, even without config, if global opts are there
     if os.path.exists(lxc_config):
-        cmd += f" -f {shlex.quote(lxc_config)}"
+        cmd += f" -f {pipes.quote(lxc_config)}"
     cmd += " -d"
     _ensure_exists(name, path=path)
     if state(name, path=path) == "frozen":
@@ -2560,7 +2560,7 @@ def freeze(name, **kwargs):
         start(name, path=path)
     cmd = "lxc-freeze"
     if path:
-        cmd += f" -P {shlex.quote(path)}"
+        cmd += f" -P {pipes.quote(path)}"
     ret = _change_state(cmd, name, "frozen", use_vt=use_vt, path=path)
     if orig_state == "stopped" and start_:
         ret["state"]["old"] = orig_state
@@ -2595,7 +2595,7 @@ def unfreeze(name, path=None, use_vt=None):
         raise CommandExecutionError(f"Container '{name}' is stopped")
     cmd = "lxc-unfreeze"
     if path:
-        cmd += f" -P {shlex.quote(path)}"
+        cmd += f" -P {pipes.quote(path)}"
     return _change_state(cmd, name, "running", path=path, use_vt=use_vt)
 
 
@@ -2689,7 +2689,7 @@ def state(name, path=None):
         else:
             cmd = "lxc-info"
             if path:
-                cmd += f" -P {shlex.quote(path)}"
+                cmd += f" -P {pipes.quote(path)}"
             cmd += f" -n {name}"
             ret = __salt__["cmd.run_all"](cmd, python_shell=False)
             if ret["retcode"] != 0:
@@ -2727,7 +2727,7 @@ def get_parameter(name, parameter, path=None):
     _ensure_exists(name, path=path)
     cmd = "lxc-cgroup"
     if path:
-        cmd += f" -P {shlex.quote(path)}"
+        cmd += f" -P {pipes.quote(path)}"
     cmd += f" -n {name} {parameter}"
     ret = __salt__["cmd.run_all"](cmd, python_shell=False)
     if ret["retcode"] != 0:
@@ -2756,7 +2756,7 @@ def set_parameter(name, parameter, value, path=None):
 
     cmd = "lxc-cgroup"
     if path:
-        cmd += f" -P {shlex.quote(path)}"
+        cmd += f" -P {pipes.quote(path)}"
     cmd += f" -n {name} {parameter} {value}"
     ret = __salt__["cmd.run_all"](cmd, python_shell=False)
     if ret["retcode"] != 0:
@@ -3648,7 +3648,7 @@ def attachable(name, path=None):
         log.debug("Checking if LXC container %s is attachable", name)
         cmd = "lxc-attach"
         if path:
-            cmd += f" -P {shlex.quote(path)}"
+            cmd += f" -P {pipes.quote(path)}"
         cmd += f" --clear-env -n {name} -- /usr/bin/env"
         result = (
             __salt__["cmd.retcode"](

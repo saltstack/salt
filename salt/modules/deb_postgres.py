@@ -2,8 +2,10 @@
 Module to provide Postgres compatibility to salt for debian family specific tools.
 
 """
+
+
 import logging
-import shlex
+import pipes
 
 import salt.utils.path
 
@@ -74,7 +76,7 @@ def cluster_create(
         cmd += ["--data-checksums"]
     if wal_segsize:
         cmd += ["--wal-segsize", wal_segsize]
-    cmdstr = " ".join([shlex.quote(c) for c in cmd])
+    cmdstr = " ".join([pipes.quote(c) for c in cmd])
     ret = __salt__["cmd.run_all"](cmdstr, python_shell=False)
     if ret.get("retcode", 0) != 0:
         log.error("Error creating a Postgresql cluster %s/%s", version, name)
@@ -95,7 +97,7 @@ def cluster_list(verbose=False):
         salt '*' postgres.cluster_list verbose=True
     """
     cmd = [salt.utils.path.which("pg_lsclusters"), "--no-header"]
-    ret = __salt__["cmd.run_all"](" ".join([shlex.quote(c) for c in cmd]))
+    ret = __salt__["cmd.run_all"](" ".join([pipes.quote(c) for c in cmd]))
     if ret.get("retcode", 0) != 0:
         log.error("Error listing clusters")
     cluster_dict = _parse_pg_lscluster(ret["stdout"])
@@ -116,7 +118,7 @@ def cluster_exists(version, name="main"):
 
         salt '*' postgres.cluster_exists '9.3' 'main'
     """
-    return f"{version}/{name}" in cluster_list()
+    return "{}/{}".format(version, name) in cluster_list()
 
 
 def cluster_remove(version, name="main", stop=False):
@@ -139,13 +141,13 @@ def cluster_remove(version, name="main", stop=False):
     if stop:
         cmd += ["--stop"]
     cmd += [str(version), name]
-    cmdstr = " ".join([shlex.quote(c) for c in cmd])
+    cmdstr = " ".join([pipes.quote(c) for c in cmd])
     ret = __salt__["cmd.run_all"](cmdstr, python_shell=False)
     # FIXME - return Boolean ?
     if ret.get("retcode", 0) != 0:
         log.error("Error removing a Postgresql cluster %s/%s", version, name)
     else:
-        ret["changes"] = f"Successfully removed cluster {version}/{name}"
+        ret["changes"] = "Successfully removed cluster {}/{}".format(version, name)
     return ret
 
 
@@ -156,7 +158,7 @@ def _parse_pg_lscluster(output):
     cluster_dict = {}
     for line in output.splitlines():
         version, name, port, status, user, datadir, log = line.split()
-        cluster_dict[f"{version}/{name}"] = {
+        cluster_dict["{}/{}".format(version, name)] = {
             "port": int(port),
             "status": status,
             "user": user,

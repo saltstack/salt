@@ -11,6 +11,20 @@ import shlex
 
 import salt.utils.platform
 
+try:
+    import pipes
+
+    HAS_DEPS = True
+except ImportError:
+    HAS_DEPS = False
+
+if hasattr(shlex, "quote"):
+    _quote = shlex.quote
+elif HAS_DEPS and hasattr(pipes, "quote"):
+    _quote = pipes.quote
+else:
+    _quote = None
+
 log = logging.getLogger(__name__)
 
 __virtualname__ = "keychain"
@@ -20,7 +34,7 @@ def __virtual__():
     """
     Only work on Mac OS
     """
-    if salt.utils.platform.is_darwin():
+    if salt.utils.platform.is_darwin() and _quote is not None:
         return __virtualname__
     return (False, "Only available on Mac OS systems with pipes")
 
@@ -68,7 +82,7 @@ def install(
     if keychain_password is not None:
         unlock_keychain(keychain, keychain_password)
 
-    cmd = f"security import {cert} -P {password} -k {keychain}"
+    cmd = "security import {} -P {} -k {}".format(cert, password, keychain)
     if allow_any:
         cmd += " -A"
     return __salt__["cmd.run"](cmd)
@@ -103,7 +117,7 @@ def uninstall(
     if keychain_password is not None:
         unlock_keychain(keychain, keychain_password)
 
-    cmd = f'security delete-certificate -c "{cert_name}" {keychain}'
+    cmd = 'security delete-certificate -c "{}" {}'.format(cert_name, keychain)
     return __salt__["cmd.run"](cmd)
 
 
@@ -123,7 +137,7 @@ def list_certs(keychain="/Library/Keychains/System.keychain"):
     """
     cmd = (
         'security find-certificate -a {} | grep -o "alis".*\\" | '
-        "grep -o '\\\"[-A-Za-z0-9.:() ]*\\\"'".format(shlex.quote(keychain))
+        "grep -o '\\\"[-A-Za-z0-9.:() ]*\\\"'".format(_quote(keychain))
     )
     out = __salt__["cmd.run"](cmd, python_shell=True)
     return out.replace('"', "").split("\n")
@@ -151,7 +165,7 @@ def get_friendly_name(cert, password):
     """
     cmd = (
         "openssl pkcs12 -in {} -passin pass:{} -info -nodes -nokeys 2> /dev/null | "
-        "grep friendlyName:".format(shlex.quote(cert), shlex.quote(password))
+        "grep friendlyName:".format(_quote(cert), _quote(password))
     )
     out = __salt__["cmd.run"](cmd, python_shell=True)
     return out.replace("friendlyName: ", "").strip()
@@ -173,7 +187,7 @@ def get_default_keychain(user=None, domain="user"):
 
         salt '*' keychain.get_default_keychain
     """
-    cmd = f"security default-keychain -d {domain}"
+    cmd = "security default-keychain -d {}".format(domain)
     return __salt__["cmd.run"](cmd, runas=user)
 
 
@@ -196,7 +210,7 @@ def set_default_keychain(keychain, domain="user", user=None):
 
         salt '*' keychain.set_keychain /Users/fred/Library/Keychains/login.keychain
     """
-    cmd = f"security default-keychain -d {domain} -s {keychain}"
+    cmd = "security default-keychain -d {} -s {}".format(domain, keychain)
     return __salt__["cmd.run"](cmd, runas=user)
 
 
@@ -219,7 +233,7 @@ def unlock_keychain(keychain, password):
 
         salt '*' keychain.unlock_keychain /tmp/test.p12 test123
     """
-    cmd = f"security unlock-keychain -p {password} {keychain}"
+    cmd = "security unlock-keychain -p {} {}".format(password, keychain)
     __salt__["cmd.run"](cmd)
 
 
@@ -247,7 +261,7 @@ def get_hash(name, password=None):
             name, password
         )
     else:
-        cmd = f'security find-certificate -c "{name}" -m -p'
+        cmd = 'security find-certificate -c "{}" -m -p'.format(name)
 
     out = __salt__["cmd.run"](cmd)
     matches = re.search(
