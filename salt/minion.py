@@ -1102,7 +1102,6 @@ class MinionManager(MinionBase):
             self.io_loop.add_callback(
                 ipc_publisher.publisher, ipc_publisher.publish_payload, self.io_loop
             )
-        log.error("get event ")
         self.event = salt.utils.event.get_event(
             "minion", opts=self.opts, io_loop=self.io_loop
         )
@@ -1186,7 +1185,6 @@ class MinionManager(MinionBase):
                     minion.setup_scheduler(before_connect=True)
                 if minion.opts.get("master_type", "str") != "disable":
                     await minion.connect_master(failed=failed)
-                log.error("RUN MINION TUNE IN")
                 minion.tune_in(start=False)
                 self.minions.append(minion)
                 break
@@ -3292,9 +3290,7 @@ class Minion(MinionBase):
         if self._running is False:
             return
 
-        log.error("Loop status %r %r", self, self.io_loop.asyncio_loop.is_running())
         self.io_loop.asyncio_loop.stop()
-        log.error("Loop status %r %r", self, self.io_loop.asyncio_loop.is_running())
         self._running = False
         if hasattr(self, "schedule"):
             del self.schedule

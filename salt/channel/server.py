@@ -774,7 +774,6 @@ class PubServerChannel:
         secrets = kwargs.get("secrets", None)
         if secrets is not None:
             salt.master.SMaster.secrets = secrets
-        log.error("RUN TRANSPORT PUBD")
         self.transport.publish_daemon(
             self.publish_payload, self.presence_callback, self.remove_presence_callback
         )
