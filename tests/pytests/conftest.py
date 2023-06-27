@@ -631,12 +631,11 @@ def io_loop():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop = tornado.ioloop.IOLoop.current()
-    loop.make_current()
     try:
         yield loop
     finally:
-        loop.clear_current()
         loop.close(all_fds=True)
+        asyncio.set_event_loop(None)
 
 
 # <---- Async Test Fixtures ------------------------------------------------------------------------------------------

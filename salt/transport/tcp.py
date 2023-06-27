@@ -10,7 +10,6 @@ import asyncio
 import errno
 import logging
 import multiprocessing
-import os
 import queue
 import select
 import socket
@@ -281,7 +280,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
         while stream is None and (not self._closed and not self._closing):
             try:
                 if self.host and self.port:
-                    # log.error("GET STREAM TCP %r %s %s %s", self.url, self.host, self.port, self.stack)
                     self._tcp_client = TCPClientKeepAlive(
                         self.opts, resolver=self.resolver
                     )
@@ -313,14 +311,8 @@ class TCPPubClient(salt.transport.base.PublishClient):
         return stream
 
     async def _connect(self):
-        # log.error("Connect %r %r", self, self._stream)
-        # import traceback
-        # stack = "".join(traceback.format_stack())
-        # log.error(f"MessageClient Connect {name} {stack}")
         if self._stream is None:
-            log.error("Get stream")
             self._stream = await self.getstream()
-            log.error("Got stream")
             if self._stream:
                 # if not self._stream_return_running:
                 #    self.io_loop.spawn_callback(self._stream_return)
@@ -407,9 +399,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
         """
 
         async def setup_callback():
-            logit = True
             while not self._stream:
-                # log.error("On recv wait stream %r", self._stream)
                 await asyncio.sleep(0.003)
             while True:
                 try:
@@ -418,9 +408,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
                 except tornado.iostream.StreamClosedError:
                     self._stream.close()
                     self._stream = None
-                    if logit:
-                        log.error("Stream Closed", exc_info=True)
-                        logit = False
                     await self._connect()
                     await asyncio.sleep(0.03)
                     # if self.disconnect_callback:
@@ -757,15 +744,6 @@ class MessageClient:
         if self.io_loop is not None:
             self.io_loop.stop()
 
-    # TODO: timeout inflight sessions
-    def close(self):
-        if self._closing:
-            return
-        self._closing = True
-        self.stream.close()
-        self.tcp_client.close()
-        self.io_loop.add_timeout(1, self.check_close)
-
     def close(self):
         if self._closing:
             return
@@ -803,7 +781,6 @@ class MessageClient:
         while stream is None and (not self._closed and not self._closing):
             try:
                 if self.host and self.port:
-                    # log.error("GET STREAM TCP %r %s %s %s", self.url, self.host, self.port, self.stack)
                     stream = await self._tcp_client.connect(
                         ip_bracket(self.host, strip=True),
                         self.port,
@@ -811,7 +788,6 @@ class MessageClient:
                         **kwargs,
                     )
                 else:
-                    log.error("GET STREAM IPC")
                     sock_type = socket.AF_UNIX
                     path = self.url.replace("ipc://", "")
                     stream = tornado.iostream.IOStream(
@@ -831,15 +807,8 @@ class MessageClient:
         return stream
 
     async def connect(self):
-        log.error("Connect %r %r", self, self._stream)
-        import traceback
-
-        # stack = "".join(traceback.format_stack())
-        # log.error(f"MessageClient Connect {name} {stack}")
         if self._stream is None:
-            log.error("Get stream")
             self._stream = await self.getstream()
-            log.error("Got stream")
             if self._stream:
                 if not self._stream_return_running:
                     self.task = asyncio.create_task(self._stream_return())
@@ -852,9 +821,7 @@ class MessageClient:
         unpacker = salt.utils.msgpack.Unpacker()
         while not self._closing:
             try:
-                log.error("Stream read bytes %r", self._stream.socket)
                 wire_bytes = await self._stream.read_bytes(4096, partial=True)
-                log.error("Stream got bytes")
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
                     framed_msg = salt.transport.frame.decode_embedded_strs(framed_msg)
@@ -903,9 +870,6 @@ class MessageClient:
                     )
                 else:
                     raise SaltClientError
-            # except OSError:
-            #    log.error("OSERROR", exc_info=True)
-            #    raise
             except Exception as e:  # pylint: disable=broad-except
                 log.error("Exception parsing response", exc_info=True)
                 for future in self.send_future_map.values():
@@ -958,11 +922,9 @@ class MessageClient:
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     async def send(self, msg, timeout=None, callback=None, raw=False, reply=True):
-        #        log.error("stream send %r %r %r %r", self, self.url, self.port, reply)
         if self._closing:
             raise ClosingError()
         while not self._stream:
-            # log.error("Wait stream %r %r", self, self._stream)
             await asyncio.sleep(0.03)
         message_id = self._message_id()
         header = {"mid": message_id}
@@ -1011,7 +973,6 @@ class MessageClient:
         try:
             if timeout == 0:
                 for msg in self.unpacker:
-                    log.error("RECV a")
                     framed_msg = salt.transport.frame.decode_embedded_strs(msg)
                     return framed_msg["body"]
                 poller = select.poll()
@@ -1025,27 +986,21 @@ class MessageClient:
                         byts = await self._stream.read_bytes(4096, partial=True)
                         self.unpacker.feed(byts)
                         for msg in self.unpacker:
-                            log.error("RECV b")
                             framed_msg = salt.transport.frame.decode_embedded_strs(msg)
                             return framed_msg["body"]
                 else:
                     return
             elif timeout:
-                log.error("RECV c")
                 return await asyncio.wait_for(self.recv(), timeout=timeout)
             else:
                 for msg in self.unpacker:
-                    log.error("RECV d")
                     framed_msg = salt.transport.frame.decode_embedded_strs(msg)
                     return framed_msg["body"]
                 while True:
-                    log.error("RECV e")
                     byts = await self._stream.read_bytes(4096, partial=True)
                     self.unpacker.feed(byts)
                     for msg in self.unpacker:
-                        log.error("RECV e %r", msg)
                         framed_msg = salt.transport.frame.decode_embedded_strs(msg)
-                        log.error("RECV e %r", framed_msg)
                         return framed_msg["body"]
         finally:
             self._read_in_progress.release()
@@ -1211,39 +1166,38 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         self.opts = opts
         self.pub_sock = None
         # Set up Salt IPC server
-        #if self.opts.get("ipc_mode", "") == "tcp":
+        # if self.opts.get("ipc_mode", "") == "tcp":
         #    self.pull_uri = int(self.opts.get("tcp_master_publish_pull", 4514))
-        #else:
+        # else:
         #    self.pull_uri = os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
-        #interface = self.opts.get("interface", "127.0.0.1")
-        #self.publish_port = self.opts.get("publish_port", 4560)
-        #self.pub_uri = f"tcp://{interface}:{self.publish_port}"
+        # interface = self.opts.get("interface", "127.0.0.1")
+        # self.publish_port = self.opts.get("publish_port", 4560)
+        # self.pub_uri = f"tcp://{interface}:{self.publish_port}"
         self.pub_host = kwargs.get("pub_host", None)
         self.pub_port = kwargs.get("pub_port", None)
         self.pub_path = kwargs.get("pub_path", None)
-        #if pub_path:
+        # if pub_path:
         #    self.pub_path = pub_path
         #    self.pub_uri = f"ipc://{pub_path}"
-        #else:
+        # else:
         #    self.pub_uri = f"tcp://{pub_host}:{pub_port}"
 
-        #self.publish_port = self.opts.get("publish_port", 4560)
-
+        # self.publish_port = self.opts.get("publish_port", 4560)
 
         self.pull_host = kwargs.get("pull_host", None)
         self.pull_port = kwargs.get("pull_port", None)
         self.pull_path = kwargs.get("pull_path", None)
-        #if pull_path:
+        # if pull_path:
         #    self.pull_uri = f"ipc://{pull_path}"
-        #else:
+        # else:
         #    self.pull_uri = f"tcp://{pub_host}:{pub_port}"
-        #log.error(
+        # log.error(
         #    "TCPPubServer %r %s %s",
         #    self,
         #    self.pull_uri,
         #    #self.publish_port,
         #    self.pub_uri,
-        #)
+        # )
 
     @property
     def topic_support(self):
@@ -1265,13 +1219,13 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         Bind to the interface specified in the configuration file
         """
         io_loop = tornado.ioloop.IOLoop()
-        #log.error(
+        # log.error(
         #    "TCPPubServer daemon %r %s %s %s",
         #    self,
         #    self.pull_uri,
         #    self.publish_port,
         #    self.pub_uri,
-        #)
+        # )
 
         # Spin up the publisher
         self.pub_server = pub_server = PubServer(
@@ -1298,13 +1252,13 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         # else:
         #    pull_uri = os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
         self.pub_server = pub_server
-        #if "ipc://" in self.pull_uri:
+        # if "ipc://" in self.pull_uri:
         #    pull_uri = pull_uri = self.pull_uri.replace("ipc://", "")
         #    log.error("WTF PULL URI %r", pull_uri)
-        #elif "tcp://" in self.pull_uri:
+        # elif "tcp://" in self.pull_uri:
         #    log.error("Fallback to publish port %r", self.pull_uri)
         #    pull_uri = self.publish_port
-        #else:
+        # else:
         #    pull_uri = self.pull_uri
         if self.pull_path:
             pull_uri = self.pull_path
@@ -1345,7 +1299,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         raise tornado.gen.Return(ret)
 
     def connect(self):
-        #path = self.pull_uri.replace("ipc://", "")
+        # path = self.pull_uri.replace("ipc://", "")
         log.error("Connect pusher %s", self.pull_path)
         # self.pub_sock = salt.utils.asynchronous.SyncWrapper(
         #    salt.transport.ipc.IPCMessageClient,
@@ -1417,15 +1371,11 @@ class TCPReqClient(salt.transport.base.RequestClient):
         )
 
     async def connect(self):
-        log.error("TCPReqClient Connect")
         await self.message_client.connect()
-        log.error("TCPReqClient Connected")
 
     async def send(self, load, timeout=60):
         await self.connect()
-        log.error("TCP Request %r", load)
         msg = await self.message_client.send(load, timeout=timeout)
-        log.error("TCP Reply %r", msg)
         return msg
 
     def close(self):

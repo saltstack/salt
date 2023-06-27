@@ -222,7 +222,7 @@ class PublishClient(salt.transport.base.PublishClient):
             if self.path:
                 raise Exception("A host and port or a path must be provided, not both")
 
-    async def close(self):
+    def close(self):
         if self._closing is True:
             return
         self._closing = True
@@ -238,21 +238,10 @@ class PublishClient(salt.transport.base.PublishClient):
         if self.callbacks:
             for cb in self.callbacks:
                 running, task = self.callbacks[cb]
-                task.cancel()
-
-    def close(self):
-        if self._closing is True:
-            return
-        self._closing = True
-        if hasattr(self, "_monitor") and self._monitor is not None:
-            self._monitor.stop()
-            self._monitor = None
-        if hasattr(self, "_stream"):
-            self._stream.close(0)
-        elif hasattr(self, "_socket"):
-            self._socket.close(0)
-        if hasattr(self, "context") and self.context.closed is False:
-            self.context.term()
+                try:
+                    task.cancel()
+                except RuntimeError:
+                    log.warning("Tasks loop already closed")
 
     # pylint: enable=W1701
     def __enter__(self):
@@ -402,7 +391,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self._closing = False
         self._monitor = None
         self._w_monitor = None
-        self.task = None
+        self.tasks = set()
         self._event = asyncio.Event()
 
     def zmq_device(self):
@@ -485,6 +474,11 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             self._socket.close()
         if hasattr(self, "context") and self.context.closed is False:
             self.context.term()
+        for task in list(self.tasks):
+            try:
+                task.cancel()
+            except RuntimeError:
+                log.error("IOLoop closed when trying to cancel task")
 
     def pre_fork(self, process_manager):
         """
@@ -518,8 +512,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         :param IOLoop io_loop: An instance of a Tornado IOLoop, to handle event scheduling
         """
         # context = zmq.Context(1)
-        context = zmq.asyncio.Context(1)
-        self._socket = context.socket(zmq.REP)
+        self.context = zmq.asyncio.Context(1)
+        self._socket = self.context.socket(zmq.REP)
         # Linger -1 means we'll never discard messages.
         self._socket.setsockopt(zmq.LINGER, -1)
         self._start_zmq_monitor()
@@ -541,16 +535,23 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self.message_handler = message_handler
 
         async def callback():
-            self.task = asyncio.create_task(self.request_handler())
-            await self.task
+            task = asyncio.create_task(self.request_handler())
+            task.add_done_callback(self.tasks.discard)
+            self.tasks.add(task)
 
         io_loop.add_callback(callback)
 
     async def request_handler(self):
         while not self._event.is_set():
-            request = await self._socket.recv()
-            reply = await self.handle_message(None, request)
-            await self._socket.send(self.encode_payload(reply))
+            try:
+                request = await asyncio.wait_for(self._socket.recv(), 1)
+                reply = await self.handle_message(None, request)
+                await self._socket.send(self.encode_payload(reply))
+            except TimeoutError:
+                continue
+            except Exception:
+                log.error("Exception in request handler", exc_info=True)
+                break
 
     async def handle_message(self, stream, payload):
         payload = self.decode_payload(payload)
@@ -605,6 +606,7 @@ def _set_tcp_keepalive(zmq_socket, opts):
 
 ctx = zmq.asyncio.Context()
 
+
 # TODO: unit tests!
 class AsyncReqMessageClient:
     """
@@ -643,25 +645,20 @@ class AsyncReqMessageClient:
         self.socket = None
 
     async def connect(self):
-        # wire up sockets
-        self._init_socket()
+        if self.socket is None:
+            # wire up sockets
+            self._init_socket()
 
     # TODO: timeout all in-flight sessions, or error
     def close(self):
-        try:
-            if self._closing:
-                return
-        except AttributeError:
-            # We must have been called from __del__
-            # The python interpreter has nuked most attributes already
+        if self._closing:
             return
-        else:
-            self._closing = True
-            if self.socket:
-                self.socket.close()
-            if self.context.closed is False:
-                # This hangs if closing the stream causes an import error
-                self.context.term()
+        self._closing = True
+        if self.socket:
+            self.socket.close()
+        if self.context.closed is False:
+            # This hangs if closing the stream causes an import error
+            self.context.term()
 
     def _init_socket(self):
         if self.socket is not None:
@@ -809,17 +806,17 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
     def __init__(self, opts, **kwargs):
         self.opts = opts
-        #if self.opts.get("ipc_mode", "") == "tcp":
+        # if self.opts.get("ipc_mode", "") == "tcp":
         #    self.pull_uri = "tcp://127.0.0.1:{}".format(
         #        self.opts.get("tcp_master_publish_pull", 4514)
         #    )
-        #else:
+        # else:
         #    self.pull_uri = "ipc://{}".format(
         #        os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
         #    )
-        #interface = self.opts.get("interface", "127.0.0.1")
-        #publish_port = self.opts.get("publish_port", 4560)
-        #self.pub_uri = f"tcp://{interface}:{publish_port}"
+        # interface = self.opts.get("interface", "127.0.0.1")
+        # publish_port = self.opts.get("publish_port", 4560)
+        # self.pub_uri = f"tcp://{interface}:{publish_port}"
 
         pub_host = kwargs.get("pub_host", None)
         pub_port = kwargs.get("pub_port", None)
@@ -829,7 +826,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         else:
             self.pub_uri = f"tcp://{pub_host}:{pub_port}"
 
-
         pull_host = kwargs.get("pull_host", None)
         pull_port = kwargs.get("pull_port", None)
         pull_path = kwargs.get("pull_path", None)
@@ -837,7 +833,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.pull_uri = f"ipc://{pull_path}"
         else:
             self.pull_uri = f"tcp://{pull_host}:{pull_port}"
-
 
         self.ctx = None
         self.sock = None

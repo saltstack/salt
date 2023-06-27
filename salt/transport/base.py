@@ -1,4 +1,5 @@
 import os
+
 import tornado.gen
 
 TRANSPORTS = (
@@ -63,7 +64,7 @@ def publish_server(opts, **kwargs):
     if "pub_host" not in kwargs and "pub_path" not in kwargs:
         kwargs["pub_host"] = opts["interface"]
     if "pub_port" not in kwargs and "pub_path" not in kwargs:
-        kwargs["pub_port"] = opts["publish_port"]
+        kwargs["pub_port"] = opts.get("publish_port", 4506)
 
     if "pull_host" not in kwargs and "pull_path" not in kwargs:
         if opts.get("ipc_mode", "") == "tcp":

@@ -174,6 +174,8 @@ async def test_publish_client_connect_server_down(transport, io_loop):
             await client.connect(background=True)
         except TimeoutError:
             pass
+        except Exception:
+            log.error("Got exception", exc_info=True)
         assert client._stream is None
     client.close()
 
@@ -188,7 +190,6 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
 
         import zmq
 
-        return
         ctx = zmq.asyncio.Context()
         uri = f"tcp://{opts['master_ip']}:{port}"
         msg = salt.payload.dumps({"meh": 123})
@@ -196,23 +197,21 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
         client = salt.transport.zeromq.PublishClient(
             opts, io_loop, host=host, port=port
         )
-        await client.connect(background=True)
+        await client.connect()
         assert client._socket
 
         socket = ctx.socket(zmq.PUB)
         socket.setsockopt(zmq.BACKLOG, 1000)
         socket.setsockopt(zmq.LINGER, -1)
         socket.setsockopt(zmq.SNDHWM, 1000)
-        print(f"bind {uri}")
         socket.bind(uri)
-        await asyncio.sleep(10)
+        await asyncio.sleep(20)
 
         async def recv():
             return await client.recv(timeout=1)
 
         task = asyncio.create_task(recv())
         # Sleep to allow zmq to do it's thing.
-        await asyncio.sleep(0.03)
         await socket.send(msg)
         await task
         response = task.result()

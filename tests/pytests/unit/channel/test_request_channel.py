@@ -1,7 +1,7 @@
 """
     :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 """
-
+import asyncio
 import ctypes
 import logging
 import multiprocessing
@@ -337,7 +337,7 @@ def run_loop_in_thread(loop, evt):
     """
     Run the provided loop until an event is set
     """
-    loop.make_current()
+    asyncio.set_event_loop(loop.asyncio_loop)
 
     @tornado.gen.coroutine
     def stopper():
@@ -377,7 +377,7 @@ class MockSaltMinionMaster:
         master_opts.update({"transport": "zeromq"})
         self.server_channel = salt.channel.server.ReqServerChannel.factory(master_opts)
         self.server_channel.pre_fork(self.process_manager)
-        self.io_loop = tornado.ioloop.IOLoop()
+        self.io_loop = tornado.ioloop.IOLoop(make_current=False)
         self.evt = threading.Event()
         self.server_channel.post_fork(self._handle_payload, io_loop=self.io_loop)
         self.server_thread = threading.Thread(
@@ -403,6 +403,7 @@ class MockSaltMinionMaster:
     def __exit__(self, *args, **kwargs):
         self.channel.__exit__(*args, **kwargs)
         del self.channel
+        self.server_channel.close()
         # Attempting to kill the children hangs the test suite.
         # Let the test suite handle this instead.
         self.process_manager.stop_restarting()
@@ -411,7 +412,6 @@ class MockSaltMinionMaster:
         self.server_thread.join()
         # Give the procs a chance to fully close before we stop the io_loop
         time.sleep(2)
-        self.server_channel.close()
         SMaster.secrets.pop("aes")
         del self.server_channel
         del self.io_loop
@@ -481,28 +481,33 @@ def test_req_server_chan_encrypt_v2(pki_dir):
     dictkey = "pillar"
     nonce = "abcdefg"
     pillar_data = {"pillar1": "meh"}
-    ret = server._encrypt_private(pillar_data, dictkey, "minion", nonce)
-    assert "key" in ret
-    assert dictkey in ret
+    try:
+        ret = server._encrypt_private(pillar_data, dictkey, "minion", nonce)
+        assert "key" in ret
+        assert dictkey in ret
 
-    key = salt.crypt.get_rsa_key(str(pki_dir.joinpath("minion", "minion.pem")), None)
-    if HAS_M2:
-        aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
-    else:
-        cipher = PKCS1_OAEP.new(key)
-        aes = cipher.decrypt(ret["key"])
-    pcrypt = salt.crypt.Crypticle(opts, aes)
-    signed_msg = pcrypt.loads(ret[dictkey])
+        key = salt.crypt.get_rsa_key(
+            str(pki_dir.joinpath("minion", "minion.pem")), None
+        )
+        if HAS_M2:
+            aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
+        else:
+            cipher = PKCS1_OAEP.new(key)
+            aes = cipher.decrypt(ret["key"])
+        pcrypt = salt.crypt.Crypticle(opts, aes)
+        signed_msg = pcrypt.loads(ret[dictkey])
 
-    assert "sig" in signed_msg
-    assert "data" in signed_msg
-    data = salt.payload.loads(signed_msg["data"])
-    assert "key" in data
-    assert data["key"] == ret["key"]
-    assert "key" in data
-    assert data["nonce"] == nonce
-    assert "pillar" in data
-    assert data["pillar"] == pillar_data
+        assert "sig" in signed_msg
+        assert "data" in signed_msg
+        data = salt.payload.loads(signed_msg["data"])
+        assert "key" in data
+        assert data["key"] == ret["key"]
+        assert "key" in data
+        assert data["nonce"] == nonce
+        assert "pillar" in data
+        assert data["pillar"] == pillar_data
+    finally:
+        server.close()
 
 
 def test_req_server_chan_encrypt_v1(pki_dir):
@@ -525,20 +530,27 @@ def test_req_server_chan_encrypt_v1(pki_dir):
     dictkey = "pillar"
     nonce = "abcdefg"
     pillar_data = {"pillar1": "meh"}
-    ret = server._encrypt_private(pillar_data, dictkey, "minion", sign_messages=False)
+    try:
+        ret = server._encrypt_private(
+            pillar_data, dictkey, "minion", sign_messages=False
+        )
 
-    assert "key" in ret
-    assert dictkey in ret
+        assert "key" in ret
+        assert dictkey in ret
 
-    key = salt.crypt.get_rsa_key(str(pki_dir.joinpath("minion", "minion.pem")), None)
-    if HAS_M2:
-        aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
-    else:
-        cipher = PKCS1_OAEP.new(key)
-        aes = cipher.decrypt(ret["key"])
-    pcrypt = salt.crypt.Crypticle(opts, aes)
-    data = pcrypt.loads(ret[dictkey])
-    assert data == pillar_data
+        key = salt.crypt.get_rsa_key(
+            str(pki_dir.joinpath("minion", "minion.pem")), None
+        )
+        if HAS_M2:
+            aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
+        else:
+            cipher = PKCS1_OAEP.new(key)
+            aes = cipher.decrypt(ret["key"])
+        pcrypt = salt.crypt.Crypticle(opts, aes)
+        data = pcrypt.loads(ret[dictkey])
+        assert data == pillar_data
+    finally:
+        server.close()
 
 
 def test_req_chan_decode_data_dict_entry_v1(pki_dir):
@@ -559,19 +571,23 @@ def test_req_chan_decode_data_dict_entry_v1(pki_dir):
     master_opts = dict(opts, pki_dir=str(pki_dir.joinpath("master")))
     server = salt.channel.server.ReqServerChannel.factory(master_opts)
     client = salt.channel.client.ReqChannel.factory(opts, io_loop=mockloop)
-    dictkey = "pillar"
-    target = "minion"
-    pillar_data = {"pillar1": "meh"}
-    ret = server._encrypt_private(pillar_data, dictkey, target, sign_messages=False)
-    key = client.auth.get_keys()
-    if HAS_M2:
-        aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
-    else:
-        cipher = PKCS1_OAEP.new(key)
-        aes = cipher.decrypt(ret["key"])
-    pcrypt = salt.crypt.Crypticle(client.opts, aes)
-    ret_pillar_data = pcrypt.loads(ret[dictkey])
-    assert ret_pillar_data == pillar_data
+    try:
+        dictkey = "pillar"
+        target = "minion"
+        pillar_data = {"pillar1": "meh"}
+        ret = server._encrypt_private(pillar_data, dictkey, target, sign_messages=False)
+        key = client.auth.get_keys()
+        if HAS_M2:
+            aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
+        else:
+            cipher = PKCS1_OAEP.new(key)
+            aes = cipher.decrypt(ret["key"])
+        pcrypt = salt.crypt.Crypticle(client.opts, aes)
+        ret_pillar_data = pcrypt.loads(ret[dictkey])
+        assert ret_pillar_data == pillar_data
+    finally:
+        client.close()
+        server.close()
 
 
 async def test_req_chan_decode_data_dict_entry_v2(pki_dir):
@@ -606,7 +622,9 @@ async def test_req_chan_decode_data_dict_entry_v2(pki_dir):
     client.auth.get_keys = auth.get_keys
     client.auth.crypticle.dumps = auth.crypticle.dumps
     client.auth.crypticle.loads = auth.crypticle.loads
+    real_transport = client.transport
     client.transport = MagicMock()
+    real_transport.close()
 
     @tornado.gen.coroutine
     def mocksend(msg, timeout=60, tries=3):
@@ -631,13 +649,17 @@ async def test_req_chan_decode_data_dict_entry_v2(pki_dir):
         "ver": "2",
         "cmd": "_pillar",
     }
-    ret = await client.crypted_transfer_decode_dictentry(
-        load,
-        dictkey="pillar",
-    )
-    assert "version" in client.transport.msg
-    assert client.transport.msg["version"] == 2
-    assert ret == {"pillar1": "meh"}
+    try:
+        ret = await client.crypted_transfer_decode_dictentry(
+            load,
+            dictkey="pillar",
+        )
+        assert "version" in client.transport.msg
+        assert client.transport.msg["version"] == 2
+        assert ret == {"pillar1": "meh"}
+    finally:
+        client.close()
+        server.close()
 
 
 async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(pki_dir):
@@ -673,7 +695,9 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(pki_dir):
     client.auth.get_keys = auth.get_keys
     client.auth.crypticle.dumps = auth.crypticle.dumps
     client.auth.crypticle.loads = auth.crypticle.loads
+    real_transport = client.transport
     client.transport = MagicMock()
+    real_transport.close()
     ret = server._encrypt_private(
         pillar_data, dictkey, target, nonce=badnonce, sign_messages=True
     )
@@ -698,12 +722,16 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(pki_dir):
         "cmd": "_pillar",
     }
 
-    with pytest.raises(salt.crypt.AuthenticationError) as excinfo:
-        ret = await client.crypted_transfer_decode_dictentry(
-            load,
-            dictkey="pillar",
-        )
-    assert "Pillar nonce verification failed." == excinfo.value.message
+    try:
+        with pytest.raises(salt.crypt.AuthenticationError) as excinfo:
+            ret = await client.crypted_transfer_decode_dictentry(
+                load,
+                dictkey="pillar",
+            )
+        assert "Pillar nonce verification failed." == excinfo.value.message
+    finally:
+        client.close()
+        server.close()
 
 
 async def test_req_chan_decode_data_dict_entry_v2_bad_signature(pki_dir):
@@ -739,7 +767,9 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(pki_dir):
     client.auth.get_keys = auth.get_keys
     client.auth.crypticle.dumps = auth.crypticle.dumps
     client.auth.crypticle.loads = auth.crypticle.loads
+    real_transport = client.transport
     client.transport = MagicMock()
+    real_transport.close()
 
     @tornado.gen.coroutine
     def mocksend(msg, timeout=60, tries=3):
@@ -780,12 +810,16 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(pki_dir):
         "cmd": "_pillar",
     }
 
-    with pytest.raises(salt.crypt.AuthenticationError) as excinfo:
-        ret = await client.crypted_transfer_decode_dictentry(
-            load,
-            dictkey="pillar",
-        )
-    assert "Pillar payload signature failed to validate." == excinfo.value.message
+    try:
+        with pytest.raises(salt.crypt.AuthenticationError) as excinfo:
+            ret = await client.crypted_transfer_decode_dictentry(
+                load,
+                dictkey="pillar",
+            )
+        assert "Pillar payload signature failed to validate." == excinfo.value.message
+    finally:
+        client.close()
+        server.close()
 
 
 async def test_req_chan_decode_data_dict_entry_v2_bad_key(pki_dir):
@@ -821,7 +855,9 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(pki_dir):
     client.auth.get_keys = auth.get_keys
     client.auth.crypticle.dumps = auth.crypticle.dumps
     client.auth.crypticle.loads = auth.crypticle.loads
+    real_transport = client.transport
     client.transport = MagicMock()
+    real_transport.close()
 
     @tornado.gen.coroutine
     def mocksend(msg, timeout=60, tries=3):
@@ -869,12 +905,16 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(pki_dir):
         "cmd": "_pillar",
     }
 
-    with pytest.raises(salt.crypt.AuthenticationError) as excinfo:
-        await client.crypted_transfer_decode_dictentry(
-            load,
-            dictkey="pillar",
-        )
-    assert "Key verification failed." == excinfo.value.message
+    try:
+        with pytest.raises(salt.crypt.AuthenticationError) as excinfo:
+            await client.crypted_transfer_decode_dictentry(
+                load,
+                dictkey="pillar",
+            )
+        assert "Key verification failed." == excinfo.value.message
+    finally:
+        client.close()
+        server.close()
 
 
 async def test_req_serv_auth_v1(pki_dir):
@@ -926,8 +966,11 @@ async def test_req_serv_auth_v1(pki_dir):
         "token": token,
         "pub": pub_key,
     }
-    ret = server._auth(load, sign_messages=False)
-    assert "load" not in ret
+    try:
+        ret = server._auth(load, sign_messages=False)
+        assert "load" not in ret
+    finally:
+        server.close()
 
 
 async def test_req_serv_auth_v2(pki_dir):
@@ -980,9 +1023,12 @@ async def test_req_serv_auth_v2(pki_dir):
         "token": token,
         "pub": pub_key,
     }
-    ret = server._auth(load, sign_messages=True)
-    assert "sig" in ret
-    assert "load" in ret
+    try:
+        ret = server._auth(load, sign_messages=True)
+        assert "sig" in ret
+        assert "load" in ret
+    finally:
+        server.close()
 
 
 async def test_req_chan_auth_v2(pki_dir, io_loop):
@@ -1023,15 +1069,19 @@ async def test_req_chan_auth_v2(pki_dir, io_loop):
     client = salt.channel.client.AsyncReqChannel.factory(opts, io_loop=io_loop)
     signin_payload = client.auth.minion_sign_in_payload()
     pload = client._package_load(signin_payload)
-    assert "version" in pload
-    assert pload["version"] == 2
+    try:
+        assert "version" in pload
+        assert pload["version"] == 2
 
-    ret = server._auth(pload["load"], sign_messages=True)
-    assert "sig" in ret
-    ret = client.auth.handle_signin_response(signin_payload, ret)
-    assert "aes" in ret
-    assert "master_uri" in ret
-    assert "publish_port" in ret
+        ret = server._auth(pload["load"], sign_messages=True)
+        assert "sig" in ret
+        ret = client.auth.handle_signin_response(signin_payload, ret)
+        assert "aes" in ret
+        assert "master_uri" in ret
+        assert "publish_port" in ret
+    finally:
+        client.close()
+        server.close()
 
 
 async def test_req_chan_auth_v2_with_master_signing(pki_dir, io_loop):
@@ -1113,16 +1163,20 @@ async def test_req_chan_auth_v2_with_master_signing(pki_dir, io_loop):
     signin_payload = client.auth.minion_sign_in_payload()
     pload = client._package_load(signin_payload)
     server_reply = server._auth(pload["load"], sign_messages=True)
-    ret = client.auth.handle_signin_response(signin_payload, server_reply)
+    try:
+        ret = client.auth.handle_signin_response(signin_payload, server_reply)
 
-    assert "aes" in ret
-    assert "master_uri" in ret
-    assert "publish_port" in ret
+        assert "aes" in ret
+        assert "master_uri" in ret
+        assert "publish_port" in ret
 
-    assert (
-        pki_dir.joinpath("minion", "minion_master.pub").read_text()
-        == pki_dir.joinpath("master", "master.pub").read_text()
-    )
+        assert (
+            pki_dir.joinpath("minion", "minion_master.pub").read_text()
+            == pki_dir.joinpath("master", "master.pub").read_text()
+        )
+    finally:
+        client.close()
+        server.close()
 
 
 async def test_req_chan_auth_v2_new_minion_with_master_pub(pki_dir, io_loop):
@@ -1165,13 +1219,17 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub(pki_dir, io_loop):
     client = salt.channel.client.AsyncReqChannel.factory(opts, io_loop=io_loop)
     signin_payload = client.auth.minion_sign_in_payload()
     pload = client._package_load(signin_payload)
-    assert "version" in pload
-    assert pload["version"] == 2
+    try:
+        assert "version" in pload
+        assert pload["version"] == 2
 
-    ret = server._auth(pload["load"], sign_messages=True)
-    assert "sig" in ret
-    ret = client.auth.handle_signin_response(signin_payload, ret)
-    assert ret == "retry"
+        ret = server._auth(pload["load"], sign_messages=True)
+        assert "sig" in ret
+        ret = client.auth.handle_signin_response(signin_payload, ret)
+        assert ret == "retry"
+    finally:
+        client.close()
+        server.close()
 
 
 async def test_req_chan_auth_v2_new_minion_with_master_pub_bad_sig(pki_dir, io_loop):
@@ -1223,13 +1281,17 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub_bad_sig(pki_dir, io_l
     client = salt.channel.client.AsyncReqChannel.factory(opts, io_loop=io_loop)
     signin_payload = client.auth.minion_sign_in_payload()
     pload = client._package_load(signin_payload)
-    assert "version" in pload
-    assert pload["version"] == 2
+    try:
+        assert "version" in pload
+        assert pload["version"] == 2
 
-    ret = server._auth(pload["load"], sign_messages=True)
-    assert "sig" in ret
-    with pytest.raises(salt.crypt.SaltClientError, match="Invalid signature"):
-        ret = client.auth.handle_signin_response(signin_payload, ret)
+        ret = server._auth(pload["load"], sign_messages=True)
+        assert "sig" in ret
+        with pytest.raises(salt.crypt.SaltClientError, match="Invalid signature"):
+            ret = client.auth.handle_signin_response(signin_payload, ret)
+    finally:
+        client.close()
+        server.close()
 
 
 async def test_req_chan_auth_v2_new_minion_without_master_pub(pki_dir, io_loop):
@@ -1273,10 +1335,14 @@ async def test_req_chan_auth_v2_new_minion_without_master_pub(pki_dir, io_loop):
     client = salt.channel.client.AsyncReqChannel.factory(opts, io_loop=io_loop)
     signin_payload = client.auth.minion_sign_in_payload()
     pload = client._package_load(signin_payload)
-    assert "version" in pload
-    assert pload["version"] == 2
+    try:
+        assert "version" in pload
+        assert pload["version"] == 2
 
-    ret = server._auth(pload["load"], sign_messages=True)
-    assert "sig" in ret
-    ret = client.auth.handle_signin_response(signin_payload, ret)
-    assert ret == "retry"
+        ret = server._auth(pload["load"], sign_messages=True)
+        assert "sig" in ret
+        ret = client.auth.handle_signin_response(signin_payload, ret)
+        assert ret == "retry"
+    finally:
+        client.close()
+        server.close()

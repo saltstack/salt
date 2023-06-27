@@ -110,9 +110,6 @@ class SyncWrapper:
                 log.error("No async method %s on object %r", method, self.obj)
             except Exception:  # pylint: disable=broad-except
                 log.exception("Exception encountered while running stop method")
-        # thread = threading.Thread(target=self._run_loop_final, args=(self.asyncio_loop,))
-        # thread.start()
-        # thread.join()
         io_loop = self.io_loop
         io_loop.stop()
         try:
@@ -143,18 +140,6 @@ class SyncWrapper:
 
         return wrap
 
-    def _run_loop_final(self, asyncio_loop):
-        asyncio.set_event_loop(asyncio_loop)
-        io_loop = tornado.ioloop.IOLoop.current()
-        try:
-
-            async def noop():
-                await asyncio.sleep(0.2)
-
-            result = io_loop.run_sync(lambda: noop())
-        except Exception:  # pylint: disable=broad-except
-            log.error("Error on last loop run")
-
     def _target(self, key, args, kwargs, results, asyncio_loop):
         asyncio.set_event_loop(asyncio_loop)
         io_loop = tornado.ioloop.IOLoop.current()
@@ -173,10 +158,16 @@ class SyncWrapper:
                 return self
             else:
                 return ret
+        elif hasattr(self.obj, "__enter__"):
+            ret = self.obj.__enter__()
+            if ret == self.obj:
+                return self
+            else:
+                return ret
         return self
 
     def __exit__(self, exc_type, exc_val, tb):
         if hasattr(self.obj, "__aexit__"):
-            return self._wrap("__aexit__")
+            return self._wrap("__aexit__")(exc_type, exc_val, tb)
         else:
             self.close()
