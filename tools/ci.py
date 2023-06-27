@@ -439,8 +439,23 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         ctx.error(f"Could not load the changed files from '{changed_files}': {exc}")
         ctx.exit(1)
 
+    labels: list[str] = []
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is not None:
+        try:
+            gh_event = json.loads(open(gh_event_path).read())
+        except Exception as exc:
+            ctx.error(
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+            )
+            ctx.exit(1)
+
+        labels.extend(
+            label[0] for label in _get_pr_test_labels_from_event_payload(gh_event)
+        )
+
     # So, it's a pull request...
-    # Based on which files changed, or other things like PR comments we can
+    # Based on which files changed, or other things like PR labels we can
     # decide what to run, or even if the full test run should be running on the
     # pull request, etc...
     changed_pkg_requirements_files = json.loads(
@@ -470,6 +485,10 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             ):
                 wfh.write(f"{path}\n")
             wfh.write("</pre>\n</details>\n")
+        testrun = {"type": "full"}
+    elif "test:full" in labels:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("Full test run chosen because the label `test:full` is set.\n")
         testrun = {"type": "full"}
     else:
         testrun_changed_files_path = tools.utils.REPO_ROOT / "testrun-changed-files.txt"
