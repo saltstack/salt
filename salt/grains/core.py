@@ -11,6 +11,7 @@ as those returned here
 
 import datetime
 import hashlib
+import locale
 import logging
 import os
 import platform
@@ -32,7 +33,6 @@ import salt.modules.smbios
 import salt.utils.args
 import salt.utils.dns
 import salt.utils.files
-import salt.utils.locales
 import salt.utils.network
 import salt.utils.path
 import salt.utils.pkg.rpm
@@ -289,7 +289,7 @@ def _linux_gpu_data():
 
     devs = []
     try:
-        lspci_out = __salt__["cmd.run"](f"{lspci} -vmm")
+        lspci_out = __salt__["cmd.run"]("{} -vmm".format(lspci))
 
         cur_dev = {}
         error = False
@@ -363,7 +363,7 @@ def _netbsd_gpu_data():
         for line in pcictl_out.splitlines():
             for vendor in known_vendors:
                 vendor_match = re.match(
-                    rf"[0-9:]+ ({vendor}) (.+) \(VGA .+\)", line, re.IGNORECASE
+                    r"[0-9:]+ ({}) (.+) \(VGA .+\)".format(vendor), line, re.IGNORECASE
                 )
                 if vendor_match:
                     gpus.append(
@@ -425,18 +425,18 @@ def _bsd_cpudata(osdata):
     if sysctl:
         cmds.update(
             {
-                "num_cpus": f"{sysctl} -n hw.ncpu",
-                "cpuarch": f"{sysctl} -n hw.machine",
-                "cpu_model": f"{sysctl} -n hw.model",
+                "num_cpus": "{} -n hw.ncpu".format(sysctl),
+                "cpuarch": "{} -n hw.machine".format(sysctl),
+                "cpu_model": "{} -n hw.model".format(sysctl),
             }
         )
 
     if arch and osdata["kernel"] == "OpenBSD":
-        cmds["cpuarch"] = f"{arch} -s"
+        cmds["cpuarch"] = "{} -s".format(arch)
 
     if osdata["kernel"] == "Darwin":
-        cmds["cpu_model"] = f"{sysctl} -n machdep.cpu.brand_string"
-        cmds["cpu_flags"] = f"{sysctl} -n machdep.cpu.features"
+        cmds["cpu_model"] = "{} -n machdep.cpu.brand_string".format(sysctl)
+        cmds["cpu_flags"] = "{} -n machdep.cpu.features".format(sysctl)
 
     grains = {k: __salt__["cmd.run"](v) for k, v in cmds.items()}
 
@@ -521,7 +521,7 @@ def _aix_cpudata():
     grains = {}
     cmd = salt.utils.path.which("prtconf")
     if cmd:
-        data = __salt__["cmd.run"](f"{cmd}") + os.linesep
+        data = __salt__["cmd.run"]("{}".format(cmd)) + os.linesep
         for dest, regstring in (
             ("cpuarch", r"(?im)^\s*Processor\s+Type:\s+(\S+)"),
             ("cpu_flags", r"(?im)^\s*Processor\s+Version:\s+(\S+)"),
@@ -567,9 +567,9 @@ def _osx_memdata():
 
     sysctl = salt.utils.path.which("sysctl")
     if sysctl:
-        mem = __salt__["cmd.run"](f"{sysctl} -n hw.memsize")
+        mem = __salt__["cmd.run"]("{} -n hw.memsize".format(sysctl))
         swap_total = (
-            __salt__["cmd.run"](f"{sysctl} -n vm.swapusage")
+            __salt__["cmd.run"]("{} -n vm.swapusage".format(sysctl))
             .split()[2]
             .replace(",", ".")
         )
@@ -594,20 +594,20 @@ def _bsd_memdata(osdata):
 
     sysctl = salt.utils.path.which("sysctl")
     if sysctl:
-        mem = __salt__["cmd.run"](f"{sysctl} -n hw.physmem")
+        mem = __salt__["cmd.run"]("{} -n hw.physmem".format(sysctl))
         if osdata["kernel"] == "NetBSD" and mem.startswith("-"):
-            mem = __salt__["cmd.run"](f"{sysctl} -n hw.physmem64")
+            mem = __salt__["cmd.run"]("{} -n hw.physmem64".format(sysctl))
         grains["mem_total"] = int(mem) // 1024 // 1024
 
         if osdata["kernel"] in ["OpenBSD", "NetBSD"]:
             swapctl = salt.utils.path.which("swapctl")
-            swap_data = __salt__["cmd.run"](f"{swapctl} -sk")
+            swap_data = __salt__["cmd.run"]("{} -sk".format(swapctl))
             if swap_data == "no swap devices configured":
                 swap_total = 0
             else:
                 swap_total = swap_data.split(" ")[1]
         else:
-            swap_total = __salt__["cmd.run"](f"{sysctl} -n vm.swap_total")
+            swap_total = __salt__["cmd.run"]("{} -n vm.swap_total".format(sysctl))
         grains["swap_total"] = int(swap_total) // 1024 // 1024
     return grains
 
@@ -625,7 +625,7 @@ def _sunos_memdata():
             grains["mem_total"] = int(comps[2].strip())
 
     swap_cmd = salt.utils.path.which("swap")
-    swap_data = __salt__["cmd.run"](f"{swap_cmd} -s").split()
+    swap_data = __salt__["cmd.run"]("{} -s".format(swap_cmd)).split()
     try:
         swap_avail = int(swap_data[-2][:-1])
         swap_used = int(swap_data[-4][:-1])
@@ -653,7 +653,7 @@ def _aix_memdata():
 
     swap_cmd = salt.utils.path.which("swap")
     if swap_cmd:
-        swap_data = __salt__["cmd.run"](f"{swap_cmd} -s").split()
+        swap_data = __salt__["cmd.run"]("{} -s".format(swap_cmd)).split()
         try:
             swap_total = (int(swap_data[-2]) + int(swap_data[-6])) * 4
         except ValueError:
@@ -706,7 +706,7 @@ def _aix_get_machine_id():
     grains = {}
     cmd = salt.utils.path.which("lsattr")
     if cmd:
-        data = __salt__["cmd.run"](f"{cmd} -El sys0") + os.linesep
+        data = __salt__["cmd.run"]("{} -El sys0".format(cmd)) + os.linesep
         uuid_regexes = [re.compile(r"(?im)^\s*os_uuid\s+(\S+)\s+(.*)")]
         for regex in uuid_regexes:
             res = regex.search(data)
@@ -1017,7 +1017,7 @@ def _virtual(osdata):
                     subtype_cmd = "{} -c current get -H -o value {}-role".format(
                         command, role
                     )
-                    ret = __salt__["cmd.run"](f"{subtype_cmd}")
+                    ret = __salt__["cmd.run"]("{}".format(subtype_cmd))
                     if ret == "true":
                         roles.append(role)
                 if roles:
@@ -1163,14 +1163,14 @@ def _virtual(osdata):
     elif osdata["kernel"] == "FreeBSD":
         kenv = salt.utils.path.which("kenv")
         if kenv:
-            product = __salt__["cmd.run"](f"{kenv} smbios.system.product")
-            maker = __salt__["cmd.run"](f"{kenv} smbios.system.maker")
+            product = __salt__["cmd.run"]("{} smbios.system.product".format(kenv))
+            maker = __salt__["cmd.run"]("{} smbios.system.maker".format(kenv))
             if product.startswith("VMware"):
                 grains["virtual"] = "VMware"
             if product.startswith("VirtualBox"):
                 grains["virtual"] = "VirtualBox"
             if maker.startswith("Xen"):
-                grains["virtual_subtype"] = f"{maker} {product}"
+                grains["virtual_subtype"] = "{} {}".format(maker, product)
                 grains["virtual"] = "xen"
             if maker.startswith("Microsoft") and product.startswith("Virtual"):
                 grains["virtual"] = "VirtualPC"
@@ -1181,9 +1181,9 @@ def _virtual(osdata):
             if maker.startswith("Amazon EC2"):
                 grains["virtual"] = "Nitro"
         if sysctl:
-            hv_vendor = __salt__["cmd.run"](f"{sysctl} -n hw.hv_vendor")
-            model = __salt__["cmd.run"](f"{sysctl} -n hw.model")
-            jail = __salt__["cmd.run"](f"{sysctl} -n security.jail.jailed")
+            hv_vendor = __salt__["cmd.run"]("{} -n hw.hv_vendor".format(sysctl))
+            model = __salt__["cmd.run"]("{} -n hw.model".format(sysctl))
+            jail = __salt__["cmd.run"]("{} -n security.jail.jailed".format(sysctl))
             if "bhyve" in hv_vendor:
                 grains["virtual"] = "bhyve"
             elif "QEMU Virtual CPU" in model:
@@ -1199,19 +1199,22 @@ def _virtual(osdata):
     elif osdata["kernel"] == "NetBSD":
         if sysctl:
             if "QEMU Virtual CPU" in __salt__["cmd.run"](
-                f"{sysctl} -n machdep.cpu_brand"
+                "{} -n machdep.cpu_brand".format(sysctl)
             ):
                 grains["virtual"] = "kvm"
             elif "invalid" not in __salt__["cmd.run"](
-                f"{sysctl} -n machdep.xen.suspend"
+                "{} -n machdep.xen.suspend".format(sysctl)
             ):
                 grains["virtual"] = "Xen PV DomU"
             elif "VMware" in __salt__["cmd.run"](
-                f"{sysctl} -n machdep.dmi.system-vendor"
+                "{} -n machdep.dmi.system-vendor".format(sysctl)
             ):
                 grains["virtual"] = "VMware"
             # NetBSD has Xen dom0 support
-            elif __salt__["cmd.run"](f"{sysctl} -n machdep.idle-mechanism") == "xen":
+            elif (
+                __salt__["cmd.run"]("{} -n machdep.idle-mechanism".format(sysctl))
+                == "xen"
+            ):
                 if os.path.isfile("/var/run/xenconsoled.pid"):
                     grains["virtual_subtype"] = "Xen Dom0"
     elif osdata["kernel"] == "SunOS":
@@ -1219,7 +1222,7 @@ def _virtual(osdata):
         # check the zonename here as fallback
         zonename = salt.utils.path.which("zonename")
         if zonename:
-            zone = __salt__["cmd.run"](f"{zonename}")
+            zone = __salt__["cmd.run"]("{}".format(zonename))
             if zone != "global":
                 grains["virtual"] = "zone"
 
@@ -1248,7 +1251,7 @@ def _virtual(osdata):
                     r".*Product Name: ([^\r\n]*).*", output, flags=re.DOTALL
                 )
                 if product:
-                    grains["virtual_subtype"] = f"Amazon EC2 ({product[1]})"
+                    grains["virtual_subtype"] = "Amazon EC2 ({})".format(product[1])
             elif re.match(r".*Version: [^\r\n]+\.amazon.*", output, flags=re.DOTALL):
                 grains["virtual_subtype"] = "Amazon EC2"
 
@@ -1280,7 +1283,9 @@ def _virtual_hv(osdata):
     try:
         version = {}
         for fn in ("major", "minor", "extra"):
-            with salt.utils.files.fopen(f"/sys/hypervisor/version/{fn}", "r") as fhr:
+            with salt.utils.files.fopen(
+                "/sys/hypervisor/version/{}".format(fn), "r"
+            ) as fhr:
                 version[fn] = salt.utils.stringutils.to_unicode(fhr.read().strip())
         grains["virtual_hv_version"] = "{}.{}{}".format(
             version["major"], version["minor"], version["extra"]
@@ -1436,7 +1441,7 @@ def _windows_os_release_grain(caption, product_type):
                 # ie: R2
                 if re.match(r"^R\d+$", item):
                     release = item
-        os_release = f"{version}Server{release}"
+        os_release = "{}Server{}".format(version, release)
     else:
         for item in caption.split(" "):
             # If it's a number, decimal number, Thin or Vista, then it's the
@@ -1627,7 +1632,7 @@ def _linux_devicetree_platform_data():
         try:
             # /proc/device-tree should be used instead of /sys/firmware/devicetree/base
             # see https://github.com/torvalds/linux/blob/v5.13/Documentation/ABI/testing/sysfs-firmware-ofw#L14
-            loc = f"/proc/device-tree/{path}"
+            loc = "/proc/device-tree/{}".format(path)
             if os.path.isfile(loc):
                 with salt.utils.files.fopen(loc, mode="r") as f:
                     return f.read().rstrip("\x00")  # all strings are null-terminated
@@ -1866,13 +1871,18 @@ def _linux_bin_exists(binary):
     """
     for search_cmd in ("which", "type -ap"):
         try:
-            return __salt__["cmd.retcode"](f"{search_cmd} {binary}") == 0
+            return __salt__["cmd.retcode"]("{} {}".format(search_cmd, binary)) == 0
         except salt.exceptions.CommandExecutionError:
             pass
 
     try:
         return (
-            len(__salt__["cmd.run_all"](f"whereis -b {binary}")["stdout"].split()) > 1
+            len(
+                __salt__["cmd.run_all"]("whereis -b {}".format(binary))[
+                    "stdout"
+                ].split()
+            )
+            > 1
         )
     except salt.exceptions.CommandExecutionError:
         return False
@@ -1890,7 +1900,7 @@ def _parse_lsb_release():
                     pass
                 else:
                     # Adds lsb_distrib_{id,release,codename,description}
-                    ret[f"lsb_{key.lower()}"] = value.rstrip()
+                    ret["lsb_{}".format(key.lower())] = value.rstrip()
     except OSError as exc:
         log.trace("Failed to parse /etc/lsb-release: %s", exc)
     return ret
@@ -2614,7 +2624,7 @@ def os_data():
         osbuild = __salt__["cmd.run"]("sw_vers -buildVersion")
         grains["os"] = "MacOS"
         grains["os_family"] = "MacOS"
-        grains["osfullname"] = f"{osname} {osrelease}"
+        grains["osfullname"] = "{} {}".format(osname, osrelease)
         grains["osrelease"] = osrelease
         grains["osbuild"] = osbuild
         grains["init"] = "launchd"
@@ -2688,7 +2698,7 @@ def locale_info():
         (
             grains["locale_info"]["defaultlanguage"],
             grains["locale_info"]["defaultencoding"],
-        ) = salt.utils.locales.getdefaultlocale()
+        ) = locale.getdefaultlocale()
     except Exception:  # pylint: disable=broad-except
         # locale.getdefaultlocale can ValueError!! Catch anything else it
         # might do, per #2205
@@ -3155,7 +3165,7 @@ def _hw_data(osdata):
             "productname": "DeviceDesc",
         }
         for grain_name, cmd_key in hwdata.items():
-            result = __salt__["cmd.run_all"](f"fw_printenv {cmd_key}")
+            result = __salt__["cmd.run_all"]("fw_printenv {}".format(cmd_key))
             if result["retcode"] == 0:
                 uboot_keyval = result["stdout"].split("=")
                 grains[grain_name] = _clean_value(grain_name, uboot_keyval[1])
@@ -3175,7 +3185,7 @@ def _hw_data(osdata):
                 "uuid": "smbios.system.uuid",
             }
             for key, val in fbsd_hwdata.items():
-                value = __salt__["cmd.run"](f"{kenv} {val}")
+                value = __salt__["cmd.run"]("{} {}".format(kenv, val))
                 grains[key] = _clean_value(key, value)
     elif osdata["kernel"] == "OpenBSD":
         sysctl = salt.utils.path.which("sysctl")
@@ -3187,7 +3197,7 @@ def _hw_data(osdata):
             "uuid": "hw.uuid",
         }
         for key, oid in hwdata.items():
-            value = __salt__["cmd.run"](f"{sysctl} -n {oid}")
+            value = __salt__["cmd.run"]("{} -n {}".format(sysctl, oid))
             if not value.endswith(" value is not available"):
                 grains[key] = _clean_value(key, value)
     elif osdata["kernel"] == "NetBSD":
@@ -3202,7 +3212,7 @@ def _hw_data(osdata):
             "uuid": "machdep.dmi.system-uuid",
         }
         for key, oid in nbsd_hwdata.items():
-            result = __salt__["cmd.run_all"](f"{sysctl} -n {oid}")
+            result = __salt__["cmd.run_all"]("{} -n {}".format(sysctl, oid))
             if result["retcode"] == 0:
                 grains[key] = _clean_value(key, result["stdout"])
     elif osdata["kernel"] == "Darwin":
@@ -3210,7 +3220,7 @@ def _hw_data(osdata):
         sysctl = salt.utils.path.which("sysctl")
         hwdata = {"productname": "hw.model"}
         for key, oid in hwdata.items():
-            value = __salt__["cmd.run"](f"{sysctl} -b {oid}")
+            value = __salt__["cmd.run"]("{} -b {}".format(sysctl, oid))
             if not value.endswith(" is invalid"):
                 grains[key] = _clean_value(key, value)
     elif osdata["kernel"] == "SunOS" and osdata["cpuarch"].startswith("sparc"):
@@ -3224,7 +3234,7 @@ def _hw_data(osdata):
             ("/usr/sbin/virtinfo", "-a"),
         ):
             if salt.utils.path.which(cmd):  # Also verifies that cmd is executable
-                data += __salt__["cmd.run"](f"{cmd} {args}")
+                data += __salt__["cmd.run"]("{} {}".format(cmd, args))
                 data += "\n"
 
         sn_regexes = [
@@ -3339,7 +3349,7 @@ def _hw_data(osdata):
     elif osdata["kernel"] == "AIX":
         cmd = salt.utils.path.which("prtconf")
         if cmd:
-            data = __salt__["cmd.run"](f"{cmd}") + os.linesep
+            data = __salt__["cmd.run"]("{}".format(cmd)) + os.linesep
             for dest, regstring in (
                 ("serialnumber", r"(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)"),
                 ("systemfirmware", r"(?im)^\s*Firmware\s+Version:\s+(.*)"),
@@ -3421,14 +3431,14 @@ def default_gateway():
             for line in out.splitlines():
                 if line.startswith("default"):
                     grains["ip_gw"] = True
-                    grains[f"ip{ip_version}_gw"] = True
+                    grains["ip{}_gw".format(ip_version)] = True
                     try:
                         via, gw_ip = line.split()[1:3]
                     except ValueError:
                         pass
                     else:
                         if via == "via":
-                            grains[f"ip{ip_version}_gw"] = gw_ip
+                            grains["ip{}_gw".format(ip_version)] = gw_ip
                     break
         except Exception:  # pylint: disable=broad-except
             continue
