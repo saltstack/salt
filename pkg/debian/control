@@ -17,6 +17,7 @@ Vcs-Git: git://github.com/saltstack/salt.git
 Package: salt-common
 Architecture: amd64 arm64
 Depends: ${misc:Depends}
+Breaks: salt-minion (<< 3006.1)
 Suggests: ifupdown
 Recommends: lsb-release
 Description: shared libraries that salt requires for all packages
@@ -68,6 +69,8 @@ Description: remote manager to administer servers via salt
 
 Package: salt-minion
 Architecture: amd64 arm64
+Replaces: salt-common (<< 3006.1)
+Breaks: salt-common (<< 3006.1)
 Depends: bsdmainutils,
          dctrl-tools,
          salt-common (= ${source:Version}),
