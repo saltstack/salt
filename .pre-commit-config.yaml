@@ -1124,32 +1124,6 @@ repos:
           - --include=requirements/zeromq.txt
           - requirements/static/ci/pkgtests-windows.in
 
-      - id: pip-tools-compile
-        alias: compile-ci-pkg-3.11-requirements
-        name: PKG tests CI Py3.11 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests|common)\.in|py3\.11/pkgtests\.in)))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.11
-          - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - requirements/static/ci/pkgtests.in
-
-      - id: pip-tools-compile
-        alias: compile-ci-windows-pkg-3.11-requirements
-        name: PKG tests Windows CI Py3.11 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((pkgtests-windows|common)\.in|py3\.11/pkgtests-windows\.in)))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.11
-          - --platform=windows
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - requirements/static/ci/pkgtests-windows.in
-
   # <---- PKG ci requirements-----------------------------------------------------------------------------------------
 
 
