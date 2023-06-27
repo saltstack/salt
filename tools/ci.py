@@ -8,12 +8,18 @@ import json
 import logging
 import os
 import pathlib
+import sys
 import time
 from typing import TYPE_CHECKING, Any
 
 from ptscripts import Context, command_group
 
 import tools.utils
+
+if sys.version_info < (3, 11):
+    from typing_extensions import NotRequired, TypedDict
+else:
+    from typing import NotRequired, TypedDict  # pylint: disable=no-name-in-module
 
 log = logging.getLogger(__name__)
 
@@ -381,6 +387,12 @@ def define_jobs(
         wfh.write(f"jobs={json.dumps(jobs)}\n")
 
 
+class TestRun(TypedDict):
+    type: str
+    from_filenames: NotRequired[str]
+    selected_tests: NotRequired[dict[str, bool]]
+
+
 @ci.command(
     name="define-testrun",
     arguments={
@@ -418,7 +430,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
     if event_name != "pull_request":
         # In this case, a full test run is in order
         ctx.info("Writing 'testrun' to the github outputs file")
-        testrun = {"type": "full"}
+        testrun = TestRun(type="full")
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"testrun={json.dumps(testrun)}\n")
 
@@ -470,7 +482,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
                 "Full test run chosen because there was a change made "
                 "to `cicd/golden-images.json`.\n"
             )
-        testrun = {"type": "full"}
+        testrun = TestRun(type="full")
     elif changed_pkg_requirements_files or changed_test_requirements_files:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(
@@ -485,19 +497,19 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             ):
                 wfh.write(f"{path}\n")
             wfh.write("</pre>\n</details>\n")
-        testrun = {"type": "full"}
+        testrun = TestRun(type="full")
     elif "test:full" in labels:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write("Full test run chosen because the label `test:full` is set.\n")
-        testrun = {"type": "full"}
+        testrun = TestRun(type="full")
     else:
         testrun_changed_files_path = tools.utils.REPO_ROOT / "testrun-changed-files.txt"
-        testrun = {
-            "type": "changed",
-            "from-filenames": str(
+        testrun = TestRun(
+            type="changed",
+            from_filenames=str(
                 testrun_changed_files_path.relative_to(tools.utils.REPO_ROOT)
             ),
-        }
+        )
         ctx.info(f"Writing {testrun_changed_files_path.name} ...")
         selected_changed_files = []
         for fpath in json.loads(changed_files_contents["testrun_files"]):
@@ -517,6 +529,28 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         if testrun["type"] == "changed":
             with open(github_step_summary, "a", encoding="utf-8") as wfh:
                 wfh.write("Partial test run chosen.\n")
+            testrun["selected_tests"] = {
+                "core": False,
+                "slow": False,
+                "fast": True,
+                "flaky": False,
+            }
+            if "test:slow" in labels:
+                with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                    wfh.write("Slow tests chosen by `test:slow` label.\n")
+                testrun["selected_tests"]["slow"] = True
+            if "test:core" in labels:
+                with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                    wfh.write("Core tests chosen by `test:core` label.\n")
+                testrun["selected_tests"]["core"] = True
+            if "test:no-fast" in labels:
+                with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                    wfh.write("Fast tests deselected by `test:no-fast` label.\n")
+                testrun["selected_tests"]["fast"] = False
+            if "test:flaky-jail" in labels:
+                with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                    wfh.write("Flaky jailed tests chosen by `test:flaky-jail` label.\n")
+                testrun["selected_tests"]["flaky"] = True
         if selected_changed_files:
             with open(github_step_summary, "a", encoding="utf-8") as wfh:
                 wfh.write(
