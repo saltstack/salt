@@ -3,14 +3,13 @@
     ~~~~~~~~~~~~~~~~~~~~
 """
 
-
 import multiprocessing
 import os
 import time
 from contextlib import contextmanager
 
 import salt.utils.event
-from salt.utils.process import clean_proc, Process
+from salt.utils.process import Process, clean_proc
 
 
 @contextmanager
@@ -35,7 +34,7 @@ def eventpublisher_process(sock_dir):
             ipc_publisher.publish_payload,
         ],
     )
-    #proc = salt.utils.event.EventPublisher({"sock_dir": sock_dir})
+    # proc = salt.utils.event.EventPublisher({"sock_dir": sock_dir})
     proc.start()
     try:
         if os.environ.get("TRAVIS_PYTHON_VERSION", None) is not None:

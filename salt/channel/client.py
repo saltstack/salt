@@ -368,7 +368,7 @@ class AsyncReqChannel:
         self.close()
 
     async def __aenter__(self):
-        await self.connect()
+        await self.transport.connect()
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
