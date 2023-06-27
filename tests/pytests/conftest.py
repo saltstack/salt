@@ -30,10 +30,6 @@ from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
-import tracemalloc
-
-tracemalloc.start()
-
 
 @pytest.fixture(scope="session")
 def salt_auth_account_1_factory():
