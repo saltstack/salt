@@ -21,7 +21,7 @@ def test_mocked_objects():
     for k, v in salt.version.SaltStackVersion.LNAMES.items():
         assert k == k.lower()
         assert isinstance(v, tuple)
-        if sv.new_version(major=v[0]) and not sv.can_have_dot_zero(major=v[0]):
+        if sv.new_version(major=v[0]):
             assert len(v) == 1
         else:
             assert len(v) == 2
@@ -64,6 +64,13 @@ def test_get_release_number_success_new_version():
     assert salt_version.get_release_number("Neon") == "3000"
 
 
+def test_get_release_number_success_new_version_with_dot():
+    """
+    Test that a version is returned for new versioning (3006)
+    """
+    assert salt_version.get_release_number("Sulfur") == "3006"
+
+
 def test_equal_success():
     """
     Test that the current version is equal to the codename
@@ -80,6 +87,16 @@ def test_equal_success_new_version():
     """
     with patch("salt.version.SaltStackVersion", MagicMock(return_value="3000.1")):
         with patch("salt.version.SaltStackVersion.LNAMES", {"foo": (3000,)}):
+            assert salt_version.equal("foo") is True
+
+
+def test_equal_success_new_version_with_dot():
+    """
+    Test that the current version is equal to the codename
+    while using the new versioning
+    """
+    with patch("salt.version.SaltStackVersion", MagicMock(return_value="3006.1")):
+        with patch("salt.version.SaltStackVersion.LNAMES", {"foo": (3006,)}):
             assert salt_version.equal("foo") is True
 
 
@@ -142,6 +159,17 @@ def test_greater_than_success_new_version():
             assert salt_version.greater_than("Nitrogen") is True
 
 
+def test_greater_than_success_new_version_with_dot():
+    """
+    Test that the current version is newer than the codename
+    """
+    with patch(
+        "salt.modules.salt_version.get_release_number", MagicMock(return_value="3000")
+    ):
+        with patch("salt.version.SaltStackVersion", MagicMock(return_value="3006.0")):
+            assert salt_version.greater_than("Neon") is True
+
+
 def test_greater_than_with_equal_codename():
     """
     Test that when an equal codename is passed in, the function returns False.
@@ -196,6 +224,19 @@ def test_less_than_success_new_version():
         with patch(
             "salt.modules.salt_version.get_release_number",
             MagicMock(return_value="3000"),
+        ):
+            assert salt_version.less_than("Fluorine") is True
+
+
+def test_less_than_success_new_version_with_dot():
+    """
+    Test that when a newer codename is passed in, the function returns True
+    using new version
+    """
+    with patch("salt.version.SaltStackVersion", MagicMock(return_value="2018.3.2")):
+        with patch(
+            "salt.modules.salt_version.get_release_number",
+            MagicMock(return_value="3006"),
         ):
             assert salt_version.less_than("Fluorine") is True
 
