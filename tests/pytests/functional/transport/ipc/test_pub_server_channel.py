@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 import tracemalloc
@@ -64,7 +65,6 @@ def test_publish_to_pubserv_ipc(salt_master, salt_minion, transport):
 
     ZMQ's ipc transport not supported on Windows
     """
-    import asyncio
 
     opts = dict(
         salt_master.config.copy(),
@@ -98,7 +98,6 @@ def test_issue_36469_tcp(salt_master, salt_minion, transport):
     """
     if transport == "tcp":
         pytest.skip("Test not applicable to the ZeroMQ transport.")
-    import asyncio
 
     def _send_small(opts, sid, num=10):
         loop = asyncio.new_event_loop()

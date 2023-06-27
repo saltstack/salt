@@ -112,7 +112,7 @@ async def test_message_client_cleanup_on_close(
 
         # The run_sync call will set stop_called, reset it
         # orig_loop.stop_called = False
-        await client.close()
+        client.close()
 
         # Stop should be called again, client's io_loop should be None
         # assert orig_loop.stop_called is True
