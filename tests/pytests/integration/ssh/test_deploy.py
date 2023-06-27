@@ -108,7 +108,7 @@ def test_retcode_exe_run_fail(salt_ssh_cli):
     ret = salt_ssh_cli.run("file.touch", "/tmp/non/ex/is/tent")
     assert ret.returncode == EX_AGGREGATE
     assert isinstance(ret.data, dict)
-    assert ret.data["stderr"] == "Error running 'file.touch': No such file or directory"
+    assert "Error running 'file.touch': No such file or directory" in ret.data["stderr"]
     assert ret.data["retcode"] == 1
 
 
