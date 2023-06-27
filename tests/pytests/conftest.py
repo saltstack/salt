@@ -610,12 +610,15 @@ def pytest_pyfunc_call(pyfuncitem):
     # loop.run_sync(
     #    CoroTestFunction(pyfuncitem.obj, testargs), timeout=get_test_timeout(pyfuncitem)
     # )
+    # try:
     loop.asyncio_loop.run_until_complete(
         asyncio.wait_for(
             CoroTestFunction(pyfuncitem.obj, testargs)(),
             timeout=get_test_timeout(pyfuncitem),
         )
     )
+    # except RuntimeError as exc:
+    #    log.warning("WTFSON %r", dir(exc))
     return True
 
 
@@ -624,13 +627,13 @@ def io_loop():
     """
     Create new io loop for each test, and tear it down after.
     """
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    asyncio_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(asyncio_loop)
     loop = tornado.ioloop.IOLoop.current()
     try:
         yield loop
     finally:
-        loop.close(all_fds=True)
+        loop.close(all_fds=True)  # Also closes asyncio_loop
         asyncio.set_event_loop(None)
 
 

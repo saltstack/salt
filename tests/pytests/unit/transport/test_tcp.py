@@ -29,7 +29,7 @@ def fake_crypto():
 
 
 @pytest.fixture
-def fake_authd():
+def fake_authd(io_loop):
     @tornado.gen.coroutine
     def return_nothing():
         raise tornado.gen.Return()
