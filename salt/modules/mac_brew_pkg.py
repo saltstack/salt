@@ -31,7 +31,7 @@ def __virtual__():
     """
     if __grains__["os"] != "MacOS":
         return False, "brew module is macos specific"
-    if not _homebrew_bin():
+    if not _homebrew_os_bin():
         return False, "The 'brew' binary was not found"
     return __virtualname__
 
@@ -93,16 +93,26 @@ def _tap(tap, runas=None):
     return True
 
 
+def _homebrew_os_bin():
+    """
+    Fetch PATH binary brew full path eg: /usr/local/bin/brew (symbolic link)
+    """
+    return salt.utils.path.which("brew")
+
+
 def _homebrew_bin():
     """
-    Returns the full path to the homebrew binary in the PATH
+    Returns the full path to the homebrew binary in the homebrew installation folder
     """
-    # Fetch PATH binary brew full path eg: /usr/local/bin/brew (symbolic link)
-    brew = salt.utils.path.which("brew")
-    # Fetch and ret brew installation folder full path eg: /opt/homebrew/bin/brew
-    ret = __salt__["cmd.run"](f"{brew} --prefix", output_loglevel="trace")
-    ret += "/bin/brew"
-    return ret
+    brew = _homebrew_os_bin()
+    if not brew:
+        # Return None in case we don't have brew installed, so we prevent calling cmd.run for 'None' executable path
+        return None
+    else:
+        # Fetch and ret brew installation folder full path eg: /opt/homebrew/bin/brew
+        ret = __salt__["cmd.run"](f"{brew} --prefix", output_loglevel="trace")
+        ret += "/bin/brew"
+        return ret
 
 
 def _call_brew(*cmd, failhard=True):
