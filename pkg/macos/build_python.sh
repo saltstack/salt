@@ -191,16 +191,16 @@ fi
 #-------------------------------------------------------------------------------
 _msg "Installing relenv"
 if [ -n "${RELENV_VERSION}" ]; then
-    pip install relenv==${RELENV_VERSION}
+    pip install relenv==${RELENV_VERSION} >/dev/null 2>&1
+    export RELENV_FETCH_VERSION=${RELENV_VERSION}
 else
-    pip install relenv
+    pip install relenv >/dev/null 2>&1
 fi
 if [ -n "$(relenv --version)" ]; then
     _success
 else
     _failure
 fi
-export RELENV_FETCH_VERSION=$(relenv --version)
 
 #-------------------------------------------------------------------------------
 # Building Python with Relenv
@@ -212,7 +212,7 @@ else
     # We want to suppress the output here so it looks nice
     # To see the output, remove the output redirection
     _msg "Fetching python (relenv)"
-    relenv fetch --python=$PY_VERSION
+    relenv fetch --python $PY_VERSION >/dev/null 2>&1
     if [ -f "$RELENV_DIR/build/$PY_VERSION-x86_64-macos.tar.xz" ]; then
         _success
     else
