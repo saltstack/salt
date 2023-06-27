@@ -77,6 +77,8 @@ Description: remote manager to administer servers via salt
 
 Package: salt-minion
 Architecture: amd64 arm64
+Replaces: salt-common (<< 3006.1)
+Breaks: salt-common (<< 3006.1)
 Depends: bsdmainutils,
          dctrl-tools,
          salt-common (= ${source:Version}),
