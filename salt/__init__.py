@@ -2,10 +2,14 @@
 Salt package
 """
 
+import asyncio
 import importlib
 import os
 import sys
 import warnings
+
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 if sys.version_info < (3,):
     sys.stderr.write(
@@ -89,6 +93,9 @@ warnings.filterwarnings(
 
 def __define_global_system_encoding_variable__():
     import sys
+
+    print("define global system encoding")
+    sys.stdout.flush()
 
     # This is the most trustworthy source of the system encoding, though, if
     # salt is being imported after being daemonized, this information is lost

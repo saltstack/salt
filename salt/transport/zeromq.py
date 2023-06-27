@@ -239,7 +239,8 @@ class PublishClient(salt.transport.base.PublishClient):
             for cb in self.callbacks:
                 running, task = self.callbacks[cb]
                 try:
-                    task.cancel()
+                    if task:
+                        task.cancel()
                 except RuntimeError:
                     log.warning("Tasks loop already closed")
 
@@ -643,6 +644,7 @@ class AsyncReqMessageClient:
 
         self._closing = False
         self.socket = None
+        self.sending = False
 
     async def connect(self):
         if self.socket is None:
@@ -708,11 +710,16 @@ class AsyncReqMessageClient:
         """
         Return a future which will be completed when the message has a response
         """
-
-        response = await asyncio.wait_for(self._send_recv(message), timeout=timeout)
-        if callback:
-            callback(response)
-        return response
+        while self.sending:
+            await asyncio.sleep(0.03)
+        self.sending = True
+        try:
+            response = await asyncio.wait_for(self._send_recv(message), timeout=timeout)
+            if callback:
+                callback(response)
+            return response
+        finally:
+            self.sending = False
 
 
 class ZeroMQSocketMonitor:

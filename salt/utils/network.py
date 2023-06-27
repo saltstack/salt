@@ -2246,12 +2246,12 @@ def _test_addrs(addrinfo, port):
             s = socket.socket(ip_family, socket.SOCK_STREAM)
             s.settimeout(2)
             s.connect((ip_addr, port))
-            s.close()
-
             ip_addrs = [ip_addr]
             break
         except OSError:
             pass
+        finally:
+            s.close()
     return ip_addrs
 
 
