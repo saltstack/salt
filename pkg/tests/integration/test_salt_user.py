@@ -1,6 +1,5 @@
 import pathlib
 import subprocess
-import sys
 
 import psutil
 import pytest
@@ -62,9 +61,7 @@ def test_salt_cloud_dirs(install_salt):
     Test the correct user is running the Salt Master
     """
     paths = [
-        "/opt/saltstack/salt/lib/python{}.{}/site-packages/salt/cloud/deploy".format(
-            *sys.version_info
-        ),
+        "/opt/saltstack/salt/lib/python3.10/site-packages/salt/cloud/deploy",
         "/etc/salt/cloud.deploy.d",
     ]
     for name in paths:
