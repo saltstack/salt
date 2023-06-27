@@ -6,9 +6,6 @@
 Add release specific details below
 -->
 
-## Python 3.11
-Salt's onedir packages now use Python 3.11
-
 ## Python 3.7 Support Dropped
 Support for python 3.7 has been dropped since it reached end-of-line in 27 Jun 2023.
 
