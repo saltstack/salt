@@ -105,14 +105,11 @@ def _homebrew_bin():
     Returns the full path to the homebrew binary in the homebrew installation folder
     """
     brew = _homebrew_os_bin()
-    if not brew:
-        # Return None in case we don't have brew installed, so we prevent calling cmd.run for 'None' executable path
-        return None
-    else:
+    if brew:
         # Fetch and ret brew installation folder full path eg: /opt/homebrew/bin/brew
-        ret = __salt__["cmd.run"](f"{brew} --prefix", output_loglevel="trace")
-        ret += "/bin/brew"
-        return ret
+        brew = __salt__["cmd.run"](f"{brew} --prefix", output_loglevel="trace")
+        brew += "/bin/brew"
+    return brew
 
 
 def _call_brew(*cmd, failhard=True):
