@@ -578,7 +578,7 @@ def pytest_runtest_setup(item):
         item._skipped_by_mark = True
         pytest.skip(PRE_PYTEST_SKIP_REASON)
     test_group_count = sum(
-        bool(item.get_closest_marker(group)) for group in ("core_test", "slow_test")
+        bool(item.get_closest_marker(group)) for group in ("core_test", "slow_test", "flaky_jail")
     )
     if item.get_closest_marker("core_test") and item.get_closest_marker("slow_test"):
         raise pytest.UsageError(
@@ -604,7 +604,7 @@ def pytest_runtest_setup(item):
                     "Slow tests are disabled, pass '--run-slow' to enable them.",
                     _use_item_location=True,
                 )
-        if test_group_count == 0 and not item.config.getoption("--no-fast-tests"):
+        if test_group_count == 0 and item.config.getoption("--no-fast-tests"):
             raise pytest.skip.Exception(
                 "Fast tests have been disabled by '--no-fast-tests'.",
                 _use_item_location=True,
