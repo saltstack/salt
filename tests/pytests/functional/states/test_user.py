@@ -348,7 +348,7 @@ def test_user_present_change_gid_but_keep_group(
 
 @pytest.mark.skip_unless_on_windows
 def test_user_present_existing(states, username):
-    win_profile = "C:\\User\\{}".format(username)
+    win_profile = f"C:\\User\\{username}"
     win_logonscript = "C:\\logon.vbs"
     win_description = "Test User Account"
     ret = states.user.present(
@@ -360,7 +360,7 @@ def test_user_present_existing(states, username):
     )
     assert ret.result is True
 
-    win_profile = "C:\\Users\\{}".format(username)
+    win_profile = f"C:\\Users\\{username}"
     win_description = "Temporary Account"
     ret = states.user.present(
         name=username,

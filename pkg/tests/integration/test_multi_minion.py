@@ -20,10 +20,9 @@ def mm_conf(mm_script):
     yield pathlib.Path(os.getenv("LocalAppData"), "Salt Project", "Salt", "conf")
     subprocess.run(
         ["powershell", str(mm_script).replace(" ", "' '"), "-d"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
-        universal_newlines=True,
+        text=True,
     )
 
 
@@ -41,10 +40,9 @@ def test_install(mm_script, mm_conf):
     """
     ret = subprocess.run(
         ["powershell", str(mm_script).replace(" ", "' '")],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
-        universal_newlines=True,
+        text=True,
     )
     assert ret.returncode == 0, ret.stderr
     conf_file = mm_conf / "minion"
@@ -58,10 +56,9 @@ def test_install_master(mm_script, mm_conf):
     """
     ret = subprocess.run(
         ["powershell", str(mm_script).replace(" ", "' '"), "-m", "spongebob"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
-        universal_newlines=True,
+        text=True,
     )
     assert ret.returncode == 0, ret.stderr
     conf_file = mm_conf / "minion"
@@ -75,10 +72,9 @@ def test_install_prefix(mm_script, mm_conf):
     """
     ret = subprocess.run(
         ["powershell", str(mm_script).replace(" ", "' '"), "-p", "squarepants"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
-        universal_newlines=True,
+        text=True,
     )
     assert ret.returncode == 0, ret.stderr
     conf_file = mm_conf / "minion"
@@ -92,10 +88,9 @@ def test_install_log_level(mm_script, mm_conf):
     """
     ret = subprocess.run(
         ["powershell", str(mm_script).replace(" ", "' '"), "-l", "debug"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
-        universal_newlines=True,
+        text=True,
     )
     assert ret.returncode == 0, ret.stderr
     conf_file = mm_conf / "minion"
@@ -109,10 +104,9 @@ def test_install_start(mm_script, mm_conf):
     """
     ret = subprocess.run(
         ["powershell", str(mm_script).replace(" ", "' '"), "-s"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
-        universal_newlines=True,
+        text=True,
     )
     assert ret.returncode == 0, ret.stderr
     conf_file = mm_conf / "minion"
