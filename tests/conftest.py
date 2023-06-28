@@ -578,7 +578,8 @@ def pytest_runtest_setup(item):
         item._skipped_by_mark = True
         pytest.skip(PRE_PYTEST_SKIP_REASON)
     test_group_count = sum(
-        bool(item.get_closest_marker(group)) for group in ("core_test", "slow_test", "flaky_jail")
+        bool(item.get_closest_marker(group))
+        for group in ("core_test", "slow_test", "flaky_jail")
     )
     if item.get_closest_marker("core_test") and item.get_closest_marker("slow_test"):
         raise pytest.UsageError(
