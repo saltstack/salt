@@ -451,9 +451,7 @@ idna==3.2
     #   requests
     #   yarl
 immutables==0.19
-    # via
-    #   -r requirements/static/ci/common.in
-    #   contextvars
+    # via contextvars
 importlib-metadata==4.6.4
     # via -r requirements/static/pkg/linux.in
 ipaddress==1.0.23
