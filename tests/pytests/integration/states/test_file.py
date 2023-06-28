@@ -1070,7 +1070,7 @@ def test_recurse(
         "{}.sls".format(sls_name), sls_contents
     )
 
-    with sls_tempfile, test_tempdir:
+    with sls_tempfile:
         for _dir in "test1", "test2", "test3":
             test_tempdir.joinpath(_dir).mkdir(parents=True, exist_ok=True)
 
@@ -1117,7 +1117,7 @@ def test_recurse_keep_symlinks_in_fileserver_root(
         "{}.sls".format(sls_name), sls_contents
     )
 
-    with sls_tempfile, test_tempdir:
+    with sls_tempfile:
         for _dir in "test1", "test2", "test3":
             test_tempdir.joinpath(_dir).mkdir(parents=True, exist_ok=True)
 
@@ -1169,7 +1169,7 @@ def test_recurse_keep_symlinks_outside_fileserver_root(
         "{}.sls".format(sls_name), sls_contents
     )
 
-    with sls_tempfile, test_tempdir:
+    with sls_tempfile:
         for _dir in "test1", "test2", "test3":
             test_tempdir.joinpath(_dir).mkdir(parents=True, exist_ok=True)
 
