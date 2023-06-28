@@ -24,7 +24,7 @@ def extension_deprecation_message(version, extension_name, extension_repo):
                 "functionality will be removed in version {version} in favor of the "
                 f"saltext.{extension_name} Salt Extension. "
                 f"({extension_repo})",
-                category=FutureWarning,
+                category=DeprecationWarning,
             )
             return function(*args, **salt.utils.args.clean_kwargs(**kwargs))
 

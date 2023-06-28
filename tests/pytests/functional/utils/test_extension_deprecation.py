@@ -24,5 +24,5 @@ def test_extension_deprecation():
         assert ret
 
         assert len(catch_warnings) == 1
-        assert issubclass(catch_warnings[-1].category, FutureWarning)
+        assert issubclass(catch_warnings[-1].category, DeprecationWarning)
         assert str(catch_warnings[-1].message) == expected_deprecation_message
