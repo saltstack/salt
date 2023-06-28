@@ -47,7 +47,7 @@ class NaclImporter:
     """
     Import hook to force PyNaCl to perform dlopen on libsodium with the
     RTLD_DEEPBIND flag. This is to work around an issue where pyzmq does a dlopen
-    with RTLD_GLOBAL which the causes calls to libsodium to resolve to
+    with RTLD_GLOBAL which then causes calls to libsodium to resolve to
     tweetnacl when it's been bundled with pyzmq.
 
     See:  https://github.com/zeromq/pyzmq/issues/1878
