@@ -473,8 +473,12 @@ class SaltStackVersion:
         version_string = self.string
         if self.sse:
             version_string += " Enterprise"
-        if (self.major, self.minor) in self.RMATCH:
-            version_string += f" ({self.RMATCH[(self.major, self.minor)]})"
+        if self.new_version(self.major):
+            rmatch_key = (self.major,)
+        else:
+            rmatch_key = (self.major, self.minor)
+        if rmatch_key in self.RMATCH:
+            version_string += f" ({self.RMATCH[rmatch_key]})"
         return version_string
 
     @property
