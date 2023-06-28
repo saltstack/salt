@@ -5,7 +5,7 @@
 <%- set prepare_workflow_skip_pkg_test_suite = prepare_workflow_skip_pkg_test_suite|default("") %>
 <%- set prepare_workflow_skip_pkg_download_test_suite = prepare_workflow_skip_pkg_download_test_suite|default("") %>
 <%- set prepare_workflow_salt_version_input = prepare_workflow_salt_version_input|default("") %>
-<%- set skip_test_coverage_check = skip_test_coverage_check|default("${{ github.event_name == 'pull_request' }}") %>
+<%- set skip_test_coverage_check = skip_test_coverage_check|default("${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}") %>
 <%- set skip_junit_reports_check = skip_junit_reports_check|default("${{ github.event_name == 'pull_request' }}") %>
 <%- set gpg_key_id = "64CBBC8173D76B3F" %>
 <%- set prepare_actual_release = prepare_actual_release | default(False) %>
@@ -192,35 +192,13 @@ jobs:
           salt-version: "<{ prepare_workflow_salt_version_input }>"
           validate-version: true
 
-      - name: Get Pull Number
-        if: ${{ github.event_name == 'pull_request' }}
-        id: get-pull-number
-        uses: ./.github/actions/get-pull-number
-        with:
-          owner: ${{ github.repository_owner }}
-          repo: ${{ github.event.repository.name }}
-          sha: ${{ github.sha }}
-          pull-number: ${{ github.event.pull_request.number }}
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Get Pull Request
-        if: ${{ github.event_name == 'pull_request' }}
-        id: get-pull-request
-        uses: ./.github/actions/get-pull-request
-        with:
-          owner: ${{ github.repository_owner }}
-          repo: ${{ github.event.repository.name }}
-          pull-number: ${{ steps.get-pull-number.outputs.number }}
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Get Pull Labels
-        if: ${{ github.event_name == 'pull_request' }}
+      - name: Get Pull Request Test Labels
         id: get-pull-labels
-        uses: ./.github/actions/get-pull-labels
-        with:
-          pull-request: ${{ steps.get-pull-request.outputs.pull-request }}
+        if: ${{ github.event_name == 'pull_request'}}
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci get-pr-test-labels --repository ${{ github.repository }}
 
       <%- if prepare_actual_release %>
 
@@ -263,7 +241,9 @@ jobs:
       - name: Define Jobs
         id: define-jobs
         run: |
-          tools ci define-jobs<{ prepare_workflow_skip_test_suite }><{ prepare_workflow_skip_pkg_test_suite }><{ prepare_workflow_skip_pkg_download_test_suite }> ${{ github.event_name }} changed-files.json
+          tools ci define-jobs<{ prepare_workflow_skip_test_suite }><{
+            prepare_workflow_skip_pkg_test_suite }><{ prepare_workflow_skip_pkg_download_test_suite
+          }> ${{ github.event_name }} changed-files.json
 
       - name: Check Defined Jobs
         run: |
