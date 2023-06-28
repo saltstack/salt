@@ -39,44 +39,6 @@ warnings.filterwarnings(
 )
 
 
-def __getdefaultlocale(envvars=("LC_ALL", "LC_CTYPE", "LANG", "LANGUAGE")):
-    """
-    This function was backported from Py3.11 which started triggering a
-    deprecation warning about it's removal in 3.13.
-    """
-    import locale
-
-    try:
-        # check if it's supported by the _locale module
-        import _locale
-
-        code, encoding = _locale._getdefaultlocale()
-    except (ImportError, AttributeError):
-        pass
-    else:
-        # make sure the code/encoding values are valid
-        if sys.platform == "win32" and code and code[:2] == "0x":
-            # map windows language identifier to language name
-            code = locale.windows_locale.get(int(code, 0))
-        # ...add other platform-specific processing here, if
-        # necessary...
-        return code, encoding
-
-    # fall back on POSIX behaviour
-    import os
-
-    lookup = os.environ.get
-    for variable in envvars:
-        localename = lookup(variable, None)
-        if localename:
-            if variable == "LANGUAGE":
-                localename = localename.split(":")[0]
-            break
-    else:
-        localename = "C"
-    return locale._parse_localename(localename)
-
-
 def __define_global_system_encoding_variable__():
     import sys
 
@@ -95,13 +57,16 @@ def __define_global_system_encoding_variable__():
         # If the system is properly configured this should return a valid
         # encoding. MS Windows has problems with this and reports the wrong
         # encoding
+        import locale
 
         try:
-            encoding = __getdefaultlocale()[-1]
-        except ValueError:
-            # A bad locale setting was most likely found:
-            #   https://github.com/saltstack/salt/issues/26063
-            pass
+            encoding = locale.getencoding()
+        except AttributeError:
+            # Python < 3.11
+            encoding = locale.getpreferredencoding(do_setlocale=True)
+
+        # This is now garbage collectable
+        del locale
 
         if not encoding:
             # This is most likely ascii which is not the best but we were
