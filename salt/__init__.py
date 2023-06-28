@@ -93,14 +93,14 @@ def __define_global_system_encoding_variable__():
         import locale
 
         try:
-            encoding = locale.getdefaultlocale()[-1]
-        except ValueError:
-            # A bad locale setting was most likely found:
-            #   https://github.com/saltstack/salt/issues/26063
-            pass
+            encoding = locale.getencoding()
+        except AttributeError:
+            # Python < 3.11
+            encoding = locale.getpreferredencoding(do_setlocale=True)
 
         # This is now garbage collectable
         del locale
+
         if not encoding:
             # This is most likely ascii which is not the best but we were
             # unable to find a better encoding. If this fails, we fall all
