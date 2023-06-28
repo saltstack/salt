@@ -1,7 +1,5 @@
 import os
 
-import tornado.gen
-
 TRANSPORTS = (
     "zeromq",
     "tcp",
@@ -142,8 +140,7 @@ class RequestClient:
     def __init__(self, opts, io_loop, **kwargs):
         pass
 
-    @tornado.gen.coroutine
-    def send(self, load, timeout=60):
+    async def send(self, load, timeout=60):
         """
         Send a request message and return the reply from the server.
         """
@@ -250,8 +247,9 @@ class PublishClient:
         """
         raise NotImplementedError
 
-    @tornado.gen.coroutine
-    def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
+    async def connect(
+        self, publish_port, connect_callback=None, disconnect_callback=None
+    ):
         """
         Create a network connection to the the PublishServer or broker.
         """

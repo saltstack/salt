@@ -20,9 +20,14 @@ from tornado.locks import Lock
 
 import salt.transport.frame
 import salt.utils.msgpack
+from salt.utils.versions import warn_until
 
 log = logging.getLogger(__name__)
 
+warn_until(
+    3008,
+    "This module is deprecated. Use zeromq or tcp transport instead.",
+)
 
 # 'tornado.concurrent.Future' doesn't support
 # remove_done_callback() which we would have called

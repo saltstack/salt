@@ -5,6 +5,7 @@ import asyncio
 import binascii
 import contextlib
 import copy
+import hashlib
 import logging
 import multiprocessing
 import os
@@ -1044,64 +1045,26 @@ class MinionManager(MinionBase):
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
-        # self.event_publisher = salt.utils.event.AsyncEventPublisher(
-        #    self.opts,
-        #    io_loop=self.io_loop,
-        # )
-
-        # import hashlib
-        # ipc_publisher = salt.transport.publish_server(self.opts)
-        # hash_type = getattr(hashlib, self.opts["hash_type"])
-        # id_hash = hash_type(
-        #    salt.utils.stringutils.to_bytes(self.opts["id"])
-        # ).hexdigest()[:10]
-        # epub_sock_path = "ipc://{}".format(
-        #    os.path.join(
-        #        self.opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
-        #    )
-        # )
-        # if os.path.exists(epub_sock_path):
-        #    os.unlink(epub_sock_path)
-        # epull_sock_path = "ipc://{}".format(
-        #    os.path.join(
-        #        self.opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
-        #    )
-        # )
-        # ipc_publisher.pub_uri = epub_sock_path
-        # ipc_publisher.pull_uri = epull_sock_path
-        # self.io_loop.add_callback(ipc_publisher.publisher, ipc_publisher.publish_payload, self.io_loop)
-        import hashlib
-
-        ipc_publisher = salt.transport.publish_server(self.opts)
         hash_type = getattr(hashlib, self.opts["hash_type"])
         id_hash = hash_type(
             salt.utils.stringutils.to_bytes(self.opts["id"])
         ).hexdigest()[:10]
-        epub_sock_path = "ipc://{}".format(
-            os.path.join(
-                self.opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
-            )
+        epub_sock_path = os.path.join(
+            self.opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
+        )
+        epull_sock_path = os.path.join(
+            self.opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
         )
         if os.path.exists(epub_sock_path):
             os.unlink(epub_sock_path)
-        epull_sock_path = "ipc://{}".format(
-            os.path.join(
-                self.opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
-            )
+        ipc_publisher = salt.transport.publish_server(
+            self.opts,
+            pub_path=epub_sock_path,
+            pull_path=epull_sock_path,
         )
-        ipc_publisher.pub_uri = epub_sock_path
-        ipc_publisher.pull_uri = epull_sock_path
-        if self.opts["transport"] == "tcp":
-
-            def target():
-                ipc_publisher.publish_daemon(ipc_publisher.publish_payload)
-
-            proc = salt.utils.process.Process(target=target, daemon=True)
-            proc.start()
-        else:
-            self.io_loop.add_callback(
-                ipc_publisher.publisher, ipc_publisher.publish_payload, self.io_loop
-            )
+        self.io_loop.add_callback(
+            ipc_publisher.publisher, ipc_publisher.publish_payload, self.io_loop
+        )
         self.event = salt.utils.event.get_event(
             "minion", opts=self.opts, io_loop=self.io_loop
         )
@@ -3296,20 +3259,11 @@ class Minion(MinionBase):
             del self.schedule
         if hasattr(self, "pub_channel") and self.pub_channel is not None:
             self.pub_channel.on_recv(None)
-            log.error("create pub_channel.close task %r", self)
             self.pub_channel.close()
-            # self.io_loop.asyncio_loop.run_until_complete(self.pub_channel.close())
-            # if hasattr(self.pub_channel, "close"):
-            #    asyncio.create_task(
-            #        self.pub_channel.close()
-            #    )
-            #    #self.pub_channel.close()
-            # del self.pub_channel
-        if hasattr(self, "event"):
-            log.error("HAS EVENT")
-        # if hasattr(self, "periodic_callbacks"):
-        #    for cb in self.periodic_callbacks.values():
-        #        cb.stop()
+            del self.pub_channel
+        if hasattr(self, "periodic_callbacks"):
+            for cb in self.periodic_callbacks.values():
+                cb.stop()
         log.error("%r destroy method finished", self)
 
     # pylint: disable=W1701
