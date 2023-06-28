@@ -450,9 +450,7 @@ idna==2.8
     #   requests
     #   yarl
 immutables==0.19
-    # via
-    #   -r requirements/static/ci/common.in
-    #   contextvars
+    # via contextvars
 importlib-metadata==6.0.0
     # via -r requirements/static/pkg/freebsd.in
 iniconfig==1.0.1
