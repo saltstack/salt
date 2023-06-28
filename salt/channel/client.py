@@ -371,7 +371,6 @@ class AsyncReqChannel:
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
-        # print("AEXIT")
         self.close()
 
 
@@ -383,7 +382,6 @@ class AsyncPubChannel:
     async_methods = [
         "connect",
         "_decode_messages",
-        #  "close",
     ]
     close_methods = [
         "close",
@@ -441,7 +439,6 @@ class AsyncPubChannel:
         try:
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
-            # log.error("*** Creds %r", self.auth.creds)
             # if this is changed from the default, we assume it was intentional
             if int(self.opts.get("publish_port", 4506)) != 4506:
                 publish_port = self.opts.get("publish_port")
@@ -646,11 +643,16 @@ class AsyncPushChannel:
         """
         # FIXME for now, just UXD
         # Obviously, this makes the factory approach pointless, but we'll extend later
+        warn_until(
+            3008,
+            "AsyncPushChannel is deprecated. Use zeromq or tcp transport instead.",
+        )
         import salt.transport.ipc
 
         return salt.transport.ipc.IPCMessageClient(opts, **kwargs)
 
 
+# XXX This is deprecated remove in 3008
 class AsyncPullChannel:
     """
     Factory class to create IPC pull channels
@@ -661,6 +663,10 @@ class AsyncPullChannel:
         """
         If we have additional IPC transports other than UXD and TCP, add them here
         """
+        warn_until(
+            3008,
+            "AsyncPullChannel is deprecated. Use zeromq or tcp transport instead.",
+        )
         import salt.transport.ipc
 
         return salt.transport.ipc.IPCMessageServer(opts, **kwargs)

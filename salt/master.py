@@ -1039,10 +1039,11 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         key = payload["enc"]
         load = payload["load"]
-        ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](load)
-        while self.clear_funcs.tasks:
-            # dequeue
-            await self.clear_funcs.tasks.pop(0)
+        if key == "clear":
+            ret = await self._handle_clear(load)
+        else:
+            ret = self._handle_aes(load)
+        # ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](load)
         return ret
 
     def _post_stats(self, start, cmd):
@@ -1067,7 +1068,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
             self.stat_clock = end
 
-    def _handle_clear(self, load):
+    async def _handle_clear(self, load):
         """
         Process a cleartext command
 
@@ -1083,7 +1084,11 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         if self.opts["master_stats"]:
             start = time.time()
             self.stats[cmd]["runs"] += 1
-        ret = method(load), {"fun": "send_clear"}
+        if cmd in self.clear_funcs.async_methods:
+            reply = await method(load)
+            ret = reply, {"fun": "send_clear"}
+        else:
+            ret = method(load), {"fun": "send_clear"}
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
         return ret
@@ -1148,7 +1153,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                     self.opts["mworker_niceness"],
                 )
                 os.nice(self.opts["mworker_niceness"])
-
         self.clear_funcs = ClearFuncs(
             self.opts,
             self.key,
@@ -1968,6 +1972,7 @@ class ClearFuncs(TransportMethods):
         "wheel",
         "runner",
     )
+    async_methods = ("publish",)
 
     # The ClearFuncs object encapsulates the functions that can be executed in
     # the clear:
@@ -1995,8 +2000,6 @@ class ClearFuncs(TransportMethods):
         # Make a masterapi object
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
         self.channels = []
-        self.tasks = []
-        # self.task_group = asyncio.TaskGroup()
 
     def runner(self, clear_load):
         """
@@ -2159,7 +2162,7 @@ class ClearFuncs(TransportMethods):
             return False
         return self.loadauth.get_tok(clear_load["token"])
 
-    def publish(self, clear_load):
+    async def publish(self, clear_load):
         """
         This method sends out publications to the minions, it can only be used
         by the LocalClient.
@@ -2313,7 +2316,7 @@ class ClearFuncs(TransportMethods):
 
         # Send it!
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
-        self._send_pub(payload)
+        await self._send_pub(payload)
 
         return {
             "enc": "clear",
@@ -2362,7 +2365,7 @@ class ClearFuncs(TransportMethods):
             return {"error": msg}
         return jid
 
-    def _send_pub(self, load):
+    async def _send_pub(self, load):
         """
         Take a load and send it across the network to connected minions
         """
@@ -2370,9 +2373,10 @@ class ClearFuncs(TransportMethods):
             for transport, opts in iter_transport_opts(self.opts):
                 chan = salt.channel.server.PubServerChannel.factory(opts)
                 self.channels.append(chan)
+        tasks = set()
         for chan in self.channels:
-            task = asyncio.create_task(chan.publish(load))
-            self.tasks.append(task)
+            tasks.add(asyncio.create_task(chan.publish(load)))
+            await asyncio.gather(*tasks)
 
     @property
     def ssh_client(self):

@@ -68,7 +68,6 @@ import salt.channel.client
 import salt.config
 import salt.defaults.exitcodes
 import salt.payload
-import salt.transport.ipc
 import salt.utils.asynchronous
 import salt.utils.cache
 import salt.utils.dicttrim
@@ -77,6 +76,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.zeromq
+from salt.utils.versions import warn_until
 
 log = logging.getLogger(__name__)
 
@@ -837,10 +837,9 @@ class SaltEvent:
             use_bin_type=True,
         )
         log.debug(
-            "Sending event(fire_event): tag = %s; data = %s %s",
+            "Sending event(fire_event): tag = %s; data = %s",
             tag,
             data,
-            self.pusher.pull_uri,
         )
         event = b"".join(
             [
@@ -1084,6 +1083,11 @@ class AsyncEventPublisher:
     """
 
     def __init__(self, opts, io_loop=None):
+        warn_until(
+            3008,
+            "salt.utils.event.AsyncEventPublisher is deprecated. "
+            "Please use salt.transport.publish_server instead.",
+        )
         self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         default_minion_sock_dir = self.opts["sock_dir"]
         self.opts.update(opts)
@@ -1184,6 +1188,11 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
     """
 
     def __init__(self, opts, **kwargs):
+        warn_until(
+            3008,
+            "salt.utils.event.EventPublisher is deprecated. "
+            "Please use salt.transport.publish_server instead.",
+        )
         super().__init__(**kwargs)
         self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.opts.update(opts)
@@ -1196,6 +1205,8 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
         """
         Bind the pub and pull sockets for events
         """
+        import salt.transport.ipc
+
         if (
             self.opts["event_publisher_niceness"]
             and not salt.utils.platform.is_windows()
