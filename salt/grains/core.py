@@ -2698,10 +2698,8 @@ def locale_info():
         (
             grains["locale_info"]["defaultlanguage"],
             grains["locale_info"]["defaultencoding"],
-        ) = locale.getdefaultlocale()
+        ) = locale.getlocale()
     except Exception:  # pylint: disable=broad-except
-        # locale.getdefaultlocale can ValueError!! Catch anything else it
-        # might do, per #2205
         grains["locale_info"]["defaultlanguage"] = "unknown"
         grains["locale_info"]["defaultencoding"] = "unknown"
     grains["locale_info"]["detectedencoding"] = __salt_system_encoding__
