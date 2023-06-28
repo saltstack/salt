@@ -35,6 +35,7 @@ import logging
 
 import salt.utils.versions
 import salt.version
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -66,6 +67,9 @@ def get_release_number(name):
 
         salt '*' salt_version.get_release_number 'Oxygen'
     """
+    if not isinstance(name, str):
+        raise CommandExecutionError("'name' argument must be a string")
+
     name = name.lower()
     version_map = salt.version.SaltStackVersion.LNAMES
     version = version_map.get(name)
