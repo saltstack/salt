@@ -98,6 +98,38 @@ def revert_repo_file(tmp_path):
         aptpkg.refresh_db()
 
 
+@pytest.fixture
+def build_repo_file():
+    source_path = "/etc/apt/sources.list.d/source_test_list.list"
+    try:
+        test_repos = [
+            "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring-2023.gpg arch=amd64] https://repo.saltproject.io/salt/py3/ubuntu/22.04/amd64/latest jammy main",
+            "deb http://dist.list stable/all/",
+        ]
+        with salt.utils.files.fopen(source_path, "w+") as fp:
+            fp.write("\n".join(test_repos))
+        yield source_path
+    finally:
+        if os.path.exists(source_path):
+            os.remove(source_path)
+
+
+def get_repos_from_file(source_path):
+    """
+    Get list of repos from repo in source_path
+    """
+    test_repos = []
+    try:
+        with salt.utils.files.fopen(source_path) as fp:
+            for line in fp:
+                test_repos.append(line.strip())
+    except FileNotFoundError as error:
+        pytest.skip("Missing {}".format(error.filename))
+    if not test_repos:
+        pytest.skip("Did not detect an APT repo")
+    return test_repos
+
+
 def get_current_repo(multiple_comps=False):
     """
     Get a repo currently in sources.list
@@ -195,18 +227,20 @@ def test_get_repos_doesnot_exist():
 
 
 @pytest.mark.destructive_test
-def test_del_repo(revert_repo_file):
+@pytest.mark.skip_if_not_root
+def test_del_repo(build_repo_file):
     """
     Test aptpkg.del_repo when passing repo
     that exists. And checking correct error
     is returned when it no longer exists.
     """
-    test_repo, comps = get_current_repo()
-    ret = aptpkg.del_repo(repo=test_repo)
-    assert "Repo '{}' has been removed".format(test_repo)
-    with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
+    test_repos = get_repos_from_file(build_repo_file)
+    for test_repo in test_repos:
         ret = aptpkg.del_repo(repo=test_repo)
-    assert "Repo {} doesn't exist".format(test_repo) in exc.value.message
+        assert "Repo '{}' has been removed".format(test_repo)
+        with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
+            ret = aptpkg.del_repo(repo=test_repo)
+        assert "Repo {} doesn't exist".format(test_repo) in exc.value.message
 
 
 @pytest.mark.skipif(
@@ -242,6 +276,7 @@ def test__expand_repo_def(grains):
 
 
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def test_mod_repo(revert_repo_file):
     """
     Test aptpkg.mod_repo when the repo exists.
@@ -256,6 +291,7 @@ def test_mod_repo(revert_repo_file):
 
 
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def test_mod_repo_no_file(tmp_path, revert_repo_file):
     """
     Test aptpkg.mod_repo when the file does not exist.
@@ -284,6 +320,7 @@ def add_key(request, get_key_file):
 @pytest.mark.parametrize("get_key_file", KEY_FILES, indirect=True)
 @pytest.mark.parametrize("add_key", [False, True], indirect=True)
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def test_get_repo_keys(get_key_file, add_key):
     """
     Test aptpkg.get_repo_keys when aptkey is False and True
@@ -297,6 +334,7 @@ def test_get_repo_keys(get_key_file, add_key):
 
 @pytest.mark.parametrize("key", [False, True])
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def test_get_repo_keys_keydir_not_exist(key):
     """
     Test aptpkg.get_repo_keys when aptkey is False and True

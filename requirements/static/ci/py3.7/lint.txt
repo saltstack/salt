@@ -452,7 +452,7 @@ idna==3.2
     #   etcd3-py
     #   requests
     #   yarl
-immutables==0.16
+immutables==0.19
     # via contextvars
 importlib-metadata==4.6.4
     # via

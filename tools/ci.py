@@ -8,12 +8,18 @@ import json
 import logging
 import os
 import pathlib
+import sys
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ptscripts import Context, command_group
 
 import tools.utils
+
+if sys.version_info < (3, 11):
+    from typing_extensions import NotRequired, TypedDict
+else:
+    from typing import NotRequired, TypedDict  # pylint: disable=no-name-in-module
 
 log = logging.getLogger(__name__)
 
@@ -381,6 +387,13 @@ def define_jobs(
         wfh.write(f"jobs={json.dumps(jobs)}\n")
 
 
+class TestRun(TypedDict):
+    type: str
+    skip_code_coverage: bool
+    from_filenames: NotRequired[str]
+    selected_tests: NotRequired[dict[str, bool]]
+
+
 @ci.command(
     name="define-testrun",
     arguments={
@@ -415,10 +428,31 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
     if TYPE_CHECKING:
         assert github_step_summary is not None
 
+    labels: list[str] = []
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is not None:
+        try:
+            gh_event = json.loads(open(gh_event_path).read())
+        except Exception as exc:
+            ctx.error(
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+            )
+            ctx.exit(1)
+
+        labels.extend(
+            label[0] for label in _get_pr_test_labels_from_event_payload(gh_event)
+        )
+
+    skip_code_coverage = True
+    if "test:coverage" in labels:
+        skip_code_coverage = False
+    elif event_name != "pull_request":
+        skip_code_coverage = False
+
     if event_name != "pull_request":
         # In this case, a full test run is in order
         ctx.info("Writing 'testrun' to the github outputs file")
-        testrun = {"type": "full"}
+        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
         with open(github_output, "a", encoding="utf-8") as wfh:
             wfh.write(f"testrun={json.dumps(testrun)}\n")
 
@@ -440,7 +474,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         ctx.exit(1)
 
     # So, it's a pull request...
-    # Based on which files changed, or other things like PR comments we can
+    # Based on which files changed, or other things like PR labels we can
     # decide what to run, or even if the full test run should be running on the
     # pull request, etc...
     changed_pkg_requirements_files = json.loads(
@@ -455,7 +489,7 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
                 "Full test run chosen because there was a change made "
                 "to `cicd/golden-images.json`.\n"
             )
-        testrun = {"type": "full"}
+        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
     elif changed_pkg_requirements_files or changed_test_requirements_files:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
             wfh.write(
@@ -470,15 +504,20 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
             ):
                 wfh.write(f"{path}\n")
             wfh.write("</pre>\n</details>\n")
-        testrun = {"type": "full"}
+        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
+    elif "test:full" in labels:
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write("Full test run chosen because the label `test:full` is set.\n")
+        testrun = TestRun(type="full", skip_code_coverage=skip_code_coverage)
     else:
         testrun_changed_files_path = tools.utils.REPO_ROOT / "testrun-changed-files.txt"
-        testrun = {
-            "type": "changed",
-            "from-filenames": str(
+        testrun = TestRun(
+            type="changed",
+            skip_code_coverage=skip_code_coverage,
+            from_filenames=str(
                 testrun_changed_files_path.relative_to(tools.utils.REPO_ROOT)
             ),
-        }
+        )
         ctx.info(f"Writing {testrun_changed_files_path.name} ...")
         selected_changed_files = []
         for fpath in json.loads(changed_files_contents["testrun_files"]):
@@ -498,6 +537,28 @@ def define_testrun(ctx: Context, event_name: str, changed_files: pathlib.Path):
         if testrun["type"] == "changed":
             with open(github_step_summary, "a", encoding="utf-8") as wfh:
                 wfh.write("Partial test run chosen.\n")
+            testrun["selected_tests"] = {
+                "core": False,
+                "slow": False,
+                "fast": True,
+                "flaky": False,
+            }
+            if "test:slow" in labels:
+                with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                    wfh.write("Slow tests chosen by `test:slow` label.\n")
+                testrun["selected_tests"]["slow"] = True
+            if "test:core" in labels:
+                with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                    wfh.write("Core tests chosen by `test:core` label.\n")
+                testrun["selected_tests"]["core"] = True
+            if "test:no-fast" in labels:
+                with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                    wfh.write("Fast tests deselected by `test:no-fast` label.\n")
+                testrun["selected_tests"]["fast"] = False
+            if "test:flaky-jail" in labels:
+                with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                    wfh.write("Flaky jailed tests chosen by `test:flaky-jail` label.\n")
+                testrun["selected_tests"]["flaky"] = True
         if selected_changed_files:
             with open(github_step_summary, "a", encoding="utf-8") as wfh:
                 wfh.write(
@@ -672,3 +733,110 @@ def get_releases(ctx: Context, repository: str = "saltstack/salt"):
             wfh.write(f"latest-release={latest}\n")
             wfh.write(f"releases={json.dumps(str_releases)}\n")
         ctx.exit(0)
+
+
+@ci.command(
+    name="get-pr-test-labels",
+    arguments={
+        "pr": {
+            "help": "Pull request number",
+        },
+        "repository": {
+            "help": "Github repository.",
+        },
+    },
+)
+def get_pr_test_labels(
+    ctx: Context, repository: str = "saltstack/salt", pr: int = None
+):
+    """
+    Set the pull-request labels.
+    """
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is None:
+        labels = _get_pr_test_labels_from_api(ctx, repository, pr=pr)
+    else:
+        if TYPE_CHECKING:
+            assert gh_event_path is not None
+
+        try:
+            gh_event = json.loads(open(gh_event_path).read())
+        except Exception as exc:
+            ctx.error(
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+            )
+            ctx.exit(1)
+
+        if "pull_request" not in gh_event:
+            ctx.warning("The 'pull_request' key was not found on the event payload.")
+            ctx.exit(1)
+
+        pr = gh_event["pull_request"]["number"]
+        labels = _get_pr_test_labels_from_event_payload(gh_event)
+
+    if labels:
+        ctx.info(f"Test labels for pull-request #{pr} on {repository}:")
+        for name, description in labels:
+            ctx.info(f" * [yellow]{name}[/yellow]: {description}")
+    else:
+        ctx.info(f"No test labels for pull-request #{pr} on {repository}")
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.exit(0)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    ctx.info("Writing 'labels' to the github outputs file")
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"labels={json.dumps([label[0] for label in labels])}\n")
+    ctx.exit(0)
+
+
+def _get_pr_test_labels_from_api(
+    ctx: Context, repository: str = "saltstack/salt", pr: int = None
+) -> list[tuple[str, str]]:
+    """
+    Set the pull-request labels.
+    """
+    if pr is None:
+        ctx.error(
+            "Could not find the 'GITHUB_EVENT_PATH' variable and the "
+            "--pr flag was not passed. Unable to detect pull-request number."
+        )
+        ctx.exit(1)
+    with ctx.web as web:
+        headers = {
+            "Accept": "application/vnd.github+json",
+        }
+        if "GITHUB_TOKEN" in os.environ:
+            headers["Authorization"] = f"Bearer {os.environ['GITHUB_TOKEN']}"
+        web.headers.update(headers)
+        ret = web.get(f"https://api.github.com/repos/{repository}/pulls/{pr}")
+        if ret.status_code != 200:
+            ctx.error(
+                f"Failed to get the #{pr} pull-request details on repository {repository!r}: {ret.reason}"
+            )
+            ctx.exit(1)
+        pr_details = ret.json()
+        return _filter_test_labels(pr_details["labels"])
+
+
+def _get_pr_test_labels_from_event_payload(
+    gh_event: dict[str, Any]
+) -> list[tuple[str, str]]:
+    """
+    Get the pull-request test labels.
+    """
+    if "pull_request" not in gh_event:
+        return []
+    return _filter_test_labels(gh_event["pull_request"]["labels"])
+
+
+def _filter_test_labels(labels: list[dict[str, Any]]) -> list[tuple[str, str]]:
+    return [
+        (label["name"], label["description"])
+        for label in labels
+        if label["name"].startswith("test:")
+    ]
