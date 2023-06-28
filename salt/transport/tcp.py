@@ -1213,6 +1213,19 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         Bind to the interface specified in the configuration file
         """
         io_loop = tornado.ioloop.IOLoop()
+        ioloop.add_callback(self.publisher, publish_payload)
+        # run forever
+        try:
+            io_loop.start()
+        except (KeyboardInterrupt, SystemExit):
+            pass
+        finally:
+            self.close()
+
+    async def publisher(self, publish_payload, ioloop=None):
+        if ioloop is None:
+            ioloop = tornado.ioloop.IOLoop.current()
+            ioloop.asyncio_loop.set_debug(True)
         # log.error(
         #    "TCPPubServer daemon %r %s %s %s",
         #    self,
@@ -1259,7 +1272,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         else:
             pull_uri = self.pull_port
 
-        pull_sock = salt.transport.ipc.IPCMessageServer(
+        self.pull_sock = salt.transport.ipc.IPCMessageServer(
             pull_uri,
             io_loop=io_loop,
             payload_handler=publish_payload,
@@ -1268,15 +1281,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         # Securely create socket
         log.warning("Starting the Salt Puller on %s", pull_uri)
         with salt.utils.files.set_umask(0o177):
-            pull_sock.start()
-
-        # run forever
-        try:
-            io_loop.start()
-        except (KeyboardInterrupt, SystemExit):
-            pass
-        finally:
-            pull_sock.close()
+            self.pull_sock.start()
 
     def pre_fork(self, process_manager):
         """
@@ -1286,11 +1291,8 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         """
         process_manager.add_process(self.publish_daemon, name=self.__class__.__name__)
 
-    @tornado.gen.coroutine
-    def publish_payload(self, payload, *args):
-        # log.error("Publish paylaod %r %r", payload, args)
-        ret = yield self.pub_server.publish_payload(payload)  # , *args)
-        raise tornado.gen.Return(ret)
+    async def publish_payload(self, payload, *args):
+        return await self.pub_server.publish_payload(payload)
 
     def connect(self):
         # path = self.pull_uri.replace("ipc://", "")

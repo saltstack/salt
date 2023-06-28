@@ -866,7 +866,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         try:
             ioloop.start()
         finally:
-            self.daemon_context.term()
+            self.close()
 
     def _get_sockets(self, context, ioloop):
         pub_sock = context.socket(zmq.PUB)

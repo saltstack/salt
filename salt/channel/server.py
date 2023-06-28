@@ -717,9 +717,6 @@ class PubServerChannel:
         transport = salt.transport.publish_server(opts, **kwargs)
         return cls(opts, transport, presence_events=presence_events)
 
-    def __repr__(self):
-        return f"<PubServerChannel pub_uri={self.transport.pub_uri} pull_uri={self.transport.pull_uri} at {id(self)}>"
-
     def __init__(self, opts, transport, presence_events=False):
         self.opts = opts
         self.ckminions = salt.utils.minions.CkMinions(self.opts)

@@ -723,24 +723,17 @@ class Master(SMaster):
                 pub_channels.append(chan)
 
             log.info("Creating master event publisher process")
-            # self.process_manager.add_process(
-            #    salt.utils.event.EventPublisher,
-            #    args=(self.opts,),
-            #    name="EventPublisher",
-            # )
-
-            ipc_publisher = salt.transport.publish_server(self.opts)
-            ipc_publisher.pub_uri = "ipc://{}".format(
-                os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
-            )
-            ipc_publisher.pull_uri = "ipc://{}".format(
-                os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
+            ipc_publisher = salt.transport.publish_server(
+                self.opts,
+                pub_path=os.path.join(self.opts["sock_dir"], "master_event_pub.ipc"),
+                pull_path=os.path.join(self.opts["sock_dir"], "master_event_pull.ipc"),
             )
             self.process_manager.add_process(
                 ipc_publisher.publish_daemon,
                 args=[
                     ipc_publisher.publish_payload,
                 ],
+                name="EventPublisher",
             )
 
             if self.opts.get("reactor"):
