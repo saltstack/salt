@@ -431,16 +431,8 @@ class SaltEvent:
                     kwargs={
                         "pub_path": self.puburi,
                         "pull_path": self.pulluri,
-                    }
+                    },
                 )
-                self.pusher.obj.pub_uri = "ipc://{}".format(self.puburi)
-                self.pusher.obj.pull_uri = "ipc://{}".format(self.pulluri)
-                # self.pusher = salt.utils.asynchronous.SyncWrapper(
-                #    salt.transport.ipc.IPCMessageClient,
-                #    args=(self.pulluri,),
-                #    kwargs={"io_loop": self.io_loop},
-                #    loop_kwarg="io_loop",
-                # )
             try:
                 # self.pusher.connect(timeout=timeout)
                 self.pusher.connect()
@@ -455,16 +447,9 @@ class SaltEvent:
                 )
         else:
             if self.pusher is None:
-                # self.pusher = salt.transport.ipc.IPCMessageClient(
-                #    self.pulluri, io_loop=self.io_loop
-                # )
                 self.pusher = salt.transport.publish_server(
-                    self.opts,
-                    pub_path=self.puburi,
-                    pull_path=self.pulluri
+                    self.opts, pub_path=self.puburi, pull_path=self.pulluri
                 )
-                self.pusher.pub_uri = "ipc://{}".format(self.puburi)
-                self.pusher.pull_uri = "ipc://{}".format(self.pulluri)
             # For the asynchronous case, the connect will be deferred to when
             # fire_event() is invoked.
             self.cpush = True

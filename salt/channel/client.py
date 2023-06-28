@@ -103,7 +103,6 @@ class AsyncReqChannel:
         "_uncrypted_transfer",
         "send",
         "connect",
-        # "close",
     ]
     close_methods = [
         "close",

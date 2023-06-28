@@ -14,7 +14,6 @@ from collections import deque
 from salt._logging.mixins import ExcInfoOnLogLevelFormatMixin
 from salt.utils.versions import warn_until_date
 
-
 log = logging.getLogger(__name__)
 
 
