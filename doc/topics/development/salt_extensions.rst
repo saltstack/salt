@@ -63,7 +63,9 @@ To indicate that a Salt module is being deprecated in favor of a Salt extension,
 for each Salt module include ``__deprecated__`` tuple in the module.  The tuple
 should include the version of Salt that the module will be removed, the name of the
 collection of modules that are being deprecated, and the URL where the source for
-the new extension can be found.
+the new extension can be found. The version should be 2 major versions from the
+next major release. For example, the next major release of Salt is 3100, the
+deprecation version should be set to 3102.
 
 .. code-block: python
 
