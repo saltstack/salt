@@ -4,7 +4,6 @@
 import os
 
 import pytest
-from saltfactories.utils.tempfiles import temp_file
 
 import salt.modules.config as config
 import salt.utils.files
@@ -57,7 +56,7 @@ def test_keygen_sk_file(test_keygen):
     test nacl.keygen function
     with sk_file set
     """
-    with temp_file("test_keygen_sk_file") as fpath:
+    with pytest.helpers.temp_file("test_keygen_sk_file") as fpath:
         with salt.utils.files.fopen(fpath, "wb") as wfh:
             wfh.write(test_keygen["sk"])
 
@@ -72,7 +71,7 @@ def test_keygen_keyfile(test_keygen):
     test nacl.keygen function
     with keyfile set
     """
-    with temp_file("test_keygen_keyfile") as fpath:
+    with pytest.helpers.temp_file("test_keygen_keyfile") as fpath:
         with salt.utils.files.fopen(fpath, "wb") as wfh:
             wfh.write(test_keygen["sk"])
 
@@ -86,7 +85,7 @@ def test_enc_keyfile(test_keygen):
     test nacl.enc function
     with keyfile and pk_file set
     """
-    with temp_file("test_enc_keyfile") as fpath:
+    with pytest.helpers.temp_file("test_enc_keyfile") as fpath:
         with salt.utils.files.fopen(fpath, "wb") as wfh:
             wfh.write(test_keygen["sk"])
         with salt.utils.files.fopen(str(fpath) + ".pub", "wb") as wfhpub:
@@ -107,7 +106,7 @@ def test_enc_sk_file(test_keygen):
     test nacl.enc function
     with sk_file and pk_file set
     """
-    with temp_file("test_enc_sk_file") as fpath:
+    with pytest.helpers.temp_file("test_enc_sk_file") as fpath:
         with salt.utils.files.fopen(fpath, "wb") as wfh:
             wfh.write(test_keygen["sk"])
         with salt.utils.files.fopen(str(fpath) + ".pub", "wb") as wfhpub:
@@ -128,7 +127,7 @@ def test_dec_keyfile(test_keygen):
     test nacl.dec function
     with keyfile and pk_file set
     """
-    with temp_file("test_dec_keyfile") as fpath:
+    with pytest.helpers.temp_file("test_dec_keyfile") as fpath:
         with salt.utils.files.fopen(fpath, "wb") as wfh:
             wfh.write(test_keygen["sk"])
         with salt.utils.files.fopen(str(fpath) + ".pub", "wb") as wfhpub:
@@ -152,7 +151,7 @@ def test_dec_sk_file(test_keygen):
     test nacl.dec function
     with sk_file and pk_file set
     """
-    with temp_file("test_dec_sk_file") as fpath:
+    with pytest.helpers.temp_file("test_dec_sk_file") as fpath:
         with salt.utils.files.fopen(fpath, "wb") as wfh:
             wfh.write(test_keygen["sk"])
         with salt.utils.files.fopen(str(fpath) + ".pub", "wb") as wfhpub:
