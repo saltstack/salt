@@ -2241,7 +2241,7 @@ def _test_addrs(addrinfo, port):
         if ip_addr in ip_addrs:
             continue
         ip_addrs.append(ip_addr)
-
+        s = None
         try:
             s = socket.socket(ip_family, socket.SOCK_STREAM)
             s.settimeout(2)
@@ -2251,7 +2251,8 @@ def _test_addrs(addrinfo, port):
         except OSError:
             pass
         finally:
-            s.close()
+            if s is not None:
+                s.close()
     return ip_addrs
 
 
