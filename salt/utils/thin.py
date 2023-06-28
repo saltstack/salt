@@ -20,11 +20,11 @@ import jinja2
 import looseversion
 import msgpack
 import packaging
+import tornado
 import yaml
 
 import salt
 import salt.exceptions
-import salt.ext.tornado as tornado
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.json

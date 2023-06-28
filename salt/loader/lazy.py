@@ -253,7 +253,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             ):
                 opts[i] = opts[i].value()
         threadsafety = not opts.get("multiprocessing")
-        self.context_dict = salt.utils.context.ContextDict(threadsafe=threadsafety)
         self.opts = self.__prep_mod_opts(opts)
         self.pack_self = pack_self
 
@@ -269,12 +268,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         if "__context__" not in self.pack:
             self.pack["__context__"] = None
 
-        for k, v in self.pack.items():
+        for k, v in list(self.pack.items()):
             if v is None:  # if the value of a pack is None, lets make an empty dict
-                self.context_dict.setdefault(k, {})
-                self.pack[k] = salt.utils.context.NamespacedDictWrapper(
-                    self.context_dict, k
-                )
+                self.pack[k] = {}
 
         self.whitelist = whitelist
         self.virtual_enable = virtual_enable
@@ -571,19 +567,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             grains = opts.get("grains", {})
             if isinstance(grains, salt.loader.context.NamedLoaderContext):
                 grains = grains.value()
-            self.context_dict["grains"] = grains
-            self.pack["__grains__"] = salt.utils.context.NamespacedDictWrapper(
-                self.context_dict, "grains"
-            )
+            self.pack["__grains__"] = grains
 
         if "__pillar__" not in self.pack:
             pillar = opts.get("pillar", {})
             if isinstance(pillar, salt.loader.context.NamedLoaderContext):
                 pillar = pillar.value()
-            self.context_dict["pillar"] = pillar
-            self.pack["__pillar__"] = salt.utils.context.NamespacedDictWrapper(
-                self.context_dict, "pillar"
-            )
+            self.pack["__pillar__"] = pillar
 
         mod_opts = {}
         for key, val in list(opts.items()):

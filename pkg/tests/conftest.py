@@ -44,6 +44,21 @@ def grains(sminion):
     return sminion.opts["grains"].copy()
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _system_up_to_date(
+    grains,
+    shell,
+):
+    if grains["os_family"] == "Debian":
+        ret = shell.run("apt", "update")
+        assert ret.returncode == 0
+        ret = shell.run("apt", "upgrade", "-y")
+        assert ret.returncode == 0
+    elif grains["os_family"] == "Redhat":
+        ret = shell.run("yum", "update", "-y")
+        assert ret.returncode == 0
+
+
 def pytest_addoption(parser):
     """
     register argparse-style options and ini-style config values.

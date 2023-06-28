@@ -33,12 +33,12 @@ import types
 
 import attr
 import pytest
+import tornado.ioloop
+import tornado.web
 from pytestshellutils.exceptions import ProcessFailed
 from pytestshellutils.utils import ports
 from pytestshellutils.utils.processes import ProcessResult
 
-import salt.ext.tornado.ioloop
-import salt.ext.tornado.web
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.pycrypto
@@ -1277,7 +1277,7 @@ def http_basic_auth(login_cb=lambda username, password: False):
     .. code-block:: python
 
         @http_basic_auth(lambda u, p: u == 'foo' and p == 'bar')
-        class AuthenticatedHandler(salt.ext.tornado.web.RequestHandler):
+        class AuthenticatedHandler(tornado.web.RequestHandler):
             pass
     """
 
@@ -1421,9 +1421,7 @@ class Webserver:
 
         self.port = port
         self.wait = wait
-        self.handler = (
-            handler if handler is not None else salt.ext.tornado.web.StaticFileHandler
-        )
+        self.handler = handler if handler is not None else tornado.web.StaticFileHandler
         self.web_root = None
         self.ssl_opts = ssl_opts
 
@@ -1431,16 +1429,14 @@ class Webserver:
         """
         Threading target which stands up the tornado application
         """
-        self.ioloop = salt.ext.tornado.ioloop.IOLoop()
+        self.ioloop = tornado.ioloop.IOLoop()
         self.ioloop.make_current()
-        if self.handler == salt.ext.tornado.web.StaticFileHandler:
-            self.application = salt.ext.tornado.web.Application(
+        if self.handler == tornado.web.StaticFileHandler:
+            self.application = tornado.web.Application(
                 [(r"/(.*)", self.handler, {"path": self.root})]
             )
         else:
-            self.application = salt.ext.tornado.web.Application(
-                [(r"/(.*)", self.handler)]
-            )
+            self.application = tornado.web.Application([(r"/(.*)", self.handler)])
         self.application.listen(self.port, ssl_options=self.ssl_opts)
         self.ioloop.start()
 
@@ -1515,7 +1511,7 @@ class Webserver:
         self.stop()
 
 
-class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
+class SaveRequestsPostHandler(tornado.web.RequestHandler):
     """
     Save all requests sent to the server.
     """
@@ -1535,7 +1531,7 @@ class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
         raise NotImplementedError()
 
 
-class MirrorPostHandler(salt.ext.tornado.web.RequestHandler):
+class MirrorPostHandler(tornado.web.RequestHandler):
     """
     Mirror a POST body back to the client
     """

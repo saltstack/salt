@@ -11,6 +11,7 @@ import pathlib
 import time
 from typing import TYPE_CHECKING
 
+import yaml
 from ptscripts import Context, command_group
 
 import tools.utils
@@ -672,3 +673,60 @@ def get_releases(ctx: Context, repository: str = "saltstack/salt"):
             wfh.write(f"latest-release={latest}\n")
             wfh.write(f"releases={json.dumps(str_releases)}\n")
         ctx.exit(0)
+
+
+@ci.command(
+    name="get-release-changelog-target",
+    arguments={
+        "event_name": {
+            "help": "The name of the GitHub event being processed.",
+        },
+    },
+)
+def get_release_changelog_target(ctx: Context, event_name: str):
+    """
+    Define which kind of release notes should be generated, next minor or major.
+    """
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is None:
+        ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event_path is not None
+
+    try:
+        gh_event = json.loads(open(gh_event_path).read())
+    except Exception as exc:
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
+        ctx.exit(1)
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    shared_context = yaml.safe_load(
+        tools.utils.SHARED_WORKFLOW_CONTEXT_FILEPATH.read_text()
+    )
+    release_branches = shared_context["release-branches"]
+
+    release_changelog_target = "next-major-release"
+    if event_name == "pull_request":
+        if gh_event["pull_request"]["base"]["ref"] in release_branches:
+            release_changelog_target = "next-minor-release"
+    elif event_name == "schedule":
+        branch_name = gh_event["repository"]["default_branch"]
+        if branch_name in release_branches:
+            release_changelog_target = "next-minor-release"
+    else:
+        for branch_name in release_branches:
+            if branch_name in gh_event["ref"]:
+                release_changelog_target = "next-minor-release"
+                break
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"release-changelog-target={release_changelog_target}\n")
+    ctx.exit(0)

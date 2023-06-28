@@ -12,39 +12,6 @@ if sys.version_info < (3,):
     )
     sys.stderr.flush()
 
-USE_VENDORED_TORNADO = True
-
-
-class TornadoImporter:
-    def find_module(self, module_name, package_path=None):
-        if USE_VENDORED_TORNADO:
-            if module_name.startswith("tornado"):
-                return self
-        else:
-            if module_name.startswith("salt.ext.tornado"):
-                return self
-        return None
-
-    def load_module(self, name):
-        if USE_VENDORED_TORNADO:
-            mod = importlib.import_module("salt.ext.{}".format(name))
-        else:
-            # Remove 'salt.ext.' from the module
-            mod = importlib.import_module(name[9:])
-        sys.modules[name] = mod
-        return mod
-
-    def create_module(self, spec):
-        return self.load_module(spec.name)
-
-    def exec_module(self, module):
-        return None
-
-
-# Try our importer first
-sys.meta_path = [TornadoImporter()] + sys.meta_path
-
-
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
     "once",  # Show once
@@ -72,6 +39,44 @@ warnings.filterwarnings(
 )
 
 
+def __getdefaultlocale(envvars=("LC_ALL", "LC_CTYPE", "LANG", "LANGUAGE")):
+    """
+    This function was backported from Py3.11 which started triggering a
+    deprecation warning about it's removal in 3.13.
+    """
+    import locale
+
+    try:
+        # check if it's supported by the _locale module
+        import _locale
+
+        code, encoding = _locale._getdefaultlocale()
+    except (ImportError, AttributeError):
+        pass
+    else:
+        # make sure the code/encoding values are valid
+        if sys.platform == "win32" and code and code[:2] == "0x":
+            # map windows language identifier to language name
+            code = locale.windows_locale.get(int(code, 0))
+        # ...add other platform-specific processing here, if
+        # necessary...
+        return code, encoding
+
+    # fall back on POSIX behaviour
+    import os
+
+    lookup = os.environ.get
+    for variable in envvars:
+        localename = lookup(variable, None)
+        if localename:
+            if variable == "LANGUAGE":
+                localename = localename.split(":")[0]
+            break
+    else:
+        localename = "C"
+    return locale._parse_localename(localename)
+
+
 def __define_global_system_encoding_variable__():
     import sys
 
@@ -90,17 +95,14 @@ def __define_global_system_encoding_variable__():
         # If the system is properly configured this should return a valid
         # encoding. MS Windows has problems with this and reports the wrong
         # encoding
-        import locale
 
         try:
-            encoding = locale.getdefaultlocale()[-1]
+            encoding = __getdefaultlocale()[-1]
         except ValueError:
             # A bad locale setting was most likely found:
             #   https://github.com/saltstack/salt/issues/26063
             pass
 
-        # This is now garbage collectable
-        del locale
         if not encoding:
             # This is most likely ascii which is not the best but we were
             # unable to find a better encoding. If this fails, we fall all

@@ -1,7 +1,7 @@
 """
 Management of Zabbix Valuemap object over Zabbix API.
 
-.. versionadded:: 2017.7
+.. versionadded:: 2017.7.0
 
 :codeauthor: Jakub Sliva <jakub.sliva@ultimum.io>
 """
@@ -95,7 +95,7 @@ def present(name, params, **kwargs):
 
             if dry_run:
                 ret["result"] = True
-                ret["comment"] = 'Zabbix Value map "{}" would be fixed.'.format(name)
+                ret["comment"] = f'Zabbix Value map "{name}" would be fixed.'
                 ret["changes"] = {
                     name: {
                         "old": (
@@ -119,14 +119,14 @@ def present(name, params, **kwargs):
                 )
                 if valuemap_update:
                     ret["result"] = True
-                    ret["comment"] = 'Zabbix Value map "{}" updated.'.format(name)
+                    ret["comment"] = f'Zabbix Value map "{name}" updated.'
                     ret["changes"] = {
                         name: {
                             "old": (
                                 'Zabbix Value map "{}" differed '
                                 "in following parameters: {}".format(name, diff_params)
                             ),
-                            "new": 'Zabbix Value map "{}" fixed.'.format(name),
+                            "new": f'Zabbix Value map "{name}" fixed.',
                         }
                     }
 
@@ -141,10 +141,10 @@ def present(name, params, **kwargs):
     else:
         if dry_run:
             ret["result"] = True
-            ret["comment"] = 'Zabbix Value map "{}" would be created.'.format(name)
+            ret["comment"] = f'Zabbix Value map "{name}" would be created.'
             ret["changes"] = {
                 name: {
-                    "old": 'Zabbix Value map "{}" does not exist.'.format(name),
+                    "old": f'Zabbix Value map "{name}" does not exist.',
                     "new": (
                         'Zabbix Value map "{}" would be created '
                         "according definition.".format(name)
@@ -163,10 +163,10 @@ def present(name, params, **kwargs):
 
             if valuemap_create:
                 ret["result"] = True
-                ret["comment"] = 'Zabbix Value map "{}" created.'.format(name)
+                ret["comment"] = f'Zabbix Value map "{name}" created.'
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Value map "{}" did not exist.'.format(name),
+                        "old": f'Zabbix Value map "{name}" did not exist.',
                         "new": (
                             'Zabbix Value map "{}" created according definition.'.format(
                                 name
@@ -205,15 +205,15 @@ def absent(name, **kwargs):
 
     if not object_id:
         ret["result"] = True
-        ret["comment"] = 'Zabbix Value map "{}" does not exist.'.format(name)
+        ret["comment"] = f'Zabbix Value map "{name}" does not exist.'
     else:
         if dry_run:
             ret["result"] = True
-            ret["comment"] = 'Zabbix Value map "{}" would be deleted.'.format(name)
+            ret["comment"] = f'Zabbix Value map "{name}" would be deleted.'
             ret["changes"] = {
                 name: {
-                    "old": 'Zabbix Value map "{}" exists.'.format(name),
-                    "new": 'Zabbix Value map "{}" would be deleted.'.format(name),
+                    "old": f'Zabbix Value map "{name}" exists.',
+                    "new": f'Zabbix Value map "{name}" would be deleted.',
                 }
             }
         else:
@@ -223,11 +223,11 @@ def absent(name, **kwargs):
 
             if valuemap_delete:
                 ret["result"] = True
-                ret["comment"] = 'Zabbix Value map "{}" deleted.'.format(name)
+                ret["comment"] = f'Zabbix Value map "{name}" deleted.'
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Value map "{}" existed.'.format(name),
-                        "new": 'Zabbix Value map "{}" deleted.'.format(name),
+                        "old": f'Zabbix Value map "{name}" existed.',
+                        "new": f'Zabbix Value map "{name}" deleted.',
                     }
                 }
 

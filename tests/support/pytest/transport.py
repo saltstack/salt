@@ -5,14 +5,14 @@ import socket
 import time
 
 import pytest
+import tornado.gen
+import tornado.ioloop
+import tornado.iostream
 import zmq
 from pytestshellutils.utils.processes import terminate_process
 
 import salt.channel.server
 import salt.exceptions
-import salt.ext.tornado.gen
-import salt.ext.tornado.ioloop
-import salt.ext.tornado.iostream
 import salt.master
 import salt.utils.msgpack
 import salt.utils.process
@@ -93,9 +93,9 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                     time.sleep(1)
                 else:
                     break
-            self.sock = salt.ext.tornado.iostream.IOStream(sock)
+            self.sock = tornado.iostream.IOStream(sock)
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _recv(self):
         if self.transport == "zeromq":
             # test_zeromq_filtering requires catching the
@@ -103,19 +103,19 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             try:
                 payload = self.sock.recv(zmq.NOBLOCK)
                 serial_payload = salt.payload.loads(payload)
-                raise salt.ext.tornado.gen.Return(serial_payload)
+                raise tornado.gen.Return(serial_payload)
             except (zmq.ZMQError, salt.exceptions.SaltDeserializationError):
                 raise RecvError("ZMQ Error")
         else:
             for msg in self.unpacker:
-                raise salt.ext.tornado.gen.Return(msg["body"])
+                raise tornado.gen.Return(msg["body"])
             byts = yield self.sock.read_bytes(8096, partial=True)
             self.unpacker.feed(byts)
             for msg in self.unpacker:
-                raise salt.ext.tornado.gen.Return(msg["body"])
+                raise tornado.gen.Return(msg["body"])
             raise RecvError("TCP Error")
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _run(self, loop):
         try:
             self._setup_listener()
@@ -165,7 +165,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         Gather results until then number of seconds specified by timeout passes
         without receiving a message
         """
-        loop = salt.ext.tornado.ioloop.IOLoop()
+        loop = tornado.ioloop.IOLoop()
         loop.add_callback(self._run, loop)
         loop.start()
 

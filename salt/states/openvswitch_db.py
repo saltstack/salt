@@ -1,7 +1,7 @@
 """
 Management of Open vSwitch database records.
 
-.. versionadded:: 3006
+.. versionadded:: 3006.0
 """
 
 

@@ -221,7 +221,6 @@ jobs:
 
       - name: Show System Info & Test Plan
         env:
-          INSTALL_TYPE: ${{ inputs.pkg-type }}
           SALT_RELEASE: "${{ inputs.salt-version }}"
           SALT_REPO_ARCH: ${{ inputs.arch }}
           LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
@@ -231,15 +230,15 @@ jobs:
           SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
           SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          DOWNLOAD_TEST_PACKAGE_TYPE: ${{ inputs.pkg-type }}
         run: |
           tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
           -E INSTALL_TYPE -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
-          -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING \
+          -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
             --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} -- download-pkgs
 
       - name: Run Package Download Tests
         env:
-          INSTALL_TYPE: ${{ inputs.pkg-type }}
           SALT_RELEASE: "${{ inputs.salt-version }}"
           SALT_REPO_ARCH: ${{ inputs.arch }}
           LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
@@ -249,10 +248,11 @@ jobs:
           SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
           SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          DOWNLOAD_TEST_PACKAGE_TYPE: ${{ inputs.pkg-type }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
           -E INSTALL_TYPE -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
-          -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING \
+          -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
             --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} -- download-pkgs
 
       - name: Combine Coverage Reports
