@@ -2,8 +2,11 @@
 Unit tests for salt/modules/salt_version.py
 """
 
+import pytest
+
 import salt.modules.salt_version as salt_version
 import salt.version
+from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
 
@@ -239,6 +242,15 @@ def test_less_than_success_new_version_with_dot():
             MagicMock(return_value="3006"),
         ):
             assert salt_version.less_than("Fluorine") is True
+
+
+def test_less_than_do_not_crash_when_input_is_a_number():
+    """
+    Test that less_than do not crash when unexpected inputs
+    """
+    with patch("salt.version.SaltStackVersion", MagicMock(return_value="2018.3.2")):
+        with pytest.raises(CommandExecutionError):
+            salt_version.less_than(1234)
 
 
 def test_less_than_with_equal_codename():
