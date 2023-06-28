@@ -319,7 +319,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.suffix_map[suffix] = (suffix, mode, kind)
             self.suffix_order.append(suffix)
 
-        self._lock = threading.RLock()
+        self._lock = self._get_lock()
+
         with self._lock:
             self._refresh_file_mapping()
 
@@ -329,6 +330,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         _generate_module(f"{self.loaded_base_name}.int.{tag}")
         _generate_module(f"{self.loaded_base_name}.ext")
         _generate_module(f"{self.loaded_base_name}.ext.{tag}")
+
+    def _get_lock(self):
+        return threading.RLock()
 
     def clean_modules(self):
         """
