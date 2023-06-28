@@ -28,7 +28,7 @@ documentation outlining transfer of ownership it can be handled on a case-by-cas
 community modules can be hosted either in individual or corporate source control systems,
 alternatively they can also be hosted in the community run Salt Extensions Github organization,
 that will operate like the the Salt Formulas Github organization.
-The criteria to determine which category to place modules in will follow these rules.
+The criteria to determine which category to place modules in will follow these rules:
 
 ## Core Modules
 
@@ -71,7 +71,7 @@ for each Salt module include ``__deprecated__`` tuple in the module.  The tuple
 should include the version of Salt that the module will be removed, the name of the
 collection of modules that are being deprecated, and the URL where the source for
 the new extension can be found. The version should be 2 major versions from the
-next major release. For example, the next major release of Salt is 3100, the
+next major release. For example, if the next major release of Salt is 3100, the
 deprecation version should be set to 3102.
 
 .. code-block: python
