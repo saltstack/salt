@@ -939,7 +939,6 @@ typing-extensions==3.10.0.0
     #   aiohttp
     #   async-timeout
     #   gitpython
-    #   immutables
     #   importlib-metadata
     #   pytest-shell-utilities
     #   pytest-system-statistics
