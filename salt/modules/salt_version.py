@@ -20,7 +20,7 @@ A simple example might be something like the following:
 .. code-block:: jinja
 
     {# a boolean check #}
-    {% set option_deprecated = salt['salt_version.less_than']("3001") %}
+    {% set option_deprecated = salt['salt_version.less_than']("Sodium") %}
 
     {% if option_deprecated %}
       <use old syntax>
@@ -52,7 +52,7 @@ def __virtual__():
 def get_release_number(name):
     """
     Returns the release number of a given release code name in a
-    ``MAJOR.PATCH`` format.
+    ``MAJOR.PATCH`` format (for Salt versions < 3000) or ``MAJOR`` for newer Salt versions.
 
     If the release name has not been given an assigned release number, the
     function returns a string. If the release cannot be found, it returns
