@@ -220,7 +220,6 @@ def test_retcode_exe_run_fail(salt_ssh_cli):
     """
     ret = salt_ssh_cli.run("file.touch", "/tmp/non/ex/is/tent")
     assert ret.returncode == EX_AGGREGATE
-    assert ret.data["retcode"] == 1
     assert isinstance(ret.data, str)
     # This should be the exact output, but some other warnings
     # might be printed to stderr.
