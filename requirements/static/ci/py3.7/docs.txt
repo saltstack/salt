@@ -188,7 +188,6 @@ tempora==4.1.1
 typing-extensions==3.10.0.0
     # via
     #   -c requirements/static/ci/py3.7/linux.txt
-    #   immutables
     #   importlib-metadata
     #   markdown-it-py
     #   myst-docutils
