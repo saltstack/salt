@@ -11,7 +11,9 @@ log = logging.getLogger(__name__)
 
 
 def extension_deprecation_message(
-    version, extension_name, extension_repo, ignore_list=None
+    version,
+    extension_name,
+    extension_repo,
 ):
     """
     Decorator wrapper to warn about deprecation
@@ -20,7 +22,11 @@ def extension_deprecation_message(
     def decorator(function):
         @wraps(function)
         def wrapper(*args, **kwargs):
-            if not ignore_list or function.__name__ not in ignore_list:
+            # Any functions that should not be decorated
+            # as they're used when attempting when determining
+            # what modules to load, eg. Salt Cloud
+            ignore_list = ("get_configured_provider",)
+            if function.__name__ not in ignore_list:
                 salt.utils.versions.warn_until(
                     version,
                     f"The '{extension_name}' functionality in Salt has been deprecated and its "
