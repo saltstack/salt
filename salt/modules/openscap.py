@@ -74,7 +74,7 @@ def xccdf_eval(
     """
     Run ``oscap xccdf eval`` commands on minions.
 
-    .. versionadded:: 3007
+    .. versionadded:: 3007.0
 
     It uses cp.push_dir to upload the generated files to the salt master
     in the master's minion files cachedir
@@ -160,11 +160,11 @@ def xccdf_eval(
 
     if not os.path.exists(xccdffile):
         success = False
-        error = "XCCDF File '{}' does not exist".format(xccdffile)
+        error = f"XCCDF File '{xccdffile}' does not exist"
     for ofile in ovalfiles:
         if success and not os.path.exists(ofile):
             success = False
-            error = "Oval File '{}' does not exist".format(ofile)
+            error = f"Oval File '{ofile}' does not exist"
 
     if success:
         tempdir = tempfile.mkdtemp()
@@ -172,7 +172,7 @@ def xccdf_eval(
         (stdoutdata, error) = proc.communicate()
         success = _OSCAP_EXIT_CODES_MAP.get(proc.returncode, False)
         if proc.returncode < 0:
-            error += "\nKilled by signal {}\n".format(proc.returncode).encode("ascii")
+            error += f"\nKilled by signal {proc.returncode}\n".encode("ascii")
         returncode = proc.returncode
         if success:
             if not __salt__["cp.push_dir"](tempdir):
@@ -229,7 +229,7 @@ def xccdf(params):
         (stdoutdata, error) = proc.communicate()
         success = _OSCAP_EXIT_CODES_MAP.get(proc.returncode, False)
         if proc.returncode < 0:
-            error += "\nKilled by signal {}\n".format(proc.returncode).encode("ascii")
+            error += f"\nKilled by signal {proc.returncode}\n".encode("ascii")
         returncode = proc.returncode
         if success:
             if not __salt__["cp.push_dir"](tempdir):
