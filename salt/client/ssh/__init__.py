@@ -887,7 +887,10 @@ class SSH(MultiprocessingStateMixin):
             if not isinstance(ret[host], dict):
                 p_data = {host: ret[host]}
             elif "return" not in ret[host]:
-                p_data = ret
+                if ret[host].get("_error") == "Permission denied":
+                    p_data = {host: ret[host]["stderr"]}
+                else:
+                    p_data = ret
             else:
                 outputter = ret[host].get("out", self.opts.get("output", "nested"))
                 p_data = {host: ret[host].get("return", {})}
