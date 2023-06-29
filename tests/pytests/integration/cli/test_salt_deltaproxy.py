@@ -44,9 +44,7 @@ def clear_proxy_minions(salt_master, proxy_minion_id):
     for proxy in [proxy_minion_id, "dummy_proxy_one", "dummy_proxy_two"]:
         pytest.helpers.remove_stale_minion_key(salt_master, proxy)
 
-        cachefile = os.path.join(
-            salt_master.config["cachedir"], "{}.cache".format(proxy)
-        )
+        cachefile = os.path.join(salt_master.config["cachedir"], f"{proxy}.cache")
         if os.path.exists(cachefile):
             os.unlink(cachefile)
 
@@ -181,11 +179,11 @@ def test_exit_status_correct_usage(
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one),
+        f"{proxy_one}.sls",
         dummy_proxy_one_pillar_file,
     )
     dummy_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_two),
+        f"{proxy_two}.sls",
         dummy_proxy_two_pillar_file,
     )
     with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, dummy_proxy_two_tempfile:
@@ -288,7 +286,7 @@ def test_missing_pillar_file(
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one),
+        f"{proxy_one}.sls",
         dummy_proxy_one_pillar_file,
     )
     with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile:
@@ -406,14 +404,14 @@ def test_invalid_connection(
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one),
+        f"{proxy_one}.sls",
         dummy_proxy_one_pillar_file,
     )
     broken_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(broken_proxy_one), broken_proxy_one_pillar_file
+        f"{broken_proxy_one}.sls", broken_proxy_one_pillar_file
     )
     broken_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(broken_proxy_two), broken_proxy_two_pillar_file
+        f"{broken_proxy_two}.sls", broken_proxy_two_pillar_file
     )
     with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, broken_proxy_one_tempfile, broken_proxy_two_tempfile:
         factory = salt_master.salt_proxy_minion_daemon(
@@ -534,11 +532,11 @@ def ping():
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one),
+        f"{proxy_one}.sls",
         dummy_proxy_one_pillar_file,
     )
     dummy_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_two),
+        f"{proxy_two}.sls",
         dummy_proxy_two_pillar_file,
     )
 
@@ -668,11 +666,11 @@ def ping():
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one),
+        f"{proxy_one}.sls",
         dummy_proxy_one_pillar_file,
     )
     dummy_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_two),
+        f"{proxy_two}.sls",
         dummy_proxy_two_pillar_file,
     )
 
