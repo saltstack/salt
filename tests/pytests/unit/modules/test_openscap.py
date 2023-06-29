@@ -31,7 +31,7 @@ def test_openscap_xccdf_eval_success(random_temp_dir):
             return_value=Mock(**{"returncode": 0, "communicate.return_value": ("", "")})
         ),
     ):
-        response = openscap.xccdf("eval --profile Default {}".format(policy_file))
+        response = openscap.xccdf(f"eval --profile Default {policy_file}")
 
         assert openscap.tempfile.mkdtemp.call_count == 1
         expected_cmd = [
@@ -72,7 +72,7 @@ def test_openscap_xccdf_eval_success_with_failing_rules(random_temp_dir):
             )
         ),
     ):
-        response = openscap.xccdf("eval --profile Default {}".format(policy_file))
+        response = openscap.xccdf(f"eval --profile Default {policy_file}")
 
         assert openscap.tempfile.mkdtemp.call_count == 1
         expected_cmd = [
@@ -164,7 +164,7 @@ def test_openscap_xccdf_eval_evaluation_error():
             )
         ),
     ):
-        response = openscap.xccdf("eval --profile Default {}".format(policy_file))
+        response = openscap.xccdf(f"eval --profile Default {policy_file}")
 
         assert response == {
             "upload_dir": None,
@@ -175,7 +175,7 @@ def test_openscap_xccdf_eval_evaluation_error():
 
 
 def test_openscap_xccdf_eval_fail_not_implemented_action():
-    response = openscap.xccdf("info {}".format(policy_file))
+    response = openscap.xccdf(f"info {policy_file}")
     mock_err = "argument action: invalid choice: 'info' (choose from 'eval')"
 
     assert response == {
