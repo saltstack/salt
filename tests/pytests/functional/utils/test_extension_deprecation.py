@@ -15,9 +15,9 @@ def get_configured_provider():
 
 def test_extension_deprecation():
     """
-    this tests for a condition where an included jinja template
-    is removed from the salt filesystem, but is still loaded from
-    the cache.
+    this tests the extension_deprecation_message decorator to
+    ensure that the warning is raised when a decorated function
+    is called.
     """
     expected_deprecation_message = (
         "The 'salt_mod' functionality in Salt has been deprecated and "
