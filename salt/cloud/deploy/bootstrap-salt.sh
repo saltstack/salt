@@ -23,7 +23,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2023.04.26"
+__ScriptVersion="2023.06.28"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -224,7 +224,6 @@ _KEEP_TEMP_FILES=${BS_KEEP_TEMP_FILES:-$BS_FALSE}
 _TEMP_CONFIG_DIR="null"
 _SALTSTACK_REPO_URL="https://github.com/saltstack/salt.git"
 _SALT_REPO_URL=${_SALTSTACK_REPO_URL}
-_DOWNSTREAM_PKG_REPO=$BS_FALSE
 _TEMP_KEYS_DIR="null"
 _SLEEP="${__DEFAULT_SLEEP}"
 _INSTALL_MASTER=$BS_FALSE
@@ -311,21 +310,31 @@ __usage() {
     - onedir_rc            Install latest onedir RC release.
     - onedir_rc [version]  Install a specific version. Only supported for
                            onedir RC packages available at repo.saltproject.io
+    - old-stable           Install latest old stable release.
+    - old-stable [branch]  Install latest version on a branch. Only supported
+                           for packages available at repo.saltproject.io
+    - old-stable [version] Install a specific version. Only supported for
+                           packages available at repo.saltproject.io
+                           To pin a 3xxx minor version, specify it as 3xxx.0
 
   Examples:
     - ${__ScriptName}
     - ${__ScriptName} stable
-    - ${__ScriptName} stable 2017.7
-    - ${__ScriptName} stable 2017.7.2
+    - ${__ScriptName} stable 3006
+    - ${__ScriptName} stable 3006.1
     - ${__ScriptName} testing
     - ${__ScriptName} git
     - ${__ScriptName} git 2017.7
     - ${__ScriptName} git v2017.7.2
     - ${__ScriptName} git 06f249901a2e2f1ed310d58ea3921a129f214358
     - ${__ScriptName} onedir
-    - ${__ScriptName} onedir 3005
+    - ${__ScriptName} onedir 3006
     - ${__ScriptName} onedir_rc
-    - ${__ScriptName} onedir_rc 3005
+    - ${__ScriptName} onedir_rc 3006
+    - ${__ScriptName} old-stable
+    - ${__ScriptName} old-stable 3005
+    - ${__ScriptName} old-stable 3005.1
+
 
   Options:
     -a  Pip install all Python pkg dependencies for Salt. Requires -V to install
@@ -401,9 +410,6 @@ __usage() {
     -v  Display script version
     -V  Install Salt into virtualenv
         (only available for Ubuntu based distributions)
-    -w  Install packages from downstream package repository rather than
-        upstream, saltstack package repository. This is currently only
-        implemented for SUSE.
     -x  Changes the Python version used to install Salt.
         For CentOS 6 git installations python2.7 is supported.
         Fedora git installation, CentOS 7, Ubuntu 18.04 support python3.
@@ -420,7 +426,7 @@ EOT
 }   # ----------  end of function __usage  ----------
 
 
-while getopts ':hvnDc:g:Gyx:wk:s:MSNXCPFUKIA:i:Lp:dH:bflV:J:j:rR:aq' opt
+while getopts ':hvnDc:g:Gyx:k:s:MSNXCPFUKIA:i:Lp:dH:bflV:J:j:rR:aq' opt
 do
   case "${opt}" in
 
@@ -436,7 +442,6 @@ do
          echowarn "No need to provide this option anymore, now it is a default behavior."
          ;;
 
-    w )  _DOWNSTREAM_PKG_REPO=$BS_TRUE                  ;;
     k )  _TEMP_KEYS_DIR="$OPTARG"                       ;;
     s )  _SLEEP=$OPTARG                                 ;;
     M )  _INSTALL_MASTER=$BS_TRUE                       ;;
@@ -595,7 +600,7 @@ if [ "$#" -gt 0 ];then
 fi
 
 # Check installation type
-if [ "$(echo "$ITYPE" | grep -E '(stable|testing|git|onedir|onedir_rc)')" = "" ]; then
+if [ "$(echo "$ITYPE" | grep -E '(stable|testing|git|onedir|onedir_rc|old-stable)')" = "" ]; then
     echoerror "Installation type \"$ITYPE\" is not known..."
     exit 1
 fi
@@ -619,28 +624,41 @@ elif [ "$ITYPE" = "stable" ]; then
         _ONEDIR_REV="latest"
         ITYPE="onedir"
     else
-        if [ "$(echo "$1" | grep -E '^(nightly|latest|3006)$')" != "" ]; then
+        if [ "$(echo "$1" | grep -E '^(nightly|latest|3005|3006)$')" != "" ]; then
             ONEDIR_REV="$1"
             _ONEDIR_REV="$1"
             ITYPE="onedir"
             shift
-        elif [ "$(echo "$1" | grep -E '^(3003|3004|3005)$')" != "" ]; then
-            STABLE_REV="$1"
-            shift
-        elif [ "$(echo "$1" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
+        elif [ "$(echo "$1" | grep -E '^([3-9][0-5]{2}[5-9](\.[0-9]*)?)')" != "" ]; then
             ONEDIR_REV="minor/$1"
             _ONEDIR_REV="$1"
             ITYPE="onedir"
             shift
+        else
+            echo "Unknown stable version: $1 (valid: 3005, 3006, latest)"
+            exit 1
+        fi
+    fi
+
+# If doing old-stable install, check if version specified
+elif [ "$ITYPE" = "old-stable" ]; then
+    if [ "$#" -eq 0 ];then
+        ITYPE="stable"
+    else
+        if [ "$(echo "$1" | grep -E '^(3003|3004|3005)$')" != "" ]; then
+            STABLE_REV="$1"
+            ITYPE="stable"
+            shift
         elif [ "$(echo "$1" | grep -E '^([3-9][0-5]{3}(\.[0-9]*)?)$')" != "" ]; then
             # Handle the 3xxx.0 version as 3xxx archive (pin to minor) and strip the fake ".0" suffix
+            ITYPE="stable"
             STABLE_REV=$(echo "$1" | sed -E 's/^([3-9][0-9]{3})\.0$/\1/')
             if [ "$(uname)" != "Darwin" ]; then
                 STABLE_REV="archive/$STABLE_REV"
             fi
             shift
         else
-            echo "Unknown stable version: $1 (valid: 3003, 3004, 3005, 3006, latest)"
+            echo "Unknown old stable version: $1 (valid: 3003, 3004, 3005)"
             exit 1
         fi
     fi
@@ -4573,6 +4591,12 @@ install_fedora_onedir_post() {
 #   CentOS Install Functions
 #
 __install_saltstack_rhel_repository() {
+  if [ "${DISTRO_MAJOR_VERSION}" -ge 9 ]; then
+    echoerror "Old stable repository unavailable on RH variants greater than or equal to 9"
+    echoerror "Use the stable install type."
+    exit 1
+  fi
+
     if [ "$ITYPE" = "stable" ]; then
         repo_rev="$STABLE_REV"
     else
@@ -4827,7 +4851,6 @@ install_centos_git_deps() {
     # Set ONEDIR_REV to STABLE_REV in case we
     # end up calling install_centos_onedir_deps
     ONEDIR_REV=${STABLE_REV}
-    install_centos_stable_deps || \
     install_centos_onedir_deps || \
     return 1
 
@@ -7698,13 +7721,8 @@ __set_suse_pkg_repo() {
         DISTRO_REPO="SLE_${DISTRO_MAJOR_VERSION}_SP${SUSE_PATCHLEVEL}"
     fi
 
-    if [ "$_DOWNSTREAM_PKG_REPO" -eq $BS_TRUE ]; then
-        suse_pkg_url_base="https://download.opensuse.org/repositories/systemsmanagement:/saltstack"
-        suse_pkg_url_path="${DISTRO_REPO}/systemsmanagement:saltstack.repo"
-    else
-        suse_pkg_url_base="${HTTP_VAL}://repo.saltproject.io/opensuse"
-        suse_pkg_url_path="${DISTRO_REPO}/systemsmanagement:saltstack:products.repo"
-    fi
+    suse_pkg_url_base="https://download.opensuse.org/repositories/systemsmanagement:/saltstack"
+    suse_pkg_url_path="${DISTRO_REPO}/systemsmanagement:saltstack.repo"
     SUSE_PKG_URL="$suse_pkg_url_base/$suse_pkg_url_path"
 }
 
@@ -7724,7 +7742,7 @@ __version_lte() {
              zypper --non-interactive install --auto-agree-with-licenses python || return 1
     fi
 
-    if [ "$(python -c 'import sys; V1=tuple([int(i) for i in sys.argv[1].split(".")]); V2=tuple([int(i) for i in sys.argv[2].split(".")]); print V1<=V2' "$1" "$2")" = "True" ]; then
+    if [ "$(${_PY_EXE} -c 'import sys; V1=tuple([int(i) for i in sys.argv[1].split(".")]); V2=tuple([int(i) for i in sys.argv[2].split(".")]); print(V1<=V2)' "$1" "$2")" = "True" ]; then
         __ZYPPER_REQUIRES_REPLACE_FILES=${BS_TRUE}
     else
         __ZYPPER_REQUIRES_REPLACE_FILES=${BS_FALSE}
@@ -8130,6 +8148,11 @@ install_opensuse_15_git() {
     return 0
 }
 
+install_opensuse_15_onedir_deps() {
+    __opensuse_prep_install || return 1
+    return 0
+}
+
 #
 #   End of openSUSE Leap 15
 #
@@ -8159,6 +8182,13 @@ install_suse_15_git_deps() {
     return 0
 }
 
+install_suse_15_onedir_deps() {
+    __opensuse_prep_install || return 1
+    install_opensuse_15_onedir_deps || return 1
+
+    return 0
+}
+
 install_suse_15_stable() {
     install_opensuse_stable || return 1
     return 0
@@ -8169,6 +8199,11 @@ install_suse_15_git() {
     return 0
 }
 
+install_suse_15_onedir() {
+    install_opensuse_stable || return 1
+    return 0
+}
+
 install_suse_15_stable_post() {
     install_opensuse_stable_post || return 1
     return 0
@@ -8176,6 +8211,11 @@ install_suse_15_stable_post() {
 
 install_suse_15_git_post() {
     install_opensuse_git_post || return 1
+    return 0
+}
+
+install_suse_15_onedir_post() {
+    install_opensuse_stable_post || return 1
     return 0
 }
 
@@ -8261,6 +8301,11 @@ install_suse_12_git_deps() {
     return 0
 }
 
+install_suse_12_onedir_deps() {
+    install_suse_12_stable_deps || return 1
+    return 0
+}
+
 install_suse_12_stable() {
     install_opensuse_stable || return 1
     return 0
@@ -8271,6 +8316,11 @@ install_suse_12_git() {
     return 0
 }
 
+install_suse_12_onedir() {
+    install_opensuse_stable || return 1
+    return 0
+}
+
 install_suse_12_stable_post() {
     install_opensuse_stable_post || return 1
     return 0
@@ -8278,6 +8328,11 @@ install_suse_12_stable_post() {
 
 install_suse_12_git_post() {
     install_opensuse_git_post || return 1
+    return 0
+}
+
+install_suse_12_onedir_post() {
+    install_opensuse_stable_post || return 1
     return 0
 }
 
@@ -8357,6 +8412,11 @@ install_suse_11_git_deps() {
     return 0
 }
 
+install_suse_11_onedir_deps() {
+    install_suse_11_stable_deps || return 1
+    return 0
+}
+
 install_suse_11_stable() {
     install_opensuse_stable || return 1
     return 0
@@ -8367,6 +8427,11 @@ install_suse_11_git() {
     return 0
 }
 
+install_suse_11_onedir() {
+    install_opensuse_stable || return 1
+    return 0
+}
+
 install_suse_11_stable_post() {
     install_opensuse_stable_post || return 1
     return 0
@@ -8374,6 +8439,11 @@ install_suse_11_stable_post() {
 
 install_suse_11_git_post() {
     install_opensuse_git_post || return 1
+    return 0
+}
+
+install_suse_11_onedir_post() {
+    install_opensuse_stable_post || return 1
     return 0
 }
 
