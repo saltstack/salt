@@ -322,7 +322,6 @@ def test_issue_46762_prereqs_on_a_state_with_unfulfilled_requirements(
 
 
 @pytest.mark.skip_on_darwin(reason="Test is broken on macosx")
-@pytest.mark.slow_test
 def test_issue_30161_unless_and_onlyif_together(state, state_tree, tmp_path):
     """
     test cmd.run using multiple unless options where the first cmd in the
