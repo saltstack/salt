@@ -22,6 +22,7 @@ import salt.utils.files
 import salt.utils.minions
 import salt.utils.stringutils
 import salt.utils.verify
+import salt.utils.versions
 from salt.utils.asynchronous import SyncWrapper
 
 try:
@@ -643,7 +644,7 @@ class AsyncPushChannel:
         """
         # FIXME for now, just UXD
         # Obviously, this makes the factory approach pointless, but we'll extend later
-        warn_until(
+        salt.utils.versions.warn_until(
             3008,
             "AsyncPushChannel is deprecated. Use zeromq or tcp transport instead.",
         )
@@ -663,7 +664,7 @@ class AsyncPullChannel:
         """
         If we have additional IPC transports other than UXD and TCP, add them here
         """
-        warn_until(
+        salt.utils.versions.warn_until(
             3008,
             "AsyncPullChannel is deprecated. Use zeromq or tcp transport instead.",
         )

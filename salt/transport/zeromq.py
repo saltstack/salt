@@ -550,7 +550,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 await self._socket.send(self.encode_payload(reply))
             except TimeoutError:
                 continue
-            except Exception:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error("Exception in request handler", exc_info=True)
                 break
 
@@ -930,7 +930,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         while True:
             try:
                 package = await self.daemon_pull_sock.recv()
-                # payload = salt.payload.loads(package)
                 await publish_payload(package)
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
@@ -938,46 +937,37 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 )
 
     async def publish_payload(self, payload, topic_list=None):
-        try:
-            log.trace("Publish payload %r", payload)
-            # payload = salt.payload.dumps(payload)
-            if self.opts["zmq_filtering"]:
-                if topic_list:
-                    for topic in topic_list:
-                        log.trace(
-                            "Sending filtered data over publisher %s", self.pub_uri
-                        )
-                        # zmq filters are substring match, hash the topic
-                        # to avoid collisions
-                        htopic = salt.utils.stringutils.to_bytes(
-                            hashlib.sha1(
-                                salt.utils.stringutils.to_bytes(topic)
-                            ).hexdigest()
-                        )
-                        await self.dpub_sock.send(htopic, flags=zmq.SNDMORE)
-                        await self.dpub_sock.send(payload)
-                        log.trace("Filtered data has been sent")
-                    # Syndic broadcast
-                    if self.opts.get("order_masters"):
-                        log.trace("Sending filtered data to syndic")
-                        await self.dpub_sock.send(b"syndic", flags=zmq.SNDMORE)
-                        await self.dpub_sock.send(payload)
-                        log.trace("Filtered data has been sent to syndic")
-                # otherwise its a broadcast
-                else:
-                    # TODO: constants file for "broadcast"
-                    log.trace(
-                        "Sending broadcasted data over publisher %s", self.pub_uri
+        log.trace("Publish payload %r", payload)
+        # payload = salt.payload.dumps(payload)
+        if self.opts["zmq_filtering"]:
+            if topic_list:
+                for topic in topic_list:
+                    log.trace("Sending filtered data over publisher %s", self.pub_uri)
+                    # zmq filters are substring match, hash the topic
+                    # to avoid collisions
+                    htopic = salt.utils.stringutils.to_bytes(
+                        hashlib.sha1(salt.utils.stringutils.to_bytes(topic)).hexdigest()
                     )
-                    await self.dpub_sock.send(b"broadcast", flags=zmq.SNDMORE)
+                    await self.dpub_sock.send(htopic, flags=zmq.SNDMORE)
                     await self.dpub_sock.send(payload)
-                    log.trace("Broadcasted data has been sent")
+                    log.trace("Filtered data has been sent")
+                # Syndic broadcast
+                if self.opts.get("order_masters"):
+                    log.trace("Sending filtered data to syndic")
+                    await self.dpub_sock.send(b"syndic", flags=zmq.SNDMORE)
+                    await self.dpub_sock.send(payload)
+                    log.trace("Filtered data has been sent to syndic")
+            # otherwise its a broadcast
             else:
-                log.trace("Sending ZMQ-unfiltered data over publisher %s", self.pub_uri)
+                # TODO: constants file for "broadcast"
+                log.trace("Sending broadcasted data over publisher %s", self.pub_uri)
+                await self.dpub_sock.send(b"broadcast", flags=zmq.SNDMORE)
                 await self.dpub_sock.send(payload)
-                log.trace("Unfiltered data has been sent")
-        except Exception as exc:  # pylint: disable=broad-except
-            log.error("pub payload %s", exc, exc_info=True)
+                log.trace("Broadcasted data has been sent")
+        else:
+            log.trace("Sending ZMQ-unfiltered data over publisher %s", self.pub_uri)
+            await self.dpub_sock.send(payload)
+            log.trace("Unfiltered data has been sent")
 
     def pre_fork(self, process_manager):
         """

@@ -171,7 +171,10 @@ async def test_publish_client_connect_server_down(transport, io_loop):
     elif transport == "tcp":
         client = salt.transport.tcp.TCPPubClient(opts, io_loop, host=host, port=port)
         try:
-            await client.connect(background=True)
+            # XXX: This is an implimentation detail of the tcp transport.
+            # XXX: This is an implimentation detail of the tcp transport.
+            # await client.connect(port)
+            io_loop.spawn_callback(client.connect)
         except TimeoutError:
             pass
         except Exception:
@@ -227,7 +230,9 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
         import tornado
 
         client = salt.transport.tcp.TCPPubClient(opts, io_loop, host=host, port=port)
-        await client.connect(port, background=True)
+        # XXX: This is an implimentation detail of the tcp transport.
+        # await client.connect(port)
+        io_loop.spawn_callback(client.connect)
         assert client._stream is None
         await asyncio.sleep(2)
 

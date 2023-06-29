@@ -247,9 +247,7 @@ class PublishClient:
         """
         raise NotImplementedError
 
-    async def connect(
-        self, publish_port, connect_callback=None, disconnect_callback=None
-    ):
+    async def connect(self, port=None, connect_callback=None, disconnect_callback=None):
         """
         Create a network connection to the the PublishServer or broker.
         """

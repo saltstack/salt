@@ -14,6 +14,7 @@ import queue
 import select
 import socket
 import threading
+import time
 import urllib
 
 import tornado
@@ -324,7 +325,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
         port=None,
         connect_callback=None,
         disconnect_callback=None,
-        background=False,
     ):
         if port is not None:
             self.port = port
@@ -332,10 +332,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
             self.connect_callback = None
         if disconnect_callback:
             self.disconnect_callback = None
-        if background:
-            self.io_loop.spawn_callback(self._connect)
-        else:
-            await self._connect()
+        await self._connect()
 
     def _decode_messages(self, messages):
         if not isinstance(messages, dict):
@@ -407,9 +404,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
                     self.disconnect_callback()
                 self.unpacker = salt.utils.msgpack.Unpacker()
                 continue
-            except Exception:
-                log.error("Other exception", exc_info=True)
-            log.error("on recv got msg %r", msg)
             callback(msg)
 
     def on_recv(self, callback):
@@ -694,7 +688,7 @@ class MessageClient:
         source_ip=None,
         source_port=None,
     ):
-        warn_until(
+        salt.utils.versions.warn_until(
             3008,
             "MessageClient has been deprecated and will be removed.",
         )
@@ -1844,7 +1838,7 @@ class TCPReqClient(salt.transport.base.RequestClient):
         if future is not None:
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
-    async def send(self, msg, timeout=None, callback=None, raw=False, reply=True):
+    async def send(self, load, timeout=60):  # , callback=None, raw=False, reply=True):
         await self.connect()
         if self._closing:
             raise ClosingError()
@@ -1854,13 +1848,12 @@ class TCPReqClient(salt.transport.base.RequestClient):
         header = {"mid": message_id}
         future = tornado.concurrent.Future()
 
-        if callback is not None:
+        # if callback is not None:
+        #    def handle_future(future):
+        #        response = future.result()
+        #        self.io_loop.add_callback(callback, response)
+        #    future.add_done_callback(handle_future)
 
-            def handle_future(future):
-                response = future.result()
-                self.io_loop.add_callback(callback, response)
-
-            future.add_done_callback(handle_future)
         # Add this future to the mapping
         self.send_future_map[message_id] = future
 
@@ -1868,9 +1861,9 @@ class TCPReqClient(salt.transport.base.RequestClient):
             timeout = 1
 
         if timeout is not None:
-            self.io_loop.call_later(timeout, self.timeout_message, message_id, msg)
+            self.io_loop.call_later(timeout, self.timeout_message, message_id, load)
 
-        item = salt.transport.frame.frame_msg(msg, header=header)
+        item = salt.transport.frame.frame_msg(load, header=header)
 
         async def _do_send():
             await self.connect()
