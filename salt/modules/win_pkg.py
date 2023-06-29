@@ -215,7 +215,7 @@ def upgrade_available(name, **kwargs):
     refresh = salt.utils.data.is_true(kwargs.get("refresh", True))
 
     # if latest_version returns blank, the latest version is already installed or
-    # their is no package definition. This is a salt standard which could be improved.
+    # there is no package definition. This is a salt standard which could be improved.
     return latest_version(name, saltenv=saltenv, refresh=refresh) != ""
 
 
@@ -1315,7 +1315,7 @@ def _get_source_sum(source_hash, file_path, saltenv, verify_ssl=True):
         # The source_hash is a file on a server
         try:
             cached_hash_file = __salt__["cp.cache_file"](
-                source_hash, saltenv=saltenv, verify_ssl=verify_ssl
+                source_hash, saltenv=saltenv, verify_ssl=verify_ssl, use_etag=True
             )
         except MinionError as exc:
             log.exception("Failed to cache %s", source_hash, exc_info=exc)
@@ -1640,6 +1640,13 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             ret[pkg_name] = {"no installer": version_num}
             continue
 
+        # Hash the installer source after verifying it was defined
+        installer_hash = __salt__["cp.hash_file"](installer, saltenv)
+        if isinstance(installer_hash, dict):
+            installer_hash = installer_hash["hsum"]
+        else:
+            installer_hash = None
+
         # Is the installer in a location that requires caching
         if __salt__["config.valid_fileproto"](installer):
 
@@ -1649,6 +1656,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             # single files
             if cache_dir and installer.startswith("salt:"):
                 path, _ = os.path.split(installer)
+                log.debug(f"PKG: Caching directory: {path}")
                 try:
                     __salt__["cp.cache_dir"](
                         path=path,
@@ -1664,51 +1672,45 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
             # Check to see if the cache_file is cached... if passed
             if cache_file and cache_file.startswith("salt:"):
+                cache_file_hash = __salt__["cp.hash_file"](cache_file, saltenv)
+                log.debug(f"PKG: Caching file: {cache_file}")
+                try:
+                    cached_file = __salt__["cp.cache_file"](
+                        cache_file,
+                        saltenv=saltenv,
+                        source_hash=cache_file_hash,
+                        verify_ssl=kwargs.get("verify_ssl", True),
+                    )
+                except MinionError as exc:
+                    msg = "Failed to cache {}".format(cache_file)
+                    log.exception(msg, exc_info=exc)
+                    return "{}\n{}".format(msg, exc)
 
-                # Check to see if the file is cached
-                cached_file = __salt__["cp.is_cached"](cache_file, saltenv)
+                # Check if the cache_file was cached successfully
                 if not cached_file:
-                    try:
-                        cached_file = __salt__["cp.cache_file"](
-                            cache_file,
-                            saltenv=saltenv,
-                            verify_ssl=kwargs.get("verify_ssl", True),
-                        )
-                    except MinionError as exc:
-                        msg = "Failed to cache {}".format(cache_file)
-                        log.exception(msg, exc_info=exc)
-                        return "{}\n{}".format(msg, exc)
+                    log.error("Unable to cache %s", cache_file)
+                    ret[pkg_name] = {"failed to cache cache_file": cache_file}
+                    continue
 
-                # Make sure the cached file is the same as the source
-                if __salt__["cp.hash_file"](cache_file, saltenv) != __salt__[
-                    "cp.hash_file"
-                ](cached_file):
-                    try:
-                        cached_file = __salt__["cp.cache_file"](
-                            cache_file,
-                            saltenv=saltenv,
-                            verify_ssl=kwargs.get("verify_ssl", True),
-                        )
-                    except MinionError as exc:
-                        msg = "Failed to cache {}".format(cache_file)
-                        log.exception(msg, exc_info=exc)
-                        return "{}\n{}".format(msg, exc)
+            # If version is "latest" we always cache because "cp.is_cached" only
+            # checks that the file exists, not that is has changed
+            cached_pkg = False
+            if version_num != "latest" and not installer.startswith("salt:"):
+                cached_pkg = __salt__["cp.is_cached"](installer, saltenv)
 
-                    # Check if the cache_file was cached successfully
-                    if not cached_file:
-                        log.error("Unable to cache %s", cache_file)
-                        ret[pkg_name] = {"failed to cache cache_file": cache_file}
-                        continue
-
-            # Check to see if the installer is cached
-            cached_pkg = __salt__["cp.is_cached"](installer, saltenv)
             if not cached_pkg:
-                # It's not cached. Cache it, mate.
+                # Since we're passing "installer_hash", it should only cache the
+                # file if the source_hash doesn't match, which only works on
+                # files hosted on "salt://". If the http/https url supports
+                # etag, it should also verify that information before caching
+                log.debug(f"PKG: Caching file: {installer}")
                 try:
                     cached_pkg = __salt__["cp.cache_file"](
                         installer,
                         saltenv=saltenv,
+                        source_hash=installer_hash,
                         verify_ssl=kwargs.get("verify_ssl", True),
+                        use_etag=True,
                     )
                 except MinionError as exc:
                     msg = "Failed to cache {}".format(installer)
@@ -1722,29 +1724,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     )
                     ret[pkg_name] = {"unable to cache": installer}
                     continue
-
-            # Compare the hash of the cached installer to the source only if the
-            # file is hosted on salt:
-            if installer.startswith("salt:"):
-                if __salt__["cp.hash_file"](installer, saltenv) != __salt__[
-                    "cp.hash_file"
-                ](cached_pkg):
-                    try:
-                        cached_pkg = __salt__["cp.cache_file"](
-                            installer,
-                            saltenv=saltenv,
-                            verify_ssl=kwargs.get("verify_ssl", True),
-                        )
-                    except MinionError as exc:
-                        msg = "Failed to cache {}".format(installer)
-                        log.exception(msg, exc_info=exc)
-                        return "{}\n{}".format(msg, exc)
-
-                    # Check if the installer was cached successfully
-                    if not cached_pkg:
-                        log.error("Unable to cache %s", installer)
-                        ret[pkg_name] = {"unable to cache": installer}
-                        continue
         else:
             # Run the installer directly (not hosted on salt:, https:, etc.)
             cached_pkg = installer
@@ -1786,7 +1765,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             log.debug("pkg.install: Source hash matches package hash.")
 
         # Get install flags
-
         install_flags = pkginfo[version_num].get("install_flags", "")
         if options and options.get("extra_install_flags"):
             install_flags = "{} {}".format(
@@ -2063,7 +2041,7 @@ def remove(name=None, pkgs=None, **kwargs):
                     removal_targets.append(ver_install)
         else:
             if version_num in pkginfo:
-                # we known how to remove this version
+                # we know how to remove this version
                 if version_num in old[pkgname]:
                     removal_targets.append(version_num)
                 else:
@@ -2107,8 +2085,15 @@ def remove(name=None, pkgs=None, **kwargs):
                 ret[pkgname] = {"no uninstaller defined": target}
                 continue
 
-            # Where is the uninstaller
-            if uninstaller.startswith(("salt:", "http:", "https:", "ftp:")):
+            # Hash the uninstaller source after verifying it was defined
+            uninstaller_hash = __salt__["cp.hash_file"](uninstaller, saltenv)
+            if isinstance(uninstaller_hash, dict):
+                uninstaller_hash = uninstaller_hash["hsum"]
+            else:
+                uninstaller_hash = None
+
+            # Is the uninstaller in a location that requires caching
+            if __salt__["config.valid_fileproto"](uninstaller):
 
                 # Check for the 'cache_dir' parameter in the .sls file
                 # If true, the entire directory will be cached instead of the
@@ -2117,24 +2102,38 @@ def remove(name=None, pkgs=None, **kwargs):
 
                 if cache_dir and uninstaller.startswith("salt:"):
                     path, _ = os.path.split(uninstaller)
+                    log.debug(f"PKG: Caching dir: {path}")
                     try:
                         __salt__["cp.cache_dir"](
-                            path, saltenv, False, None, "E@init.sls$"
+                            path=path,
+                            saltenv=saltenv,
+                            include_empty=False,
+                            include_pat=None,
+                            exclude_pat="E@init.sls$",
                         )
                     except MinionError as exc:
                         msg = "Failed to cache {}".format(path)
                         log.exception(msg, exc_info=exc)
                         return "{}\n{}".format(msg, exc)
 
-                # Check to see if the uninstaller is cached
+                # Check to see if the uninstaller is cached. We don't want to
+                # check for latest here like we do for "pkg.install" because we
+                # only want to uninstall the version that has been installed
                 cached_pkg = __salt__["cp.is_cached"](uninstaller, saltenv)
                 if not cached_pkg:
-                    # It's not cached. Cache it, mate.
+                    # Since we're passing "uninstaller_hash", it should only
+                    # cache the file if the source_hash doesn't match, which
+                    # only works on files hosted on "salt://". If the http/https
+                    # url supports etag, it should also verify that information
+                    # before caching
+                    log.debug(f"PKG: Caching file: {uninstaller}")
                     try:
                         cached_pkg = __salt__["cp.cache_file"](
                             uninstaller,
                             saltenv=saltenv,
+                            source_hash=uninstaller_hash,
                             verify_ssl=kwargs.get("verify_ssl", True),
+                            use_etag=True,
                         )
                     except MinionError as exc:
                         msg = "Failed to cache {}".format(uninstaller)
@@ -2147,32 +2146,8 @@ def remove(name=None, pkgs=None, **kwargs):
                         ret[pkgname] = {"unable to cache": uninstaller}
                         continue
 
-                # Compare the hash of the cached installer to the source only if
-                # the file is hosted on salt:
-                # TODO cp.cache_file does cache and hash checking? So why do it again?
-                if uninstaller.startswith("salt:"):
-                    if __salt__["cp.hash_file"](uninstaller, saltenv) != __salt__[
-                        "cp.hash_file"
-                    ](cached_pkg):
-                        try:
-                            cached_pkg = __salt__["cp.cache_file"](
-                                uninstaller,
-                                saltenv=saltenv,
-                                verify_ssl=kwargs.get("verify_ssl", True),
-                            )
-                        except MinionError as exc:
-                            msg = "Failed to cache {}".format(uninstaller)
-                            log.exception(msg, exc_info=exc)
-                            return "{}\n{}".format(msg, exc)
-
-                        # Check if the installer was cached successfully
-                        if not cached_pkg:
-                            log.error("Unable to cache %s", uninstaller)
-                            ret[pkgname] = {"unable to cache": uninstaller}
-                            continue
             else:
-                # Run the uninstaller directly
-                # (not hosted on salt:, https:, etc.)
+                # Run the uninstaller directly (not hosted on salt:, https:, etc.)
                 cached_pkg = os.path.expandvars(uninstaller)
 
             # Fix non-windows slashes
