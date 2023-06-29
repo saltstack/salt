@@ -609,7 +609,7 @@ def test_parallel_state_with_requires(state, state_tree):
         assert (end_time - start_time) < 30
 
         for item in range(1, 10):
-            _id = "cmd_|-blah-{}_|-sleep 2_|-run".format(item)
+            _id = f"cmd_|-blah-{item}_|-sleep 2_|-run"
             assert "__parallel__" in ret[_id]
 
 

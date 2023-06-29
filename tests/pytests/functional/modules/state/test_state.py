@@ -904,10 +904,8 @@ def test_parallel_state_with_long_tag(state, state_tree):
         )
 
     comments = sorted(x.comment for x in ret)
-    expected = sorted(
-        'Command "{}" run'.format(x) for x in (short_command, long_command)
-    )
-    assert comments == expected, "{} != {}".format(comments, expected)
+    expected = sorted(f'Command "{x}" run' for x in (short_command, long_command))
+    assert comments == expected, f"{comments} != {expected}"
 
 
 @pytest.mark.skip_on_darwin(reason="Test is broken on macosx")
