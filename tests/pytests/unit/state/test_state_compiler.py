@@ -38,7 +38,6 @@ def test_format_log_non_ascii_character():
     salt.state.format_log(ret)
 
 
-@pytest.mark.slow_test
 def test_render_error_on_invalid_requisite(minion_opts):
     """
     Test that the state compiler correctly deliver a rendering
