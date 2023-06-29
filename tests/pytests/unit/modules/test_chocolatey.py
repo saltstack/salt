@@ -146,19 +146,20 @@ def test__find_chocolatey_programdata(mock_false, mock_true, chocolatey_path_pd)
         "os.path.isfile", mock_true
     ):
         result = chocolatey._find_chocolatey()
-        expected = choco_path_pd
+        expected = chocolatey_path_pd
         # Does it return the correct path
         assert result == expected
         # Does it populate __context__
         assert chocolatey.__context__["chocolatey._path"] == expected
 
 
-def test__find_choco_programdata(mock_false, mock_true, choco_path_pd):
+def test__find_choco_programdata(mock_false, choco_path_pd):
     """
     Test _find_chocolatey when found in ProgramData and named choco.exe
     """
+    mock_is_file = MagicMock(side_effect=[False, True])
     with patch.dict(chocolatey.__salt__, {"cmd.which": mock_false}), patch(
-        "os.path.isfile", mock_true
+        "os.path.isfile", mock_is_file
     ):
         result = chocolatey._find_chocolatey()
         expected = choco_path_pd
@@ -173,7 +174,7 @@ def test__find_chocolatey_systemdrive(mock_false, choco_path_sd):
     Test _find_chocolatey when found on SystemDrive (older versions)
     """
     with patch.dict(chocolatey.__salt__, {"cmd.which": mock_false}), patch(
-        "os.path.isfile", MagicMock(side_effect=[False, True])
+        "os.path.isfile", MagicMock(side_effect=[False, False, True])
     ):
         result = chocolatey._find_chocolatey()
         expected = choco_path_sd
