@@ -33,9 +33,7 @@ def chocolatey_path_pd():
 
 @pytest.fixture(scope="module")
 def choco_path_pd():
-    return os.path.join(
-        os.environ.get("ProgramData"), "Chocolatey", "bin", "choco.exe"
-    )
+    return os.path.join(os.environ.get("ProgramData"), "Chocolatey", "bin", "choco.exe")
 
 
 @pytest.fixture(scope="module")
