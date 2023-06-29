@@ -87,13 +87,13 @@ def world():
     return "world"
 """
 
-    test_moduledir = salt_master.state_tree.base.paths[0] / f"_{module_type}"
+    test_moduledir = salt_master.state_tree.base.write_path / f"_{module_type}"
     test_moduledir.mkdir(parents=True, exist_ok=True)
     module_tempfile = salt_master.state_tree.base.temp_file(
         f"_{module_type}/{module_name}.py", module_contents
     )
 
-    with module_tempfile, test_moduledir:
+    with module_tempfile:
         salt_cmd = f"saltutil.sync_{module_sync_functions[module_type]}"
         ret = salt_run_cli.run(salt_cmd)
         assert ret.returncode == 0
