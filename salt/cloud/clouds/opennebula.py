@@ -1077,7 +1077,7 @@ def create(vm_):
             return node_data
 
     try:
-        data = __utils__["cloud.wait_for_ip"](
+        data = salt.utils.cloud.wait_for_ip(
             __query_node_data,
             update_args=(vm_["name"],),
             timeout=config.get_cloud_config_value(
