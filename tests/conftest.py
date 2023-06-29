@@ -605,7 +605,7 @@ def pytest_runtest_setup(item):
                     "Slow tests are disabled, pass '--run-slow' to enable them.",
                     _use_item_location=True,
                 )
-        if test_group_count == 0 and item.config.getoption("--no-fast-tests"):
+        if test_group_count == 0 and not item.config.getoption("--no-fast-tests"):
             raise pytest.skip.Exception(
                 "Fast tests have been disabled by '--no-fast-tests'.",
                 _use_item_location=True,
