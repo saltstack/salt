@@ -620,6 +620,12 @@ def absent(name, **kwargs):
         The name of the package repo, as it would be referred to when running
         the regular package manager commands.
 
+    .. note::
+        On apt-based systems this must be the complete source entry. For
+        example, if you include ``[arch=amd64]``, and a repo matching the
+        specified URI, dist, etc. exists _without_ an architecture, then no
+        changes will be made and the state will report a ``True`` result.
+
     **FEDORA/REDHAT-SPECIFIC OPTIONS**
 
     copr
@@ -701,6 +707,12 @@ def absent(name, **kwargs):
         ret["result"] = False
         ret["comment"] = f"Failed to configure repo '{name}': {exc}"
         return ret
+
+    if repo and "pkg.apt_source_entry" in __salt__:
+        if set(__salt__["pkg.apt_source_entry"](stripname)["architectures"]) != set(
+            repo["architectures"]
+        ):
+            repo = {}
 
     if not repo:
         ret["comment"] = f"Package repo {name} is absent"
