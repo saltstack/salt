@@ -596,12 +596,10 @@ def pytest_runtest_setup(item):
                 "flaky jail tests are disabled, pass '--flaky-jail' to enable them.",
                 _use_item_location=True,
             )
-    if (
-        not item.get_closest_marker("slow_test")
-        and not item.get_closest_marker("core_test")
-        and not item.get_closest_marker("flaky_jail")
+    if not item.get_closest_marker("slow_test") and not item.get_closest_marker(
+        "core_test"
     ):
-        if not item.config.getoption("--no-fast-tests"):
+        if item.config.getoption("--no-fast-tests"):
             raise pytest.skip.Exception(
                 "Fast tests are disabled, dont pass '--no-fast-tests' to enable them.",
                 _use_item_location=True,
