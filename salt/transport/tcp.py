@@ -16,6 +16,7 @@ import socket
 import threading
 import time
 import urllib
+import warnings
 
 import tornado
 import tornado.concurrent
@@ -259,14 +260,18 @@ class TCPPubClient(salt.transport.base.PublishClient):
         if self._closing:
             return
         self._closing = True
-        self._stream.close()
+        if self._stream is not None:
+            self._stream.close()
         self._stream = None
         self._closed = True
 
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn("%r not closed", self)
+            warnings.warn(
+                "unclosed publish client {self!r}", ResourceWarning, source=self
+            )
+
     # pylint: enable=W1701
 
     async def getstream(self, **kwargs):
@@ -754,6 +759,7 @@ class MessageClient:
     def __del__(self):
         if not self._closing:
             warnings.warn("%r not closed", self)
+
     # pylint: enable=W1701
 
     async def getstream(self, **kwargs):
@@ -913,10 +919,6 @@ class MessageClient:
             await asyncio.sleep(0.03)
         message_id = self._message_id()
         header = {"mid": message_id}
-        # item = salt.transport.frame.frame_msg(msg, header=header)
-        #        await self._stream.write(item)
-        #        if reply:
-        #            return await self.recv(timeout=None)
         future = tornado.concurrent.Future()
 
         if callback is not None:
@@ -989,7 +991,6 @@ class MessageClient:
                         return framed_msg["body"]
         finally:
             self._read_in_progress.release()
-        # await asyncio.sleep(.003)
 
 
 class Subscriber:
@@ -1023,6 +1024,7 @@ class Subscriber:
     def __del__(self):
         if not self._closing:
             warnings.warn("%r not closed", self)
+
     # pylint: enable=W1701
 
 
@@ -1277,6 +1279,7 @@ class TCPPuller:
     def __del__(self):
         if not self._closing:
             warnings.warn("%r not closed", self)
+
     # pylint: enable=W1701
 
     def __enter__(self):
@@ -1587,6 +1590,7 @@ class _TCPPubServerPublisher:
     def __del__(self):
         if not self._closing:
             warnings.warn("%r not closed", self)
+
     # pylint: enable=W1701
 
     def __enter__(self):

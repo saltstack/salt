@@ -630,6 +630,10 @@ class AsyncReqMessageClient:
                            http://api.zeromq.org/2-1:zmq-setsockopt [ZMQ_LINGER]
         :param IOLoop io_loop: A Tornado IOLoop event scheduler [tornado.ioloop.IOLoop]
         """
+        salt.utils.versions.warn_until(
+            3008,
+            "AsyncReqMessageClient has been deprecated and will be removed.",
+        )
         self.opts = opts
         self.addr = addr
         self.linger = linger
