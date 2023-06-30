@@ -254,6 +254,8 @@ class PublishClient(salt.transport.base.PublishClient):
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     async def connect(self, port=None, connect_callback=None, disconnect_callback=None):
         self.connect_called = True
+        if port is not None:
+            self.port = port
         if self.path:
             pub_uri = f"ipc://{self.path}"
             log.debug("Connecting the publisher client to: %s", pub_uri)
@@ -635,8 +637,7 @@ class AsyncReqMessageClient:
             self.io_loop = tornado.ioloop.IOLoop.current()
         else:
             self.io_loop = io_loop
-
-        self.context = zmq.asyncio.Context()
+        self.context = None
 
         self.send_queue = []
         # mapping of message -> future
@@ -644,7 +645,7 @@ class AsyncReqMessageClient:
 
         self._closing = False
         self.socket = None
-        self.sending = False
+        self.sending = asyncio.Lock()
 
     async def connect(self):
         if self.socket is None:
@@ -658,12 +659,15 @@ class AsyncReqMessageClient:
         self._closing = True
         if self.socket:
             self.socket.close()
+            self.socket = None
         if self.context.closed is False:
             # This hangs if closing the stream causes an import error
             self.context.term()
+            self.context = None
 
     def _init_socket(self):
         if self.socket is not None:
+            self.context = zmq.asyncio.Context()
             self.socket.close()  # pylint: disable=E0203
             del self.socket
 
@@ -698,28 +702,28 @@ class AsyncReqMessageClient:
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     async def _send_recv(self, message):
-        if not self.socket:
-            await self.connect()
         message = salt.payload.dumps(message)
         await self.socket.send(message)
         ret = await self.socket.recv()
-        data = salt.payload.loads(ret)
-        return data
+        return salt.payload.loads(ret)
 
     async def send(self, message, timeout=None, callback=None):
         """
         Return a future which will be completed when the message has a response
         """
-        while self.sending:
-            await asyncio.sleep(0.03)
-        self.sending = True
+        if not self.socket:
+            await self.connect()
+        await self.sending.acquire()
         try:
             response = await asyncio.wait_for(self._send_recv(message), timeout=timeout)
             if callback:
                 callback(response)
             return response
+        except TimeoutError:
+            self.close()
+            raise
         finally:
-            self.sending = False
+            self.sending.release()
 
 
 class ZeroMQSocketMonitor:
@@ -1043,24 +1047,87 @@ class RequestClient(salt.transport.base.RequestClient):
 
     ttype = "zeromq"
 
-    def __init__(self, opts, io_loop):  # pylint: disable=W0231
+    def __init__(self, opts, io_loop, linger=0):  # pylint: disable=W0231
         self.opts = opts
-        master_uri = self.get_master_uri(opts)
-        self.message_client = AsyncReqMessageClient(
-            self.opts,
-            master_uri,
-            io_loop=io_loop,
-        )
+        self.master_uri = self.get_master_uri(opts)
+        self.linger = linger
+        if io_loop is None:
+            self.io_loop = tornado.ioloop.IOLoop.current()
+        else:
+            self.io_loop = io_loop
+        self.context = None
+        self.send_queue = []
+        # mapping of message -> future
+        self.send_future_map = {}
+        self._closing = False
+        self.socket = None
+        self.sending = asyncio.Lock()
 
     async def connect(self):
-        await self.message_client.connect()
+        if self.socket is None:
+            # wire up sockets
+            self._init_socket()
 
-    async def send(self, load, timeout=60):
-        await self.connect()
-        return await self.message_client.send(load, timeout=timeout)
+    def _init_socket(self):
+        if self.socket is not None:
+            self.context = zmq.asyncio.Context()
+            self.socket.close()  # pylint: disable=E0203
+            del self.socket
+        self.context = zmq.asyncio.Context()
+        self.socket = self.context.socket(zmq.REQ)
+        self.socket.setsockopt(zmq.LINGER, -1)
 
+        # socket options
+        if hasattr(zmq, "RECONNECT_IVL_MAX"):
+            self.socket.setsockopt(zmq.RECONNECT_IVL_MAX, 5000)
+
+        _set_tcp_keepalive(self.socket, self.opts)
+        if self.master_uri.startswith("tcp://["):
+            # Hint PF type if bracket enclosed IPv6 address
+            if hasattr(zmq, "IPV6"):
+                self.socket.setsockopt(zmq.IPV6, 1)
+            elif hasattr(zmq, "IPV4ONLY"):
+                self.socket.setsockopt(zmq.IPV4ONLY, 0)
+        self.socket.linger = self.linger
+        self.socket.connect(self.master_uri)
+
+    # TODO: timeout all in-flight sessions, or error
     def close(self):
-        self.message_client.close()
+        if self._closing:
+            return
+        self._closing = True
+        if self.socket:
+            self.socket.close()
+            self.socket = None
+        if self.context.closed is False:
+            # This hangs if closing the stream causes an import error
+            self.context.term()
+            self.context = None
+
+    async def _send_recv(self, message):
+        message = salt.payload.dumps(message)
+        await self.socket.send(message)
+        ret = await self.socket.recv()
+        return salt.payload.loads(ret)
+
+    async def send(self, message, timeout=None, callback=None):
+        """
+        Return a future which will be completed when the message has a response
+        """
+        if not self.socket:
+            await self.connect()
+        await self.sending.acquire()
+        try:
+            response = await asyncio.wait_for(self._send_recv(message), timeout=timeout)
+            if callback:
+                callback(response)
+            return response
+        except TimeoutError:
+            self.close()
+        except Exception:
+            self.close()
+        finally:
+            self.sending.release()
 
     @staticmethod
     def get_master_uri(opts):

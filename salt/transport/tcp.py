@@ -390,13 +390,17 @@ class TCPPubClient(salt.transport.base.PublishClient):
             self._read_in_progress.release()
 
     async def on_recv_handler(self, callback):
+        log.error("ON RECV HANDLER")
         while not self._stream:
             await asyncio.sleep(0.003)
         while True:
             try:
+                log.error("ON RECV HANDLER - RECV")
                 msg = await self.recv()
+                log.error("ON RECV HANDLER - RECVED")
                 logit = True
             except tornado.iostream.StreamClosedError:
+                log.error("Stream Closed")
                 self._stream.close()
                 self._stream = None
                 await self._connect()
@@ -404,6 +408,8 @@ class TCPPubClient(salt.transport.base.PublishClient):
                     self.disconnect_callback()
                 self.unpacker = salt.utils.msgpack.Unpacker()
                 continue
+            except:
+                log.error("Stream Closed", exc_info=True)
             callback(msg)
 
     def on_recv(self, callback):
@@ -1432,6 +1438,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         process_manager.add_process(self.publish_daemon, name=self.__class__.__name__)
 
     async def publish_payload(self, payload, *args):
+        log.error("publisher - publish payload")
         return await self.pub_server.publish_payload(payload)
 
     def connect(self):
@@ -1448,6 +1455,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         Publish "load" to minions
         """
         if not self.pub_sock:
+            log.error("CONNECT")
             self.connect()
         # if self.opts.get("ipc_mode", "") == "tcp":
         #    pull_uri = int(self.opts.get("tcp_master_publish_pull", 4514))
@@ -1461,6 +1469,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         #    )
         #    self.pub_sock.connect()
         # await self.pub_sock.send(payload)
+        log.error("publish payload")
         self.pub_sock.send(payload)
 
     def close(self):
@@ -1694,6 +1703,7 @@ class TCPReqClient(salt.transport.base.RequestClient):
         self._connecting_future = tornado.concurrent.Future()
         self._stream_return_running = False
         self._stream = None
+        self.disconnect_callback = None
 
     async def getstream(self, **kwargs):
         if self.source_ip or self.source_port:
