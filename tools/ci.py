@@ -647,18 +647,29 @@ def transport_matrix(ctx: Context, distro_slug: str):
             "help": "The distribution slug to generate the matrix for",
         },
         "pkg_type": {
-            "help": "The distribution slug to generate the matrix for",
+            "help": "The type of package we are testing against",
+        },
+        "testing_releases": {
+            "help": "The salt releases to test upgrades against",
+            "nargs": "+",
+            "required": True,
         },
     },
 )
-def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
+def pkg_matrix(
+    ctx: Context,
+    distro_slug: str,
+    pkg_type: str,
+    testing_releases: list[tools.utils.Version] = None,
+):
     """
     Generate the test matrix.
     """
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output is None:
         ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
-
+    if TYPE_CHECKING:
+        assert testing_releases
     matrix = []
     sessions = [
         "install",
@@ -675,11 +686,12 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
         and pkg_type != "MSI"
     ):
         # These OS's never had arm64 packages built for them
-        # with the tiamate onedir packages.
+        # with the tiamat onedir packages.
         # we will need to ensure when we release 3006.0
         # we allow for 3006.0 jobs to run, because then
         # we will have arm64 onedir packages to upgrade from
         sessions.append("upgrade")
+    # TODO: Remove this block when we reach version 3009.0, we will no longer be testing upgrades from classic packages
     if (
         distro_slug
         not in [
@@ -695,11 +707,22 @@ def pkg_matrix(ctx: Context, distro_slug: str, pkg_type: str):
         sessions.append("upgrade-classic")
 
     for session in sessions:
-        matrix.append(
-            {
-                "test-chunk": session,
-            }
-        )
+        versions: list[str | None] = [None]
+        if session == "upgrade":
+            versions = [str(version) for version in testing_releases]
+        elif session == "upgrade-classic":
+            versions = [
+                str(version)
+                for version in testing_releases
+                if version < tools.utils.Version("3006.0")
+            ]
+        for version in versions:
+            matrix.append(
+                {
+                    "test-chunk": session,
+                    "version": version,
+                }
+            )
     ctx.info("Generated matrix:")
     ctx.print(matrix, soft_wrap=True)
 
@@ -898,3 +921,70 @@ def _filter_test_labels(labels: list[dict[str, Any]]) -> list[tuple[str, str]]:
         for label in labels
         if label["name"].startswith("test:")
     ]
+
+
+@ci.command(
+    name="get-testing-releases",
+    arguments={
+        "releases": {
+            "help": "The list of releases of salt",
+            "nargs": "*",
+        },
+        "salt_version": {
+            "help": "The version of salt being tested against",
+            "required": True,
+        },
+    },
+)
+def get_testing_releases(
+    ctx: Context,
+    releases: list[tools.utils.Version],
+    salt_version: str = None,
+):
+    """
+    Get a list of releases to use for the upgrade and downgrade tests.
+    """
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.exit(1, "The 'GITHUB_OUTPUT' variable is not set.")
+    else:
+        # We aren't testing upgrades from anything before 3006.0 except the latest 3005.x
+        threshold_major = 3006
+        parsed_salt_version = tools.utils.Version(salt_version)
+        # We want the latest 4 major versions, removing the oldest if this version is a new major
+        num_major_versions = 4
+        if parsed_salt_version.minor == 0:
+            num_major_versions = 3
+        majors = sorted(
+            list(
+                {
+                    version.major
+                    for version in releases
+                    if version.major >= threshold_major
+                }
+            )
+        )[-num_major_versions:]
+        testing_releases = []
+        # Append the latest minor for each major
+        for major in majors:
+            minors_of_major = [
+                version for version in releases if version.major == major
+            ]
+            testing_releases.append(minors_of_major[-1])
+
+        # TODO: Remove this block when we reach version 3009.0
+        # Append the latest minor version of 3005 if we don't have enough major versions to test against
+        if len(testing_releases) != num_major_versions:
+            url = "https://repo.saltproject.io/salt/onedir/repo.json"
+            ret = ctx.web.get(url)
+            repo_data = ret.json()
+            latest = list(repo_data["latest"].keys())[0]
+            version = repo_data["latest"][latest]["version"]
+            testing_releases = [version] + testing_releases
+
+        str_releases = [str(version) for version in testing_releases]
+
+        with open(github_output, "a", encoding="utf-8") as wfh:
+            wfh.write(f"testing-releases={json.dumps(str_releases)}\n")
+
+        ctx.exit(0)
