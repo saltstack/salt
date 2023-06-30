@@ -22,8 +22,8 @@ def service_name(grains, salt_cli, salt_minion):
 
     service_name = "cron"
     cmd_name = "crontab"
-    os_family = grains["os_family"]
-    is_systemd = grains["systemd"]
+    os_family = grains.get("os_family")
+    is_systemd = grains.get("systemd")
     if os_family == "RedHat":
         service_name = "crond"
     elif os_family == "Arch":
