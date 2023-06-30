@@ -9,9 +9,6 @@ import pytest
 import salt.utils.path
 import salt.utils.platform
 
-INIT_DELAY = 5
-
-
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.destructive_test,
@@ -19,6 +16,7 @@ pytestmark = [
 ]
 
 
+INIT_DELAY = 5
 STOPPED = False
 RUNNING = True
 
@@ -26,7 +24,7 @@ RUNNING = True
 @pytest.fixture
 def service_name(grains, salt_cli, salt_minion):
     # For local testing purposes
-    env_name = os.environ.get("SALT_SERVICE_STATE_TEST_SERVICE")
+    env_name = os.environ.get("SALT_INTEGRATION_TEST_SERVICE_NAME")
     if env_name is not None:
         return env_name
 
@@ -68,45 +66,6 @@ def setup_service(service_name, salt_cli, salt_minion):
     yield post_srv_disable
     if post_srv_disable:
         salt_cli.run("service.disable", service_name, minion_tgt=salt_minion.id)
-
-
-# def setUp(self):
-#     self.service_name = "cron"
-#     cmd_name = "crontab"
-#     os_family = self.run_function("grains.get", ["os_family"])
-#     os_release = self.run_function("grains.get", ["osrelease"])
-#     is_systemd = self.run_function("grains.get", ["systemd"])
-#     self.stopped = False
-#     self.running = True
-#     if os_family == "RedHat":
-#         self.service_name = "crond"
-#     elif os_family == "Arch":
-#         self.service_name = "sshd"
-#         cmd_name = "systemctl"
-#     elif os_family == "MacOS":
-#         self.service_name = "com.apple.AirPlayXPCHelper"
-#     elif os_family == "Windows":
-#         self.service_name = "Spooler"
-
-#     self.pre_srv_enabled = (
-#         True
-#         if self.service_name in self.run_function("service.get_enabled")
-#         else False
-#     )
-#     self.post_srv_disable = False
-#     if not self.pre_srv_enabled:
-#         self.run_function("service.enable", name=self.service_name)
-#         self.post_srv_disable = True
-
-#     if os_family != "Windows" and salt.utils.path.which(cmd_name) is None:
-#         self.skipTest("{} is not installed".format(cmd_name))
-
-#     if is_systemd and self.run_function("service.offline"):
-#         self.skipTest("systemd is OFFLINE")
-
-# def tearDown(self):
-#     if self.post_srv_disable:
-#        self.run_function("service.disable", name=self.service_name)
 
 
 def check_service_status(exp_return, salt_cli, salt_minion, service_name):
