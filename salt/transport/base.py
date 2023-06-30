@@ -128,6 +128,7 @@ def publish_client(opts, io_loop, host=None, port=None, path=None):
         ttype = opts["transport"]
     elif "transport" in opts.get("pillar", {}).get("master", {}):
         ttype = opts["pillar"]["master"]["transport"]
+
     # switch on available ttypes
     if ttype == "zeromq":
         import salt.transport.zeromq
@@ -147,6 +148,7 @@ def publish_client(opts, io_loop, host=None, port=None, path=None):
         return salt.transport.ws.PublishClient(
             opts, io_loop, host=host, port=port, path=path
         )
+
     raise Exception("Transport type not found: {}".format(ttype))
 
 
