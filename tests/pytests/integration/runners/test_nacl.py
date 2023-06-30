@@ -8,21 +8,13 @@ import salt.config
 import salt.utils.stringutils
 from tests.support.mock import patch
 
-try:
-    import salt.runners.nacl as nacl
-
-    HAS_PYNACL = True
-except (ImportError, OSError, AttributeError):
-    HAS_PYNACL = False
+pytest.importorskip("libnacl")
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
 ]
 
 
-@pytest.mark.skipif(
-    not HAS_PYNACL, reason="skipping test_nacl, reason=PyNaCl is unavailable"
-)
 @pytest.fixture(scope="module")
 def minion_opts():
     return salt.config.minion_config(None)
