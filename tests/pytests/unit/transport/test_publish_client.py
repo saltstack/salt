@@ -177,7 +177,7 @@ async def test_publish_client_connect_server_down(transport, io_loop):
             io_loop.spawn_callback(client.connect)
         except TimeoutError:
             pass
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.error("Got exception", exc_info=True)
         assert client._stream is None
     client.close()
@@ -226,8 +226,6 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
     elif transport == "tcp":
         import asyncio
         import socket
-
-        import tornado
 
         client = salt.transport.tcp.TCPPubClient(opts, io_loop, host=host, port=port)
         # XXX: This is an implimentation detail of the tcp transport.
