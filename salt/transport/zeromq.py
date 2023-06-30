@@ -1110,7 +1110,7 @@ class RequestClient(salt.transport.base.RequestClient):
         ret = await self.socket.recv()
         return salt.payload.loads(ret)
 
-    async def send(self, message, timeout=None, callback=None):
+    async def send(self, message, timeout=None):
         """
         Return a future which will be completed when the message has a response
         """
@@ -1118,10 +1118,7 @@ class RequestClient(salt.transport.base.RequestClient):
             await self.connect()
         await self.sending.acquire()
         try:
-            response = await asyncio.wait_for(self._send_recv(message), timeout=timeout)
-            if callback:
-                callback(response)
-            return response
+            return await asyncio.wait_for(self._send_recv(message), timeout=timeout)
         except TimeoutError:
             self.close()
         except Exception:
