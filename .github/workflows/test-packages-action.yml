@@ -27,6 +27,10 @@ on:
         required: true
         type: string
         description: Seed used to invalidate caches
+      testing-releases:
+        required: true
+        type: string
+        description: A JSON list of releases to test upgrades against
       package-name:
         required: false
         type: string
@@ -77,7 +81,7 @@ jobs:
       - name: Generate Package Test Matrix
         id: generate-pkg-matrix
         run: |
-          tools ci pkg-matrix ${{ inputs.distro-slug }} ${{ inputs.pkg-type }}
+          tools ci pkg-matrix ${{ inputs.distro-slug }} ${{ inputs.pkg-type }} --testing-releases ${{ join(fromJSON(inputs.testing-releases), ' ') }}
 
   dependencies:
     name: Setup Test Dependencies
@@ -260,12 +264,14 @@ jobs:
       - name: Show System Info & Test Plan
         run: |
           tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
-            --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }}
+            --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }} \
+            ${{ contains(matrix.test-chunk, 'upgrade') && format('--prev-version {0}', matrix.version) || ''}}
 
       - name: Run Package Tests
         run: |
-          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install\
-            --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }}
+          tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
+          --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} -- ${{ matrix.test-chunk }} \
+          ${{ contains(matrix.test-chunk, 'upgrade') && format('--prev-version {0}', matrix.version) || ''}}
 
       - name: Download Test Run Artifacts
         id: download-artifacts-from-vm

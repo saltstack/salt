@@ -171,8 +171,8 @@ def pytest_addoption(parser):
         "--no-fast",
         "--no-fast-tests",
         dest="fast",
-        action="store_false",
-        default=True,
+        action="store_true",
+        default=False,
         help="Don't run salt-fast tests. Default: %(default)s",
     )
     test_selection_group.addoption(
