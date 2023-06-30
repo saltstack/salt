@@ -9,17 +9,7 @@ import salt.modules.config as config
 import salt.utils.files
 from tests.support.mock import patch
 
-try:
-    import salt.utils.nacl as nacl
-
-    HAS_PYNACL = nacl.check_requirements
-except (ImportError, OSError, AttributeError):
-    HAS_PYNACL = False
-
-
-@pytest.mark.skipif(
-    not HAS_PYNACL, reason="skipping test_nacl, reason=PyNaCl is unavailable"
-)
+pytest.importorskip("libnacl")
 @pytest.fixture
 def configure_loader_modules():
     return {
