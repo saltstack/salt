@@ -2167,6 +2167,7 @@ class ClearFuncs(TransportMethods):
         This method sends out publications to the minions, it can only be used
         by the LocalClient.
         """
+        log.error("CLEAR LOAD %r", clear_load)
         extra = clear_load.get("kwargs", {})
 
         publisher_acl = salt.acl.PublisherACL(self.opts["publisher_acl_blacklist"])

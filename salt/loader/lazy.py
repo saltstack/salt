@@ -739,9 +739,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     # loading using exec_module has been causing odd things
                     # with the magic dunders we pack into the loaded
                     # modules, most notably with salt-ssh's __opts__.
-                    # mod = spec.loader.load_module()
-                    mod = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(mod)
+                    mod = spec.loader.load_module()
+                    # mod = importlib.util.module_from_spec(spec)
+                    # spec.loader.exec_module(mod)
                     # pylint: enable=no-member
                     sys.modules[mod_namespace] = mod
                     # reload all submodules if necessary
@@ -760,9 +760,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     # loading using exec_module has been causing odd things
                     # with the magic dunders we pack into the loaded
                     # modules, most notably with salt-ssh's __opts__.
-                    # mod = self.run(spec.loader.load_module)
-                    mod = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(mod)
+                    mod = self.run(spec.loader.load_module)
+                    # mod = importlib.util.module_from_spec(spec)
+                    # spec.loader.exec_module(mod)
                     # pylint: enable=no-member
                     sys.modules[mod_namespace] = mod
         except OSError:
