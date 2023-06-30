@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 import salt.config
@@ -5,15 +7,28 @@ import salt.daemons.masterapi as masterapi
 import salt.utils.platform
 from tests.support.mock import MagicMock, patch
 
+log = logging.getLogger(__name__)
+
 pytestmark = [
     pytest.mark.slow_test,
 ]
+
+test_check_key = {
+    "test": "mGXdurU1c8lXt5cmpbGq4rWvrOvDXxkwI9gbkP5CBBjpyGWuB8vkgz9r+sjjG0wVDL9/uFuREtk=",
+    "root": "2t5HHv/ek2wIFh8tTX2c3hdt+6V+93xKlcXb7IlGLIszOeCVv2NuH38LyCw9UwQTfUFTeseXhSs=",
+}
 
 
 @pytest.fixture
 def local_funcs():
     opts = salt.config.master_config(None)
     return masterapi.LocalFuncs(opts, "test-key")
+
+
+@pytest.fixture
+def check_local_funcs():
+    opts = salt.config.master_config(None)
+    return masterapi.LocalFuncs(opts, test_check_key)
 
 
 # runner tests
@@ -510,3 +525,52 @@ def test_publish_user_authorization_error(local_funcs):
         "salt.utils.minions.CkMinions.auth_check", MagicMock(return_value=False)
     ):
         assert mock_ret == local_funcs.publish(load)
+
+
+def test_dual_key_auth(check_local_funcs):
+    """
+    Test for check for presented dual keys (salt, root) are authenticated
+    """
+    load = {
+        "user": "test",
+        "fun": "test.arg",
+        "tgt": "test_minion",
+        "kwargs": {"user": "test"},
+        "arg": "foo",
+        "key": "mGXdurU1c8lXt5cmpbGq4rWvrOvDXxkwI9gbkP5CBBjpyGWuB8vkgz9r+sjjG0wVDL9/uFuREtk=",
+    }
+    with patch(
+        "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
+    ), patch(
+        "salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=False)
+    ), patch(
+        "salt.utils.master.get_values_of_matching_keys",
+        MagicMock(return_value=["test"]),
+    ):
+        results = check_local_funcs.publish(load)
+        assert results == {"enc": "clear", "load": {"jid": None, "minions": []}}
+
+
+def test_dual_key_auth_sudo(check_local_funcs):
+    """
+    Test for check for presented dual keys (salt, root) are authenticated
+    with a sudo user
+    """
+    load = {
+        "user": "sudo_test",
+        "fun": "test.arg",
+        "tgt": "test_minion",
+        "kwargs": {"user": "sudo_test"},
+        "arg": "foo",
+        "key": "mGXdurU1c8lXt5cmpbGq4rWvrOvDXxkwI9gbkP5CBBjpyGWuB8vkgz9r+sjjG0wVDL9/uFuREtk=",
+    }
+    with patch(
+        "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
+    ), patch(
+        "salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=False)
+    ), patch(
+        "salt.utils.master.get_values_of_matching_keys",
+        MagicMock(return_value=["test"]),
+    ):
+        results = check_local_funcs.publish(load)
+        assert results == {"enc": "clear", "load": {"jid": None, "minions": []}}
