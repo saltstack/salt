@@ -330,7 +330,7 @@ def test_clear_req_channel_master_uri_override(temp_salt_minion, temp_salt_maste
         master_ip="localhost", master_port=opts["master_port"]
     )
     with salt.channel.client.ReqChannel.factory(opts, master_uri=master_uri) as channel:
-        assert "127.0.0.1" in channel.transport.message_client.addr
+        assert "127.0.0.1" in channel.transport.master_uri
 
 
 def run_loop_in_thread(loop, evt):

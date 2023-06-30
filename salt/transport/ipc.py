@@ -241,12 +241,8 @@ class IPCServer:
 
     # pylint: disable=W1701
     def __del__(self):
-        try:
-            self.close()
-        except TypeError:
-            # This is raised when Python's GC has collected objects which
-            # would be needed when calling self.close()
-            pass
+        if not self._closing:
+            log.warning("%r never closed")
 
     # pylint: enable=W1701
 
@@ -388,12 +384,8 @@ class IPCClient:
 
     # pylint: disable=W1701
     def __del__(self):
-        try:
-            self.close()
-        except TypeError:
-            # This is raised when Python's GC has collected objects which
-            # would be needed when calling self.close()
-            pass
+        if not self._closing:
+            log.warning("%r never closed", self)
 
     # pylint: enable=W1701
 

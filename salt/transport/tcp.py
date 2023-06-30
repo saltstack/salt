@@ -229,7 +229,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
     def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
         self.opts = opts
         self.io_loop = io_loop
-        self.message_client = None
         self.unpacker = salt.utils.msgpack.Unpacker()
         self.connected = False
         self._closing = False
@@ -260,9 +259,9 @@ class TCPPubClient(salt.transport.base.PublishClient):
         if self._closing:
             return
         self._closing = True
-        if self.message_client is not None:
-            self.message_client.close()
-            self.message_client = None
+        self._stream.close()
+        self._stream = None
+        self._closed = True
 
     # pylint: disable=W1701
     def __del__(self):
@@ -345,7 +344,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
         return body
 
     async def send(self, msg):
-        await self.message_client.send(msg, reply=False)
+        await self._stream.send(msg)
 
     async def recv(self, timeout=None):
         try:

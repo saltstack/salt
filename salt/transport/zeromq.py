@@ -1099,7 +1099,7 @@ class RequestClient(salt.transport.base.RequestClient):
         if self.socket:
             self.socket.close()
             self.socket = None
-        if self.context.closed is False:
+        if self.context and self.context.closed is False:
             # This hangs if closing the stream causes an import error
             self.context.term()
             self.context = None
