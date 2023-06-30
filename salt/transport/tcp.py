@@ -1878,4 +1878,4 @@ class TCPReqClient(salt.transport.base.RequestClient):
         return recv
 
     def close(self):
-        self.message_client.close()
+        self._stream.close()
