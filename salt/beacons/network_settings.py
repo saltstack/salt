@@ -221,6 +221,8 @@ def beacon(config):
     log.debug("interfaces %s", interfaces)
     for interface in interfaces:
         _send_event = False
+        if interface not in LAST_STATS:
+            LAST_STATS[interface] = set()
         _diff_stats = _stats[interface] - LAST_STATS[interface]
         _ret_diff = {}
         interface_config = _config["interfaces"][interface]
