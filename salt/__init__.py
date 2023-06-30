@@ -38,10 +38,6 @@ class TornadoImporter:
         sys.modules[spec.name] = mod
         return mod
 
-    def exec_module(self, module):
-        log.error("exec_module %r", module)
-        return None
-
 
 class NaclImporter:
     """
@@ -80,10 +76,6 @@ class NaclImporter:
         NaclImporter.loading = False
         sys.modules[spec.name] = mod
         return mod
-
-    def exec_module(self, module):
-        log.error("exec_module %r", module)
-        return None
 
 
 # Try our importer first
