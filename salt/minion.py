@@ -1062,7 +1062,7 @@ class MinionManager(MinionBase):
             pub_path=epub_sock_path,
             pull_path=epull_sock_path,
         )
-        self.io_loop.add_callback(
+        self.io_loop.spawn_callback(
             ipc_publisher.publisher, ipc_publisher.publish_payload, self.io_loop
         )
         self.event = salt.utils.event.get_event(
