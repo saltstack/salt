@@ -21,6 +21,11 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       driver: proxmox
       verify_ssl: True
 
+.. warning::
+    This cloud provider will be removed from Salt in version 3009.0 in favor of
+    the `saltext.proxmox Salt Extension
+    <https://github.com/salt-extensions/saltext-proxmox>`_
+
 :maintainer: Frank Klaassen <frank@cloudright.nl>
 :depends: requests >= 2.2.1
 :depends: IPy >= 0.81
@@ -61,6 +66,11 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "proxmox"
 
+__deprecated__ = (
+    3009,
+    "proxmox",
+    "https://github.com/salt-extensions/saltext-proxmox"
+)
 
 def __virtual__():
     """
