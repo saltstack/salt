@@ -1088,6 +1088,8 @@ class AsyncEventPublisher:
             "salt.utils.event.AsyncEventPublisher is deprecated. "
             "Please use salt.transport.publish_server instead.",
         )
+        import salt.transport.ipc
+
         self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         default_minion_sock_dir = self.opts["sock_dir"]
         self.opts.update(opts)
