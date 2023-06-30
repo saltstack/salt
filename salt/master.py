@@ -727,6 +727,7 @@ class Master(SMaster):
                 self.opts,
                 pub_path=os.path.join(self.opts["sock_dir"], "master_event_pub.ipc"),
                 pull_path=os.path.join(self.opts["sock_dir"], "master_event_pull.ipc"),
+                transport="tcp",
             )
             self.process_manager.add_process(
                 ipc_publisher.publish_daemon,
@@ -1043,7 +1044,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             ret = await self._handle_clear(load)
         else:
             ret = self._handle_aes(load)
-        # ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](load)
         return ret
 
     def _post_stats(self, start, cmd):
@@ -2167,7 +2167,6 @@ class ClearFuncs(TransportMethods):
         This method sends out publications to the minions, it can only be used
         by the LocalClient.
         """
-        log.error("CLEAR LOAD %r", clear_load)
         extra = clear_load.get("kwargs", {})
 
         publisher_acl = salt.acl.PublisherACL(self.opts["publisher_acl_blacklist"])

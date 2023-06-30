@@ -25,10 +25,6 @@ def request_server(opts, **kwargs):
         import salt.transport.tcp
 
         return salt.transport.tcp.TCPReqServer(opts)
-    elif ttype == "ws":
-        import salt.transport.ws
-
-        return salt.transport.ws.RequestServer(opts)
     elif ttype == "local":
         import salt.transport.local
 
@@ -51,10 +47,6 @@ def request_client(opts, io_loop):
         import salt.transport.tcp
 
         return salt.transport.tcp.TCPReqClient(opts, io_loop=io_loop)
-    elif ttype == "ws":
-        import salt.transport.ws
-
-        return salt.transport.ws.RequestClient(opts, io_loop=io_loop)
     else:
         raise Exception("Channels are only defined for tcp, zeromq")
 
@@ -63,7 +55,9 @@ def publish_server(opts, **kwargs):
     # Default to ZeroMQ for now
     ttype = "zeromq"
     # determine the ttype
-    if "transport" in opts:
+    if "transport" in kwargs:
+        ttype = kwargs.pop("transport")
+    elif "transport" in opts:
         ttype = opts["transport"]
     elif "transport" in opts.get("pillar", {}).get("master", {}):
         ttype = opts["pillar"]["master"]["transport"]
@@ -89,10 +83,6 @@ def publish_server(opts, **kwargs):
         import salt.transport.tcp
 
         return salt.transport.tcp.TCPPublishServer(opts, **kwargs)
-    elif ttype == "ws":
-        import salt.transport.ws
-
-        return salt.transport.ws.PublishServer(opts, **kwargs)
     elif ttype == "local":  # TODO:
         import salt.transport.local
 
@@ -120,11 +110,13 @@ def ipc_publish_client(opts, io_loop):
     raise Exception("Transport type not found: {}".format(ttype))
 
 
-def publish_client(opts, io_loop, host=None, port=None, path=None):
+def publish_client(opts, io_loop, host=None, port=None, path=None, transport=None):
     # Default to ZeroMQ for now
     ttype = "zeromq"
     # determine the ttype
-    if "transport" in opts:
+    if transport is not None:
+        ttype = transport
+    elif "transport" in opts:
         ttype = opts["transport"]
     elif "transport" in opts.get("pillar", {}).get("master", {}):
         ttype = opts["pillar"]["master"]["transport"]
@@ -140,12 +132,6 @@ def publish_client(opts, io_loop, host=None, port=None, path=None):
         import salt.transport.tcp
 
         return salt.transport.tcp.TCPPubClient(
-            opts, io_loop, host=host, port=port, path=path
-        )
-    elif ttype == "ws":
-        import salt.transport.ws
-
-        return salt.transport.ws.PublishClient(
             opts, io_loop, host=host, port=port, path=path
         )
 

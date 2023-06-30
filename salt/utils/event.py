@@ -353,7 +353,7 @@ class SaltEvent:
         if self.cpub:
             return True
 
-        kwargs = {}
+        kwargs = {"transport": "tcp"}
         if isinstance(self.puburi, int):
             kwargs.update(host="127.0.0.1", port=self.puburi)
         else:

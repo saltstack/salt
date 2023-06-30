@@ -1061,6 +1061,7 @@ class MinionManager(MinionBase):
             self.opts,
             pub_path=epub_sock_path,
             pull_path=epull_sock_path,
+            transport="tcp",
         )
         self.io_loop.spawn_callback(
             ipc_publisher.publisher, ipc_publisher.publish_payload, self.io_loop
