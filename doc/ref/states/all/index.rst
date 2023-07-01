@@ -294,6 +294,7 @@ state modules
     sqlite3
     ssh_auth
     ssh_known_hosts
+    ssh_pki
     stateconf
     status
     statuspage
