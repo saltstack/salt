@@ -7,6 +7,7 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 """
 
 import asyncio
+import asyncio.exceptions
 import errno
 import logging
 import multiprocessing
@@ -353,6 +354,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
 
     async def recv(self, timeout=None):
         if not self._stream:
+            await self.connect()
             await asyncio.sleep(0.001)
             return
         if timeout == 0:
@@ -370,6 +372,11 @@ class TCPPubClient(salt.transport.base.PublishClient):
                     await self._read_in_progress.acquire()
                     try:
                         byts = await self._stream.read_bytes(4096, partial=True)
+                    except tornado.iostream.StreamClosedError:
+                        self.close()
+                        return
+                    except Exception:
+                        raise
                     finally:
                         self._read_in_progress.release()
                     self.unpacker.feed(byts)
@@ -377,7 +384,12 @@ class TCPPubClient(salt.transport.base.PublishClient):
                         framed_msg = salt.transport.frame.decode_embedded_strs(msg)
                         return framed_msg["body"]
         elif timeout:
-            return await asyncio.wait_for(self.recv(), timeout=timeout)
+            try:
+                return await asyncio.wait_for(self.recv(), timeout=timeout)
+            except asyncio.exceptions.TimeoutError:
+                self.close()
+                await self.connect()
+                return
         else:
             for msg in self.unpacker:
                 framed_msg = salt.transport.frame.decode_embedded_strs(msg)
@@ -386,6 +398,12 @@ class TCPPubClient(salt.transport.base.PublishClient):
                 await self._read_in_progress.acquire()
                 try:
                     byts = await self._stream.read_bytes(4096, partial=True)
+                except tornado.iostream.StreamClosedError:
+                    self.close()
+                    await self.connect()
+                    continue
+                except Exception:
+                    raise
                 finally:
                     self._read_in_progress.release()
                 self.unpacker.feed(byts)
@@ -1403,7 +1421,6 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         process_manager.add_process(self.publish_daemon, name=self.__class__.__name__)
 
     async def publish_payload(self, payload, *args):
-        log.error("publisher - publish payload")
         return await self.pub_server.publish_payload(payload)
 
     def connect(self):
