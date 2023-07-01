@@ -21,12 +21,11 @@ def eventpublisher_process(sock_dir):
         "ipv6": None,
         "zmq_filtering": None,
     }
-    ipc_publisher = salt.transport.publish_server(opts)
-    ipc_publisher.pub_uri = "ipc://{}".format(
-        os.path.join(opts["sock_dir"], "master_event_pub.ipc")
-    )
-    ipc_publisher.pull_uri = "ipc://{}".format(
-        os.path.join(opts["sock_dir"], "master_event_pull.ipc")
+    ipc_publisher = salt.transport.publish_server(
+        opts,
+        pub_path=os.path.join(opts["sock_dir"], "master_event_pub.ipc"),
+        pull_path=os.path.join(opts["sock_dir"], "master_event_pull.ipc"),
+        transport="tcp",
     )
     proc = Process(
         target=ipc_publisher.publish_daemon,

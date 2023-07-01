@@ -431,6 +431,7 @@ class SaltEvent:
                     kwargs={
                         "pub_path": self.puburi,
                         "pull_path": self.pulluri,
+                        "transport": "tcp",
                     },
                 )
             try:
@@ -448,7 +449,10 @@ class SaltEvent:
         else:
             if self.pusher is None:
                 self.pusher = salt.transport.publish_server(
-                    self.opts, pub_path=self.puburi, pull_path=self.pulluri
+                    self.opts,
+                    pub_path=self.puburi,
+                    pull_path=self.pulluri,
+                    transport="tcp",
                 )
             # For the asynchronous case, the connect will be deferred to when
             # fire_event() is invoked.
