@@ -253,7 +253,14 @@ class SaltEvent:
 
         if salt.utils.platform.is_windows() and "ipc_mode" not in opts:
             self.opts["ipc_mode"] = "tcp"
-        self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
+        (
+            self.pub_host,
+            self.pub_port,
+            self.pub_path,
+            self.pull_host,
+            self.pull_port,
+            self.pull_path,
+        ) = self.__load_uri(sock_dir, node)
         self.pending_tags = []
         self.pending_events = []
         self.__load_cache_regex()
@@ -281,17 +288,53 @@ class SaltEvent:
         Return the string URI for the location of the pull and pub sockets to
         use for firing and listening to events
         """
+        pub_host = None
+        pub_port = None
+        pub_path = None
+        pull_host = None
+        pull_port = None
+        pull_path = None
         if node == "master":
             if self.opts["ipc_mode"] == "tcp":
-                puburi = int(self.opts["tcp_master_pub_port"])
-                pulluri = int(self.opts["tcp_master_pull_port"])
+                pub_host = "127.0.0.1"
+                pub_port = int(self.opts["tcp_master_pub_port"])
+                pull_host = "127.0.0.1"
+                pull_port = int(self.opts["tcp_master_pull_port"])
+                log.debug(
+                    "%s PUB socket URI: %s:%s",
+                    self.__class__.__name__,
+                    pub_host,
+                    pub_port,
+                )
+                log.debug(
+                    "%s PULL socket URI: %s:%s",
+                    self.__class__.__name__,
+                    pull_host,
+                    pull_port,
+                )
             else:
-                puburi = os.path.join(sock_dir, "master_event_pub.ipc")
-                pulluri = os.path.join(sock_dir, "master_event_pull.ipc")
+                pub_path = os.path.join(sock_dir, "master_event_pub.ipc")
+                pull_path = os.path.join(sock_dir, "master_event_pull.ipc")
+                log.debug("%s PUB socket URI: %s", self.__class__.__name__, pub_path)
+                log.debug("%s PULL socket URI: %s", self.__class__.__name__, pull_path)
         else:
             if self.opts["ipc_mode"] == "tcp":
-                puburi = int(self.opts["tcp_pub_port"])
-                pulluri = int(self.opts["tcp_pull_port"])
+                pub_host = "127.0.0.1"
+                pub_port = int(self.opts["tcp_pub_port"])
+                pull_host = "127.0.0.1"
+                pull_port = int(self.opts["tcp_pull_port"])
+                log.debug(
+                    "%s PUB socket URI: %s:%s",
+                    self.__class__.__name__,
+                    pub_host,
+                    pub_port,
+                )
+                log.debug(
+                    "%s PULL socket URI: %s:%s",
+                    self.__class__.__name__,
+                    pull_host,
+                    pull_port,
+                )
             else:
                 hash_type = getattr(hashlib, self.opts["hash_type"])
                 # Only use the first 10 chars to keep longer hashes from exceeding the
@@ -300,15 +343,15 @@ class SaltEvent:
                 id_hash = hash_type(
                     salt.utils.stringutils.to_bytes(minion_id)
                 ).hexdigest()[:10]
-                puburi = os.path.join(
+                pub_path = os.path.join(
                     sock_dir, "minion_event_{}_pub.ipc".format(id_hash)
                 )
-                pulluri = os.path.join(
+                pull_path = os.path.join(
                     sock_dir, "minion_event_{}_pull.ipc".format(id_hash)
                 )
-        log.debug("%s PUB socket URI: %s", self.__class__.__name__, puburi)
-        log.debug("%s PULL socket URI: %s", self.__class__.__name__, pulluri)
-        return puburi, pulluri
+                log.debug("%s PUB socket URI: %s", self.__class__.__name__, pub_path)
+                log.debug("%s PULL socket URI: %s", self.__class__.__name__, pull_path)
+        return pub_host, pub_port, pub_path, pull_host, pull_port, pull_path
 
     def subscribe(self, tag=None, match_type=None):
         """
@@ -354,10 +397,7 @@ class SaltEvent:
             return True
 
         kwargs = {"transport": "tcp"}
-        if isinstance(self.puburi, int):
-            kwargs.update(host="127.0.0.1", port=self.puburi)
-        else:
-            kwargs.update(path=self.puburi)
+        kwargs.update(host=self.pub_host, port=self.pub_port, path=self.pub_path)
         if self._run_io_loop_sync:
             if self.subscriber is None:
                 self.subscriber = salt.utils.asynchronous.SyncWrapper(
@@ -368,7 +408,7 @@ class SaltEvent:
                 )
             try:
                 # self.subscriber.connect(timeout=timeout)
-                log.debug("Event connect subscriber %r", self.puburi)
+                log.debug("Event connect subscriber %r", self.pub_path)
                 self.subscriber.connect()
                 self.cpub = True
             except tornado.iostream.StreamClosedError:
@@ -389,7 +429,7 @@ class SaltEvent:
                     self.opts["master_ip"] = ""
                 kwargs["io_loop"] = self.io_loop
                 self.subscriber = salt.transport.publish_client(self.opts, **kwargs)
-                log.debug("Event connect subscriber %r", self.puburi)
+                log.debug("Event connect subscriber %r", self.pub_path)
                 self.io_loop.spawn_callback(self.subscriber.connect)
                 # self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
                 #    self.puburi, io_loop=self.io_loop
@@ -429,8 +469,12 @@ class SaltEvent:
                     salt.transport.publish_server,
                     args=(self.opts,),
                     kwargs={
-                        "pub_path": self.puburi,
-                        "pull_path": self.pulluri,
+                        "pub_host": self.pub_host,
+                        "pub_port": self.pub_port,
+                        "pub_path": self.pub_path,
+                        "pull_host": self.pull_host,
+                        "pull_port": self.pull_port,
+                        "pull_path": self.pull_path,
                         "transport": "tcp",
                     },
                 )
@@ -450,8 +494,12 @@ class SaltEvent:
             if self.pusher is None:
                 self.pusher = salt.transport.publish_server(
                     self.opts,
-                    pub_path=self.puburi,
-                    pull_path=self.pulluri,
+                    pub_host=self.pub_host,
+                    pub_port=self.pub_port,
+                    pub_path=self.pub_path,
+                    pull_host=self.pull_host,
+                    pull_port=self.pull_port,
+                    pull_path=self.pull_path,
                     transport="tcp",
                 )
             # For the asynchronous case, the connect will be deferred to when

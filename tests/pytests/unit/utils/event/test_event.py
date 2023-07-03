@@ -48,8 +48,8 @@ def _assert_got_event(evt, data, msg=None, expected_failure=False):
 
 def test_master_event(sock_dir):
     with salt.utils.event.MasterEvent(str(sock_dir), listen=False) as me:
-        assert me.puburi == str(sock_dir / "master_event_pub.ipc")
-        assert me.pulluri == str(sock_dir / "master_event_pull.ipc")
+        assert me.pub_path == str(sock_dir / "master_event_pub.ipc")
+        assert me.pull_path == str(sock_dir / "master_event_pull.ipc")
 
 
 def test_minion_event(sock_dir):
@@ -58,22 +58,22 @@ def test_minion_event(sock_dir):
         :10
     ]
     with salt.utils.event.MinionEvent(opts, listen=False) as me:
-        assert me.puburi == str(sock_dir / f"minion_event_{id_hash}_pub.ipc")
-        assert me.pulluri == str(sock_dir / f"minion_event_{id_hash}_pull.ipc")
+        assert me.pub_path == str(sock_dir / f"minion_event_{id_hash}_pub.ipc")
+        assert me.pull_path == str(sock_dir / f"minion_event_{id_hash}_pull.ipc")
 
 
 def test_minion_event_tcp_ipc_mode():
     opts = dict(id="foo", ipc_mode="tcp")
     with salt.utils.event.MinionEvent(opts, listen=False) as me:
-        assert me.puburi == 4510
-        assert me.pulluri == 4511
+        assert me.pub_port == 4510
+        assert me.pull_port == 4511
 
 
 def test_minion_event_no_id(sock_dir):
     with salt.utils.event.MinionEvent(dict(sock_dir=str(sock_dir)), listen=False) as me:
         id_hash = hashlib.sha256(salt.utils.stringutils.to_bytes("")).hexdigest()[:10]
-        assert me.puburi == str(sock_dir / f"minion_event_{id_hash}_pub.ipc")
-        assert me.pulluri == str(sock_dir / f"minion_event_{id_hash}_pull.ipc")
+        assert me.pub_path == str(sock_dir / f"minion_event_{id_hash}_pub.ipc")
+        assert me.pull_path == str(sock_dir / f"minion_event_{id_hash}_pull.ipc")
 
 
 @pytest.mark.slow_test
