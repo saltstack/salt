@@ -387,7 +387,7 @@ pytest-httpserver==1.0.8
     # via -r requirements/pytest.txt
 pytest-salt-factories==1.0.0rc21
     # via -r requirements/pytest.txt
-pytest-shell-utilities==1.7.0
+pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
 pytest-skip-markers==1.4.0
     # via
