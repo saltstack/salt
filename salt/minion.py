@@ -1049,20 +1049,30 @@ class MinionManager(MinionBase):
         id_hash = hash_type(
             salt.utils.stringutils.to_bytes(self.opts["id"])
         ).hexdigest()[:10]
-        epub_sock_path = os.path.join(
-            self.opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
-        )
-        epull_sock_path = os.path.join(
-            self.opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
-        )
-        if os.path.exists(epub_sock_path):
-            os.unlink(epub_sock_path)
-        ipc_publisher = salt.transport.publish_server(
-            self.opts,
-            pub_path=epub_sock_path,
-            pull_path=epull_sock_path,
-            transport="tcp",
-        )
+        if self.opts["ipc_mode"] == "tcp":
+            ipc_publisher = salt.transport.publish_server(
+                self.opts,
+                pub_host="127.0.0.1",
+                pub_port=int(self.opts["tcp_pub_port"]),
+                pull_host="127.0.0.1",
+                pull_port=int(self.opts["tcp_pull_port"]),
+                transport="tcp",
+            )
+        else:
+            epub_sock_path = os.path.join(
+                self.opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
+            )
+            epull_sock_path = os.path.join(
+                self.opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
+            )
+            if os.path.exists(epub_sock_path):
+                os.unlink(epub_sock_path)
+            ipc_publisher = salt.transport.publish_server(
+                self.opts,
+                pub_path=epub_sock_path,
+                pull_path=epull_sock_path,
+                transport="tcp",
+            )
         self.io_loop.spawn_callback(
             ipc_publisher.publisher, ipc_publisher.publish_payload, self.io_loop
         )

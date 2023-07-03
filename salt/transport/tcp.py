@@ -298,7 +298,9 @@ class TCPPubClient(salt.transport.base.PublishClient):
                         ssl_options=self.opts.get("ssl"),
                         **kwargs,
                     )
-                    log.error("PubClient conencted to %r %r:%r", self, self.host, self.port)
+                    log.error(
+                        "PubClient conencted to %r %r:%r", self, self.host, self.port
+                    )
                 else:
                     sock_type = socket.AF_UNIX
                     stream = tornado.iostream.IOStream(
@@ -398,7 +400,11 @@ class TCPPubClient(salt.transport.base.PublishClient):
         elif timeout:
             try:
                 return await asyncio.wait_for(self.recv(), timeout=timeout)
-            except (TimeoutError, asyncio.exceptions.TimeoutError, asyncio.exceptions.CancelledError):
+            except (
+                TimeoutError,
+                asyncio.exceptions.TimeoutError,
+                asyncio.exceptions.CancelledError,
+            ):
                 self.close()
                 await self.connect()
                 return
@@ -416,9 +422,9 @@ class TCPPubClient(salt.transport.base.PublishClient):
                     self.close()
                     await self.connect()
                     continue
-                #except AttributeError:
+                # except AttributeError:
                 #    return
-                #except Exception:
+                # except Exception:
                 #    raise
                 finally:
                     self._read_in_progress.release()
@@ -1325,9 +1331,7 @@ class TCPPuller:
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn(
-                "unclosed tcp puller {self!r}", ResourceWarning, source=self
-            )
+            warnings.warn("unclosed tcp puller {self!r}", ResourceWarning, source=self)
 
     # pylint: enable=W1701
 
@@ -1368,10 +1372,18 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         return not self.opts.get("order_masters", False)
 
     def __setstate__(self, state):
-        self.__init__(state["opts"])
+        self.__init__(**state)
 
     def __getstate__(self):
-        return {"opts": self.opts}
+        return {
+            "opts": self.opts,
+            "pub_host": self.pub_host,
+            "pub_port": self.pub_port,
+            "pub_path": self.pub_path,
+            "pull_host": self.pull_host,
+            "pull_port": self.pull_port,
+            "pull_path": self.pull_path,
+        }
 
     def publish_daemon(
         self,
@@ -1459,7 +1471,11 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         log.debug("Connect pusher %s", self.pull_path)
         self.pub_sock = salt.utils.asynchronous.SyncWrapper(
             _TCPPubServerPublisher,
-            (self.pull_path,),
+            (
+                self.pull_host,
+                self.pull_port,
+                self.pull_path,
+            ),
             loop_kwarg="io_loop",
         )
         self.pub_sock.connect()
@@ -1519,7 +1535,7 @@ class _TCPPubServerPublisher:
         "close",
     ]
 
-    def __init__(self, socket_path, io_loop=None):
+    def __init__(self, host, port, path, io_loop=None):
         """
         Create a new IPC client
 
@@ -1529,7 +1545,9 @@ class _TCPPubServerPublisher:
 
         """
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
-        self.socket_path = socket_path
+        self.host = host
+        self.port = port
+        self.path = path
         self._closing = False
         self.stream = None
         # msgpack deprecated `encoding` starting with version 0.5.2
@@ -1573,12 +1591,12 @@ class _TCPPubServerPublisher:
         """
         Connect to a running IPCServer
         """
-        if isinstance(self.socket_path, int):
+        if isinstance(self.path, int):
             sock_type = socket.AF_INET
-            sock_addr = ("127.0.0.1", self.socket_path)
+            sock_addr = (self.host, self.port)
         else:
             sock_type = socket.AF_UNIX
-            sock_addr = self.socket_path
+            sock_addr = self.path
 
         self.stream = None
         if timeout is not None:
@@ -1595,7 +1613,10 @@ class _TCPPubServerPublisher:
                 )
             try:
                 log.trace(
-                    "TCPMessageClient: Connecting to socket: %s", self.socket_path
+                    "TCPMessageClient: Connecting to socket: %s:%s %s",
+                    self.host,
+                    self.port,
+                    self.path,
                 )
                 await self.stream.connect(sock_addr)
                 self._connecting_future.set_result(True)

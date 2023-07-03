@@ -723,12 +723,26 @@ class Master(SMaster):
                 pub_channels.append(chan)
 
             log.info("Creating master event publisher process")
-            ipc_publisher = salt.transport.publish_server(
-                self.opts,
-                pub_path=os.path.join(self.opts["sock_dir"], "master_event_pub.ipc"),
-                pull_path=os.path.join(self.opts["sock_dir"], "master_event_pull.ipc"),
-                transport="tcp",
-            )
+            if self.opts["ipc_mode"] == "tcp":
+                ipc_publisher = salt.transport.publish_server(
+                    self.opts,
+                    transport="tcp",
+                    pub_host="127.0.0.1",
+                    pub_port=int(self.opts["tcp_master_pub_port"]),
+                    pull_host="127.0.0.1",
+                    pull_port=int(self.opts["tcp_master_pull_port"]),
+                )
+            else:
+                ipc_publisher = salt.transport.publish_server(
+                    self.opts,
+                    transport="tcp",
+                    pub_path=os.path.join(
+                        self.opts["sock_dir"], "master_event_pub.ipc"
+                    ),
+                    pull_path=os.path.join(
+                        self.opts["sock_dir"], "master_event_pull.ipc"
+                    ),
+                )
             self.process_manager.add_process(
                 ipc_publisher.publish_daemon,
                 args=[
