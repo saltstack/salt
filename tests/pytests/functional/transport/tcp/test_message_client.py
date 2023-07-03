@@ -28,7 +28,7 @@ def server(config):
 
         async def handle_stream(self, stream, address):
             try:
-                log.error("Got stream")
+                log.error("Got stream %r", self.disconnect)
                 while self.disconnect is False:
                     for msg in self.send[:]:
                         msg = self.send.pop(0)
@@ -42,11 +42,9 @@ def server(config):
                         log.error("SLEEP")
                         await asyncio.sleep(1)
                 log.error("Close stream")
-                log.error("After close stream")
-            except:
-                log.error("WTFSON", exc_info=True)
             finally:
                 stream.close()
+                log.error("After close stream")
 
     server = TestServer()
     try:
@@ -123,8 +121,14 @@ async def test_message_client_reconnect(config, client, server):
     # rest of this test would fail.
     log.error("Send pmsg %r", pmsg)
     server.send.append(pmsg)
+    log.error("After - Send pmsg %r", pmsg)
     while not received:
         await tornado.gen.sleep(1)
+    log.error("received %r", received)
     assert received == [msg, msg]
     server.disconnect = True
+
+    # Close the client
+    client.close()
+    # Provide time for the on_recv task to complete
     await tornado.gen.sleep(1)
