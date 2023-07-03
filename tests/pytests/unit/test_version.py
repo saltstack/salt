@@ -187,7 +187,7 @@ def test_string_new_version_minor():
     ver = SaltStackVersion(major=maj_ver, minor=min_ver)
     assert ver.minor == min_ver
     assert not ver.bugfix
-    assert ver.string == "{}.{}".format(maj_ver, min_ver)
+    assert ver.string == f"{maj_ver}.{min_ver}"
 
 
 def test_string_new_version_minor_as_string():
@@ -201,13 +201,13 @@ def test_string_new_version_minor_as_string():
     ver = SaltStackVersion(major=maj_ver, minor=min_ver)
     assert ver.minor == int(min_ver)
     assert not ver.bugfix
-    assert ver.string == "{}.{}".format(maj_ver, min_ver)
+    assert ver.string == f"{maj_ver}.{min_ver}"
 
     # This only seems to happen on a cloned repo without its tags
     maj_ver = "3000"
     min_ver = ""
     ver = SaltStackVersion(major=maj_ver, minor=min_ver)
-    assert ver.minor is None, "{!r} is not {!r}".format(ver.minor, min_ver)
+    assert ver.minor is None, f"{ver.minor!r} is not {min_ver!r}"
     assert not ver.bugfix
     assert ver.string == maj_ver
 
@@ -222,7 +222,7 @@ def test_string_old_version():
     min_ver = "2"
     ver = SaltStackVersion(major=maj_ver, minor=min_ver)
     assert ver.bugfix == 0
-    assert ver.string == "{}.{}.0".format(maj_ver, min_ver)
+    assert ver.string == f"{maj_ver}.{min_ver}.0"
 
 
 @pytest.mark.parametrize(
@@ -537,6 +537,8 @@ def test_versions_report_no_extensions_available():
         ("3000.1", "3000.1", "Neon"),
         ("3005", "3005", "Phosphorus"),
         ("3006", "3006.0", "Sulfur"),
+        ("3006.0", "3006.0", "Sulfur"),
+        ("3006.1", "3006.1", "Sulfur"),
         ("3015.1", "3015.1", "Manganese"),
         ("3109.3", "3109.3", None),
     ],
