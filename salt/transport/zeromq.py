@@ -1053,6 +1053,7 @@ class RequestClient(salt.transport.base.RequestClient):
 
     def __init__(self, opts, io_loop, linger=0):  # pylint: disable=W0231
         self.opts = opts
+        # XXX Support host, port, path, instead of using get_master_uri
         self.master_uri = self.get_master_uri(opts)
         self.linger = linger
         if io_loop is None:
@@ -1114,7 +1115,7 @@ class RequestClient(salt.transport.base.RequestClient):
         ret = await self.socket.recv()
         return salt.payload.loads(ret)
 
-    async def send(self, message, timeout=None):
+    async def send(self, load, timeout=60):
         """
         Return a future which will be completed when the message has a response
         """
@@ -1122,11 +1123,11 @@ class RequestClient(salt.transport.base.RequestClient):
             await self.connect()
         await self.sending.acquire()
         try:
-            return await asyncio.wait_for(self._send_recv(message), timeout=timeout)
+            return await asyncio.wait_for(self._send_recv(load), timeout=timeout)
         except TimeoutError:
             self.close()
-        except Exception:
-            self.close()
+        # except Exception:
+        #     self.close()
         finally:
             self.sending.release()
 
