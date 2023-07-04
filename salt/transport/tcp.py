@@ -1614,12 +1614,12 @@ class _TCPPubServerPublisher:
         """
         Connect to a running IPCServer
         """
-        if isinstance(self.path, int):
-            sock_type = socket.AF_INET
-            sock_addr = (self.host, self.port)
-        else:
+        if self.path:
             sock_type = socket.AF_UNIX
             sock_addr = self.path
+        else:
+            sock_type = socket.AF_INET
+            sock_addr = (self.host, self.port)
 
         self.stream = None
         if timeout is not None:
