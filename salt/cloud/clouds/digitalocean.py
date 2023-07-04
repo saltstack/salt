@@ -223,9 +223,7 @@ def get_image(vm_):
             if images[image]["slug"] is not None:
                 return images[image]["slug"]
             return int(images[image]["id"])
-    raise SaltCloudNotFound(
-        "The specified image, '{}', could not be found.".format(vm_image)
-    )
+    raise SaltCloudNotFound(f"The specified image, '{vm_image}', could not be found.")
 
 
 def get_size(vm_):
@@ -239,9 +237,7 @@ def get_size(vm_):
     for size in sizes:
         if vm_size.lower() == sizes[size]["slug"]:
             return sizes[size]["slug"]
-    raise SaltCloudNotFound(
-        "The specified size, '{}', could not be found.".format(vm_size)
-    )
+    raise SaltCloudNotFound(f"The specified size, '{vm_size}', could not be found.")
 
 
 def get_location(vm_):
@@ -257,7 +253,7 @@ def get_location(vm_):
         if vm_location in (locations[location]["name"], locations[location]["slug"]):
             return locations[location]["slug"]
     raise SaltCloudNotFound(
-        "The specified location, '{}', could not be found.".format(vm_location)
+        f"The specified location, '{vm_location}', could not be found."
     )
 
 
@@ -333,7 +329,7 @@ def create(vm_):
 
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            "The defined key_filename '{}' does not exist".format(key_filename)
+            f"The defined key_filename '{key_filename}' does not exist"
         )
 
     if not __opts__.get("ssh_agent", False) and key_filename is None:
@@ -625,12 +621,12 @@ def query(
     )
     # vpcs method doesn't like the / at the end.
     if method == "vpcs":
-        path = "{}/{}".format(base_path, method)
+        path = f"{base_path}/{method}"
     else:
-        path = "{}/{}/".format(base_path, method)
+        path = f"{base_path}/{method}/"
 
     if droplet_id:
-        path += "{}/".format(droplet_id)
+        path += f"{droplet_id}/"
 
     if command:
         path += command
@@ -885,7 +881,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -922,7 +918,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -997,7 +993,7 @@ def destroy_dns_records(fqdn):
                 ret = query(
                     method="domains",
                     droplet_id=domain,
-                    command="records/{}".format(id_),
+                    command=f"records/{id_}",
                     http_method="delete",
                 )
             except SaltCloudSystemExit:
