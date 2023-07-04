@@ -293,7 +293,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
         while stream is None and (not self._closed and not self._closing):
             try:
                 if self.host and self.port:
-                    log.trace(
+                    log.debug(
                         "PubClient connecting to %r %r:%r", self, self.host, self.port
                     )
                     self._tcp_client = TCPClientKeepAlive(
@@ -313,7 +313,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
                         "PubClient conencted to %r %r:%r", self, self.host, self.port
                     )
                 else:
-                    log.trace("PubClient connecting to %r %r", self, self.path)
+                    log.debug("PubClient connecting to %r %r", self, self.path)
                     sock_type = socket.AF_UNIX
                     stream = tornado.iostream.IOStream(
                         socket.socket(sock_type, socket.SOCK_STREAM)
@@ -382,9 +382,19 @@ class TCPPubClient(salt.transport.base.PublishClient):
                 framed_msg = salt.transport.frame.decode_embedded_strs(msg)
                 return framed_msg["body"]
             try:
+                log.error("Stream is %r", self._stream)
                 events, _, _ = select.select([self._stream.socket], [], [], 0)
             except TimeoutError:
                 events = []
+            #except TypeError:
+            #    # Stream's socket is closed.
+            #    stream = self._stream
+            #    self._stream = None
+            #    stream.close()
+            #    if self.disconnect_callback:
+            #        self.disconnect_callback()
+            #    await self.connect()
+            #    events = []
             if events:
                 while not self._closing:
                     await self._read_in_progress.acquire()

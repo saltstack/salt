@@ -1124,8 +1124,9 @@ class RequestClient(salt.transport.base.RequestClient):
         await self.sending.acquire()
         try:
             return await asyncio.wait_for(self._send_recv(load), timeout=timeout)
-        except TimeoutError:
+        except (asyncio.exceptions.TimeoutError, TimeoutError):
             self.close()
+            raise
         # except Exception:
         #     self.close()
         finally:
