@@ -392,7 +392,7 @@ contextvars==2.4
     # via -r requirements/base.txt
 croniter==1.0.15 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-cryptography==39.0.2
+cryptography==41.0.1
     # via
     #   -r requirements/static/pkg/linux.in
     #   adal
@@ -711,7 +711,7 @@ pyjwt==2.4.0
     # via adal
 pynacl==1.4.0
     # via paramiko
-pyopenssl==23.0.0
+pyopenssl==23.2.0
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
