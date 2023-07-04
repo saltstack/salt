@@ -69,7 +69,7 @@ pycparser==2.21 ; python_version >= "3.9"
     #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pyopenssl==23.0.0
+pyopenssl==23.2.0
     # via -r requirements/static/pkg/freebsd.in
 python-dateutil==2.8.1
     # via -r requirements/static/pkg/freebsd.in
