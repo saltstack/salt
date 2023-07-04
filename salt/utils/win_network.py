@@ -53,7 +53,8 @@ if IS_WINDOWS:
         import salt.utils.winapi
     else:
         # This uses .NET to get network settings and is faster than WMI
-        import clr
+        # We need the clr import for the `System.Net` import
+        import clr  # pylint: disable=unused-import
         from System.Net import NetworkInformation
 
 # TODO: Should we deprecate support for pythonnet 2.5.2, these enumerations can
@@ -312,7 +313,6 @@ def _get_ip_wins_info(i_face):
 
 
 def _get_network_interfaces():
-    clr.AddReference("System.Net")
     return NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
 
 

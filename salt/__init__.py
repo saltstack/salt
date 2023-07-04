@@ -12,58 +12,6 @@ if sys.version_info < (3,):
     )
     sys.stderr.flush()
 
-
-USE_VENDORED_TORNADO = True
-
-
-class TornadoImporter:
-    def find_module(self, module_name, package_path=None):
-        if USE_VENDORED_TORNADO:
-            if module_name.startswith("tornado"):
-                return self
-        else:
-            if module_name.startswith("salt.ext.tornado"):
-                return self
-        return None
-
-    def load_module(self, name):
-        if USE_VENDORED_TORNADO:
-            mod = importlib.import_module("salt.ext.{}".format(name))
-        else:
-            # Remove 'salt.ext.' from the module
-            mod = importlib.import_module(name[9:])
-        sys.modules[name] = mod
-        return mod
-
-    def create_module(self, spec):
-        return self.load_module(spec.name)
-
-    def exec_module(self, module):
-        return None
-
-
-class SixRedirectImporter:
-    def find_module(self, module_name, package_path=None):
-        if module_name.startswith("salt.ext.six"):
-            return self
-        return None
-
-    def load_module(self, name):
-        mod = importlib.import_module(name[9:])
-        sys.modules[name] = mod
-        return mod
-
-    def create_module(self, spec):
-        return self.load_module(spec.name)
-
-    def exec_module(self, module):
-        return None
-
-
-# Try our importer first
-sys.meta_path = [TornadoImporter(), SixRedirectImporter()] + sys.meta_path
-
-
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
     "once",  # Show once
@@ -112,14 +60,14 @@ def __define_global_system_encoding_variable__():
         import locale
 
         try:
-            encoding = locale.getdefaultlocale()[-1]
-        except ValueError:
-            # A bad locale setting was most likely found:
-            #   https://github.com/saltstack/salt/issues/26063
-            pass
+            encoding = locale.getencoding()
+        except AttributeError:
+            # Python < 3.11
+            encoding = locale.getpreferredencoding(do_setlocale=True)
 
         # This is now garbage collectable
         del locale
+
         if not encoding:
             # This is most likely ascii which is not the best but we were
             # unable to find a better encoding. If this fails, we fall all

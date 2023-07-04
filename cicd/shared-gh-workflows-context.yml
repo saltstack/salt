@@ -1,0 +1,4 @@
+python_version: "3.10.11"
+relenv_version: "0.12.3"
+release-branches:
+  - "3006.x"

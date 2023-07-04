@@ -5,6 +5,7 @@ self-hosted-runner:
     - x86_64
     - arm64
     - aarch64
+    - amd64
     - repo-nightly
     - repo-staging
     - repo-release

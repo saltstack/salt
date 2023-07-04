@@ -1,15 +1,1 @@
-alma-8-x86_64: ami-0708f5cff435866cd
-amazon-2-x86_64: ami-06c1223b35589b91d
-arch-lts-x86_64: ami-09e092a0d37c2994d
-centos-7-x86_64: ami-08820f92ce35a631d
-centosstream-9-x86_64: ami-0d86221d8e9e59fb9
-debian-10-amd64: ami-0fd6eece6b43a23f7
-debian-11-arm64: ami-0fefd3d31f4280ae6
-debian-11-amd64: ami-05e5be3e4bf712f40
-opensuse-15-x86_64: ami-09a641121b8c7bbb8
-photon-3-x86_64: ami-0c2a76bc94da0e1ad
-ubuntu-2004-arm64: ami-0db63a47ac7b19b9e
-ubuntu-2004-amd64: ami-0c2eab8a4788fb9cb
-ubuntu-2204-amd64: ami-0c0f726ed9c745a97
-windows-2016-x64: ami-0d24f748e46e8da27
-windows-2019-x64: ami-0cc2909fbc6cc5209
+centosstream-9-x86_64: ami-0bd92f4dca5d74017

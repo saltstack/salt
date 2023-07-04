@@ -1,5 +1,5 @@
 """
-.. versionadded:: 2017.7
+.. versionadded:: 2017.7.0
 
 Management of Zabbix Template object over Zabbix API.
 
@@ -487,10 +487,10 @@ def is_present(name, **kwargs):
 
     if not object_id:
         ret["result"] = False
-        ret["comment"] = 'Zabbix Template "{}" does not exist.'.format(name)
+        ret["comment"] = f'Zabbix Template "{name}" does not exist.'
     else:
         ret["result"] = True
-        ret["comment"] = 'Zabbix Template "{}" exists.'.format(name)
+        ret["comment"] = f'Zabbix Template "{name}" exists.'
 
     return ret
 
@@ -690,7 +690,7 @@ def present(name, params, static_host_list=True, **kwargs):
             "selectMacros": "extend",
             "filter": {"host": name},
         },
-        **kwargs
+        **kwargs,
     )
     log.info("TEMPLATE get result: %s", str(json.dumps(tmpl_get, indent=4)))
 
@@ -797,7 +797,7 @@ def present(name, params, static_host_list=True, **kwargs):
                         TEMPLATE_COMPONENT_DEF[component]["qselectpid"]: template_id
                     },
                     filter_key=TEMPLATE_COMPONENT_DEF[component]["filter"],
-                    **kwargs
+                    **kwargs,
                 )
             else:
                 defined_c_list_subs = []
@@ -807,7 +807,7 @@ def present(name, params, static_host_list=True, **kwargs):
                 template_id,
                 defined_c_list_subs,
                 existing_c_list_subs,
-                **kwargs
+                **kwargs,
             )
 
         log.info(
@@ -846,7 +846,7 @@ def present(name, params, static_host_list=True, **kwargs):
                     defined_p_list_subs = __salt__["zabbix.substitute_params"](
                         d_rule_component[proto_name],
                         extend_params={c_def["qselectpid"]: template_id},
-                        **kwargs
+                        **kwargs,
                     )
                 else:
                     defined_p_list_subs = []
@@ -857,7 +857,7 @@ def present(name, params, static_host_list=True, **kwargs):
                     defined_p_list_subs,
                     existing_p_list_subs,
                     template_id=template_id,
-                    **kwargs
+                    **kwargs,
                 )
 
     log.info(
@@ -884,10 +884,10 @@ def present(name, params, static_host_list=True, **kwargs):
         if tmpl_action:
             ret["result"] = True
             if dry_run:
-                ret["comment"] = 'Zabbix Template "{}" would be created.'.format(name)
+                ret["comment"] = f'Zabbix Template "{name}" would be created.'
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Template "{}" does not exist.'.format(name),
+                        "old": f'Zabbix Template "{name}" does not exist.',
                         "new": (
                             'Zabbix Template "{}" would be created '
                             "according definition.".format(name)
@@ -895,10 +895,10 @@ def present(name, params, static_host_list=True, **kwargs):
                     }
                 }
             else:
-                ret["comment"] = 'Zabbix Template "{}" created.'.format(name)
+                ret["comment"] = f'Zabbix Template "{name}" created.'
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Template "{}" did not exist.'.format(name),
+                        "old": f'Zabbix Template "{name}" did not exist.',
                         "new": (
                             'Zabbix Template "{}" created according definition.'.format(
                                 name
@@ -909,10 +909,10 @@ def present(name, params, static_host_list=True, **kwargs):
         else:
             ret["result"] = True
             if dry_run:
-                ret["comment"] = 'Zabbix Template "{}" would be updated.'.format(name)
+                ret["comment"] = f'Zabbix Template "{name}" would be updated.'
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Template "{}" differs.'.format(name),
+                        "old": f'Zabbix Template "{name}" differs.',
                         "new": (
                             'Zabbix Template "{}" would be updated '
                             "according definition.".format(name)
@@ -920,10 +920,10 @@ def present(name, params, static_host_list=True, **kwargs):
                     }
                 }
             else:
-                ret["comment"] = 'Zabbix Template "{}" updated.'.format(name)
+                ret["comment"] = f'Zabbix Template "{name}" updated.'
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Template "{}" differed.'.format(name),
+                        "old": f'Zabbix Template "{name}" differed.',
                         "new": (
                             'Zabbix Template "{}" updated according definition.'.format(
                                 name
@@ -962,15 +962,15 @@ def absent(name, **kwargs):
 
     if not object_id:
         ret["result"] = True
-        ret["comment"] = 'Zabbix Template "{}" does not exist.'.format(name)
+        ret["comment"] = f'Zabbix Template "{name}" does not exist.'
     else:
         if dry_run:
             ret["result"] = True
-            ret["comment"] = 'Zabbix Template "{}" would be deleted.'.format(name)
+            ret["comment"] = f'Zabbix Template "{name}" would be deleted.'
             ret["changes"] = {
                 name: {
-                    "old": 'Zabbix Template "{}" exists.'.format(name),
-                    "new": 'Zabbix Template "{}" would be deleted.'.format(name),
+                    "old": f'Zabbix Template "{name}" exists.',
+                    "new": f'Zabbix Template "{name}" would be deleted.',
                 }
             }
         else:
@@ -979,11 +979,11 @@ def absent(name, **kwargs):
             )
             if tmpl_delete:
                 ret["result"] = True
-                ret["comment"] = 'Zabbix Template "{}" deleted.'.format(name)
+                ret["comment"] = f'Zabbix Template "{name}" deleted.'
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Template "{}" existed.'.format(name),
-                        "new": 'Zabbix Template "{}" deleted.'.format(name),
+                        "old": f'Zabbix Template "{name}" existed.',
+                        "new": f'Zabbix Template "{name}" deleted.',
                     }
                 }
 

@@ -1,3 +1,4 @@
 conf/minion /etc/salt
+conf/proxy /etc/salt
 pkg/common/salt-minion.service /lib/systemd/system
-pkg/common/fish-completions/salt-minion.fish /usr/share/fish/vendor_completions.d
+pkg/common/salt-proxy@.service /lib/systemd/system

@@ -337,3 +337,8 @@ tests/pytests/scenarios/multimaster:
   - pytests.scenarios.multimaster.beacons.test_inotify
   - pytests.scenarios.multimaster.modules.test_test
   - pytests.scenarios.failover.multimaster.test_failover_master
+
+tests/integration/files/ssh/.*:
+  - integration.modules.test_ssh
+  - integration.states.test_ssh_auth
+  - integration.states.test_ssh_known_hosts

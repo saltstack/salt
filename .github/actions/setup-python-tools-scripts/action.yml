@@ -2,6 +2,16 @@
 name: setup-python-tools-scripts
 description: Setup 'python-tools-scripts'
 
+inputs:
+  cwd:
+    type: string
+    description: The directory the salt checkout is located in
+    default: "."
+
+outputs:
+  version:
+    value: ${{ steps.get-version.outputs.version }}
+
 
 env:
   PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
@@ -21,5 +31,14 @@ runs:
 
     - name: Install 'python-tools-scripts'
       shell: bash
+      working-directory: ${{ inputs.cwd }}
       run: |
         python3 -m pip install -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+
+    - name: Get 'python-tools-scripts' Version
+      id: get-version
+      shell: bash
+      working-directory: ${{ inputs.cwd }}
+      run: |
+        VERSION=$(tools --version)
+        echo "version=$VERSION" >> "${GITHUB_OUTPUT}"

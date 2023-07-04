@@ -8,6 +8,11 @@ import salt.state
 log = logging.getLogger(__name__)
 
 
+pytestmark = [
+    pytest.mark.core_test,
+]
+
+
 @pytest.fixture
 def minion_config(minion_opts):
     minion_opts["file_client"] = "local"

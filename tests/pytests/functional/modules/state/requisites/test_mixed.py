@@ -4,6 +4,7 @@ from . import normalize_ret
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
 ]
 
 
@@ -321,7 +322,6 @@ def test_issue_46762_prereqs_on_a_state_with_unfulfilled_requirements(
 
 
 @pytest.mark.skip_on_darwin(reason="Test is broken on macosx")
-@pytest.mark.slow_test
 def test_issue_30161_unless_and_onlyif_together(state, state_tree, tmp_path):
     """
     test cmd.run using multiple unless options where the first cmd in the
@@ -369,21 +369,21 @@ def test_issue_30161_unless_and_onlyif_together(state, state_tree, tmp_path):
         # then the unless state run bailed out after the first unless command succeeded,
         # which is the bug we're regression testing for.
     _expected = {
-        "file_|-unless_false_onlyif_false_|-{}_|-managed".format(test_txt_path): {
+        f"file_|-unless_false_onlyif_false_|-{test_txt_path}_|-managed": {
             "comment": "onlyif condition is false\nunless condition is false",
-            "name": "{}".format(test_txt_path),
+            "name": f"{test_txt_path}",
             "skip_watch": True,
             "changes": {},
             "result": True,
         },
-        "file_|-unless_false_onlyif_true_|-{}_|-managed".format(test_txt_path): {
+        f"file_|-unless_false_onlyif_true_|-{test_txt_path}_|-managed": {
             "comment": "Empty file",
             "name": str(test_txt_path),
             "start_time": "18:10:20.341753",
             "result": True,
-            "changes": {"new": "file {} created".format(test_txt_path)},
+            "changes": {"new": f"file {test_txt_path} created"},
         },
-        "file_|-unless_true_onlyif_false_|-{}_|-managed".format(test_txt_path): {
+        f"file_|-unless_true_onlyif_false_|-{test_txt_path}_|-managed": {
             "comment": "onlyif condition is false\nunless condition is true",
             "name": str(test_txt_path),
             "start_time": "18:10:22.936446",
@@ -391,7 +391,7 @@ def test_issue_30161_unless_and_onlyif_together(state, state_tree, tmp_path):
             "changes": {},
             "result": True,
         },
-        "file_|-unless_true_onlyif_true_|-{}_|-managed".format(test_txt_path): {
+        f"file_|-unless_true_onlyif_true_|-{test_txt_path}_|-managed": {
             "comment": "onlyif condition is true\nunless condition is true",
             "name": str(test_txt_path),
             "skip_watch": True,

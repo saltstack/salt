@@ -448,7 +448,7 @@ namespace MinionConfigurationExtension {
         }
 
 
-       [CustomAction]
+        [CustomAction]
         public static void stop_service(Session session, string a_service) {
             // the installer cannot assess the log file unless it is released.
             session.Log("...stop_service " + a_service);
@@ -459,26 +459,29 @@ namespace MinionConfigurationExtension {
         }
 
 
-       [CustomAction]
+        [CustomAction]
         public static ActionResult kill_python_exe(Session session) {
             // because a running process can prevent removal of files
             // Get full path and command line from running process
             // see https://github.com/saltstack/salt/issues/42862
-            session.Log("...BEGIN kill_python_exe");
-            using (var wmi_searcher = new ManagementObjectSearcher
-                ("SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE Name = 'python.exe'")) {
+            session.Log("...BEGIN kill_python_exe (CustomAction01.cs)");
+            using (
+                var wmi_searcher = new ManagementObjectSearcher(
+                    "SELECT ProcessID, ExecutablePath, CommandLine FROM Win32_Process WHERE CommandLine LIKE '%salt-minion%' AND NOT CommandLine LIKE '%msiexec%'"
+                )
+            ) {
                 foreach (ManagementObject wmi_obj in wmi_searcher.Get()) {
+                    String ProcessID = wmi_obj["ProcessID"].ToString();
+                    Int32 pid = Int32.Parse(ProcessID);
+                    String ExecutablePath = wmi_obj["ExecutablePath"].ToString();
+                    String CommandLine = wmi_obj["CommandLine"].ToString();
+                    session.Log("...kill_python_exe " + ExecutablePath + " " + CommandLine);
+                    Process proc11 = Process.GetProcessById(pid);
                     try {
-                        String ProcessID = wmi_obj["ProcessID"].ToString();
-                        Int32 pid = Int32.Parse(ProcessID);
-                        String ExecutablePath = wmi_obj["ExecutablePath"].ToString();
-                        String CommandLine = wmi_obj["CommandLine"].ToString();
-                        if (CommandLine.ToLower().Contains("salt") || ExecutablePath.ToLower().Contains("salt")) {
-                            session.Log("...kill_python_exe " + ExecutablePath + " " + CommandLine);
-                            Process proc11 = Process.GetProcessById(pid);
-                            proc11.Kill();
-                        }
-                    } catch (Exception) {
+                        proc11.Kill();
+                    } catch (Exception exc) {
+                        session.Log("...kill_python_exe " + ExecutablePath + " " + CommandLine);
+                        session.Log(exc.ToString());
                         // ignore wmiresults without these properties
                     }
                 }
@@ -662,7 +665,7 @@ namespace MinionConfigurationExtension {
             session.Log("...END save_custom_config_file_DECAC");
         }
 
-       [CustomAction]
+        [CustomAction]
         public static ActionResult DeleteConfig_DECAC(Session session) {
             // This removes not only config, but ROOTDIR or subfolders of ROOTDIR, depending on properties CLEAN_INSTALL and REMOVE_CONFIG
             // Called on install, upgrade and uninstall
@@ -702,7 +705,7 @@ namespace MinionConfigurationExtension {
         }
 
 
-       [CustomAction]
+        [CustomAction]
         public static ActionResult MoveConfig_DECAC(Session session) {
             // This moves the root_dir from the old location (C:\salt) to the
             // new location (%ProgramData%\Salt Project\Salt)

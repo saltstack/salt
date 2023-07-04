@@ -3,16 +3,14 @@ import logging
 import multiprocessing
 
 import pytest
+import tornado.gen
 from pytestshellutils.utils.processes import terminate_process
 
 import salt.channel.client
 import salt.channel.server
 import salt.config
 import salt.exceptions
-import salt.ext.tornado.gen
 import salt.master
-import salt.transport.client
-import salt.transport.server
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
@@ -23,7 +21,8 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.skip_on_spawning_platform(
         reason="These tests are currently broken on spawning platforms. Need to be rewritten.",
-    )
+    ),
+    pytest.mark.slow_test,
 ]
 
 
@@ -56,7 +55,7 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             ),
         }
 
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+        self.io_loop = tornado.ioloop.IOLoop()
         self.io_loop.make_current()
         self.req_server_channel.post_fork(self._handle_payload, io_loop=self.io_loop)
         self.io_loop.add_callback(self.running.set)
@@ -92,11 +91,11 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
                 terminate_process(pid=pid, kill_children=True, slow_stop=False)
             self.process_manager = None
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _handle_payload(self, payload):
         if self.req_channel_crypt == "clear":
-            raise salt.ext.tornado.gen.Return((payload, {"fun": "send_clear"}))
-        raise salt.ext.tornado.gen.Return((payload, {"fun": "send"}))
+            raise tornado.gen.Return((payload, {"fun": "send_clear"}))
+        raise tornado.gen.Return((payload, {"fun": "send"}))
 
 
 @pytest.fixture

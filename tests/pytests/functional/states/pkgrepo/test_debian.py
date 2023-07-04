@@ -10,8 +10,10 @@ import _pytest._version
 import attr
 import pytest
 
+import salt.modules.aptpkg
 import salt.utils.files
 from tests.conftest import CODE_DIR
+from tests.support.mock import MagicMock, patch
 
 PYTEST_GE_7 = getattr(_pytest._version, "version_tuple", (-1, -1)) >= (7, 0)
 
@@ -21,6 +23,7 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.destructive_test,
     pytest.mark.skip_if_not_root,
+    pytest.mark.slow_test,
 ]
 
 
@@ -788,3 +791,56 @@ def test_adding_repo_file_signedby_alt_file(pkgrepo, states, repo):
         assert file_content.endswith("\n")
     assert key_file.is_file()
     assert repo_content in ret.comment
+
+
+def test_adding_repo_file_signedby_fail_key_keyid(
+    pkgrepo, states, repo, subtests, modules
+):
+    """
+    Test adding a repo file using pkgrepo.managed
+    and setting signedby and keyid when adding the key fails
+    an error is returned
+    """
+
+    def _run(test=False):
+        return states.pkgrepo.managed(
+            name=repo.repo_content,
+            file=str(repo.repo_file),
+            clean_file=True,
+            signedby=str(repo.key_file),
+            keyid="10857FFDD3F91EAE577A21D664CBBC8173D76B3F1",
+            keyserver="keyserver.ubuntu.com",
+            aptkey=False,
+            test=test,
+            keydir="/tmp/test",
+        )
+
+    ret = _run()
+    assert "Failed to configure repo" in ret.comment
+    assert "Could not add key" in ret.comment
+
+
+def test_adding_repo_file_signedby_fail_key_keyurl(
+    pkgrepo, states, repo, subtests, modules
+):
+    """
+    Test adding a repo file using pkgrepo.managed
+    and setting signedby and keyurl when adding the key fails
+    an error is returned
+    """
+
+    def _run(test=False):
+        with patch(
+            "salt.utils.path.which", MagicMock(side_effect=[True, True, False, False])
+        ):
+            return states.pkgrepo.managed(
+                name=repo.repo_content,
+                file=str(repo.repo_file),
+                clean_file=True,
+                key_url="https://repo.saltproject.io/salt/py3/ubuntu/20.04/amd64/latest/SALT-PROJECT-GPG-PUBKEY-2023.pub",
+                aptkey=False,
+            )
+
+    ret = _run()
+    assert "Failed to configure repo" in ret.comment
+    assert "Could not add key" in ret.comment

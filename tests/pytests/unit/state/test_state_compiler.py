@@ -17,6 +17,11 @@ from tests.support.mock import MagicMock, patch
 log = logging.getLogger(__name__)
 
 
+pytestmark = [
+    pytest.mark.core_test,
+]
+
+
 def test_format_log_non_ascii_character():
     """
     Tests running a non-ascii character through the state.format_log
@@ -33,7 +38,6 @@ def test_format_log_non_ascii_character():
     salt.state.format_log(ret)
 
 
-@pytest.mark.slow_test
 def test_render_error_on_invalid_requisite(minion_opts):
     """
     Test that the state compiler correctly deliver a rendering
@@ -526,7 +530,7 @@ def test_verify_onlyif_parse_slots(tmp_path, minion_opts):
         "onlyif": [
             {
                 "fun": "file.search",
-                "args": ["__slot__:salt:test.echo({})".format(_expand_win_path(name))],
+                "args": [f"__slot__:salt:test.echo({_expand_win_path(name)})"],
                 "pattern": "__slot__:salt:test.echo(file-contents)",
             }
         ],
@@ -628,7 +632,7 @@ def test_verify_unless_parse_slots(tmp_path, minion_opts):
         "unless": [
             {
                 "fun": "file.search",
-                "args": ["__slot__:salt:test.echo({})".format(_expand_win_path(name))],
+                "args": [f"__slot__:salt:test.echo({_expand_win_path(name)})"],
                 "pattern": "__slot__:salt:test.echo(file-contents)",
             }
         ],
@@ -1038,3 +1042,50 @@ def test_mod_aggregate(minion_opts):
 
             # Ensure pkgs were aggregated
             assert low_ret["pkgs"] == ["figlet", "sl"]
+
+
+def test_verify_onlyif_cmd_opts_exclude(minion_opts):
+    """
+    Verify cmd.run state arguments are properly excluded from cmd.retcode
+    when passed.
+    """
+    low_data = {
+        "onlyif": "somecommand",
+        "cmd_opts_exclude": ["shell"],
+        "cwd": "acwd",
+        "root": "aroot",
+        "env": [{"akey": "avalue"}],
+        "prepend_path": "apath",
+        "umask": "0700",
+        "success_retcodes": 1,
+        "timeout": 5,
+        "runas": "doesntexist",
+        "name": "echo something",
+        "shell": "/bin/dash",
+        "state": "cmd",
+        "__id__": "this is just a test",
+        "fun": "run",
+        "__env__": "base",
+        "__sls__": "sometest",
+        "order": 10000,
+    }
+
+    with patch("salt.state.State._gather_pillar"):
+        state_obj = salt.state.State(minion_opts)
+        mock = MagicMock()
+        with patch.dict(state_obj.functions, {"cmd.retcode": mock}):
+            #  The mock handles the exception, but the runas dict is being passed as it would actually be
+            return_result = state_obj._run_check(low_data)
+            mock.assert_called_once_with(
+                "somecommand",
+                ignore_retcode=True,
+                python_shell=True,
+                cwd="acwd",
+                root="aroot",
+                runas="doesntexist",
+                env=[{"akey": "avalue"}],
+                prepend_path="apath",
+                umask="0700",
+                timeout=5,
+                success_retcodes=1,
+            )

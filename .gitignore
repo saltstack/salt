@@ -23,6 +23,7 @@ Pipfile.lock
 # - /some/path$ git clone https://github.com/thatch45/salt.git
 # - /some/path$ virtualenv --python=/usr/bin/python2.6 salt
 /env/
+/.env/
 /bin/
 /etc/
 /include/
@@ -117,6 +118,7 @@ kitchen.local.yml
 .bundle/
 Gemfile.lock
 /artifacts/
+/pkg/artifacts/
 requirements/static/*/py*/*.log
 
 # Vim's default session file

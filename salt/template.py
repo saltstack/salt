@@ -149,7 +149,9 @@ def compile_template_str(template, renderers, default, blacklist, whitelist):
     fn_ = salt.utils.files.mkstemp()
     with salt.utils.files.fopen(fn_, "wb") as ofile:
         ofile.write(SLS_ENCODER(template)[0])
-    return compile_template(fn_, renderers, default, blacklist, whitelist)
+    ret = compile_template(fn_, renderers, default, blacklist, whitelist)
+    os.unlink(fn_)
+    return ret
 
 
 def template_shebang(template, renderers, default, blacklist, whitelist, input_data):

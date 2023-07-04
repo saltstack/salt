@@ -304,7 +304,7 @@ class SSH(MultiprocessingStateMixin):
         }
         if self.opts.get("rand_thin_dir"):
             self.defaults["thin_dir"] = os.path.join(
-                "/var/tmp", ".{}".format(uuid.uuid4().hex[:6])
+                "/var/tmp", f".{uuid.uuid4().hex[:6]}"
             )
             self.opts["ssh_wipe"] = "True"
         self.returners = salt.loader.returners(self.opts, {})
@@ -454,9 +454,9 @@ class SSH(MultiprocessingStateMixin):
             priv = self.opts.get(
                 "ssh_priv", os.path.join(self.opts["pki_dir"], "ssh", "salt-ssh.rsa")
             )
-        pub = "{}.pub".format(priv)
+        pub = f"{priv}.pub"
         with salt.utils.files.fopen(pub, "r") as fp_:
-            return "{} rsa root@master".format(fp_.read().split()[1])
+            return f"{fp_.read().split()[1]} rsa root@master"
 
     def key_deploy(self, host, ret):
         """
@@ -500,7 +500,7 @@ class SSH(MultiprocessingStateMixin):
             mods=self.mods,
             fsclient=self.fsclient,
             thin=self.thin,
-            **target
+            **target,
         )
         if salt.utils.path.which("ssh-copy-id"):
             # we have ssh-copy-id, use it!
@@ -516,7 +516,7 @@ class SSH(MultiprocessingStateMixin):
                 mods=self.mods,
                 fsclient=self.fsclient,
                 thin=self.thin,
-                **target
+                **target,
             )
             stdout, stderr, retcode = single.cmd_block()
             try:
@@ -543,7 +543,7 @@ class SSH(MultiprocessingStateMixin):
             fsclient=self.fsclient,
             thin=self.thin,
             mine=mine,
-            **target
+            **target,
         )
         ret = {"id": single.id}
         stdout, stderr, retcode = single.run()
@@ -552,6 +552,11 @@ class SSH(MultiprocessingStateMixin):
             data = salt.utils.json.find_json(stdout)
             if len(data) < 2 and "local" in data:
                 ret["ret"] = data["local"]
+                try:
+                    # Ensure a reported local retcode is kept
+                    retcode = data["local"]["retcode"]
+                except (KeyError, TypeError):
+                    pass
             else:
                 ret["ret"] = {
                     "stdout": stdout,
@@ -564,7 +569,7 @@ class SSH(MultiprocessingStateMixin):
                 "stderr": stderr,
                 "retcode": retcode,
             }
-        que.put(ret)
+        que.put((ret, retcode))
 
     def handle_ssh(self, mine=False):
         """
@@ -608,7 +613,7 @@ class SSH(MultiprocessingStateMixin):
                         "fun": "",
                         "id": host,
                     }
-                    yield {host: no_ret}
+                    yield {host: no_ret}, 1
                     continue
                 args = (
                     que,
@@ -622,11 +627,12 @@ class SSH(MultiprocessingStateMixin):
                 running[host] = {"thread": routine}
                 continue
             ret = {}
+            retcode = 0
             try:
-                ret = que.get(False)
+                ret, retcode = que.get(False)
                 if "id" in ret:
                     returned.add(ret["id"])
-                    yield {ret["id"]: ret["ret"]}
+                    yield {ret["id"]: ret["ret"]}, retcode
             except queue.Empty:
                 pass
             for host in running:
@@ -636,10 +642,10 @@ class SSH(MultiprocessingStateMixin):
                         # last checked
                         try:
                             while True:
-                                ret = que.get(False)
+                                ret, retcode = que.get(False)
                                 if "id" in ret:
                                     returned.add(ret["id"])
-                                    yield {ret["id"]: ret["ret"]}
+                                    yield {ret["id"]: ret["ret"]}, retcode
                         except queue.Empty:
                             pass
 
@@ -650,7 +656,7 @@ class SSH(MultiprocessingStateMixin):
                             )
                             ret = {"id": host, "ret": error}
                             log.error(error)
-                            yield {ret["id"]: ret["ret"]}
+                            yield {ret["id"]: ret["ret"]}, 1
                     running[host]["thread"].join()
                     rets.add(host)
             for host in rets:
@@ -705,8 +711,8 @@ class SSH(MultiprocessingStateMixin):
                 jid, job_load
             )
 
-        for ret in self.handle_ssh(mine=mine):
-            host = next(iter(ret.keys()))
+        for ret, _ in self.handle_ssh(mine=mine):
+            host = next(iter(ret))
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
                 id_, data = next(iter(ret.items()))
@@ -792,22 +798,16 @@ class SSH(MultiprocessingStateMixin):
             )
 
         if self.opts.get("verbose"):
-            msg = "Executing job with jid {}".format(jid)
+            msg = f"Executing job with jid {jid}"
             print(msg)
             print("-" * len(msg) + "\n")
             print("")
         sret = {}
         outputter = self.opts.get("output", "nested")
         final_exit = 0
-        for ret in self.handle_ssh():
-            host = next(iter(ret.keys()))
-            if isinstance(ret[host], dict):
-                host_ret = ret[host].get("retcode", 0)
-                if host_ret != 0:
-                    final_exit = 1
-            else:
-                # Error on host
-                final_exit = 1
+        for ret, retcode in self.handle_ssh():
+            host = next(iter(ret))
+            final_exit = max(final_exit, retcode)
 
             self.cache_job(jid, host, ret[host], fun)
             ret = self.key_deploy(host, ret)
@@ -883,7 +883,7 @@ class Single:
         remote_port_forwards=None,
         winrm=False,
         ssh_options=None,
-        **kwargs
+        **kwargs,
     ):
         # Get mine setting and mine_functions if defined in kwargs (from roster)
         self.mine = mine
@@ -1017,9 +1017,7 @@ class Single:
         """
         check if the thindir exists on the remote machine
         """
-        stdout, stderr, retcode = self.shell.exec_cmd(
-            "test -d {}".format(self.thin_dir)
-        )
+        stdout, stderr, retcode = self.shell.exec_cmd(f"test -d {self.thin_dir}")
         if retcode != 0:
             return False
         return True
@@ -1131,7 +1129,7 @@ class Single:
                 self.id,
                 fsclient=self.fsclient,
                 minion_opts=self.minion_opts,
-                **self.target
+                **self.target,
             )
 
             opts_pkg = pre_wrapper["test.opts_pkg"]()  # pylint: disable=E1102
@@ -1217,7 +1215,7 @@ class Single:
             self.id,
             fsclient=self.fsclient,
             minion_opts=self.minion_opts,
-            **self.target
+            **self.target,
         )
         wrapper.fsclient.opts["cachedir"] = opts["cachedir"]
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
@@ -1265,7 +1263,7 @@ class Single:
             else:
                 result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         except TypeError as exc:
-            result = "TypeError encountered executing {}: {}".format(self.fun, exc)
+            result = f"TypeError encountered executing {self.fun}: {exc}"
             log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
         except Exception as exc:  # pylint: disable=broad-except
@@ -1274,6 +1272,10 @@ class Single:
             )
             log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
+
+        # Ensure retcode from wrappers is respected, especially state render exceptions
+        retcode = max(retcode, self.context.get("retcode", 0))
+
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
         if isinstance(result, dict) and "local" in result:
@@ -1288,7 +1290,7 @@ class Single:
         """
         if self.target.get("sudo"):
             sudo = (
-                "sudo -p '{}'".format(salt.client.ssh.shell.SUDO_PROMPT)
+                f"sudo -p '{salt.client.ssh.shell.SUDO_PROMPT}'"
                 if self.target.get("passwd")
                 else "sudo"
             )
@@ -1360,20 +1362,18 @@ ARGS = {arguments}\n'''.format(
                 script_args = shlex.split(str(script_args))
             args = " {}".format(" ".join([shlex.quote(str(el)) for el in script_args]))
         if extension == "ps1":
-            ret = self.shell.exec_cmd('"powershell {}"'.format(script))
+            ret = self.shell.exec_cmd(f'"powershell {script}"')
         else:
             if not self.winrm:
-                ret = self.shell.exec_cmd(
-                    "/bin/sh '{}{}'{}".format(pre_dir, script, args)
-                )
+                ret = self.shell.exec_cmd(f"/bin/sh '{pre_dir}{script}'{args}")
             else:
                 ret = saltwinshell.call_python(self, script)
 
         # Remove file from target system
         if not self.winrm:
-            self.shell.exec_cmd("rm '{}{}'".format(pre_dir, script))
+            self.shell.exec_cmd(f"rm '{pre_dir}{script}'")
         else:
-            self.shell.exec_cmd("del {}".format(script))
+            self.shell.exec_cmd(f"del {script}")
 
         return ret
 
@@ -1461,7 +1461,7 @@ ARGS = {arguments}\n'''.format(
                 while re.search(RSTR_RE, stderr):
                     stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             else:
-                return "ERROR: {}".format(error), stderr, retcode
+                return f"ERROR: {error}", stderr, retcode
 
         # FIXME: this discards output from ssh_shim if the shim succeeds.  It should
         # always save the shim output regardless of shim success or failure.
@@ -1521,7 +1521,7 @@ ARGS = {arguments}\n'''.format(
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
                     return (
-                        "ERROR: Failure deploying ext_mods: {}".format(stdout),
+                        f"ERROR: Failure deploying ext_mods: {stdout}",
                         stderr,
                         retcode,
                     )
@@ -1682,50 +1682,49 @@ def mod_data(fsclient):
         "returners",
     ]
     ret = {}
-    envs = fsclient.envs()
-    ver_base = ""
-    for env in envs:
-        files = fsclient.file_list(env)
-        for ref in sync_refs:
-            mods_data = {}
-            pref = "_{}".format(ref)
-            for fn_ in sorted(files):
-                if fn_.startswith(pref):
-                    if fn_.endswith((".py", ".so", ".pyx")):
-                        full = salt.utils.url.create(fn_)
-                        mod_path = fsclient.cache_file(full, env)
-                        if not os.path.isfile(mod_path):
-                            continue
-                        mods_data[os.path.basename(fn_)] = mod_path
-                        chunk = salt.utils.hashutils.get_hash(mod_path)
-                        ver_base += chunk
-            if mods_data:
-                if ref in ret:
-                    ret[ref].update(mods_data)
-                else:
-                    ret[ref] = mods_data
-    if not ret:
-        return {}
+    with fsclient:
+        envs = fsclient.envs()
+        ver_base = ""
+        for env in envs:
+            files = fsclient.file_list(env)
+            for ref in sync_refs:
+                mods_data = {}
+                pref = f"_{ref}"
+                for fn_ in sorted(files):
+                    if fn_.startswith(pref):
+                        if fn_.endswith((".py", ".so", ".pyx")):
+                            full = salt.utils.url.create(fn_)
+                            mod_path = fsclient.cache_file(full, env)
+                            if not os.path.isfile(mod_path):
+                                continue
+                            mods_data[os.path.basename(fn_)] = mod_path
+                            chunk = salt.utils.hashutils.get_hash(mod_path)
+                            ver_base += chunk
+                if mods_data:
+                    if ref in ret:
+                        ret[ref].update(mods_data)
+                    else:
+                        ret[ref] = mods_data
+        if not ret:
+            return {}
 
-    ver_base = salt.utils.stringutils.to_bytes(ver_base)
+        ver_base = salt.utils.stringutils.to_bytes(ver_base)
 
-    ver = hashlib.sha1(ver_base).hexdigest()
-    ext_tar_path = os.path.join(
-        fsclient.opts["cachedir"], "ext_mods.{}.tgz".format(ver)
-    )
-    mods = {"version": ver, "file": ext_tar_path}
-    if os.path.isfile(ext_tar_path):
+        ver = hashlib.sha1(ver_base).hexdigest()
+        ext_tar_path = os.path.join(fsclient.opts["cachedir"], f"ext_mods.{ver}.tgz")
+        mods = {"version": ver, "file": ext_tar_path}
+        if os.path.isfile(ext_tar_path):
+            return mods
+        tfp = tarfile.open(ext_tar_path, "w:gz")
+        verfile = os.path.join(fsclient.opts["cachedir"], "ext_mods.ver")
+        with salt.utils.files.fopen(verfile, "w+") as fp_:
+            fp_.write(ver)
+        tfp.add(verfile, "ext_version")
+        for ref in ret:
+            for fn_ in ret[ref]:
+                tfp.add(ret[ref][fn_], os.path.join(ref, fn_))
+        tfp.close()
         return mods
-    tfp = tarfile.open(ext_tar_path, "w:gz")
-    verfile = os.path.join(fsclient.opts["cachedir"], "ext_mods.ver")
-    with salt.utils.files.fopen(verfile, "w+") as fp_:
-        fp_.write(ver)
-    tfp.add(verfile, "ext_version")
-    for ref in ret:
-        for fn_ in ret[ref]:
-            tfp.add(ret[ref][fn_], os.path.join(ref, fn_))
-    tfp.close()
-    return mods
 
 
 def ssh_version():
@@ -1761,7 +1760,7 @@ def _convert_args(args):
             for key in list(arg.keys()):
                 if key == "__kwarg__":
                     continue
-                converted.append("{}={}".format(key, arg[key]))
+                converted.append(f"{key}={arg[key]}")
         else:
             converted.append(arg)
     return converted

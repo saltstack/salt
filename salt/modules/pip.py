@@ -144,7 +144,7 @@ def _check_bundled():
     """
     Gather run-time information to indicate if we are running from source or bundled.
     """
-    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    if hasattr(sys, "RELENV"):
         return True
     return False
 
@@ -157,7 +157,7 @@ def _get_pip_bin(bin_env):
     if not bin_env:
         if _check_bundled():
             logger.debug("pip: Using pip from bundled app")
-            return [os.path.normpath(sys.executable), "pip"]
+            return [str(sys.RELENV / "salt-pip")]
         else:
             logger.debug("pip: Using pip from currently-running Python")
             return [os.path.normpath(sys.executable), "-m", "pip"]

@@ -19,7 +19,7 @@ jobs:
   Salt:
     name: Lint Salt's Source Code
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || github.event_name == 'schedule' || fromJSON(inputs.changed-files)['salt'] || fromJSON(inputs.changed-files)['lint'] }}
+    if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['salt'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
       image: python:3.8-slim-buster
@@ -61,7 +61,7 @@ jobs:
   Tests:
     name: Lint Salt's Test Suite
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || github.event_name == 'schedule' || fromJSON(inputs.changed-files)['tests'] || fromJSON(inputs.changed-files)['lint'] }}
+    if: ${{ contains(fromJSON('["push", "schedule", "workflow_dispatch"]'), github.event_name) || fromJSON(inputs.changed-files)['tests'] || fromJSON(inputs.changed-files)['lint'] }}
 
     container:
       image: python:3.8-slim-buster

@@ -143,6 +143,10 @@ class CacheDisk(CacheDict):
         if not salt.utils.msgpack.HAS_MSGPACK or not os.path.exists(self._path):
             return
 
+        if 0 == os.path.getsize(self._path):
+            # File exists but empty, treat as empty cache
+            return
+
         try:
             with salt.utils.files.fopen(self._path, "rb") as fp_:
                 cache = salt.utils.msgpack.load(

@@ -11,34 +11,22 @@ as created by the Python installer. This includes all header files, scripts,
 dlls, library files, and pip.
 
 .EXAMPLE
-build_python.ps1 -Version 3.8.16 -Architecture x86
+build_python.ps1 -Version 3.10.9 -Architecture x86
 
 #>
 param(
     [Parameter(Mandatory=$false)]
     [ValidatePattern("^\d{1,2}.\d{1,2}.\d{1,2}$")]
     [ValidateSet(
-        #"3.10.5",
-        #"3.10.4",
-        #"3.10.3",
-        #"3.9.13",
-        #"3.9.12",
-        #"3.9.11",
-        "3.8.16",
-        "3.8.15",
-        "3.8.14",
-        "3.8.13",
-        "3.8.12",
-        "3.8.11",
-        "3.8.10"
+        "3.11.3",
+        "3.10.11"
     )]
     [Alias("v")]
-    # The version of Python to be built. Pythonnet only supports up to Python
-    # 3.8 for now. Pycurl stopped building wheel files after 7.43.0.5 which
-    # supported up to 3.8. So we're pinned to the latest version of Python 3.8.
-    # We may have to drop support for pycurl or build it ourselves.
-    # Default is: 3.8.16
-    [String] $Version = "3.8.16",
+    [String] $Version = "3.10.11",
+
+    [Parameter(Mandatory=$false)]
+    [Alias("r")]
+    [String] $RelenvVersion = "0.12.3",
 
     [Parameter(Mandatory=$false)]
     [ValidateSet("x64", "x86", "amd64")]
@@ -96,6 +84,7 @@ if ( $Build ) {
 }
 Write-Host "$SCRIPT_MSG" -ForegroundColor Cyan
 Write-Host "- Python Version: $Version"
+Write-Host "- Relenv Version: $RelenvVersion"
 Write-Host "- Architecture:   $Architecture"
 Write-Host "- Build:          $Build"
 Write-Host $("-" * 80)
@@ -162,7 +151,7 @@ $SCRIPT_DIR   = (Get-ChildItem "$($myInvocation.MyCommand.Definition)").Director
 $BUILD_DIR    = "$SCRIPT_DIR\buildenv"
 $SCRIPTS_DIR  = "$BUILD_DIR\Scripts"
 $RELENV_DIR   = "${env:LOCALAPPDATA}\relenv"
-$SYS_PY_BIN   = (cmd /c "where python")
+$SYS_PY_BIN   = (python -c "import sys; print(sys.executable)")
 $BLD_PY_BIN   = "$BUILD_DIR\Scripts\python.exe"
 $SALT_DEP_URL = "https://repo.saltproject.io/windows/dependencies"
 
@@ -238,7 +227,7 @@ if ( $env:VIRTUAL_ENV ) {
 # Installing Relenv
 #-------------------------------------------------------------------------------
 Write-Host "Installing Relenv: " -NoNewLine
-pip install relenv --disable-pip-version-check | Out-Null
+pip install relenv==$RelenvVersion --disable-pip-version-check | Out-Null
 $output = pip list --disable-pip-version-check
 if ("relenv" -in $output.split()) {
     Write-Result "Success" -ForegroundColor Green
@@ -246,6 +235,7 @@ if ("relenv" -in $output.split()) {
     Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
+$env:RELENV_FETCH_VERSION=$RelenvVersion
 
 #-------------------------------------------------------------------------------
 # Building Python with Relenv
@@ -255,9 +245,9 @@ if ( $Build ) {
     $output = relenv build --clean --arch $ARCH
 } else {
     Write-Host "Fetching Python with Relenv: " -NoNewLine
-    relenv fetch --arch $ARCH | Out-Null
+    relenv fetch --python $Version --arch $ARCH | Out-Null
 }
-if ( Test-Path -Path "$RELENV_DIR\build\$ARCH-win.tar.xz") {
+if ( Test-Path -Path "$RELENV_DIR\build\$Version-$ARCH-win.tar.xz") {
     Write-Result "Success" -ForegroundColor Green
 } else {
     Write-Result "Failed" -ForegroundColor Red
@@ -268,30 +258,12 @@ if ( Test-Path -Path "$RELENV_DIR\build\$ARCH-win.tar.xz") {
 # Extracting Python environment
 #-------------------------------------------------------------------------------
 Write-Host "Extracting Python environment: " -NoNewLine
-relenv create --arch $ARCH "$BUILD_DIR"
+relenv create --python $Version --arch $ARCH "$BUILD_DIR"
 If ( Test-Path -Path "$BLD_PY_BIN" ) {
     Write-Result "Success" -ForegroundColor Green
 } else {
     Write-Result "Failed" -ForegroundColor Red
     exit 1
-}
-
-#-------------------------------------------------------------------------------
-# Retrieving SSL Libraries
-#-------------------------------------------------------------------------------
-$ssllibs = "libeay32.dll",
-           "ssleay32.dll"
-$ssllibs | ForEach-Object {
-    $url = "$SALT_DEP_URL/openssl/1.1.1k/$_"
-    $file = "$SCRIPTS_DIR\$_"
-    Write-Host "Retrieving $_`: " -NoNewline
-    Invoke-WebRequest -Uri "$url" -OutFile "$file" | Out-Null
-    if ( Test-Path -Path "$file" ) {
-        Write-Result "Success" -ForegroundColor Green
-    } else {
-        Write-Result "Failed" -ForegroundColor Red
-        exit 1
-    }
 }
 
 #-------------------------------------------------------------------------------

@@ -1,8 +1,6 @@
 """
 the locale utils used by salt
 """
-
-
 import sys
 
 from salt.utils.decorators import memoize as real_memoize

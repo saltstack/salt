@@ -154,6 +154,7 @@ def salt_ssh_cli(
     )
 
 
+@pytest.mark.flaky_jail
 def test_setup(salt_ssh_cli, ssh_container_name, ssh_sub_container_name, ssh_password):
     """
     Test salt-ssh setup works

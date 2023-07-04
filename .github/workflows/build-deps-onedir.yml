@@ -21,23 +21,13 @@ on:
       relenv-version:
         required: false
         type: string
-        default: 0.6.0
+        default: 0.12.3
         description: The version of relenv to use
-      python-version-linux:
+      python-version:
         required: false
         type: string
         default: 3.10.9
         description: The version of python to use with relenv
-      python-version-macos:
-        required: false
-        type: string
-        default: 3.10.9
-        description: The version of python to use with relenv
-      python-version-windows:
-        required: false
-        type: string
-        description: The version of python to use with relenv on Windows
-        default: 3.10.9
 
 env:
   RELENV_DATA: "${{ github.workspace }}/.relenv"
@@ -60,13 +50,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup Relenv
+        id: setup-relenv
         uses: ./.github/actions/setup-relenv
         with:
           platform: linux
           arch: ${{ matrix.arch }}
           version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
-          python-version: ${{ inputs.python-version-linux }}
+          python-version: ${{ inputs.python-version }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -76,8 +67,8 @@ jobs:
         with:
           platform: linux
           arch: ${{ matrix.arch }}
-          python-version: ${{ inputs.python-version-linux }}
-          cache-seed: ${{ inputs.cache-seed }}
+          python-version: "${{ inputs.python-version }}"
+          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
 
 
   build-deps-windows:
@@ -100,12 +91,14 @@ jobs:
           python-version: "3.10"
 
       - name: Setup Relenv
+        id: setup-relenv
         uses: ./.github/actions/setup-relenv
         with:
           platform: windows
           arch: ${{ matrix.arch }}
+          version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
-          python-version: ${{ inputs.python-version-windows }}
+          python-version: ${{ inputs.python-version }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -115,8 +108,8 @@ jobs:
         with:
           platform: windows
           arch: ${{ matrix.arch }}
-          cache-seed: ${{ inputs.cache-seed }}
-          python-version: ${{ inputs.python-version-windows }}
+          python-version: "${{ inputs.python-version }}"
+          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
 
 
   build-deps-macos:
@@ -138,12 +131,14 @@ jobs:
           python-version: "3.10"
 
       - name: Setup Relenv
+        id: setup-relenv
         uses: ./.github/actions/setup-relenv
         with:
           platform: darwin
           arch: ${{ matrix.arch }}
+          version: ${{ inputs.relenv-version }}
           cache-seed: ${{ inputs.cache-seed }}
-          python-version: ${{ inputs.python-version-macos }}
+          python-version: ${{ inputs.python-version }}
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -153,5 +148,5 @@ jobs:
         with:
           platform: darwin
           arch: ${{ matrix.arch }}
-          cache-seed: ${{ inputs.cache-seed }}
-          python-version: ${{ inputs.python-version-macos }}
+          python-version: "${{ inputs.python-version }}"
+          cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}

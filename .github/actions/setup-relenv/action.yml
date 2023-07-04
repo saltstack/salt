@@ -22,7 +22,11 @@ inputs:
     required: false
     type: string
     description: The version of relenv to use
-    default: 0.6.0
+    default: 0.12.3
+
+outputs:
+  version:
+    value: ${{ inputs.version }}
 
 
 env:
@@ -49,10 +53,14 @@ runs:
     - name: Fetch Toolchain
       if: ${{ inputs.platform == 'linux' }}
       shell: bash
+      env:
+        RELENV_FETCH_VERSION: "${{ inputs.version }}"
       run: |
         python3 -m relenv toolchain fetch --arch=${{ inputs.arch }}
 
     - name: Fetch Native Python Build
       shell: bash
+      env:
+        RELENV_FETCH_VERSION: "${{ inputs.version }}"
       run: |
         python3 -m relenv fetch --arch=${{ inputs.arch }} --python=${{ inputs.python-version }}

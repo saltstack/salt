@@ -405,3 +405,29 @@ def test_managed_test_mode_user_group_not_present():
         )
         assert ret["result"] is not False
         assert "is not available" not in ret["comment"]
+
+
+@pytest.mark.parametrize(
+    "source,check_result",
+    [
+        ("http://@$@dead_link@$@/src.tar.gz", True),
+        ("https://@$@dead_link@$@/src.tar.gz", True),
+        ("ftp://@$@dead_link@$@/src.tar.gz", True),
+        ("salt://@$@dead_link@$@/src.tar.gz", False),
+        ("file://@$@dead_link@$@/src.tar.gz", False),
+        (
+            ["http://@$@dead_link@$@/src.tar.gz", "https://@$@dead_link@$@/src.tar.gz"],
+            True,
+        ),
+        (
+            ["salt://@$@dead_link@$@/src.tar.gz", "file://@$@dead_link@$@/src.tar.gz"],
+            False,
+        ),
+        (
+            ["http://@$@dead_link@$@/src.tar.gz", "file://@$@dead_link@$@/src.tar.gz"],
+            True,
+        ),
+    ],
+)
+def test_sources_source_hash_check(source, check_result):
+    assert filestate._http_ftp_check(source) is check_result

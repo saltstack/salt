@@ -19,7 +19,7 @@ inputs:
     type: string
     description: The onedir package name to create
     default: salt
-  cache-seed:
+  cache-prefix:
     required: true
     type: string
     description: Seed used to invalidate caches
@@ -29,6 +29,7 @@ env:
   COLUMNS: 190
   PIP_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
   PIP_EXTRA_INDEX_URL: https://pypi.org/simple
+  RELENV_BUILDENV: 1
 
 
 runs:
@@ -41,38 +42,20 @@ runs:
       uses: actions/cache@v3
       with:
         path: artifacts/${{ inputs.package-name }}
-        key: ${{ inputs.cache-seed }}|relenv|${{ env.RELENV_VERSION }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{ hashFiles(format('{0}/.relenv/**/*.xz', github.workspace), 'requirements/static/pkg/*/*.txt', '.github/actions/build-onedir-deps/action.yml') }}
-
-    - name: Create Onedir Directory
-      shell: bash
-      if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
-      run: |
-        python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
-        python3 -m relenv create --arch=${{ inputs.arch }} --python=${{ inputs.python-version }} artifacts/${{ inputs.package-name }}
-
-    - name: Get Ondir Python Version
-      id: get-python-version
-      if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
-      uses: ./.github/actions/get-python-version
-      with:
-        python-binary: artifacts/${{ inputs.package-name }}/${{ inputs.platform == 'windows' && 'Scripts/python' || 'bin/python3' }}
-
-    - name: Upgrade Setuptools & Pip
-      shell: bash
-      if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
-      run: |
-        ${{ steps.get-python-version.outputs.binary }} -m pip install -U "pip>=22.3.1,<23.0"
-        ${{ steps.get-python-version.outputs.binary }} -m pip install -U "setuptools>=65.6.3,<66"
+        key: >
+          ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|
+          ${{ hashFiles(
+            format('{0}/.relenv/**/*.xz', github.workspace),
+            'requirements/static/pkg/*/*.txt',
+            '.github/actions/build-onedir-deps/action.yml',
+            'cicd/shared-gh-workflows-context.yml'
+          ) }}
 
     - name: Install Salt Onedir Package Dependencies
       shell: bash
       if: steps.onedir-pkg-cache.outputs.cache-hit != 'true'
       run: |
-        if [ "${{ inputs.platform }}" != "windows" ]; then
-          ${{ steps.get-python-version.outputs.binary }} -m pip install -r requirements/static/pkg/py${{ steps.get-python-version.outputs.version }}/${{ inputs.platform }}.txt --no-binary=':all:'
-        else
-          ${{ steps.get-python-version.outputs.binary }} -m pip install -r requirements/static/pkg/py${{ steps.get-python-version.outputs.version }}/${{ inputs.platform }}.txt
-        fi
+        tools pkg build onedir-dependencies --arch ${{ inputs.arch }} --python-version ${{ inputs.python-version }} --package-name artifacts/${{ inputs.package-name }} --platform ${{ inputs.platform }}
 
     - name: Cleanup Salt Onedir Directory
       shell: bash

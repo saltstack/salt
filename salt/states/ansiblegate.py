@@ -32,12 +32,10 @@ state:
           - state: installed
 
 """
-
 import logging
 import os
 import sys
 
-# Import salt modules
 import salt.fileclient
 import salt.utils.decorators.path
 from salt.utils.decorators import depends
@@ -108,13 +106,6 @@ def __virtual__():
     return __virtualname__
 
 
-def _client():
-    """
-    Get a fileclient
-    """
-    return salt.fileclient.get_file_client(__opts__)
-
-
 def _changes(plays):
     """
     Find changes in ansible return data
@@ -171,7 +162,8 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
     }
     if git_repo:
         if not isinstance(rundir, str) or not os.path.isdir(rundir):
-            rundir = _client()._extrn_path(git_repo, "base")
+            with salt.fileclient.get_file_client(__opts__) as client:
+                rundir = client._extrn_path(git_repo, "base")
             log.trace("rundir set to %s", rundir)
         if not isinstance(git_kwargs, dict):
             log.debug("Setting git_kwargs to empty dict: %s", git_kwargs)

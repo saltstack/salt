@@ -1,12 +1,18 @@
 import logging
 
-import tools.changelog
-import tools.ci
-import tools.docs
-import tools.pkg
-import tools.pkgrepo
-import tools.pre_commit
-import tools.vm
+import ptscripts
+
+ptscripts.register_tools_module("tools.changelog")
+ptscripts.register_tools_module("tools.ci")
+ptscripts.register_tools_module("tools.docs")
+ptscripts.register_tools_module("tools.pkg")
+ptscripts.register_tools_module("tools.pkg.repo")
+ptscripts.register_tools_module("tools.pkg.build")
+ptscripts.register_tools_module("tools.pkg.repo.create")
+ptscripts.register_tools_module("tools.pkg.repo.publish")
+ptscripts.register_tools_module("tools.pre_commit")
+ptscripts.register_tools_module("tools.release")
+ptscripts.register_tools_module("tools.vm")
 
 for name in ("boto3", "botocore", "urllib3"):
     logging.getLogger(name).setLevel(logging.INFO)

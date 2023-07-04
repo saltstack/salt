@@ -3,6 +3,7 @@ import logging
 import pytest
 
 import salt.modules.beacons as beaconmod
+import salt.modules.cp as cp
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.yumpkg as yumpkg
 import salt.states.beacon as beaconstate
@@ -15,19 +16,28 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def configure_loader_modules():
+def configure_loader_modules(minion_opts):
     return {
+        cp: {
+            "__opts__": minion_opts,
+        },
         pkg: {
             "__env__": "base",
             "__salt__": {},
             "__grains__": {"os": "CentOS", "os_family": "RedHat"},
-            "__opts__": {"test": False, "cachedir": ""},
+            "__opts__": minion_opts,
             "__instance_id__": "",
             "__low__": {},
             "__utils__": {"state.gen_tag": state_utils.gen_tag},
         },
-        beaconstate: {"__salt__": {}, "__opts__": {}},
-        beaconmod: {"__salt__": {}, "__opts__": {}},
+        beaconstate: {
+            "__salt__": {},
+            "__opts__": minion_opts,
+        },
+        beaconmod: {
+            "__salt__": {},
+            "__opts__": minion_opts,
+        },
         pkg_resource: {
             "__salt__": {},
             "__grains__": {"os": "CentOS", "os_family": "RedHat"},
@@ -35,7 +45,7 @@ def configure_loader_modules():
         yumpkg: {
             "__salt__": {},
             "__grains__": {"osarch": "x86_64", "osmajorrelease": 7},
-            "__opts__": {},
+            "__opts__": minion_opts,
         },
     }
 
@@ -546,21 +556,49 @@ def test_installed_with_changes_test_true(list_pkgs):
     Test pkg.installed with simulated changes
     """
 
+    latest_pkgs = MagicMock(return_value="some version here")
     list_pkgs = MagicMock(return_value=list_pkgs)
 
     with patch.dict(
         pkg.__salt__,
         {
+            "pkg.latest_version": latest_pkgs,
             "pkg.list_pkgs": list_pkgs,
         },
     ):
 
-        expected = {"dummy": {"new": "installed", "old": ""}}
+        expected = {"dummy": {"new": "some version here", "old": ""}}
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
             ret = pkg.installed("dummy", test=True)
             assert ret["result"] is None
             assert ret["changes"] == expected
+
+
+def test_installed_with_sources(list_pkgs, tmp_path):
+    """
+    Test pkg.installed with passing `sources`
+    """
+
+    list_pkgs = MagicMock(return_value=list_pkgs)
+    pkg_source = tmp_path / "pkga-package-0.3.0.deb"
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "cp.cache_file": cp.cache_file,
+            "pkg.list_pkgs": list_pkgs,
+            "pkg_resource.pack_sources": pkg_resource.pack_sources,
+            "lowpkg.bin_pkg_info": MagicMock(),
+        },
+    ), patch("salt.fileclient.get_file_client", return_value=MagicMock()):
+        try:
+            ret = pkg.installed("install-pkgd", sources=[{"pkga": str(pkg_source)}])
+            assert ret["result"] is False
+        except TypeError as exc:
+            if "got multiple values for keyword argument 'saltenv'" in str(exc):
+                pytest.fail(f"TypeError should have not been raised: {exc}")
+            raise exc from None
 
 
 @pytest.mark.parametrize("action", ["removed", "purged"])
@@ -1011,5 +1049,76 @@ def test_installed_with_single_normalize_32bit():
         )
         call_yum_mock.assert_called_once()
         assert "xz-devel.i686" in call_yum_mock.mock_calls[0].args[0]
+        assert ret["result"]
+        assert ret["changes"] == expected
+
+
+def test__get_installable_versions_no_version_found():
+    mock_latest_versions = MagicMock(return_value={})
+    mock_list_repo_pkgs = MagicMock(return_value={})
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.latest_version": mock_latest_versions,
+            "pkg.list_pkgs": mock_list_repo_pkgs,
+        },
+    ), patch.dict(pkg.__opts__, {"test": True}):
+        expected = {"dummy": {"new": "installed", "old": ""}}
+        ret = pkg._get_installable_versions({"dummy": None}, current=None)
+        assert ret == expected
+
+
+def test__get_installable_versions_version_found():
+    mock_latest_versions = MagicMock(return_value={"dummy": "1.0.1"})
+    mock_list_repo_pkgs = MagicMock(return_value={})
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.latest_version": mock_latest_versions,
+            "pkg.list_pkgs": mock_list_repo_pkgs,
+        },
+    ), patch.dict(pkg.__opts__, {"test": True}):
+        expected = {"dummy": {"new": "1.0.1", "old": ""}}
+        ret = pkg._get_installable_versions({"dummy": None}, current=None)
+        assert ret == expected
+
+
+def test_installed_salt_minion_windows():
+    mock_list_pkgs = MagicMock(
+        return_value={
+            "git": "1.34.1",
+            "salt-minion-py3": "3006.0",
+            "vim": "1.6",
+        }
+    )
+    mock_install = MagicMock(
+        return_value={
+            "salt-minion-py3": {"install status": "task started"},
+        }
+    )
+    mock_find_install_targets = MagicMock(
+        return_value=(
+            {"salt-minion-py3": "3006.1"},
+            {"salt-minion-py3": "3006.1"},
+            [],
+            {},
+            {},
+            [],
+            True,
+        )
+    )
+    salt_dict = {
+        "pkg.install": mock_install,
+        "pkg.list_pkgs": mock_list_pkgs,
+        "pkg_resource.check_extra_requirements": pkg_resource.check_extra_requirements,
+        "pkg_resource.version_clean": pkg_resource.version_clean,
+    }
+    with patch.dict(pkg.__salt__, salt_dict), patch.object(
+        pkg, "_find_install_targets", mock_find_install_targets
+    ):
+        expected = {
+            "salt-minion-py3": {"install status": "task started"},
+        }
+        ret = pkg.installed(name="salt-minion-py3", version="3006.1")
         assert ret["result"]
         assert ret["changes"] == expected

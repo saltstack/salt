@@ -16,6 +16,10 @@ inputs:
     type: boolean
     default: false
     description: Validate the passed version.
+  release:
+    type: boolean
+    default: false
+    description: This is a release of salt.
 outputs:
   salt-version:
     value: ${{ steps.setup-salt-version.outputs.salt-version }}
@@ -36,4 +40,4 @@ runs:
         if [ "${{ inputs.cwd }}" != "" ]; then
           cd "${{ inputs.cwd }}"
         fi
-        tools pkg set-salt-version ${{ inputs.validate-version == 'true' && '--validate-version' || '' }} ${{ inputs.salt-version }}
+        tools pkg set-salt-version ${{ inputs.validate-version == 'true' && '--validate-version' || '' }} ${{ inputs.release == 'true' && '--release' || '' }} ${{ inputs.salt-version }}

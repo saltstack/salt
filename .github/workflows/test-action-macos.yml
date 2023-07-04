@@ -42,6 +42,16 @@ on:
         type: string
         description: The onedir package name to use
         default: salt
+      skip-code-coverage:
+        required: false
+        type: boolean
+        description: Skip code coverage
+        default: false
+      skip-junit-reports:
+        required: false
+        type: boolean
+        description: Skip Publishing JUnit Reports
+        default: false
 
 
 env:
@@ -98,7 +108,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt', 'noxfile.py') }}
 
       - name: Download Onedir Tarball as an Artifact
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
@@ -114,6 +124,7 @@ jobs:
           python3 -c "import os; os.makedirs('artifacts', exist_ok=True)"
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
+
       - name: Set up Python ${{ inputs.python-version }}
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: actions/setup-python@v4
@@ -131,12 +142,14 @@ jobs:
           python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
 
       - name: Define Nox Session
-        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        id: define-nox-session
         run: |
           if [ "${{ matrix.transport }}" != "tcp" ]; then
             echo NOX_SESSION=${{ inputs.nox-session}} >> "$GITHUB_ENV"
+            echo "nox-session=${{ inputs.nox-session}}" >> "$GITHUB_OUTPUT"
           else
             echo NOX_SESSION=${{ inputs.nox-session}}-tcp >> "$GITHUB_ENV"
+            echo "nox-session=${{ inputs.nox-session}}-tcp" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install Dependencies
@@ -160,6 +173,12 @@ jobs:
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
           nox -e compress-dependencies -- ${{ inputs.distro-slug }}
+
+      - name: Upload Nox Requirements Tarball
+        uses: actions/upload-artifact@v3
+        with:
+          name: nox-${{ inputs.distro-slug }}-${{ steps.define-nox-session.outputs.nox-session }}
+          path: nox.${{ inputs.distro-slug }}.tar.*
 
   test:
     name: Test
@@ -202,7 +221,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt') }}
+          key: ${{ inputs.cache-prefix }}|testrun-deps|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ matrix.transport }}|${{ inputs.python-version }}|${{ hashFiles('requirements/**/*.txt', 'noxfile.py') }}
+          # If we get a cache miss here it means the dependencies step failed to save the cache
+          fail-on-cache-miss: true
 
       - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v4
@@ -239,12 +260,13 @@ jobs:
           PRINT_SYSTEM_INFO: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "1"
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- -k "mac or darwin"
 
-      - name: Run Slow/Changed Tests
-        id: run-slow-changed-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+      - name: Run Fast/Changed Tests
+        id: run-fast-changed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] == false }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -253,13 +275,49 @@ jobs:
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
-            -k "mac or darwin" --suppress-no-test-exit-code --run-slow --from-filenames=testrun-changed-files.txt
+            -k "mac or darwin" --suppress-no-test-exit-code \
+            --from-filenames=testrun-changed-files.txt
+
+      - name: Run Slow/Changed Tests
+        id: run-slow-changed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] == false }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --slow-tests \
+            --from-filenames=testrun-changed-files.txt
+
+      - name: Run Core/Changed Tests
+        id: run-core-changed-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] == false }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --core-tests \
+            --from-filenames=testrun-changed-files.txt
 
       - name: Run Fast Tests
         id: run-fast-tests
-        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' }}
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['fast'] }}
         env:
           SKIP_REQUIREMENTS_INSTALL: "1"
           PRINT_TEST_SELECTION: "0"
@@ -268,9 +326,58 @@ jobs:
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
-            -k "mac or darwin"
+            -k "mac or darwin" --suppress-no-test-exit-code
+
+      - name: Run Slow Tests
+        id: run-slow-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['slow'] }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --slow-tests
+
+      - name: Run Core Tests
+        id: run-core-tests
+        if: ${{ fromJSON(inputs.testrun)['type'] != 'full' && fromJSON(inputs.testrun)['selected_tests']['core'] }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --core-tests
+
+      - name: Run Flaky Tests
+        id: run-flaky-tests
+        if: ${{ fromJSON(inputs.testrun)['selected_tests']['flaky'] }}
+        env:
+          SKIP_REQUIREMENTS_INSTALL: "1"
+          PRINT_TEST_SELECTION: "0"
+          PRINT_TEST_PLAN_ONLY: "0"
+          PRINT_SYSTEM_INFO: "0"
+          RERUN_FAILURES: "1"
+          GITHUB_ACTIONS_PIPELINE: "1"
+          SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+        run: |
+          sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
+            -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
 
       - name: Run Full Tests
         id: run-full-tests
@@ -283,16 +390,17 @@ jobs:
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
-            --run-slow -k "mac or darwin"
+            --slow-tests --core-tests -k "mac or darwin"
 
       - name: Fix file ownership
         run: |
           sudo chown -R "$(id -un)" .
 
       - name: Combine Coverage Reports
-        if: always() && job.status != 'cancelled'
+        if: always() && inputs.skip-code-coverage == false && job.status != 'cancelled'
         run: |
           nox -e combine-coverage
 
@@ -304,11 +412,13 @@ jobs:
           # from it showing in the tree command below
           rm -rf artifacts/salt*
           tree -a artifacts
-          mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
-          echo "COVERAGE_FILE=artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}" >> GITHUB_ENV
+          if [ "${{ inputs.skip-code-coverage }}" != "true" ]; then
+            mv artifacts/coverage/.coverage artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
+            echo "COVERAGE_FILE=artifacts/coverage/.coverage.${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}" >> GITHUB_ENV
+          fi
 
       - name: Upload Code Coverage Test Run Artifacts
-        if: always() && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         uses: actions/upload-artifact@v3
         with:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
@@ -334,7 +444,7 @@ jobs:
 
   report:
     name: Reports for ${{ inputs.distro-slug }}(${{ matrix.transport }})
-    if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+    if: always() && (inputs.skip-code-coverage == false || inputs.skip-junit-reports == false) && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     runs-on: ubuntu-latest
     needs:
       - generate-matrix
@@ -358,6 +468,7 @@ jobs:
 
       - name: Download Code Coverage Test Run Artifacts
         uses: actions/download-artifact@v3
+        if: ${{ inputs.skip-code-coverage == false }}
         id: download-coverage-artifacts
         with:
           name: testrun-coverage-artifacts-${{ inputs.distro-slug }}-${{ env.NOX_SESSION }}
@@ -374,41 +485,42 @@ jobs:
         run: |
           tree -a artifacts
 
-      - name: Set up Python 3.9
+      - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v4
         with:
-          python-version: "3.9"
+          python-version: "${{ inputs.python-version }}"
 
       - name: Install Nox
         run: |
           python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
 
       - name: Combine Code Coverage
+        if: ${{ inputs.skip-code-coverage == false }}
         continue-on-error: true
         run: |
           nox --force-color -e combine-coverage
 
       - name: Upload Code Coverage DB
-        if: always() && steps.download-coverage-artifacts.outcome == 'success'
+        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
         uses: actions/upload-artifact@v3
         with:
           name: code-coverage
           path: artifacts/coverage
 
       - name: Report Salt Code Coverage
-        if: always() && steps.download-coverage-artifacts.outcome == 'success'
+        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
         continue-on-error: true
         run: |
           nox --force-color -e report-coverage -- salt
 
       - name: Report Tests Code Coverage
-        if: always() && steps.download-coverage-artifacts.outcome == 'success'
+        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
         continue-on-error: true
         run: |
           nox --force-color -e report-coverage -- tests
 
       - name: Report Combined Code Coverage
-        if: always() && steps.download-coverage-artifacts.outcome == 'success'
+        if: always() && inputs.skip-code-coverage == false && steps.download-coverage-artifacts.outcome == 'success'
         continue-on-error: true
         run: |
           nox --force-color -e report-coverage
@@ -416,7 +528,7 @@ jobs:
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v3
         # always run even if the previous steps fails
-        if: always() && github.event_name == 'push' && steps.download-junit-artifacts.outcome == 'success'
+        if: always() && inputs.skip-junit-reports == false && steps.download-junit-artifacts.outcome == 'success'
         with:
           check_name: Test Results(${{ inputs.distro-slug }})
           report_paths: 'artifacts/xml-unittests-output/*.xml'

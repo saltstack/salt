@@ -35,22 +35,10 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Download Release Patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         uses: actions/download-artifact@v3
         with:
           name: salt-${{ inputs.salt-version }}.patch
-
-      - name: Configure Git
-        shell: bash
-        run: |
-          git config --global user.name "Salt Project Packaging"
-          git config --global user.email saltproject-packaging@vmware.com
-          git config --global --add safe.directory "$(pwd)"
-
-      - name: Apply Release Patch
-        shell: bash
-        run: |
-          git am --committer-date-is-author-date salt-${{ inputs.salt-version }}.patch
-          rm salt-${{ inputs.salt-version }}.patch
 
       - name: Get Python Version
         id: get-python-version
@@ -59,14 +47,25 @@ jobs:
           python-binary: python3
 
       - name: Setup Python Tools Scripts
+        id: python-tools-scripts
         uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Configure Git
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools pkg configure-git
+
+      - name: Apply release patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
 
       - name: Cache Python Tools Docs Virtualenv
         id: tools-venvs-dependencies-cache
         uses: actions/cache@v3
         with:
           path: .tools-venvs/docs
-          key: ${{ inputs.cache-seed }}|${{ github.workflow }}|tools-venvs|docs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/docs.txt') }}
+          key: ${{ inputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|docs|${{ steps.get-python-version.outputs.version }}|${{ hashFiles('requirements/**/docs.txt') }}
 
       - name: Prepare Docs Build
         run: |

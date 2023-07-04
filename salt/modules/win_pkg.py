@@ -65,7 +65,7 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltRenderError,
 )
-from salt.utils.versions import Version
+from salt.utils.versions import LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -1298,7 +1298,7 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
         successful_verbose[short_path_name] = []
 
 
-def _get_source_sum(source_hash, file_path, saltenv):
+def _get_source_sum(source_hash, file_path, saltenv, verify_ssl=True):
     """
     Extract the hash sum, whether it is in a remote hash file, or just a string.
     """
@@ -1314,7 +1314,9 @@ def _get_source_sum(source_hash, file_path, saltenv):
     if source_hash_scheme in schemes:
         # The source_hash is a file on a server
         try:
-            cached_hash_file = __salt__["cp.cache_file"](source_hash, saltenv)
+            cached_hash_file = __salt__["cp.cache_file"](
+                source_hash, saltenv=saltenv, verify_ssl=verify_ssl
+            )
         except MinionError as exc:
             log.exception("Failed to cache %s", source_hash, exc_info=exc)
             raise
@@ -1359,6 +1361,28 @@ def _get_msiexec(use_msiexec):
             use_msiexec = True
     if use_msiexec is True:
         return True, "msiexec"
+
+
+def normalize_name(name):
+    """
+    Nothing to do on Windows. We need this function so that Salt doesn't go
+    through every module looking for ``pkg.normalize_name``.
+
+    .. versionadded:: 3006.0
+
+    Args:
+        name (str): The name of the package
+
+    Returns:
+        str: The name of the package
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.normalize_name git
+    """
+    return name
 
 
 def install(name=None, refresh=False, pkgs=None, **kwargs):
@@ -1645,7 +1669,11 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 cached_file = __salt__["cp.is_cached"](cache_file, saltenv)
                 if not cached_file:
                     try:
-                        cached_file = __salt__["cp.cache_file"](cache_file, saltenv)
+                        cached_file = __salt__["cp.cache_file"](
+                            cache_file,
+                            saltenv=saltenv,
+                            verify_ssl=kwargs.get("verify_ssl", True),
+                        )
                     except MinionError as exc:
                         msg = "Failed to cache {}".format(cache_file)
                         log.exception(msg, exc_info=exc)
@@ -1656,7 +1684,11 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     "cp.hash_file"
                 ](cached_file):
                     try:
-                        cached_file = __salt__["cp.cache_file"](cache_file, saltenv)
+                        cached_file = __salt__["cp.cache_file"](
+                            cache_file,
+                            saltenv=saltenv,
+                            verify_ssl=kwargs.get("verify_ssl", True),
+                        )
                     except MinionError as exc:
                         msg = "Failed to cache {}".format(cache_file)
                         log.exception(msg, exc_info=exc)
@@ -1673,7 +1705,11 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             if not cached_pkg:
                 # It's not cached. Cache it, mate.
                 try:
-                    cached_pkg = __salt__["cp.cache_file"](installer, saltenv)
+                    cached_pkg = __salt__["cp.cache_file"](
+                        installer,
+                        saltenv=saltenv,
+                        verify_ssl=kwargs.get("verify_ssl", True),
+                    )
                 except MinionError as exc:
                     msg = "Failed to cache {}".format(installer)
                     log.exception(msg, exc_info=exc)
@@ -1694,7 +1730,11 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     "cp.hash_file"
                 ](cached_pkg):
                     try:
-                        cached_pkg = __salt__["cp.cache_file"](installer, saltenv)
+                        cached_pkg = __salt__["cp.cache_file"](
+                            installer,
+                            saltenv=saltenv,
+                            verify_ssl=kwargs.get("verify_ssl", True),
+                        )
                     except MinionError as exc:
                         msg = "Failed to cache {}".format(installer)
                         log.exception(msg, exc_info=exc)
@@ -1716,7 +1756,12 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         # Compare the hash sums
         source_hash = pkginfo[version_num].get("source_hash", False)
         if source_hash:
-            source_sum = _get_source_sum(source_hash, cached_pkg, saltenv)
+            source_sum = _get_source_sum(
+                source_hash,
+                cached_pkg,
+                saltenv=saltenv,
+                verify_ssl=kwargs.get("verify_ssl", True),
+            )
             log.debug(
                 "pkg.install: Source %s hash: %s",
                 source_sum["hash_type"],
@@ -1768,7 +1813,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
         # Install the software
         # Check Use Scheduler Option
-        log.debug("PKG : cmd: %s /s /c %s", cmd_shell, arguments)
+        log.debug("PKG : cmd: %s /c %s", cmd_shell, arguments)
         log.debug("PKG : pwd: %s", cache_path)
         if pkginfo[version_num].get("use_scheduler", False):
             # Create Scheduled Task
@@ -1778,7 +1823,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 force=True,
                 action_type="Execute",
                 cmd=cmd_shell,
-                arguments='/s /c "{}"'.format(arguments),
+                arguments='/c "{}"'.format(arguments),
                 start_in=cache_path,
                 trigger_type="Once",
                 start_date="1975-01-01",
@@ -1830,7 +1875,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         else:
             # Launch the command
             result = __salt__["cmd.run_all"](
-                '"{}" /s /c "{}"'.format(cmd_shell, arguments),
+                '"{}" /c "{}"'.format(cmd_shell, arguments),
                 cache_path,
                 output_loglevel="trace",
                 python_shell=False,
@@ -2086,7 +2131,11 @@ def remove(name=None, pkgs=None, **kwargs):
                 if not cached_pkg:
                     # It's not cached. Cache it, mate.
                     try:
-                        cached_pkg = __salt__["cp.cache_file"](uninstaller, saltenv)
+                        cached_pkg = __salt__["cp.cache_file"](
+                            uninstaller,
+                            saltenv=saltenv,
+                            verify_ssl=kwargs.get("verify_ssl", True),
+                        )
                     except MinionError as exc:
                         msg = "Failed to cache {}".format(uninstaller)
                         log.exception(msg, exc_info=exc)
@@ -2106,7 +2155,11 @@ def remove(name=None, pkgs=None, **kwargs):
                         "cp.hash_file"
                     ](cached_pkg):
                         try:
-                            cached_pkg = __salt__["cp.cache_file"](uninstaller, saltenv)
+                            cached_pkg = __salt__["cp.cache_file"](
+                                uninstaller,
+                                saltenv=saltenv,
+                                verify_ssl=kwargs.get("verify_ssl", True),
+                            )
                         except MinionError as exc:
                             msg = "Failed to cache {}".format(uninstaller)
                             log.exception(msg, exc_info=exc)
@@ -2126,7 +2179,7 @@ def remove(name=None, pkgs=None, **kwargs):
             cached_pkg = cached_pkg.replace("/", "\\")
             cache_path, _ = os.path.split(cached_pkg)
 
-            # os.path.expandvars is not required as we run everything through cmd.exe /s /c
+            # os.path.expandvars is not required as we run everything through cmd.exe /c
 
             if kwargs.get("extra_uninstall_flags"):
                 uninstall_flags = "{} {}".format(
@@ -2154,6 +2207,8 @@ def remove(name=None, pkgs=None, **kwargs):
             # Uninstall the software
             changed.append(pkgname)
             # Check Use Scheduler Option
+            log.debug("PKG : cmd: %s /c %s", cmd_shell, arguments)
+            log.debug("PKG : pwd: %s", cache_path)
             if pkginfo[target].get("use_scheduler", False):
                 # Create Scheduled Task
                 __salt__["task.create_task"](
@@ -2162,7 +2217,7 @@ def remove(name=None, pkgs=None, **kwargs):
                     force=True,
                     action_type="Execute",
                     cmd=cmd_shell,
-                    arguments='/s /c "{}"'.format(arguments),
+                    arguments='/c "{}"'.format(arguments),
                     start_in=cache_path,
                     trigger_type="Once",
                     start_date="1975-01-01",
@@ -2179,11 +2234,12 @@ def remove(name=None, pkgs=None, **kwargs):
             else:
                 # Launch the command
                 result = __salt__["cmd.run_all"](
-                    '"{}" /s /c "{}"'.format(cmd_shell, arguments),
+                    '"{}" /c "{}"'.format(cmd_shell, arguments),
                     output_loglevel="trace",
                     python_shell=False,
                     redirect_stderr=True,
                 )
+                log.debug("PKG : retcode: %s", result["retcode"])
                 if not result["retcode"]:
                     ret[pkgname] = {"uninstall status": "success"}
                     changed.append(pkgname)
@@ -2356,7 +2412,7 @@ def _reverse_cmp_pkg_versions(pkg1, pkg2):
     """
     Compare software package versions
     """
-    return 1 if Version(pkg1) > Version(pkg2) else -1
+    return 1 if LooseVersion(pkg1) > LooseVersion(pkg2) else -1
 
 
 def _get_latest_pkg_version(pkginfo):

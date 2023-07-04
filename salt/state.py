@@ -16,6 +16,7 @@ import copy
 import datetime
 import fnmatch
 import importlib
+import inspect
 import logging
 import os
 import random
@@ -83,6 +84,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "fun",
         "state",
         "check_cmd",
+        "cmd_opts_exclude",
         "failhard",
         "onlyif",
         "unless",
@@ -971,10 +973,18 @@ class State:
             "timeout",
             "success_retcodes",
         )
+        if "cmd_opts_exclude" in low_data:
+            if not isinstance(low_data["cmd_opts_exclude"], list):
+                cmd_opts_exclude = [low_data["cmd_opts_exclude"]]
+            else:
+                cmd_opts_exclude = low_data["cmd_opts_exclude"]
+        else:
+            cmd_opts_exclude = []
         for run_cmd_arg in POSSIBLE_CMD_ARGS:
-            cmd_opts[run_cmd_arg] = low_data.get(run_cmd_arg)
+            if run_cmd_arg not in cmd_opts_exclude:
+                cmd_opts[run_cmd_arg] = low_data.get(run_cmd_arg)
 
-        if "shell" in low_data:
+        if "shell" in low_data and "shell" not in cmd_opts_exclude:
             cmd_opts["shell"] = low_data["shell"]
         elif "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
@@ -2292,6 +2302,7 @@ class State:
             initial_ret={"full": state_func_name},
             expected_extra_kws=STATE_INTERNAL_KEYWORDS,
         )
+
         inject_globals = {
             # Pass a copy of the running dictionary, the low state chunks and
             # the current state dictionaries.
@@ -2301,6 +2312,7 @@ class State:
             "__running__": immutabletypes.freeze(running) if running else {},
             "__instance_id__": self.instance_id,
             "__lowstate__": immutabletypes.freeze(chunks) if chunks else {},
+            "__user__": self.opts.get("user", "UNKNOWN"),
         }
 
         if "__env__" in low:
@@ -2374,11 +2386,15 @@ class State:
                                 *cdata["args"], **cdata["kwargs"]
                             )
                 self.states.inject_globals = {}
-            if (
-                "check_cmd" in low
-                and "{0[state]}.mod_run_check_cmd".format(low) not in self.states
-            ):
-                ret.update(self._run_check_cmd(low))
+            if "check_cmd" in low:
+                state_check_cmd = "{0[state]}.mod_run_check_cmd".format(low)
+                state_func = "{0[state]}.{0[fun]}".format(low)
+                state_func_sig = inspect.signature(self.states[state_func])
+                if state_check_cmd not in self.states:
+                    ret.update(self._run_check_cmd(low))
+                else:
+                    if "check_cmd" not in state_func_sig.parameters:
+                        ret.update(self._run_check_cmd(low))
         except Exception as exc:  # pylint: disable=broad-except
             log.debug(
                 "An exception occurred in this state: %s",

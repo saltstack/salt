@@ -8,6 +8,11 @@ import pytest
 docker = pytest.importorskip("docker")
 
 
+pytestmark = [
+    pytest.mark.core_test,
+]
+
+
 def json_output_to_dict(output):
     """
     Convert ``salt ... --out=json`` Syndic return to a dictionary. Since the

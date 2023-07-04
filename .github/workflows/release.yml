@@ -1,0 +1,1093 @@
+# Do not edit these workflows directly as the changes made will be overwritten.
+# Instead, edit the template '.github/workflows/templates/release.yml.jinja'
+---
+
+name: Release
+run-name: "Release (branch: ${{ github.ref_name }}; version: ${{ inputs.salt-version }})"
+
+on:
+  workflow_dispatch:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: >
+          The Salt version to get from staging to publish the release.
+          (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+      skip-salt-pkg-download-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages download test suite.
+
+env:
+  COLUMNS: 190
+  CACHE_SEED: SEED-3  # Bump the number to invalidate all caches
+  RELENV_DATA: "${{ github.workspace }}/.relenv"
+
+permissions:
+  contents: write  # To be able to publish the release
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+
+  check-requirements:
+    name: Check Requirements
+    runs-on: ubuntu-latest
+    environment: release-check
+    steps:
+      - name: Check For Admin Permission
+        uses: actions-cool/check-user-permission@v2
+        with:
+          require: admin
+          username: ${{ github.triggering_actor }}
+
+  prepare-workflow:
+    name: Prepare Workflow Run
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-release
+    environment: release
+    needs:
+      - check-requirements
+    outputs:
+      salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
+      cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
+      latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
+      releases: ${{ steps.get-salt-releases.outputs.releases }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full clone to also get the tags to get the right salt version
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Pretty Print The GH Actions Event
+        run:
+          tools ci print-gh-event
+
+      - name: Setup Salt Version
+        id: setup-salt-version
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+          validate-version: true
+
+      - name: Check Existing Releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+
+      - name: Check Release Staged
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools pkg repo confirm-staged --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+
+      - name: Get Salt Releases
+        id: get-salt-releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci get-releases
+
+      - name: Check Salt Releases
+        run: |
+          echo '${{ steps.get-salt-releases.outputs.latest-release }}' | jq -C '.'
+          echo '${{ steps.get-salt-releases.outputs.releases }}' | jq -C '.'
+
+      - name: Set Cache Seed Output
+        id: set-cache-seed
+        run: |
+          echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
+
+  download-onedir-artifact:
+    name: Download Staging Onedir Artifact
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-release
+    environment: release
+    needs:
+      - prepare-workflow
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            arch: x86_64
+          - platform: linux
+            arch: aarch64
+          - platform: windows
+            arch: amd64
+          - platform: windows
+            arch: x86
+          - platform: darwin
+            arch: x86_64
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
+      - name: Download Onedir Tarball Artifact
+        run: |
+          tools release download-onedir-artifact --platform=${{ matrix.platform }} --arch=${{ matrix.arch }} ${{ inputs.salt-version }}
+
+      - name: Upload Onedir Tarball as an Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
+          path: artifacts/salt-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz*
+          retention-days: 7
+          if-no-files-found: error
+
+  backup:
+    name: Backup
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-release
+    needs:
+      - prepare-workflow
+    environment: release
+    outputs:
+      backup-complete: ${{ steps.backup.outputs.backup-complete }}
+
+    steps:
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Rclone
+        uses: AnimMouse/setup-rclone@v1
+        with:
+          version: v1.61.1
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Backup Previous Releases
+        id: backup
+        run: |
+          tools pkg repo backup-previous-releases
+
+  publish-repositories:
+    name: Publish Repositories
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-release
+    needs:
+      - prepare-workflow
+      - backup
+      - download-onedir-artifact
+    environment: release
+
+    steps:
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v3
+
+      - name: Get Salt Project GitHub Actions Bot Environment
+        run: |
+          TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+          SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+          echo "SPB_ENVIRONMENT=$SPB_ENVIRONMENT" >> "$GITHUB_ENV"
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Publish Release Repository
+        env:
+          SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
+          SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
+        run: |
+          tools pkg repo publish release ${{ needs.prepare-workflow.outputs.salt-version }}
+
+  almalinux-8-package-download-tests:
+    name: Test Alma Linux 8 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: almalinux-8
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  almalinux-8-arm64-package-download-tests:
+    name: Test Alma Linux 8 Arm64 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: almalinux-8-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  almalinux-9-package-download-tests:
+    name: Test Alma Linux 9 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: almalinux-9
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  almalinux-9-arm64-package-download-tests:
+    name: Test Alma Linux 9 Arm64 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: almalinux-9-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  amazonlinux-2-package-download-tests:
+    name: Test Amazon Linux 2 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: amazonlinux-2
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  amazonlinux-2-arm64-package-download-tests:
+    name: Test Amazon Linux 2 Arm64 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: amazonlinux-2-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  centos-7-package-download-tests:
+    name: Test CentOS 7 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: centos-7
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  centos-7-arm64-package-download-tests:
+    name: Test CentOS 7 Arm64 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: centos-7-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  centosstream-8-package-download-tests:
+    name: Test CentOS Stream 8 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: centosstream-8
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  centosstream-8-arm64-package-download-tests:
+    name: Test CentOS Stream 8 Arm64 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: centosstream-8-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  centosstream-9-package-download-tests:
+    name: Test CentOS Stream 9 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: centosstream-9
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  centosstream-9-arm64-package-download-tests:
+    name: Test CentOS Stream 9 Arm64 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: centosstream-9-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  debian-10-package-download-tests:
+    name: Test Debian 10 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: debian-10
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  debian-11-package-download-tests:
+    name: Test Debian 11 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: debian-11
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  debian-11-arm64-package-download-tests:
+    name: Test Debian 11 Arm64 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: debian-11-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  fedora-37-package-download-tests:
+    name: Test Fedora 37 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: fedora-37
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  fedora-37-arm64-package-download-tests:
+    name: Test Fedora 37 Arm64 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: fedora-37-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  fedora-38-package-download-tests:
+    name: Test Fedora 38 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: fedora-38
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  fedora-38-arm64-package-download-tests:
+    name: Test Fedora 38 Arm64 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: fedora-38-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  photonos-3-package-download-tests:
+    name: Test Photon OS 3 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: photonos-3
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  photonos-4-package-download-tests:
+    name: Test Photon OS 4 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: photonos-4
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  ubuntu-2004-package-download-tests:
+    name: Test Ubuntu 20.04 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-20.04
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  ubuntu-2004-arm64-package-download-tests:
+    name: Test Ubuntu 20.04 Arm64 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-20.04-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  ubuntu-2204-package-download-tests:
+    name: Test Ubuntu 22.04 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-22.04
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  ubuntu-2204-arm64-package-download-tests:
+    name: Test Ubuntu 22.04 Arm64 package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-22.04-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  ubuntu-2204-onedir-download-tests:
+    name: Test Ubuntu 22.04 onedir Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-22.04
+      platform: linux
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: onedir
+    secrets: inherit
+
+  ubuntu-2204-arm64-onedir-download-tests:
+    name: Test Ubuntu 22.04 Arm64 onedir Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-linux.yml
+    with:
+      distro-slug: ubuntu-22.04-arm64
+      platform: linux
+      arch: aarch64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: onedir
+    secrets: inherit
+
+  macos-12-Package-download-tests:
+    name: Test macOS 12 Package Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-macos.yml
+    with:
+      distro-slug: macos-12
+      platform: darwin
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: package
+    secrets: inherit
+
+  macos-12-Onedir-download-tests:
+    name: Test macOS 12 Onedir Downloads
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-macos.yml
+    with:
+      distro-slug: macos-12
+      platform: darwin
+      arch: x86_64
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+      pkg-type: onedir
+    secrets: inherit
+
+  windows-2022-NSIS-amd64-download-tests:
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    name: Test Windows 2022 amd64 NSIS Package Downloads
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-windows.yml
+    with:
+      distro-slug: windows-2022
+      platform: windows
+      arch: amd64
+      pkg-type: nsis
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+    secrets: inherit
+
+  windows-2022-MSI-amd64-download-tests:
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    name: Test Windows 2022 amd64 MSI Package Downloads
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-windows.yml
+    with:
+      distro-slug: windows-2022
+      platform: windows
+      arch: amd64
+      pkg-type: msi
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+    secrets: inherit
+
+  windows-2022-Onedir-amd64-download-tests:
+    if: ${{ inputs.skip-salt-pkg-download-test-suite == false }}
+    name: Test Windows 2022 amd64 Onedir Package Downloads
+    needs:
+      - prepare-workflow
+      - publish-repositories
+      - download-onedir-artifact
+    uses: ./.github/workflows/test-package-downloads-action-windows.yml
+    with:
+      distro-slug: windows-2022
+      platform: windows
+      arch: amd64
+      pkg-type: onedir
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      environment: release
+      skip-code-coverage: true
+      latest-release: "${{ needs.prepare-workflow.outputs.latest-release }}"
+    secrets: inherit
+
+  release:
+    name: Release v${{ needs.prepare-workflow.outputs.salt-version }}
+    if: ${{ always() && ! failure() && ! cancelled() }}
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-release
+    needs:
+      - prepare-workflow
+      - backup
+      - publish-repositories
+      - almalinux-8-package-download-tests
+      - almalinux-8-arm64-package-download-tests
+      - almalinux-9-package-download-tests
+      - almalinux-9-arm64-package-download-tests
+      - amazonlinux-2-package-download-tests
+      - amazonlinux-2-arm64-package-download-tests
+      - centos-7-package-download-tests
+      - centos-7-arm64-package-download-tests
+      - centosstream-8-package-download-tests
+      - centosstream-8-arm64-package-download-tests
+      - centosstream-9-package-download-tests
+      - centosstream-9-arm64-package-download-tests
+      - debian-10-package-download-tests
+      - debian-11-package-download-tests
+      - debian-11-arm64-package-download-tests
+      - fedora-37-package-download-tests
+      - fedora-37-arm64-package-download-tests
+      - fedora-38-package-download-tests
+      - fedora-38-arm64-package-download-tests
+      - photonos-3-package-download-tests
+      - photonos-4-package-download-tests
+      - ubuntu-2004-package-download-tests
+      - ubuntu-2004-arm64-package-download-tests
+      - ubuntu-2204-package-download-tests
+      - ubuntu-2204-arm64-package-download-tests
+      - ubuntu-2204-onedir-download-tests
+      - ubuntu-2204-arm64-onedir-download-tests
+      - macos-12-Package-download-tests
+      - macos-12-Onedir-download-tests
+      - windows-2022-NSIS-amd64-download-tests
+      - windows-2022-MSI-amd64-download-tests
+      - windows-2022-Onedir-amd64-download-tests
+    environment: release
+    steps:
+      - name: Clone The Salt Repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.GHA_SSH_KEY }}
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup GnuPG
+        run: |
+          sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
+          GNUPGHOME="$(mktemp -d -p /run/gpg)"
+          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
+          cat <<EOF > "${GNUPGHOME}/gpg.conf"
+          batch
+          no-tty
+          pinentry-mode loopback
+          EOF
+
+      - name: Get Secrets
+        id: get-secrets
+        env:
+          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+        run: |
+          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
+          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256-2023 \
+            --query SecretString --output text | jq .default_key -r | base64 -d \
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -d - \
+            | gpg --import -
+          sync
+          aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/signing/repo-signing-keys-sha256-2023 \
+            --query SecretString --output text| jq .default_passphrase -r | base64 -d \
+            | gpg --passphrase-file "${SECRETS_KEY_FILE}" -o "${GNUPGHOME}/passphrase" -d -
+          sync
+          rm "$SECRETS_KEY_FILE"
+          echo "passphrase-file ${GNUPGHOME}/passphrase" >> "${GNUPGHOME}/gpg.conf"
+
+      - name: Prepare Release
+        id: prepare-release
+        run: |
+          tools pkg repo publish github --repository ${{ github.repository }} --key-id=64CBBC8173D76B3F ${{ needs.prepare-workflow.outputs.salt-version }}
+
+      - name: Configure Git
+        shell: bash
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+          git config --global user.name "Salt Project Packaging"
+          git config --global user.email saltproject-packaging@vmware.com
+          git config --global user.signingkey 64CBBC8173D76B3F
+          git config --global commit.gpgsign true
+
+      - name: Apply The Release Patch
+        run: |
+          git am --committer-date-is-author-date release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          rm release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+
+      - name: Tag The v${{ needs.prepare-workflow.outputs.salt-version }} Release
+        run: |
+          git tag -m "Release v${{ needs.prepare-workflow.outputs.salt-version }}" -as v${{ needs.prepare-workflow.outputs.salt-version }}
+
+      - name: Push Changes
+        uses: ad-m/github-push-action@b87afee92c6e70ea888be6203a3e9426fda49839
+        with:
+          ssh: true
+          tags: true
+          atomic: true
+          branch: ${{ github.ref }}
+
+      - name: Create Github Release
+        uses: ncipollo/release-action@v1.12.0
+        with:
+          artifactErrorsFailBuild: true
+          artifacts: ${{ steps.prepare-release.outputs.release-artifacts }}
+          bodyFile: ${{ steps.prepare-release.outputs.release-messsage-file }}
+          draft: false
+          generateReleaseNotes: false
+          makeLatest: fromJSON(${{ steps.prepare-release.outputs.make-latest }})
+          name: v${{ needs.prepare-workflow.outputs.salt-version }}
+          prerelease: ${{ contains(needs.prepare-workflow.outputs.salt-version, 'rc') }}
+          removeArtifacts: true
+          replacesArtifacts: true
+          tag: v${{ needs.prepare-workflow.outputs.salt-version }}
+
+      - name: Upload PyPi Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: pypi-artifacts
+          path: |
+            release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+            release-artifacts/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz.asc
+          retention-days: 7
+          if-no-files-found: error
+
+  publish-pypi:
+    name: Publish to PyPi
+    if: ${{ always() && ! failure() && ! cancelled() && github.event.repository.fork != true }}
+    needs:
+      - prepare-workflow
+      - release
+    environment: release
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-release
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+
+      - name: Setup GnuPG
+        run: |
+          sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
+          GNUPGHOME="$(mktemp -d -p /run/gpg)"
+          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
+          cat <<EOF > "${GNUPGHOME}/gpg.conf"
+          batch
+          no-tty
+          pinentry-mode loopback
+          EOF
+
+      - name: Get Secrets
+        id: get-secrets
+        env:
+          SECRETS_KEY: ${{ secrets.SECRETS_KEY }}
+        run: |
+          SECRETS_KEY_FILE=$(mktemp /tmp/output.XXXXXXXXXX)
+          echo "$SECRETS_KEY" > "$SECRETS_KEY_FILE"
+          TWINE_PASSWORD=$(aws --region us-west-2 secretsmanager get-secret-value --secret-id /cmbu-saltstack/publishing/publish-pypi \
+            --query SecretString --output text | jq .default_passphrase -r | base64 -d \
+            | gpg --passphrase-file "$SECRETS_KEY_FILE" -d -)
+          echo "::add-mask::$TWINE_PASSWORD"
+          echo "twine-password=$TWINE_PASSWORD" >> "${GITHUB_OUTPUT}"
+
+      - name: Download PyPi Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: pypi-artifacts
+          path: artifacts/release
+
+      - name: Publish to PyPi
+        env:
+          TWINE_PASSWORD: "${{ steps.get-secrets.outputs.twine-password }}"
+        run: |
+          tools pkg pypi-upload artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
+
+  set-pipeline-exit-status:
+    # This step is just so we can make github require this step, to pass checks
+    # on a pull request instead of requiring all
+    name: Set the ${{ github.workflow }} Pipeline Exit Status
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      - check-requirements
+      - prepare-workflow
+      - publish-repositories
+      - release
+      - publish-pypi
+    steps:
+      - name: Get workflow information
+        id: get-workflow-info
+        uses: technote-space/workflow-conclusion-action@v3
+
+      - run: |
+          # shellcheck disable=SC2129
+          if [ "${{ steps.get-workflow-info.outputs.conclusion }}" != "success" ]; then
+            echo 'To restore the release bucket run:' >> "${GITHUB_STEP_SUMMARY}"
+            echo '```' >> "${GITHUB_STEP_SUMMARY}"
+            echo 'tools pkg repo restore-previous-releases' >> "${GITHUB_STEP_SUMMARY}"
+            echo '```' >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+      - name: Set Pipeline Exit Status
+        shell: bash
+        run: |
+          if [ "${{ steps.get-workflow-info.outputs.conclusion }}" != "success" ]; then
+            exit 1
+          else
+            exit 0
+          fi
+
+      - name: Done
+        if: always()
+        run:
+          echo "All worflows finished"
