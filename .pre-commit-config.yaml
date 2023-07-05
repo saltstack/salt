@@ -1021,6 +1021,17 @@ repos:
           - --py-version=3.10
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/tools.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-tools-3.11-requirements
+        name: Linux CI Py3.11 Tools Requirements
+        files: ^requirements/static/ci/(tools\.in|py3.11/(tools|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.11
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/tools.in
   # <---- Tools -----------------------------------------------------------------------------------------------------
 
   # ----- Code Formatting ------------------------------------------------------------------------------------------->
