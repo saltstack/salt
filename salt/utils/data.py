@@ -1692,6 +1692,7 @@ def shuffle(value, seed=None):
     return sample(value, len(value), seed=seed)
 
 
+@jinja_filter("to_entries")
 def to_entries(data):
     """
     Convert a dictionary or list into a list of key-value pairs (entries).
@@ -1718,6 +1719,7 @@ def to_entries(data):
     return ret
 
 
+@jinja_filter("from_entries")
 def from_entries(entries):
     """
     Convert a list of key-value pairs (entries) into a dictionary.
