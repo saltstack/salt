@@ -688,7 +688,11 @@ def container_create(
     # Add devices if not wait and devices have been given.
     if devices:
         for dn, dargs in devices.items():
-            container_device_add(name, dn, **dargs)
+            if "type" in dargs:
+                # extract 'type' so it won't be overwritten
+                container_device_add(name, dn, device_type=dargs["type"], **dargs)
+            else:
+                container_device_add(name, dn, **dargs)
 
     if _raw:
         return container

@@ -10,13 +10,13 @@ import sys
 import threading
 from random import randint
 
+import tornado
+import tornado.concurrent
+import tornado.gen
+import tornado.ioloop
 import zmq.error
 import zmq.eventloop.zmqstream
 
-import salt.ext.tornado
-import salt.ext.tornado.concurrent
-import salt.ext.tornado.gen
-import salt.ext.tornado.ioloop
 import salt.payload
 import salt.transport.base
 import salt.utils.files
@@ -203,7 +203,7 @@ class PublishClient(salt.transport.base.PublishClient):
         self.close()
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
         self.publish_port = publish_port
         log.debug(
@@ -226,7 +226,7 @@ class PublishClient(salt.transport.base.PublishClient):
             source_port=self.opts.get("source_publish_port"),
         )
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _decode_messages(self, messages):
         """
         Take the zmq messages, decrypt/decode them into a payload
@@ -248,7 +248,7 @@ class PublishClient(salt.transport.base.PublishClient):
                 and message_target not in ("broadcast", "syndic")
             ):
                 log.debug("Publish received for not this minion: %s", message_target)
-                raise salt.ext.tornado.gen.Return(None)
+                raise tornado.gen.Return(None)
             payload = salt.payload.loads(messages[1])
         else:
             raise Exception(
@@ -258,7 +258,7 @@ class PublishClient(salt.transport.base.PublishClient):
             )
         # Yield control back to the caller. When the payload has been decoded, assign
         # the decoded payload to 'ret' and resume operation
-        raise salt.ext.tornado.gen.Return(payload)
+        raise tornado.gen.Return(payload)
 
     @property
     def stream(self):
@@ -279,7 +279,7 @@ class PublishClient(salt.transport.base.PublishClient):
         """
         return self.stream.on_recv(callback)
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def send(self, msg):
         self.stream.send(msg, noblock=True)
 
@@ -426,7 +426,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self.message_handler = message_handler
         self.stream.on_recv_stream(self.handle_message)
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def handle_message(self, stream, payload):
         payload = self.decode_payload(payload)
         # XXX: Is header really needed?
@@ -504,7 +504,7 @@ class AsyncReqMessageClient:
         self.addr = addr
         self.linger = linger
         if io_loop is None:
-            self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+            self.io_loop = tornado.ioloop.IOLoop.current()
         else:
             self.io_loop = io_loop
 
@@ -587,12 +587,12 @@ class AsyncReqMessageClient:
         if future is not None:
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def send(self, message, timeout=None, callback=None):
         """
         Return a future which will be completed when the message has a response
         """
-        future = salt.ext.tornado.concurrent.Future()
+        future = tornado.concurrent.Future()
 
         message = salt.payload.dumps(message)
 
@@ -624,7 +624,7 @@ class AsyncReqMessageClient:
         self.stream.on_recv(mark_future)
         yield self.stream.send(message)
         recv = yield future
-        raise salt.ext.tornado.gen.Return(recv)
+        raise tornado.gen.Return(recv)
 
 
 class ZeroMQSocketMonitor:
@@ -700,7 +700,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.opts = opts
 
     def connect(self):
-        return salt.ext.tornado.gen.sleep(5)
+        return tornado.gen.sleep(5)
 
     def publish_daemon(
         self,
@@ -712,8 +712,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         This method represents the Publish Daemon process. It is intended to be
         run in a thread or process as it creates and runs an it's own ioloop.
         """
-        ioloop = salt.ext.tornado.ioloop.IOLoop()
-        ioloop.make_current()
+        ioloop = tornado.ioloop.IOLoop()
         self.io_loop = ioloop
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUB)
@@ -748,7 +747,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         with salt.utils.files.set_umask(0o177):
             pull_sock.bind(self.pull_uri)
 
-        @salt.ext.tornado.gen.coroutine
+        @tornado.gen.coroutine
         def on_recv(packages):
             for package in packages:
                 payload = salt.payload.loads(package)
@@ -777,7 +776,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     def pub_uri(self):
         return "tcp://{interface}:{publish_port}".format(**self.opts)
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def publish_payload(self, payload, topic_list=None):
         payload = salt.payload.dumps(payload)
         if self.opts["zmq_filtering"]:
@@ -910,11 +909,11 @@ class RequestClient(salt.transport.base.RequestClient):
     def connect(self):
         self.message_client.connect()
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def send(self, load, timeout=60):
         self.connect()
         ret = yield self.message_client.send(load, timeout=timeout)
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)
 
     def close(self):
         self.message_client.close()

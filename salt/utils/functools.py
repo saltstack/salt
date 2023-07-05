@@ -80,7 +80,7 @@ def alias_function(fun, name, doc=None):
         alias_fun.__doc__ = doc
     else:
         orig_name = fun.__name__
-        alias_msg = "\nThis function is an alias of ``{}``.\n".format(orig_name)
+        alias_msg = f"\nThis function is an alias of ``{orig_name}``.\n"
         alias_fun.__doc__ = alias_msg + (fun.__doc__ or "")
 
     return alias_fun

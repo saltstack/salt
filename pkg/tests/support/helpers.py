@@ -661,6 +661,7 @@ class SaltPkgInstall:
         minor_ver = self.minor
         pkg_version = self.pkg_version
         full_version = f"{self.major}.{self.minor}-{pkg_version}"
+        relenv = int(major_ver) >= 3006
 
         min_ver = f"{major_ver}"
         distro_name = self.distro_name
@@ -676,6 +677,9 @@ class SaltPkgInstall:
             gpg_key = "SALTSTACK-GPG-KEY.pub"
             if self.distro_version == "9":
                 gpg_key = "SALTSTACK-GPG-KEY2.pub"
+            if relenv:
+                gpg_key = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
+
             if platform.is_aarch64():
                 arch = "aarch64"
             else:
@@ -713,15 +717,20 @@ class SaltPkgInstall:
             else:
                 arch = "amd64"
             pathlib.Path("/etc/apt/keyrings").mkdir(parents=True, exist_ok=True)
+            gpg_dest = "salt-archive-keyring.gpg"
+            gpg_key = gpg_dest
+            if relenv:
+                gpg_key = "SALT-PROJECT-GPG-PUBKEY-2023.gpg"
+
             download_file(
-                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}/salt-archive-keyring.gpg",
-                "/etc/apt/keyrings/salt-archive-keyring.gpg",
+                f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver}/{gpg_key}",
+                f"/etc/apt/keyrings/{gpg_dest}",
             )
             with open(
                 pathlib.Path("/etc", "apt", "sources.list.d", "salt.list"), "w"
             ) as fp:
                 fp.write(
-                    f"deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch={arch}] "
+                    f"deb [signed-by=/etc/apt/keyrings/{gpg_dest} arch={arch}] "
                     f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver} {self.distro_codename} main"
                 )
             ret = self.proc.run(self.pkg_mngr, "update")
@@ -740,12 +749,21 @@ class SaltPkgInstall:
             self.bin_dir = self.install_dir / "bin"
             self.run_root = self.bin_dir / f"salt.exe"
             self.ssm_bin = self.bin_dir / "ssm.exe"
-            if self.file_ext == "msi":
+            if self.file_ext == "msi" or relenv:
                 self.ssm_bin = self.install_dir / "ssm.exe"
 
             if not self.classic:
-                win_pkg = f"salt-{full_version}-windows-amd64.{self.file_ext}"
-                win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{full_version}/{win_pkg}"
+                if not relenv:
+                    win_pkg = f"salt-{self.prev_version}-windows-amd64.{self.file_ext}"
+                    win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{self.prev_version}/{win_pkg}"
+                else:
+                    if self.file_ext == "msi":
+                        win_pkg = (
+                            f"Salt-Minion-{self.prev_version}-Py3-AMD64.{self.file_ext}"
+                        )
+                    elif self.file_ext == "exe":
+                        win_pkg = f"Salt-Minion-{self.prev_version}-Py3-AMD64-Setup.{self.file_ext}"
+                    win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{major_ver}/{win_pkg}"
             else:
                 if self.file_ext == "msi":
                     win_pkg = f"Salt-Minion-{min_ver}-1-Py3-AMD64.{self.file_ext}"
@@ -754,10 +772,8 @@ class SaltPkgInstall:
                 win_pkg_url = f"https://repo.saltproject.io/windows/{win_pkg}"
             pkg_path = pathlib.Path(r"C:\TEMP", win_pkg)
             pkg_path.parent.mkdir(exist_ok=True)
-            ret = requests.get(win_pkg_url)
+            download_file(win_pkg_url, pkg_path)
 
-            with open(pkg_path, "wb") as fp:
-                fp.write(ret.content)
             if self.file_ext == "msi":
                 # Write a batch file to run the installer. It is impossible to
                 # perform escaping of the START_MINION property that the MSI
@@ -782,11 +798,16 @@ class SaltPkgInstall:
 
         elif platform.is_darwin():
             if self.classic:
-                mac_pkg = f"salt-{min_ver}.{minor_ver}-1-py3-x86_64.pkg"
+                mac_pkg = f"salt-{self.prev_version}-py3-x86_64.pkg"
                 mac_pkg_url = f"https://repo.saltproject.io/osx/{mac_pkg}"
             else:
-                mac_pkg = f"salt-{min_ver}.{minor_ver}-1-macos-x86_64.pkg"
-                mac_pkg_url = f"https://repo.saltproject.io/salt/py3/macos/{major_ver}.{minor_ver}-1/{mac_pkg}"
+                if not relenv:
+                    mac_pkg = f"salt-{self.prev_version}-macos-x86_64.pkg"
+                    mac_pkg_url = f"https://repo.saltproject.io/salt/py3/macos/{self.prev_version}/{mac_pkg}"
+                else:
+                    mac_pkg = f"salt-{self.prev_version}-py3-x86_64.pkg"
+                    mac_pkg_url = f"https://repo.saltproject.io/salt/py3/macos/{major_ver}/{mac_pkg}"
+
             mac_pkg_path = f"/tmp/{mac_pkg}"
             if not os.path.exists(mac_pkg_path):
                 download_file(

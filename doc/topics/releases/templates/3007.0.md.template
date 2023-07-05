@@ -6,6 +6,15 @@
 Add release specific details below
 -->
 
+## Python 3.11
+Salt's onedir packages now use Python 3.11
+
+## Python 3.7 Support Dropped
+Support for python 3.7 has been dropped since it reached end-of-line in 27 Jun 2023.
+
+## Azure Salt Extension
+
+Starting from Salt version 3007.0, the Azure functionality previously available in the Salt code base is fully removed. To continue using Salt's features for interacting with Azure resources, users are required to utilize the Azure Salt extension. For more information, refer to the [Azure Salt Extension GitHub repository](https://github.com/salt-extensions/saltext-azurerm).
 
 <!--
 Do not edit the changelog below.

@@ -1,7 +1,7 @@
 import pytest
+import tornado.iostream
 from pytestshellutils.utils import ports
 
-import salt.ext.tornado.iostream
 import salt.transport.ipc
 import salt.utils.asynchronous
 import salt.utils.platform
@@ -31,6 +31,6 @@ async def test_ipc_connect_sync_wrapped(io_loop, tmp_path):
         kwargs={"io_loop": io_loop},
         loop_kwarg="io_loop",
     )
-    with pytest.raises(salt.ext.tornado.iostream.StreamClosedError):
+    with pytest.raises(tornado.iostream.StreamClosedError):
         # Don't `await subscriber.connect()`, that's the purpose of the SyncWrapper
         subscriber.connect()

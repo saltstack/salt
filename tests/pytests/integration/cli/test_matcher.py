@@ -85,7 +85,7 @@ def test_list(salt_cli, salt_minion, salt_sub_minion):
     assert salt_minion.id in ret.stdout
     assert salt_sub_minion.id not in ret.stdout
     ret = salt_cli.run(
-        "-L", "test.ping", minion_tgt="{},{}".format(salt_minion.id, salt_sub_minion.id)
+        "-L", "test.ping", minion_tgt=f"{salt_minion.id},{salt_sub_minion.id}"
     )
     assert ret.returncode == 0
     assert salt_minion.id in ret.data
@@ -124,16 +124,14 @@ def test_compound_pcre_grain_and_grain(salt_cli, salt_minion, salt_sub_minion):
 
 
 def test_compound_list_and_pcre_minion(salt_cli, salt_minion, salt_sub_minion):
-    match = "L@{} and E@.*".format(salt_sub_minion.id)
+    match = f"L@{salt_sub_minion.id} and E@.*"
     ret = salt_cli.run("-C", "test.ping", minion_tgt=match)
     assert salt_sub_minion.id in ret.data
     assert salt_minion.id not in ret.data
 
 
 def test_compound_not_sub_minion(salt_cli, salt_minion, salt_sub_minion):
-    ret = salt_cli.run(
-        "-C", "test.ping", minion_tgt="not {}".format(salt_sub_minion.id)
-    )
+    ret = salt_cli.run("-C", "test.ping", minion_tgt=f"not {salt_sub_minion.id}")
     assert ret.returncode == 0
     assert salt_minion.id in ret.data
     assert salt_sub_minion.id not in ret.data
@@ -183,7 +181,7 @@ def test_compound_nodegroup(salt_cli, salt_minion, salt_sub_minion):
     assert ret.returncode == 0
     assert salt_minion.id in ret.data
     assert salt_sub_minion.id in ret.data
-    target = "N@multiline_nodegroup not {}".format(salt_sub_minion.id)
+    target = f"N@multiline_nodegroup not {salt_sub_minion.id}"
     ret = salt_cli.run("-C", "test.ping", minion_tgt=target)
     assert ret.returncode == 0
     assert salt_minion.id in ret.data
@@ -269,7 +267,7 @@ def test_regex(salt_cli, salt_minion, salt_sub_minion):
     """
     test salt regex matcher
     """
-    ret = salt_cli.run("-E", "test.ping", minion_tgt="^{}$".format(salt_minion.id))
+    ret = salt_cli.run("-E", "test.ping", minion_tgt=f"^{salt_minion.id}$")
     assert ret.returncode == 0
     assert salt_minion.id in ret.data
     assert salt_sub_minion.id not in ret.data
@@ -362,12 +360,12 @@ def test_grains_targeting_minion_id_running(salt_cli, salt_minion, salt_sub_mini
     """
     Tests return of each running test minion targeting with minion id grain
     """
-    ret = salt_cli.run("-G", "test.ping", minion_tgt="id:{}".format(salt_minion.id))
+    ret = salt_cli.run("-G", "test.ping", minion_tgt=f"id:{salt_minion.id}")
     assert ret.returncode == 0
     assert salt_minion.id in ret.data
     assert ret.data[salt_minion.id] is True
 
-    ret = salt_cli.run("-G", "test.ping", minion_tgt="id:{}".format(salt_sub_minion.id))
+    ret = salt_cli.run("-G", "test.ping", minion_tgt=f"id:{salt_sub_minion.id}")
     assert ret.returncode == 0
     assert salt_sub_minion.id in ret.data
     assert ret.data[salt_sub_minion.id] is True
@@ -400,8 +398,8 @@ def test_grains_targeting_minion_id_disconnected(salt_master, salt_minion, salt_
             "--log-level=debug",
             "-G",
             "test.ping",
-            minion_tgt="id:{}".format(disconnected_minion_id),
-            _timeout=15,
+            minion_tgt=f"id:{disconnected_minion_id}",
+            _timeout=30,
         )
         assert ret.returncode == 1
         assert disconnected_minion_id in ret.data
@@ -432,9 +430,7 @@ def test_pillar(salt_cli, salt_minion, salt_sub_minion, pillar_tree):
     assert salt_minion.id in ret.data
     assert salt_sub_minion.id in ret.data
     # First-level pillar (string value, only in sub_minion)
-    ret = salt_cli.run(
-        "-I", "test.ping", minion_tgt="sub:{}".format(salt_sub_minion.id)
-    )
+    ret = salt_cli.run("-I", "test.ping", minion_tgt=f"sub:{salt_sub_minion.id}")
     assert ret.returncode == 0
     assert salt_sub_minion.id in ret.data
     assert salt_minion.id not in ret.data
