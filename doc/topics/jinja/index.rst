@@ -1708,7 +1708,7 @@ Returns:
   [{"key":"a", "value":1}, {"key":"b", "value":2}]
 
 
-.. jinja_ref:: to_entries
+.. jinja_ref:: from_entries
 
 ``from_entries``
 ----------------
