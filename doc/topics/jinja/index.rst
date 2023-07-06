@@ -1711,7 +1711,7 @@ Returns:
 .. jinja_ref:: to_entries
 
 ``from_entries``
---------------
+----------------
 
 .. versionadded:: 3007.0
 
