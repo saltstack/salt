@@ -1266,7 +1266,9 @@ def unassign_floating_ip(kwargs=None, call=None):
 
 def _get_vpc_by_name(name):
     """
-    Helper function to format and parse vpc data.
+    Helper function to format and parse vpc data. It's pretty expensive as it
+    retrieves a list of vpcs and iterates through them till it finds the correct
+    vpc by name.
     """
     fetch = True
     page = 1
@@ -1274,7 +1276,7 @@ def _get_vpc_by_name(name):
 
     log.debug("Matching vpc name with: %s", name)
     while fetch:
-        items = query(method="vpcs", command="?page=" + str(page) + "&per_page=200")
+        items = query(method="vpcs", command=f"?page={str(page)}&per_page=200")
         for node in items["vpcs"]:
             log.debug("Node returned : %s", node["name"])
             if name == node["name"]:
@@ -1306,7 +1308,7 @@ def _list_nodes(full=False, for_output=False):
     ret = {}
 
     while fetch:
-        items = query(method="droplets", command="?page=" + str(page) + "&per_page=200")
+        items = query(method="droplets", command=f"?page={str(page)}&per_page=200")
         for node in items["droplets"]:
             name = node["name"]
             ret[name] = {}
