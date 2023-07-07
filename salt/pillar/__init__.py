@@ -858,6 +858,7 @@ class Pillar:
                     match,
                     data,
                     self.opts.get("nodegroups", {}),
+                    self.matchers,
                 ):
                     if saltenv not in matches:
                         matches[saltenv] = env_matches = []

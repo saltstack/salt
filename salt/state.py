@@ -4188,7 +4188,9 @@ class BaseHighState:
                 def _filter_matches(_match, _data, _opts):
                     if isinstance(_data, str):
                         _data = [_data]
-                    if self.matchers["confirm_top.confirm_top"](_match, _data, _opts):
+                    if self.matchers["confirm_top.confirm_top"](
+                        _match, _data, _opts, self.matchers
+                    ):
                         if saltenv not in matches:
                             matches[saltenv] = []
                         for item in _data:
