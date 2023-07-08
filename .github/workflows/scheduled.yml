@@ -176,6 +176,11 @@ jobs:
         run:
           tools ci print-gh-event
 
+      - name: Set Cache Seed Output
+        id: set-cache-seed
+        run: |
+          tools ci define-cache-seed ${{ env.CACHE_SEED }}
+
       - name: Setup Salt Version
         id: setup-salt-version
         uses: ./.github/actions/setup-salt-version
@@ -268,11 +273,6 @@ jobs:
         with:
           name: testrun-changed-files.txt
           path: testrun-changed-files.txt
-
-      - name: Set Cache Seed Output
-        id: set-cache-seed
-        run: |
-          echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
   pre-commit:
     name: Pre-Commit
     if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
