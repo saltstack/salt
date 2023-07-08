@@ -693,16 +693,26 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     def _load_module(self, name):
         mod = None
         fpath, suffix = self.file_mapping[name][:2]
+        func_decorator = None
         if (
             suffix == ".py"
             and self._ast_dunder_virtual_inspect
             and not self._ast_dunder_virtual_defined(name, fpath)
         ):
+            func_decorator = _deprecated_dunder_utils_usage
+            # On 3010, un-commend the code below
+            # log.debug(
+            #    "Not loading %r because it does not define a __virtual__ function",
+            #    name,
+            # )
+            # return False
+
+            # On 3010, remove this code below
             log.debug(
-                "Not loading %r because it does not define a __virtual__ function",
+                "Loading %r into __utils__ but this will stop working in Salt 3010",
                 name,
             )
-            return False
+
         # if the fpath has `.cpython-3x` in it, but the running Py version
         # is 3.y, the following will cause us to return immediately and we won't try to import this .pyc.
         # This is for the unusual case where several Python versions share a single
@@ -1023,6 +1033,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if hasattr(mod, "__deprecated__"):
                 func = extension_deprecation_message(*mod.__deprecated__)(func)
 
+            if func_decorator:
+                # Wrap the function in decorator
+                func = func_decorator(func)
+
             # Let's get the function name.
             # If the module has the __func_alias__ attribute, it must be a
             # dictionary mapping in the form of(key -> value):
@@ -1317,3 +1331,19 @@ def global_injector_decorator(inject_globals):
         return wrapper
 
     return inner_decorator
+
+
+def _deprecated_dunder_utils_usage(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            3010,
+            "Detected __utils__ usage on a module that will stop getting "
+            "loaded into __utils__ after {version}. Please import the utils "
+            "module and call the utils function directly.",
+            stacklevel=6,
+            category=DeprecationWarning,
+        )
+        return func(*args, **kwargs)
+
+    return wrapper
