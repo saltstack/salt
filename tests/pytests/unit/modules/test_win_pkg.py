@@ -92,7 +92,7 @@ def test_pkg__get_reg_software():
 
 def test_pkg__get_reg_software_noremove():
     search = "test_pkg_noremove"
-    key = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(search)
+    key = f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{search}"
     win_reg.set_value(hive="HKLM", key=key, vname="DisplayName", vdata=search)
     win_reg.set_value(hive="HKLM", key=key, vname="DisplayVersion", vdata="1.0.0")
     win_reg.set_value(
@@ -114,7 +114,7 @@ def test_pkg__get_reg_software_noremove():
 
 def test_pkg__get_reg_software_noremove_not_present():
     search = "test_pkg_noremove_not_present"
-    key = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(search)
+    key = f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{search}"
     win_reg.set_value(hive="HKLM", key=key, vname="DisplayName", vdata=search)
     win_reg.set_value(hive="HKLM", key=key, vname="DisplayVersion", vdata="1.0.0")
     try:
