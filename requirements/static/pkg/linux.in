@@ -9,3 +9,4 @@ rpm-vercmp
 setproctitle>=1.2.3
 timelib>=0.2.5
 importlib-metadata>=3.3.0
+cryptography>=41.0.1
