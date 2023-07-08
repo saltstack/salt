@@ -34,7 +34,7 @@ import salt.utils.odict
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
-from salt.utils.decorators import Depends
+from salt.utils.decorators import Depends, memoize
 from salt.utils.decorators.extension_deprecation import extension_deprecation_message
 
 try:
@@ -669,27 +669,40 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 ):
                     del sys.path_importer_cache[directory]
 
+    @memoize
+    def _ast_dunder_virtual_defined(self, name, fpath):
+        with salt.utils.files.fopen(fpath) as rfh:
+            tree = ast.parse(rfh.read())
+            for node in tree.body:
+                if not isinstance(node, ast.FunctionDef):
+                    continue
+                if node.name == "__virtual__":
+                    # The module defines a __virtual__ function.
+                    # Continue regular loading.
+                    break
+            else:
+                # The module did not define a __virtual__ function, stop
+                # processing the module
+                log.debug(
+                    "Not loading %r because it does not define a __virtual__ function",
+                    name,
+                )
+                return False
+        return True
+
     def _load_module(self, name):
         mod = None
         fpath, suffix = self.file_mapping[name][:2]
-        if suffix == ".py" and self._ast_dunder_virtual_inspect:
-            with salt.utils.files.fopen(fpath) as rfh:
-                tree = ast.parse(rfh.read())
-                for node in tree.body:
-                    if not isinstance(node, ast.FunctionDef):
-                        continue
-                    if node.name == "__virtual__":
-                        # The module defines a __virtual__ function.
-                        # Continue regular loading.
-                        break
-                else:
-                    # The module did not define a __virtual__ function, stop
-                    # processing the module
-                    log.debug(
-                        "Not loading %r because it does not define a __virtual__ function",
-                        name,
-                    )
-                    return False
+        if (
+            suffix == ".py"
+            and self._ast_dunder_virtual_inspect
+            and not self._ast_dunder_virtual_defined(name, fpath)
+        ):
+            log.debug(
+                "Not loading %r because it does not define a __virtual__ function",
+                name,
+            )
+            return False
         # if the fpath has `.cpython-3x` in it, but the running Py version
         # is 3.y, the following will cause us to return immediately and we won't try to import this .pyc.
         # This is for the unusual case where several Python versions share a single
