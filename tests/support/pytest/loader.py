@@ -40,6 +40,7 @@ class LoaderModuleMock:
             "__grains__",
             "__pillar__",
             "__sdb__",
+            "__matchers__",
         ),
     )
     # These dunders might exist at the module global scope
