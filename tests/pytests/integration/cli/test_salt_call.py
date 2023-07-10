@@ -81,6 +81,55 @@ def test_local_sls_call(salt_master, salt_call_cli):
         assert state_run_dict["changes"]["ret"] == "hello"
 
 
+def test_local_sls_call_multiple_file_roots(salt_master, salt_call_cli):
+    sls_contents1 = """
+    regular-module1:
+      module.run:
+        - name: test.echo
+        - text: hello
+    """
+    sls_contents2 = """
+    regular-module2:
+      module.run:
+        - name: test.echo
+        - text: world
+    """
+    with salt_master.state_tree.base.temp_file(
+        "saltcalllocal1.sls", sls_contents1
+    ), salt_master.state_tree.prod.temp_file(
+        "saltcalllocal2.sls", sls_contents2
+    ):
+        ret = salt_call_cli.run(
+            "--local",
+            "--file-root",
+            str(salt_master.state_tree.base.paths[0]),
+            "--file-root",
+            str(salt_master.state_tree.prod.paths[0]),
+            "state.sls",
+            "saltcalllocal1",
+        )
+        assert ret.returncode == 0
+        state_run_dict = next(iter(ret.data.values()))
+        assert state_run_dict["name"] == "test.echo"
+        assert state_run_dict["result"] is True
+        assert state_run_dict["changes"]["ret"] == "hello"
+
+        ret = salt_call_cli.run(
+            "--local",
+            "--file-root",
+            str(salt_master.state_tree.base.paths[0]),
+            "--file-root",
+            str(salt_master.state_tree.prod.paths[0]),
+            "state.sls",
+            "saltcalllocal2",
+        )
+        assert ret.returncode == 0
+        state_run_dict = next(iter(ret.data.values()))
+        assert state_run_dict["name"] == "test.echo"
+        assert state_run_dict["result"] is True
+        assert state_run_dict["changes"]["ret"] == "world"
+
+
 def test_local_salt_call(salt_call_cli):
     """
     This tests to make sure that salt-call does not execute the
