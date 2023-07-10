@@ -306,6 +306,23 @@ def define_jobs(
             )
         return
 
+    # This is a pull-request
+
+    labels: list[str] = []
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is not None:
+        try:
+            gh_event = json.loads(open(gh_event_path).read())
+        except Exception as exc:
+            ctx.error(
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+            )
+            ctx.exit(1)
+
+        labels.extend(
+            label[0] for label in _get_pr_test_labels_from_event_payload(gh_event)
+        )
+
     if not changed_files.exists():
         ctx.error(f"The '{changed_files}' file does not exist.")
         ctx.error(
@@ -355,9 +372,16 @@ def define_jobs(
         changed_files_contents["workflows"],
     }
     if jobs["test-pkg"] and required_pkg_test_changes == {"false"}:
-        with open(github_step_summary, "a", encoding="utf-8") as wfh:
-            wfh.write("De-selecting the 'test-pkg' job.\n")
-        jobs["test-pkg"] = False
+        if "test:pkg" in labels:
+            with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                wfh.write(
+                    "The 'test-pkg' job is forcefully selected by the use of the 'test:pkg' label.\n"
+                )
+            jobs["test-pkg"] = True
+        else:
+            with open(github_step_summary, "a", encoding="utf-8") as wfh:
+                wfh.write("De-selecting the 'test-pkg' job.\n")
+            jobs["test-pkg"] = False
 
     if jobs["test-pkg-download"] and required_pkg_test_changes == {"false"}:
         with open(github_step_summary, "a", encoding="utf-8") as wfh:
