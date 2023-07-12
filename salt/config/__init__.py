@@ -997,7 +997,7 @@ VALID_OPTS = immutabletypes.freeze(
 DEFAULT_MINION_OPTS = immutabletypes.freeze(
     {
         "interface": "0.0.0.0",
-        "master": "salt",
+        "master": "127.0.0.1",
         "master_type": "str",
         "master_uri_format": "default",
         "source_interface_name": "",
