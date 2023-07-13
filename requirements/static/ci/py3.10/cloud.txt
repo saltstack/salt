@@ -668,7 +668,9 @@ pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and plat
 pyjwt==2.4.0
     # via adal
 pynacl==1.4.0
-    # via paramiko
+    # via
+    #   -r requirements/static/ci/common.in
+    #   paramiko
 pyopenssl==23.2.0
     # via
     #   -r requirements/static/pkg/linux.in
