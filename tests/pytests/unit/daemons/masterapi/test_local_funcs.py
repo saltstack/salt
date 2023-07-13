@@ -2,9 +2,7 @@ import logging
 
 import pytest
 
-import salt.config
 import salt.daemons.masterapi as masterapi
-import salt.utils.platform
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -13,22 +11,23 @@ pytestmark = [
     pytest.mark.slow_test,
 ]
 
-test_check_key = {
-    "test": "mGXdurU1c8lXt5cmpbGq4rWvrOvDXxkwI9gbkP5CBBjpyGWuB8vkgz9r+sjjG0wVDL9/uFuREtk=",
-    "root": "2t5HHv/ek2wIFh8tTX2c3hdt+6V+93xKlcXb7IlGLIszOeCVv2NuH38LyCw9UwQTfUFTeseXhSs=",
-}
+
+@pytest.fixture
+def check_keys():
+    return {
+        "test": "mGXdurU1c8lXt5cmpbGq4rWvrOvDXxkwI9gbkP5CBBjpyGWuB8vkgz9r+sjjG0wVDL9/uFuREtk=",
+        "root": "2t5HHv/ek2wIFh8tTX2c3hdt+6V+93xKlcXb7IlGLIszOeCVv2NuH38LyCw9UwQTfUFTeseXhSs=",
+    }
 
 
 @pytest.fixture
-def local_funcs():
-    opts = salt.config.master_config(None)
-    return masterapi.LocalFuncs(opts, "test-key")
+def local_funcs(master_opts):
+    return masterapi.LocalFuncs(master_opts, "test-key")
 
 
 @pytest.fixture
-def check_local_funcs():
-    opts = salt.config.master_config(None)
-    return masterapi.LocalFuncs(opts, test_check_key)
+def check_local_funcs(master_opts, check_keys):
+    return masterapi.LocalFuncs(master_opts, check_keys)
 
 
 # runner tests
