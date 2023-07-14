@@ -8,6 +8,7 @@ from tests.support.mock import patch
 
 log = logging.getLogger(__name__)
 
+
 pytestmark = [
     pytest.mark.skip_unless_on_linux(
         reason="Should only run in platforms which have duplicate GID support"
