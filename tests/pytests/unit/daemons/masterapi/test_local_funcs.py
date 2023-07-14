@@ -2,7 +2,9 @@ import logging
 
 import pytest
 
+import salt.config
 import salt.daemons.masterapi as masterapi
+import salt.utils.platform
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -22,7 +24,8 @@ def check_keys():
 
 @pytest.fixture
 def local_funcs(master_opts):
-    return masterapi.LocalFuncs(master_opts, "test-key")
+    opts = salt.config.master_config(None)
+    return masterapi.LocalFuncs(opts, "test-key")
 
 
 @pytest.fixture
