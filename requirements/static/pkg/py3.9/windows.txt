@@ -12,7 +12,7 @@ cffi==1.14.6
     # via
     #   -r requirements/windows.txt
     #   cryptography
-chardet==3.0.4
+charset-normalizer==3.2.0
     # via requests
 cheroot==8.5.2
     # via cherrypy
@@ -110,7 +110,7 @@ pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==23.2.0 ; python_version >= "3.9"
     # via -r requirements/zeromq.txt
-requests==2.25.1
+requests==2.31.0 ; python_version >= "3.7"
     # via
     #   -r requirements/base.txt
     #   -r requirements/windows.txt
