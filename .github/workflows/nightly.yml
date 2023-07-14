@@ -1580,12 +1580,6 @@ jobs:
             version: "9"
             arch: aarch64
           - distro: fedora
-            version: "36"
-            arch: x86_64
-          - distro: fedora
-            version: "36"
-            arch: aarch64
-          - distro: fedora
             version: "37"
             arch: x86_64
           - distro: fedora
