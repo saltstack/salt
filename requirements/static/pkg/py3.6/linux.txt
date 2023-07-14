@@ -18,8 +18,10 @@ cherrypy==18.6.1
     # via -r requirements/static/pkg/linux.in
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==39.0.1
-    # via pyopenssl
+cryptography==40.0.2 ; python_version == "3.6"
+    # via
+    #   -r requirements/static/pkg/linux.in
+    #   pyopenssl
 distro==1.5.0
     # via -r requirements/base.txt
 idna==2.8
@@ -65,7 +67,7 @@ pycparser==2.17
     # via cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pyopenssl==23.0.0
+pyopenssl==23.2.0 ; python_version >= "3.6"
     # via -r requirements/static/pkg/linux.in
 python-dateutil==2.8.1
     # via -r requirements/static/pkg/linux.in

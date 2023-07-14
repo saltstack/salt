@@ -1,7 +1,0 @@
-Upgrade to `cryptography==39.0.1`
-
-Due to:
-  * https://github.com/advisories/GHSA-x4qr-2fvf-3mr5
-  * https://github.com/advisories/GHSA-w7pp-m8wf-vj6r
-
-There is no security upgrade available for Py3.5
