@@ -73,7 +73,7 @@ colorama==0.4.1
     # via pytest
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==39.0.2
+cryptography==41.0.2
     # via
     #   -r requirements/windows.txt
     #   etcd3-py
@@ -238,7 +238,7 @@ pymssql==2.2.1
     # via -r requirements/windows.txt
 pymysql==1.0.2
     # via -r requirements/windows.txt
-pyopenssl==23.0.0
+pyopenssl==23.2.0
     # via
     #   -r requirements/windows.txt
     #   etcd3-py

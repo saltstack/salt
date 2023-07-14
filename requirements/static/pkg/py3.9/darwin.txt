@@ -18,7 +18,7 @@ cherrypy==18.6.1
     # via -r requirements/darwin.txt
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==39.0.2
+cryptography==41.0.2
     # via
     #   -r requirements/darwin.txt
     #   pyopenssl
@@ -81,7 +81,7 @@ pycparser==2.21
     #   cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pyopenssl==23.0.0
+pyopenssl==23.2.0
     # via -r requirements/darwin.txt
 python-dateutil==2.8.0
     # via -r requirements/darwin.txt
