@@ -158,13 +158,13 @@ def get_specific_user():
     user = get_user()
     if salt.utils.platform.is_windows():
         if _win_current_user_is_admin():
-            return "sudo_{}".format(user)
+            return f"sudo_{user}"
     else:
         env_vars = ("SUDO_USER",)
         if user == "root":
             for evar in env_vars:
                 if evar in os.environ:
-                    return "sudo_{}".format(os.environ[evar])
+                    return f"sudo_{os.environ[evar]}"
     return user
 
 
@@ -182,7 +182,7 @@ def chugid(runas, group=None):
             target_pw_gid = grp.getgrnam(group).gr_gid
         except KeyError as err:
             raise CommandExecutionError(
-                "Failed to fetch the GID for {}. Error: {}".format(group, err)
+                f"Failed to fetch the GID for {group}. Error: {err}"
             )
     else:
         target_pw_gid = uinfo.pw_gid
