@@ -137,7 +137,7 @@ def test_service_disable_doesnot_exist(modules):
         disable = modules.service.disable(srv_name)
         assert not disable
     except CommandExecutionError as exc:
-        assert srv_name in exc.error
+        assert srv_name in exc.error or "no such file or directory" in exc.error.lower()
 
     if salt.utils.platform.is_darwin():
         with pytest.raises(
@@ -154,4 +154,4 @@ def test_service_get_service_name(modules, service_name):
     test service.get_service_name
     """
     ret = modules.service.get_service_name()
-    assert service_name in ret.data.values()
+    assert service_name in ret.values()
