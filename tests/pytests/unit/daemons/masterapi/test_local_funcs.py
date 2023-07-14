@@ -1,13 +1,9 @@
-import logging
-
 import pytest
 
 import salt.config
 import salt.daemons.masterapi as masterapi
 import salt.utils.platform
 from tests.support.mock import MagicMock, patch
-
-log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.slow_test,
