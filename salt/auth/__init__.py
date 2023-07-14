@@ -354,7 +354,6 @@ class LoadAuth:
 
             elif auth_user.is_running_user():
                 if auth_key != key.get(load["user"]):
-                    load_user = load["user"]
                     log.warning(error_msg)
                     return False
             elif auth_key == key.get("root"):
