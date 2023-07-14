@@ -626,6 +626,13 @@ class SaltPkgInstall:
         log.info(ret)
         self._check_retcode(ret)
 
+    def package_python_version(self):
+        return self.proc.run(
+            self.binary_paths["python"],
+            "-c",
+            "import sys; print('{}.{}'.format(*sys.version_info))",
+        ).stdout
+
     def install(self, upgrade=False):
         if self.compressed:
             self._install_compressed(upgrade=upgrade)
