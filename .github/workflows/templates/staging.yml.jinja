@@ -62,7 +62,7 @@ concurrency:
   <{ job_name }>:
   <%- do prepare_workflow_needs.append(job_name) %>
     name: Check Requirements
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     environment: <{ gh_environment }>-check
     steps:
       - name: Check For Admin Permission
@@ -70,17 +70,6 @@ concurrency:
         with:
           require: admin
           username: ${{ github.triggering_actor }}
-
-      - name: Check Branch
-        run: |
-          echo "Trying to run the staging workflow from branch ${{ github.ref_name }}"
-          if [ "${{ contains(fromJSON('<{ release_branches|tojson }>'), github.ref_name) }}" != "true" ]; then
-              echo "Running the staging workflow from the ${{ github.ref_name }} branch is not allowed"
-              echo "Allowed branches: <{ release_branches|join(', ') }>"
-              exit 1
-          else
-              echo "Allowed to release from branch ${{ github.ref_name }}"
-          fi
 
 <%- endblock pre_jobs %>
 

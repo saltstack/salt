@@ -28,7 +28,7 @@ jobs:
 
   workflow-requirements:
     name: Check Workflow Requirements
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     outputs:
       requirements-met: ${{ steps.check-requirements.outputs.requirements-met }}
     steps:
@@ -55,8 +55,7 @@ jobs:
   trigger-branch-scheduled-builds:
     name: Trigger Branch Workflows
     if: ${{ github.event_name == 'schedule' && fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
-    runs-on:
-      - ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     needs:
       - workflow-requirements
     steps:
@@ -68,7 +67,7 @@ jobs:
 
   prepare-workflow:
     name: Prepare Workflow Run
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     if: ${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
     needs:
       - workflow-requirements
@@ -82,6 +81,7 @@ jobs:
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
       releases: ${{ steps.get-salt-releases.outputs.releases }}
+      testing-releases: ${{ steps.get-testing-releases.outputs.testing-releases }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -175,6 +175,11 @@ jobs:
         run:
           tools ci print-gh-event
 
+      - name: Set Cache Seed Output
+        id: set-cache-seed
+        run: |
+          tools ci define-cache-seed ${{ env.CACHE_SEED }}
+
       - name: Setup Salt Version
         id: setup-salt-version
         uses: ./.github/actions/setup-salt-version
@@ -182,35 +187,13 @@ jobs:
           salt-version: ""
           validate-version: true
 
-      - name: Get Pull Number
-        if: ${{ github.event_name == 'pull_request' }}
-        id: get-pull-number
-        uses: ./.github/actions/get-pull-number
-        with:
-          owner: ${{ github.repository_owner }}
-          repo: ${{ github.event.repository.name }}
-          sha: ${{ github.sha }}
-          pull-number: ${{ github.event.pull_request.number }}
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Get Pull Request
-        if: ${{ github.event_name == 'pull_request' }}
-        id: get-pull-request
-        uses: ./.github/actions/get-pull-request
-        with:
-          owner: ${{ github.repository_owner }}
-          repo: ${{ github.event.repository.name }}
-          pull-number: ${{ steps.get-pull-number.outputs.number }}
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Get Pull Labels
-        if: ${{ github.event_name == 'pull_request' }}
+      - name: Get Pull Request Test Labels
         id: get-pull-labels
-        uses: ./.github/actions/get-pull-labels
-        with:
-          pull-request: ${{ steps.get-pull-request.outputs.pull-request }}
+        if: ${{ github.event_name == 'pull_request'}}
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci get-pr-test-labels --repository ${{ github.repository }}
 
       - name: Write Changed Files To A Local File
         run:
@@ -256,10 +239,18 @@ jobs:
         run: |
           tools ci get-releases
 
+      - name: Get Latest Salt Releases for Testing
+        id: get-testing-releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci get-testing-releases ${{ join(fromJSON(steps.get-salt-releases.outputs.releases), ' ') }} --salt-version ${{ steps.setup-salt-version.outputs.salt-version }}
+
       - name: Check Salt Releases
         run: |
           echo '${{ steps.get-salt-releases.outputs.latest-release }}' | jq -C '.'
           echo '${{ steps.get-salt-releases.outputs.releases }}' | jq -C '.'
+          echo '${{ steps.get-testing-releases.outputs.testing-releases }}' | jq -C '.'
 
       - name: Define Testrun
         id: define-testrun
@@ -281,11 +272,6 @@ jobs:
         with:
           name: testrun-changed-files.txt
           path: testrun-changed-files.txt
-
-      - name: Set Cache Seed Output
-        id: set-cache-seed
-        run: |
-          echo "cache-seed=${{ env.CACHE_SEED }}" >> "$GITHUB_OUTPUT"
   pre-commit:
     name: Pre-Commit
     if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
@@ -309,8 +295,7 @@ jobs:
   prepare-release:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['prepare-release'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-    runs-on:
-      - ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     needs:
       - prepare-workflow
     steps:
@@ -444,7 +429,7 @@ jobs:
     needs:
       - prepare-workflow
       - prepare-release
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v3
 
@@ -492,9 +477,7 @@ jobs:
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
       relenv-version: "0.12.3"
-      python-version-linux: "3.10.11"
-      python-version-macos: "3.10.11"
-      python-version-windows: "3.10.11"
+      python-version: "3.10.11"
 
   build-salt-onedir:
     name: Build Salt Onedir
@@ -510,9 +493,7 @@ jobs:
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
       relenv-version: "0.12.3"
-      python-version-linux: "3.10.11"
-      python-version-macos: "3.10.11"
-      python-version-windows: "3.10.11"
+      python-version: "3.10.11"
 
   build-rpm-pkgs:
     name: Build RPM Packages
@@ -523,6 +504,8 @@ jobs:
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      relenv-version: "0.12.3"
+      python-version: "3.10.11"
 
   build-deb-pkgs:
     name: Build DEB Packages
@@ -533,6 +516,8 @@ jobs:
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      relenv-version: "0.12.3"
+      python-version: "3.10.11"
 
   build-windows-pkgs:
     name: Build Windows Packages
@@ -543,6 +528,8 @@ jobs:
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      relenv-version: "0.12.3"
+      python-version: "3.10.11"
 
   build-macos-pkgs:
     name: Build macOS Packages
@@ -553,6 +540,8 @@ jobs:
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      relenv-version: "0.12.3"
+      python-version: "3.10.11"
 
   amazonlinux-2-pkg-tests:
     name: Amazon Linux 2 Package Tests
@@ -570,6 +559,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   centos-7-pkg-tests:
     name: CentOS 7 Package Tests
@@ -587,6 +577,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   centosstream-8-pkg-tests:
     name: CentOS Stream 8 Package Tests
@@ -604,6 +595,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   centosstream-9-pkg-tests:
     name: CentOS Stream 9 Package Tests
@@ -621,6 +613,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   debian-10-pkg-tests:
     name: Debian 10 Package Tests
@@ -638,6 +631,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   debian-11-pkg-tests:
     name: Debian 11 Package Tests
@@ -655,6 +649,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   debian-11-arm64-pkg-tests:
     name: Debian 11 Arm64 Package Tests
@@ -672,6 +667,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   photonos-3-pkg-tests:
     name: Photon OS 3 Package Tests
@@ -689,6 +685,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   photonos-4-pkg-tests:
     name: Photon OS 4 Package Tests
@@ -706,6 +703,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   ubuntu-2004-pkg-tests:
     name: Ubuntu 20.04 Package Tests
@@ -723,6 +721,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   ubuntu-2004-arm64-pkg-tests:
     name: Ubuntu 20.04 Arm64 Package Tests
@@ -740,6 +739,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   ubuntu-2204-pkg-tests:
     name: Ubuntu 22.04 Package Tests
@@ -757,6 +757,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   ubuntu-2204-arm64-pkg-tests:
     name: Ubuntu 22.04 Arm64 Package Tests
@@ -774,6 +775,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   macos-12-pkg-tests:
     name: macOS 12 Package Tests
@@ -791,6 +793,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2016-nsis-pkg-tests:
     name: Windows 2016 NSIS Package Tests
@@ -808,6 +811,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2016-msi-pkg-tests:
     name: Windows 2016 MSI Package Tests
@@ -825,6 +829,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2019-nsis-pkg-tests:
     name: Windows 2019 NSIS Package Tests
@@ -842,6 +847,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2019-msi-pkg-tests:
     name: Windows 2019 MSI Package Tests
@@ -859,6 +865,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2022-nsis-pkg-tests:
     name: Windows 2022 NSIS Package Tests
@@ -876,6 +883,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2022-msi-pkg-tests:
     name: Windows 2022 MSI Package Tests
@@ -893,6 +901,7 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
       skip-code-coverage: false
       skip-junit-reports: false
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
 
   windows-2016:
     name: Windows 2016
@@ -909,7 +918,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -928,7 +936,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -947,7 +954,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -966,7 +972,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -985,7 +990,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1004,7 +1008,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1023,7 +1026,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1042,7 +1044,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1061,7 +1062,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1080,7 +1080,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1099,7 +1098,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1118,7 +1116,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1137,7 +1134,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1156,26 +1152,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
-      skip-code-coverage: false
-      skip-junit-reports: false
-
-  fedora-36:
-    name: Fedora 36
-    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
-    needs:
-      - prepare-workflow
-      - build-salt-onedir
-    uses: ./.github/workflows/test-action.yml
-    with:
-      distro-slug: fedora-36
-      nox-session: ci-test-onedir
-      platform: linux
-      arch: x86_64
-      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
-      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1194,7 +1170,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1213,7 +1188,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1232,7 +1206,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1251,7 +1224,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1270,7 +1242,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1289,7 +1260,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1308,7 +1278,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1327,7 +1296,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1346,7 +1314,6 @@ jobs:
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.11
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
       skip-code-coverage: false
       skip-junit-reports: false
 
@@ -1355,7 +1322,7 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     needs:
       - workflow-requirements
       - trigger-branch-scheduled-builds
@@ -1379,7 +1346,6 @@ jobs:
       - debian-10
       - debian-11
       - debian-11-arm64
-      - fedora-36
       - fedora-37
       - fedora-38
       - opensuse-15

@@ -19,6 +19,7 @@ def test_salt_upgrade(salt_call_cli, salt_minion, install_salt):
     assert install.returncode == 0
     use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
     assert "Authentication information could" in use_lib.stderr
+
     # upgrade Salt from previous version and test
     install_salt.install(upgrade=True)
     ret = salt_call_cli.run("test.ping")

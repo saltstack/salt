@@ -18,16 +18,15 @@ param(
     [Parameter(Mandatory=$false)]
     [ValidatePattern("^\d{1,2}.\d{1,2}.\d{1,2}$")]
     [ValidateSet(
-        "3.11.2",
-        "3.10.10"
+        "3.11.3",
+        "3.10.11"
     )]
     [Alias("v")]
-    # The version of Python to be built. Pythonnet only supports up to Python
-    # 3.8 for now. Pycurl stopped building wheel files after 7.43.0.5 which
-    # supported up to 3.8. So we're pinned to the latest version of Python 3.8.
-    # We may have to drop support for pycurl or build it ourselves.
-    # Default is: 3.8.16
-    [String] $Version = "3.10.10",
+    [String] $Version = "3.10.11",
+
+    [Parameter(Mandatory=$false)]
+    [Alias("r")]
+    [String] $RelenvVersion = "0.12.3",
 
     [Parameter(Mandatory=$false)]
     [ValidateSet("x64", "x86", "amd64")]
@@ -85,6 +84,7 @@ if ( $Build ) {
 }
 Write-Host "$SCRIPT_MSG" -ForegroundColor Cyan
 Write-Host "- Python Version: $Version"
+Write-Host "- Relenv Version: $RelenvVersion"
 Write-Host "- Architecture:   $Architecture"
 Write-Host "- Build:          $Build"
 Write-Host $("-" * 80)
@@ -227,7 +227,7 @@ if ( $env:VIRTUAL_ENV ) {
 # Installing Relenv
 #-------------------------------------------------------------------------------
 Write-Host "Installing Relenv: " -NoNewLine
-pip install relenv --disable-pip-version-check | Out-Null
+pip install relenv==$RelenvVersion --disable-pip-version-check | Out-Null
 $output = pip list --disable-pip-version-check
 if ("relenv" -in $output.split()) {
     Write-Result "Success" -ForegroundColor Green
@@ -235,6 +235,7 @@ if ("relenv" -in $output.split()) {
     Write-Result "Failed" -ForegroundColor Red
     exit 1
 }
+$env:RELENV_FETCH_VERSION=$RelenvVersion
 
 #-------------------------------------------------------------------------------
 # Building Python with Relenv

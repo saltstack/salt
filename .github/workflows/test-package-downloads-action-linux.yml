@@ -31,6 +31,10 @@ on:
         required: true
         type: string
         description: The latest salt release
+      pkg-type:
+        required: true
+        type: string
+        description: The type of artifact to download
       package-name:
         required: false
         type: string
@@ -74,7 +78,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
 
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
@@ -180,7 +184,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 
@@ -221,10 +225,11 @@ jobs:
           SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
+          DOWNLOAD_TEST_PACKAGE_TYPE: ${{ inputs.pkg-type }}
         run: |
           tools --timestamps --timeout-secs=1800 vm testplan --skip-requirements-install \
           -E INSTALL_TYPE -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
-          -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING \
+          -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
             --nox-session=${{ inputs.nox-session }} ${{ inputs.distro-slug }} -- download-pkgs
 
       - name: Run Package Download Tests
@@ -238,10 +243,11 @@ jobs:
           SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
+          DOWNLOAD_TEST_PACKAGE_TYPE: ${{ inputs.pkg-type }}
         run: |
           tools --timestamps --no-output-timeout-secs=1800 --timeout-secs=14400 vm test --skip-requirements-install \
           -E INSTALL_TYPE -E SALT_RELEASE -E SALT_REPO_ARCH -E SALT_REPO_TYPE -E SALT_REPO_USER -E SALT_REPO_PASS \
-          -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING \
+          -E SALT_REPO_DOMAIN_RELEASE -E SALT_REPO_DOMAIN_STAGING  -E LATEST_SALT_RELEASE -E DOWNLOAD_TEST_PACKAGE_TYPE \
             --nox-session=${{ inputs.nox-session }} --rerun-failures ${{ inputs.distro-slug }} -- download-pkgs
 
       - name: Combine Coverage Reports
