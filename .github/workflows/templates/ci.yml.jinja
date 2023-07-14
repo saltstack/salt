@@ -1,12 +1,6 @@
 <%- extends 'layout.yml.jinja' %>
 <%- set pre_commit_version = "3.0.4" %>
 
-<%- block on %>
-on:
-  push: {}
-  pull_request: {}
-<%- endblock on %>
-
 
 <%- block jobs %>
   <{- super() }>
@@ -280,9 +274,7 @@ on:
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
       relenv-version: "<{ relenv_version }>"
-      python-version-linux: "<{ python_version_linux }>"
-      python-version-macos: "<{ python_version_macos }>"
-      python-version-windows: "<{ python_version_windows }>"
+      python-version: "<{ python_version }>"
 
   <%- endif %>
 
@@ -305,9 +297,7 @@ on:
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
       relenv-version: "<{ relenv_version }>"
-      python-version-linux: "<{ python_version_linux }>"
-      python-version-macos: "<{ python_version_macos }>"
-      python-version-windows: "<{ python_version_windows }>"
+      python-version: "<{ python_version }>"
 
   <%- endif %>
 

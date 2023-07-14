@@ -713,7 +713,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         run in a thread or process as it creates and runs an it's own ioloop.
         """
         ioloop = tornado.ioloop.IOLoop()
-        ioloop.make_current()
         self.io_loop = ioloop
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUB)

@@ -650,7 +650,6 @@ def test_issues_7905_and_8174_sls_syntax_error(state, state_tree):
         assert ret.errors == ["State 'C' in SLS 'badlist2' is not formed as a list"]
 
 
-@pytest.mark.slow_test
 def test_retry_option(state, state_tree):
     """
     test the retry option on a simple state with defaults
@@ -752,7 +751,6 @@ def test_retry_option_success_parallel(state, state_tree, tmp_path):
             assert "Attempt 2" not in state_return.comment
 
 
-@pytest.mark.slow_test
 def test_retry_option_eventual_success(state, state_tree, tmp_path):
     """
     test a state with the retry option that should return True, eventually
@@ -800,7 +798,6 @@ def test_retry_option_eventual_success(state, state_tree, tmp_path):
 @pytest.mark.skip_on_windows(
     reason="Skipped until parallel states can be fixed on Windows"
 )
-@pytest.mark.slow_test
 def test_retry_option_eventual_success_parallel(state, state_tree, tmp_path):
     """
     test a state with the retry option that should return True, eventually
@@ -849,7 +846,6 @@ def test_retry_option_eventual_success_parallel(state, state_tree, tmp_path):
             assert "Attempt 5" not in state_return.comment
 
 
-@pytest.mark.slow_test
 def test_state_non_base_environment(state, state_tree_prod, tmp_path):
     """
     test state.sls with saltenv using a nonbase environment
@@ -908,10 +904,8 @@ def test_parallel_state_with_long_tag(state, state_tree):
         )
 
     comments = sorted(x.comment for x in ret)
-    expected = sorted(
-        'Command "{}" run'.format(x) for x in (short_command, long_command)
-    )
-    assert comments == expected, "{} != {}".format(comments, expected)
+    expected = sorted(f'Command "{x}" run' for x in (short_command, long_command))
+    assert comments == expected, f"{comments} != {expected}"
 
 
 @pytest.mark.skip_on_darwin(reason="Test is broken on macosx")

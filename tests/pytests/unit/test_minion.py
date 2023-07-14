@@ -478,7 +478,6 @@ def test_beacons_before_connect(minion_opts):
     ):
         minion_opts["beacons_before_connect"] = True
         io_loop = tornado.ioloop.IOLoop()
-        io_loop.make_current()
         minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
         try:
 
@@ -511,7 +510,6 @@ def test_scheduler_before_connect(minion_opts):
     ):
         minion_opts["scheduler_before_connect"] = True
         io_loop = tornado.ioloop.IOLoop()
-        io_loop.make_current()
         minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
         try:
             try:
@@ -600,7 +598,6 @@ def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_call
     ):
         minion_opts["ping_interval"] = 10
         io_loop = tornado.ioloop.IOLoop()
-        io_loop.make_current()
         minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
         try:
             try:
@@ -622,7 +619,6 @@ def test_when_passed_start_event_grains(minion_opts):
     minion_opts["grains"]["os"] = "linux"
     minion_opts["start_event_grains"] = ["os"]
     io_loop = tornado.ioloop.IOLoop()
-    io_loop.make_current()
     minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
     try:
         minion.tok = MagicMock()
@@ -641,7 +637,6 @@ def test_when_passed_start_event_grains(minion_opts):
 @pytest.mark.slow_test
 def test_when_not_passed_start_event_grains(minion_opts):
     io_loop = tornado.ioloop.IOLoop()
-    io_loop.make_current()
     minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
     try:
         minion.tok = MagicMock()
@@ -658,7 +653,6 @@ def test_when_not_passed_start_event_grains(minion_opts):
 def test_when_other_events_fired_and_start_event_grains_are_set(minion_opts):
     minion_opts["start_event_grains"] = ["os"]
     io_loop = tornado.ioloop.IOLoop()
-    io_loop.make_current()
     minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
     try:
         minion.tok = MagicMock()
@@ -696,7 +690,6 @@ def test_gen_modules_executors(minion_opts):
     Ensure gen_modules is called with the correct arguments #54429
     """
     io_loop = tornado.ioloop.IOLoop()
-    io_loop.make_current()
     minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
 
     class MockPillarCompiler:
@@ -707,7 +700,9 @@ def test_gen_modules_executors(minion_opts):
         with patch("salt.pillar.get_pillar", return_value=MockPillarCompiler()):
             with patch("salt.loader.executors") as execmock:
                 minion.gen_modules()
-        assert execmock.called_with(minion.opts, minion.functions)
+        execmock.assert_called_with(
+            minion.opts, functions=minion.functions, proxy=minion.proxy, context={}
+        )
     finally:
         minion.destroy()
 
@@ -720,7 +715,6 @@ def test_reinit_crypto_on_fork(minion_opts):
     with patch("salt.utils.process.default_signals"):
 
         io_loop = tornado.ioloop.IOLoop()
-        io_loop.make_current()
         minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
 
         job_data = {"jid": "test-jid", "fun": "test.ping"}
@@ -761,7 +755,6 @@ def test_minion_manage_schedule(minion_opts):
         MagicMock(return_value=True),
     ):
         io_loop = tornado.ioloop.IOLoop()
-        io_loop.make_current()
 
         with patch("salt.utils.schedule.clean_proc_dir", MagicMock(return_value=None)):
             try:
@@ -821,7 +814,6 @@ def test_minion_manage_beacons(minion_opts):
             minion_opts["beacons"] = {}
 
             io_loop = tornado.ioloop.IOLoop()
-            io_loop.make_current()
 
             mock_functions = {"test.ping": None}
             minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
