@@ -364,10 +364,10 @@ cffi==1.14.6
     #   cryptography
     #   pygit2
     #   pynacl
-chardet==3.0.4
-    # via requests
 charset-normalizer==2.0.12
-    # via aiohttp
+    # via
+    #   aiohttp
+    #   requests
 cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
 cheroot==8.5.2
@@ -757,7 +757,7 @@ pyzmq==23.2.0
     #   pytest-salt-factories
 requests-oauthlib==1.3.0
     # via msrest
-requests==2.25.1
+requests==2.31.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in

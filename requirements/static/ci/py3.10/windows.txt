@@ -49,10 +49,10 @@ cffi==1.14.6
     #   clr-loader
     #   cryptography
     #   pygit2
-chardet==3.0.4
-    # via requests
 charset-normalizer==2.1.1
-    # via aiohttp
+    # via
+    #   aiohttp
+    #   requests
 cheetah3==3.2.6.post1
     # via -r requirements/static/ci/common.in
 cheroot==8.5.2
@@ -322,7 +322,7 @@ pyzmq==25.0.2 ; sys_platform == "win32"
     #   pytest-salt-factories
 requests-ntlm==1.1.0
     # via pywinrm
-requests==2.25.1
+requests==2.31.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in

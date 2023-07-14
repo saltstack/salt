@@ -13,7 +13,7 @@ cffi==1.14.6
     #   -r requirements/windows.txt
     #   clr-loader
     #   cryptography
-chardet==3.0.4
+charset-normalizer==3.2.0
     # via requests
 cheroot==8.5.2
     # via cherrypy
@@ -108,7 +108,7 @@ pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.0.2 ; sys_platform == "win32"
     # via -r requirements/zeromq.txt
-requests==2.25.1
+requests==2.31.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/windows.txt

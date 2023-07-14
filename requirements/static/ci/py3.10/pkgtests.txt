@@ -129,7 +129,7 @@ pyzmq==25.0.2
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-requests==2.28.2
+requests==2.31.0
     # via
     #   -r requirements/base.txt
     #   docker
