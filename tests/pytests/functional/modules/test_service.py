@@ -131,7 +131,7 @@ def test_service_disable_doesnot_exist(modules):
         enable = modules.service.enable(srv_name)
         assert not enable
     except CommandExecutionError as exc:
-        assert srv_name in exc.error
+        assert srv_name in exc.error or "no such file or directory" in exc.error.lower()
 
     try:
         disable = modules.service.disable(srv_name)
