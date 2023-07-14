@@ -395,8 +395,9 @@ contextvars==2.4
     # via -r requirements/base.txt
 croniter==1.0.15 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-cryptography==39.0.1
+cryptography==41.0.2 ; python_version >= "3.7"
     # via
+    #   -r requirements/static/pkg/linux.in
     #   adal
     #   ansible-core
     #   azure-cosmosdb-table
@@ -703,7 +704,7 @@ pymysql==1.0.2 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
 pynacl==1.4.0
     # via paramiko
-pyopenssl==23.0.0
+pyopenssl==23.2.0 ; python_version >= "3.6"
     # via
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
