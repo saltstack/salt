@@ -26,7 +26,9 @@ pymysql>=1.0.2
 pyopenssl>=20.0.1
 python-dateutil>=2.8.1
 python-gnupg>=0.4.7
-requests>=2.25.1
+requests>=2.31.0 ; python_version >= "3.7"
+requests<=2.27.1 ; python_version == "3.6"
+requests<=2.25.1 ; python_version == "3.5"
 setproctitle
 timelib>=0.2.5
 urllib3>=1.26.5

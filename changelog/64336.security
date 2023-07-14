@@ -1,0 +1,4 @@
+Upgrade to `requests==2.31.0`
+
+Due to:
+  * https://github.com/advisories/GHSA-j8r2-6x86-q33q

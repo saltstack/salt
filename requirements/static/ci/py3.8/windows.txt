@@ -52,10 +52,10 @@ cffi==1.14.6
     #   -r requirements/windows.txt
     #   cryptography
     #   pygit2
-chardet==3.0.4
-    # via requests
 charset-normalizer==2.0.12
-    # via aiohttp
+    # via
+    #   aiohttp
+    #   requests
 cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
 cheroot==8.5.2
@@ -322,7 +322,7 @@ pyzmq==22.0.3 ; python_version < "3.9" and sys_platform == "win32"
     #   pytest-salt-factories
 requests-ntlm==1.1.0
     # via pywinrm
-requests==2.25.1
+requests==2.31.0 ; python_version >= "3.7"
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in

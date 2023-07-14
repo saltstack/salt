@@ -3,7 +3,9 @@ jmespath
 msgpack>=0.5,!=0.5.5
 PyYAML
 MarkupSafe
-requests>=1.0.0
+requests>=2.31.0 ; python_version >= "3.7"
+requests<=2.27.1 ; python_version == "3.6"
+requests<=2.25.1 ; python_version == "3.5"
 distro>=1.0.1
 contextvars
 psutil>=5.0.0
