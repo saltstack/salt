@@ -157,12 +157,20 @@ def creds(provider):
             result = get_metadata("meta-data/iam/security-credentials/")
             role = result.text
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
-            return provider["id"], provider["key"], ""
+            return (
+                provider["id"],
+                provider["key"],
+                provider["token"] if provider.get("token") is not None else "",
+            )
 
         try:
             result = get_metadata(f"meta-data/iam/security-credentials/{role}")
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
-            return provider["id"], provider["key"], ""
+            return (
+                provider["id"],
+                provider["key"],
+                provider["token"] if provider.get("token") is not None else "",
+            )
 
         data = result.json()
         __AccessKeyId__ = data["AccessKeyId"]
@@ -172,7 +180,10 @@ def creds(provider):
 
         ret_credentials = __AccessKeyId__, __SecretAccessKey__, __Token__
     else:
-        ret_credentials = provider["id"], provider["key"], ""
+        if provider.get("token") is not None:
+            ret_credentials = provider["id"], provider["key"], provider["token"]
+        else:
+            ret_credentials = provider["id"], provider["key"], ""
 
     if provider.get("role_arn") is not None:
         provider_shadow = provider.copy()
