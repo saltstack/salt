@@ -168,6 +168,5 @@ class SyncWrapper:
 
     def __exit__(self, exc_type, exc_val, tb):
         if hasattr(self.obj, "__aexit__"):
-            return self._wrap("__aexit__")(exc_type, exc_val, tb)
-        else:
-            self.close()
+            self._wrap("__aexit__")(exc_type, exc_val, tb)
+        self.close()
