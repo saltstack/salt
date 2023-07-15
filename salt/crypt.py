@@ -927,7 +927,8 @@ class AsyncAuth:
             autosign_grains = {}
             for grain in self.opts["autosign_grains"]:
                 autosign_grains[grain] = self.opts["grains"].get(grain, None)
-            payload["autosign_grains"] = autosign_grains
+            if autosign_grains:
+                payload["autosign_grains"] = autosign_grains 
         try:
             pubkey_path = os.path.join(self.opts["pki_dir"], self.mpub)
             pub = get_rsa_pub_key(pubkey_path)
@@ -938,7 +939,7 @@ class AsyncAuth:
             else:
                 cipher = PKCS1_OAEP.new(pub)
                 payload["token"] = cipher.encrypt(self.token)
-        except Exception:  # pylint: disable=broad-except
+        except FileNotFoundError:
             pass
         with salt.utils.files.fopen(self.pub_path) as f:
             payload["pub"] = f.read()
