@@ -122,8 +122,8 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     :return: Path on the filesystem to the RSA private key
     """
     base = os.path.join(keydir, keyname)
-    priv = "{}.pem".format(base)
-    pub = "{}.pub".format(base)
+    priv = f"{base}.pem"
+    pub = f"{base}.pub"
 
     if HAS_M2:
         gen = RSA.gen_key(keysize, 65537, lambda: None)
@@ -443,7 +443,7 @@ class MasterKeys(dict):
         try:
             key = get_rsa_key(path, passphrase)
         except key_error as e:
-            message = "Unable to read key: {}; passphrase may be incorrect".format(path)
+            message = f"Unable to read key: {path}; passphrase may be incorrect"
             log.error(message)
             raise MasterExit(message)
         log.debug("Loaded %s key: %s", name, path)
@@ -928,7 +928,7 @@ class AsyncAuth:
             for grain in self.opts["autosign_grains"]:
                 autosign_grains[grain] = self.opts["grains"].get(grain, None)
             if autosign_grains:
-                payload["autosign_grains"] = autosign_grains 
+                payload["autosign_grains"] = autosign_grains
         try:
             pubkey_path = os.path.join(self.opts["pki_dir"], self.mpub)
             pub = get_rsa_pub_key(pubkey_path)
