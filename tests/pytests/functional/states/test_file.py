@@ -7,6 +7,7 @@ import random
 import shutil
 import socket
 import sys
+import warnings
 from contextlib import closing
 
 import pytest
@@ -212,10 +213,12 @@ def test_file_symlink_replace_existing_link(states, tmp_path):
     old_target = tmp_path / "bar"
     name.symlink_to(old_target)
 
-    ret = states.file.symlink(
-        name=str(name),
-        target=str(target),
-    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=DeprecationWarning, lineno=283)
+        ret = states.file.symlink(
+            name=str(name),
+            target=str(target),
+        )
 
     assert ret.filtered == {
         "name": str(name),
