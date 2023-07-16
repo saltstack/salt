@@ -398,7 +398,7 @@ contextvars==2.4
     # via -r requirements/base.txt
 croniter==0.3.29 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-cryptography==41.0.1
+cryptography==41.0.2
     # via
     #   -r requirements/static/pkg/linux.in
     #   adal
