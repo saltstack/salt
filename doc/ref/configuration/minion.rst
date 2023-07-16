@@ -1197,8 +1197,8 @@ seconds each iteration.
 
 Default: ``False``
 
-If the master rejects the minion's public key, retry instead of exiting.
-Rejected keys will be handled the same as waiting on acceptance.
+If the master denies or rejects the minion's public key, retry instead of
+exiting.  These keys will be handled the same as waiting on acceptance.
 
 .. code-block:: yaml
 
