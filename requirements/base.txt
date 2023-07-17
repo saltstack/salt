@@ -1,3 +1,4 @@
+cython
 Jinja2
 jmespath
 msgpack>=0.5,!=0.5.5

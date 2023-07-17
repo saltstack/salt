@@ -18,6 +18,8 @@ contextvars==2.4
     # via -r requirements/base.txt
 cryptography==41.0.2
     # via pyopenssl
+cython==0.29.36
+    # via -r requirements/base.txt
 distro==1.5.0
     # via
     #   -r requirements/base.txt
