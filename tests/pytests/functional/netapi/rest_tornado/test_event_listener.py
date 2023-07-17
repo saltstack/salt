@@ -1,6 +1,6 @@
 import asyncio
-import time
 import logging
+
 import pytest
 
 import salt.utils.event
@@ -8,6 +8,7 @@ from salt.netapi.rest_tornado import saltnado
 from tests.support.events import eventpublisher_process
 
 log = logging.getLogger(__name__)
+
 
 def _check_skip(grains):
     if grains["os"] == "MacOS":

@@ -707,8 +707,17 @@ class AsyncReqMessageClient:
 
     async def _send_recv(self, message):
         message = salt.payload.dumps(message)
-        await self.socket.send(message)
-        ret = await self.socket.recv()
+        await self.sending.acquire()
+        try:
+            await self.socket.send(message)
+            ret = await self.socket.recv()
+        except zmq.error.ZMQError:
+            self.close()
+            await self.connect()
+            await self.socket.send(message)
+            ret = await self.socket.recv()
+        finally:
+            self.sending.release()
         return salt.payload.loads(ret)
 
     async def send(self, message, timeout=None, callback=None):
@@ -717,7 +726,6 @@ class AsyncReqMessageClient:
         """
         if not self.socket:
             await self.connect()
-        await self.sending.acquire()
         try:
             response = await asyncio.wait_for(self._send_recv(message), timeout=timeout)
             if callback:
@@ -726,8 +734,6 @@ class AsyncReqMessageClient:
         except TimeoutError:
             self.close()
             raise
-        finally:
-            self.sending.release()
 
 
 class ZeroMQSocketMonitor:
@@ -1121,16 +1127,14 @@ class RequestClient(salt.transport.base.RequestClient):
         """
         if not self.socket:
             await self.connect()
-        await self.sending.acquire()
         try:
             return await asyncio.wait_for(self._send_recv(load), timeout=timeout)
         except (asyncio.exceptions.TimeoutError, TimeoutError):
             self.close()
             raise
-        # except Exception:
-        #     self.close()
-        finally:
-            self.sending.release()
+        except Exception:
+            self.close()
+            raise
 
     @staticmethod
     def get_master_uri(opts):
