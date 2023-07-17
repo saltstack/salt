@@ -567,11 +567,17 @@ def download_artifacts(ctx: Context, name: str):
     name="list",
     arguments={
         "key_name": {"help": "The SSH key name."},
+        "states": {
+            "help": "The instance state to filter by.",
+            "flags": ["-s", "-state"],
+            "action": "append",
+        },
     },
 )
 def list_vms(
     ctx: Context,
     key_name: str = os.environ.get("RUNNER_NAME"),  # type: ignore[assignment]
+    states: set[str] = None,
 ):
     """
     List the vms associated with the given key.
@@ -596,7 +602,10 @@ def list_vms(
         ctx.exit(1)
 
     for instance in instances:
-        state = instance.state["Name"]
+        vm_state = instance.state["Name"]
+        # Filter by wanted states
+        if states and vm_state not in states:
+            continue
         ip_addr = instance.public_ip_address
         ami = instance.image_id
         vm_name = None
@@ -614,7 +623,7 @@ def list_vms(
             extras = sep + sep.join(
                 [f"{key}: {value}" for key, value in extra_info.items()]
             )
-            log.info(f"{vm_name} ({state}){extras}")
+            log.info(f"{vm_name} ({vm_state}){extras}")
 
 
 @attr.s(frozen=True, kw_only=True)
