@@ -58,9 +58,11 @@ def setup_service(service_name, modules):
     if not pre_srv_enabled:
         modules.service.enable(service_name)
         post_srv_disable = True
-    yield post_srv_disable
-    if post_srv_disable:
-        modules.service.disable(service_name)
+    try:
+        yield post_srv_disable
+    finally:
+        if post_srv_disable:
+            modules.service.disable(service_name)
 
 
 def check_service_status(exp_return, modules, service_name):
