@@ -67,7 +67,6 @@ def setup_service(service_name, modules):
             modules.service.disable(service_name)
 
 
-@pytest.mark.flaky(max_runs=4)
 def test_service_status_running(modules, service_name):
     """
     test service.status execution module
