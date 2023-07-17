@@ -370,7 +370,7 @@ certifi==2023.07.22
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.15.1 ; python_version > "3.7"
+cffi==1.15.1
     # via
     #   -r requirements/static/ci/common.in
     #   azure-datalake-store
@@ -713,7 +713,7 @@ pyjwt==2.4.0
     #   twilio
 pymysql==1.0.2 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
-pynacl==1.4.0 ; python_version == "3.8"
+pynacl==1.5.0
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
@@ -882,7 +882,6 @@ six==1.16.0
     #   more-itertools
     #   ncclient
     #   paramiko
-    #   pynacl
     #   python-consul
     #   python-dateutil
     #   pyvmomi

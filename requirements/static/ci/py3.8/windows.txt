@@ -44,7 +44,7 @@ certifi==2023.07.22
     #   -r requirements/windows.txt
     #   kubernetes
     #   requests
-cffi==1.15.1 ; python_version > "3.7"
+cffi==1.15.1
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/windows.txt
@@ -239,7 +239,7 @@ pymssql==2.2.1
     # via -r requirements/windows.txt
 pymysql==1.0.2
     # via -r requirements/windows.txt
-pynacl==1.4.0 ; python_version == "3.8"
+pynacl==1.5.0
     # via -r requirements/static/ci/common.in
 pyopenssl==23.2.0
     # via
@@ -367,7 +367,6 @@ six==1.15.0
     #   jsonschema
     #   kubernetes
     #   mock
-    #   pynacl
     #   python-dateutil
     #   pyvmomi
     #   pywinrm

@@ -3,12 +3,9 @@ Salt package
 """
 
 import importlib
-import logging
 import os
 import sys
 import warnings
-
-log = logging.getLogger()
 
 if sys.version_info < (3,):
     sys.stderr.write(
