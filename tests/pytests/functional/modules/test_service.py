@@ -49,22 +49,23 @@ def setup_service(service_name, modules):
     pre_srv_status = modules.service.status(service_name)
     pre_srv_enabled = service_name in modules.service.get_enabled()
 
-    yield pre_srv_status
+    try:
+        yield pre_srv_status
+    finally:
+        post_srv_status = modules.service.status(service_name)
+        post_srv_enabled = service_name in modules.service.get_enabled()
 
-    post_srv_status = modules.service.status(service_name)
-    post_srv_enabled = service_name in modules.service.get_enabled()
+        if post_srv_status != pre_srv_status:
+            if pre_srv_status:
+                modules.service.enable(service_name)
+            else:
+                modules.service.disable(service_name)
 
-    if post_srv_status != pre_srv_status:
-        if pre_srv_status:
-            modules.service.enable(service_name)
-        else:
-            modules.service.disable(service_name)
-
-    if post_srv_enabled != pre_srv_enabled:
-        if pre_srv_enabled:
-            modules.service.enable(service_name)
-        else:
-            modules.service.disable(service_name)
+        if post_srv_enabled != pre_srv_enabled:
+            if pre_srv_enabled:
+                modules.service.enable(service_name)
+            else:
+                modules.service.disable(service_name)
 
 
 def test_service_status_running(modules, service_name):
