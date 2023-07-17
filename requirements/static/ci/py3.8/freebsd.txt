@@ -356,7 +356,7 @@ certifi==2022.12.7
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.15.1 ; python_version > "3.7"
+cffi==1.15.1
     # via
     #   -r requirements/static/ci/common.in
     #   azure-datalake-store
@@ -693,7 +693,7 @@ pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and plat
     # via -r requirements/static/ci/common.in
 pyjwt==2.4.0
     # via adal
-pynacl==1.4.0 ; python_version == "3.8"
+pynacl==1.5.0
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
@@ -845,7 +845,6 @@ six==1.16.0
     #   msrestazure
     #   ncclient
     #   paramiko
-    #   pynacl
     #   python-dateutil
     #   pyvmomi
     #   responses
