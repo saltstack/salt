@@ -956,8 +956,6 @@ def create(vm_):
 
          salt-cloud -p my-opennebula-profile vm_name
 
-        salt-cloud -p my-opennebula-profile vm_name memory=16384 cpu=2.5 vcpu=16
-
     """
     try:
         # Check for required profile parameters before sending any API calls.
