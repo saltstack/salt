@@ -5,7 +5,6 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 
 
 """
-
 import asyncio
 import asyncio.exceptions
 import errno
@@ -386,7 +385,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
                 events, _, _ = select.select([self._stream.socket], [], [], 0)
             except TimeoutError:
                 events = []
-            #except TypeError:
+            # except TypeError:
             #    # Stream's socket is closed.
             #    stream = self._stream
             #    self._stream = None
