@@ -6,17 +6,12 @@ import pytest
 import salt.utils.stringutils
 from tests.support.mock import patch
 
-try:
-    import salt.modules.nacl as nacl
+pytest.importorskip("nacl.public")
+pytest.importorskip("nacl.secret")
 
-    HAS_PYNACL = True
-except (ImportError, OSError, AttributeError):
-    HAS_PYNACL = False
+import salt.modules.nacl as nacl
 
 
-@pytest.mark.skipif(
-    not HAS_PYNACL, reason="skipping test_nacl, reason=PyNaCl is unavailable"
-)
 @pytest.fixture
 def configure_loader_modules(minion_opts):
     utils = salt.loader.utils(minion_opts)

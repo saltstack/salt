@@ -2,9 +2,7 @@
 Common code shared between the nacl module and runner.
 """
 
-
 import base64
-import logging
 import os
 
 import salt.syspaths
@@ -14,9 +12,6 @@ import salt.utils.stringutils
 import salt.utils.versions
 import salt.utils.win_dacl
 import salt.utils.win_functions
-
-log = logging.getLogger(__name__)
-
 
 REQ_ERROR = None
 try:
