@@ -563,6 +563,60 @@ def download_artifacts(ctx: Context, name: str):
     vm.download_artifacts()
 
 
+@vm.command(
+    name="list",
+    arguments={
+        "key_name": {"help": "The SSH key name."},
+    },
+)
+def list_vms(
+    ctx: Context,
+    key_name: str = os.environ.get("RUNNER_NAME"),  # type: ignore[assignment]
+):
+    """
+    List the vms associated with the given key.
+    """
+    if key_name is None:
+        ctx.exit(1, "We need a key name to filter the instances by.")
+    ec2 = boto3.resource("ec2", region_name=ctx.parser.options.region)
+    # First let's get the instances on AWS associated with the key given
+    filters = [
+        {"Name": "key-name", "Values": [key_name]},
+    ]
+    try:
+        instances = list(
+            ec2.instances.filter(
+                Filters=filters,
+            )
+        )
+    except ClientError as exc:
+        if "RequestExpired" not in str(exc):
+            raise
+        ctx.error(str(exc))
+        ctx.exit(1)
+
+    for instance in instances:
+        state = instance.state["Name"]
+        ip_addr = instance.public_ip_address
+        ami = instance.image_id
+        vm_name = None
+        for tag in instance.tags:
+            if tag.get("Key") == "vm-name":
+                vm_name = tag.get("Value")
+                break
+
+        if vm_name is not None:
+            sep = "\n    "
+            extra_info = {
+                "IP": ip_addr,
+                "AMI": ami,
+            }
+            extras = sep + sep.join(
+                [f"{key}: {value}" for key, value in extra_info.items()]
+            )
+            log.info(f"{vm_name} ({state}){extras}")
+
+
 @attr.s(frozen=True, kw_only=True)
 class AMIConfig:
     ami: str = attr.ib()
