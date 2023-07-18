@@ -564,6 +564,52 @@ def download_artifacts(ctx: Context, name: str):
 
 
 @vm.command(
+    name="sync-cache",
+    arguments={
+        "key_name": {"help": "The SSH key name."},
+    },
+)
+def sync_cache(
+    ctx: Context,
+    key_name: str = os.environ.get("RUNNER_NAME"),  # type: ignore[assignment]
+):
+    """
+    Sync the cache
+    """
+    ec2_instances = _filter_instances_by_state(
+        _get_instances_by_key(ctx, key_name),
+        {"running"},
+    )
+
+    cached_instances = {}
+    if STATE_DIR.exists():
+        for state_path in STATE_DIR.iterdir():
+            instance_id = (state_path / "instance-id").read_text()
+            cached_instances[instance_id] = state_path.name
+
+    # Find what instances we are missing in our cached states
+    to_write = {}
+    to_remove = cached_instances.copy()
+    for instance in ec2_instances:
+        if instance.id not in cached_instances:
+            for tag in instance.tags:
+                if tag.get("Key") == "vm-name":
+                    to_write[tag.get("Value")] = instance
+                    break
+        else:
+            del to_remove[instance.id]
+
+    for cached_id, vm_name in to_remove.items():
+        shutil.rmtree(STATE_DIR / vm_name)
+        log.info(f"REMOVED {vm_name} ({cached_id}) from cache at {STATE_DIR / vm_name}")
+
+    for name_tag, vm_instance in to_write.items():
+        vm_write = VM(ctx=ctx, name=name_tag, region_name=ctx.parser.options.region)
+        vm_write.instance = vm_instance
+        vm_write.write_state()
+
+
+@vm.command(
     name="list",
     arguments={
         "key_name": {"help": "The SSH key name."},
@@ -582,30 +628,13 @@ def list_vms(
     """
     List the vms associated with the given key.
     """
-    if key_name is None:
-        ctx.exit(1, "We need a key name to filter the instances by.")
-    ec2 = boto3.resource("ec2", region_name=ctx.parser.options.region)
-    # First let's get the instances on AWS associated with the key given
-    filters = [
-        {"Name": "key-name", "Values": [key_name]},
-    ]
-    try:
-        instances = list(
-            ec2.instances.filter(
-                Filters=filters,
-            )
-        )
-    except ClientError as exc:
-        if "RequestExpired" not in str(exc):
-            raise
-        ctx.error(str(exc))
-        ctx.exit(1)
+    instances = _filter_instances_by_state(
+        _get_instances_by_key(ctx, key_name),
+        states,
+    )
 
     for instance in instances:
         vm_state = instance.state["Name"]
-        # Filter by wanted states
-        if states and vm_state not in states:
-            continue
         ip_addr = instance.public_ip_address
         ami = instance.image_id
         vm_name = None
@@ -624,6 +653,34 @@ def list_vms(
                 [f"{key}: {value}" for key, value in extra_info.items()]
             )
             log.info(f"{vm_name} ({vm_state}){extras}")
+
+
+def _get_instances_by_key(ctx: Context, key_name: str):
+    if key_name is None:
+        ctx.exit(1, "We need a key name to filter the instances by.")
+    ec2 = boto3.resource("ec2", region_name=ctx.parser.options.region)
+    # First let's get the instances on AWS associated with the key given
+    filters = [
+        {"Name": "key-name", "Values": [key_name]},
+    ]
+    try:
+        instances = list(
+            ec2.instances.filter(
+                Filters=filters,
+            )
+        )
+    except ClientError as exc:
+        if "RequestExpired" not in str(exc):
+            raise
+        ctx.error(str(exc))
+        ctx.exit(1)
+    return instances
+
+
+def _filter_instances_by_state(instances: list[Instance], states: set[str] | None):
+    if states is None:
+        return instances
+    return [instance for instance in instances if instance.state["Name"] in states]
 
 
 @attr.s(frozen=True, kw_only=True)
