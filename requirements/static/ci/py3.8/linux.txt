@@ -416,8 +416,6 @@ cryptography==41.0.2
     #   paramiko
     #   pyopenssl
     #   vcert
-cython==0.29.36
-    # via -r requirements/base.txt
 distlib==0.3.2
     # via virtualenv
 distro==1.5.0
