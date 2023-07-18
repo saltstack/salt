@@ -567,11 +567,16 @@ def download_artifacts(ctx: Context, name: str):
     name="sync-cache",
     arguments={
         "key_name": {"help": "The SSH key name."},
+        "delete": {
+            "help": "Delete the entries in the cache that don't align with ec2",
+            "action": "store_true",
+        },
     },
 )
 def sync_cache(
     ctx: Context,
     key_name: str = os.environ.get("RUNNER_NAME"),  # type: ignore[assignment]
+    delete: bool = False,
 ):
     """
     Sync the cache
@@ -600,8 +605,17 @@ def sync_cache(
             del to_remove[instance.id]
 
     for cached_id, vm_name in to_remove.items():
-        shutil.rmtree(STATE_DIR / vm_name)
-        log.info(f"REMOVED {vm_name} ({cached_id}) from cache at {STATE_DIR / vm_name}")
+        if delete:
+            shutil.rmtree(STATE_DIR / vm_name)
+            log.info(
+                f"REMOVED {vm_name} ({cached_id.strip()}) from cache at {STATE_DIR / vm_name}"
+            )
+        else:
+            log.info(
+                f"Would remove {vm_name} ({cached_id.strip()}) from cache at {STATE_DIR / vm_name}"
+            )
+    if not delete and to_remove:
+        log.info("To force the removal of the above cache entries, pass --delete")
 
     for name_tag, vm_instance in to_write.items():
         vm_write = VM(ctx=ctx, name=name_tag, region_name=ctx.parser.options.region)
