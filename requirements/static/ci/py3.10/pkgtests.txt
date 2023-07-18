@@ -127,7 +127,7 @@ pytest==7.3.2
     #   pytest-tempdir
 pytz==2023.3
     # via tempora
-pyyaml==6.0
+pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.1.0
     # via

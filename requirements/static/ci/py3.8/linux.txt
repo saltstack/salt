@@ -447,7 +447,7 @@ pytz==2023.3
     #   twilio
 pyvmomi==8.0.1.0.1
     # via -r requirements/static/ci/common.in
-pyyaml==6.0
+pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/../pkg/py3.8/linux.txt
     #   -r requirements/base.txt
@@ -576,7 +576,7 @@ ttp==0.9.4
     #   ttp-templates
 twilio==8.2.2
     # via -r requirements/static/ci/linux.in
-types-pyyaml==6.0.12.10
+types-pyyaml==6.0.1
     # via responses
 typing-extensions==4.6.2
     # via

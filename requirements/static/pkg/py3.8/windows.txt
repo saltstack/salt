@@ -110,7 +110,7 @@ pywin32==306
     #   -r requirements/windows.txt
     #   cherrypy
     #   wmi
-pyyaml==6.0
+pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.1.0
     # via -r requirements/zeromq.txt

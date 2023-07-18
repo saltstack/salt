@@ -107,7 +107,7 @@ pytz==2023.3
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   tempora
-pyyaml==6.0
+pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   myst-docutils
