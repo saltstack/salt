@@ -235,14 +235,12 @@ class PublishClient(salt.transport.base.PublishClient):
             self._socket.close(0)
         if hasattr(self, "context") and self.context.closed is False:
             self.context.term()
-        if self.callbacks:
-            for cb in self.callbacks:
-                running, task = self.callbacks[cb]
-                try:
-                    if task:
-                        task.cancel()
-                except RuntimeError:
-                    log.warning("Tasks loop already closed")
+        callbacks = self.callbacks
+        self.callbacks = {}
+        for callback, (running, task) in callbacks.items():
+            running.clear()
+            # task.cancel()
+        return
 
     # pylint: enable=W1701
     def __enter__(self):
@@ -359,6 +357,14 @@ class PublishClient(salt.transport.base.PublishClient):
 
         :param func callback: A function which should be called when data is received
         """
+        if callback is None:
+            callbacks = self.callbacks
+            self.callbacks = {}
+            for callback, (running, task) in callbacks.items():
+                running.clear()
+                # task.cancel()
+            return
+
         running = asyncio.Event()
         running.set()
 
@@ -1117,8 +1123,17 @@ class RequestClient(salt.transport.base.RequestClient):
 
     async def _send_recv(self, message):
         message = salt.payload.dumps(message)
-        await self.socket.send(message)
-        ret = await self.socket.recv()
+        await self.sending.acquire()
+        try:
+            await self.socket.send(message)
+            ret = await self.socket.recv()
+        except zmq.error.ZMQError:
+            self.close()
+            await self.connect()
+            await self.socket.send(message)
+            ret = await self.socket.recv()
+        finally:
+            self.sending.release()
         return salt.payload.loads(ret)
 
     async def send(self, load, timeout=60):
@@ -1131,7 +1146,6 @@ class RequestClient(salt.transport.base.RequestClient):
             return await asyncio.wait_for(self._send_recv(load), timeout=timeout)
         except (asyncio.exceptions.TimeoutError, TimeoutError):
             self.close()
-            raise
         except Exception:
             self.close()
             raise
