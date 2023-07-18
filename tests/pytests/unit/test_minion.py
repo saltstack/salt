@@ -829,7 +829,7 @@ def test_minion_manage_beacons(minion_opts):
         try:
             minion_opts["beacons"] = {}
 
-            io_loop = tornado.ioloop.IOLoop()
+            io_loop = MagicMock()
 
             mock_functions = {"test.ping": None}
             minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
