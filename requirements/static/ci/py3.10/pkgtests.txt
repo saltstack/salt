@@ -23,8 +23,6 @@ cherrypy==18.8.0
     # via -r requirements/static/ci/pkgtests.in
 contextvars==2.4
     # via -r requirements/base.txt
-cython==0.29.36
-    # via -r requirements/base.txt
 distlib==0.3.6
     # via virtualenv
 distro==1.8.0
