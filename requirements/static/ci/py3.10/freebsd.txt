@@ -100,7 +100,7 @@ cryptography==41.0.2
     #   vcert
 distlib==0.3.6
     # via virtualenv
-distro==1.5.0
+distro==1.8.0
     # via
     #   -c requirements/static/ci/../pkg/py3.10/freebsd.txt
     #   -r requirements/base.txt
