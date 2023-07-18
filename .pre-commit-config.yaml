@@ -56,7 +56,7 @@ repos:
           - pre-commit-checks
         additional_dependencies:
           - boto3==1.21.46
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - jinja2==3.1.2
           - packaging==23.0
           - virustotal3==1.0.8
@@ -70,7 +70,7 @@ repos:
           - generate-workflows
         additional_dependencies:
           - boto3==1.21.46
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - jinja2==3.1.2
           - packaging==23.0
           - virustotal3==1.0.8
@@ -85,7 +85,7 @@ repos:
           - actionlint
         additional_dependencies:
           - boto3==1.21.46
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - jinja2==3.1.2
           - packaging==23.0
 
@@ -1156,7 +1156,7 @@ repos:
           - docs.check
         additional_dependencies:
           - blessings==1.7
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3
@@ -1175,7 +1175,7 @@ repos:
           - filemap.check
         additional_dependencies:
           - blessings==1.7
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3
@@ -1198,7 +1198,7 @@ repos:
           - loader.check-virtual
         additional_dependencies:
           - blessings==1.7
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3
@@ -1221,7 +1221,7 @@ repos:
           - docstrings.check
         additional_dependencies:
           - blessings==1.7
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3
@@ -1246,7 +1246,7 @@ repos:
           - --error-on-known-failures
         additional_dependencies:
           - blessings==1.7
-          - pyyaml==6.0
+          - pyyaml==6.0.1
           - distro==1.7.0
           - jinja2==3.0.3
           - msgpack==1.0.3

@@ -783,7 +783,7 @@ pyvmomi==7.0.2
     # via -r requirements/static/ci/common.in
 pywinrm==0.3.0
     # via -r requirements/static/ci/cloud.in
-pyyaml==5.4.1
+pyyaml==6.0.1
     # via
     #   -r requirements/base.txt
     #   clustershell
