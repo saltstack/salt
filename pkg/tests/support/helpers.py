@@ -74,6 +74,7 @@ class SaltPkgInstall:
     # The artifact is an installer (exe, msi, pkg, rpm, deb)
     installer_pkg: bool = attr.ib(default=False)
     upgrade: bool = attr.ib(default=False)
+    downgrade: bool = attr.ib(default=False)
     # install salt or not. This allows someone
     # to test a currently installed version of salt
     no_install: bool = attr.ib(default=False)
