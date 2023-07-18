@@ -65,7 +65,7 @@ def add_store(name, store, saltenv="base"):
         ret["result"] = False
         return ret
 
-    cert_serial = __salt__["certutil.get_cert_serial"](name)
+    cert_serial = __salt__["certutil.get_cert_serial"](name, saltenv)
     if cert_serial is None:
         ret["comment"] = f"Invalid certificate file: {name}"
         ret["result"] = False
@@ -81,7 +81,7 @@ def add_store(name, store, saltenv="base"):
         ret["result"] = None
         return ret
 
-    retcode = __salt__["certutil.add_store"](name, store, retcode=True)
+    retcode = __salt__["certutil.add_store"](name, store, saltenv, retcode=True)
     if retcode != 0:
         ret["comment"] = f"Error adding certificate: {name}"
         ret["result"] = False
@@ -151,7 +151,7 @@ def del_store(name, store, saltenv="base"):
         ret["result"] = None
         return ret
 
-    retcode = __salt__["certutil.del_store"](name, store, retcode=True)
+    retcode = __salt__["certutil.del_store"](name, store, saltenv, retcode=True)
     if retcode != 0:
         ret["comment"] = f"Error removing certificate: {name}"
         ret["result"] = False
