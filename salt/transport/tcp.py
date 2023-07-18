@@ -381,7 +381,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
                 framed_msg = salt.transport.frame.decode_embedded_strs(msg)
                 return framed_msg["body"]
             try:
-                log.error("Stream is %r", self._stream)
                 events, _, _ = select.select([self._stream.socket], [], [], 0)
             except TimeoutError:
                 events = []
@@ -1326,7 +1325,7 @@ class TCPPuller:
                 log.error("Exception occurred while handling stream: %s", exc)
 
     def handle_connection(self, connection, address):
-        log.error(
+        log.trace(
             "IPCServer: Handling connection to address: %s",
             address if address else connection,
         )
@@ -1740,7 +1739,6 @@ class TCPReqClient(salt.transport.base.RequestClient):
         self._on_recv = None
         self._closing = False
         self._closed = False
-        self._connecting_future = tornado.concurrent.Future()
         self._stream_return_running = False
         self._stream = None
         self.disconnect_callback = _null_callback
