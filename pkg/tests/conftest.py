@@ -88,6 +88,12 @@ def pytest_addoption(parser):
         help="Install previous version and then upgrade then run tests",
     )
     test_selection_group.addoption(
+        "--downgrade",
+        default=False,
+        action="store_true",
+        help="Install current version and then downgrade to the previous version and run tests",
+    )
+    test_selection_group.addoption(
         "--no-install",
         default=False,
         action="store_true",
@@ -168,6 +174,7 @@ def install_salt(request, salt_factories_root_dir):
         conf_dir=salt_factories_root_dir / "etc" / "salt",
         system_service=request.config.getoption("--system-service"),
         upgrade=request.config.getoption("--upgrade"),
+        downgrade=request.config.getoption("--downgrade"),
         no_uninstall=request.config.getoption("--no-uninstall"),
         no_install=request.config.getoption("--no-install"),
         classic=request.config.getoption("--classic"),
