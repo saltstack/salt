@@ -259,7 +259,7 @@ jobs:
 
   report:
     name: Reports for ${{ inputs.distro-slug }}(${{ inputs.arch }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}t
     environment: ${{ inputs.environment }}
     if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     needs:
