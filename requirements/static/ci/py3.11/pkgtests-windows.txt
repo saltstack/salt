@@ -134,7 +134,7 @@ pywin32==306
     # via
     #   pytest-skip-markers
     #   wmi
-pyyaml==6.0
+pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.1.0
     # via
