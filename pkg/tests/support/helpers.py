@@ -66,7 +66,6 @@ class SaltPkgInstall:
     onedir: bool = attr.ib(default=False)
     singlebin: bool = attr.ib(default=False)
     compressed: bool = attr.ib(default=False)
-    hashes: Dict[str, Dict[str, Any]] = attr.ib(repr=False)
     root: pathlib.Path = attr.ib(default=None)
     run_root: pathlib.Path = attr.ib(default=None)
     ssm_bin: pathlib.Path = attr.ib(default=None)
@@ -75,8 +74,8 @@ class SaltPkgInstall:
     installer_pkg: bool = attr.ib(default=False)
     upgrade: bool = attr.ib(default=False)
     downgrade: bool = attr.ib(default=False)
-    # install salt or not. This allows someone
-    # to test a currently installed version of salt
+
+    # Installing flags
     no_install: bool = attr.ib(default=False)
     no_uninstall: bool = attr.ib(default=False)
 
@@ -102,14 +101,6 @@ class SaltPkgInstall:
     @proc.default
     def _default_proc(self):
         return Subprocess()
-
-    @hashes.default
-    def _default_hashes(self):
-        return {
-            "BLAKE2B": {"file": None, "tool": "-blake2b512"},
-            "SHA3_512": {"file": None, "tool": "-sha3-512"},
-            "SHA512": {"file": None, "tool": "-sha512"},
-        }
 
     @distro_id.default
     def _default_distro_id(self):
@@ -479,16 +470,6 @@ class SaltPkgInstall:
             log.error(ret)
         assert ret.returncode == 0
         return True
-
-    @property
-    def salt_hashes(self):
-        for _hash in self.hashes.keys():
-            for fpath in ARTIFACTS_DIR.glob(f"**/*{_hash}*"):
-                fpath = str(fpath)
-                if re.search(f"{_hash}", fpath):
-                    self.hashes[_hash]["file"] = fpath
-
-        return self.hashes
 
     def _install_ssm_service(self):
         # Register the services
