@@ -13,7 +13,7 @@ jobs:
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
 
     container:
-      image: python:3.8.6-slim-buster
+      image: ghcr.io/saltstack/salt-ci-containers/python:3.8
 
     steps:
 
@@ -21,20 +21,24 @@ jobs:
       run: |
         apt-get update
         apt-get upgrade debian-keyring -y
-        echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+        echo "deb http://deb.debian.org/debian bookworm-backports main" >> /etc/apt/sources.list
         apt-get update
-        apt-get install -y enchant git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
-        apt-get install -y git/buster-backports
+        apt-get install -y enchant-2 git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
 
     - uses: actions/checkout@v3
+
+    - name: Add Git Safe Directory
+      run: |
+        git config --global --add safe.directory $(pwd)
 
     - name: Install Pre-Commit
       env:
         PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
       run: |
+        git config --global --add safe.directory $(pwd)
         python -m pip install --upgrade pip
         pip install pre-commit
-        pre-commit install --install-hooks
+        pre-commit install --install-hooks || cat /root/.cache/pre-commit/pre-commit.log
 
     - id: changed-files
       name: Get Changed Files
