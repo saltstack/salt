@@ -90,7 +90,6 @@ class SaltPkgInstall:
     binary_paths: Dict[str, List[pathlib.Path]] = attr.ib(init=False)
     classic: bool = attr.ib(default=False)
     prev_version: str = attr.ib()
-    pkg_version: str = attr.ib(default="1")
     repo_data: str = attr.ib(init=False, repr=False)
     major: str = attr.ib(init=False)
     minor: str = attr.ib(init=False)
@@ -220,14 +219,10 @@ class SaltPkgInstall:
 
     def get_version(self, version_only=False):
         """
-        Return the version information
-        needed to install a previous version
-        of Salt.
+        Return the version information needed to install a previous version of Salt.
         """
-        prev_version = self.prev_version
-        pkg_version = None
-        if not self.upgrade:
-            # working with local artifact
+        if not self.ugprade:
+            # Parse the version from a local artifact (regular or downgrade tests)
             version = ""
             for artifact in ARTIFACTS_DIR.glob("**/*.*"):
                 version = re.search(
@@ -237,43 +232,15 @@ class SaltPkgInstall:
                 if version:
                     version = version.groups()[0].replace("_", "-").replace("~", "")
                     version = version.split("-")[0]
-                    # TODO: Remove this clause.  This is to handle a versioning difficulty between pre-3006
-                    # dev versions and older salt versions on deb-based distros
-                    if version.startswith("1:"):
-                        version = version[2:]
                     break
             major, minor = version.split(".", 1)
         else:
-            if not prev_version:
-                # We did not pass in a version, lets detect the latest
-                # version information of a Salt artifact.
-                latest = list(self.repo_data["latest"].keys())[0]
-                version = self.repo_data["latest"][latest]["version"]
-                if "-" in version:
-                    prev_version, pkg_version = version.split("-")
-                else:
-                    prev_version, pkg_version = version, None
-            else:
-                # We passed in a version, but lets check if the pkg_version
-                # is defined. Relenv pkgs do not define a pkg build number
-                if "-" not in prev_version and not self.check_relenv(
-                    version=prev_version
-                ):
-                    pkg_numbers = [
-                        x for x in self.repo_data.keys() if prev_version in x
-                    ]
-                    pkg_version = 1
-                    for number in pkg_numbers:
-                        number = int(number.split("-")[1])
-                        if number > pkg_version:
-                            pkg_version = number
-            major, minor = prev_version.split(".")
-        if version_only:
-            return version
-        return major, minor, prev_version, pkg_version
+            # This is an upgrade, start on the previous version
+            major, minor = self.prev_version.split(".", 1)
+        return major, minor
 
     def __attrs_post_init__(self):
-        self.major, self.minor, self.prev_version, self.pkg_version = self.get_version()
+        self.major, self.minor = self.get_version()
         self.relenv = self.check_relenv(self.major)
         file_ext_re = r"tar\.gz"
         if platform.is_darwin():
@@ -648,8 +615,6 @@ class SaltPkgInstall:
         """
         major_ver = self.major
         minor_ver = self.minor
-        pkg_version = self.pkg_version
-        full_version = f"{self.major}.{self.minor}-{pkg_version}"
         relenv = int(major_ver) >= 3006
 
         min_ver = f"{major_ver}"
