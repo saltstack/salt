@@ -24,6 +24,7 @@ jobs:
         env:
           PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
         run: |
+          git config --global --add safe.directory $(pwd)
           python -m pip install --upgrade pip
           pip install pre-commit pygithub
 

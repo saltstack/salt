@@ -12,7 +12,7 @@ jobs:
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
 
     container:
-      image: python:3.8.6-slim-buster
+      image: ghcr.io/saltstack/salt-ci-containers/python:3.8
 
     steps:
 
@@ -20,14 +20,17 @@ jobs:
       run: |
         apt-get update
         apt-get upgrade debian-keyring -y
-        echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+        echo "deb http://deb.debian.org/debian bookworm-backports main" >> /etc/apt/sources.list
         apt-get update
-        apt-get install -y enchant git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils
-        apt-get install -y git/buster-backports
+        apt-get install -y enchant-2 git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils
 
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
+
+    - name: Add Git Safe Directory
+      run: |
+        git config --global --add safe.directory $(pwd)
 
     - name: Install Nox
       env:
@@ -69,7 +72,7 @@ jobs:
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
 
     container:
-      image: python:3.8.6-slim-buster
+      image: ghcr.io/saltstack/salt-ci-containers/python:3.8
 
     steps:
 
@@ -77,12 +80,15 @@ jobs:
       run: |
         apt-get update
         apt-get upgrade debian-keyring -y
-        echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+        echo "deb http://deb.debian.org/debian bookworm-backports main" >> /etc/apt/sources.list
         apt-get update
-        apt-get install -y enchant git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
-        apt-get install -y git/buster-backports
+        apt-get install -y enchant-2 git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
 
     - uses: actions/checkout@v3
+
+    - name: Add Git Safe Directory
+      run: |
+        git config --global --add safe.directory $(pwd)
 
     - id: changed-files
       name: Get Changed Files
