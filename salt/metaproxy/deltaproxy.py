@@ -529,6 +529,7 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
             exc,
             exc_info=True,
         )
+        return {"proxy_minion": None, "proxy_opts": {}}
 
     # Reload the grains
     proxy_grains = salt.loader.grains(
