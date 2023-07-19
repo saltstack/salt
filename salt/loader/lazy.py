@@ -1225,7 +1225,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Run the `_func_or_method` in this loader's context
         """
         self._last_context = contextvars.copy_context()
-        return self._last_context.run(self._run_as, _func_or_method, *args, **kwargs)
+        return self._run_as(_func_or_method, *args, **kwargs)
+        #return self._last_context.run(self._run_as, _func_or_method, *args, **kwargs)
 
     def _run_as(self, _func_or_method, *args, **kwargs):
         """
