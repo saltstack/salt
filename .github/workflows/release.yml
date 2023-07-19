@@ -22,7 +22,7 @@ permissions:
 jobs:
   SaltChangelog:
     name: Build Salt Changelog
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
 
     container:
       image: python:3.8.6-slim-buster
@@ -85,7 +85,7 @@ jobs:
 
   Manpages:
     name: Build Salt man Pages
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
 
     container:
       image: python:3.8.6-slim-buster
@@ -148,7 +148,7 @@ jobs:
   PullRequest:
     needs: [SaltChangelog, Manpages]
     name: Create Pull Request
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
 
     container:
       image: python:3.8.6-slim-buster

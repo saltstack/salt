@@ -9,7 +9,7 @@ permissions:
 jobs:
   Salt:
     name: Build Salt Documentation
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
 
     container:
       image: python:3.8.6-slim-buster
@@ -66,7 +66,7 @@ jobs:
 
   Manpages:
     name: Build Salt man Pages
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
 
     container:
       image: python:3.8.6-slim-buster

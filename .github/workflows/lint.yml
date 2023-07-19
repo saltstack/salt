@@ -9,7 +9,7 @@ permissions:
 jobs:
   Salt:
     name: Lint Salt's Source Code
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
 
     container:
       image: python:3.8.6-slim-buster
@@ -73,7 +73,7 @@ jobs:
 
   Tests:
     name: Lint Salt's Test Suite
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
 
     container:
       image: python:3.8.6-slim-buster
