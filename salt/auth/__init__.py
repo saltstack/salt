@@ -340,8 +340,6 @@ class LoadAuth:
                 load["user"] == self.opts.get("user", "root") or load["user"] == "root"
             ):
                 for check_key in key:
-                    dgm_user = self.opts.get("user", "root")
-                    dgm_check_key = key[check_key]
                     if auth_key == key[check_key]:
                         return True
                 log.warning(
