@@ -15,6 +15,10 @@ on:
         default: "master"
         required: false
 
+permissions:
+  contents: read  # for dorny/paths-filter to fetch a list of changed files
+  pull-requests: read  # for dorny/paths-filter to read pull requests
+
 jobs:
   SaltChangelog:
     name: Build Salt Changelog
