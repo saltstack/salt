@@ -11,6 +11,7 @@ import glob
 import hashlib
 import io
 import logging
+import multiprocessing
 import os
 import shlex
 import shutil
@@ -224,6 +225,10 @@ class GitProvider:
     self.provider should be set in the sub-class' __init__ function before
     invoking the parent class' __init__.
     """
+
+    # master lock should only be locked for very short periods of times "seconds"
+    # the master lock should be used when ever git provider reads or writes to one if it locks
+    _master_lock = multiprocessing.Lock()
 
     def __init__(
         self,
@@ -451,10 +456,19 @@ class GitProvider:
             failhard(self.role)
 
         hash_type = getattr(hashlib, self.opts.get("hash_type", "md5"))
+        # Generate full id. The full id is made from these parts name-id-env-_root.
+        # Full id stops collections in the gtfs cache.
+        self._full_id = "-".join(
+            [
+                getattr(self, "name", ""),
+                self.id.replace(" ", "-"),
+                getattr(self, "env", ""),
+                getattr(self, "_root", ""),
+            ]
+        )
         # We loaded this data from yaml configuration files, so, its safe
         # to use UTF-8
-        self.hash = hash_type(self.id.encode("utf-8")).hexdigest()
-        self.cachedir_basename = getattr(self, "name", self.hash)
+        self.cachedir_basename = f"{getattr(self, 'name', '')}-{hash_type(self._full_id.encode('utf-8')).hexdigest()}"
         self.cachedir = salt.utils.path.join(cache_root, self.cachedir_basename)
         self.linkdir = salt.utils.path.join(cache_root, "links", self.cachedir_basename)
 
@@ -471,6 +485,12 @@ class GitProvider:
                 msg += " Perhaps git is not available."
             log.critical(msg, exc_info=True)
             failhard(self.role)
+
+    def full_id(self):
+        return self._full_id
+
+    def get_cachedir_basename(self):
+        return self.cachedir_basename
 
     def _get_envs_from_ref_paths(self, refs):
         """
@@ -662,6 +682,19 @@ class GitProvider:
         """
         Clear update.lk
         """
+        if self.__class__._master_lock.acquire(timeout=60) is False:
+            # if gtfs works right we should never see this timeout error.
+            log.error("gtfs master lock timeout!")
+            raise TimeoutError("gtfs master lock timeout!")
+        try:
+            return self._clear_lock(lock_type)
+        finally:
+            self.__class__._master_lock.release()
+
+    def _clear_lock(self, lock_type="update"):
+        """
+        Clear update.lk without MultiProcessing locks
+        """
         lock_file = self._get_lock_file(lock_type=lock_type)
 
         def _add_error(errlist, exc):
@@ -836,6 +869,20 @@ class GitProvider:
     def _lock(self, lock_type="update", failhard=False):
         """
         Place a lock file if (and only if) it does not already exist.
+        Without MultiProcessing locks.
+        """
+        if self.__class__._master_lock.acquire(timeout=60) is False:
+            # if gtfs works right we should never see this timeout error.
+            log.error("gtfs master lock timeout!")
+            raise TimeoutError("gtfs master lock timeout!")
+        try:
+            return self.__lock(lock_type, failhard)
+        finally:
+            self.__class__._master_lock.release()
+
+    def __lock(self, lock_type="update", failhard=False):
+        """
+        Place a lock file if (and only if) it does not already exist.
         """
         try:
             fh_ = os.open(
@@ -903,9 +950,9 @@ class GitProvider:
                             lock_type,
                             lock_file,
                         )
-                    success, fail = self.clear_lock()
+                    success, fail = self._clear_lock()
                     if success:
-                        return self._lock(lock_type="update", failhard=failhard)
+                        return self.__lock(lock_type="update", failhard=failhard)
                     elif failhard:
                         raise
                     return
