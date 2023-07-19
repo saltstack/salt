@@ -274,6 +274,20 @@ def _install_requirements(
     requirements_file = _get_pip_requirements_file(
         session, transport, requirements_type=requirements_type
     )
+    if _get_session_python_version_info(session) >= (3, 10):
+        # Workaround pyyaml issue https://github.com/yaml/pyyaml/issues/601
+        with open(requirements_file, encoding="utf-8") as rfh:
+            contents = rfh.read().lower()
+            for line in contents.splitlines():
+                if line.startswith("pyyaml"):
+                    session.install(
+                        "--progress-bar=off",
+                        "--no-build-isolation",
+                        "Cython<3.0",
+                        line.strip(),
+                        silent=PIP_INSTALL_SILENT,
+                    )
+                    break
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
