@@ -19,7 +19,7 @@ on:
 jobs:
   GenerateTagRelease:
     name: Generate Tag and Github Release
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     steps:
     - uses: dev-drprasad/delete-tag-and-release@v0.2.0
       if: github.event.inputs.reTag == 'true'
