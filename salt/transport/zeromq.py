@@ -553,7 +553,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
     async def request_handler(self):
         while not self._event.is_set():
             try:
-                request = await asyncio.wait_for(self._socket.recv(), .3)
+                request = await asyncio.wait_for(self._socket.recv(), 0.3)
                 reply = await self.handle_message(None, request)
                 await self._socket.send(self.encode_payload(reply))
             except asyncio.exceptions.TimeoutError:
