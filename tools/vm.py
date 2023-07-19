@@ -592,9 +592,19 @@ def sync_cache(
     cached_instances = {}
     if STATE_DIR.exists():
         for state_path in STATE_DIR.iterdir():
-            instance_id_path = state_path / "instance-id"
-            if instance_id_path.exists():
-                instance_id = instance_id_path.read_text()
+            try:
+                instance_id = (state_path / "instance-id").read_text()
+            except FileNotFoundError:
+                if not delete:
+                    log.info(
+                        f"Would remove {state_path.name} (No valid ID) from cache at {state_path}"
+                    )
+                else:
+                    shutil.rmtree(state_path)
+                    log.info(
+                        f"REMOVED {state_path.name} (No valid ID) from cache at {state_path}"
+                    )
+            else:
                 cached_instances[instance_id] = state_path.name
 
     # Find what instances we are missing in our cached states
