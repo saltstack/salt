@@ -1425,12 +1425,12 @@ async def test_req_server_garbage_request(io_loop):
 
     valid_response = msgpack.dumps({"msg": "bad load"})
 
-    with MagicMock() as stream:
-        request_server.stream = stream
+    stream = MagicMock()
+    request_server.stream = stream
 
-        try:
-            await request_server.handle_message(stream, badbyts)
-        except Exception as exc:  # pylint: disable=broad-except
-            pytest.fail("Exception was raised {}".format(exc))
+    try:
+        await request_server.handle_message(stream, badbyts)
+    except Exception as exc:  # pylint: disable=broad-except
+        pytest.fail("Exception was raised {}".format(exc))
 
     request_server.stream.send.assert_called_once_with(valid_response)
