@@ -1423,7 +1423,7 @@ async def test_req_server_garbage_request(io_loop):
     byts = msgpack.dumps({"foo": "bar"})
     badbyts = byts[:3] + b"^M" + byts[3:]
 
-    valid_response = msgpack.dumps("Invalid payload")
+    valid_response = msgpack.dumps({"msg": "bad load"})
 
     with MagicMock() as stream:
         request_server.stream = stream
