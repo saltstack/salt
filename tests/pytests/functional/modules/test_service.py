@@ -57,9 +57,9 @@ def setup_service(service_name, modules):
 
         if post_srv_status != pre_srv_status:
             if pre_srv_status:
-                modules.service.enable(service_name)
+                modules.service.start(service_name)
             else:
-                modules.service.disable(service_name)
+                modules.service.stop(service_name)
 
         if post_srv_enabled != pre_srv_enabled:
             if pre_srv_enabled:

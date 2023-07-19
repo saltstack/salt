@@ -53,16 +53,26 @@ def service_name(grains, modules):
 
 @pytest.fixture(autouse=True)
 def setup_service(service_name, modules):
-    pre_srv_enabled = True if service_name in modules.service.get_enabled() else False
-    post_srv_disable = False
-    if not pre_srv_enabled:
-        modules.service.enable(service_name)
-        post_srv_disable = True
+    pre_srv_status = modules.service.status(service_name)
+    pre_srv_enabled = service_name in modules.service.get_enabled()
+
     try:
-        yield post_srv_disable
+        yield pre_srv_status
     finally:
-        if post_srv_disable:
-            modules.service.disable(service_name)
+        post_srv_status = modules.service.status(service_name)
+        post_srv_enabled = service_name in modules.service.get_enabled()
+
+        if post_srv_status != pre_srv_status:
+            if pre_srv_status:
+                modules.service.start(service_name)
+            else:
+                modules.service.stop(service_name)
+
+        if post_srv_enabled != pre_srv_enabled:
+            if pre_srv_enabled:
+                modules.service.enable(service_name)
+            else:
+                modules.service.disable(service_name)
 
 
 def check_service_status(exp_return, modules, service_name):
