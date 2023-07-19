@@ -461,7 +461,7 @@ def list_(
     """
     choc_path = _find_chocolatey()
     # https://docs.chocolatey.org/en-us/guides/upgrading-to-chocolatey-v2-v6
-    if Version(chocolatey_version()) <= Version("2.0.0"):
+    if Version(chocolatey_version()) < Version("2.0.0"):
         cmd = [choc_path, "list"]
     else:
         cmd = [choc_path, "search"]
@@ -523,7 +523,7 @@ def list_webpi():
     """
     choc_path = _find_chocolatey()
     # https://docs.chocolatey.org/en-us/guides/upgrading-to-chocolatey-v2-v6
-    if Version(chocolatey_version()) <= Version("2.0.0"):
+    if Version(chocolatey_version()) < Version("2.0.0"):
         cmd = [choc_path, "list", "--source", "webpi"]
     else:
         cmd = [choc_path, "search", "--source", "webpi"]
@@ -552,7 +552,7 @@ def list_windowsfeatures():
     """
     choc_path = _find_chocolatey()
     # https://docs.chocolatey.org/en-us/guides/upgrading-to-chocolatey-v2-v6
-    if Version(chocolatey_version()) <= Version("2.0.0"):
+    if Version(chocolatey_version()) < Version("2.0.0"):
         cmd = [choc_path, "list", "--source", "windowsfeatures"]
     else:
         cmd = [choc_path, "search", "--source", "windowsfeatures"]
