@@ -369,12 +369,6 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
                     assert _file.owner() == "salt"
                     assert _file.group() == "salt"
 
-    if (platform.is_windows() or platform.is_darwin()) and install_salt.singlebin:
-        start_timeout = 240
-        # For every minion started we have to accept it's key.
-        # On windows, using single binary, it has to decompress it and run the command. Too slow.
-        # So, just in this scenario, use open mode
-        config_overrides["open_mode"] = True
     master_script = False
     if platform.is_windows():
         if install_salt.classic:
@@ -446,8 +440,6 @@ def salt_minion(salt_factories, salt_master, install_salt):
     Start up a minion
     """
     start_timeout = None
-    if (platform.is_windows() or platform.is_darwin()) and install_salt.singlebin:
-        start_timeout = 240
     minion_id = random_string("minion-")
     # Since the daemons are "packaged" with tiamat, the salt plugins provided
     # by salt-factories won't be discovered. Provide the required `*_dirs` on
@@ -538,8 +530,6 @@ def salt_api(salt_master, install_salt, extras_pypath):
     """
     shutil.rmtree(str(extras_pypath), ignore_errors=True)
     start_timeout = None
-    if platform.is_windows() and install_salt.singlebin:
-        start_timeout = 240
     factory = salt_master.salt_api_daemon()
     with factory.started(start_timeout=start_timeout):
         yield factory

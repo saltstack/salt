@@ -52,12 +52,6 @@ def test_compare_versions(version, binary, install_salt):
     """
     Test compare versions
     """
-    if platform.is_windows() and install_salt.singlebin:
-        pytest.skip(
-            "Already tested in `test_salt_version`. No need to repeat for "
-            "Windows single binary installs."
-        )
-
     if binary in install_salt.binary_paths:
         ret = install_salt.proc.run(*install_salt.binary_paths[binary], "--version")
         ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
@@ -93,11 +87,6 @@ def test_symlinks_created(version, symlink, install_salt):
     """
     Test symlinks created
     """
-    if not install_salt.installer_pkg:
-        pytest.skip(
-            "This test is for the installer package only (pkg). It does not "
-            "apply to the tarball"
-        )
     ret = install_salt.proc.run(pathlib.Path("/usr/local/sbin") / symlink, "--version")
     ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
 

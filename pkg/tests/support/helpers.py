@@ -59,43 +59,46 @@ log = logging.getLogger(__name__)
 
 @attr.s(kw_only=True, slots=True)
 class SaltPkgInstall:
-    conf_dir: pathlib.Path = attr.ib()
-    system_service: bool = attr.ib(default=False)
     proc: Subprocess = attr.ib(init=False, repr=False)
-    pkgs: List[str] = attr.ib(factory=list)
-    onedir: bool = attr.ib(default=False)
-    singlebin: bool = attr.ib(default=False)
-    compressed: bool = attr.ib(default=False)
+    system_service: bool = attr.ib(default=False)
+
+    # Paths
     root: pathlib.Path = attr.ib(default=None)
     run_root: pathlib.Path = attr.ib(default=None)
     ssm_bin: pathlib.Path = attr.ib(default=None)
     bin_dir: pathlib.Path = attr.ib(default=None)
-    # The artifact is an installer (exe, msi, pkg, rpm, deb)
-    installer_pkg: bool = attr.ib(default=False)
+    install_dir: pathlib.Path = attr.ib(init=False)
+    binary_paths: Dict[str, List[pathlib.Path]] = attr.ib(init=False)
+    config_path: str = attr.ib(init=False)
+    conf_dir: pathlib.Path = attr.ib()
+
+    # Test selection flags
     upgrade: bool = attr.ib(default=False)
     downgrade: bool = attr.ib(default=False)
+    classic: bool = attr.ib(default=False)
 
     # Installing flags
     no_install: bool = attr.ib(default=False)
     no_uninstall: bool = attr.ib(default=False)
 
+    # Distribution/system information
     distro_id: str = attr.ib(init=False)
     distro_codename: str = attr.ib(init=False)
     distro_name: str = attr.ib(init=False)
     distro_version: str = attr.ib(init=False)
+
+    # Package (and management) metadata
     pkg_mngr: str = attr.ib(init=False)
     rm_pkg: str = attr.ib(init=False)
     salt_pkgs: List[str] = attr.ib(init=False)
-    install_dir: pathlib.Path = attr.ib(init=False)
-    binary_paths: Dict[str, List[pathlib.Path]] = attr.ib(init=False)
-    classic: bool = attr.ib(default=False)
+    pkgs: List[str] = attr.ib(factory=list)
+    file_ext: bool = attr.ib(default=None)
+    relenv: bool = attr.ib(default=True)
+
+    # Version information
     prev_version: str = attr.ib()
-    repo_data: str = attr.ib(init=False, repr=False)
     major: str = attr.ib(init=False)
     minor: str = attr.ib(init=False)
-    relenv: bool = attr.ib(default=True)
-    file_ext: bool = attr.ib(default=None)
-    config_path: str = attr.ib(init=False)
 
     @proc.default
     def _default_proc(self):
@@ -174,27 +177,6 @@ class SaltPkgInstall:
             config_path = pathlib.Path("/etc", "salt")
         return config_path
 
-    @repo_data.default
-    def _default_repo_data(self):
-        """
-        Query to see the published Salt artifacts
-        from repo.json
-        """
-        url = "https://repo.saltproject.io/salt/onedir/repo.json"
-        ret = requests.get(url)
-        data = ret.json()
-        return data
-
-    def check_relenv(self, version):
-        """
-        Detects if we are using relenv
-        onedir build
-        """
-        relenv = False
-        if packaging.version.parse(version) >= packaging.version.parse("3006.0"):
-            relenv = True
-        return relenv
-
     def update_process_path(self):
         # The installer updates the path for the system, but that doesn't
         # make it to this python session, so we need to update that
@@ -221,12 +203,12 @@ class SaltPkgInstall:
         """
         Return the version information needed to install a previous version of Salt.
         """
-        if not self.ugprade:
+        if not self.upgrade:
             # Parse the version from a local artifact (regular or downgrade tests)
             version = ""
             for artifact in ARTIFACTS_DIR.glob("**/*.*"):
                 version = re.search(
-                    r"([0-9].*)(\-[0-9].fc|\-[0-9].el|\+ds|\_all|\_any|\_amd64|\_arm64|\-[0-9].am|(\-[0-9]-[a-z]*-[a-z]*[0-9_]*.|\-[0-9]*.*)(tar.gz|tar.xz|zip|exe|msi|pkg|rpm|deb))",
+                    r"([0-9].*)(\-[0-9].fc|\-[0-9].el|\+ds|\_all|\_any|\_amd64|\_arm64|\-[0-9].am|(\-[0-9]-[a-z]*-[a-z]*[0-9_]*.|\-[0-9]*.*)(exe|msi|pkg|rpm|deb))",
                     artifact.name,
                 )
                 if version:
@@ -241,89 +223,36 @@ class SaltPkgInstall:
 
     def __attrs_post_init__(self):
         self.major, self.minor = self.get_version()
-        self.relenv = self.check_relenv(self.major)
-        file_ext_re = r"tar\.gz"
+        self.relenv = packaging.version.parse(self.major) >= packaging.version.parse(
+            "3006.0"
+        )
+
+        file_ext_re = "rpm|deb"
         if platform.is_darwin():
-            file_ext_re = r"tar\.gz|pkg"
+            file_ext_re = "pkg"
         if platform.is_windows():
-            file_ext_re = "zip|exe|msi"
+            file_ext_re = "exe|msi"
+
         for f_path in ARTIFACTS_DIR.glob("**/*.*"):
             f_path = str(f_path)
             if re.search(f"salt-(.*).({file_ext_re})$", f_path, re.IGNORECASE):
-                # Compressed can be zip, tar.gz, exe, or pkg. All others are
-                # deb and rpm
-                self.compressed = True
                 self.file_ext = os.path.splitext(f_path)[1].strip(".")
-                if self.file_ext == "gz":
-                    if f_path.endswith("tar.gz"):
-                        self.file_ext = "tar.gz"
                 self.pkgs.append(f_path)
                 if platform.is_windows():
                     self.root = pathlib.Path(os.getenv("LocalAppData")).resolve()
-                    if self.file_ext == "zip":
-                        with ZipFile(f_path, "r") as zip:
-                            first = zip.infolist()[0]
-                            if first.filename == "salt/ssm.exe":
-                                self.onedir = True
-                                self.bin_dir = self.root / "salt" / "salt"
-                                self.run_root = self.bin_dir / "salt.exe"
-                                self.ssm_bin = self.root / "salt" / "ssm.exe"
-                            elif first.filename == "salt.exe":
-                                self.singlebin = True
-                                self.run_root = self.root / "salt.exe"
-                                self.ssm_bin = self.root / "ssm.exe"
-                            else:
-                                log.error(
-                                    "Unexpected archive layout. First: %s",
-                                    first.filename,
-                                )
-                    elif self.file_ext in ["exe", "msi"]:
-                        self.compressed = False
-                        self.onedir = True
-                        self.installer_pkg = True
+                    if self.file_ext in ["exe", "msi"]:
                         self.root = self.install_dir.parent
                         self.bin_dir = self.install_dir
                         self.ssm_bin = self.install_dir / "ssm.exe"
                     else:
                         log.error("Unexpected file extension: %s", self.file_ext)
-                else:
-                    if platform.is_darwin():
-                        self.root = pathlib.Path(os.sep, "opt")
-                    else:
-                        self.root = pathlib.Path(os.sep, "usr", "local", "bin")
-
+                elif platform.is_darwin():
+                    self.root = pathlib.Path(os.sep, "opt")
                     if self.file_ext == "pkg":
-                        self.compressed = False
-                        self.onedir = True
-                        self.installer_pkg = True
                         self.bin_dir = self.root / "salt" / "bin"
                         self.run_root = self.bin_dir / "run"
-                    elif self.file_ext == "tar.gz":
-                        with tarfile.open(f_path) as tar:
-                            # The first item will be called salt
-                            first = next(iter(tar.getmembers()))
-                            if first.name == "salt" and first.isdir():
-                                self.onedir = True
-                                self.bin_dir = self.root / "salt" / "run"
-                                self.run_root = self.bin_dir / "run"
-                            elif first.name == "salt" and first.isfile():
-                                self.singlebin = True
-                                self.run_root = self.root / "salt"
-                            else:
-                                log.error(
-                                    "Unexpected archive layout. First: %s (isdir: %s, isfile: %s)",
-                                    first.name,
-                                    first.isdir(),
-                                    first.isfile(),
-                                )
                     else:
                         log.error("Unexpected file extension: %s", self.file_ext)
-
-            if re.search(
-                r"salt(.*)(x86_64|all|amd64|aarch64|arm64)\.(rpm|deb)$", f_path
-            ):
-                self.installer_pkg = True
-                self.pkgs.append(f_path)
 
         if not self.pkgs:
             pytest.fail("Could not find Salt Artifacts")
@@ -331,92 +260,35 @@ class SaltPkgInstall:
         python_bin = self.install_dir / "bin" / "python3"
         if platform.is_windows():
             python_bin = self.install_dir / "Scripts" / "python.exe"
-        if not self.compressed:
-            if platform.is_windows():
-                self.binary_paths = {
-                    "call": ["salt-call.exe"],
-                    "cp": ["salt-cp.exe"],
-                    "minion": ["salt-minion.exe"],
-                    "pip": ["salt-pip.exe"],
-                    "python": [python_bin],
-                }
-            else:
-                if os.path.exists(self.install_dir / "bin" / "salt"):
-                    install_dir = self.install_dir / "bin"
-                else:
-                    install_dir = self.install_dir
-                self.binary_paths = {
-                    "salt": [install_dir / "salt"],
-                    "api": [install_dir / "salt-api"],
-                    "call": [install_dir / "salt-call"],
-                    "cloud": [install_dir / "salt-cloud"],
-                    "cp": [install_dir / "salt-cp"],
-                    "key": [install_dir / "salt-key"],
-                    "master": [install_dir / "salt-master"],
-                    "minion": [install_dir / "salt-minion"],
-                    "proxy": [install_dir / "salt-proxy"],
-                    "run": [install_dir / "salt-run"],
-                    "ssh": [install_dir / "salt-ssh"],
-                    "syndic": [install_dir / "salt-syndic"],
-                    "spm": [install_dir / "spm"],
-                    "pip": [install_dir / "salt-pip"],
-                    "python": [python_bin],
-                }
+            self.binary_paths = {
+                "call": ["salt-call.exe"],
+                "cp": ["salt-cp.exe"],
+                "minion": ["salt-minion.exe"],
+                "pip": ["salt-pip.exe"],
+                "python": [python_bin],
+            }
         else:
-            if self.run_root and os.path.exists(self.run_root):
-                if platform.is_windows():
-                    self.binary_paths = {
-                        "call": [str(self.run_root), "call"],
-                        "cp": [str(self.run_root), "cp"],
-                        "minion": [str(self.run_root), "minion"],
-                        "pip": [str(self.run_root), "pip"],
-                        "python": [python_bin],
-                    }
-                else:
-                    self.binary_paths = {
-                        "salt": [str(self.run_root)],
-                        "api": [str(self.run_root), "api"],
-                        "call": [str(self.run_root), "call"],
-                        "cloud": [str(self.run_root), "cloud"],
-                        "cp": [str(self.run_root), "cp"],
-                        "key": [str(self.run_root), "key"],
-                        "master": [str(self.run_root), "master"],
-                        "minion": [str(self.run_root), "minion"],
-                        "proxy": [str(self.run_root), "proxy"],
-                        "run": [str(self.run_root), "run"],
-                        "ssh": [str(self.run_root), "ssh"],
-                        "syndic": [str(self.run_root), "syndic"],
-                        "spm": [str(self.run_root), "spm"],
-                        "pip": [str(self.run_root), "pip"],
-                        "python": [python_bin],
-                    }
+            if os.path.exists(self.install_dir / "bin" / "salt"):
+                install_dir = self.install_dir / "bin"
             else:
-                if platform.is_windows():
-                    self.binary_paths = {
-                        "call": [self.install_dir / "salt-call.exe"],
-                        "cp": [self.install_dir / "salt-cp.exe"],
-                        "minion": [self.install_dir / "salt-minion.exe"],
-                        "pip": [self.install_dir / "salt-pip.exe"],
-                        "python": [python_bin],
-                    }
-                else:
-                    self.binary_paths = {
-                        "salt": [self.install_dir / "salt"],
-                        "api": [self.install_dir / "salt-api"],
-                        "call": [self.install_dir / "salt-call"],
-                        "cloud": [self.install_dir / "salt-cloud"],
-                        "cp": [self.install_dir / "salt-cp"],
-                        "key": [self.install_dir / "salt-key"],
-                        "master": [self.install_dir / "salt-master"],
-                        "minion": [self.install_dir / "salt-minion"],
-                        "proxy": [self.install_dir / "salt-proxy"],
-                        "run": [self.install_dir / "salt-run"],
-                        "ssh": [self.install_dir / "salt-ssh"],
-                        "syndic": [self.install_dir / "salt-syndic"],
-                        "spm": [self.install_dir / "spm"],
-                        "pip": [self.install_dir / "salt-pip"],
-                        "python": [python_bin],
-                    }
+                install_dir = self.install_dir
+            self.binary_paths = {
+                "salt": [install_dir / "salt"],
+                "api": [install_dir / "salt-api"],
+                "call": [install_dir / "salt-call"],
+                "cloud": [install_dir / "salt-cloud"],
+                "cp": [install_dir / "salt-cp"],
+                "key": [install_dir / "salt-key"],
+                "master": [install_dir / "salt-master"],
+                "minion": [install_dir / "salt-minion"],
+                "proxy": [install_dir / "salt-proxy"],
+                "run": [install_dir / "salt-run"],
+                "ssh": [install_dir / "salt-ssh"],
+                "syndic": [install_dir / "salt-syndic"],
+                "spm": [install_dir / "spm"],
+                "pip": [install_dir / "salt-pip"],
+                "python": [python_bin],
+            }
 
     @staticmethod
     def salt_factories_root_dir(system_service: bool = False) -> pathlib.Path:
@@ -437,68 +309,6 @@ class SaltPkgInstall:
             log.error(ret)
         assert ret.returncode == 0
         return True
-
-    def _install_ssm_service(self):
-        # Register the services
-        # run_root and ssm_bin are configured in helper.py to point to the
-        # correct binary location
-        log.debug("Installing master service")
-        ret = self.proc.run(
-            str(self.ssm_bin),
-            "install",
-            "salt-master",
-            str(self.run_root),
-            "master",
-            "-c",
-            str(self.conf_dir),
-        )
-        self._check_retcode(ret)
-        log.debug("Installing minion service")
-        ret = self.proc.run(
-            str(self.ssm_bin),
-            "install",
-            "salt-minion",
-            str(self.run_root),
-            "minion",
-            "-c",
-            str(self.conf_dir),
-        )
-        self._check_retcode(ret)
-        log.debug("Installing api service")
-        ret = self.proc.run(
-            str(self.ssm_bin),
-            "install",
-            "salt-api",
-            str(self.run_root),
-            "api",
-            "-c",
-            str(self.conf_dir),
-        )
-        self._check_retcode(ret)
-
-    def _install_compressed(self, upgrade=False):
-        pkg = self.pkgs[0]
-        log.info("Installing %s", pkg)
-        if platform.is_windows():
-            if pkg.endswith("zip"):
-                # Extract the files
-                log.debug("Extracting zip file")
-                with ZipFile(pkg, "r") as zip:
-                    zip.extractall(path=self.root)
-            elif pkg.endswith("exe") or pkg.endswith("msi"):
-                log.error("Not a compressed package type: %s", pkg)
-            else:
-                log.error("Unknown package type: %s", pkg)
-            if self.system_service:
-                self._install_ssm_service()
-        elif platform.is_darwin():
-            log.debug("Extracting tarball into %s", self.root)
-            with tarfile.open(pkg) as tar:  # , "r:gz")
-                tar.extractall(path=str(self.root))
-        else:
-            log.debug("Extracting tarball into %s", self.root)
-            with tarfile.open(pkg) as tar:  # , "r:gz")
-                tar.extractall(path=str(self.root))
 
     def _install_pkgs(self, upgrade=False):
         pkg = self.pkgs[0]
@@ -583,12 +393,9 @@ class SaltPkgInstall:
         ).stdout
 
     def install(self, upgrade=False):
-        if self.compressed:
-            self._install_compressed(upgrade=upgrade)
-        else:
-            self._install_pkgs(upgrade=upgrade)
-            if self.distro_id in ("ubuntu", "debian"):
-                self.stop_services()
+        self._install_pkgs(upgrade=upgrade)
+        if self.distro_id in ("ubuntu", "debian"):
+            self.stop_services()
 
     def stop_services(self):
         """
@@ -614,10 +421,6 @@ class SaltPkgInstall:
         upgrade tests.
         """
         major_ver = self.major
-        minor_ver = self.minor
-        relenv = int(major_ver) >= 3006
-
-        min_ver = f"{major_ver}"
         distro_name = self.distro_name
         if distro_name == "centos" or distro_name == "fedora":
             distro_name = "redhat"
@@ -631,7 +434,7 @@ class SaltPkgInstall:
             gpg_key = "SALTSTACK-GPG-KEY.pub"
             if self.distro_version == "9":
                 gpg_key = "SALTSTACK-GPG-KEY2.pub"
-            if relenv:
+            if self.relenv:
                 gpg_key = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
 
             if platform.is_aarch64():
@@ -673,7 +476,7 @@ class SaltPkgInstall:
             pathlib.Path("/etc/apt/keyrings").mkdir(parents=True, exist_ok=True)
             gpg_dest = "salt-archive-keyring.gpg"
             gpg_key = gpg_dest
-            if relenv:
+            if self.relenv:
                 gpg_key = "SALT-PROJECT-GPG-PUBKEY-2023.gpg"
 
             download_file(
@@ -698,16 +501,14 @@ class SaltPkgInstall:
             self._check_retcode(ret)
             self.stop_services()
         elif platform.is_windows():
-            self.onedir = True
-            self.installer_pkg = True
             self.bin_dir = self.install_dir / "bin"
             self.run_root = self.bin_dir / f"salt.exe"
             self.ssm_bin = self.bin_dir / "ssm.exe"
-            if self.file_ext == "msi" or relenv:
+            if self.file_ext == "msi" or self.relenv:
                 self.ssm_bin = self.install_dir / "ssm.exe"
 
             if not self.classic:
-                if not relenv:
+                if not self.relenv:
                     win_pkg = f"salt-{self.prev_version}-windows-amd64.{self.file_ext}"
                     win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{self.prev_version}/{win_pkg}"
                 else:
@@ -720,9 +521,11 @@ class SaltPkgInstall:
                     win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{major_ver}/{win_pkg}"
             else:
                 if self.file_ext == "msi":
-                    win_pkg = f"Salt-Minion-{min_ver}-1-Py3-AMD64.{self.file_ext}"
+                    win_pkg = f"Salt-Minion-{major_ver}-1-Py3-AMD64.{self.file_ext}"
                 elif self.file_ext == "exe":
-                    win_pkg = f"Salt-Minion-{min_ver}-1-Py3-AMD64-Setup.{self.file_ext}"
+                    win_pkg = (
+                        f"Salt-Minion-{major_ver}-1-Py3-AMD64-Setup.{self.file_ext}"
+                    )
                 win_pkg_url = f"https://repo.saltproject.io/windows/{win_pkg}"
             pkg_path = pathlib.Path(r"C:\TEMP", win_pkg)
             pkg_path.parent.mkdir(exist_ok=True)
@@ -755,7 +558,7 @@ class SaltPkgInstall:
                 mac_pkg = f"salt-{self.prev_version}-py3-x86_64.pkg"
                 mac_pkg_url = f"https://repo.saltproject.io/osx/{mac_pkg}"
             else:
-                if not relenv:
+                if not self.relenv:
                     mac_pkg = f"salt-{self.prev_version}-macos-x86_64.pkg"
                     mac_pkg_url = f"https://repo.saltproject.io/salt/py3/macos/{self.prev_version}/{mac_pkg}"
                 else:
@@ -772,26 +575,19 @@ class SaltPkgInstall:
             ret = self.proc.run("installer", "-pkg", mac_pkg_path, "-target", "/")
             self._check_retcode(ret)
 
-    def _uninstall_compressed(self):
+    def uninstall(self):
+        pkg = self.pkgs[0]
         if platform.is_windows():
-            if self.system_service:
-                # Uninstall the services
-                log.debug("Uninstalling master service")
-                self.proc.run(str(self.ssm_bin), "stop", "salt-master")
-                self.proc.run(str(self.ssm_bin), "remove", "salt-master", "confirm")
-                log.debug("Uninstalling minion service")
-                self.proc.run(str(self.ssm_bin), "stop", "salt-minion")
-                self.proc.run(str(self.ssm_bin), "remove", "salt-minion", "confirm")
-                log.debug("Uninstalling api service")
-                self.proc.run(str(self.ssm_bin), "stop", "salt-api")
-                self.proc.run(str(self.ssm_bin), "remove", "salt-api", "confirm")
-            log.debug("Removing the Salt Service Manager")
-            if self.ssm_bin:
-                try:
-                    self.ssm_bin.unlink()
-                except PermissionError:
-                    atexit.register(self.ssm_bin.unlink)
-        if platform.is_darwin():
+            log.info("Uninstalling %s", pkg)
+            if pkg.endswith("exe"):
+                uninst = self.install_dir / "uninst.exe"
+                ret = self.proc.run(uninst, "/S")
+                self._check_retcode(ret)
+            elif pkg.endswith("msi"):
+                ret = self.proc.run("msiexec.exe", "/qn", "/x", pkg)
+                self._check_retcode(ret)
+
+        elif platform.is_darwin():
             # From here: https://stackoverflow.com/a/46118276/4581998
             daemons_dir = pathlib.Path(os.sep, "Library", "LaunchDaemons")
             for service in ("minion", "master", "api", "syndic"):
@@ -837,41 +633,12 @@ class SaltPkgInstall:
             # Remove receipt
             self.proc.run("pkgutil", "--forget", "com.saltstack.salt")
 
-        if self.singlebin:
-            log.debug("Deleting the salt binary: %s", self.run_root)
-            if self.run_root:
-                try:
-                    self.run_root.unlink()
-                except PermissionError:
-                    atexit.register(self.run_root.unlink)
-        else:
             log.debug("Deleting the onedir directory: %s", self.root / "salt")
             shutil.rmtree(str(self.root / "salt"))
-
-    def _uninstall_pkgs(self):
-        pkg = self.pkgs[0]
-        if platform.is_windows():
-            log.info("Uninstalling %s", pkg)
-            if pkg.endswith("exe"):
-                uninst = self.install_dir / "uninst.exe"
-                ret = self.proc.run(uninst, "/S")
-                self._check_retcode(ret)
-            elif pkg.endswith("msi"):
-                ret = self.proc.run("msiexec.exe", "/qn", "/x", pkg)
-                self._check_retcode(ret)
-
-        elif platform.is_darwin():
-            self._uninstall_compressed()
         else:
             log.debug("Un-Installing packages:\n%s", pprint.pformat(self.salt_pkgs))
             ret = self.proc.run(self.pkg_mngr, self.rm_pkg, "-y", *self.salt_pkgs)
             self._check_retcode(ret)
-
-    def uninstall(self):
-        if self.compressed:
-            self._uninstall_compressed()
-        else:
-            self._uninstall_pkgs()
 
     def assert_uninstalled(self):
         """
@@ -1318,7 +1085,7 @@ class PkgMixin:
     salt_pkg_install: SaltPkgInstall = attr.ib()
 
     def get_script_path(self):
-        if self.salt_pkg_install.compressed or (
+        if (
             platform.is_darwin()
             and self.salt_pkg_install.classic
             and self.salt_pkg_install.upgrade
@@ -1335,21 +1102,11 @@ class PkgMixin:
 
     def get_base_script_args(self):
         base_script_args = []
-        if self.salt_pkg_install.run_root and os.path.exists(
-            self.salt_pkg_install.run_root
-        ):
-            if self.salt_pkg_install.compressed:
-                if self.script_name == "spm":
-                    base_script_args.append(self.script_name)
-                elif self.script_name != "salt":
-                    base_script_args.append(self.script_name.split("salt-")[-1])
         base_script_args.extend(super().get_base_script_args())
         return base_script_args
 
     def cmdline(self, *args, **kwargs):
         _cmdline = super().cmdline(*args, **kwargs)
-        if self.salt_pkg_install.compressed is False:
-            return _cmdline
         if _cmdline[0] == self.python_executable:
             _cmdline.pop(0)
         return _cmdline
