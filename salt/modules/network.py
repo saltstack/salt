@@ -15,6 +15,7 @@ import time
 import salt.utils.decorators.path
 import salt.utils.functools
 import salt.utils.network
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.validate.net
 from salt._compat import ipaddress
@@ -471,6 +472,9 @@ def _netstat_route_linux():
     """
     ret = []
     cmd = "netstat -A inet -rn | tail -n+3"
+    which_netstat = path.which("netstat")
+    if path.islink(which_netstat) and path.readlink(which_netstat).endswith("/busybox"):
+        cmd = "netstat -rn | tail -n+3"
     out = __salt__["cmd.run"](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
