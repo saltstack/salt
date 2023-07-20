@@ -35,6 +35,8 @@ def use_static_requirements(request):
 
 @pytest.fixture
 def virtualenv(virtualenv, use_static_requirements):
+    if use_static_requirements is False:
+        pytest.skip("Skipping tests when USE_STATIC_REQUIREMENTS=0")
     virtualenv.environ["USE_STATIC_REQUIREMENTS"] = (
         "1" if use_static_requirements else "0"
     )
