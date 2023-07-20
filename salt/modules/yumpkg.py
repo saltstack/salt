@@ -2052,7 +2052,7 @@ def upgrade(
         cmd.append("upgrade" if not minimal else "upgrade-minimal")
     else:
         # do not force the removal of obsolete packages
-        if _yum() == "dnf" or _yum() == "dnf5":
+        if _yum() in ("dnf", "dnf5"):
             cmd.append("upgrade" if not minimal else "upgrade-minimal")
         else:
             # for yum we have to use update instead of upgrade
