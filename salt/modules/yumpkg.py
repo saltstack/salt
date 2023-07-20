@@ -251,7 +251,7 @@ def _versionlock_pkg(grains=None):
     if grains is None:
         grains = __grains__
 
-    if _yum() == "dnf" or _yum() == "dnf5":
+    if _yum() in ("dnf", "dnf5"):
         if grains["os"].lower() == "fedora":
             return (
                 "python3-dnf-plugin-versionlock"
