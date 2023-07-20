@@ -2014,7 +2014,7 @@ def upgrade(
 
         salt '*' pkg.upgrade security=True exclude='kernel*'
     """
-    if (_yum() == "dnf" or _yum() == "dnf5") and not obsoletes:
+    if _yum() in ("dnf", "dnf5") and not obsoletes:
         # for dnf we can just disable obsoletes
         _setopt = [
             opt
