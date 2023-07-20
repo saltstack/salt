@@ -1,7 +1,6 @@
 """
 Tests using salt formula
 """
-import json
 import shutil
 from pathlib import Path
 from zipfile import ZipFile
