@@ -9,6 +9,13 @@ from zipfile import ZipFile
 import pytest
 import requests
 
+import salt.utils.files
+
+
+@pytest.fixture(scope="module")
+def modules(loaders):
+    return loaders.modules
+
 
 @pytest.fixture(scope="module")
 def formula_tag():
@@ -20,7 +27,7 @@ def repo_url(formula_tag):
     return f"https://github.com/saltstack-formulas/salt-formula/archive/refs/tags/v{formula_tag}.zip"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="module", autouse=True)
 def salt_repo(state_tree, base_env_state_tree_root_dir, formula_tag, repo_url):
     local_filename = Path(repo_url.split("/")[-1])
     zip_path = state_tree / local_filename
@@ -36,42 +43,13 @@ def salt_repo(state_tree, base_env_state_tree_root_dir, formula_tag, repo_url):
     return str(base_env_state_tree_root_dir)
 
 
-def test_salt_formula(salt_call_cli, salt_repo):
+def test_salt_formula(modules):
     # Master Formula
-    out = salt_call_cli.run(
-        "--local",
-        "state.sls",
-        "salt.master",
-        "test=True",
-    )
-    ret = json.loads(str(out.stdout))
-    state_ids = [
-        "pkg_|-salt-master_|-salt_|-installed",
-        "file_|-salt-master_|-/etc/salt/master.d_|-recurse",
-        "file_|-remove-old-master-conf-file_|-/etc/salt/master.d/_defaults.conf_|-absent",
-        "service_|-salt-master_|-salt-master_|-running",
-    ]
-    for state_id in state_ids:
-        assert ret["local"][state_id]["result"] is not False
+    ret = modules.state.sls("salt.master", test=True)
+    for staterun in ret:
+        assert not staterun.result.failed
 
     # Minion Formula
-    out = salt_call_cli.run(
-        "--local",
-        "state.sls",
-        "salt.minion",
-        "test=True",
-    )
-    ret = json.loads(str(out.stdout))
-    state_ids = [
-        "pkg_|-salt-minion_|-salt_|-installed",
-        "file_|-salt-minion_|-/etc/salt/minion.d_|-recurse",
-        "file_|-remove-old-minion-conf-file_|-/etc/salt/minion.d/_defaults.conf_|-absent",
-        "cmd_|-salt-minion_|-salt-call --local service.restart salt-minion --out-file /dev/null_|-run",
-        "file_|-permissions-minion-config_|-/etc/salt/minion_|-managed",
-        "file_|-salt-minion-pki-dir_|-/etc/salt/pki/minion_|-directory",
-        "file_|-permissions-minion.pem_|-/etc/salt/pki/minion/minion.pem_|-managed",
-        "file_|-permissions-minion.pub_|-/etc/salt/pki/minion/minion.pub_|-managed",
-        "service_|-salt-minion_|-salt-minion_|-running",
-    ]
-    for state_id in state_ids:
-        assert ret["local"][state_id]["result"] is not False
+    ret = modules.state.sls("salt.minion", test=True)
+    for staterun in ret:
+        assert not staterun.result.failed

@@ -9,6 +9,13 @@ from zipfile import ZipFile
 import pytest
 import requests
 
+import salt.utils.files
+
+
+@pytest.fixture(scope="module")
+def modules(loaders):
+    return loaders.modules
+
 
 @pytest.fixture(scope="module")
 def formula_tag():
@@ -20,7 +27,7 @@ def repo_url(formula_tag):
     return f"https://github.com/saltstack-formulas/docker-formula/archive/refs/tags/v{formula_tag}.zip"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="module", autouse=True)
 def docker_repo(state_tree, base_env_state_tree_root_dir, formula_tag, repo_url):
     local_filename = Path(repo_url.split("/")[-1])
     zip_path = state_tree / local_filename
@@ -36,47 +43,7 @@ def docker_repo(state_tree, base_env_state_tree_root_dir, formula_tag, repo_url)
     return str(base_env_state_tree_root_dir)
 
 
-def test_docker_formula(salt_call_cli, docker_repo):
-    out = salt_call_cli.run(
-        "--local",
-        "state.sls",
-        "docker",
-        "test=True",
-    )
-    ret = json.loads(str(out.stdout))
-    state_ids = [
-        "archive_|-docker-software-docker-archive-install_|-/usr/local/docker-19.03.9/bin/_|-extracted",
-        "cmd_|-docker-software-docker-archive-install-managed-service_|-systemctl daemon-reload_|-run",
-        "file_|-docker-compose-software-binary-install-symlink-docker-compose_|-/usr/local/bin/docker-compose_|-symlink",
-        "file_|-docker-compose-software-binary-install_|-/usr/local/docker-compose-latest/bin//docker-compose_|-managed",
-        "file_|-docker-software-daemon-file-managed-daemon_file_|-/etc/docker/daemon.json_|-absent",
-        "file_|-docker-software-docker-archive-install-file-directory_|-/var/lib/docker_|-directory",
-        "file_|-docker-software-docker-archive-install-managed-service_|-/usr/lib/systemd/system/docker.service_|-managed",
-        "file_|-docker-software-docker-archive-install-symlink-containerd-shim_|-/usr/local/bin/containerd-shim_|-symlink",
-        "file_|-docker-software-docker-archive-install-symlink-containerd_|-/usr/local/bin/containerd_|-symlink",
-        "file_|-docker-software-docker-archive-install-symlink-ctr_|-/usr/local/bin/ctr_|-symlink",
-        "file_|-docker-software-docker-archive-install-symlink-docker-init_|-/usr/local/bin/docker-init_|-symlink",
-        "file_|-docker-software-docker-archive-install-symlink-docker-proxy_|-/usr/local/bin/docker-proxy_|-symlink",
-        "file_|-docker-software-docker-archive-install-symlink-docker_|-/usr/local/bin/docker_|-symlink",
-        "file_|-docker-software-docker-archive-install-symlink-dockerd_|-/usr/local/bin/dockerd_|-symlink",
-        "file_|-docker-software-docker-archive-install-symlink-runc_|-/usr/local/bin/runc_|-symlink",
-        "file_|-docker-software-docker-archive-install_|-/usr/local/docker-19.03.9/bin/_|-directory",
-        "pkg_|-docker-compose-software-binary-install_|-python-docker_|-installed",
-        "pkg_|-docker-compose-software-binary-install_|-python-pip_|-installed",
-        "pkg_|-docker-software-docker-archive-install_|-python-docker_|-installed",
-        "pkg_|-docker-software-docker-archive-install_|-python-pip_|-installed",
-        "service_|-docker-software-service-running-docker_|-docker_|-running",
-        "service_|-docker-software-service-running-unmasked_|-docker_|-unmasked",
-        "service_|-docker-software-service-running-docker-fail-notify_|-docker_|-enabled",
-        "test_|-docker-compose-package-install-other_|-docker-compose-package-install-other_|-show_notification",
-        "test_|-docker-software-desktop-install-other_|-docker-software-desktop-install-other_|-show_notification",
-        "test_|-docker-software-package-install-other_|-docker-software-package-install-other_|-show_notification",
-    ]
-    for state_id in state_ids:
-        assert ret["local"][state_id]["result"] is not False
-
-    state_ids = [
-        "test_|-docker-software-service-running-docker-fail-notify_|-docker-software-service-running-docker-fail-notify_|-fail_without_changes",
-    ]
-    for state_id in state_ids:
-        assert ret["local"][state_id]["result"] is False
+def test_docker_formula(modules):
+    ret = modules.state.sls("docker", test=True)
+    for staterun in ret:
+        assert not staterun.result.failed
