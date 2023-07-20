@@ -129,7 +129,7 @@ def _get_hold(line, pattern=__HOLD_PATTERN, full=True):
         else:
             lock_re = rf"(\d+:{pattern}-\S+)"
     else:
-        if _yum() == "dnf" or _yum() == "dnf5":
+        if _yum() in ("dnf", "dnf5"):
             lock_re = rf"({pattern}-\S+)"
         else:
             lock_re = rf"\d+:({pattern}-\S+)"
