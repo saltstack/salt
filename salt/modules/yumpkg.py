@@ -3044,7 +3044,7 @@ def mod_repo(repo, basedir=None, **kwargs):
         if use_copr:
             # Is copr plugin installed?
             copr_plugin_name = ""
-            if _yum() == "dnf" or _yum() == "dnf5":
+            if _yum() in ("dnf", "dnf5"):
                 copr_plugin_name = "dnf-plugins-core"
             else:
                 copr_plugin_name = "yum-plugin-copr"
