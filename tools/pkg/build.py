@@ -749,7 +749,7 @@ def salt_onedir(
         shutil.copyfile(src, dst)
 
     # Add package type file for package grain
-    with open(pathlib.Path(site_packages) / "_pkg.txt", "w") as fp:
+    with open(pathlib.Path(site_packages) / "salt" / "_pkg.txt", "w") as fp:
         fp.write("onedir")
 
 

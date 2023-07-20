@@ -4,7 +4,7 @@ import pytest
 
 
 @pytest.fixture(scope="package", autouse=True)
-def onedir_env():
+def _onedir_env():
     """
     Functional tests cannot currently test the
     onedir artifact. This will need to be removed
@@ -18,6 +18,8 @@ def onedir_env():
             yield
         finally:
             os.environ["ONEDIR_TESTRUN"] = "1"
+    else:
+        yield
 
 
 @pytest.fixture(scope="module")
