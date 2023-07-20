@@ -2408,7 +2408,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
         ret[target] = {"name": target, "changes": {}, "result": False, "comment": ""}
 
-        if _yum() == "dnf" or _yum() == "dnf5":
+        if _yum() in ("dnf", "dnf5"):
             search_locks = [x for x in current_locks if x == target]
         else:
             # To accommodate yum versionlock's lack of support for removing
