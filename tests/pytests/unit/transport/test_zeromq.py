@@ -11,6 +11,7 @@ import threading
 import time
 import uuid
 
+import msgpack
 import pytest
 import salt.channel.client
 import salt.channel.server
@@ -1383,3 +1384,32 @@ async def test_req_chan_auth_v2_new_minion_without_master_pub(pki_dir, io_loop):
     assert "sig" in ret
     ret = client.auth.handle_signin_response(signin_payload, ret)
     assert ret == "retry"
+
+
+async def test_req_server_garbage_request(io_loop):
+    """
+    Validate invalid msgpack messages will not raise exceptions in the
+    RequestServers's message handler.
+    """
+    opts = salt.config.master_config("")
+    request_server = salt.transport.zeromq.RequestServer(opts)
+
+    def message_handler(payload):
+        return payload
+
+    request_server.post_fork(message_handler, io_loop)
+
+    byts = msgpack.dumps({"foo": "bar"})
+    badbyts = byts[:3] + b"^M" + byts[3:]
+
+    valid_response = msgpack.dumps({"msg": "bad load"})
+
+    stream = MagicMock()
+    request_server.stream = stream
+
+    try:
+        await request_server.handle_message(stream, badbyts)
+    except Exception as exc:  # pylint: disable=broad-except
+        pytest.fail("Exception was raised {}".format(exc))
+
+    request_server.stream.send.assert_called_once_with(valid_response)
