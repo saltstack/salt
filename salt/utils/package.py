@@ -18,7 +18,7 @@ def pkg_type():
     """
     Utility to find out how Salt was installed.
     """
-    pkg_file = pathlib.Path(__file__).parent.parent.parent / "_pkg.txt"
+    pkg_file = pathlib.Path(__file__).parent.parent / "_pkg.txt"
     if pkg_file.is_file():
         with salt.utils.files.fopen(pkg_file) as _fp:
             content = _fp.read()
