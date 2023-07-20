@@ -289,6 +289,8 @@ class TCPPubClient(salt.transport.base.PublishClient):
                 "source_port": self.source_port,
             }
         stream = None
+        timeout = kwargs.get("timeout", None)
+        start = time.time()
         while stream is None and (not self._closed and not self._closing):
             try:
                 if self.host and self.port:
@@ -330,14 +332,18 @@ class TCPPubClient(salt.transport.base.PublishClient):
                     exc,
                     self.backoff,
                 )
+                if timeout and time.time() - start > timeout:
+                    break
                 await asyncio.sleep(self.backoff)
+            if timeout and time.time() - start > timeout:
+                break
         return stream
 
-    async def _connect(self):
+    async def _connect(self, timeout=None):
         if self._stream is None:
             self._closing = False
             self._closed = False
-            self._stream = await self.getstream()
+            self._stream = await self.getstream(timeout=timeout)
             if self._stream:
                 # if not self._stream_return_running:
                 #    self.io_loop.spawn_callback(self._stream_return)
@@ -350,6 +356,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
         port=None,
         connect_callback=None,
         disconnect_callback=None,
+        timeout=None,
     ):
         if port is not None:
             self.port = port
@@ -357,7 +364,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
             self.connect_callback = None
         if disconnect_callback:
             self.disconnect_callback = None
-        await self._connect()
+        await self._connect(timeout=timeout)
 
     def _decode_messages(self, messages):
         if not isinstance(messages, dict):
