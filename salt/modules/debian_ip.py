@@ -1,9 +1,10 @@
 """
-The networking module for Debian-based distros
+The networking module for Debian- and BusyBox-based distros
 
 References:
 
 * http://www.debian.org/doc/manuals/debian-reference/ch05.en.html
+* https://www.busybox.net/downloads/BusyBox.html
 """
 
 import functools
@@ -48,7 +49,7 @@ def __virtual__():
     provider claims the ``ip`` virtual instead, because writing
     ``/etc/network/interfaces`` there has no effect (issue #62219).
     """
-    if __grains__["os_family"] != "Debian":
+    if __grains__["os_family"] not in ("Debian", "Alpine"):
         return (
             False,
             "The debian_ip module could not be loaded: unsupported OS family",
