@@ -132,6 +132,7 @@ def cert(
     http_01_address=None,
     dns_plugin=None,
     dns_plugin_credentials=None,
+    dns_plugin_propagate_seconds=None
 ):
     """
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
@@ -216,6 +217,8 @@ def cert(
         if dns_plugin == "cloudflare":
             cmd.append("--dns-cloudflare")
             cmd.append(f"--dns-cloudflare-credentials {dns_plugin_credentials}")
+            if dns_plugin_propagate_seconds:
+                cmd.append(f"--dns-cloudflare-propagation-seconds {dns_plugin_propagate_seconds}")
         else:
             return {
                 "result": False,
@@ -421,3 +424,85 @@ def needs_renewal(name, window=None):
         window = int(window)
 
     return _renew_by(name, window) <= datetime.datetime.today()
+
+
+def revoke(name, reason=None):
+    """
+    Revoke certificate
+    The revoked certificate will also be deleted due to the `--non-interactive` flag.
+    :param str name: Name of certificate
+    :param str reason: Optional - why you are revoking the certificate; default is 'unspecified'.
+    :rtype: bool
+    :return: Whether or not the certificate was successfully revoked.
+
+    CLI example:
+    .. code-block:: bash
+
+        salt 'gitlab.example.com' acme.revoke dev.example.com
+
+
+    Code example:
+    .. code-block:: python
+
+         __salt__['acme.revoke']('dev.example.com'):
+
+    """
+    cmd = [LEA, "revoke", "--non-interactive", f"--cert-name {name}"]
+    if reason:
+        cmd.append(f"--reason {reason}")
+
+    res = __salt__["cmd.run_all"](" ".join(cmd))
+
+    if res["retcode"] != 0:
+        if "expand" in res["stderr"]:
+            cmd.append("--expand")
+            res = __salt__["cmd.run_all"](" ".join(cmd))
+            if res["retcode"] != 0:
+                return {
+                    "result": False,
+                    "comment": f"Certificate {name} revocation failed with:\n{res['stderr']}",
+                }
+        else:
+            return {
+                "result": False,
+                "comment": f"Certificate {name} renewal failed with:\n{res['stderr']}",
+            }
+
+
+def delete(name):
+    """
+    Delete certificate
+    :param str name: Name of certificate
+    :rtype: bool
+    :return: Whether or not the certificate was successfully deleted.
+
+    CLI example:
+    .. code-block:: bash
+
+        salt 'gitlab.example.com' acme.delete dev.example.com
+
+
+    Code example:
+    .. code-block:: python
+
+         __salt__['acme.delete']('dev.example.com'):
+
+    """
+    cmd = [LEA, "delete", "--non-interactive", f"--cert-name {name}"]
+
+    res = __salt__["cmd.run_all"](" ".join(cmd))
+
+    if res["retcode"] != 0:
+        if "expand" in res["stderr"]:
+            cmd.append("--expand")
+            res = __salt__["cmd.run_all"](" ".join(cmd))
+            if res["retcode"] != 0:
+                return {
+                    "result": False,
+                    "comment": f"Certificate {name} deletion failed with:\n{res['stderr']}",
+                }
+        else:
+            return {
+                "result": False,
+                "comment": f"Certificate {name} deletion failed with:\n{res['stderr']}",
+            }
