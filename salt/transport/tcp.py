@@ -225,7 +225,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
         "connect",
         "connect_uri",
         "recv",
-        # "close",
     ]
     close_methods = [
         "close",
@@ -289,8 +288,8 @@ class TCPPubClient(salt.transport.base.PublishClient):
                 "source_port": self.source_port,
             }
         stream = None
-        timeout = kwargs.get("timeout", None)
         start = time.time()
+        timeout = kwargs.get("timeout", None)
         while stream is None and (not self._closed and not self._closing):
             try:
                 if self.host and self.port:
@@ -450,7 +449,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
                     if self.disconnect_callback:
                         self.disconnect_callback()
                     await self.connect()
-                    log.error("Re-connected - continue")
+                    log.debug("Re-connected - continue")
                     continue
                 # except AttributeError:
                 #    return
@@ -1178,7 +1177,6 @@ class PubServer(tornado.tcpserver.TCPServer):
         log.trace(
             "TCP PubServer sending payload: topic_list=%r %r", topic_list, package
         )
-        # log.error("PUBLISH PAYLOAD %r", package)
         payload = salt.transport.frame.frame_msg(package)
         to_remove = []
         if topic_list:
@@ -1198,7 +1196,6 @@ class PubServer(tornado.tcpserver.TCPServer):
         else:
             for client in self.clients:
                 try:
-                    # log.error("PUBLISH CLIENT %r", package)
                     # Write the packed str
                     await client.stream.write(payload)
                 except tornado.iostream.StreamClosedError:
@@ -1512,7 +1509,6 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         """
         Publish "load" to minions
         """
-        # log.error("PUBLISH %r", payload)
         if not self.pub_sock:
             self.connect()
         self.pub_sock.send(payload)
@@ -1811,11 +1807,9 @@ class TCPReqClient(salt.transport.base.RequestClient):
 
                     if message_id in self.send_future_map:
                         self.send_future_map.pop(message_id).set_result(body)
-                        # self.remove_message_timeout(message_id)
                     else:
                         if self._on_recv is not None:
                             self.io_loop.spawn_callback(self._on_recv, header, body)
-                            # await self._on_recv(header, body)
                         else:
                             log.error(
                                 "Got response for message_id %s that we are not"
@@ -1880,12 +1874,6 @@ class TCPReqClient(salt.transport.base.RequestClient):
                 self._mid += 1
 
         return self._mid
-
-    def remove_message_timeout(self, message_id):
-        if message_id not in self.send_timeout_map:
-            return
-        timeout = self.send_timeout_map.pop(message_id)
-        self.io_loop.remove_timeout(timeout)
 
     def timeout_message(self, message_id, msg):
         if message_id not in self.send_future_map:

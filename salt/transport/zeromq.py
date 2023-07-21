@@ -250,7 +250,9 @@ class PublishClient(salt.transport.base.PublishClient):
         self.close()
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
-    async def connect(self, port=None, connect_callback=None, disconnect_callback=None):
+    async def connect(
+        self, port=None, connect_callback=None, disconnect_callback=None, timeout=None
+    ):
         self.connect_called = True
         if port is not None:
             self.port = port

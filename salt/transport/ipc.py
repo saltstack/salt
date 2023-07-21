@@ -214,7 +214,7 @@ class IPCServer:
                 log.error("Exception occurred while handling stream: %s", exc)
 
     def handle_connection(self, connection, address):
-        log.error(
+        log.trace(
             "IPCServer: Handling connection to address: %s",
             address if address else connection,
         )

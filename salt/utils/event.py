@@ -409,7 +409,7 @@ class SaltEvent:
             try:
                 # self.subscriber.connect(timeout=timeout)
                 log.debug("Event connect subscriber %r", self.pub_path)
-                self.subscriber.connect()
+                self.subscriber.connect(timeout=timeout)
                 self.cpub = True
             except tornado.iostream.StreamClosedError:
                 log.error("Encountered StreamClosedException")
