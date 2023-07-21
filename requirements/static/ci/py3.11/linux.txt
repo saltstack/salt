@@ -6,7 +6,7 @@
 #
 aiohttp-retry==2.8.3
     # via twilio
-aiohttp==3.8.4
+aiohttp==3.8.5
     # via
     #   aiohttp-retry
     #   etcd3-py

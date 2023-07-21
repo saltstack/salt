@@ -11,7 +11,7 @@ aiohttp==3.8.5
     #   aiohttp-retry
     #   etcd3-py
     #   twilio
-aiosignal==1.2.0
+aiosignal==1.3.1
     # via aiohttp
 ansible-core==2.15.0
     # via ansible
