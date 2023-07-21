@@ -28,23 +28,23 @@ def server(config):
 
         async def handle_stream(self, stream, address):
             try:
-                log.error("Got stream %r", self.disconnect)
+                log.info("Got stream %r", self.disconnect)
                 while self.disconnect is False:
                     for msg in self.send[:]:
                         msg = self.send.pop(0)
                         try:
-                            log.error("Write %r", msg)
+                            log.info("Write %r", msg)
                             await stream.write(msg)
                         except tornado.iostream.StreamClosedError:
                             log.error("Stream Closed Error From Test Server")
                             break
                     else:
-                        log.error("SLEEP")
+                        log.info("Sleep")
                         await asyncio.sleep(1)
-                log.error("Close stream")
+                log.info("Close stream")
             finally:
                 stream.close()
-                log.error("After close stream")
+                log.info("After close stream")
 
     server = TestServer()
     try:
@@ -89,42 +89,32 @@ async def test_message_client_reconnect(config, client, server):
 
     # Send one full and one partial msg to the client.
     partial = pmsg[:40]
-    log.error("Send partial %r", partial)
+    log.info("Send partial %r", partial)
     server.send.append(partial)
 
     while not received:
-        log.error("wait received")
+        log.info("wait received")
         await asyncio.sleep(1)
-    log.error("assert received")
+    log.info("assert received")
     assert received == [msg]
-    # log.error("sleep")
+    # log.info("sleep")
     # await asyncio.sleep(1)
 
     # The message client has unpacked one msg and there is a partial msg left in
     # the unpacker. Closing the stream now leaves the unpacker in a bad state
     # since the rest of the partil message will never be received.
-    log.error("disconnect")
     server.disconnect = True
-    log.error("sleep")
     await asyncio.sleep(1)
-    log.error("after sleep")
-    log.error("disconnect false")
     server.disconnect = False
-    log.error("sleep")
     await asyncio.sleep(1)
-    log.error("after sleep")
-    log.error("Disconnect False")
     received = []
 
     # Prior to the fix for #60831, the unpacker would be left in a broken state
     # resulting in either a TypeError or BufferFull error from msgpack. The
     # rest of this test would fail.
-    log.error("Send pmsg %r", pmsg)
     server.send.append(pmsg)
-    log.error("After - Send pmsg %r", pmsg)
     while not received:
         await tornado.gen.sleep(1)
-    log.error("received %r", received)
     assert received == [msg, msg]
     server.disconnect = True
 

@@ -87,7 +87,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             self.sock.setsockopt(zmq.LINGER, -1)
             self.sock.setsockopt(zmq.SUBSCRIBE, b"")
             pub_uri = "tcp://{}:{}".format(self.interface, self.port)
-            log.error("Collector listen %s", pub_uri)
+            log.info("Collector listen %s", pub_uri)
             self.sock.connect(pub_uri)
         else:
             end = time.time() + 120
@@ -105,20 +105,17 @@ class Collector(salt.utils.process.SignalHandlingProcess):
 
     @tornado.gen.coroutine
     def _recv(self):
-        # log.error("RECV %s", self.transport)
         if self.transport == "zeromq":
             # test_zeromq_filtering requires catching the
             # SaltDeserializationError in order to pass.
             try:
                 payload = self.sock.recv(zmq.NOBLOCK)
-                # log.error("ZMQ Payload is %r", payload)
                 serial_payload = salt.payload.loads(payload)
                 raise tornado.gen.Return(serial_payload)
             except (zmq.ZMQError, salt.exceptions.SaltDeserializationError):
                 raise RecvError("ZMQ Error")
         else:
             for msg in self.unpacker:
-                # log.error("TCP Payload is %r", msg)
                 serial_payload = salt.payload.loads(msg["body"])
                 # raise tornado.gen.Return(msg["body"])
                 raise tornado.gen.Return(serial_payload)
