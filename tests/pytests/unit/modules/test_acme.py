@@ -338,3 +338,112 @@ def test_cert():
     ):
         assert acme.cert("test") == result_renew
         assert acme.cert("testing.example.com", certname="test") == result_renew
+
+
+def test_revoke():
+    """
+    Test certificate revocation
+    """
+    cmd_result_successful = {
+        "stdout": "Certificate revoked.",
+        "stderr": "",
+        "retcode": 0,
+    }
+    cmd_result_failed = {
+        "stdout": "",
+        "stderr": "Revocation failed.",
+        "retcode": 1,
+    }
+
+    # Test case: successful revocation
+    with patch.dict(
+        acme.__salt__,
+        {  # pylint: disable=no-member
+            "cmd.run_all": MagicMock(return_value=cmd_result_successful)
+        },
+    ):
+        result = acme.revoke('test_certificate')
+        assert result == {"result": True, "comment": "Certificate test_certificate successfully revoked"}
+
+    # Test case: unsuccessful revocation, 'expand' not in stderr
+    with patch.dict(
+        acme.__salt__,
+        {  # pylint: disable=no-member
+            "cmd.run_all": MagicMock(return_value=cmd_result_failed)
+        },
+    ):
+        result = acme.revoke('test_certificate')
+        assert result == {
+            "result": False,
+            "comment": "Certificate test_certificate renewal failed with:\nRevocation failed.",
+        }
+
+    # Test case: unsuccessful revocation, 'expand' in stderr
+    cmd_result_failed_expand = {
+        "stdout": "",
+        "stderr": "Revocation failed. expand",
+        "retcode": 1,
+    }
+    with patch.dict(
+        acme.__salt__,
+        {  # pylint: disable=no-member
+            "cmd.run_all": MagicMock(side_effect=[cmd_result_failed_expand, cmd_result_failed])
+        },
+    ):
+        result = acme.revoke('test_certificate')
+        assert result == {
+            "result": False,
+            "comment": "Certificate test_certificate revocation failed with:\nRevocation failed.",
+        }
+
+
+def test_delete():
+    """
+    Test certificate deletion
+    """
+    cmd = {
+        "stdout": "",
+        "stderr": "",
+        "retcode": 0,
+    }
+
+    result_success = {
+        "result": True,
+        "comment": "",
+    }
+
+    result_failed = {
+        "result": False,
+        "comment": f"Certificate 'test' deletion failed with:\nerror",
+    }
+
+    # Test successful deletion
+    with patch("salt.modules.acme.LEA", "certbot"), patch.dict(
+        acme.__salt__,
+        {  # pylint: disable=no-member
+            "cmd.run_all": MagicMock(return_value=cmd),
+        },
+    ):
+        assert acme.delete("test") == result_success
+
+    # Test failed deletion
+    cmd["retcode"] = 1
+    cmd["stderr"] = "error"
+    with patch("salt.modules.acme.LEA", "certbot"), patch.dict(
+        acme.__salt__,
+        {  # pylint: disable=no-member
+            "cmd.run_all": MagicMock(return_value=cmd),
+        },
+    ):
+        assert acme.delete("test") == result_failed
+
+    # Test failed deletion with expand in stderr
+    cmd["stderr"] = "expand"
+    with patch("salt.modules.acme.LEA", "certbot"), patch.dict(
+        acme.__salt__,
+        {  # pylint: disable=no-member
+            "cmd.run_all": MagicMock(return_value=cmd),
+        },
+    ):
+        assert acme.delete("test") == result_failed
+
