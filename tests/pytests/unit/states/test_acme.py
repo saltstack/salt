@@ -145,3 +145,21 @@ def test_cert_renew_certificate():
         }
         assert acme.cert("test") == match
         assert acme.cert("testing.example.com", certname="test") == match
+
+
+def test_cert_replace_staging():
+    """
+    Test cert state replacing staging certificate when test_cert is False.
+    """
+    with patch.dict(
+        acme.__salt__,
+        {  # pylint: disable=no-member
+            "acme.has": MagicMock(return_value=True),
+            "acme.info": MagicMock(return_value={"issuer": {"O": "STAGING"}}),
+            "acme.revoke": MagicMock(),
+            "acme.cert": MagicMock(return_value={"result": True, "comment": "Mockery"}),
+            "acme.needs_renewal": MagicMock(return_value=False),
+        },
+    ):
+        acme.cert("test", replace_staging=True, test_cert=False)
+        acme.__salt__["acme.revoke"].assert_called_with("test")
