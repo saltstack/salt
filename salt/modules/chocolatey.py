@@ -460,7 +460,11 @@ def list_(
         salt '*' chocolatey.list <narrow> all_versions=True
     """
     choc_path = _find_chocolatey()
-    cmd = [choc_path, "list"]
+    # https://docs.chocolatey.org/en-us/guides/upgrading-to-chocolatey-v2-v6
+    if Version(chocolatey_version()) < Version("2.0.0"):
+        cmd = [choc_path, "list"]
+    else:
+        cmd = [choc_path, "search"]
     if narrow:
         cmd.append(narrow)
     if salt.utils.data.is_true(all_versions):
@@ -518,7 +522,11 @@ def list_webpi():
         salt '*' chocolatey.list_webpi
     """
     choc_path = _find_chocolatey()
-    cmd = [choc_path, "list", "--source", "webpi"]
+    # https://docs.chocolatey.org/en-us/guides/upgrading-to-chocolatey-v2-v6
+    if Version(chocolatey_version()) < Version("2.0.0"):
+        cmd = [choc_path, "list", "--source", "webpi"]
+    else:
+        cmd = [choc_path, "search", "--source", "webpi"]
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:
@@ -543,7 +551,11 @@ def list_windowsfeatures():
         salt '*' chocolatey.list_windowsfeatures
     """
     choc_path = _find_chocolatey()
-    cmd = [choc_path, "list", "--source", "windowsfeatures"]
+    # https://docs.chocolatey.org/en-us/guides/upgrading-to-chocolatey-v2-v6
+    if Version(chocolatey_version()) < Version("2.0.0"):
+        cmd = [choc_path, "list", "--source", "windowsfeatures"]
+    else:
+        cmd = [choc_path, "search", "--source", "windowsfeatures"]
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:
