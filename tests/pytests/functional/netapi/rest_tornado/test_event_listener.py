@@ -118,9 +118,9 @@ async def test_clean_by_request(sock_dir, io_loop):
     """
 
     with eventpublisher_process(sock_dir):
-        log.error("After event pubserver start")
+        log.info("After event pubserver start")
         with salt.utils.event.MasterEvent(sock_dir) as me:
-            log.error("After master event start %r", me)
+            log.info("After master event start %r", me)
             request1 = Request()
             request2 = Request()
             event_listener = saltnado.EventListener(
