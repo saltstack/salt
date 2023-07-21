@@ -1,0 +1,3 @@
+version: 2
+updates:
+  - target-branch: "3006.x"
