@@ -61,6 +61,8 @@ def cert(
     http_01_address=None,
     dns_plugin=None,
     dns_plugin_credentials=None,
+    dns_plugin_propagate_seconds=None,
+    replace_staging=None,
 ):
     """
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
@@ -91,6 +93,8 @@ def cert(
     :param https_01_address: The address the server listens to during http-01 challenge.
     :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare')
     :param dns_plugin_credentials: Path to the credentials file if required by the specified DNS plugin
+    :param dns_plugin_propagate_seconds: How many seconds to wait for the DNS change to be live
+    :param bool replace_staging: Whether or not to replace the staging (test) certificate of the same name with production. The revoked certificate will also be deleted.
     """
 
     if certname is None:
@@ -101,6 +105,11 @@ def cert(
 
     current_certificate = {}
     new_certificate = {}
+
+    if replace_staging and not test_cert:
+        if __salt__["acme.has"](certname) and __salt__['acme.info'](certname)['issuer']['O'].find('STAGING') != -1:
+            __salt__["acme.revoke"](certname)
+
     if not __salt__["acme.has"](certname):
         action = "obtain"
     elif __salt__["acme.needs_renewal"](certname, renew):
@@ -138,6 +147,7 @@ def cert(
                 http_01_address=http_01_address,
                 dns_plugin=dns_plugin,
                 dns_plugin_credentials=dns_plugin_credentials,
+                dns_plugin_propagate_seconds=dns_plugin_propagate_seconds,
             )
             ret["result"] = res["result"]
             ret["comment"].append(res["comment"])
