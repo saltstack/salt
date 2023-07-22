@@ -1084,6 +1084,7 @@ class RequestClient(salt.transport.base.RequestClient):
 
     async def connect(self):
         if self.socket is None:
+            self._closing = False
             # wire up sockets
             self._init_socket()
 
@@ -1148,6 +1149,7 @@ class RequestClient(salt.transport.base.RequestClient):
             return await asyncio.wait_for(self._send_recv(load), timeout=timeout)
         except (asyncio.exceptions.TimeoutError, TimeoutError):
             self.close()
+            raise SaltReqTimeoutError("Request client send timedout")
         except Exception:
             self.close()
             raise
