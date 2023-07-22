@@ -383,6 +383,7 @@ async def test_master_publish_group(master_acl_clear_funcs, master_acl_valid_loa
         )
 
 
+@pytest.mark.skip_on_windows(reason="PAM eauth not available on Windows")
 async def test_master_publish_some_minions(
     master_acl_clear_funcs, master_acl_valid_load
 ):
