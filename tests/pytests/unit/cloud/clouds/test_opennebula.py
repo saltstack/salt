@@ -28,6 +28,46 @@ def configure_loader_modules():
     }
 
 
+"""
+Mock the server object
+"""
+class MockServer:
+    def __init__(self, ret):
+        self.ret = ret
+        self.one = MockOne(self.ret)
+
+
+"""
+Mock the one API instance
+"""
+class MockOne:
+    def __init__(self, ret):
+        self.ret = ret
+        self.vm = MockObject(self.ret)
+
+
+"""
+Mock the object we are working on e.g. vm in the call to vm.diskresize
+"""
+class MockObject:
+    def __init__(self, ret):
+        self.ret = ret
+
+    def __getattr__(self, name):
+        return MockCallable(self.ret)
+
+
+"""
+Mock the callable e.g. diskresize in vm.diskresize
+"""
+class MockCallable:
+    def __init__(self, ret):
+        self.ret = ret
+
+    def __call__(self, *args):
+        return self.ret
+
+
 def test_avail_images_action():
     """
     Tests that a SaltCloudSystemExit error is raised when trying to call
@@ -1259,6 +1299,57 @@ def test_vm_detach_nic_no_nic_id():
     Tests that a SaltCloudSystemExit is raised when the nic_id arg is missing.
     """
     pytest.raises(SaltCloudSystemExit, opennebula.vm_detach_nic, VM_NAME, call="action")
+
+
+def test_vm_disk_resize_no_disk_id():
+    """
+    Tests that a SaltCloudSystemExit is raised when the disk_id arg is missing.
+    """
+    pytest.raises(
+        SaltCloudSystemExit,
+        opennebula.vm_disk_resize,
+        VM_NAME,
+        call="action",
+        kwargs={"disk_size": "1024"},
+    )
+
+
+def test_vm_disk_resize_no_disk_size():
+    """
+    Tests that a SaltCloudSystemExit is raised when the disk_size arg is missing.
+    """
+    pytest.raises(
+        SaltCloudSystemExit,
+        opennebula.vm_disk_resize,
+        VM_NAME,
+        call="action",
+        kwargs={"disk_id": "0"},
+    )
+
+
+def test_vm_disk_resize_success():
+    """
+    Tests that disk_resize returns successfully
+    """
+
+    """
+    get_xml_rpc is where the XML RPC connection to OpenNebula is established,
+    we return our MockServer which is passed the value we want our XML RPC
+    call to return.  We also return the XML RPC username & password
+    """
+    with patch("salt.cloud.clouds.opennebula._get_xml_rpc", MagicMock(return_value=[MockServer(["True","1","0"]), "username", "password"])):
+        """
+        get_vm_id gets called in the init routine, so we need to capture it
+        """
+        with patch("salt.cloud.clouds.opennebula.get_vm_id", MagicMock(return_value=1)):
+            expected = {
+                "action": "vm.disk_resize",
+                "resized": "True",
+                "vm_id": "1",
+                "error_code": "0",
+            }
+            ret = opennebula.vm_disk_resize(VM_NAME, kwargs={"disk_id": "0", "disk_size": "1024"}, call="action")
+            assert expected == ret
 
 
 def test_vm_disk_save_action_error():
