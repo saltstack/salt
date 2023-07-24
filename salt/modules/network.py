@@ -472,8 +472,11 @@ def _netstat_route_linux():
     """
     ret = []
     cmd = "netstat -A inet -rn | tail -n+3"
-    which_netstat = path.which("netstat")
-    if path.islink(which_netstat) and path.readlink(which_netstat).endswith("/busybox"):
+    which_netstat = salt.utils.path.which("netstat")
+    is_busybox = salt.utils.path.islink(which_netstat) and salt.utils.path.readlink(
+        which_netstat
+    ).endswith("/busybox")
+    if is_busybox:
         cmd = "netstat -rn | tail -n+3"
     out = __salt__["cmd.run"](cmd, python_shell=True)
     for line in out.splitlines():
@@ -488,6 +491,9 @@ def _netstat_route_linux():
                 "interface": comps[7],
             }
         )
+    # No IPv6 in BusyBox'es netstat:
+    if is_busybox:
+        return ret
     cmd = "netstat -A inet6 -rn | tail -n+3"
     out = __salt__["cmd.run"](cmd, python_shell=True)
     for line in out.splitlines():
