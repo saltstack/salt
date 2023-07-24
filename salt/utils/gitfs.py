@@ -1236,14 +1236,14 @@ class GitProvider:
                         dirs = []
                     self._linkdir_walk.append(
                         (
-                            salt.utils.path.join(self.linkdir, *parts[: idx + 1]),
+                            salt.utils.path.join(self._linkdir, *parts[: idx + 1]),
                             dirs,
                             [],
                         )
                     )
                 try:
                     # The linkdir itself goes at the beginning
-                    self._linkdir_walk.insert(0, (self.linkdir, [parts[0]], []))
+                    self._linkdir_walk.insert(0, (self._linkdirlinkdir, [parts[0]], []))
                 except IndexError:
                     pass
             return self._linkdir_walk
@@ -3355,8 +3355,8 @@ class GitPillar(GitBase):
                         env = "base" if tgt == repo.base else tgt
                 if repo._mountpoint:
                     if self.link_mountpoint(repo):
-                        self.pillar_dirs[repo.linkdir] = env
-                        self.pillar_linked_dirs.append(repo.linkdir)
+                        self.pillar_dirs[repo.get_linkdir()] = env
+                        self.pillar_linked_dirs.append(repo.get_linkdir())
                 else:
                     self.pillar_dirs[cachedir] = env
 
@@ -3373,11 +3373,11 @@ class GitPillar(GitBase):
         create_link = False
         try:
             with repo.gen_lock(lock_type="mountpoint", timeout=10):
-                walk_results = list(os.walk(repo.linkdir, followlinks=False))
+                walk_results = list(os.walk(repo.get_linkdir(), followlinks=False))
                 if walk_results != repo.linkdir_walk:
                     log.debug(
                         "Results of walking %s differ from expected results",
-                        repo.linkdir,
+                        repo.get_linkdir(),
                     )
                     log.debug("Walk results: %s", walk_results)
                     log.debug("Expected results: %s", repo.linkdir_walk)
@@ -3438,7 +3438,7 @@ class GitPillar(GitBase):
                     # Wiping implies that we need to create the link
                     create_link = True
                     try:
-                        shutil.rmtree(repo.linkdir)
+                        shutil.rmtree(repo.get_linkdir())
                     except OSError:
                         pass
                     try:
