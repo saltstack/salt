@@ -30,8 +30,10 @@ For example:
 """
 
 
+import json
 import logging
 
+import salt.utils.data
 import salt.utils.http
 from salt.exceptions import CommandExecutionError
 
@@ -731,6 +733,118 @@ def _repo_to_dict(repo):
     ret["has_wiki"] = repo.has_wiki
     ret["has_downloads"] = repo.has_downloads
     return ret
+
+
+def check_release(
+    project, version, globbing=True, release_list=None, mine_cache=False
+):
+    """
+    Mostly a check if a given release string is in get_releases().
+    Returned is a version string/tag name of a matching release which
+    may be the the latest released version on github (if `version=True`)
+    or (the probably newest) one matching `version + '*'` like '1.2.1-2'
+    for version='1.2'. If no matching release is found `False` will be
+    returned.
+    A previously optained list of releases can be supplied via the arg
+    `release_list` causing the 1st argument (`project`) ignored
+    altogether as no call to `get_releases()` is necessary.
+    """
+    # Those are probably set somewhere in PyGithub:
+    GH_API_REPO_BASE = "https://api.github.com/repos/"
+    GH_MINE_RELEASES_FORMAT = "gh_releases:{0}"
+    GH_MINE_LATEST_FORMAT = "gh_latest:{0}"
+    # For future use:
+    #GH_MINE_CHECKSUM_FORMAT = "gh_checksum:{0}"
+    if project is None and release_list is None:
+        msg = "Can only check versions w/o project when a list of releases is supplied"
+        raise ValueError(msg)
+    if release_list is None:
+        releases = get_releases(project, mine_cache)
+    elif isinstance(release_list, list):
+        releases = release_list
+    else:
+        raise ValueError("Argument release_list can only be None or a list")
+    if version == "latest":
+        ret = releases[0]
+    elif version in releases:
+        ret = version
+    elif globbing:
+        globbed_releases = __utils__.data.glob_list(releases, str(version) + "*")
+        if len(globbed_releases) < 1:
+            ret = False
+        else:
+            ret = globbed_releases[0]
+    else:
+        ret = False
+    return ret
+
+
+def get_releases(project, mine_cache=False):
+    """
+    Queries GitHubs API to get a list of given projects
+    releases. The argument 'project' has to be of the
+    format {owner}/{repo} unless they are the identical.
+    The latest release should always be the 1st in the
+    list.
+    """
+    # Those are probably set somewhere in PyGithub:
+    GH_API_REPO_BASE = "https://api.github.com/repos/"
+    GH_MINE_RELEASES_FORMAT = "gh_releases:{0}"
+    GH_MINE_LATEST_FORMAT = "gh_latest:{0}"
+    # For future use:
+    #GH_MINE_CHECKSUM_FORMAT = "gh_checksum:{0}"
+
+    owner, repo = project.split("/")
+    if repo == "":
+        project = "{0}/{0}".format(owner)
+    gh_urls = {
+        "latest": "{0}{1}/releases/latest".format(GH_API_REPO_BASE, project),
+        "releases": "{0}{1}/releases".format(GH_API_REPO_BASE, project),
+    }
+    log.debug("Constructed GH URLs:\n%s\n%s", gh_urls["latest"], gh_urls["releases"])
+
+    if mine_cache:
+        if isinstance(mine_cache, str):
+            target = mine_cache
+        elif isinstance(mine_cache, bool):
+            target = "*"
+        else:
+            raise ValueError(
+                "Can only use True or str (used as target) in `mine_cache`"
+            )
+
+        mine_func_latest = GH_MINE_LATEST_FORMAT.format(project)
+        mine_latest = __salt__["mine.get"](target, mine_func_latest)
+        mine_id_latest, json_latest = mine_latest.popitem()
+        log.debug("Got %s from minion %s", mine_func_latest, mine_id_latest)
+
+        mine_func_releases = GH_MINE_RELEASES_FORMAT.format(project)
+        mine_releases = __salt__["mine.get"](target, mine_func_releases)
+        mine_id_releases, json_releases = mine_releases.popitem()
+        log.debug("Got %s from minion %s", mine_func_releases, mine_id_releases)
+    else:
+        json_latest = __salt__["http.query"](gh_urls["latest"], decode_type="json")[
+            "body"
+        ]
+        json_releases = __salt__["http.query"](
+            gh_urls["releases"], decode_type="json"
+        )["body"]
+
+    if isinstance(json_releases, str):
+        json_releases = json.loads(json_releases)
+    if isinstance(json_latest, str):
+        json_latest = json.loads(json_latest)
+
+    try:
+        releases = [rel.get("tag_name") for rel in json_releases]
+    except AttributeError as msg:
+        raise AttributeError("{0}:\n{1}".format(msg, json_releases)) from msg
+    latest = json_latest.get("tag_name", False)
+
+    if releases[0] != latest:
+        releases.remove(latest)
+        releases.insert(0, latest)
+    return releases
 
 
 def get_repo_info(repo_name, profile="github", ignore_cache=False):
