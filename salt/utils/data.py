@@ -779,6 +779,38 @@ def filter_by(lookup_dict, lookup, traverse, merge=None, default="default", base
     return ret
 
 
+def replace_list_element(orig, placeholder, updates_list):
+    """
+    Takes a list `orig` and inserts the elements of `updates_list`
+    anyplace where an element equal `placeholder` has been.
+    In list ['a', 'bx', 'c'] placeholder 'bx' would be replaced
+    with the elements of ['b1', 'b2', 'b3'] resulting in list
+    ['a', 'b1', 'b2', 'b3', 'c'].
+    """
+    if not isinstance(orig, list) or not isinstance(updates_list, list):
+        if not isinstance(orig, list) and not isinstance(updates_list, list):
+            msg = "Neiter arg 0 'orig' nor arg 2 'updates_list' is a list-like!"
+        if not isinstance(orig, list) and isinstance(updates_list, list):
+            msg = "Arg 0 'orig' isn't a list(-like object)!"
+        if isinstance(orig, list) and not isinstance(updates_list, list):
+            msg = "Arg 2 'updates_list' isn't a list(-like object)!"
+        raise TypeError(msg)
+
+    if placeholder not in orig:
+        return orig
+    indexed_orig = list(enumerate(orig))
+    indexed_orig.reverse()
+    updated = []
+    for index, elem in indexed_orig:
+        if elem == placeholder:
+            for update in updates_list:
+                updated.insert(index, update)
+        else:
+            updated.append(elem)
+    updated.reverse()
+    return updated
+
+
 def traverse_dict(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
     """
     Traverse a dict using a colon-delimited (or otherwise delimited, using the
