@@ -143,6 +143,7 @@ async def test_send_req_async_regression_62453(minion_opts):
     minion_opts["random_startup_delay"] = 0
     minion_opts["return_retry_tries"] = 30
     minion_opts["grains"] = {}
+    minion_opts["ipc_mode"] = "tcp"
     with patch("salt.loader.grains"):
         minion = salt.minion.Minion(minion_opts)
 
@@ -151,7 +152,7 @@ async def test_send_req_async_regression_62453(minion_opts):
 
         # We are just validating no exception is raised
         rtn = await minion._send_req_async(load, timeout)
-        assert rtn is None
+        assert rtn is False
 
 
 def test_mine_send_tries():
