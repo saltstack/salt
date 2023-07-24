@@ -465,7 +465,7 @@ def revoke(name, reason=None):
         else:
             return {
                 "result": False,
-                "comment": f"Certificate {name} renewal failed with:\n{res['stderr']}",
+                "comment": f"Certificate {name} revocation failed with:\n{res['stderr']}",
             }
 
 
