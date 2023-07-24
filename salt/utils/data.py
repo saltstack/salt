@@ -801,6 +801,32 @@ def glob_list(data, pattern):
     return matches
 
 
+def list_rm_match(listing, rgx, ignorecase=False, multiline=False):
+    """
+    Removes matching elements of a given
+    list based on a regular expression.
+    """
+    # Duplicating code from `utils.jinja.py` as using
+    # `__utils__['jinja.test_match']()` causes KeyErrors
+    flag = 0
+    not_matching = []
+    if ignorecase:
+        flag |= re.I
+    if multiline:
+        flag |= re.M
+    # compiled_rgx = re.compile(rgx, flag)
+    for elem in listing:
+        if not re.match(rgx, elem):
+            not_matching.append(elem)
+    log.debug(
+        "list_rm_match(): regex `%s` turned `[%s]` into `[%s]",
+        rgx,
+        ", ".join(listing),
+        ", ".join(not_matching),
+    )
+    return not_matching
+
+
 def replace_list_element(orig, placeholder, updates_list):
     """
     Takes a list `orig` and inserts the elements of `updates_list`
