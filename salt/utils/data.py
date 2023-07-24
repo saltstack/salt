@@ -779,6 +779,28 @@ def filter_by(lookup_dict, lookup, traverse, merge=None, default="default", base
     return ret
 
 
+def glob_list(data, pattern):
+    """
+    Uses fnmatch for "globbing" elements of a list:
+    The globbing the list [eth0, eth2, lo] with pattern
+    'eth*' results in [eth0, eth2]
+
+    Same function as used in Salt's match.glob.
+    https://docs.python.org/3/library/fnmatch.html
+    """
+    if not isinstance(data, list):
+        error_msg = "1st argument should be a list but is "
+        raise TypeError(error_msg + str(type(data)))
+    matches = []
+    for num, element in enumerate(data):
+        if not isinstance(element, str):
+            error_msg = "List element " + str(num) + " isn't a str but "
+            raise TypeError(error_msg + str(element))
+        if fnmatch.fnmatch(element, str(pattern)):
+            matches.append(element)
+    return matches
+
+
 def replace_list_element(orig, placeholder, updates_list):
     """
     Takes a list `orig` and inserts the elements of `updates_list`
