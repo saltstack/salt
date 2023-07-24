@@ -779,6 +779,13 @@ def filter_by(lookup_dict, lookup, traverse, merge=None, default="default", base
     return ret
 
 
+def get_type(var):
+    """
+    Return Python type of given variable.
+    """
+    return str(type(var))
+
+
 def glob_list(data, pattern):
     """
     Uses fnmatch for "globbing" elements of a list:
