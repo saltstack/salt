@@ -1,4 +1,8 @@
 import os
+import hashlib
+
+import salt.utils.stringutils
+
 
 TRANSPORTS = (
     "zeromq",
@@ -90,26 +94,6 @@ def publish_server(opts, **kwargs):
     raise Exception("Transport type not found: {}".format(ttype))
 
 
-def ipc_publish_client(opts, io_loop):
-    # Default to ZeroMQ for now
-    ttype = "zeromq"
-    # determine the ttype
-    if "transport" in opts:
-        ttype = opts["transport"]
-    elif "transport" in opts.get("pillar", {}).get("master", {}):
-        ttype = opts["pillar"]["master"]["transport"]
-    # switch on available ttypes
-    if ttype == "zeromq":
-        import salt.transport.zeromq
-
-        return salt.transport.zeromq.PublishClient(opts, io_loop)
-    elif ttype == "tcp":
-        import salt.transport.tcp
-
-        return salt.transport.tcp.TCPPubClient(opts, io_loop)
-    raise Exception("Transport type not found: {}".format(ttype))
-
-
 def publish_client(opts, io_loop, host=None, port=None, path=None, transport=None):
     # Default to ZeroMQ for now
     ttype = "zeromq"
@@ -136,6 +120,93 @@ def publish_client(opts, io_loop, host=None, port=None, path=None, transport=Non
         )
 
     raise Exception("Transport type not found: {}".format(ttype))
+
+
+def _minion_hash(hash_type, minion_id):
+    """
+    Generate a hash string for the minion id
+    """
+    hasher = getattr(hashlib, hash_type)
+    return hasher(salt.utils.stringutils.to_bytes(minion_id)).hexdigest()[:10]
+
+
+def ipc_publish_client(node, opts, io_loop):
+    # Default to ZeroMQ for now
+    ttype = "tcp"
+
+    kwargs = {}
+    if opts["ipc_mode"] == "tcp":
+        if node == "master":
+            kwargs.update(
+                host="127.0.0.1",
+                port=int(opts["tcp_master_pub_port"]),
+            )
+        else:
+            kwargs.update(
+                host="127.0.0.1",
+                port=int(opts["tcp_pub_port"]),
+            )
+    else:
+        if node == "master":
+            kwargs.update(
+                path=os.path.join(opts["sock_dir"], "master_event_pub.ipc"),
+            )
+        else:
+            id_hash = _minion_hash(
+                hash_type=opts["hash_type"],
+                minion_id=opts.get("hash_id", opts["id"]),
+            )
+            kwargs.update(
+                path=os.path.join(
+                    opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
+                )
+            )
+    return publish_client(opts, io_loop, **kwargs)
+
+
+def ipc_publish_server(node, opts):
+    # Default to TCP for now
+    kwargs = {"transport": "tcp"}
+    if opts["ipc_mode"] == "tcp":
+        if node == "master":
+            kwargs.update(
+                pub_host="127.0.0.1",
+                pub_port=int(opts["tcp_master_pub_port"]),
+                pull_host="127.0.0.1",
+                pull_port=int(opts["tcp_master_pull_port"]),
+            )
+        else:
+            kwargs.update(
+                pub_host="127.0.0.1",
+                pub_port=int(opts["tcp_pub_port"]),
+                pull_host="127.0.0.1",
+                pull_port=int(opts["tcp_pull_port"]),
+            )
+    else:
+        if node == "master":
+            kwargs.update(
+                pub_path=os.path.join(opts["sock_dir"], "master_event_pub.ipc"),
+                pull_path=os.path.join(opts["sock_dir"], "master_event_pull.ipc"),
+            )
+        else:
+            id_hash = _minion_hash(
+                hash_type=opts["hash_type"],
+                minion_id=opts.get("hash_id", opts["id"]),
+            )
+            pub_path = (
+                os.path.join(
+                    opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
+                ),
+            )
+            kwargs.update(
+                pub_path=pub_path,
+                pull_path=os.path.join(
+                    opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
+                ),
+            )
+            if os.path.exists(pub_path):
+                os.unlink(pub_path)
+    return publish_server(opts, **kwargs)
 
 
 class RequestClient:

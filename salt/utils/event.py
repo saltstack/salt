@@ -225,6 +225,7 @@ class SaltEvent:
                                is destroyed. This is useful when using event
                                loops from within third party asynchronous code
         """
+        self.node = node
         self.keep_loop = keep_loop
         if io_loop is not None:
             self.io_loop = io_loop
@@ -253,14 +254,6 @@ class SaltEvent:
 
         if salt.utils.platform.is_windows() and "ipc_mode" not in opts:
             self.opts["ipc_mode"] = "tcp"
-        (
-            self.pub_host,
-            self.pub_port,
-            self.pub_path,
-            self.pull_host,
-            self.pull_port,
-            self.pull_path,
-        ) = self.__load_uri(sock_dir, node)
         self.pending_tags = []
         self.pending_events = []
         self.__load_cache_regex()
@@ -395,19 +388,17 @@ class SaltEvent:
         """
         if self.cpub:
             return True
-
-        kwargs = {"transport": "tcp"}
-        kwargs.update(host=self.pub_host, port=self.pub_port, path=self.pub_path)
         if self._run_io_loop_sync:
             if self.subscriber is None:
                 self.subscriber = salt.utils.asynchronous.SyncWrapper(
-                    salt.transport.publish_client,
-                    args=(self.opts,),
-                    kwargs=kwargs,
+                    salt.transport.ipc_publish_client,
+                    args=(
+                        self.node,
+                        self.opts,
+                    ),
                     loop_kwarg="io_loop",
                 )
             try:
-                # self.subscriber.connect(timeout=timeout)
                 log.debug("Event connect subscriber %r", self.pub_path)
                 self.subscriber.connect(timeout=timeout)
                 self.cpub = True
@@ -425,15 +416,11 @@ class SaltEvent:
                 )
         else:
             if self.subscriber is None:
-                if "master_ip" not in self.opts:
-                    self.opts["master_ip"] = ""
-                kwargs["io_loop"] = self.io_loop
-                self.subscriber = salt.transport.publish_client(self.opts, **kwargs)
+                self.subscriber = salt.transport.ipc_publish_client(
+                    self.node, self.opts, io_loop=self.io_loop
+                )
                 log.debug("Event connect subscriber %r", self.pub_path)
                 self.io_loop.spawn_callback(self.subscriber.connect)
-                # self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
-                #    self.puburi, io_loop=self.io_loop
-                # )
 
             # For the asynchronous case, the connect will be defered to when
             # set_event_handler() is invoked.
@@ -466,17 +453,11 @@ class SaltEvent:
         if self._run_io_loop_sync:
             if self.pusher is None:
                 self.pusher = salt.utils.asynchronous.SyncWrapper(
-                    salt.transport.publish_server,
-                    args=(self.opts,),
-                    kwargs={
-                        "pub_host": self.pub_host,
-                        "pub_port": self.pub_port,
-                        "pub_path": self.pub_path,
-                        "pull_host": self.pull_host,
-                        "pull_port": self.pull_port,
-                        "pull_path": self.pull_path,
-                        "transport": "tcp",
-                    },
+                    salt.transport.ipc_publish_server,
+                    args=(
+                        self.node,
+                        self.opts,
+                    ),
                 )
             try:
                 # self.pusher.connect(timeout=timeout)
@@ -492,15 +473,9 @@ class SaltEvent:
                 )
         else:
             if self.pusher is None:
-                self.pusher = salt.transport.publish_server(
+                self.pusher = salt.transport.ipc_publish_server(
+                    self.node,
                     self.opts,
-                    pub_host=self.pub_host,
-                    pub_port=self.pub_port,
-                    pub_path=self.pub_path,
-                    pull_host=self.pull_host,
-                    pull_port=self.pull_port,
-                    pull_path=self.pull_path,
-                    transport="tcp",
                 )
             # For the asynchronous case, the connect will be deferred to when
             # fire_event() is invoked.
