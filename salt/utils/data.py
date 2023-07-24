@@ -866,6 +866,14 @@ def replace_list_element(orig, placeholder, updates_list):
     return updated
 
 
+def updated_dict(data, updates):
+    """
+    Returns a new dict with the 1st dict's content updated/overridden
+    with the 2nd one's.
+    """
+    return {**data, **updates}
+
+
 def traverse_dict(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
     """
     Traverse a dict using a colon-delimited (or otherwise delimited, using the
