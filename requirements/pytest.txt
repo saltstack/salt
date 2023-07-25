@@ -2,7 +2,7 @@ mock >= 3.0.0
 # PyTest
 docker
 pytest >= 7.2.0
-pytest-salt-factories >= 1.0.0rc21
+pytest-salt-factories >= 1.0.0rc24
 pytest-tempdir >= 2019.10.12
 pytest-helpers-namespace >= 2019.1.8
 pytest-subtests
