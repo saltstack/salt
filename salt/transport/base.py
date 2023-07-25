@@ -129,7 +129,7 @@ def _minion_hash(hash_type, minion_id):
 
 
 def ipc_publish_client(node, opts, io_loop):
-    # Default to ZeroMQ for now
+    # Default to TCP for now
     kwargs = {"transport": "tcp"}
     if opts["ipc_mode"] == "tcp":
         if node == "master":

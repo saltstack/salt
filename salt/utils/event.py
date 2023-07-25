@@ -231,7 +231,7 @@ class SaltEvent:
             self.io_loop = io_loop
             self._run_io_loop_sync = False
         else:
-            # self.io_loop = tornado.ioloop.IOLoop()
+            self.io_loop = None
             self._run_io_loop_sync = True
         self.cpub = False
         self.cpush = False
@@ -532,7 +532,6 @@ class SaltEvent:
             try:
                 if not self.cpub and not self.connect_pub(timeout=wait):
                     break
-                # riraw = self.subscriber.read(timeout=wait)
                 raw = self.subscriber.recv(timeout=wait)
                 if raw is None:
                     break

@@ -1,3 +1,4 @@
+import asyncio
 import os
 import socket
 
@@ -123,18 +124,12 @@ async def test_message_client_cleanup_on_close(
         del orig_loop.stop_called
 
 
-#        orig_loop.clear_current()
-#        orig_loop.close(all_fds=True)
-
-
 async def test_async_tcp_pub_channel_connect_publish_port(
     temp_salt_master, client_socket
 ):
     """
     test when publish_port is not 4506
     """
-    import asyncio
-
     opts = dict(
         temp_salt_master.config.copy(),
         master_uri="tcp://127.0.0.1:1234",
