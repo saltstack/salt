@@ -607,18 +607,12 @@ def pytest_pyfunc_call(pyfuncitem):
 
     __tracebackhide__ = True
 
-    # loop.run_sync(
-    #    CoroTestFunction(pyfuncitem.obj, testargs), timeout=get_test_timeout(pyfuncitem)
-    # )
-    # try:
     loop.asyncio_loop.run_until_complete(
         asyncio.wait_for(
             CoroTestFunction(pyfuncitem.obj, testargs)(),
             timeout=get_test_timeout(pyfuncitem),
         )
     )
-    # except RuntimeError as exc:
-    #    log.warning("WTFSON %r", dir(exc))
     return True
 
 

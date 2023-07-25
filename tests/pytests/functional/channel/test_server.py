@@ -141,7 +141,6 @@ def _connect_and_publish(
     io_loop.spawn_callback(
         server.publish, {"tgt_type": "glob", "tgt": [channel_minion_id], "WTF": "SON"}
     )
-    # server.publish({"tgt_type": "glob", "tgt": [channel_minion_id], "WTF": "SON"})
     start = time.time()
     while time.time() - start < timeout:
         yield tornado.gen.sleep(1)
