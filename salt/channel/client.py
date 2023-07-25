@@ -371,7 +371,7 @@ class AsyncReqChannel:
         await self.transport.connect()
         return self
 
-    async def __aexit__(self, exc_type, exc, tb):
+    async def __aexit__(self, *_):
         self.close()
 
 
@@ -628,7 +628,7 @@ class AsyncPubChannel:
     async def __aenter__(self):
         return self
 
-    async def __aexit__(self, exc_type, exc, tb):
+    async def __aexit__(self, *_):
         await self.close()
 
 
