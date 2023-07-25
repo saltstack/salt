@@ -117,7 +117,6 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         else:
             for msg in self.unpacker:
                 serial_payload = salt.payload.loads(msg["body"])
-                # raise tornado.gen.Return(msg["body"])
                 raise tornado.gen.Return(serial_payload)
             byts = yield self.sock.read_bytes(8096, partial=True)
             self.unpacker.feed(byts)
