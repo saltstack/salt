@@ -399,7 +399,6 @@ class SaltEvent:
                     loop_kwarg="io_loop",
                 )
             try:
-                log.debug("Event connect subscriber %r", self.pub_path)
                 self.subscriber.connect(timeout=timeout)
                 self.cpub = True
             except tornado.iostream.StreamClosedError:
@@ -419,7 +418,6 @@ class SaltEvent:
                 self.subscriber = salt.transport.ipc_publish_client(
                     self.node, self.opts, io_loop=self.io_loop
                 )
-                log.debug("Event connect subscriber %r", self.pub_path)
                 self.io_loop.spawn_callback(self.subscriber.connect)
 
             # For the asynchronous case, the connect will be defered to when
