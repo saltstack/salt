@@ -198,8 +198,6 @@ def ipc_publish_server(node, opts):
                     opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
                 ),
             )
-            if os.path.exists(pub_path):
-                os.unlink(pub_path)
     return publish_server(opts, **kwargs)
 
 
