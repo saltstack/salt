@@ -1262,13 +1262,7 @@ class TCPPuller:
             else:
                 return _null
 
-        # msgpack deprecated `encoding` starting with version 0.5.2
-        if salt.utils.msgpack.version >= (0, 5, 2):
-            # Under Py2 we still want raw to be set to True
-            msgpack_kwargs = {"raw": False}
-        else:
-            msgpack_kwargs = {"encoding": "utf-8"}
-        unpacker = salt.utils.msgpack.Unpacker(**msgpack_kwargs)
+        unpacker = salt.utils.msgpack.Unpacker(raw=False)
         while not stream.closed():
             try:
                 wire_bytes = await stream.read_bytes(4096, partial=True)
