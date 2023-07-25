@@ -1425,8 +1425,12 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
             remove_presence_callback=remove_presence_callback,
         )
         if self.pub_path:
+            log.debug("Publish server binding pub to %s", self.pub_path)
             sock = tornado.netutil.bind_unix_socket(self.pub_path)
         else:
+            log.debug(
+                "Publish server binding pub to %s:%s", self.pub_host, self.pub_port
+            )
             sock = _get_socket(self.opts)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             _set_tcp_keepalive(sock, self.opts)
@@ -1439,8 +1443,10 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         # Set up Salt IPC server
         self.pub_server = pub_server
         if self.pull_path:
+            log.debug("Publish server binding pull to %s", self.pull_path)
             pull_uri = self.pull_path
         else:
+            log.debug("Publish server binding pull to 127.0.0.1:%s", self.pull_port)
             pull_uri = self.pull_port
 
         self.pull_sock = TCPPuller(
@@ -1450,7 +1456,6 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         )
 
         # Securely create socket
-        log.warning("Starting the Salt Puller on %s", pull_uri)
         with salt.utils.files.set_umask(0o177):
             self.pull_sock.start()
 
@@ -1466,7 +1471,6 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         return await self.pub_server.publish_payload(payload)
 
     def connect(self):
-        log.debug("Connect pusher %s", self.pull_path)
         self.pub_sock = salt.utils.asynchronous.SyncWrapper(
             _TCPPubServerPublisher,
             (
@@ -1591,9 +1595,11 @@ class _TCPPubServerPublisher:
         if self.path:
             sock_type = socket.AF_UNIX
             sock_addr = self.path
+            log.debug("Publisher connecting to %s", self.path)
         else:
             sock_type = socket.AF_INET
             sock_addr = (self.host, self.port)
+            log.debug("Publisher connecting to %s:%s", self.host, self.port)
 
         self.stream = None
         if timeout is not None:
@@ -1609,12 +1615,6 @@ class _TCPPubServerPublisher:
                     socket.socket(sock_type, socket.SOCK_STREAM)
                 )
             try:
-                log.trace(
-                    "TCPMessageClient: Connecting to socket: %s:%s %s",
-                    self.host,
-                    self.port,
-                    self.path,
-                )
                 await self.stream.connect(sock_addr)
                 self._connecting_future.set_result(True)
                 break
