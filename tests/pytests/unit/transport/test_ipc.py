@@ -1,7 +1,11 @@
+import hashlib
+
 import pytest
 import tornado.iostream
 from pytestshellutils.utils import ports
 
+import salt.config
+import salt.transport
 import salt.transport.ipc
 import salt.utils.asynchronous
 import salt.utils.platform
@@ -9,6 +13,20 @@ import salt.utils.platform
 pytestmark = [
     pytest.mark.core_test,
 ]
+
+
+@pytest.fixture
+def sock_dir(tmp_path):
+    sock_dir_path = tmp_path / "test-socks"
+    sock_dir_path.mkdir(parents=True, exist_ok=True)
+    yield sock_dir_path
+
+
+@pytest.fixture
+def minion_config(sock_dir):
+    minion_config = salt.config.minion_config("")
+    minion_config["sock_dir"] = sock_dir
+    yield minion_config
 
 
 def test_ipc_connect_in_async_methods():
@@ -34,3 +52,50 @@ async def test_ipc_connect_sync_wrapped(io_loop, tmp_path):
     with pytest.raises(tornado.iostream.StreamClosedError):
         # Don't `await subscriber.connect()`, that's the purpose of the SyncWrapper
         subscriber.connect()
+
+
+@pytest.fixture
+def master_config(sock_dir):
+    conf = salt.config.master_config("")
+    conf["sock_dir"] = sock_dir
+    yield conf
+
+
+def test_master_ipc_server_unix(master_config, sock_dir):
+    assert master_config.get("ipc_mode") != "tcp"
+    server = salt.transport.ipc_publish_server("master", master_config)
+    assert server.pub_path == str(sock_dir / "master_event_pub.ipc")
+    assert server.pull_path == str(sock_dir / "master_event_pull.ipc")
+
+
+def test_minion_ipc_server_unix(minion_config, sock_dir):
+    minion_config["id"] = "foo"
+    id_hash = hashlib.sha256(
+        salt.utils.stringutils.to_bytes(minion_config["id"])
+    ).hexdigest()[:10]
+    assert minion_config.get("ipc_mode") != "tcp"
+    server = salt.transport.ipc_publish_server("minion", minion_config)
+    assert server.pub_path == str(sock_dir / f"minion_event_{id_hash}_pub.ipc")
+    assert server.pull_path == str(sock_dir / f"minion_event_{id_hash}_pull.ipc")
+
+
+def test_master_ipc_server_tcp(master_config, sock_dir):
+    master_config["ipc_mode"] = "tcp"
+    server = salt.transport.ipc_publish_server("master", master_config)
+    assert server.pub_host == "127.0.0.1"
+    assert server.pub_port == int(master_config["tcp_master_pub_port"])
+    assert server.pub_path is None
+    assert server.pull_host == "127.0.0.1"
+    assert server.pull_port == int(master_config["tcp_master_pull_port"])
+    assert server.pull_path is None
+
+
+def test_minion_ipc_server_tcp(minion_config, sock_dir):
+    minion_config["ipc_mode"] = "tcp"
+    server = salt.transport.ipc_publish_server("minion", minion_config)
+    assert server.pub_host == "127.0.0.1"
+    assert server.pub_port == int(minion_config["tcp_pub_port"])
+    assert server.pub_path is None
+    assert server.pull_host == "127.0.0.1"
+    assert server.pull_port == int(minion_config["tcp_pull_port"])
+    assert server.pull_path is None
