@@ -174,9 +174,9 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                             log.exception("Failed to deserialize...")
                             break
                     if self.gotone is False:
-                        log.error("Collector started recieving")
+                        log.debug("Collector started recieving")
                     self.gotone = True
-            log.error("Collector finished recieving")
+            log.debug("Collector finished recieving")
             self.end = time.time()
             print(f"Total time {self.end - self.start}")
         finally:
@@ -298,12 +298,9 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.queue.put(payload)
 
     def __enter__(self):
-        log.error("Proc start")
         self.start()
-        log.error("Col enter")
         self.collector.__enter__()
         attempts = 300
-        log.error("Wait collector")
         while attempts > 0:
             self.publish({"tgt_type": "glob", "tgt": "*", "jid": -1, "start": True})
             if self.collector.running.wait(1) is True:
@@ -311,7 +308,6 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             attempts -= 1
         else:
             pytest.fail("Failed to confirm the collector has started")
-        log.error("Collector started")
         return self
 
     def __exit__(self, *args):
@@ -328,4 +324,3 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.stopped.wait(10)
         self.close()
         self.terminate()
-        log.error("The PubServerChannelProcess has terminated")
