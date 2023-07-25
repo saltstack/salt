@@ -6,11 +6,12 @@ import warnings
 
 from salt.transport.base import (
     TRANSPORTS,
+    ipc_publish_client,
+    ipc_publish_server,
     publish_client,
     publish_server,
     request_client,
     request_server,
-    ipc_publish_server,
 )
 
 log = logging.getLogger(__name__)
@@ -23,9 +24,10 @@ warnings.filterwarnings(
 
 __all__ = (
     "TRANSPORTS",
+    "ipc_publish_client",
+    "ipc_publish_server",
     "publish_client",
     "publish_server",
     "request_client",
     "request_server",
-    "ipc_publish_server",
 )

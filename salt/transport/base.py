@@ -1,13 +1,11 @@
-import os
 import hashlib
+import os
 
 import salt.utils.stringutils
-
 
 TRANSPORTS = (
     "zeromq",
     "tcp",
-    "ws",
 )
 
 
@@ -132,9 +130,7 @@ def _minion_hash(hash_type, minion_id):
 
 def ipc_publish_client(node, opts, io_loop):
     # Default to ZeroMQ for now
-    ttype = "tcp"
-
-    kwargs = {}
+    kwargs = {"transport": "tcp"}
     if opts["ipc_mode"] == "tcp":
         if node == "master":
             kwargs.update(
@@ -193,10 +189,8 @@ def ipc_publish_server(node, opts):
                 hash_type=opts["hash_type"],
                 minion_id=opts.get("hash_id", opts["id"]),
             )
-            pub_path = (
-                os.path.join(
-                    opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
-                ),
+            pub_path = os.path.join(
+                opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
             )
             kwargs.update(
                 pub_path=pub_path,
@@ -330,6 +324,17 @@ class PublishClient:
     ):
         """
         Create a network connection to the the PublishServer or broker.
+        """
+        raise NotImplementedError
+
+    async def recv(self, timeout=None):
+        """
+        Receive a single message from the publish server.
+
+        The default timeout=None will wait indefinitly for a message. When
+        timeout is 0 return immediately if no message is ready. A positive
+        value sepcifies a period of time to wait for a message before raising a
+        TimeoutError.
         """
         raise NotImplementedError
 
