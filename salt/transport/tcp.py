@@ -1475,7 +1475,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
     async def publish_payload(self, payload, *args):
         return await self.pub_server.publish_payload(payload)
 
-    def connect(self):
+    def connect(self, timeout=None):
         self.pub_sock = salt.utils.asynchronous.SyncWrapper(
             _TCPPubServerPublisher,
             (
@@ -1485,7 +1485,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
             ),
             loop_kwarg="io_loop",
         )
-        self.pub_sock.connect()
+        self.pub_sock.connect(timeout=timeout)
 
     async def publish(self, payload, **kwargs):
         """

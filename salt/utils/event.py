@@ -384,8 +384,7 @@ class SaltEvent:
                     ),
                 )
             try:
-                # self.pusher.connect(timeout=timeout)
-                self.pusher.connect()
+                self.pusher.connect(timeout=timeout)
                 self.cpush = True
             except tornado.iostream.StreamClosedError as exc:
                 log.debug("Unable to connect pusher: %s", exc)
