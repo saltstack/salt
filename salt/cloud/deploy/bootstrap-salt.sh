@@ -23,7 +23,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2023.06.28"
+__ScriptVersion="2023.07.25"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -277,6 +277,8 @@ _MINIMUM_PIP_VERSION="9.0.1"
 _MINIMUM_SETUPTOOLS_VERSION="9.1"
 _POST_NEON_PIP_INSTALL_ARGS="--prefix=/usr"
 _PIP_DOWNLOAD_ARGS=""
+_QUICK_START="$BS_FALSE"
+_AUTO_ACCEPT_MINION_KEYS="$BS_FALSE"
 
 # Defaults for install arguments
 ITYPE="stable"
@@ -395,6 +397,8 @@ __usage() {
         resort method. NOTE: This only works for functions which actually
         implement pip based installations.
     -q  Quiet salt installation from git (setup.py install -q)
+    -Q  Quickstart, install the Salt master and the Salt minion.
+        And automatically accept the minion key.
     -R  Specify a custom repository URL. Assumes the custom repository URL
         points to a repository that mirrors Salt packages located at
         repo.saltproject.io. The option passed with -R replaces the
@@ -426,7 +430,7 @@ EOT
 }   # ----------  end of function __usage  ----------
 
 
-while getopts ':hvnDc:g:Gyx:k:s:MSNXCPFUKIA:i:Lp:dH:bflV:J:j:rR:aq' opt
+while getopts ':hvnDc:g:Gyx:k:s:MSNXCPFUKIA:i:Lp:dH:bflV:J:j:rR:aqQ' opt
 do
   case "${opt}" in
 
@@ -470,6 +474,7 @@ do
     J )  _CUSTOM_MASTER_CONFIG=$OPTARG                  ;;
     j )  _CUSTOM_MINION_CONFIG=$OPTARG                  ;;
     q )  _QUIET_GIT_INSTALLATION=$BS_TRUE               ;;
+    Q )  _QUICK_START=$BS_TRUE                          ;;
     x )  _PY_EXE="$OPTARG"                              ;;
     y )  _INSTALL_PY="$BS_TRUE"                         ;;
 
@@ -712,6 +717,31 @@ elif [ "$ITYPE" = "onedir_rc" ]; then
             exit 1
         fi
     fi
+fi
+
+# Doing a quick start, so install master
+# set master address to 127.0.0.1
+if [ "$_QUICK_START" -eq "$BS_TRUE" ]; then
+  # make install type is stable
+  ITYPE="stable"
+
+  # make sure the revision is latest
+  STABLE_REV="latest"
+  ONEDIR_REV="latest"
+
+  # make sure we're installing the master
+  _INSTALL_MASTER=$BS_TRUE
+
+  # override incase install minion
+  # is set to false
+  _INSTALL_MINION=$BS_TRUE
+
+  # Set master address to loopback IP
+  _SALT_MASTER_ADDRESS="127.0.0.1"
+
+  # Auto accept the minion key
+  # when the install is done.
+  _AUTO_ACCEPT_MINION_KEYS=$BS_TRUE
 fi
 
 # Check for any unparsed arguments. Should be an error.
@@ -4670,7 +4700,7 @@ __install_saltstack_rhel_onedir_repository() {
     if [ "${ONEDIR_REV}" = "nightly" ] ; then
         base_url="${HTTP_VAL}://${_REPO_URL}/${_ONEDIR_NIGHTLY_DIR}/${__PY_VERSION_REPO}/redhat/${DISTRO_MAJOR_VERSION}/\$basearch/"
     fi
-    if [ "$(echo "${ONEDIR_REV}" | grep -E '(3004|3005)')" != "" ]; then
+    if [ "$(echo "${ONEDIR_REV}" | grep -E '(3004|3005)')" != "" ] || [ "${ONEDIR_REV}" = "nightly" ]; then
       if [ "${DISTRO_MAJOR_VERSION}" -eq 9 ]; then
           gpg_key="SALTSTACK-GPG-KEY2.pub"
       else
@@ -6464,7 +6494,7 @@ install_amazon_linux_ami_2_onedir_deps() {
             base_url="$HTTP_VAL://${_REPO_URL}/${_ONEDIR_NIGHTLY_DIR}/${__PY_VERSION_REPO}/amazon/2/\$basearch/"
         fi
 
-        if [ "$(echo "${ONEDIR_REV}" | grep -E '(3004|3005)')" != "" ]; then
+        if [ "$(echo "${ONEDIR_REV}" | grep -E '(3004|3005)')" != "" ] || [ "${ONEDIR_REV}" = "nightly" ]; then
           gpg_key="${base_url}SALTSTACK-GPG-KEY.pub,${base_url}base/RPM-GPG-KEY-CentOS-7"
           if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
             gpg_key="${base_url}SALTSTACK-GPG-KEY.pub"
@@ -9698,11 +9728,23 @@ if [ "$DAEMONS_RUNNING_FUNC" != "null" ] && [ ${_START_DAEMONS} -eq $BS_TRUE ]; 
     fi
 fi
 
+if [ "$_AUTO_ACCEPT_MINION_KEYS" -eq "$BS_TRUE" ]; then
+  echoinfo "Accepting the Salt Minion Keys"
+  salt-key -yA
+fi
+
 # Done!
 if [ "$_CONFIG_ONLY" -eq $BS_FALSE ]; then
     echoinfo "Salt installed!"
 else
     echoinfo "Salt configured!"
+fi
+
+if [ "$_QUICK_START" -eq "$BS_TRUE" ]; then
+  echoinfo "Congratulations!"
+  echoinfo "A couple of commands to try:"
+  echoinfo "  salt \* test.ping"
+  echoinfo "  salt \* test.version"
 fi
 
 exit 0
