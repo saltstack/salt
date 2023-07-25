@@ -976,7 +976,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             args=(self.publish_payload,),
         )
 
-    def connect(self):
+    def connect(self, timeout=None):
         """
         Create and connect this thread's zmq socket. If a publisher socket
         already exists "pub_close" is called before creating and connecting a
