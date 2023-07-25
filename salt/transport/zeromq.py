@@ -284,18 +284,6 @@ class PublishClient(salt.transport.base.PublishClient):
         if connect_callback:
             await connect_callback(True)
 
-    #  @property
-    #  def master_pub(self):
-    #      """
-    #      Return the master publish port
-    #      """
-    #      return _get_master_uri(
-    #          self.opts["master_ip"],
-    #          self.publish_port,
-    #          source_ip=self.opts.get("source_ip"),
-    #          source_port=self.opts.get("source_publish_port"),
-    #      )
-
     def _decode_messages(self, messages):
         """
         Take the zmq messages, decrypt/decode them into a payload
@@ -378,9 +366,6 @@ class PublishClient(salt.transport.base.PublishClient):
                     except zmq.error.ZMQError as exc:
                         # We've disconnected just die
                         break
-                    # except Exception:  # pylint: disable=broad-except
-                    #    log.error("WTF", exc_info=True)
-                    #    break
                     if msg:
                         try:
                             await callback(msg)
@@ -615,9 +600,6 @@ def _set_tcp_keepalive(zmq_socket, opts):
             zmq_socket.setsockopt(zmq.TCP_KEEPALIVE_INTVL, opts["tcp_keepalive_intvl"])
 
 
-ctx = zmq.asyncio.Context()
-
-
 # TODO: unit tests!
 class AsyncReqMessageClient:
     """
@@ -824,10 +806,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     Encapsulate synchronous operations for a publisher channel
     """
 
-    # _sock_data = threading.local()
     async_methods = [
         "publish",
-        # "close",
     ]
     close_methods = [
         "close",
@@ -835,18 +815,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
     def __init__(self, opts, **kwargs):
         self.opts = opts
-        # if self.opts.get("ipc_mode", "") == "tcp":
-        #    self.pull_uri = "tcp://127.0.0.1:{}".format(
-        #        self.opts.get("tcp_master_publish_pull", 4514)
-        #    )
-        # else:
-        #    self.pull_uri = "ipc://{}".format(
-        #        os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
-        #    )
-        # interface = self.opts.get("interface", "127.0.0.1")
-        # publish_port = self.opts.get("publish_port", 4560)
-        # self.pub_uri = f"tcp://{interface}:{publish_port}"
-
         pub_host = kwargs.get("pub_host", None)
         pub_port = kwargs.get("pub_port", None)
         pub_path = kwargs.get("pub_path", None)
@@ -960,7 +928,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
     async def publish_payload(self, payload, topic_list=None):
         log.trace("Publish payload %r", payload)
-        # payload = salt.payload.dumps(payload)
         if self.opts["zmq_filtering"]:
             if topic_list:
                 for topic in topic_list:

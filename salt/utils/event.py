@@ -431,10 +431,6 @@ class SaltEvent:
         """
         if not self.cpub:
             return
-        # if isinstance(self.subscriber, salt.utils.asynchronous.SyncWrapper):
-        #    self.subscriber.close()
-        # else:
-        #    asyncio.create_task(self.subscriber.close())
         self.subscriber.close()
         self.subscriber = None
         self.pending_events = []
@@ -818,9 +814,12 @@ class SaltEvent:
         )
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         self.pusher.publish(msg)
-        # ret = yield self.pusher.send(msg)
-        # if cb is not None:
-        #    cb(ret)
+        if cb is not None:
+            warn_until(
+                3008,
+                "The cb argument to fire_event_async will be removed in 3008",
+            )
+            cb(None)
 
     def fire_event(self, data, tag, timeout=1000):
         """
@@ -876,7 +875,6 @@ class SaltEvent:
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         if self._run_io_loop_sync:
             try:
-                # self.pusher.send(msg)
                 self.pusher.publish(msg)
             except Exception as exc:  # pylint: disable=broad-except
                 log.debug(
@@ -887,7 +885,6 @@ class SaltEvent:
                 raise
         else:
             asyncio.create_task(self.pusher.publish(msg))
-            # self.io_loop.spawn_callback(self.pusher.send, msg)
         return True
 
     def fire_master(self, data, tag, timeout=1000):
@@ -905,8 +902,6 @@ class SaltEvent:
             self.close_pub()
         if self.pusher is not None:
             self.close_pull()
-        # if self._run_io_loop_sync and not self.keep_loop:
-        #    self.io_loop.close()
 
     def _fire_ret_load_specific_fun(self, load, fun_index=0):
         """
@@ -1000,7 +995,6 @@ class SaltEvent:
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        # return self.subscriber.read_async(event_handler)
         self.io_loop.spawn_callback(self.subscriber.on_recv, event_handler)
 
     # pylint: disable=W1701

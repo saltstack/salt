@@ -390,15 +390,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
                 events, _, _ = select.select([self._stream.socket], [], [], 0)
             except TimeoutError:
                 events = []
-            # except TypeError:
-            #    # Stream's socket is closed.
-            #    stream = self._stream
-            #    self._stream = None
-            #    stream.close()
-            #    if self.disconnect_callback:
-            #        self.disconnect_callback()
-            #    await self.connect()
-            #    events = []
             if events:
                 while not self._closing:
                     await self._read_in_progress.acquire()
@@ -413,9 +404,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
                             self.disconnect_callback()
                         await self.connect()
                         return
-                    # except Exception:
-                    #     log.error("Unhandled Exception")
-                    #     raise
                     finally:
                         self._read_in_progress.release()
                     self.unpacker.feed(byts)
@@ -451,10 +439,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
                     await self.connect()
                     log.debug("Re-connected - continue")
                     continue
-                # except AttributeError:
-                #    return
-                # except Exception:
-                #    raise
                 finally:
                     self._read_in_progress.release()
                 self.unpacker.feed(byts)
@@ -470,17 +454,6 @@ class TCPPubClient(salt.transport.base.PublishClient):
             msg = await self.recv()
             if msg:
                 callback(msg)
-            # except tornado.iostream.StreamClosedError:
-            #     log.trace("Stream closed, reconnecting.")
-            #     self._stream.close()
-            #     self._stream = None
-            #     await self._connect()
-            #     if self.disconnect_callback:
-            #         self.disconnect_callback()
-            #     self.unpacker = salt.utils.msgpack.Unpacker()
-            #     continue
-            # except Exception:  # py-lint: disable=broad-except
-            #     log.error("Unhandled exception in on_recv handler.", exc_info=True)
 
     def on_recv(self, callback):
         """
@@ -1788,7 +1761,6 @@ class TCPReqClient(salt.transport.base.RequestClient):
             if self._stream:
                 if not self._stream_return_running:
                     self.task = asyncio.create_task(self._stream_return())
-                    # self.io_loop.spawn_callback(self._stream_return)
                 if self.connect_callback is not None:
                     self.connect_callback()
 
@@ -1882,7 +1854,7 @@ class TCPReqClient(salt.transport.base.RequestClient):
         if future is not None:
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
-    async def send(self, load, timeout=60):  # , callback=None, raw=False, reply=True):
+    async def send(self, load, timeout=60):
         await self.connect()
         if self._closing:
             raise ClosingError()
@@ -1891,12 +1863,6 @@ class TCPReqClient(salt.transport.base.RequestClient):
         message_id = self._message_id()
         header = {"mid": message_id}
         future = tornado.concurrent.Future()
-
-        # if callback is not None:
-        #    def handle_future(future):
-        #        response = future.result()
-        #        self.io_loop.add_callback(callback, response)
-        #    future.add_done_callback(handle_future)
 
         # Add this future to the mapping
         self.send_future_map[message_id] = future
