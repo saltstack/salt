@@ -2371,7 +2371,7 @@ class ClearFuncs(TransportMethods):
         tasks = set()
         for chan in self.channels:
             tasks.add(asyncio.create_task(chan.publish(load)))
-            await asyncio.gather(*tasks)
+        await asyncio.gather(*tasks)
 
     @property
     def ssh_client(self):
