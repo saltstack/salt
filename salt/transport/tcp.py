@@ -739,7 +739,7 @@ class MessageClient:
         source_port=None,
     ):
         salt.utils.versions.warn_until(
-            3008,
+            3009,
             "MessageClient has been deprecated and will be removed.",
         )
         self.opts = opts
@@ -1351,15 +1351,24 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         "close",
     ]
 
-    def __init__(self, opts, **kwargs):
+    def __init__(
+        self,
+        opts,
+        pub_host=None,
+        pub_port=None,
+        pub_path=None,
+        pull_host=None,
+        pull_port=None,
+        pull_path=None,
+    ):
         self.opts = opts
         self.pub_sock = None
-        self.pub_host = kwargs.get("pub_host", None)
-        self.pub_port = kwargs.get("pub_port", None)
-        self.pub_path = kwargs.get("pub_path", None)
-        self.pull_host = kwargs.get("pull_host", None)
-        self.pull_port = kwargs.get("pull_port", None)
-        self.pull_path = kwargs.get("pull_path", None)
+        self.pub_host = pub_host
+        self.pub_port = pub_port
+        self.pub_path = pub_path
+        self.pull_host = pull_host
+        self.pull_port = pull_port
+        self.pull_path = pull_path
 
     @property
     def topic_support(self):

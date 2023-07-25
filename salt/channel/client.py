@@ -645,7 +645,7 @@ class AsyncPushChannel:
         # FIXME for now, just UXD
         # Obviously, this makes the factory approach pointless, but we'll extend later
         salt.utils.versions.warn_until(
-            3008,
+            3009,
             "AsyncPushChannel is deprecated. Use zeromq or tcp transport instead.",
         )
         import salt.transport.ipc
@@ -664,7 +664,7 @@ class AsyncPullChannel:
         If we have additional IPC transports other than UXD and TCP, add them here
         """
         salt.utils.versions.warn_until(
-            3008,
+            3009,
             "AsyncPullChannel is deprecated. Use zeromq or tcp transport instead.",
         )
         import salt.transport.ipc
