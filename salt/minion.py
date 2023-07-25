@@ -1145,7 +1145,7 @@ class MinionManager(MinionBase):
                 last = time.time()
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
-                await tornado.gen.sleep(auth_wait)  # TODO: log?
+                await asyncio.sleep(auth_wait)
             except SaltMasterUnresolvableError:
                 err = (
                     "Master address: '{}' could not be resolved. Invalid or"
@@ -3246,7 +3246,6 @@ class Minion(MinionBase):
         if hasattr(self, "periodic_callbacks"):
             for cb in self.periodic_callbacks.values():
                 cb.stop()
-        log.error("%r destroy method finished", self)
 
     # pylint: disable=W1701
     def __del__(self):

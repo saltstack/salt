@@ -438,7 +438,6 @@ class IPCMessageClient(IPCClient):
 
     # FIXME timeout unimplemented
     # FIXME tries unimplemented
-    # @tornado.gen.coroutine
     async def send(self, msg, timeout=None, tries=None):
         """
         Send a message to an IPC socket

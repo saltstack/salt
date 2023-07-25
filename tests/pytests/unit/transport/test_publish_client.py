@@ -161,7 +161,6 @@ async def test_publish_client_connect_server_down(transport, io_loop):
     opts = {"master_ip": "127.0.0.1"}
     host = "127.0.0.1"
     port = 111222
-    print(transport)
     if transport == "zeromq":
         client = salt.transport.zeromq.PublishClient(
             opts, io_loop, host=host, port=port
@@ -171,7 +170,6 @@ async def test_publish_client_connect_server_down(transport, io_loop):
     elif transport == "tcp":
         client = salt.transport.tcp.TCPPubClient(opts, io_loop, host=host, port=port)
         try:
-            # XXX: This is an implimentation detail of the tcp transport.
             # XXX: This is an implimentation detail of the tcp transport.
             # await client.connect(port)
             io_loop.spawn_callback(client.connect)

@@ -22,7 +22,6 @@ def test_zeromq_filtering(salt_master, salt_minion):
     """
     Test sending messages to publisher using UDP with zeromq_filtering enabled
     """
-    log.error("TEST START")
     opts = dict(
         salt_master.config.copy(),
         ipc_mode="ipc",
@@ -32,7 +31,6 @@ def test_zeromq_filtering(salt_master, salt_minion):
     )
     send_num = 1
     expect = []
-    log.error("TEST START 2 ")
     with patch(
         "salt.utils.minions.CkMinions.check_minions",
         MagicMock(
@@ -43,12 +41,9 @@ def test_zeromq_filtering(salt_master, salt_minion):
             }
         ),
     ):
-        # log.error("Get Server Channel")
-        log.error("TEST START 3")
         with PubServerChannelProcess(
             opts, salt_minion.config.copy(), zmq_filtering=True
         ) as server_channel:
-            log.error("pub chan started")
             expect.append(send_num)
             load = {"tgt_type": "glob", "tgt": "*", "jid": send_num}
             server_channel.publish(load)

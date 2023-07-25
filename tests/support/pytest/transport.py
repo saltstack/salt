@@ -1,6 +1,7 @@
 import ctypes
 import logging
 import multiprocessing
+import queue
 import socket
 import time
 
@@ -192,17 +193,11 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         loop.start()
 
     def __enter__(self):
-        import sys
-
-        print("COL ENTER")
-        sys.stdout.flush()
         self.manager.__enter__()
         self.start()
         # Wait until we can start receiving events
         self.started.wait()
         self.started.clear()
-        print("COL ENTER - Done")
-        sys.stdout.flush()
         return self
 
     def __exit__(self, *args):
@@ -256,7 +251,6 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         )
 
     def run(self):
-        import queue
 
         ioloop = tornado.ioloop.IOLoop()
         try:

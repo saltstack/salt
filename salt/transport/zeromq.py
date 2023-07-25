@@ -239,7 +239,6 @@ class PublishClient(salt.transport.base.PublishClient):
         self.callbacks = {}
         for callback, (running, task) in callbacks.items():
             running.clear()
-            # task.cancel()
         return
 
     # pylint: enable=W1701
@@ -887,7 +886,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         salt.utils.zeromq.check_ipc_path_max_len(self.pull_uri)
         # Start the minion command publisher
         # Securely create socket
-        log.error("PULL URI %r PUB URI %r", self.pull_uri, self.pub_uri)
         with salt.utils.files.set_umask(0o177):
             log.info("Starting the Salt Publisher on %s", self.pub_uri)
             pub_sock.bind(self.pub_uri)
