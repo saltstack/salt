@@ -61,6 +61,7 @@ def master_config(sock_dir):
     yield conf
 
 
+@pytest.mark.skip_on_windows(reason="Unix socket not available on win32")
 def test_master_ipc_server_unix(master_config, sock_dir):
     assert master_config.get("ipc_mode") != "tcp"
     server = salt.transport.ipc_publish_server("master", master_config)
@@ -68,6 +69,7 @@ def test_master_ipc_server_unix(master_config, sock_dir):
     assert server.pull_path == str(sock_dir / "master_event_pull.ipc")
 
 
+@pytest.mark.skip_on_windows(reason="Unix socket not available on win32")
 def test_minion_ipc_server_unix(minion_config, sock_dir):
     minion_config["id"] = "foo"
     id_hash = hashlib.sha256(

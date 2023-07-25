@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 
 
 warn_until(
-    3008,
+    3009,
     "This module is deprecated. Use zeromq or tcp transport instead.",
 )
 

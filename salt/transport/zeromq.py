@@ -620,7 +620,7 @@ class AsyncReqMessageClient:
         :param IOLoop io_loop: A Tornado IOLoop event scheduler [tornado.ioloop.IOLoop]
         """
         salt.utils.versions.warn_until(
-            3008,
+            3009,
             "AsyncReqMessageClient has been deprecated and will be removed.",
         )
         self.opts = opts
@@ -812,24 +812,31 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         "close",
     ]
 
-    def __init__(self, opts, **kwargs):
+    def __init__(
+        self,
+        opts,
+        pub_host=None,
+        pub_port=None,
+        pub_path=None,
+        pull_host=None,
+        pull_port=None,
+        pull_path=None,
+    ):
         self.opts = opts
-        pub_host = kwargs.get("pub_host", None)
-        pub_port = kwargs.get("pub_port", None)
-        pub_path = kwargs.get("pub_path", None)
+        self.pub_host = pub_host
+        self.pub_port = pub_port
+        self.pub_path = pub_path
         if pub_path:
             self.pub_uri = f"ipc://{pub_path}"
         else:
             self.pub_uri = f"tcp://{pub_host}:{pub_port}"
-
-        pull_host = kwargs.get("pull_host", None)
-        pull_port = kwargs.get("pull_port", None)
-        pull_path = kwargs.get("pull_path", None)
+        self.pull_host = pull_host
+        self.pull_port = pull_port
+        self.pull_path = pull_path
         if pull_path:
             self.pull_uri = f"ipc://{pull_path}"
         else:
             self.pull_uri = f"tcp://{pull_host}:{pull_port}"
-
         self.ctx = None
         self.sock = None
         self.daemon_context = None
@@ -890,7 +897,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             log.info("Starting the Salt Publisher on %s", self.pub_uri)
             pub_sock.bind(self.pub_uri)
             if "ipc://" in self.pub_uri:
-                pub_path = self.pub_uri.replace("ipc:", "")
+                pub_path = self.pub_uri.replace("ipc:/", "")
                 os.chmod(  # nosec
                     pub_path,
                     0o600,
@@ -898,7 +905,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             log.info("Starting the Salt Puller on %s", self.pull_uri)
             pull_sock.bind(self.pull_uri)
             if "ipc://" in self.pull_uri:
-                pull_path = self.pull_uri.replace("ipc:", "")
+                pull_path = self.pull_uri.replace("ipc:/", "")
                 os.chmod(  # nosec
                     pull_path,
                     0o600,
