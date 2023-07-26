@@ -355,7 +355,7 @@ cachetools==4.2.2
     #   python-telegram-bot
 cassandra-driver==3.25.0
     # via -r requirements/static/ci/common.in
-certifi==2022.12.7 ; python_version >= "3.6"
+certifi==2023.07.22 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
     #   kubernetes
