@@ -10,12 +10,6 @@ Windows images.
 Requirements
 ============
 
-.. note::
-   Support ``winexe`` and ``impacket`` has been deprecated and will be removed in
-   3001. These dependencies are replaced by ``pypsexec`` and ``smbprotocol``
-   respectively. These are pure python alternatives that are compatible with all
-   supported python versions.
-
 Salt Cloud makes use of `impacket` and `winexe` to set up the Windows Salt
 Minion installer.
 
