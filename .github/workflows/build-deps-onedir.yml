@@ -21,12 +21,12 @@ on:
       relenv-version:
         required: false
         type: string
-        default: 0.12.3
+        default: 0.13.2
         description: The version of relenv to use
       python-version:
         required: false
         type: string
-        default: 3.10.9
+        default: 3.10.12
         description: The version of python to use with relenv
 
 env:
