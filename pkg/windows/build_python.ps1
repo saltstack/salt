@@ -17,12 +17,8 @@ build_python.ps1 -Version 3.10.9 -Architecture x86
 param(
     [Parameter(Mandatory=$false)]
     [ValidatePattern("^\d{1,2}.\d{1,2}.\d{1,2}$")]
-    [ValidateSet(
-        "3.11.3",
-        "3.10.11"
-    )]
     [Alias("v")]
-    [String] $Version = "3.10.11",
+    [String] $Version = "3.10.12",
 
     [Parameter(Mandatory=$false)]
     [Alias("r")]
