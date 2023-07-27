@@ -10,16 +10,16 @@ Windows images.
 Dependencies
 ============
 
-Salt Cloud's dependencies are automatically installed in Salt version 3006 and
-later.
+Salt Cloud needs the following packages:
+
+* `pypsexec <https://github.com/jborean93/pypsexec>`_.
+* `smbprotocol <https://github.com/jborean93/smbprotocol>`_.
+
 
 For versions of Salt prior to 3006, Salt Cloud has a dependency on the
-``impacket`` library to set up the Windows Salt Minion installer.
+``impacket`` library to set up the Windows Salt Minion installer:
 
-``impacket`` is usually available as either the ``impacket`` or the
-``python-impacket`` package, depending on the distribution. More information on
-``impacket`` can be found at the
-`impacket project home <https://github.com/SecureAuthCorp/impacket>`_.
+* `impacket <https://github.com/SecureAuthCorp/impacket>`_.
 
 
 Requirements
