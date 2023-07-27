@@ -41,7 +41,7 @@ def test_exit_status_unknown_user(salt_master, minion_id):
         factory = salt_master.salt_minion_daemon(
             minion_id, overrides={"user": "unknown-user"}
         )
-        factory.start(start_timeout=10, max_start_attempts=1)
+        factory.start(start_timeout=30, max_start_attempts=1)
 
     assert exc.value.process_result.returncode == salt.defaults.exitcodes.EX_NOUSER
     assert "The user is not available." in exc.value.process_result.stderr
@@ -53,7 +53,7 @@ def test_exit_status_unknown_argument(salt_master, minion_id):
     """
     with pytest.raises(FactoryNotStarted) as exc:
         factory = salt_master.salt_minion_daemon(minion_id)
-        factory.start("--unknown-argument", start_timeout=10, max_start_attempts=1)
+        factory.start("--unknown-argument", start_timeout=30, max_start_attempts=1)
 
     assert exc.value.process_result.returncode == salt.defaults.exitcodes.EX_USAGE
     assert "Usage" in exc.value.process_result.stderr
