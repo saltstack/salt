@@ -457,7 +457,7 @@ class GitProvider:
 
         hash_type = getattr(hashlib, self.opts.get("hash_type", "md5"))
         # Generate full id. The full id is made from these parts name-id-env-_root.
-        # Full id stops collections in the gtfs cache.
+        # Full id stops collections in the gitfs cache.
         self._full_id = "-".join(
             [
                 getattr(self, "name", ""),
@@ -683,9 +683,9 @@ class GitProvider:
         Clear update.lk
         """
         if self.__class__._master_lock.acquire(timeout=60) is False:
-            # if gtfs works right we should never see this timeout error.
-            log.error("gtfs master lock timeout!")
-            raise TimeoutError("gtfs master lock timeout!")
+            # if gitfs works right we should never see this timeout error.
+            log.error("gitfs master lock timeout!")
+            raise TimeoutError("gitfs master lock timeout!")
         try:
             return self._clear_lock(lock_type)
         finally:
@@ -871,9 +871,9 @@ class GitProvider:
         Place a lock file if (and only if) it does not already exist.
         """
         if self.__class__._master_lock.acquire(timeout=60) is False:
-            # if gtfs works right we should never see this timeout error.
-            log.error("gtfs master lock timeout!")
-            raise TimeoutError("gtfs master lock timeout!")
+            # if gitfs works right we should never see this timeout error.
+            log.error("gitfs master lock timeout!")
+            raise TimeoutError("gitfs master lock timeout!")
         try:
             return self.__lock(lock_type, failhard)
         finally:
