@@ -256,7 +256,8 @@ def pytest_configure(config):
                 raise pytest.UsageError(
                     "Apparently running the test suite against the onedir build "
                     "of salt, however, the imported salt package is pointing to "
-                    "the respository checkout instead of the onedir package."
+                    "the respository checkout instead of the onedir package.\n\n"
+                    f"  * sys.path: {sys.path}"
                 )
         config._onedir_check_complete = True
 
