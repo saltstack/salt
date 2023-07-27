@@ -649,7 +649,7 @@ def list_vms(
 
     for instance in instances:
         vm_state = instance.state["Name"]
-        ip_addr = instance.public_ip_address
+        ip_addr = instance.private_ip_address
         ami = instance.image_id
         vm_name = None
         for tag in instance.tags:
@@ -812,7 +812,7 @@ class VM:
         ssh_config = textwrap.dedent(
             f"""\
             Host {self.name}
-              Hostname {self.instance.public_ip_address or self.instance.private_ip_address}
+              Hostname {self.instance.private_ip_address}
               User {self.config.ssh_username}
               ControlMaster=no
               Compression=yes
@@ -837,7 +837,7 @@ class VM:
         self.get_ec2_resource.cache_clear()
 
         if environment is None:
-            environment = "prod"
+            environment = tools.utils.SPB_ENVIRONMENT
 
         create_timeout = self.config.create_timeout
         create_timeout_progress = 0
@@ -928,11 +928,7 @@ class VM:
                     if tag["Key"] != "Name":
                         continue
                     private_value = f"-{environment}-vpc-private-"
-                    if started_in_ci and private_value in tag["Value"]:
-                        subnets[subnet.id] = subnet.available_ip_address_count
-                        break
-                    public_value = f"-{environment}-vpc-public-"
-                    if started_in_ci is False and public_value in tag["Value"]:
+                    if private_value in tag["Value"]:
                         subnets[subnet.id] = subnet.available_ip_address_count
                         break
             if subnets:
@@ -1104,7 +1100,7 @@ class VM:
                 return error
 
             # Wait until we can SSH into the VM
-            host = self.instance.public_ip_address or self.instance.private_ip_address
+            host = self.instance.private_ip_address
 
         progress = create_progress_bar()
         connect_task = progress.add_task(
