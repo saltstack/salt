@@ -351,7 +351,6 @@ class PublishClient(salt.transport.base.PublishClient):
             self.callbacks = {}
             for callback, (running, task) in callbacks.items():
                 running.clear()
-                # task.cancel()
             return
 
         running = asyncio.Event()
