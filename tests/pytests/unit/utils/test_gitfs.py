@@ -1,6 +1,6 @@
 import os
 import string
-from time import time
+import time
 
 import pytest
 
@@ -53,14 +53,6 @@ def test_provider_case_insensitive_gitfs_provider(minion_opts, role_name, role_c
             # Now try to instantiate an instance with all lowercase
             # letters. Again, no need for an assert here.
             role_class(*args, **kwargs)
-            pytest.mark.parametrize(
-                "role_name,role_class",
-                (
-                    ("gitfs", salt.utils.gitfs.GitFS),
-                    ("git_pillar", salt.utils.gitfs.GitPillar),
-                    ("winrepo", salt.utils.gitfs.WinRepo),
-                ),
-            )
 
 
 @pytest.mark.parametrize(
@@ -109,7 +101,9 @@ def _prepare_remote_repository_pygit2(tmp_path):
     remote = os.path.join(tmp_path, "pygit2-repo")
     filecontent = "This is an empty README file"
     filename = "README"
-    signature = pygit2.Signature("Dummy Commiter", "dummy@dummy.com", int(time()), 0)
+    signature = pygit2.Signature(
+        "Dummy Commiter", "dummy@dummy.com", int(time.time()), 0
+    )
     repository = pygit2.init_repository(remote, False)
     builder = repository.TreeBuilder()
     tree = builder.write()
@@ -144,10 +138,10 @@ def _prepare_remote_repository_pygit2(tmp_path):
 
 @pytest.fixture
 def _prepare_provider(tmp_path, minion_opts, _prepare_remote_repository_pygit2):
-    cache = os.path.join(tmp_path, "pygit2-repo-cache")
+    cache = tmp_path / "pygit2-repo-cache"
     minion_opts.update(
         {
-            "cachedir": cache,
+            "cachedir": str(cache),
             "gitfs_disable_saltenv_mapping": False,
             "gitfs_base": "master",
             "gitfs_insecure_auth": False,
@@ -193,8 +187,8 @@ def _prepare_provider(tmp_path, minion_opts, _prepare_remote_repository_pygit2):
         "user": "",
     }
     per_remote_only = ("all_saltenvs", "name", "saltenv")
-    override_params = tuple(per_remote_defaults.keys())
-    cache_root = os.path.join(cache, "gitfs")
+    override_params = tuple(per_remote_defaults)
+    cache_root = cache / "gitfs"
     role = "gitfs"
     provider = salt.utils.gitfs.Pygit2(
         minion_opts,
@@ -202,7 +196,7 @@ def _prepare_provider(tmp_path, minion_opts, _prepare_remote_repository_pygit2):
         per_remote_defaults,
         per_remote_only,
         override_params,
-        cache_root,
+        str(cache_root),
         role,
     )
     return provider
