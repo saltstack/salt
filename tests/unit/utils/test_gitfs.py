@@ -6,7 +6,6 @@ any remotes.
 import tempfile
 
 import pytest
-
 import salt.ext.tornado.ioloop
 import salt.fileserver.gitfs
 import salt.utils.files
