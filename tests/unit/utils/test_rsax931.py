@@ -276,3 +276,30 @@ class RSAX931Test(TestCase):
             or hasattr(lib, "OPENSSL_init_crypto")
             or hasattr(lib, "OPENSSL_no_config")
         )
+
+    @patch.object(salt.utils.platform, "is_darwin", lambda: True)
+    @patch.object(platform, "mac_ver", lambda: ("10.15.2", (), ""))
+    @patch.object(sys, "platform", "macosx")
+    def test_find_libcrypto_darwin_onedir(self):
+        """
+        Test _find_libcrypto on a macOS
+        libcryptos and defaulting to the versioned system libraries.
+        """
+        available = [
+            "/usr/lib/libcrypto.0.9.7.dylib",
+            "/usr/lib/libcrypto.0.9.8.dylib",
+            "/usr/lib/libcrypto.35.dylib",
+            "/usr/lib/libcrypto.41.dylib",
+            "/usr/lib/libcrypto.42.dylib",
+            "/usr/lib/libcrypto.44.dylib",
+            "/test/homebrew/prefix/opt/openssl/lib/libcrypto.dylib",
+            "/opt/local/lib/libcrypto.dylib",
+            "lib/libcrypto.dylib",
+        ]
+
+        def test_glob(pattern):
+            return [lib for lib in available if fnmatch.fnmatch(lib, pattern)]
+
+        with patch.object(glob, "glob", test_glob):
+            lib_path = _find_libcrypto()
+        self.assertEqual("lib/libcrypto.dylib", lib_path)
