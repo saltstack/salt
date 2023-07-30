@@ -41,7 +41,7 @@ def _find_libcrypto():
         # look in location salt is running from
         # this accounts for running from an unpacked
         # onedir file
-        lib = lib or glob.glob(os.path.join("lib/libcrypto.dylib"))
+        lib = lib or glob.glob("lib/libcrypto.dylib")
 
         # Find library symlinks in Homebrew locations.
         brew_prefix = os.getenv("HOMEBREW_PREFIX", "/usr/local")
