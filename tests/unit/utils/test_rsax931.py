@@ -169,21 +169,19 @@ class RSAX931Test(TestCase):
                 fnmatch.fnmatch(lib_path, "/opt/freeware/lib/libcrypto.so*")
             )
 
-    @patch.object(salt.utils.platform, "is_darwin", lambda: True)
-    @patch.object(platform, "mac_ver", lambda: ("10.14.2", (), ""))
-    @patch.object(glob, "glob", lambda _: [])
-    @patch.object(sys, "platform", "macosx")
     def test_find_libcrypto_with_system_before_catalina(self):
         """
         Test _find_libcrypto on a pre-Catalina macOS host by simulating not
         finding any other libcryptos and verifying that it defaults to system.
         """
-        lib_path = _find_libcrypto()
-        self.assertEqual(lib_path, "/usr/lib/libcrypto.dylib")
+        with patch.object(salt.utils.platform, "is_darwin", lambda: True), patch.object(
+            platform, "mac_ver", lambda: ("10.14.2", (), "")
+        ), patch.object(glob, "glob", lambda _: []), patch.object(
+            sys, "platform", "macosx"
+        ):
+            lib_path = _find_libcrypto()
+            self.assertEqual(lib_path, "/usr/lib/libcrypto.dylib")
 
-    @patch.object(salt.utils.platform, "is_darwin", lambda: True)
-    @patch.object(platform, "mac_ver", lambda: ("10.15.2", (), ""))
-    @patch.object(sys, "platform", "macosx")
     def test_find_libcrypto_darwin_catalina(self):
         """
         Test _find_libcrypto on a macOS Catalina host where there are no custom
@@ -202,13 +200,14 @@ class RSAX931Test(TestCase):
         def test_glob(pattern):
             return [lib for lib in available if fnmatch.fnmatch(lib, pattern)]
 
-        with patch.object(glob, "glob", test_glob):
+        with patch.object(salt.utils.platform, "is_darwin", lambda: True), patch.object(
+            platform, "mac_ver", lambda: ("10.15.2", (), "")
+        ), patch.object(sys, "platform", "macosx"), patch.object(
+            glob, "glob", test_glob
+        ):
             lib_path = _find_libcrypto()
         self.assertEqual("/usr/lib/libcrypto.44.dylib", lib_path)
 
-    @patch.object(salt.utils.platform, "is_darwin", lambda: True)
-    @patch.object(platform, "mac_ver", lambda: ("11.2.2", (), ""))
-    @patch.object(sys, "platform", "macosx")
     def test_find_libcrypto_darwin_bigsur_packaged(self):
         """
         Test _find_libcrypto on a Darwin-like macOS host where there isn't a
@@ -237,31 +236,36 @@ class RSAX931Test(TestCase):
 
             return test_glob
 
-        for package_manager, expected_lib in managed_paths.items():
-            if package_manager == "brew":
-                env = {"HOMEBREW_PREFIX": "/test/homebrew/prefix"}
-            else:
-                env = {"HOMEBREW_PREFIX": ""}
-            with patch.object(os, "getenv", mock_getenv(env)):
-                with patch.object(glob, "glob", mock_glob(expected_lib)):
+        with patch.object(salt.utils.platform, "is_darwin", lambda: True), patch.object(
+            platform, "mac_ver", lambda: ("11.2.2", (), "")
+        ), patch.object(sys, "platform", "macosx"):
+            for package_manager, expected_lib in managed_paths.items():
+                if package_manager == "brew":
+                    env = {"HOMEBREW_PREFIX": "/test/homebrew/prefix"}
+                else:
+                    env = {"HOMEBREW_PREFIX": ""}
+                with patch.object(os, "getenv", mock_getenv(env)):
+                    with patch.object(glob, "glob", mock_glob(expected_lib)):
+                        lib_path = _find_libcrypto()
+
+                self.assertEqual(expected_lib, lib_path)
+
+            # On Big Sur, there's nothing else to fall back on.
+            with patch.object(glob, "glob", lambda _: []):
+                with self.assertRaises(OSError):
                     lib_path = _find_libcrypto()
 
-            self.assertEqual(expected_lib, lib_path)
-
-        # On Big Sur, there's nothing else to fall back on.
-        with patch.object(glob, "glob", lambda _: []):
-            with self.assertRaises(OSError):
-                lib_path = _find_libcrypto()
-
-    @patch.object(ctypes.util, "find_library", lambda a: None)
-    @patch.object(glob, "glob", lambda a: [])
-    @patch.object(sys, "platform", "unknown")
-    @patch.object(salt.utils.platform, "is_darwin", lambda: False)
     def test_find_libcrypto_unsupported(self):
         """
         Ensure that _find_libcrypto works correctly on an unsupported host OS.
         """
-        with self.assertRaises(OSError):
+        with patch.object(ctypes.util, "find_library", lambda a: None), patch.object(
+            glob, "glob", lambda a: []
+        ), patch.object(sys, "platform", "unknown"), patch.object(
+            salt.utils.platform, "is_darwin", lambda: False
+        ), self.assertRaises(
+            OSError
+        ):
             _find_libcrypto()
 
     def test_load_libcrypto(self):
@@ -277,9 +281,6 @@ class RSAX931Test(TestCase):
             or hasattr(lib, "OPENSSL_no_config")
         )
 
-    @patch.object(salt.utils.platform, "is_darwin", lambda: True)
-    @patch.object(platform, "mac_ver", lambda: ("10.15.2", (), ""))
-    @patch.object(sys, "platform", "macosx")
     def test_find_libcrypto_darwin_onedir(self):
         """
         Test _find_libcrypto on a macOS
@@ -300,6 +301,10 @@ class RSAX931Test(TestCase):
         def test_glob(pattern):
             return [lib for lib in available if fnmatch.fnmatch(lib, pattern)]
 
-        with patch.object(glob, "glob", test_glob):
+        with patch.object(glob, "glob", test_glob), patch.object(
+            salt.utils.platform, "is_darwin", lambda: True
+        ), patch.object(platform, "mac_ver", lambda: ("10.15.2", (), "")), patch.object(
+            sys, "platform", "macosx"
+        ):
             lib_path = _find_libcrypto()
         self.assertEqual("lib/libcrypto.dylib", lib_path)
