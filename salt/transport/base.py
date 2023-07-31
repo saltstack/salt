@@ -48,7 +48,8 @@ def request_client(opts, io_loop):
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPReqClient(opts, io_loop=io_loop)
+        resolver = salt.transport.tcp.Resolver()
+        return salt.transport.tcp.TCPReqClient(opts, resolver=resolver, io_loop=io_loop)
     else:
         raise Exception("Channels are only defined for tcp, zeromq")
 
