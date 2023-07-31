@@ -715,6 +715,7 @@ def pkg_matrix(
         # we allow for 3006.0 jobs to run, because then
         # we will have arm64 onedir packages to upgrade from
         sessions.append("upgrade")
+        sessions.append("downgrade")
     # TODO: Remove this block when we reach version 3009.0, we will no longer be testing upgrades from classic packages
     if (
         distro_slug
@@ -729,12 +730,13 @@ def pkg_matrix(
     ):
         # Packages for these OSs where never built for classic previously
         sessions.append("upgrade-classic")
+        sessions.append("downgrade-classic")
 
     for session in sessions:
         versions: list[str | None] = [None]
-        if session == "upgrade":
+        if session in ("upgrade", "downgrade"):
             versions = [str(version) for version in testing_releases]
-        elif session == "upgrade-classic":
+        elif session in ("upgrade-classic", "downgrade-classic"):
             versions = [
                 str(version)
                 for version in testing_releases
