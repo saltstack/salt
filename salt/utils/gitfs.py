@@ -869,7 +869,6 @@ class GitProvider:
     def _lock(self, lock_type="update", failhard=False):
         """
         Place a lock file if (and only if) it does not already exist.
-        Without MultiProcessing locks.
         """
         if self.__class__._master_lock.acquire(timeout=60) is False:
             # if gitfs works right we should never see this timeout error.
@@ -883,6 +882,7 @@ class GitProvider:
     def __lock(self, lock_type="update", failhard=False):
         """
         Place a lock file if (and only if) it does not already exist.
+        Without MultiProcessing locks.
         """
         try:
             fh_ = os.open(
