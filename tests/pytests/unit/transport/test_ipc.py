@@ -23,10 +23,9 @@ def sock_dir(tmp_path):
 
 
 @pytest.fixture
-def minion_config(sock_dir):
-    minion_config = salt.config.minion_config("")
-    minion_config["sock_dir"] = sock_dir
-    yield minion_config
+def minion_config(sock_dir, minion_opts):
+    minion_opts["sock_dir"] = sock_dir
+    yield minion_opts
 
 
 def test_ipc_connect_in_async_methods():
@@ -55,10 +54,9 @@ async def test_ipc_connect_sync_wrapped(io_loop, tmp_path):
 
 
 @pytest.fixture
-def master_config(sock_dir):
-    conf = salt.config.master_config("")
-    conf["sock_dir"] = sock_dir
-    yield conf
+def master_config(sock_dir, master_opts):
+    master_opts["sock_dir"] = sock_dir
+    yield master_opts
 
 
 @pytest.mark.skip_on_windows(reason="Unix socket not available on win32")

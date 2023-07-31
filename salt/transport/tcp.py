@@ -1730,19 +1730,13 @@ class TCPReqClient(salt.transport.base.RequestClient):
         stream = None
         while stream is None and (not self._closed and not self._closing):
             try:
-                if self.host and self.port:
-                    stream = await self._tcp_client.connect(
-                        ip_bracket(self.host, strip=True),
-                        self.port,
-                        ssl_options=self.opts.get("ssl"),
-                        **kwargs,
-                    )
-                else:
-                    sock_type = socket.AF_UNIX
-                    stream = tornado.iostream.IOStream(
-                        socket.socket(sock_type, socket.SOCK_STREAM)
-                    )
-                    await stream.connect(path)
+                # XXX: Support ipc sockets too
+                stream = await self._tcp_client.connect(
+                    ip_bracket(self.host, strip=True),
+                    self.port,
+                    ssl_options=self.opts.get("ssl"),
+                    **kwargs,
+                )
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
                     "TCP Message Client encountered an exception while connecting to"

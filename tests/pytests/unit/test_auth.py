@@ -47,15 +47,14 @@ def load_auth():
 
 
 @pytest.fixture
-def master_acl_master_opts():
-    opts = salt.config.master_config(None)
-    opts["publisher_acl"] = {}
-    opts["publisher_acl_blacklist"] = {}
-    opts["master_job_cache"] = ""
-    opts["sign_pub_messages"] = False
-    opts["con_cache"] = ""
-    opts["external_auth"] = {}
-    opts["external_auth"]["pam"] = {
+def master_acl_master_opts(master_opts):
+    master_opts["publisher_acl"] = {}
+    master_opts["publisher_acl_blacklist"] = {}
+    master_opts["master_job_cache"] = ""
+    master_opts["sign_pub_messages"] = False
+    master_opts["con_cache"] = ""
+    master_opts["external_auth"] = {}
+    master_opts["external_auth"]["pam"] = {
         "test_user": [
             {"*": ["test.ping"]},
             {"minion_glob*": ["foo.bar"]},
@@ -93,7 +92,7 @@ def master_acl_master_opts():
             },
         ],
     }
-    yield opts
+    yield master_opts
 
 
 @pytest.fixture
@@ -150,19 +149,18 @@ def master_acl_valid_load():
 
 
 @pytest.fixture
-def auth_acl_master_opts():
+def auth_acl_master_opts(master_opts):
     """
     Master options
     """
-    opts = salt.config.master_config(None)
-    opts["publisher_acl"] = {}
-    opts["publisher_acl_blacklist"] = {}
-    opts["master_job_cache"] = ""
-    opts["sign_pub_messages"] = False
-    opts["con_cache"] = ""
-    opts["external_auth"] = {}
-    opts["external_auth"] = {"pam": {"test_user": [{"alpha_minion": ["test.ping"]}]}}
-    yield opts
+    master_opts["publisher_acl"] = {}
+    master_opts["publisher_acl_blacklist"] = {}
+    master_opts["master_job_cache"] = ""
+    master_opts["sign_pub_messages"] = False
+    master_opts["con_cache"] = ""
+    master_opts["external_auth"] = {}
+    master_opts["external_auth"] = {"pam": {"test_user": [{"alpha_minion": ["test.ping"]}]}}
+    yield master_opts
 
 
 @pytest.fixture
@@ -372,8 +370,8 @@ async def test_master_publish_group(master_acl_clear_funcs, master_acl_valid_loa
         # Request sys.doc
         master_acl_valid_load["fun"] = "sys.doc"
 
-        # XXX: Of course we won't fire an event if publihs isn't called. If
-        # sys.dock is there wwhen we publish is that a bug?
+        # XXX: Of course we won't fire an event if publish isn't called. If
+        # sys.dock is there when we publish is that a bug?
 
         # await master_acl_clear_funcs.publish(master_acl_valid_load)
 
@@ -455,19 +453,6 @@ async def test_master_minion_glob(master_acl_clear_funcs, master_acl_valid_load)
         master_acl_clear_funcs.event.fire_event.call_args[0][0]["fun"]
         == requested_function
     ), "Did not fire {} for minion glob".format(requested_function)
-
-
-async def test_master_function_glob(master_acl_clear_funcs, master_acl_valid_load):
-    """
-    Test to ensure that we can allow access to a given
-    set of functions in an execution module as selected
-    by a glob. ex:
-
-    my_user:
-        my_minion:
-            'test.*'
-    """
-    # Unimplemented
 
 
 @pytest.mark.skip_on_windows(reason="PAM eauth not available on Windows")
@@ -636,10 +621,10 @@ async def test_args_kwargs_match(master_acl_clear_funcs, master_acl_valid_load):
     Test simple kwargs restriction allowed.
 
     'test_user_func':
-        '*':
-            - test.echo:
-                kwargs:
-                    text: 'KWMSG:.*'
+      '*':
+        - test.echo:
+            kwargs:
+              text: 'KWMSG:.*'
     """
     _check_minions_return = {"minions": ["some_minions"], "missing": []}
     with patch(

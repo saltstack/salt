@@ -182,7 +182,6 @@ async def test_publish_client_connect_server_down(transport, io_loop):
 
 
 async def test_publish_client_connect_server_comes_up(transport, io_loop):
-    print(io_loop)
     opts = {"master_ip": "127.0.0.1"}
     host = "127.0.0.1"
     port = 11122
@@ -194,7 +193,7 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
         ctx = zmq.asyncio.Context()
         uri = f"tcp://{opts['master_ip']}:{port}"
         msg = salt.payload.dumps({"meh": 123})
-        print(f"send {msg}")
+        log.debug("TEST - Senging %r", msg)
         client = salt.transport.zeromq.PublishClient(
             opts, io_loop, host=host, port=port
         )

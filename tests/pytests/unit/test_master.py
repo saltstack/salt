@@ -8,14 +8,6 @@ from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
-def master_opts():
-    """
-    Master options
-    """
-    yield salt.config.master_config(None)
-
-
-@pytest.fixture
 def maintenence_opts(master_opts):
     """
     Options needed for master's Maintenence class
@@ -204,12 +196,11 @@ def test_when_syndic_return_processes_load_then_correct_values_should_be_returne
         fake_return.assert_called_with(expected_return)
 
 
-def test_aes_funcs_white():
+def test_aes_funcs_white(master_opts):
     """
     Validate methods exposed on AESFuncs exist and are callable
     """
-    opts = salt.config.master_config(None)
-    aes_funcs = salt.master.AESFuncs(opts)
+    aes_funcs = salt.master.AESFuncs(master_opts)
     try:
         for name in aes_funcs.expose_methods:
             func = getattr(aes_funcs, name, None)
@@ -233,12 +224,11 @@ def test_transport_methods():
     assert foo.get_method("bang") is None
 
 
-def test_aes_funcs_black():
+def test_aes_funcs_black(master_opts):
     """
     Validate methods on AESFuncs that should not be called remotely
     """
-    opts = salt.config.master_config(None)
-    aes_funcs = salt.master.AESFuncs(opts)
+    aes_funcs = salt.master.AESFuncs(master_opts)
     # Any callable that should not explicitly be allowed should be added
     # here.
     blacklist_methods = [
@@ -284,12 +274,11 @@ def test_aes_funcs_black():
         aes_funcs.destroy()
 
 
-def test_clear_funcs_white():
+def test_clear_funcs_white(master_opts):
     """
     Validate methods exposed on ClearFuncs exist and are callable
     """
-    opts = salt.config.master_config(None)
-    clear_funcs = salt.master.ClearFuncs(opts, {})
+    clear_funcs = salt.master.ClearFuncs(master_opts, {})
     try:
         for name in clear_funcs.expose_methods:
             func = getattr(clear_funcs, name, None)
@@ -298,12 +287,11 @@ def test_clear_funcs_white():
         clear_funcs.destroy()
 
 
-def test_clear_funcs_black():
+def test_clear_funcs_black(master_opts):
     """
     Validate methods on ClearFuncs that should not be called remotely
     """
-    opts = salt.config.master_config(None)
-    clear_funcs = salt.master.ClearFuncs(opts, {})
+    clear_funcs = salt.master.ClearFuncs(master_opts, {})
     blacklist_methods = [
         "__class__",
         "__delattr__",
@@ -365,7 +353,7 @@ def test_runner_token_not_authenticated(clear_funcs):
         }
     }
     ret = clear_funcs.runner({"token": "asdfasdfasdfasdf"})
-    assert mock_ret == ret
+    assert ret == mock_ret
 
 
 @pytest.mark.slow_test
@@ -391,7 +379,7 @@ def test_runner_token_authorization_error(clear_funcs):
     ), patch("salt.auth.LoadAuth.get_auth_list", MagicMock(return_value=[])):
         ret = clear_funcs.runner(clear_load)
 
-    assert mock_ret == ret
+    assert ret == mock_ret
 
 
 @pytest.mark.slow_test
@@ -415,7 +403,7 @@ def test_runner_token_salt_invocation_error(clear_funcs):
     ), patch("salt.auth.LoadAuth.get_auth_list", MagicMock(return_value=["testing"])):
         ret = clear_funcs.runner(clear_load)
 
-    assert mock_ret == ret
+    assert ret == mock_ret
 
 
 @pytest.mark.slow_test
@@ -432,7 +420,7 @@ def test_runner_eauth_not_authenticated(clear_funcs):
         }
     }
     ret = clear_funcs.runner({"eauth": "foo"})
-    assert mock_ret == ret
+    assert ret == mock_ret
 
 
 @pytest.mark.slow_test
@@ -455,7 +443,7 @@ def test_runner_eauth_authorization_error(clear_funcs):
     ), patch("salt.auth.LoadAuth.get_auth_list", MagicMock(return_value=[])):
         ret = clear_funcs.runner(clear_load)
 
-    assert mock_ret == ret
+    assert ret == mock_ret
 
 
 @pytest.mark.slow_test
@@ -476,7 +464,7 @@ def test_runner_eauth_salt_invocation_error(clear_funcs):
     ), patch("salt.auth.LoadAuth.get_auth_list", MagicMock(return_value=["testing"])):
         ret = clear_funcs.runner(clear_load)
 
-    assert mock_ret == ret
+    assert ret == mock_ret
 
 
 @pytest.mark.slow_test
@@ -491,7 +479,7 @@ def test_runner_user_not_authenticated(clear_funcs):
         }
     }
     ret = clear_funcs.runner({})
-    assert mock_ret == ret
+    assert ret == mock_ret
 
 
 # wheel tests
@@ -509,7 +497,7 @@ def test_wheel_token_not_authenticated(clear_funcs):
         }
     }
     ret = clear_funcs.wheel({"token": "asdfasdfasdfasdf"})
-    assert mock_ret == ret
+    assert ret == mock_ret
 
 
 @pytest.mark.slow_test
@@ -534,8 +522,7 @@ def test_wheel_token_authorization_error(clear_funcs):
         "salt.auth.LoadAuth.authenticate_token", MagicMock(return_value=mock_token)
     ), patch("salt.auth.LoadAuth.get_auth_list", MagicMock(return_value=[])):
         ret = clear_funcs.wheel(clear_load)
-
-    assert mock_ret == ret
+    assert ret == mock_ret
 
 
 @pytest.mark.slow_test
@@ -558,8 +545,7 @@ def test_wheel_token_salt_invocation_error(clear_funcs):
         "salt.auth.LoadAuth.authenticate_token", MagicMock(return_value=mock_token)
     ), patch("salt.auth.LoadAuth.get_auth_list", MagicMock(return_value=["testing"])):
         ret = clear_funcs.wheel(clear_load)
-
-    assert mock_ret == ret
+    assert ret == mock_ret
 
 
 @pytest.mark.slow_test
@@ -576,7 +562,7 @@ def test_wheel_eauth_not_authenticated(clear_funcs):
         }
     }
     ret = clear_funcs.wheel({"eauth": "foo"})
-    assert mock_ret == ret
+    assert ret == mock_ret
 
 
 @pytest.mark.slow_test
@@ -598,8 +584,7 @@ def test_wheel_eauth_authorization_error(clear_funcs):
         "salt.auth.LoadAuth.authenticate_eauth", MagicMock(return_value=True)
     ), patch("salt.auth.LoadAuth.get_auth_list", MagicMock(return_value=[])):
         ret = clear_funcs.wheel(clear_load)
-
-    assert mock_ret == ret
+    assert ret == mock_ret
 
 
 @pytest.mark.slow_test
@@ -619,8 +604,7 @@ def test_wheel_eauth_salt_invocation_error(clear_funcs):
         "salt.auth.LoadAuth.authenticate_eauth", MagicMock(return_value=True)
     ), patch("salt.auth.LoadAuth.get_auth_list", MagicMock(return_value=["testing"])):
         ret = clear_funcs.wheel(clear_load)
-
-    assert mock_ret == ret
+    assert ret == mock_ret
 
 
 @pytest.mark.slow_test
@@ -635,7 +619,7 @@ def test_wheel_user_not_authenticated(clear_funcs):
         }
     }
     ret = clear_funcs.wheel({})
-    assert mock_ret == ret
+    assert ret == mock_ret
 
 
 # publish tests
@@ -655,7 +639,7 @@ async def test_publish_user_is_blacklisted(clear_funcs):
     with patch(
         "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=True)
     ):
-        assert mock_ret == await clear_funcs.publish({"user": "foo", "fun": "test.arg"})
+        assert await clear_funcs.publish({"user": "foo", "fun": "test.arg"}) == mock_ret
 
 
 @pytest.mark.slow_test
@@ -672,7 +656,7 @@ async def test_publish_cmd_blacklisted(clear_funcs):
     with patch(
         "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
     ), patch("salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=True)):
-        assert mock_ret == await clear_funcs.publish({"user": "foo", "fun": "test.arg"})
+        assert await clear_funcs.publish({"user": "foo", "fun": "test.arg"}) == mock_ret
 
 
 @pytest.mark.slow_test
@@ -695,7 +679,7 @@ async def test_publish_token_not_authenticated(clear_funcs):
     with patch(
         "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
     ), patch("salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=False)):
-        assert mock_ret == await clear_funcs.publish(load)
+        assert await clear_funcs.publish(load) == mock_ret
 
 
 @pytest.mark.slow_test
@@ -729,7 +713,7 @@ async def test_publish_token_authorization_error(clear_funcs):
     ), patch(
         "salt.auth.LoadAuth.get_auth_list", MagicMock(return_value=[])
     ):
-        assert mock_ret == await clear_funcs.publish(load)
+        assert await clear_funcs.publish(load) == mock_ret
 
 
 @pytest.mark.slow_test
@@ -752,7 +736,7 @@ async def test_publish_eauth_not_authenticated(clear_funcs):
     with patch(
         "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
     ), patch("salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=False)):
-        assert mock_ret == await clear_funcs.publish(load)
+        assert await clear_funcs.publish(load) == mock_ret
 
 
 @pytest.mark.slow_test
@@ -783,7 +767,7 @@ async def test_publish_eauth_authorization_error(clear_funcs):
     ), patch(
         "salt.auth.LoadAuth.get_auth_list", MagicMock(return_value=[])
     ):
-        assert mock_ret == await clear_funcs.publish(load)
+        assert await clear_funcs.publish(load) == mock_ret
 
 
 @pytest.mark.slow_test
@@ -801,7 +785,7 @@ async def test_publish_user_not_authenticated(clear_funcs):
     with patch(
         "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
     ), patch("salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=False)):
-        assert mock_ret == await clear_funcs.publish(load)
+        assert await clear_funcs.publish(load) == mock_ret
 
 
 @pytest.mark.slow_test
@@ -833,7 +817,7 @@ async def test_publish_user_authenticated_missing_auth_list(clear_funcs):
     ), patch(
         "salt.utils.master.get_values_of_matching_keys", MagicMock(return_value=[])
     ):
-        assert mock_ret == await clear_funcs.publish(load)
+        assert await clear_funcs.publish(load) == mock_ret
 
 
 @pytest.mark.slow_test
@@ -868,7 +852,7 @@ async def test_publish_user_authorization_error(clear_funcs):
     ), patch(
         "salt.utils.minions.CkMinions.auth_check", MagicMock(return_value=False)
     ):
-        assert mock_ret == await clear_funcs.publish(load)
+        assert await clear_funcs.publish(load) == mock_ret
 
 
 def test_run_func(maintenence):
