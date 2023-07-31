@@ -373,8 +373,6 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
     if platform.is_windows():
         if install_salt.classic:
             master_script = True
-        # this check will need to be changed to install_salt.relenv
-        # once the package version returns 3006 and not 3005 on master
         if install_salt.relenv:
             master_script = True
         elif not install_salt.upgrade:

@@ -6,11 +6,9 @@ import pathlib
 import pprint
 import re
 import shutil
-import tarfile
 import textwrap
 import time
-from typing import TYPE_CHECKING, Any, Dict, List
-from zipfile import ZipFile
+from typing import TYPE_CHECKING, Dict, List
 
 import attr
 import distro
@@ -31,24 +29,11 @@ from saltfactories.daemons import api, master, minion
 from saltfactories.utils import cli_scripts
 
 try:
-    import crypt
-
-    HAS_CRYPT = True
-except ImportError:
-    HAS_CRYPT = False
-try:
     import pwd
 
     HAS_PWD = True
 except ImportError:
     HAS_PWD = False
-
-try:
-    import winreg
-
-    HAS_WINREG = True
-except ImportError:
-    HAS_WINREG = False
 
 TESTS_DIR = pathlib.Path(__file__).resolve().parent.parent
 CODE_DIR = TESTS_DIR.parent
@@ -182,23 +167,6 @@ class SaltPkgInstall:
         # make it to this python session, so we need to update that
         os.environ["PATH"] = ";".join([str(self.install_dir), os.getenv("path")])
 
-        # When the MSI installer is run from self.proc.run, it doesn't update
-        # the registry. When run from a normal command prompt it does. Until we
-        # figure that out, we will update the process path as above. This
-        # doesn't really check that the path is being set though... but I see
-        # no other way around this
-        # if HAS_WINREG:
-        #     log.debug("Refreshing the path")
-        #     # Get the updated system path from the registry
-        #     path_key = winreg.OpenKeyEx(
-        #         winreg.HKEY_LOCAL_MACHINE,
-        #         r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
-        #     )
-        #     current_path = winreg.QueryValueEx(path_key, "path")[0]
-        #     path_key.Close()
-        #     # Update the path for the current running process
-        #     os.environ["PATH"] = current_path
-
     def get_version(self, version_only=False):
         """
         Return the version information needed to install a previous version of Salt.
@@ -219,6 +187,8 @@ class SaltPkgInstall:
         else:
             # This is an upgrade, start on the previous version
             major, minor = self.prev_version.split(".", 1)
+        if version_only:
+            return version
         return major, minor
 
     def __attrs_post_init__(self):
@@ -387,10 +357,10 @@ class SaltPkgInstall:
 
     def package_python_version(self):
         return self.proc.run(
-            self.binary_paths["python"],
+            str(self.binary_paths["python"][0]),
             "-c",
             "import sys; print('{}.{}'.format(*sys.version_info))",
-        ).stdout
+        ).stdout.strip()
 
     def install(self, upgrade=False):
         self._install_pkgs(upgrade=upgrade)
@@ -429,6 +399,7 @@ class SaltPkgInstall:
             root_url = "py3/"
 
         if self.distro_name in ["redhat", "centos", "amazon", "fedora", "vmware"]:
+            # Removing EPEL repo files
             for fp in pathlib.Path("/etc", "yum.repos.d").glob("epel*"):
                 fp.unlink()
             gpg_key = "SALTSTACK-GPG-KEY.pub"
