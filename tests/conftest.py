@@ -67,7 +67,7 @@ else:
         os.environ["COVERAGE_PROCESS_START"] = str(COVERAGERC_FILE)
 
 # Define the pytest plugins we rely on
-pytest_plugins = ["tempdir", "helpers_namespace"]
+pytest_plugins = ["helpers_namespace"]
 
 # Define where not to collect tests from
 collect_ignore = ["setup.py"]
@@ -110,17 +110,6 @@ for handler in logging.root.handlers[:]:
 logging.root.setLevel(logging.WARNING)
 
 log = logging.getLogger("salt.testsuite")
-
-
-# ----- PyTest Tempdir Plugin Hooks --------------------------------------------------------------------------------->
-def pytest_tempdir_basename():
-    """
-    Return the temporary directory basename for the salt test suite.
-    """
-    return "stsuite"
-
-
-# <---- PyTest Tempdir Plugin Hooks ----------------------------------------------------------------------------------
 
 
 # ----- CLI Options Setup ------------------------------------------------------------------------------------------->

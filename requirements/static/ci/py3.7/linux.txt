@@ -28,7 +28,7 @@ async-timeout==4.0.2
     # via aiohttp
 asynctest==0.13.0
     # via aiohttp
-attrs==20.3.0
+attrs==23.1.0
     # via
     #   aiohttp
     #   jsonschema
@@ -469,6 +469,7 @@ immutables==0.15
 importlib-metadata==4.6.4
     # via
     #   -r requirements/static/pkg/linux.in
+    #   attrs
     #   backports.entry-points-selectable
     #   jsonschema
     #   mako
@@ -748,11 +749,11 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc21
+pytest-salt-factories==1.0.0rc25
     # via -r requirements/pytest.txt
-pytest-shell-utilities==1.6.0
+pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
-pytest-skip-markers==1.2.0
+pytest-skip-markers==1.4.1
     # via
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -761,10 +762,6 @@ pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
 pytest-system-statistics==1.0.2
     # via pytest-salt-factories
-pytest-tempdir==2019.10.12
-    # via
-    #   -r requirements/pytest.txt
-    #   pytest-salt-factories
 pytest-timeout==1.4.2
     # via -r requirements/pytest.txt
 pytest==7.2.0
@@ -777,7 +774,6 @@ pytest==7.2.0
     #   pytest-skip-markers
     #   pytest-subtests
     #   pytest-system-statistics
-    #   pytest-tempdir
     #   pytest-timeout
 python-consul==1.1.0
     # via -r requirements/static/ci/linux.in
@@ -816,6 +812,7 @@ pyyaml==6.0.1
     #   junos-eznc
     #   kubernetes
     #   napalm
+    #   pytest-salt-factories
     #   yamllint
     #   yamlordereddictloader
 pyzmq==23.2.0
