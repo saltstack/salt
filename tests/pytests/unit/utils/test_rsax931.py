@@ -13,8 +13,6 @@ import sys
 import pytest
 
 import salt.utils.platform
-
-# salt libs
 from salt.utils.rsax931 import (
     RSAX931Signer,
     RSAX931Verifier,
