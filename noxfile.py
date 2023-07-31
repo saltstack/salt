@@ -1797,6 +1797,16 @@ def test_pkgs_onedir(session):
             "--no-uninstall",
             "pkg/tests/upgrade/",
         ],
+        "downgrade": [
+            "--downgrade",
+            "--no-uninstall",
+            "pkg/tests/downgrade/",
+        ],
+        "downgrade-classic": [
+            "--downgrade",
+            "--no-uninstall",
+            "pkg/tests/downgrade/",
+        ],
         "download-pkgs": [
             "--download-pkgs",
             "pkg/tests/download/",
