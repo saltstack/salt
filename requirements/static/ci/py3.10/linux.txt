@@ -390,7 +390,7 @@ pytest-salt-factories==1.0.0rc24
     # via -r requirements/pytest.txt
 pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
-pytest-skip-markers==1.4.0
+pytest-skip-markers==1.4.1
     # via
     #   pytest-salt-factories
     #   pytest-shell-utilities

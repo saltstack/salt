@@ -108,7 +108,7 @@ pytest-salt-factories==1.0.0rc17
     # via -r requirements/static/ci/pkgtests.in
 pytest-shell-utilities==1.7.0
     # via pytest-salt-factories
-pytest-skip-markers==1.4.0
+pytest-skip-markers==1.4.1
     # via
     #   pytest-salt-factories
     #   pytest-shell-utilities
