@@ -22,11 +22,7 @@ def maintenence(maintenence_opts):
     """
     The master's Maintenence class
     """
-    maintenence = salt.master.Maintenance(maintenence_opts)
-    try:
-        yield maintenence
-    finally:
-        pass
+    return salt.master.Maintenance(maintenence_opts)
 
 
 @pytest.fixture
