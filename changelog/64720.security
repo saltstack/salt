@@ -1,3 +1,0 @@
-Bump to `certifi==2023.07.22` due to https://github.com/advisories/GHSA-xqr8-7jwr-rhp7
-
-Python 3.5 cannot get the updated requirements since certifi no longer supports this python version
