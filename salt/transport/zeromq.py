@@ -1119,17 +1119,15 @@ class RequestClient(salt.transport.base.RequestClient):
 
     async def _send_recv(self, message):
         message = salt.payload.dumps(message)
-        await self.sending.acquire()
-        try:
-            await self.socket.send(message)
-            ret = await self.socket.recv()
-        except zmq.error.ZMQError:
-            self.close()
-            await self.connect()
-            await self.socket.send(message)
-            ret = await self.socket.recv()
-        finally:
-            self.sending.release()
+        async with self.sending:
+            try:
+                await self.socket.send(message)
+                ret = await self.socket.recv()
+            except zmq.error.ZMQError:
+                self.close()
+                await self.connect()
+                await self.socket.send(message)
+                ret = await self.socket.recv()
         return salt.payload.loads(ret)
 
     async def send(self, load, timeout=60):
