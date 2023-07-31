@@ -1204,7 +1204,7 @@ class VM:
             timeout = self.config.terminate_timeout
             timeout_progress = 0.0
             progress = create_progress_bar()
-            task = progress.add_task(f"Terminatting {self!r}...", total=timeout)
+            task = progress.add_task(f"Terminating {self!r}...", total=timeout)
             self.instance.terminate()
             try:
                 with progress:
