@@ -285,10 +285,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
 
     async def getstream(self, **kwargs):
         if self.source_ip or self.source_port:
-            kwargs = {
-                "source_ip": self.source_ip,
-                "source_port": self.source_port,
-            }
+            kwargs.update(source_ip=self.source_ip, source_port=self.source_port)
         stream = None
         start = time.monotonic()
         timeout = kwargs.get("timeout", None)
@@ -1671,10 +1668,7 @@ class TCPReqClient(salt.transport.base.RequestClient):
 
     async def getstream(self, **kwargs):
         if self.source_ip or self.source_port:
-            kwargs = {
-                "source_ip": self.source_ip,
-                "source_port": self.source_port,
-            }
+            kwargs.update(source_ip=self.source_ip, source_port=self.source_port)
         stream = None
         while stream is None and (not self._closed and not self._closing):
             try:
