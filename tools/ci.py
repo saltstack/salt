@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import pathlib
+import random
 import sys
 import time
 from typing import TYPE_CHECKING, Any
@@ -1012,3 +1013,71 @@ def get_testing_releases(
             wfh.write(f"testing-releases={json.dumps(str_releases)}\n")
 
         ctx.exit(0)
+
+
+@ci.command(
+    name="define-cache-seed",
+    arguments={
+        "static_cache_seed": {
+            "help": "The static cache seed value",
+        },
+        "randomize": {
+            "help": "Randomize the cache seed value",
+        },
+    },
+)
+def define_cache_seed(ctx: Context, static_cache_seed: str, randomize: bool = False):
+    """
+    Set `cache-seed` in GH Actions outputs.
+    """
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    github_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if github_step_summary is None:
+        ctx.warn("The 'GITHUB_STEP_SUMMARY' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_step_summary is not None
+
+    labels: list[str] = []
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is not None:
+        try:
+            gh_event = json.loads(open(gh_event_path).read())
+        except Exception as exc:
+            ctx.error(
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+            )
+            ctx.exit(1)
+
+        labels.extend(
+            label[0] for label in _get_pr_test_labels_from_event_payload(gh_event)
+        )
+
+    if randomize is True:
+        cache_seed = f"SEED-{random.randint(100, 1000)}"
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                f"The cache seed has been randomized to `{cache_seed}` because "
+                "`--randomize` was passed to `tools ci define-cache-seed`."
+            )
+    elif "test:random-cache-seed" in labels:
+        cache_seed = f"SEED-{random.randint(100, 1000)}"
+        with open(github_step_summary, "a", encoding="utf-8") as wfh:
+            wfh.write(
+                f"The cache seed has been randomized to `{cache_seed}` because "
+                "the label `test:random-cache-seed` was set."
+            )
+    else:
+        cache_seed = static_cache_seed
+
+    ctx.info("Writing 'cache-seed' to the github outputs file")
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"cache-seed={cache_seed}\n")

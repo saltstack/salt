@@ -48,8 +48,8 @@ _usage() {
      echo "  -v, --version   version of python to install, must be available with relenv"
      echo "  -r, --relenv-version   version of python to install, must be available with relenv"
      echo ""
-     echo "  To build python 3.10.11:"
-     echo "      example: $0 --version 3.10.11"
+     echo "  To build python 3.10.12:"
+     echo "      example: $0 --version 3.10.12"
 }
 
 # _msg
