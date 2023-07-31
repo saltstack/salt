@@ -895,18 +895,16 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         with salt.utils.files.set_umask(0o177):
             log.info("Starting the Salt Publisher on %s", self.pub_uri)
             pub_sock.bind(self.pub_uri)
-            if "ipc://" in self.pub_uri:
-                pub_path = self.pub_uri.replace("ipc:/", "")
+            if self.pub_path:
                 os.chmod(  # nosec
-                    pub_path,
+                    self.pub_path,
                     0o600,
                 )
             log.info("Starting the Salt Puller on %s", self.pull_uri)
             pull_sock.bind(self.pull_uri)
-            if "ipc://" in self.pull_uri:
-                pull_path = self.pull_uri.replace("ipc:/", "")
+            if self.pull_path:
                 os.chmod(  # nosec
-                    pull_path,
+                    self.pull_path,
                     0o600,
                 )
         return pull_sock, pub_sock, monitor
