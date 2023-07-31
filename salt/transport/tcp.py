@@ -25,7 +25,6 @@ import tornado.iostream
 import tornado.netutil
 import tornado.tcpclient
 import tornado.tcpserver
-from tornado.locks import Lock
 
 import salt.master
 import salt.payload
@@ -808,7 +807,7 @@ class MessageClient:
                     ip_bracket(self.host, strip=True),
                     self.port,
                     ssl_options=self.opts.get("ssl"),
-                    **kwargs
+                    **kwargs,
                 )
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
@@ -1497,13 +1496,7 @@ class _TCPPubServerPublisher:
         self.path = path
         self._closing = False
         self.stream = None
-        # msgpack deprecated `encoding` starting with version 0.5.2
-        if salt.utils.msgpack.version >= (0, 5, 2):
-            # Under Py2 we still want raw to be set to True
-            msgpack_kwargs = {"raw": False}
-        else:
-            msgpack_kwargs = {"encoding": "utf-8"}
-        self.unpacker = salt.utils.msgpack.Unpacker(**msgpack_kwargs)
+        self.unpacker = salt.utils.msgpack.Unpacker(raw=False)
         self._connecting_future = None
 
     def connected(self):

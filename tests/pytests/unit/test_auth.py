@@ -159,7 +159,9 @@ def auth_acl_master_opts(master_opts):
     master_opts["sign_pub_messages"] = False
     master_opts["con_cache"] = ""
     master_opts["external_auth"] = {}
-    master_opts["external_auth"] = {"pam": {"test_user": [{"alpha_minion": ["test.ping"]}]}}
+    master_opts["external_auth"] = {
+        "pam": {"test_user": [{"alpha_minion": ["test.ping"]}]}
+    }
     yield master_opts
 
 
