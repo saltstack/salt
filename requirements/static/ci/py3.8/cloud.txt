@@ -22,7 +22,7 @@ asn1crypto==1.4.0
     #   oscrypto
 async-timeout==4.0.2
     # via aiohttp
-attrs==21.2.0
+attrs==23.1.0
     # via
     #   aiohttp
     #   jsonschema
@@ -729,11 +729,11 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-shell-utilities
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
-pytest-salt-factories==1.0.0rc21
+pytest-salt-factories==1.0.0rc25
     # via -r requirements/pytest.txt
-pytest-shell-utilities==1.6.0
+pytest-shell-utilities==1.8.0
     # via pytest-salt-factories
-pytest-skip-markers==1.2.0
+pytest-skip-markers==1.4.1
     # via
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -742,10 +742,6 @@ pytest-subtests==0.5.0
     # via -r requirements/pytest.txt
 pytest-system-statistics==1.0.2
     # via pytest-salt-factories
-pytest-tempdir==2019.10.12
-    # via
-    #   -r requirements/pytest.txt
-    #   pytest-salt-factories
 pytest-timeout==2.0.2
     # via -r requirements/pytest.txt
 pytest==7.2.0
@@ -758,7 +754,6 @@ pytest==7.2.0
     #   pytest-skip-markers
     #   pytest-subtests
     #   pytest-system-statistics
-    #   pytest-tempdir
     #   pytest-timeout
 python-dateutil==2.8.2
     # via
@@ -790,6 +785,7 @@ pyyaml==6.0.1
     #   junos-eznc
     #   kubernetes
     #   napalm
+    #   pytest-salt-factories
     #   yamlordereddictloader
 pyzmq==23.2.0
     # via
