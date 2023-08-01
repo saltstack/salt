@@ -224,25 +224,20 @@ def update_git_repos(opts=None, clean=False, masterless=False):
             ret.update(winrepo_result)
         else:
             # New winrepo code utilizing salt.utils.gitfs
-            try:
-                winrepo = salt.utils.gitfs.WinRepo(
-                    opts,
-                    remotes,
-                    per_remote_overrides=PER_REMOTE_OVERRIDES,
-                    per_remote_only=PER_REMOTE_ONLY,
-                    global_only=GLOBAL_ONLY,
-                    cache_root=base_dir,
-                )
-                winrepo.fetch_remotes()
-                # Since we're not running update(), we need to manually call
-                # clear_old_remotes() to remove directories from remotes that
-                # have been removed from configuration.
-                if clean:
-                    winrepo.clear_old_remotes()
-                winrepo.checkout()
-            except Exception as exc:  # pylint: disable=broad-except
-                msg = "Failed to update winrepo_remotes: {}".format(exc)
-                log.error(msg, exc_info_on_loglevel=logging.DEBUG)
-                return msg
+            winrepo = salt.utils.gitfs.WinRepo(
+                opts,
+                remotes,
+                per_remote_overrides=PER_REMOTE_OVERRIDES,
+                per_remote_only=PER_REMOTE_ONLY,
+                global_only=GLOBAL_ONLY,
+                cache_root=base_dir,
+            )
+            winrepo.fetch_remotes()
+            # Since we're not running update(), we need to manually call
+            # clear_old_remotes() to remove directories from remotes that
+            # have been removed from configuration.
+            if clean:
+                winrepo.clear_old_remotes()
+            winrepo.checkout()
             ret.update(winrepo.winrepo_dirs)
     return ret
