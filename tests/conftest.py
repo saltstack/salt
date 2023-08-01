@@ -854,6 +854,22 @@ def groups_collection_modifyitems(config, items):
 
 # ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
 @pytest.fixture(scope="session")
+def salt_factories_default_root_dir(salt_factories_default_root_dir):
+    """
+    The root directory from where to base all salt-factories paths.
+
+    For example, in a salt system installation, this would be ``/``.
+
+    .. admonition:: Attention
+
+        If `root_dir` is returned on the `salt_factories_config()` fixture
+        dictionary, then that's the value used, and not the one returned by
+        this fixture.
+    """
+    return salt_factories_default_root_dir / "stsuite"
+
+
+@pytest.fixture(scope="session")
 def salt_factories_config():
     """
     Return a dictionary with the keyworkd arguments for FactoriesManager
