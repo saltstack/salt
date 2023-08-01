@@ -3,8 +3,6 @@ import time
 import pytest
 from saltfactories.utils import random_string
 
-from tests.support.helpers import dedent
-
 
 @pytest.fixture(scope="function")
 def salt_minion_retry(salt_master_factory, salt_minion_id):
@@ -30,7 +28,7 @@ def salt_minion_retry(salt_master_factory, salt_minion_id):
 @pytest.mark.slow_test
 def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
     # run job that takes some time for warmup
-    rtn = salt_cli.run("test.sleep", "4.9", "--async", minion_tgt=salt_minion_retry.id)
+    rtn = salt_cli.run("test.sleep", "5", "--async", minion_tgt=salt_minion_retry.id)
     # obtain JID
     jid = rtn.stdout.strip().split(" ")[-1]
 
@@ -57,7 +55,7 @@ def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
 @pytest.mark.slow_test
 def test_pillar_timeout(salt_master_factory):
     cmd = """
-    python -c "import time; time.sleep(4.8); print('{\\"foo\\": \\"bar\\"}');\"
+    python -c "import time; time.sleep(2.5); print('{\\"foo\\": \\"bar\\"}');\"
     """.strip()
     master_overrides = {
         "ext_pillar": [
@@ -73,8 +71,7 @@ def test_pillar_timeout(salt_master_factory):
         "request_channel_tries": 1,
     }
     sls_name = "issue-50221"
-    sls_contents = dedent(
-        """
+    sls_contents = """
     custom_test_state:
       test.configurable_test_state:
         - name: example
@@ -82,7 +79,6 @@ def test_pillar_timeout(salt_master_factory):
         - result: True
         - comment: "Nothing has acutally been changed"
     """
-    )
     master = salt_master_factory.salt_master_daemon(
         "pillar-timeout-master",
         overrides=master_overrides,
