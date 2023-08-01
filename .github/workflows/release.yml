@@ -232,7 +232,7 @@ jobs:
       distro-slug: almalinux-8
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -252,7 +252,7 @@ jobs:
       distro-slug: almalinux-8-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -272,7 +272,7 @@ jobs:
       distro-slug: almalinux-9
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -292,7 +292,7 @@ jobs:
       distro-slug: almalinux-9-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -312,7 +312,7 @@ jobs:
       distro-slug: amazonlinux-2
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -332,7 +332,7 @@ jobs:
       distro-slug: amazonlinux-2-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -352,7 +352,7 @@ jobs:
       distro-slug: centos-7
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -372,7 +372,7 @@ jobs:
       distro-slug: centos-7-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -392,7 +392,7 @@ jobs:
       distro-slug: centosstream-8
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -412,7 +412,7 @@ jobs:
       distro-slug: centosstream-8-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -432,7 +432,7 @@ jobs:
       distro-slug: centosstream-9
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -452,7 +452,7 @@ jobs:
       distro-slug: centosstream-9-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -472,7 +472,7 @@ jobs:
       distro-slug: debian-10
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -492,7 +492,7 @@ jobs:
       distro-slug: debian-11
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -512,7 +512,7 @@ jobs:
       distro-slug: debian-11-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -532,7 +532,7 @@ jobs:
       distro-slug: fedora-37
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -552,7 +552,7 @@ jobs:
       distro-slug: fedora-37-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -572,7 +572,7 @@ jobs:
       distro-slug: fedora-38
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -592,7 +592,7 @@ jobs:
       distro-slug: fedora-38-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -612,7 +612,7 @@ jobs:
       distro-slug: photonos-3
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -632,7 +632,7 @@ jobs:
       distro-slug: photonos-4
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -652,7 +652,7 @@ jobs:
       distro-slug: ubuntu-20.04
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -672,7 +672,7 @@ jobs:
       distro-slug: ubuntu-20.04-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -692,7 +692,7 @@ jobs:
       distro-slug: ubuntu-22.04
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -712,7 +712,7 @@ jobs:
       distro-slug: ubuntu-22.04-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -732,7 +732,7 @@ jobs:
       distro-slug: ubuntu-22.04
       platform: linux
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -752,7 +752,7 @@ jobs:
       distro-slug: ubuntu-22.04-arm64
       platform: linux
       arch: aarch64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -772,7 +772,7 @@ jobs:
       distro-slug: macos-12
       platform: darwin
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -792,7 +792,7 @@ jobs:
       distro-slug: macos-12
       platform: darwin
       arch: x86_64
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -813,7 +813,7 @@ jobs:
       platform: windows
       arch: amd64
       pkg-type: nsis
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -833,7 +833,7 @@ jobs:
       platform: windows
       arch: amd64
       pkg-type: msi
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true
@@ -853,7 +853,7 @@ jobs:
       platform: windows
       arch: amd64
       pkg-type: onedir
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.11.3
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.12
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       environment: release
       skip-code-coverage: true

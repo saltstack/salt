@@ -38,12 +38,8 @@ param(
 
     [Parameter(Mandatory=$false)]
     [ValidatePattern("^\d{1,2}.\d{1,2}.\d{1,2}$")]
-    [ValidateSet(
-        "3.11.3",
-        "3.10.11"
-    )]
     [Alias("p")]
-    [String] $PythonVersion = "3.10.11",
+    [String] $PythonVersion = "3.10.12",
 
     [Parameter(Mandatory=$false)]
     [Alias("r")]

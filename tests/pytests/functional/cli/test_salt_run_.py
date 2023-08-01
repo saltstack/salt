@@ -80,6 +80,6 @@ def test_versions_report(salt_run_cli):
 
 
 def test_salt_run_version(salt_run_cli):
-    expected = salt.version.__version__
+    expected = salt.version.__saltstack_version__.formatted_version
     ret = salt_run_cli.run("--version")
     assert f"cli_salt_run.py {expected}\n" == ret.stdout

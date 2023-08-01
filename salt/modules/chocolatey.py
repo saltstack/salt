@@ -111,6 +111,7 @@ def _find_chocolatey():
         os.path.join(
             os.environ.get("ProgramData"), "Chocolatey", "bin", "chocolatey.exe"
         ),
+        os.path.join(os.environ.get("ProgramData"), "Chocolatey", "bin", "choco.exe"),
         os.path.join(
             os.environ.get("SystemDrive"), "Chocolatey", "bin", "chocolatey.bat"
         ),
@@ -207,7 +208,7 @@ def bootstrap(force=False, source=None):
     except CommandExecutionError:
         choc_path = None
     if choc_path and not force:
-        return "Chocolatey found at {}".format(choc_path)
+        return f"Chocolatey found at {choc_path}"
 
     temp_dir = tempfile.gettempdir()
 
@@ -335,7 +336,7 @@ def bootstrap(force=False, source=None):
 
     if not os.path.exists(script):
         raise CommandExecutionError(
-            "Failed to find Chocolatey installation script: {}".format(script)
+            f"Failed to find Chocolatey installation script: {script}"
         )
 
     # Run the Chocolatey bootstrap
@@ -377,7 +378,7 @@ def unbootstrap():
         if os.path.exists(choco_dir):
             log.debug("Removing Chocolatey directory: %s", choco_dir)
             __salt__["file.remove"](path=choco_dir, force=True)
-            removed.append("Removed Directory: {}".format(choco_dir))
+            removed.append(f"Removed Directory: {choco_dir}")
     else:
         known_paths = [
             os.path.join(os.environ.get("ProgramData"), "Chocolatey"),
@@ -387,7 +388,7 @@ def unbootstrap():
             if os.path.exists(path):
                 log.debug("Removing Chocolatey directory: %s", path)
                 __salt__["file.remove"](path=path, force=True)
-                removed.append("Removed Directory: {}".format(path))
+                removed.append(f"Removed Directory: {path}")
 
     # Delete all Chocolatey environment variables
     for env_var in __salt__["environ.items"]():
@@ -399,14 +400,14 @@ def unbootstrap():
             __salt__["environ.setval"](
                 key=env_var, val=False, false_unsets=True, permanent="HKCU"
             )
-            removed.append("Removed Environment Var: {}".format(env_var))
+            removed.append(f"Removed Environment Var: {env_var}")
 
     # Remove Chocolatey from the path:
     for path in __salt__["win_path.get_path"]():
         if "chocolatey" in path.lower():
             log.debug("Removing Chocolatey path item: %s", path)
             __salt__["win_path.remove"](path=path, rehash=True)
-            removed.append("Removed Path Item: {}".format(path))
+            removed.append(f"Removed Path Item: {path}")
 
     return removed
 
@@ -459,7 +460,11 @@ def list_(
         salt '*' chocolatey.list <narrow> all_versions=True
     """
     choc_path = _find_chocolatey()
-    cmd = [choc_path, "list"]
+    # https://docs.chocolatey.org/en-us/guides/upgrading-to-chocolatey-v2-v6
+    if Version(chocolatey_version()) < Version("2.0.0"):
+        cmd = [choc_path, "list"]
+    else:
+        cmd = [choc_path, "search"]
     if narrow:
         cmd.append(narrow)
     if salt.utils.data.is_true(all_versions):
@@ -517,7 +522,11 @@ def list_webpi():
         salt '*' chocolatey.list_webpi
     """
     choc_path = _find_chocolatey()
-    cmd = [choc_path, "list", "--source", "webpi"]
+    # https://docs.chocolatey.org/en-us/guides/upgrading-to-chocolatey-v2-v6
+    if Version(chocolatey_version()) < Version("2.0.0"):
+        cmd = [choc_path, "list", "--source", "webpi"]
+    else:
+        cmd = [choc_path, "search", "--source", "webpi"]
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:
@@ -542,7 +551,11 @@ def list_windowsfeatures():
         salt '*' chocolatey.list_windowsfeatures
     """
     choc_path = _find_chocolatey()
-    cmd = [choc_path, "list", "--source", "windowsfeatures"]
+    # https://docs.chocolatey.org/en-us/guides/upgrading-to-chocolatey-v2-v6
+    if Version(chocolatey_version()) < Version("2.0.0"):
+        cmd = [choc_path, "list", "--source", "windowsfeatures"]
+    else:
+        cmd = [choc_path, "search", "--source", "windowsfeatures"]
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:
