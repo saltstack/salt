@@ -2,17 +2,33 @@
 Operations on regular files, special files, directories, and symlinks
 =====================================================================
 
-Salt States can aggressively manipulate files on a system. There are a number
-of ways in which files can be managed.
+The states.file module enables you to alter configuration files to complete tasks such as upgrading operating systems, changing permissions, security settings, and adding and configuring nodes.
 
-Regular files can be enforced with the :mod:`file.managed
-<salt.states.file.managed>` state. This state downloads files from the salt
+For further information about states, see
+`Configuration management and states tutorials<https://docs.saltproject.io/en/latest/topics/states/index.html>`_
+`Writing Salt states<https://docs.saltproject.io/en/latest/ref/states/writing.html>`_
+
+Here is a quick guide to common salt.states.file examples. For more examples, see the functions reference below.
+
+* :ref:`Manage regular files with the file.managed state`
+* :ref:`Use py renderer as a templating option`
+* :ref:`Specify a file with the the source parameter`
+* :ref:`Use the names parameter to expand the contents of a single state`
+* :ref:`Manage special files with the mknod function`
+* :ref:`Manage directories with the directory function`
+* :ref:`Use the symlink function`
+* :ref:`Manage directories recursively with the recurse function`
+* :ref:`Manage backup directories with the retention schedule function`
+
+
+Manage regular files with the file.managed state
+------------------------------------------------
+
+Regular files can be enforced with the :mod:`file.managed <salt.states.file.managed>` state. This state downloads files from the salt
 master and places them on the target system. Managed files can be rendered as a
-jinja, mako, or wempy template, adding a dynamic component to file management.
-An example of :mod:`file.managed <salt.states.file.managed>` which makes use of
-the jinja templating system would look like this:
+jinja, mako, or wempy template, adding a dynamic component to file management. For example, here :mod:`file.managed <salt.states.file.managed>`uses the jinja templating system:
 
-.. code-block:: jinja
+.. code-block:: jinja‰
 
     /etc/http/conf/http.conf:
       file.managed:
@@ -21,7 +37,7 @@ the jinja templating system would look like this:
         - group: root
         - mode: 644
         - attrs: ai
-        - template: jinje
+        - template: jinja
         - defaults:
             custom_var: "default value"
             other_var: 123
@@ -30,11 +46,16 @@ the jinja templating system would look like this:
             custom_var: "override"
     {% endif %}
 
+
+Use py renderer as a templating option
+--------------------------------------
 It is also possible to use the :mod:`py renderer <salt.renderers.py>` as a
 templating option. The template would be a Python script which would need to
 contain a function called ``run()``, which returns a string. All arguments
 to the state will be made available to the Python script as globals. The
-returned string will be the contents of the managed file. For example:
+returned string will be the contents of the managed file.
+
+For example:
 
 .. code-block:: python
 
@@ -47,7 +68,7 @@ returned string will be the contents of the managed file. For example:
 
     The ``defaults`` and ``context`` arguments require extra indentation (four
     spaces instead of the normal two) in order to create a nested dictionary.
-    :ref:`More information <nested-dict-indentation>`.
+    See :ref:`YAML idiosyncrasies <nested-dict-indentation>`for more information.
 
 If using a template, any user-defined template variables in the file defined in
 ``source`` must be passed in using the ``defaults`` and/or ``context``
@@ -59,6 +80,8 @@ the template using ``{{ custom_var }}``. If the operating system is Ubuntu, the
 value of the variable ``custom_var`` would be *override*, otherwise it is the
 default *default value*
 
+Specify a file with the the source parameter
+--------------------------------------------
 The ``source`` parameter can be specified as a list. If this is done, then the
 first file to be matched will be the one that is used. This allows you to have
 a default file on which to fall back if the desired file does not exist on the
@@ -103,6 +126,8 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
     value in single quotes. If the value is not wrapped in quotes it
     will be read by YAML as an integer and evaluated as an octal.
 
+Use the names parameter to expand the contents of a single state
+----------------------------------------------------------------
 The ``names`` parameter, which is part of the state compiler, can be used to
 expand the contents of a single state declaration into multiple, single state
 declarations. Each item in the ``names`` list receives its own individual state
@@ -127,6 +152,8 @@ way to manage several files with similar attributes.
     There is more documentation about this feature in the :ref:`Names declaration
     <names-declaration>` section of the :ref:`Highstate docs <states-highstate>`.
 
+Manage special files with the mknod function
+--------------------------------------------
 Special files can be managed via the ``mknod`` function. This function will
 create and enforce the permissions on a special file. The function supports the
 creation of character devices, block devices, and FIFO pipes. The function will
@@ -135,7 +162,9 @@ minion. The function will not overwrite or operate on (change major/minor
 numbers) existing special files with the exception of user, group, and
 permissions. In most cases the creation of some special files require root
 permissions on the minion. This would require that the minion to be run as the
-root user. Here is an example of a character device:
+root user.
+
+Here is an example of a character device:
 
 .. code-block:: yaml
 
@@ -172,6 +201,8 @@ Here is an example of a fifo pipe:
         - group: named
         - mode: 660
 
+Manage directories with the directory function
+----------------------------------------------
 Directories can be managed via the ``directory`` function. This function can
 create and enforce the permissions on a directory. A directory statement will
 look like this:
@@ -185,8 +216,8 @@ look like this:
         - mode: 755
         - makedirs: True
 
-If you need to enforce user and/or group ownership or permissions recursively
-on the directory's contents, you can do so by adding a ``recurse`` directive:
+To enforce user and/or group ownership or permissions recursively
+on the directory's contents, add a ``recurse`` directive:
 
 .. code-block:: yaml
 
@@ -201,7 +232,7 @@ on the directory's contents, you can do so by adding a ``recurse`` directive:
           - group
           - mode
 
-As a default, ``mode`` will resolve to ``dir_mode`` and ``file_mode``, to
+As a default, ``mode`` will resolve to ``dir_mode`` and ``file_mode``. To
 specify both directory and file permissions, use this form:
 
 .. code-block:: yaml
@@ -218,8 +249,9 @@ specify both directory and file permissions, use this form:
           - group
           - mode
 
-Symlinks can be easily created; the symlink function is very simple and only
-takes a few arguments:
+Use symlinks
+------------
+The symlink function is very simple and only takes a few arguments:
 
 .. code-block:: yaml
 
@@ -227,11 +259,12 @@ takes a few arguments:
       file.symlink:
         - target: /boot/grub/grub.conf
 
+Manage directories recursively with the recurse function
+--------------------------------------------------------
 Recursive directory management can also be set via the ``recurse``
 function. Recursive directory management allows for a directory on the salt
 master to be recursively copied down to the minion. This is a great tool for
-deploying large code and configuration systems. A state using ``recurse``
-would look something like this:
+deploying large code and configuration systems. Here is an example of a state using ``recurse``:
 
 .. code-block:: yaml
 
@@ -259,7 +292,10 @@ A more complex ``recurse`` example:
         - source: salt://project/templates_dir
         - include_empty: True
 
+Manage backup directories with the retention schedule function
+--------------------------------------------------------------
 Retention scheduling can be applied to manage contents of backup directories.
+
 For example:
 
 .. code-block:: yaml
