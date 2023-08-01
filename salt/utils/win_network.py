@@ -20,12 +20,15 @@ depending on the version of Windows this is run on. Once support for Windows
 """
 # https://docs.microsoft.com/en-us/dotnet/api/system.net.networkinformation.networkinterface.getallnetworkinterfaces?view=netframework-4.7.2
 
+import logging
 import platform
 
 import salt.utils.win_reg
 from salt._compat import ipaddress
 
 IS_WINDOWS = platform.system() == "Windows"
+
+log = logging.getLogger(__name__)
 
 __virtualname__ = "win_network"
 
@@ -53,8 +56,20 @@ if IS_WINDOWS:
         import salt.utils.winapi
     else:
         # This uses .NET to get network settings and is faster than WMI
-        import clr
-        from System.Net import NetworkInformation
+        try:
+            import clr
+            from System.Net import NetworkInformation
+        except RuntimeError:
+            # In some environments, using the Relenv OneDir package, we can't
+            # load pythonnet. Uninstalling and reinstalling pythonnet fixes the
+            # issue, but it is a manual step. Until we figure it out, we are
+            # just going to fall back to WMI. I was able to reproduce a failing
+            # system using Windows 10 Home Edition
+            log.debug("Failed to load pythonnet. Falling back to WMI")
+            USE_WMI = True
+            import wmi
+
+            import salt.utils.winapi
 
 # TODO: Should we deprecate support for pythonnet 2.5.2, these enumerations can
 # TODO: be deleted
