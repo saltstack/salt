@@ -226,6 +226,12 @@ from salt.state import HighState
 
 __docformat__ = "restructuredtext en"
 
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
+
 
 # pylint: disable=import-error
 try:
