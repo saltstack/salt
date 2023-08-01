@@ -30,7 +30,7 @@ def salt_minion_retry(salt_master_factory, salt_minion_id):
 @pytest.mark.slow_test
 def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
     # run job that takes some time for warmup
-    rtn = salt_cli.run("test.sleep", "5", "--async", minion_tgt=salt_minion_retry.id)
+    rtn = salt_cli.run("test.sleep", "4.9", "--async", minion_tgt=salt_minion_retry.id)
     # obtain JID
     jid = rtn.stdout.strip().split(" ")[-1]
 
@@ -110,13 +110,12 @@ def test_pillar_timeout(salt_master_factory):
     with master.started(), minion1.started(), minion2.started(), minion3.started(), minion4.started(), sls_tempfile:
         proc = cli.run("state.sls", sls_name, minion_tgt="*")
         # At least one minion should have a Pillar timeout
-        print(proc)
         assert proc.returncode == 1
         minion_timed_out = False
         # Find the minion that has a Pillar timeout
         for key in proc.data:
             if isinstance(proc.data[key], str):
-                if proc.data[key].find("Pillar timed out") != -1:
+                if "Pillar timed out" in proc.data[key]:
                     minion_timed_out = True
                     break
         assert minion_timed_out is True
