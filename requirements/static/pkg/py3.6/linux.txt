@@ -79,7 +79,7 @@ pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==23.2.0 ; python_version >= "3.6"
     # via -r requirements/zeromq.txt
-requests==2.25.1 ; python_version == "3.6"
+requests==2.25.1
     # via -r requirements/base.txt
 rpm-vercmp==0.1.2
     # via -r requirements/static/pkg/linux.in
