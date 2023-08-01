@@ -3,6 +3,7 @@ Classes which provide the shared base for GitFS, git_pillar, and winrepo
 """
 
 
+import base64
 import contextlib
 import copy
 import errno
@@ -457,7 +458,7 @@ class GitProvider:
 
         hash_type = getattr(hashlib, self.opts.get("hash_type", "md5"))
         # Generate full id. The full id is made from these parts name-id-env-_root.
-        # Full id stops collections in the gitfs cache.
+        # Full id helps decrease the chances of collections in the gitfs cache.
         self._full_id = "-".join(
             [
                 getattr(self, "name", ""),
@@ -468,10 +469,16 @@ class GitProvider:
         )
         # We loaded this data from yaml configuration files, so, its safe
         # to use UTF-8
-        self.cachedir_basename = f"{getattr(self, 'name', '')}-{hash_type(self._full_id.encode('utf-8')).hexdigest()}"
+        log.error(hash_type(self._full_id.encode("utf-8")).hexdigest())
+        base64_hash = str(
+            base64.b64encode(hash_type(self._full_id.encode("utf-8")).digest()),
+            encoding="utf-8",
+        ).replace("/", "_")
+        # limit name length to 19, so we don't eat up all the path length for windows
+        # this is due to pygit2 limitations
+        self.cachedir_basename = f"{getattr(self, 'name', '')[:19]}-{base64_hash}"
         self.cachedir = salt.utils.path.join(cache_root, self.cachedir_basename)
         self.linkdir = salt.utils.path.join(cache_root, "links", self.cachedir_basename)
-
         if not os.path.isdir(self.cachedir):
             os.makedirs(self.cachedir)
 
