@@ -29,6 +29,12 @@ from saltfactories.daemons import api, master, minion
 from saltfactories.utils import cli_scripts
 
 try:
+    import crypt
+
+    HAS_CRYPT = True
+except ImportError:
+    HAS_CRYPT = False
+try:
     import pwd
 
     HAS_PWD = True
