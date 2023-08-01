@@ -991,6 +991,8 @@ VALID_OPTS = immutabletypes.freeze(
         "maintenance_interval": int,
         # Fileserver process restart interval
         "fileserver_interval": int,
+        "request_channel_timeout": int,
+        "request_channel_tries": int,
     }
 )
 
@@ -1052,6 +1054,8 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "pillar_cache": False,
         "pillar_cache_ttl": 3600,
         "pillar_cache_backend": "disk",
+        "request_channel_timeout": 30,
+        "request_channel_tries": 3,
         "gpg_cache": False,
         "gpg_cache_ttl": 86400,
         "gpg_cache_backend": "disk",
