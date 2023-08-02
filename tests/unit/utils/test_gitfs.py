@@ -124,13 +124,13 @@ class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_get_cachedir_basename(self):
         self.assertEqual(
             self.main_class.remotes[0].get_cachedir_basename(),
-            "-b4dcbd51b08742ec23eaf96d192d29b417ec137ea7ca0c0de2515cfaf6e26860",
+            "-tNy9UbCHQuwj6vltGS0ptBfsE36nygwN4lFc+vbiaGA=",
         )
 
     def test_get_cachedir_base_with_name(self):
         self.assertEqual(
             self.main_class.remotes[1].get_cachedir_basename(),
-            "repo2-4218c2f8e303c6ea24cc541d8748e523d5b443c3050170a43a1a00be253b56aa",
+            "repo2-QhjC+OMDxuokzFQdh0jlI9W0Q8MFAXCkOhoAviU7Vqo=",
         )
 
     def test_git_provider_mp_lock(self):
