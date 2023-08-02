@@ -246,7 +246,7 @@ def test_checkout_pygit2(_prepare_provider):
 )
 def test_full_id_pygit2(_prepare_provider):
     assert _prepare_provider.full_id().startswith("-")
-    assert _prepare_provider.full_id().endswith("/pygit2-repo--")
+    assert _prepare_provider.full_id().endswith("/pygit2-repo---gitfs-master--")
 
 
 @pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
