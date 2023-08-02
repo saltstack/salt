@@ -458,14 +458,22 @@ class GitProvider:
             failhard(self.role)
 
         hash_type = getattr(hashlib, self.opts.get("hash_type", "md5"))
-        # Generate full id. The full id is made from these parts name-id-env-_root.
+        # Generate full id.
         # Full id helps decrease the chances of collections in the gitfs cache.
+        try:
+            target = str(self.get_checkout_target())
+        except AttributeError:
+            target = ""
         self._full_id = "-".join(
             [
                 getattr(self, "name", ""),
-                self.id.replace(" ", "-"),
+                self.id,
                 getattr(self, "env", ""),
                 getattr(self, "_root", ""),
+                self.role,
+                getattr(self, "base", ""),
+                getattr(self, "branch", ""),
+                target
             ]
         )
         # We loaded this data from yaml configuration files, so, its safe
