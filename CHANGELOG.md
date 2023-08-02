@@ -28,11 +28,12 @@ Security
 
   Due to:
     * https://github.com/advisories/GHSA-j8r2-6x86-q33q (#64336)
-- Upgrade to `cryptography==41.0.2`(and therefor `pyopenssl==23.2.0` due to https://github.com/advisories/GHSA-5cpq-8wj7-hf2v)
+- Upgrade to `cryptography==41.0.3`(and therefor `pyopenssl==23.2.0` due to https://github.com/advisories/GHSA-jm77-qphf-c4w8)
 
   Also resolves the following cryptography advisories:
 
   Due to:
+    * https://github.com/advisories/GHSA-5cpq-8wj7-hf2v
     * https://github.com/advisories/GHSA-x4qr-2fvf-3mr5
     * https://github.com/advisories/GHSA-w7pp-m8wf-vj6r
 
