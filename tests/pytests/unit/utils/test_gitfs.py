@@ -255,6 +255,8 @@ def test_full_id_pygit2(_prepare_provider):
 )
 def test_get_cachedir_basename_pygit2(_prepare_provider):
     basename = _prepare_provider.get_cachedir_basename()
+    # Note: if you are changing the length of basename
+    # keep in mind that pygit2 will error out on large file paths on Windows
     assert len(basename) == 45
     assert basename[0] == "-"
     # check that a valid base64 is given '/' -> '_'
