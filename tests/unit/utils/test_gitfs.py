@@ -115,11 +115,14 @@ class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertFalse(self.main_class.remotes[1].fetched)
 
     def test_full_id(self):
-        self.assertEqual(self.main_class.remotes[0].full_id(), "-file://repo1.git---gitfs-master--")
+        self.assertEqual(
+            self.main_class.remotes[0].full_id(), "-file://repo1.git---gitfs-master--"
+        )
 
     def test_full_id_with_name(self):
         self.assertEqual(
-            self.main_class.remotes[1].full_id(), "repo2-file://repo2.git---gitfs-master--"
+            self.main_class.remotes[1].full_id(),
+            "repo2-file://repo2.git---gitfs-master--",
         )
 
     def test_get_cachedir_basename(self):
