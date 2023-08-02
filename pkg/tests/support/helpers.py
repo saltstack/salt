@@ -88,8 +88,9 @@ class SaltPkgInstall:
 
     # Version information
     prev_version: str = attr.ib()
-    major: str = attr.ib(init=False)
-    minor: str = attr.ib(init=False)
+    use_prev_version: str = attr.ib()
+    artifact_version: str = attr.ib(init=False)
+    version: str = attr.ib(init=False)
 
     @proc.default
     def _default_proc(self):
@@ -168,38 +169,41 @@ class SaltPkgInstall:
             config_path = pathlib.Path("/etc", "salt")
         return config_path
 
+    @version.default
+    def _default_version(self):
+        """
+        The version to be installed at the start
+        """
+        if not self.upgrade and not self.use_prev_version:
+            version = self.artifact_version
+        else:
+            version = self.prev_version
+        return version
+
+    @artifact_version.default
+    def _default_artifact_version(self):
+        """
+        The version of the local salt artifacts being tested, based on regex matching
+        """
+        version = ""
+        for artifact in ARTIFACTS_DIR.glob("**/*.*"):
+            version = re.search(
+                r"([0-9].*)(\-[0-9].fc|\-[0-9].el|\+ds|\_all|\_any|\_amd64|\_arm64|\-[0-9].am|(\-[0-9]-[a-z]*-[a-z]*[0-9_]*.|\-[0-9]*.*)(exe|msi|pkg|rpm|deb))",
+                artifact.name,
+            )
+            if version:
+                version = version.groups()[0].replace("_", "-").replace("~", "")
+                version = version.split("-")[0]
+                break
+        return version
+
     def update_process_path(self):
         # The installer updates the path for the system, but that doesn't
         # make it to this python session, so we need to update that
         os.environ["PATH"] = ";".join([str(self.install_dir), os.getenv("path")])
 
-    def get_version(self, version_only=False):
-        """
-        Return the version information needed to install a previous version of Salt.
-        """
-        if not self.upgrade:
-            # Parse the version from a local artifact (regular or downgrade tests)
-            version = ""
-            for artifact in ARTIFACTS_DIR.glob("**/*.*"):
-                version = re.search(
-                    r"([0-9].*)(\-[0-9].fc|\-[0-9].el|\+ds|\_all|\_any|\_amd64|\_arm64|\-[0-9].am|(\-[0-9]-[a-z]*-[a-z]*[0-9_]*.|\-[0-9]*.*)(exe|msi|pkg|rpm|deb))",
-                    artifact.name,
-                )
-                if version:
-                    version = version.groups()[0].replace("_", "-").replace("~", "")
-                    version = version.split("-")[0]
-                    break
-            major, minor = version.split(".", 1)
-        else:
-            # This is an upgrade, start on the previous version
-            major, minor = self.prev_version.split(".", 1)
-        if version_only:
-            return version
-        return major, minor
-
     def __attrs_post_init__(self):
-        self.major, self.minor = self.get_version()
-        self.relenv = packaging.version.parse(self.major) >= packaging.version.parse(
+        self.relenv = packaging.version.parse(self.version) >= packaging.version.parse(
             "3006.0"
         )
 
@@ -286,7 +290,10 @@ class SaltPkgInstall:
         assert ret.returncode == 0
         return True
 
-    def _install_pkgs(self, upgrade=False):
+    def _install_pkgs(self, upgrade=False, downgrade=False):
+        if downgrade:
+            self.install_previous(downgrade=downgrade)
+            return True
         pkg = self.pkgs[0]
         if platform.is_windows():
             if upgrade:
@@ -368,8 +375,8 @@ class SaltPkgInstall:
             "import sys; print('{}.{}'.format(*sys.version_info))",
         ).stdout.strip()
 
-    def install(self, upgrade=False):
-        self._install_pkgs(upgrade=upgrade)
+    def install(self, upgrade=False, downgrade=False):
+        self._install_pkgs(upgrade=upgrade, downgrade=downgrade)
         if self.distro_id in ("ubuntu", "debian"):
             self.stop_services()
 
@@ -391,12 +398,12 @@ class SaltPkgInstall:
             self._check_retcode(stop_service)
         return True
 
-    def install_previous(self):
+    def install_previous(self, downgrade=False):
         """
         Install previous version. This is used for
         upgrade tests.
         """
-        major_ver = self.major
+        major_ver = packaging.version.parse(self.prev_version).major
         distro_name = self.distro_name
         if distro_name == "centos" or distro_name == "fedora":
             distro_name = "redhat"
@@ -430,9 +437,10 @@ class SaltPkgInstall:
             )
             ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
             self._check_retcode(ret)
+            cmd_action = "downgrade" if downgrade else "install"
             ret = self.proc.run(
                 self.pkg_mngr,
-                "install",
+                cmd_action,
                 *self.salt_pkgs,
                 "-y",
             )
@@ -444,7 +452,7 @@ class SaltPkgInstall:
             ret = self.proc.run(self.pkg_mngr, "install", "apt-transport-https", "-y")
             self._check_retcode(ret)
             ## only classic 3005 has arm64 support
-            if self.major >= "3006" and platform.is_aarch64():
+            if self.relenv and platform.is_aarch64():
                 arch = "arm64"
             elif platform.is_aarch64() and self.classic:
                 arch = "arm64"
@@ -469,12 +477,20 @@ class SaltPkgInstall:
                 )
             ret = self.proc.run(self.pkg_mngr, "update")
             self._check_retcode(ret)
-            ret = self.proc.run(
+            pkgs_to_install = self.salt_pkgs
+            if downgrade:
+                pkgs_to_install = [
+                    f"{pkg}={self.prev_version}" for pkg in self.salt_pkgs
+                ]
+            cmd = [
                 self.pkg_mngr,
                 "install",
-                *self.salt_pkgs,
+                *pkgs_to_install,
                 "-y",
-            )
+            ]
+            if downgrade:
+                cmd.append("--allow-downgrades")
+            ret = self.proc.run(*cmd)
             self._check_retcode(ret)
             self.stop_services()
         elif platform.is_windows():
