@@ -26,12 +26,12 @@ from tests.support.sminion import create_sminion
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def version(install_salt):
     """
     get version number from artifact
     """
-    return install_salt.get_version(version_only=True)
+    return install_salt.version
 
 
 @pytest.fixture(scope="session")
@@ -117,6 +117,11 @@ def pytest_addoption(parser):
         help="Test an upgrade from the version specified.",
     )
     test_selection_group.addoption(
+        "--use-prev-version",
+        action="store_true",
+        help="Tells the test suite to validate the version using the previous version (for downgrades)",
+    )
+    test_selection_group.addoption(
         "--download-pkgs",
         default=False,
         action="store_true",
@@ -179,6 +184,7 @@ def install_salt(request, salt_factories_root_dir):
         no_install=request.config.getoption("--no-install"),
         classic=request.config.getoption("--classic"),
         prev_version=request.config.getoption("--prev-version"),
+        use_prev_version=request.config.getoption("--use_prev-version"),
     ) as fixture:
         yield fixture
 

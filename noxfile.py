@@ -1865,6 +1865,7 @@ def test_pkgs_onedir(session):
         + session.posargs
     )
     _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+
     if chunk not in ("install", "download-pkgs"):
         cmd_args = chunks["install"]
         pytest_args = (
@@ -1878,5 +1879,7 @@ def test_pkgs_onedir(session):
             ]
             + session.posargs
         )
+        if "downgrade" in chunk:
+            pytest_args.append("--use-prev-version")
         _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
     sys.exit(0)
