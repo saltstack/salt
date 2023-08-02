@@ -746,13 +746,18 @@ class Master(SMaster):
 
             log.info("Creating master event publisher process")
             ipc_publisher = salt.transport.ipc_publish_server("master", self.opts)
-            self.process_manager.add_process(
-                ipc_publisher.publish_daemon,
-                args=[
-                    ipc_publisher.publish_payload,
-                ],
-                name="EventPublisher",
+            ipc_publisher = salt.channel.server.MasterPubServerChannel.factory(
+                self.opts
             )
+            ipc_publisher.pre_fork(self.process_manager)
+
+            # self.process_manager.add_process(
+            #    ipc_publisher.publish_daemon,
+            #    args=[
+            #        ipc_publisher.publish_payload,
+            #    ],
+            #    name="EventPublisher",
+            # )
 
             self.process_manager.add_process(
                 EventMonitor,

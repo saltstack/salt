@@ -16,6 +16,7 @@ import salt.crypt
 import salt.master
 import salt.payload
 import salt.transport.frame
+import salt.transport.ipc
 import salt.utils.channel
 import salt.utils.event
 import salt.utils.files
@@ -870,6 +871,10 @@ class PubServerChannel:
         )
         payload["load"] = crypticle.dumps(load)
         if self.opts["sign_pub_messages"]:
+            if self.opts["cluster_id"]:
+                master_pem_path = os.path.join(self.opts["cluster_pki_dir"], "cluster.pem")
+            else:
+                master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")
             log.debug("Signing data packet")
             payload["sig"] = salt.crypt.sign_message(
                 self.master_key.rsa_path, payload["load"]
@@ -907,3 +912,106 @@ class PubServerChannel:
         )
         payload = salt.payload.dumps(load)
         await self.transport.publish(payload)
+
+
+class MasterPubServerChannel:
+    """ """
+
+    @classmethod
+    def factory(cls, opts, **kwargs):
+        transport = salt.transport.ipc_publish_server("master", opts)
+        return cls(opts, transport)
+
+    def __init__(self, opts, transport, presence_events=False):
+        self.opts = opts
+        self.transport = transport
+        self.io_loop = tornado.ioloop.IOLoop.current()
+
+    def __getstate__(self):
+        return {
+            "opts": self.opts,
+            "transport": self.transport,
+        }
+
+    def __setstate__(self, state):
+        self.opts = state["opts"]
+        self.transport = state["transport"]
+
+    def close(self):
+        self.transport.close()
+
+    def pre_fork(self, process_manager, kwargs=None):
+        """
+        Do anything necessary pre-fork. Since this is on the master side this will
+        primarily be used to create IPC channels and create our daemon process to
+        do the actual publishing
+
+        :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
+        """
+        if hasattr(self.transport, "publish_daemon"):
+
+            process_manager.add_process(
+                self._publish_daemon, kwargs=kwargs, name="EventPublisher"
+            )
+
+    def _publish_daemon(self, **kwargs):
+        if (
+            self.opts["event_publisher_niceness"]
+            and not salt.utils.platform.is_windows()
+        ):
+            log.info(
+                "setting EventPublisher niceness to %i",
+                self.opts["event_publisher_niceness"],
+            )
+            os.nice(self.opts["event_publisher_niceness"])
+        self.io_loop = tornado.ioloop.IOLoop.current()
+        tcp_master_pool_port = 4520
+        self.pushers = []
+        for master in self.opts.get("master_pool", []):
+            pusher = salt.transport.tcp.TCPPublishServer(
+                        self.opts,
+                        pull_host=master,
+                        pull_port=tcp_master_pool_port,
+            )
+            self.pushers.append(pusher)
+
+        self.pool_puller = salt.transport.tcp.TCPPuller(
+            host=self.opts["interface"],
+            port=tcp_master_pool_port,
+            io_loop=self.io_loop,
+            payload_handler=self.handle_pool_publish,
+        )
+        self.pool_puller.start()
+        self.io_loop.add_callback(
+            self.transport.publisher,
+            self.publish_payload,
+            io_loop=self.io_loop,
+        )
+        # run forever
+        try:
+            self.io_loop.start()
+        except (KeyboardInterrupt, SystemExit):
+            pass
+        finally:
+            self.close()
+
+    async def publish(self, load):
+        """
+        Publish "load" to minions
+        """
+        await self.transport.publish(load)
+
+    async def handle_pool_publish(self, load, _):
+        log.error("Got event from other master")
+        try:
+            await self.transport.publish(load)
+        # Add an extra fallback in case a forked process leeks through
+        except Exception:  # pylint: disable=broad-except
+            log.critical("Unexpected error while polling master events", exc_info=True)
+            return None
+
+    async def publish_payload(self, load, *args):
+        await self.transport.publish_payload(load)
+        for pusher in self.pushers:
+            log.error("Send event to master %s:%s", pusher.pull_host, pusher.pull_port)
+            await pusher.publish(load)
