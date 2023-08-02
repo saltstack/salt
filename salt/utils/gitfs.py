@@ -473,7 +473,7 @@ class GitProvider:
                 self.role,
                 getattr(self, "base", ""),
                 getattr(self, "branch", ""),
-                target
+                target,
             ]
         )
         # We loaded this data from yaml configuration files, so, its safe
