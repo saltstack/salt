@@ -69,8 +69,9 @@ __virtualname__ = "proxmox"
 __deprecated__ = (
     3009,
     "proxmox",
-    "https://github.com/salt-extensions/saltext-proxmox"
+    "https://github.com/salt-extensions/saltext-proxmox",
 )
+
 
 def __virtual__():
     """
