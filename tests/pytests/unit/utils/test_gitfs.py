@@ -3,7 +3,6 @@ import string
 import time
 
 import pytest
-
 import salt.config
 import salt.fileserver.gitfs
 import salt.utils.gitfs
