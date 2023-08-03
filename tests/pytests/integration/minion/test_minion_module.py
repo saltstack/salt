@@ -52,9 +52,20 @@ def second_minion(module_master, salt_minion_id):
         yield factory
 
 
-def test_list_minions(event_listener, salt_master, master_minion, second_minion, salt_cli, salt_run_cli, salt_key_cli):
+def test_list_minions(
+    event_listener,
+    salt_master,
+    master_minion,
+    second_minion,
+    salt_cli,
+    salt_run_cli,
+    salt_key_cli,
+):
     master_dir = Path(f"/tmp/stsuite/{salt_master.id}")
-    shutil.copy(master_dir / "pki" / "minion.pub", master_dir / "pki" / "minions" / f"{salt_master.id}")
+    shutil.copy(
+        master_dir / "pki" / "minion.pub",
+        master_dir / "pki" / "minions" / f"{salt_master.id}",
+    )
     with master_minion.started():
         rtn = salt_cli.run("minion.list", minion_tgt=salt_master.id)
         assert "minions" in rtn.data
