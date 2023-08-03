@@ -8,7 +8,8 @@ def test_salt_downgrade(salt_call_cli, install_salt):
     if not install_salt.downgrade:
         pytest.skip("Not testing a downgrade, do not run")
 
-    original_py_version = install_salt.package_python_version()
+    if install_salt.relenv:
+        original_py_version = install_salt.package_python_version()
 
     # Verify current install version is setup correctly and works
     ret = salt_call_cli.run("test.version")
@@ -27,14 +28,17 @@ def test_salt_downgrade(salt_call_cli, install_salt):
 
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)
-    new_py_version = install_salt.package_python_version()
+    if install_salt.relenv:
+        new_py_version = install_salt.package_python_version()
     ret = salt_call_cli.run("test.version")
     assert ret.returncode == 0
     assert ret.data == install_salt.prev_version
 
     # Install dep following downgrade
     # TODO: This should be removed when we stop testing against versions < 3006.0
-    if not install_salt.relenv or original_py_version != new_py_version:
+    if (
+        install_salt.relenv and original_py_version != new_py_version
+    ) or not install_salt.relenv:
         install = salt_call_cli.run("--local", "pip.install", dep)
         assert install.returncode == 0
 

@@ -1848,7 +1848,7 @@ def test_pkgs_onedir(session):
         "PKG_TEST_TYPE": chunk,
     }
 
-    if chunk == "upgrade-classic":
+    if chunk in ("upgrade-classic", "downgrade-classic"):
         cmd_args.append("--classic")
         # Workaround for installing and running classic packages from 3005.1
         # They can only run with importlib-metadata<5.0.0.

@@ -404,6 +404,9 @@ class SaltPkgInstall:
         upgrade tests.
         """
         major_ver = packaging.version.parse(self.prev_version).major
+        relenv = packaging.version.parse(self.prev_version) >= packaging.version.parse(
+            "3006.0"
+        )
         distro_name = self.distro_name
         if distro_name == "centos" or distro_name == "fedora":
             distro_name = "redhat"
@@ -418,7 +421,7 @@ class SaltPkgInstall:
             gpg_key = "SALTSTACK-GPG-KEY.pub"
             if self.distro_version == "9":
                 gpg_key = "SALTSTACK-GPG-KEY2.pub"
-            if self.relenv:
+            if relenv:
                 gpg_key = "SALT-PROJECT-GPG-PUBKEY-2023.pub"
 
             if platform.is_aarch64():
@@ -452,7 +455,7 @@ class SaltPkgInstall:
             ret = self.proc.run(self.pkg_mngr, "install", "apt-transport-https", "-y")
             self._check_retcode(ret)
             ## only classic 3005 has arm64 support
-            if self.relenv and platform.is_aarch64():
+            if relenv and platform.is_aarch64():
                 arch = "arm64"
             elif platform.is_aarch64() and self.classic:
                 arch = "arm64"
@@ -461,7 +464,7 @@ class SaltPkgInstall:
             pathlib.Path("/etc/apt/keyrings").mkdir(parents=True, exist_ok=True)
             gpg_dest = "salt-archive-keyring.gpg"
             gpg_key = gpg_dest
-            if self.relenv:
+            if relenv:
                 gpg_key = "SALT-PROJECT-GPG-PUBKEY-2023.gpg"
 
             download_file(
@@ -478,30 +481,39 @@ class SaltPkgInstall:
             ret = self.proc.run(self.pkg_mngr, "update")
             self._check_retcode(ret)
             pkgs_to_install = self.salt_pkgs
-            if downgrade:
-                pkgs_to_install = [
-                    f"{pkg}={self.prev_version}" for pkg in self.salt_pkgs
-                ]
+
             cmd = [
                 self.pkg_mngr,
                 "install",
                 *pkgs_to_install,
                 "-y",
             ]
+
             if downgrade:
+                pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt.pref")
+                pref_file.parent.mkdir(exist_ok=True)
+                pref_contents = """
+                Package: salt*
+                Pin: origin "repo.saltproject.io"
+                Pin-Priority: 1001
+                """
+                with open(pref_file, "w") as fp:
+                    fp.write(pref_contents)
                 cmd.append("--allow-downgrades")
             ret = self.proc.run(*cmd)
             self._check_retcode(ret)
+            if downgrade:
+                pref_file.unlink()
             self.stop_services()
         elif platform.is_windows():
             self.bin_dir = self.install_dir / "bin"
             self.run_root = self.bin_dir / f"salt.exe"
             self.ssm_bin = self.bin_dir / "ssm.exe"
-            if self.file_ext == "msi" or self.relenv:
+            if self.file_ext == "msi" or relenv:
                 self.ssm_bin = self.install_dir / "ssm.exe"
 
             if not self.classic:
-                if not self.relenv:
+                if not relenv:
                     win_pkg = f"salt-{self.prev_version}-windows-amd64.{self.file_ext}"
                     win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{self.prev_version}/{win_pkg}"
                 else:
@@ -551,7 +563,7 @@ class SaltPkgInstall:
                 mac_pkg = f"salt-{self.prev_version}-py3-x86_64.pkg"
                 mac_pkg_url = f"https://repo.saltproject.io/osx/{mac_pkg}"
             else:
-                if not self.relenv:
+                if not relenv:
                     mac_pkg = f"salt-{self.prev_version}-macos-x86_64.pkg"
                     mac_pkg_url = f"https://repo.saltproject.io/salt/py3/macos/{self.prev_version}/{mac_pkg}"
                 else:

@@ -8,7 +8,8 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     if not install_salt.upgrade:
         pytest.skip("Not testing an upgrade, do not run")
 
-    original_py_version = install_salt.package_python_version()
+    if install_salt.relenv:
+        original_py_version = install_salt.package_python_version()
 
     # Verify previous install version is setup correctly and works
     ret = salt_call_cli.run("test.version")
@@ -34,7 +35,9 @@ def test_salt_upgrade(salt_call_cli, install_salt):
 
     # Install dep following upgrade
     # TODO: This should be removed when we stop testing against versions < 3006.0
-    if not install_salt.relenv or original_py_version != new_py_version:
+    if (
+        install_salt.relenv and original_py_version != new_py_version
+    ) or not install_salt.relenv:
         install = salt_call_cli.run("--local", "pip.install", dep)
         assert install.returncode == 0
 
