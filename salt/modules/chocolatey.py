@@ -896,7 +896,13 @@ def install_webpi(name, install_args=None, override_args=False):
     )
 
 
-def uninstall(name, version=None, uninstall_args=None, override_args=False):
+def uninstall(
+    name,
+    version=None,
+    uninstall_args=None,
+    override_args=False,
+    force=False,
+):
     """
     Instructs Chocolatey to uninstall a package.
 
@@ -933,11 +939,13 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
     if uninstall_args:
         cmd.extend(["--uninstallarguments", uninstall_args])
     if override_args:
-        cmd.extend(["--overridearguments"])
+        cmd.append("--overridearguments")
+    if force:
+        cmd.append("--force")
     cmd.extend(_yes())
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
-    if result["retcode"] not in [0, 1605, 1614, 1641]:
+    if result["retcode"] not in [0, 1, 1605, 1614, 1641]:
         err = "Running chocolatey failed: {}".format(result["stdout"])
         raise CommandExecutionError(err)
 
@@ -1120,21 +1128,21 @@ def version(name, check_remote=False, source=None, pre_versions=False):
 
     packages = {}
     lower_name = name.lower()
-    for pkg in installed:
-        if lower_name in pkg.lower():
-            packages[pkg] = installed[pkg]
+    if installed:
+        for pkg in installed:
+            if lower_name == pkg.lower():
+                packages.setdefault(pkg, {})
+                packages[pkg]["installed"] = installed[pkg]
 
     if check_remote:
-        available = list_(narrow=name, pre_versions=pre_versions, source=source)
-
-        for pkg in packages:
-            # Grab the current version from the package that was installed
-            packages[pkg] = {"installed": installed[pkg]}
-
-            # If there's a remote package available, then also include that
-            # in the dictionary that we return.
-            if pkg in available:
-                packages[pkg]["available"] = available[pkg]
+        # If there's a remote package available, then also include that
+        # in the dictionary that we return.
+        available = list_(narrow=name, local_only=False, pre_versions=pre_versions, source=source)
+        if available:
+            for pkg in available:
+                if lower_name == pkg.lower():
+                    packages.setdefault(pkg, {})
+                    packages[pkg]["available"] = available[pkg]
 
     return packages
 
