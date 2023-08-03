@@ -184,7 +184,7 @@ def install_salt(request, salt_factories_root_dir):
         no_install=request.config.getoption("--no-install"),
         classic=request.config.getoption("--classic"),
         prev_version=request.config.getoption("--prev-version"),
-        use_prev_version=request.config.getoption("--use_prev-version"),
+        use_prev_version=request.config.getoption("--use-prev-version"),
     ) as fixture:
         yield fixture
 
