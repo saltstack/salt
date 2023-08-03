@@ -190,7 +190,7 @@ def test_version_check_remote_false():
     """
     list_return_value = {"ack": ["3.1.1"]}
     with patch.object(chocolatey, "list_", return_value=list_return_value):
-        expected = {"ack": ["3.1.1"]}
+        expected = {"ack": {"installed": ["3.1.1"]}}
         result = chocolatey.version("ack", check_remote=False)
         assert result == expected
 
