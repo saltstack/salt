@@ -478,7 +478,6 @@ class SaltPkgInstall:
                     f"deb [signed-by=/etc/apt/keyrings/{gpg_dest} arch={arch}] "
                     f"https://repo.saltproject.io/{root_url}{distro_name}/{self.distro_version}/{arch}/{major_ver} {self.distro_codename} main"
                 )
-            ret = self.proc.run(self.pkg_mngr, "update")
             self._check_retcode(ret)
             pkgs_to_install = self.salt_pkgs
 
@@ -492,14 +491,17 @@ class SaltPkgInstall:
             if downgrade:
                 pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt.pref")
                 pref_file.parent.mkdir(exist_ok=True)
-                pref_contents = """
+                pref_contents = textwrap.dedent(
+                    """\
                 Package: salt*
                 Pin: origin "repo.saltproject.io"
                 Pin-Priority: 1001
                 """
+                )
                 with open(pref_file, "w") as fp:
                     fp.write(pref_contents)
                 cmd.append("--allow-downgrades")
+            ret = self.proc.run(self.pkg_mngr, "update")
             ret = self.proc.run(*cmd)
             self._check_retcode(ret)
             if downgrade:

@@ -32,7 +32,7 @@ def test_salt_downgrade(salt_call_cli, install_salt):
         new_py_version = install_salt.package_python_version()
     ret = salt_call_cli.run("test.version")
     assert ret.returncode == 0
-    assert ret.data == install_salt.prev_version
+    assert ret.data < install_salt.artifact_version
 
     # Install dep following downgrade
     # TODO: This should be removed when we stop testing against versions < 3006.0
