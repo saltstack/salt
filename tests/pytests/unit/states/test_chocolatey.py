@@ -1,9 +1,11 @@
+"""
+Unit tests for chocolatey state
+"""
 import logging
 
 import pytest
 
 import salt.modules.chocolatey as chocolatey_mod
-import salt.modules.cmdmod as cmdmod
 import salt.states.chocolatey as chocolatey
 from tests.support.mock import MagicMock, patch
 
@@ -112,4 +114,3 @@ def test_source_present(list_sources):
                     },
                 }
             }
-
