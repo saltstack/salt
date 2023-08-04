@@ -530,7 +530,11 @@ def rpm(
 
     _create_repo_file(repo_file_path, f"minor/{salt_version}")
 
-    if not nightly_build_from:
+    if nightly_build_from:
+        nightly_link = create_repo_path.parent / "nightly"
+        ctx.info(f"Creating '{nightly_link.relative_to(repo_path)}' symlink ...")
+        nightly_link.symlink_to(f"minor/{salt_version}")
+    else:
         remote_versions = _get_remote_versions(
             tools.utils.STAGING_BUCKET_NAME,
             create_repo_path.parent.relative_to(repo_path),
