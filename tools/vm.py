@@ -110,7 +110,7 @@ vm.add_argument("--region", help="The AWS region.", default=AWS_REGION)
 def create(
     ctx: Context,
     name: str,
-    key_name: str = os.environ.get("RUNNER_NAME"),  # type: ignore[assignment]
+    key_name: str = os.environ.get("RUNNER_NAME") or os.environ.get("TOOLS_KEY_NAME"),  # type: ignore[assignment]
     instance_type: str = None,
     no_delete: bool = False,
     no_destroy_on_failure: bool = False,
@@ -575,7 +575,7 @@ def download_artifacts(ctx: Context, name: str):
 )
 def sync_cache(
     ctx: Context,
-    key_name: str = os.environ.get("RUNNER_NAME"),  # type: ignore[assignment]
+    key_name: str = os.environ.get("RUNNER_NAME") or os.environ.get("TOOLS_KEY_NAME"),  # type: ignore[assignment]
     delete: bool = False,
 ):
     """
@@ -636,7 +636,7 @@ def sync_cache(
 )
 def list_vms(
     ctx: Context,
-    key_name: str = os.environ.get("RUNNER_NAME"),  # type: ignore[assignment]
+    key_name: str = os.environ.get("RUNNER_NAME") or os.environ.get("TOOLS_KEY_NAME"),  # type: ignore[assignment]
     states: set[str] = None,
 ):
     """
