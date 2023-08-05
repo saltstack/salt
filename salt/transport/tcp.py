@@ -201,10 +201,6 @@ class Resolver(tornado.netutil.DefaultLoopResolver):
     Default resolver for tornado
     """
 
-    #def __init__(self, *args, **kwargs):
-    #    super().configure('tornado.netutil.DefaultLoopResolver')
-
-
 
 class TCPPubClient(salt.transport.base.PublishClient):
     """
