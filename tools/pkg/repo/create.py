@@ -534,7 +534,7 @@ def rpm(
 
     if nightly_build_from:
         nightly_latest_repo_file_path = create_repo_path.parent / "nightly_latest.repo"
-        _create_repo_file(nightly_latest_repo_file_path, "minor/nightly", "nightly")
+        _create_repo_file(nightly_latest_repo_file_path, "minor/nightly", "latest")
 
         nightly_link = create_repo_path.parent / "minor/nightly"
         ctx.info(f"Creating '{nightly_link.relative_to(repo_path)}' symlink ...")
