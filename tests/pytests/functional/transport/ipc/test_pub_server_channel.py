@@ -100,7 +100,6 @@ def test_issue_36469_tcp(salt_master, salt_minion, transport):
         server_channel = salt.channel.server.PubServerChannel.factory(opts)
 
         async def send():
-            await asyncio.sleep(0.3)
             for idx in range(num):
                 load = {
                     "tgt_type": "glob",
@@ -110,7 +109,7 @@ def test_issue_36469_tcp(salt_master, salt_minion, transport):
                 await server_channel.publish(load)
 
         asyncio.run(send())
-        time.sleep(0.3)
+        # Allow some time for sends to finish
         time.sleep(3)
         server_channel.close()
         loop.close()
@@ -122,7 +121,6 @@ def test_issue_36469_tcp(salt_master, salt_minion, transport):
         server_channel = salt.channel.server.PubServerChannel.factory(opts)
 
         async def send():
-            await asyncio.sleep(0.3)
             for idx in range(num):
                 load = {
                     "tgt_type": "glob",

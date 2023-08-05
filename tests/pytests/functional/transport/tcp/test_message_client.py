@@ -80,7 +80,6 @@ async def test_message_client_reconnect(config, client, server):
         received.append(msg)
 
     client.on_recv(handler)
-    await asyncio.sleep(0.03)
     # Prepare two packed messages
     msg = salt.utils.msgpack.dumps({"test": "test1"})
     pmsg = salt.utils.msgpack.dumps({"head": {}, "body": msg})
