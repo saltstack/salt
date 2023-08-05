@@ -485,10 +485,12 @@ def rpm(
     if salt_repo_user and salt_repo_pass:
         repo_domain = f"{salt_repo_user}:{salt_repo_pass}@{repo_domain}"
 
-    def _create_repo_file(create_repo_path, url_suffix):
+    def _create_repo_file(create_repo_path, url_suffix, nightly_path=None):
         ctx.info(f"Creating '{repo_file_path.relative_to(repo_path)}' file ...")
         if nightly_build_from:
-            base_url = f"salt-dev/{nightly_build_from}/{datetime.utcnow().strftime('%Y-%m-%d')}/"
+            if not nightly_path:
+                nightly_path = datetime.utcnow().strftime("%Y-%m-%d")
+            base_url = f"salt-dev/{nightly_build_from}/{nightly_path}/"
             repo_file_contents = "[salt-nightly-repo]"
         elif "rc" in salt_version:
             base_url = "salt_rc/"
@@ -531,6 +533,9 @@ def rpm(
     _create_repo_file(repo_file_path, f"minor/{salt_version}")
 
     if nightly_build_from:
+        nightly_latest_repo_file_path = create_repo_path.parent / "nightly_latest.repo"
+        _create_repo_file(nightly_latest_repo_file_path, "minor/nightly", "nightly")
+
         nightly_link = create_repo_path.parent / "minor/nightly"
         ctx.info(f"Creating '{nightly_link.relative_to(repo_path)}' symlink ...")
         nightly_link.symlink_to(f"minor/{salt_version}")
