@@ -18,7 +18,7 @@ cffi==1.15.1
     # via
     #   clr-loader
     #   cryptography
-charset-normalizer==2.1.1
+charset-normalizer==3.1.0
     # via requests
 cheroot==10.0.0
     # via cherrypy
@@ -30,7 +30,7 @@ colorama==0.4.6
     # via pytest
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==40.0.2
+cryptography==41.0.3
     # via -r requirements/crypto.txt
 distlib==0.3.6
     # via virtualenv

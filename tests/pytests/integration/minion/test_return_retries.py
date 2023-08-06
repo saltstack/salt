@@ -50,3 +50,68 @@ def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
 
     assert salt_minion_retry.id in data
     assert data[salt_minion_retry.id] is True
+
+
+@pytest.mark.slow_test
+def test_pillar_timeout(salt_master_factory):
+    cmd = """
+    python -c "import time; time.sleep(2.5); print('{\\"foo\\": \\"bar\\"}');\"
+    """.strip()
+    master_overrides = {
+        "ext_pillar": [
+            {"cmd_json": cmd},
+        ],
+        "auto_accept": True,
+        "worker_threads": 3,
+        "peer": True,
+    }
+    minion_overrides = {
+        "auth_timeout": 20,
+        "request_channel_timeout": 5,
+        "request_channel_tries": 1,
+    }
+    sls_name = "issue-50221"
+    sls_contents = """
+    custom_test_state:
+      test.configurable_test_state:
+        - name: example
+        - changes: True
+        - result: True
+        - comment: "Nothing has acutally been changed"
+    """
+    master = salt_master_factory.salt_master_daemon(
+        "pillar-timeout-master",
+        overrides=master_overrides,
+    )
+    minion1 = master.salt_minion_daemon(
+        random_string("pillar-timeout-1-"),
+        overrides=minion_overrides,
+    )
+    minion2 = master.salt_minion_daemon(
+        random_string("pillar-timeout-2-"),
+        overrides=minion_overrides,
+    )
+    minion3 = master.salt_minion_daemon(
+        random_string("pillar-timeout-3-"),
+        overrides=minion_overrides,
+    )
+    minion4 = master.salt_minion_daemon(
+        random_string("pillar-timeout-4-"),
+        overrides=minion_overrides,
+    )
+    cli = master.salt_cli()
+    sls_tempfile = master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+    with master.started(), minion1.started(), minion2.started(), minion3.started(), minion4.started(), sls_tempfile:
+        proc = cli.run("state.sls", sls_name, minion_tgt="*")
+        # At least one minion should have a Pillar timeout
+        assert proc.returncode == 1
+        minion_timed_out = False
+        # Find the minion that has a Pillar timeout
+        for key in proc.data:
+            if isinstance(proc.data[key], str):
+                if "Pillar timed out" in proc.data[key]:
+                    minion_timed_out = True
+                    break
+        assert minion_timed_out is True
