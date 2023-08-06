@@ -315,7 +315,6 @@ def test_clear_funcs_black(master_opts):
         "_prep_auth_info",
         "_prep_jid",
         "_prep_pub",
-        "_send_pub",
         "_send_ssh_pub",
         "connect",
         "destroy",
@@ -333,8 +332,8 @@ def test_clear_funcs_black(master_opts):
 
 
 def test_clear_funcs_get_method(clear_funcs):
-    assert getattr(clear_funcs, "_send_pub", None) is not None
-    assert clear_funcs.get_method("_send_pub") is None
+    assert getattr(clear_funcs, "_prep_pub", None) is not None
+    assert clear_funcs.get_method("_prep_pub") is None
 
 
 @pytest.mark.slow_test
