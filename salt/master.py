@@ -2,7 +2,6 @@
 This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 """
-import asyncio
 import collections
 import copy
 import ctypes
@@ -732,6 +731,12 @@ class Master(SMaster):
                 name="EventPublisher",
             )
 
+            self.process_manager.add_process(
+                PublishForwarder,
+                args=[self.opts],
+                name="PublishForwarder",
+            )
+
             if self.opts.get("reactor"):
                 if isinstance(self.opts["engines"], list):
                     rine = False
@@ -841,6 +846,44 @@ class Master(SMaster):
         self.process_manager._handle_signals(signum, sigframe)
         time.sleep(1)
         sys.exit(0)
+
+
+class PublishForwarder(salt.utils.process.SignalHandlingProcess):
+    """
+    Forward events from the event bus to the publish server.
+    """
+
+    def __init__(self, opts, channels=None, name="PublishForwarder"):
+        super().__init__(name=name)
+        self.opts = opts
+        if channels is None:
+            channels = []
+        self.channels = channels
+
+    @tornado.gen.coroutine
+    def handle_event(self, package):
+        """
+        Event handler for publish forwarder
+        """
+        tag, data = salt.utils.event.SaltEvent.unpack(package)
+        log.error("event tag is %r", tag)
+        if tag.startswith("salt/job") and tag.endswith("/publish"):
+            log.info("Forward job event to publisher server: %r", package)
+            if not self.channels:
+                for transport, opts in iter_transport_opts(self.opts):
+                    chan = salt.channel.server.PubServerChannel.factory(opts)
+                    self.channels.append(chan)
+            for chan in self.channels:
+                yield chan.publish(data)
+
+    def run(self):
+        io_loop = tornado.ioloop.IOLoop()
+        with salt.utils.event.get_master_event(
+            self.opts, self.opts["sock_dir"], io_loop=io_loop, listen=True
+        ) as event_bus:
+            event_bus.subscribe("")
+            event_bus.set_event_handler(self.handle_event)
+            io_loop.start()
 
 
 class ReqServer(salt.utils.process.SignalHandlingProcess):
@@ -2310,8 +2353,8 @@ class ClearFuncs(TransportMethods):
             payload["auth_list"] = auth_list
 
         # Send it!
+        self.event.fire_event(payload, tagify([jid, "publish"], "job"))
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
-        await self._send_pub(payload)
 
         return {
             "enc": "clear",
@@ -2359,19 +2402,6 @@ class ClearFuncs(TransportMethods):
             log.error(msg)
             return {"error": msg}
         return jid
-
-    async def _send_pub(self, load):
-        """
-        Take a load and send it across the network to connected minions
-        """
-        if not self.channels:
-            for transport, opts in iter_transport_opts(self.opts):
-                chan = salt.channel.server.PubServerChannel.factory(opts)
-                self.channels.append(chan)
-        tasks = set()
-        for chan in self.channels:
-            tasks.add(asyncio.create_task(chan.publish(load)))
-        await asyncio.gather(*tasks)
 
     @property
     def ssh_client(self):

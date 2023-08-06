@@ -219,7 +219,13 @@ def access_keys(opts):
     acl_users.add(salt.utils.user.get_user())
     for user in acl_users:
         log.info("Preparing the %s key for local communication", user)
-        key = mk_key(opts, user)
+
+        keyfile = os.path.join(opts["cachedir"], ".{}_key".format(user))
+        if os.path.exists(keyfile):
+            with salt.utils.files.fopen(keyfile, "r") as fp:
+                key = salt.utils.stringutils.to_unicode(fp.read())
+        else:
+            key = mk_key(opts, user)
         if key is not None:
             keys[user] = key
 
@@ -231,7 +237,11 @@ def access_keys(opts):
             if user not in keys and salt.utils.stringutils.check_whitelist_blacklist(
                 user, whitelist=acl_users
             ):
-                keys[user] = mk_key(opts, user)
+                if os.path.exists(keyfile):
+                    with salt.utils.files.fopen(keyfile, "r") as fp:
+                        keys[user] = salt.utils.stringutils.to_unicode(fp.read())
+                else:
+                    keys[user] = mk_key(opts, user)
         log.profile("End pwd.getpwall() call in masterapi access_keys function")
 
     return keys
