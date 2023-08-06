@@ -191,7 +191,7 @@ class AsyncReqChannel:
                 else:
                     _try += 1
                     continue
-        raise salt.ext.tornado.gen.Return(ret)
+        raise tornado.gen.Return(ret)
 
     @tornado.gen.coroutine
     def crypted_transfer_decode_dictentry(
