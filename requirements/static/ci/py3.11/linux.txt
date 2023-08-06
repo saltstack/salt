@@ -334,10 +334,9 @@ pyasn1==0.5.0
     # via
     #   pyasn1-modules
     #   rsa
-pycparser==2.21 ; python_version >= "3.9"
+pycparser==2.21
     # via
     #   -c requirements/static/ci/../pkg/py3.11/linux.txt
-    #   -r requirements/static/ci/common.in
     #   cffi
 pycryptodomex==3.9.8
     # via

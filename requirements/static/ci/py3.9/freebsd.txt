@@ -315,7 +315,6 @@ pyasn1==0.5.0
 pycparser==2.21 ; python_version >= "3.9"
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
-    #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/freebsd.in
     #   cffi
 pycryptodomex==3.9.8
