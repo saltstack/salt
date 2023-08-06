@@ -57,7 +57,7 @@ def test_keygen_sk_file(test_keygen):
 
         # test sk_file
         ret = nacl.keygen(sk_file=fpath)
-        assert "saved pk_file: {}.pub".format(fpath) == ret
+        assert f"saved pk_file: {fpath}.pub" == ret
         salt.utils.files.remove(str(fpath) + ".pub")
 
 
@@ -71,7 +71,7 @@ def test_keygen_keyfile(test_keygen):
             wfh.write(test_keygen["sk"])
 
         ret = nacl.keygen(keyfile=fpath)
-        assert "saved pk_file: {}.pub".format(fpath) == ret
+        assert f"saved pk_file: {fpath}.pub" == ret
         salt.utils.files.remove(str(fpath) + ".pub")
 
 
