@@ -67,7 +67,7 @@ class BatchAsync:
             clear_load.pop("fun"),
             clear_load["kwargs"].pop("batch"),
             self.local.opts,
-            **clear_load
+            **clear_load,
         )
         self.eauth = batch_get_eauth(clear_load["kwargs"])
         self.metadata = clear_load["kwargs"].get("metadata", {})
@@ -96,8 +96,8 @@ class BatchAsync:
         self.patterns = set()
 
     def __set_event_handler(self):
-        ping_return_pattern = "salt/job/{}/ret/*".format(self.ping_jid)
-        batch_return_pattern = "salt/job/{}/ret/*".format(self.batch_jid)
+        ping_return_pattern = f"salt/job/{self.ping_jid}/ret/*"
+        batch_return_pattern = f"salt/job/{self.batch_jid}/ret/*"
         self.event.subscribe(ping_return_pattern, match_type="glob")
         self.event.subscribe(batch_return_pattern, match_type="glob")
         self.patterns = {
@@ -111,7 +111,7 @@ class BatchAsync:
             return
         try:
             mtag, data = self.event.unpack(raw, self.event.serial)
-            for (pattern, op) in self.patterns:
+            for pattern, op in self.patterns:
                 if mtag.startswith(pattern[:-1]):
                     minion = data["id"]
                     if op == "ping_return":
@@ -146,7 +146,7 @@ class BatchAsync:
         Check if the job with specified ``jid`` was finished on the minions
         """
         if self.event:
-            find_job_return_pattern = "salt/job/{}/ret/*".format(jid)
+            find_job_return_pattern = f"salt/job/{jid}/ret/*"
             self.event.unsubscribe(find_job_return_pattern, match_type="glob")
             self.patterns.remove((find_job_return_pattern, "find_job_return"))
 
@@ -178,7 +178,7 @@ class BatchAsync:
             try:
                 if not_done:
                     jid = self.jid_gen()
-                    find_job_return_pattern = "salt/job/{}/ret/*".format(jid)
+                    find_job_return_pattern = f"salt/job/{jid}/ret/*"
                     self.patterns.add((find_job_return_pattern, "find_job_return"))
                     self.event.subscribe(find_job_return_pattern, match_type="glob")
                     ret = yield self.local.run_job_async(
@@ -188,7 +188,7 @@ class BatchAsync:
                         "list",
                         gather_job_timeout=self.opts["gather_job_timeout"],
                         jid=jid,
-                        **self.eauth
+                        **self.eauth,
                     )
                     yield salt.ext.tornado.gen.sleep(self.opts["gather_job_timeout"])
                     if self.event:
@@ -219,7 +219,7 @@ class BatchAsync:
                 gather_job_timeout=self.opts["gather_job_timeout"],
                 jid=self.ping_jid,
                 metadata=self.metadata,
-                **self.eauth
+                **self.eauth,
             )
             self.targeted_minions = set(ping_return["minions"])
             # start batching even if not all minions respond to ping
@@ -242,9 +242,7 @@ class BatchAsync:
                 "down_minions": self.targeted_minions.difference(self.minions),
                 "metadata": self.metadata,
             }
-            ret = self.event.fire_event(
-                data, "salt/batch/{}/start".format(self.batch_jid)
-            )
+            ret = self.event.fire_event(data, f"salt/batch/{self.batch_jid}/start")
             if self.event:
                 self.event.io_loop.spawn_callback(self.run_next)
 
@@ -265,7 +263,7 @@ class BatchAsync:
                 "timedout_minions": self.timedout_minions,
                 "metadata": self.metadata,
             }
-            self.event.fire_event(data, "salt/batch/{}/done".format(self.batch_jid))
+            self.event.fire_event(data, f"salt/batch/{self.batch_jid}/done")
 
             # release to the IOLoop to allow the event to be published
             # before closing batch async execution
@@ -276,7 +274,7 @@ class BatchAsync:
         """
         Safely close the batch and destroy the object
         """
-        for (pattern, label) in self.patterns:
+        for pattern, label in self.patterns:
             self.event.unsubscribe(pattern, match_type="glob")
         self.event.remove_event_handler(self.__event_handler)
         self.event = None
