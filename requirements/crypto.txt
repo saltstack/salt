@@ -1,2 +1,2 @@
 pycryptodomex>=3.9.8
-cryptography>=40.0.2
+cryptography>=40.0.3
