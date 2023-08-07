@@ -40,7 +40,6 @@ def pkg_paths_salt_user():
         "/opt/saltstack/salt/lib/python3.10/site-packages/salt/cloud/deploy",
         "/etc/salt/pki/master",
         "/etc/salt/master.d",
-        "/etc/salt/minion.d",
         "/var/log/salt/master",
         "/var/log/salt/api",
         "/var/log/salt/key",
