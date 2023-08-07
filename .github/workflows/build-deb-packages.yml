@@ -35,7 +35,7 @@ jobs:
           - src
 
     container:
-      image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-11
+      image: ghcr.io/saltstack/salt-ci-containers/packaging:debian-12
 
     steps:
       # Checkout here so we can easily use custom actions

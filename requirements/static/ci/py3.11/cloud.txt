@@ -8,7 +8,7 @@ apache-libcloud==3.7.0 ; sys_platform != "win32"
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   -r requirements/static/ci/cloud.in
-certifi==2023.5.7
+certifi==2023.07.22
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   requests
@@ -20,7 +20,7 @@ charset-normalizer==2.1.1
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   requests
-cryptography==40.0.2
+cryptography==41.0.2
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   pyspnego
