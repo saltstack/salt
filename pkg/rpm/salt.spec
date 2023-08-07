@@ -32,6 +32,8 @@ Group:   System Environment/Daemons
 License: ASL 2.0
 URL:     https://saltproject.io/
 
+Provides:  salt = %{version}
+Obsoletes: salt3 < 3006
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -68,6 +70,8 @@ servers, handle them quickly and through a simple and manageable interface.
 Summary:    Management component for salt, a parallel remote execution system
 Group:      System Environment/Daemons
 Requires:   %{name} = %{version}-%{release}
+Provides:   salt-master = %{version}
+Obsoletes:  salt3-master < 3006
 
 %description master
 The Salt master is the central server to which all minions connect.
@@ -77,6 +81,8 @@ The Salt master is the central server to which all minions connect.
 Summary:    Client component for Salt, a parallel remote execution system
 Group:      System Environment/Daemons
 Requires:   %{name} = %{version}-%{release}
+Provides:   salt-minion = %{version}
+Obsoletes:  salt3-minion < 3006
 
 %description minion
 The Salt minion is the agent component of Salt. It listens for instructions
@@ -87,6 +93,8 @@ from the master, runs jobs, and returns results back to the master.
 Summary:    Master-of-master component for Salt, a parallel remote execution system
 Group:      System Environment/Daemons
 Requires:   %{name}-master = %{version}-%{release}
+Provides:   salt-syndic = %{version}
+Obsoletes:  salt3-syndic < 3006
 
 %description syndic
 The Salt syndic is a master daemon which can receive instruction from a
@@ -98,6 +106,8 @@ infrastructure.
 Summary:    REST API for Salt, a parallel remote execution system
 Group:      Applications/System
 Requires:   %{name}-master = %{version}-%{release}
+Provides:   salt-api = %{version}
+Obsoletes:  salt3-api < 3006
 
 %description api
 salt-api provides a REST interface to the Salt master.
@@ -107,6 +117,8 @@ salt-api provides a REST interface to the Salt master.
 Summary:    Cloud provisioner for Salt, a parallel remote execution system
 Group:      Applications/System
 Requires:   %{name}-master = %{version}-%{release}
+Provides:   salt-cloud = %{version}
+Obsoletes:  salt3-cloud < 3006
 
 %description cloud
 The salt-cloud tool provisions new cloud VMs, installs salt-minion on them, and
@@ -117,6 +129,8 @@ adds them to the master's collection of controllable minions.
 Summary:    Agentless SSH-based version of Salt, a parallel remote execution system
 Group:      Applications/System
 Requires:   %{name} = %{version}-%{release}
+Provides:   salt-ssh = %{version}
+Obsoletes:  salt3-ssh < 3006
 
 %description ssh
 The salt-ssh tool can run remote execution functions and states without the use

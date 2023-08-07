@@ -6,16 +6,16 @@
 #
 autocommand==2.2.2
     # via jaraco.text
-certifi==2023.5.7
+certifi==2023.07.22
     # via
     #   -r requirements/windows.txt
     #   requests
-cffi==1.15.1
+cffi==1.14.6
     # via
     #   -r requirements/windows.txt
     #   clr-loader
     #   cryptography
-charset-normalizer==2.1.1
+charset-normalizer==3.1.0
     # via requests
 cheroot==10.0.0
     # via cherrypy
@@ -25,9 +25,10 @@ clr-loader==0.2.4
     # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==40.0.2
+cryptography==41.0.3
     # via
     #   -r requirements/crypto.txt
+    #   -r requirements/windows.txt
     #   pyopenssl
 distro==1.8.0
     # via -r requirements/base.txt
@@ -78,7 +79,7 @@ packaging==23.1
     # via -r requirements/base.txt
 portend==3.1.0
     # via cherrypy
-psutil==5.9.5
+psutil==5.8.0
     # via -r requirements/base.txt
 pyasn1==0.4.8
     # via -r requirements/windows.txt
@@ -107,7 +108,7 @@ pywin32==306
     #   -r requirements/windows.txt
     #   cherrypy
     #   wmi
-pyyaml==6.0
+pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.1.0
     # via -r requirements/zeromq.txt

@@ -12,7 +12,7 @@ attrs==23.1.0
     #   pytest-system-statistics
 autocommand==2.2.2
     # via jaraco.text
-certifi==2023.5.7
+certifi==2023.07.22
     # via requests
 cffi==1.15.1
     # via
@@ -30,7 +30,7 @@ colorama==0.4.6
     # via pytest
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==41.0.1
+cryptography==41.0.3
     # via -r requirements/crypto.txt
 distlib==0.3.6
     # via virtualenv
@@ -111,7 +111,7 @@ pytest-salt-factories==1.0.0rc17
     # via -r requirements/static/ci/pkgtests-windows.in
 pytest-shell-utilities==1.7.0
     # via pytest-salt-factories
-pytest-skip-markers==1.4.0
+pytest-skip-markers==1.4.1
     # via
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -136,7 +136,7 @@ pywin32==306
     # via
     #   pytest-skip-markers
     #   wmi
-pyyaml==6.0
+pyyaml==6.0.1
     # via -r requirements/base.txt
 pyzmq==25.1.0
     # via

@@ -8,7 +8,7 @@ in a number of ways:
 -  Use Salt and open well-written bug reports.
 -  Join a `working group <https://github.com/saltstack/community>`__.
 -  Answer questions on `irc <https://web.libera.chat/#salt>`__,
-   the `community Slack <https://join.slack.com/t/saltstackcommunity/shared_invite/zt-3av8jjyf-oBQ2M0vhXOhJpNpRkPWBvg>`__,
+   the `community Slack <https://join.slack.com/t/saltstackcommunity/shared_invite/zt-1zlfxffs1-NuEH~G9TzOeuNGdsfZIl3w>`__,
    the `salt-users mailing
    list <https://groups.google.com/forum/#!forum/salt-users>`__,
    `Server Fault <https://serverfault.com/questions/tagged/saltstack>`__,
