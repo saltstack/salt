@@ -21,6 +21,12 @@ def roster_file_new():
 
 
 @pytest.fixture
+def roster_file_priv():
+    """ Fixture containing a specified "priv" argument. """
+    return pathlib.Path(__file__).parent / "terraform.data" / "terraform-new-specific-priv.tfstate"
+
+
+@pytest.fixture
 def pki_dir():
     return pathlib.Path(__file__).parent / "terraform.data"
 
@@ -151,6 +157,33 @@ def test_defaults_new_matching(pki_dir, roster_file_new):
 
     with patch.dict(terraform.__opts__, {"roster_file": str(roster_file_new)}):
         ret = terraform.targets("*1")
+        assert expected_result == ret
+
+
+def test_specified_priv(pki_dir, roster_file_priv):
+    """
+    Test the output of a fixture tfstate file which contains libvirt
+    resources using matching
+    """
+    expected_result = {
+        "web0": {
+            "host": "192.168.122.106",
+            "user": "root",
+            "passwd": "linux",
+            "timeout": 22,
+            "priv": str(pki_dir / "ssh" / "salt-ssh.rsa"),
+        },
+        "web1": {
+            "host": "192.168.122.107",
+            "user": "root",
+            "passwd": "linux",
+            "timeout": 22,
+            "priv": "tests/pytests/unit/roster/terraform.data/ssh/salt-ssh-custom.rsa",
+        },
+    }
+
+    with patch.dict(terraform.__opts__, {"roster_file": str(roster_file_priv)}):
+        ret = terraform.targets("*")
         assert expected_result == ret
 
 
