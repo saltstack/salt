@@ -31,6 +31,10 @@ on:
         type: boolean
         default: false
         description: Sign Windows Packages
+      skip-test-pypi-publish:
+        type: boolean
+        default: false
+        description: Skip publishing the source package to Test PyPi(For example, CVE releases)
       skip-salt-test-suite:
         type: boolean
         default: false
@@ -160,7 +164,7 @@ concurrency:
   publish-pypi:
     <%- do conclusion_needs.append('publish-pypi') %>
     name: Publish to PyPi(test)
-    if: ${{ github.event.repository.fork != true }}
+    if: ${{ inputs.skip-test-pypi-publish != true && github.event.repository.fork != true }}
     needs:
       - prepare-workflow
       - upload-release-artifacts
