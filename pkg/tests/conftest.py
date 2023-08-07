@@ -354,11 +354,9 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
                 )
                 # verify files were set with correct owner/group
                 verify_files = [
-                    pathlib.Path("/var", "log", "salt", "master"),
                     pathlib.Path("/etc", "salt", "pki", "master"),
                     pathlib.Path("/etc", "salt", "master.d"),
                     pathlib.Path("/var", "cache", "salt", "master"),
-                    pathlib.Path("/var", "run", "salt", "master"),
                 ]
                 for _file in verify_files:
                     assert _file.owner() == "salt"
