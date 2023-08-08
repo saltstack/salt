@@ -16,6 +16,7 @@ MANIFEST
 .pytest_cache
 Pipfile.lock
 .mypy_cache/*
+.tools-venvs/
 
 # virtualenv
 # - ignores directories of a virtualenv when you create it right on

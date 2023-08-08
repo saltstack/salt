@@ -3,6 +3,7 @@ Salt package
 """
 
 import importlib
+import os
 import sys
 import warnings
 
@@ -11,6 +12,53 @@ if sys.version_info < (3,):
         "\n\nAfter the Sodium release, 3001, Salt no longer supports Python 2. Exiting.\n\n"
     )
     sys.stderr.flush()
+
+
+class NaclImporter:
+    """
+    Import hook to force PyNaCl to perform dlopen on libsodium with the
+    RTLD_DEEPBIND flag. This is to work around an issue where pyzmq does a dlopen
+    with RTLD_GLOBAL which then causes calls to libsodium to resolve to
+    tweetnacl when it's been bundled with pyzmq.
+
+    See:  https://github.com/zeromq/pyzmq/issues/1878
+    """
+
+    loading = False
+
+    def find_module(self, module_name, package_path=None):
+        if not NaclImporter.loading and module_name.startswith("nacl"):
+            NaclImporter.loading = True
+            return self
+        return None
+
+    def create_module(self, spec):
+        dlopen = hasattr(sys, "getdlopenflags")
+        if dlopen:
+            dlflags = sys.getdlopenflags()
+            # Use RTDL_DEEPBIND in case pyzmq was compiled with ZMQ_USE_TWEETNACL. This is
+            # needed because pyzmq imports libzmq with RTLD_GLOBAL.
+            if hasattr(os, "RTLD_DEEPBIND"):
+                flags = os.RTLD_DEEPBIND | dlflags
+            else:
+                flags = dlflags
+            sys.setdlopenflags(flags)
+        try:
+            mod = importlib.import_module(spec.name)
+        finally:
+            if dlopen:
+                sys.setdlopenflags(dlflags)
+        NaclImporter.loading = False
+        sys.modules[spec.name] = mod
+        return mod
+
+    def exec_module(self, module):
+        return None
+
+
+# Try our importer first
+sys.meta_path = [NaclImporter()] + sys.meta_path
+
 
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(

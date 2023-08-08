@@ -52,7 +52,18 @@ def _system_up_to_date(
     if grains["os_family"] == "Debian":
         ret = shell.run("apt", "update")
         assert ret.returncode == 0
-        ret = shell.run("apt", "upgrade", "-y")
+        env = os.environ.copy()
+        env["DEBIAN_FRONTEND"] = "noninteractive"
+        ret = shell.run(
+            "apt",
+            "upgrade",
+            "-y",
+            "-o",
+            "DPkg::Options::=--force-confdef",
+            "-o",
+            "DPkg::Options::=--force-confold",
+            env=env,
+        )
         assert ret.returncode == 0
     elif grains["os_family"] == "Redhat":
         ret = shell.run("yum", "update", "-y")

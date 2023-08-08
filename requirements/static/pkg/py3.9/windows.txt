@@ -6,7 +6,7 @@
 #
 autocommand==2.2.2
     # via jaraco.text
-certifi==2023.5.7
+certifi==2023.07.22
     # via
     #   -r requirements/windows.txt
     #   requests
@@ -15,7 +15,7 @@ cffi==1.14.6
     #   -r requirements/windows.txt
     #   clr-loader
     #   cryptography
-charset-normalizer==2.1.1
+charset-normalizer==3.1.0
     # via requests
 cheroot==10.0.0
     # via cherrypy
@@ -25,7 +25,7 @@ clr-loader==0.2.4
     # via pythonnet
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==41.0.2
+cryptography==41.0.3
     # via
     #   -r requirements/crypto.txt
     #   -r requirements/windows.txt
