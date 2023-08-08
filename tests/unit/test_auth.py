@@ -370,7 +370,7 @@ class MasterACLTestCase(ModuleCase):
         self.assertEqual(
             self.fire_event_mock.call_args[0][0]["fun"],
             requested_function,
-            "Did not fire {} for minion glob".format(requested_function),
+            f"Did not fire {requested_function} for minion glob",
         )
 
     def test_master_function_glob(self):
