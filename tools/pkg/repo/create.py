@@ -531,7 +531,7 @@ def rpm(
     _create_repo_file(repo_file_path, f"minor/{salt_version}")
 
     if nightly_build_from:
-        nightly_link = create_repo_path.parent / "minor/nightly"
+        nightly_link = create_repo_path.parent / "minor/latest"
         ctx.info(f"Creating '{nightly_link.relative_to(repo_path)}' symlink ...")
         nightly_link.symlink_to(f"minor/{salt_version}")
     else:
