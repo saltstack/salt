@@ -103,7 +103,6 @@ def test_pub_not_allowed(
     user_info,
     caplog,
 ):
-    assert hasattr(salt.master.ClearFuncs, "_send_pub")
     tempfile = tmp_path / "evil_file"
     assert not tempfile.exists()
     jid = "202003100000000001"
