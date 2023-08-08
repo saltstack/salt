@@ -252,7 +252,7 @@ Official images are available under the ``linode`` namespace.
         ----------
         linode:
             ----------
-            linode/alpine3.10:
+            linode/ubuntu22.04:
                 ----------
                 created:
                     2019-06-20T17:17:11
@@ -267,7 +267,7 @@ Official images are available under the ``linode`` namespace.
                 expiry:
                     None
                 id:
-                    linode/alpine3.10
+                    linode/ubuntu22.04
                 is_public:
                     True
                 label:
