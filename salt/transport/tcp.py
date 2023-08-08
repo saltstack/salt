@@ -177,6 +177,7 @@ class LoadBalancerServer(SignalHandlingProcess):
         self._socket.setblocking(1)
         self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
         self._socket.listen(self.backlog)
+
         while True:
             try:
                 # Wait for a connection to occur since the socket is
