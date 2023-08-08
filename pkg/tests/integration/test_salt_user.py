@@ -61,6 +61,12 @@ def pkg_paths_salt_user_exclusions():
     return paths
 
 
+@pytest.fixture(autouse=True)
+def skip_on_non_relenv(install_salt):
+    if not install_salt.relenv:
+        pytest.skip("The salt user only exists on relenv versions of salt")
+
+
 def test_salt_user_master(salt_master, install_salt):
     """
     Test the correct user is running the Salt Master

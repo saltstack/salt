@@ -5,6 +5,11 @@ def test_help(install_salt):
     for cmd in install_salt.binary_paths.values():
         # TODO: add back salt-cloud and salt-ssh when its fixed
         cmd = [str(x) for x in cmd]
+
+        if len(cmd) > 1 and "shell" in cmd[1]:
+            # Singlebin build, unable to get the version
+            continue
+
         if "python" in cmd[0]:
             ret = install_salt.proc.run(*cmd, "--version")
             assert "Python" in ret.stdout
