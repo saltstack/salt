@@ -70,7 +70,7 @@ Set up a profile configuration in ``/etc/salt/cloud.profiles.d/``:
 Migrating to APIv4
 ------------------
 
-You will need to generate a new token for your account. See https://www.linode.com/docs/platform/api/getting-started-with-the-linode-api/#create-an-api-token
+You will need to generate a new token for your account. See https://www.linode.com/docs/products/tools/api/get-started/#create-an-api-token
 
 There are a few changes to note:
 - There has been a general move from label references to ID references. The profile configuration parameters ``location``, ``size``, and ``image`` have moved from being label based references to IDs. See the profile section for more information. In addition to these inputs being changed, ``avail_sizes``, ``avail_locations``, and ``avail_images`` now output options sorted by ID instead of label.
