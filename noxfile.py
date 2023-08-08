@@ -1881,5 +1881,7 @@ def test_pkgs_onedir(session):
         )
         if "downgrade" in chunk:
             pytest_args.append("--use-prev-version")
+        if chunk in ("upgrade-classic", "downgrade-classic"):
+            pytest_args.append("--classic")
         _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
     sys.exit(0)

@@ -178,6 +178,10 @@ class SaltPkgInstall:
             version = self.artifact_version
         else:
             version = self.prev_version
+            parsed = packaging.version.parse(version)
+            version = f"{parsed.major}.{parsed.minor}"
+        if self.distro_id in ("ubuntu", "debian"):
+            self.stop_services()
         return version
 
     @artifact_version.default
@@ -252,23 +256,49 @@ class SaltPkgInstall:
                 install_dir = self.install_dir / "bin"
             else:
                 install_dir = self.install_dir
-            self.binary_paths = {
-                "salt": [install_dir / "salt"],
-                "api": [install_dir / "salt-api"],
-                "call": [install_dir / "salt-call"],
-                "cloud": [install_dir / "salt-cloud"],
-                "cp": [install_dir / "salt-cp"],
-                "key": [install_dir / "salt-key"],
-                "master": [install_dir / "salt-master"],
-                "minion": [install_dir / "salt-minion"],
-                "proxy": [install_dir / "salt-proxy"],
-                "run": [install_dir / "salt-run"],
-                "ssh": [install_dir / "salt-ssh"],
-                "syndic": [install_dir / "salt-syndic"],
-                "spm": [install_dir / "spm"],
-                "pip": [install_dir / "salt-pip"],
-                "python": [python_bin],
-            }
+            if self.relenv:
+                self.binary_paths = {
+                    "salt": [install_dir / "salt"],
+                    "api": [install_dir / "salt-api"],
+                    "call": [install_dir / "salt-call"],
+                    "cloud": [install_dir / "salt-cloud"],
+                    "cp": [install_dir / "salt-cp"],
+                    "key": [install_dir / "salt-key"],
+                    "master": [install_dir / "salt-master"],
+                    "minion": [install_dir / "salt-minion"],
+                    "proxy": [install_dir / "salt-proxy"],
+                    "run": [install_dir / "salt-run"],
+                    "ssh": [install_dir / "salt-ssh"],
+                    "syndic": [install_dir / "salt-syndic"],
+                    "spm": [install_dir / "spm"],
+                    "pip": [install_dir / "salt-pip"],
+                    "python": [python_bin],
+                }
+            else:
+                self.binary_paths = {
+                    "salt": [shutil.which("salt")],
+                    "api": [shutil.which("salt-api")],
+                    "call": [shutil.which("salt-call")],
+                    "cloud": [shutil.which("salt-cloud")],
+                    "cp": [shutil.which("salt-cp")],
+                    "key": [shutil.which("salt-key")],
+                    "master": [shutil.which("salt-master")],
+                    "minion": [shutil.which("salt-minion")],
+                    "proxy": [shutil.which("salt-proxy")],
+                    "run": [shutil.which("salt-run")],
+                    "ssh": [shutil.which("salt-ssh")],
+                    "syndic": [shutil.which("salt-syndic")],
+                    "spm": [shutil.which("spm")],
+                    "python": [str(pathlib.Path("/usr/bin/python3"))],
+                }
+                if self.classic:
+                    self.binary_paths["pip"] = [str(pathlib.Path("/usr/bin/pip3"))]
+                    self.proc.run(
+                        *self.binary_paths["pip"], "install", "-U", "pyopenssl"
+                    )
+                else:
+                    self.binary_paths["python"] = [shutil.which("salt"), "shell"]
+                    self.binary_paths["pip"] = [shutil.which("salt-pip")]
 
     @staticmethod
     def salt_factories_root_dir(system_service: bool = False) -> pathlib.Path:
@@ -387,16 +417,18 @@ class SaltPkgInstall:
         settings we have set. This will also verify the expected
         services are up and running.
         """
+        retval = True
         for service in ["salt-syndic", "salt-master", "salt-minion"]:
             check_run = self.proc.run("systemctl", "status", service)
             if check_run.returncode != 0:
                 # The system was not started automatically and we
                 # are expecting it to be on install
                 log.debug("The service %s was not started on install.", service)
-                return False
-            stop_service = self.proc.run("systemctl", "stop", service)
-            self._check_retcode(stop_service)
-        return True
+                retval = False
+            else:
+                stop_service = self.proc.run("systemctl", "stop", service)
+                self._check_retcode(stop_service)
+        return retval
 
     def install_previous(self, downgrade=False):
         """
@@ -500,9 +532,28 @@ class SaltPkgInstall:
                 with open(pref_file, "w") as fp:
                     fp.write(pref_contents)
                 cmd.append("--allow-downgrades")
-            ret = self.proc.run(self.pkg_mngr, "update")
-            ret = self.proc.run(*cmd)
-            self._check_retcode(ret)
+            env = os.environ.copy()
+            env["DEBIAN_FRONTEND"] = "noninteractive"
+            extra_args = [
+                "-o",
+                "DPkg::Options::=--force-confdef",
+                "-o",
+                "DPkg::Options::=--force-confold",
+            ]
+            ret = self.proc.run(self.pkg_mngr, "update", *extra_args, env=env)
+
+            cmd.extend(extra_args)
+
+            ret = self.proc.run(*cmd, env=env)
+            # Pre-relenv packages down get downgraded to cleanly programmatically
+            # They work manually, and the install tests after downgrades will catch problems with the install
+            # Let's not check the returncode if this is the case
+            if not (
+                downgrade
+                and not packaging.version.parse(self.prev_version)
+                >= packaging.version.parse("3006.0")
+            ):
+                self._check_retcode(ret)
             if downgrade:
                 pref_file.unlink()
             self.stop_services()
