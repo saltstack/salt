@@ -235,26 +235,6 @@ class MockState:
             pass
 
 
-class MockSerial:
-    """
-    Mock Class
-    """
-
-    @staticmethod
-    def load(data):
-        """
-        Mock load method
-        """
-        return {"A": "B"}
-
-    @staticmethod
-    def dump(data, data1):
-        """
-        Mock dump method
-        """
-        return True
-
-
 class MockTarFile:
     """
     Mock tarfile class
@@ -798,36 +778,33 @@ def test_highstate():
                         mock = MagicMock(return_value=True)
                         with patch.object(state, "_filter_running", mock):
                             mock = MagicMock(return_value=True)
-                            with patch.object(salt.payload, "Serial", mock):
-                                with patch.object(os.path, "join", mock):
-                                    with patch.object(state, "_set" "_retcode", mock):
-                                        assert state.highstate(arg)
+                            with patch.object(os.path, "join", mock):
+                                with patch.object(state, "_set" "_retcode", mock):
+                                    assert state.highstate(arg)
 
 
 def test_clear_request():
     """
     Test to clear out the state execution request without executing it
     """
-    mock = MagicMock(return_value=True)
-    with patch.object(salt.payload, "Serial", mock):
-        mock = MagicMock(side_effect=[False, True, True])
-        with patch.object(os.path, "isfile", mock):
-            assert state.clear_request("A")
+    mock = MagicMock(side_effect=[False, True, True])
+    with patch.object(os.path, "isfile", mock):
+        assert state.clear_request("A")
 
-            mock = MagicMock(return_value=True)
-            with patch.object(os, "remove", mock):
-                assert state.clear_request()
+        mock = MagicMock(return_value=True)
+        with patch.object(os, "remove", mock):
+            assert state.clear_request()
 
-            mock = MagicMock(return_value={})
-            with patch.object(state, "check_request", mock):
-                assert not state.clear_request("A")
+        mock = MagicMock(return_value={})
+        with patch.object(state, "check_request", mock):
+            assert not state.clear_request("A")
 
 
 def test_check_request():
     """
     Test to return the state request information
     """
-    with patch("salt.modules.state.salt.payload", MockSerial):
+    with patch("salt.payload.load", MagicMock(return_value={"A": "B"})):
         mock = MagicMock(side_effect=[True, True, False])
         with patch.object(os.path, "isfile", mock):
             with patch("salt.utils.files.fopen", mock_open(b"")):
@@ -933,42 +910,42 @@ def test_get_test_value():
     with patch.dict(state.__opts__, {test_arg: True}):
         assert state._get_test_value(
             test=None
-        ), "Failure when {} is True in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is True in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: "blah"}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is blah in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is blah in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: "true"}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is true in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is true in __opts__"
 
     with patch.dict(config.__opts__, {test_arg: False}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is False in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is False in __opts__"
 
     with patch.dict(config.__opts__, {}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} does not exist in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} does not exist in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: None}):
         assert (
             state._get_test_value(test=None) is None
-        ), "Failure when {} is None in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is None in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: True}):
         assert state._get_test_value(
             test=None
-        ), "Failure when {} is True in __pillar__".format(test_arg)
+        ), f"Failure when {test_arg} is True in __pillar__"
 
     with patch.dict(config.__pillar__, {"master": {test_arg: True}}):
         assert state._get_test_value(
             test=None
-        ), "Failure when {} is True in master __pillar__".format(test_arg)
+        ), f"Failure when {test_arg} is True in master __pillar__"
 
     with patch.dict(config.__pillar__, {"master": {test_arg: False}}):
         with patch.dict(config.__pillar__, {test_arg: True}):
@@ -989,13 +966,13 @@ def test_get_test_value():
     with patch.dict(state.__opts__, {"test": False}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is False in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is False in __opts__"
 
     with patch.dict(state.__opts__, {"test": False}):
         with patch.dict(config.__pillar__, {"master": {test_arg: True}}):
             assert state._get_test_value(
                 test=None
-            ), "Failure when {} is False in __opts__".format(test_arg)
+            ), f"Failure when {test_arg} is False in __opts__"
 
     with patch.dict(state.__opts__, {}):
         assert state._get_test_value(test=True), "Failure when test is True as arg"
@@ -1264,7 +1241,7 @@ def test_event():
         "tag": "a_event_tag",
     }
 
-    _expected = '"date": "{}"'.format(now)
+    _expected = f'"date": "{now}"'
     with patch.object(SaltEvent, "get_event", return_value=event_returns):
         print_cli_mock = MagicMock()
         with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
