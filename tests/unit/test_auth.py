@@ -18,7 +18,6 @@ from tests.support.unit import TestCase
 class LoadAuthTestCase(TestCase):
     def setUp(self):  # pylint: disable=W0221
         patches = (
-            ("salt.payload.Serial", None),
             (
                 "salt.loader.auth",
                 dict(
@@ -166,7 +165,7 @@ class MasterACLTestCase(ModuleCase):
 
         patches = (
             ("zmq.Context", MagicMock()),
-            ("salt.payload.Serial.dumps", MagicMock()),
+            ("salt.payload.dumps", MagicMock()),
             ("salt.master.tagify", MagicMock()),
             ("salt.utils.event.SaltEvent.fire_event", self.fire_event_mock),
             ("salt.auth.LoadAuth.time_auth", MagicMock(return_value=True)),
