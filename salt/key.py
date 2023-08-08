@@ -725,7 +725,9 @@ class Key:
         else:
             self.check_minion_cache()
         if self.opts.get("rotate_aes_key"):
-            salt.crypt.dropfile(self.opts["cachedir"], self.opts["user"])
+            salt.crypt.dropfile(
+                self.opts["cachedir"], self.opts["user"], self.opts["id"]
+            )
         return self.name_match(match) if match is not None else self.dict_match(matches)
 
     def delete_den(self):
@@ -758,7 +760,9 @@ class Key:
                     pass
         self.check_minion_cache()
         if self.opts.get("rotate_aes_key"):
-            salt.crypt.dropfile(self.opts["cachedir"], self.opts["user"])
+            salt.crypt.dropfile(
+                self.opts["cachedir"], self.opts["user"], self.opts["id"]
+            )
         return self.list_keys()
 
     def reject(
@@ -792,7 +796,9 @@ class Key:
                     pass
         self.check_minion_cache()
         if self.opts.get("rotate_aes_key"):
-            salt.crypt.dropfile(self.opts["cachedir"], self.opts["user"])
+            salt.crypt.dropfile(
+                self.opts["cachedir"], self.opts["user"], self.opts["id"]
+            )
         return self.name_match(match) if match is not None else self.dict_match(matches)
 
     def reject_all(self):
@@ -812,7 +818,9 @@ class Key:
                 pass
         self.check_minion_cache()
         if self.opts.get("rotate_aes_key"):
-            salt.crypt.dropfile(self.opts["cachedir"], self.opts["user"])
+            salt.crypt.dropfile(
+                self.opts["cachedir"], self.opts["user"], self.opts["id"]
+            )
         return self.list_keys()
 
     def finger(self, match, hash_type=None):

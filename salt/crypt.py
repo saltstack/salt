@@ -81,10 +81,20 @@ if not HAS_M2 and not HAS_CRYPTO:
 log = logging.getLogger(__name__)
 
 
-def dropfile(cachedir, user=None):
+def read_dropfile(cachedir):
+    dfn = os.path.join(cachedir, ".dfn")
+    try:
+        with salt.utils.files.fopen(dfn, "r") as fp:
+            return fp.read()
+    except FileNotFoundError:
+        pass
+
+
+def dropfile(cachedir, user=None, master_id=""):
     """
     Set an AES dropfile to request the master update the publish session key
     """
+    dfn_next = os.path.join(cachedir, ".dfn-next")
     dfn = os.path.join(cachedir, ".dfn")
     # set a mask (to avoid a race condition on file creation) and store original.
     with salt.utils.files.set_umask(0o277):
@@ -95,17 +105,18 @@ def dropfile(cachedir, user=None):
 
         if os.path.isfile(dfn) and not os.access(dfn, os.W_OK):
             os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
-        with salt.utils.files.fopen(dfn, "wb+") as fp_:
-            fp_.write(b"")
-        os.chmod(dfn, stat.S_IRUSR)
+        with salt.utils.files.fopen(dfn_next, "w+") as fp_:
+            fp_.write(master_id)
+        os.chmod(dfn_next, stat.S_IRUSR)
         if user:
             try:
                 import pwd
 
                 uid = pwd.getpwnam(user).pw_uid
-                os.chown(dfn, uid, -1)
+                os.chown(dfn_next, uid, -1)
             except (KeyError, ImportError, OSError):
                 pass
+        os.rename(dfn_next, dfn)
 
 
 def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
@@ -1443,6 +1454,21 @@ class Crypticle:
         b64key = b64key.decode("utf-8")
         # Return data must be a base64-encoded string, not a unicode type
         return b64key.replace("\n", "")
+
+    @classmethod
+    def read_or_generate_key(cls, path, key_size=192, remove=False):
+        if remove:
+            os.remove(path)
+        with salt.utils.files.set_umask(0o177):
+            try:
+                with salt.utils.files.fopen(path, "r") as fp:
+                    return fp.read()
+            except FileNotFoundError:
+                pass
+            key = cls.generate_key_string(key_size)
+            with salt.utils.files.fopen(path, "w") as fp:
+                fp.write(key)
+            return key
 
     @classmethod
     def extract_keys(cls, key_string, key_size):

@@ -1,3 +1,6 @@
+import os
+import pathlib
+import threading
 import time
 
 import pytest
@@ -927,3 +930,72 @@ def test_run_func(maintenence):
         assert mocked_handle_presence.call_times == [0, 60, 120, 180]
         assert mocked_handle_key_rotate.call_times == [0, 60, 120, 180]
         assert mocked_check_max_open_files.call_times == [0, 60, 120, 180]
+
+
+def test_key_rotate_master_match(maintenence):
+    maintenence.event = MagicMock()
+    now = time.monotonic()
+    dfn = pathlib.Path(maintenence.opts["cachedir"]) / ".dfn"
+    salt.crypt.dropfile(
+        maintenence.opts["cachedir"],
+        maintenence.opts["user"],
+        master_id=maintenence.opts["id"],
+    )
+    assert dfn.exists()
+    with patch("salt.master.SMaster.rotate_secrets") as rotate_secrets:
+        maintenence.handle_key_rotate(now)
+        assert not dfn.exists()
+        rotate_secrets.assert_called_with(
+            maintenence.opts, maintenence.event, owner=True
+        )
+
+
+def test_key_rotate_no_master_match(maintenence):
+    now = time.monotonic()
+    dfn = pathlib.Path(maintenence.opts["cachedir"]) / ".dfn"
+    dfn.write_text("nomatch")
+    assert dfn.exists()
+    with patch("salt.master.SMaster.rotate_secrets") as rotate_secrets:
+        maintenence.handle_key_rotate(now)
+        assert dfn.exists()
+        rotate_secrets.assert_not_called()
+
+
+import stat
+
+
+@pytest.mark.slow_test
+def test_key_dfn_wait(maintenence):
+    now = time.monotonic()
+    key = pathlib.Path(maintenence.opts["cachedir"]) / ".aes"
+    salt.crypt.Crypticle.read_or_generate_key(str(key))
+    rotate_time = time.monotonic() - (maintenence.opts["publish_session"] + 1)
+    os.utime(str(key), (rotate_time, rotate_time))
+
+    dfn = pathlib.Path(maintenence.opts["cachedir"]) / ".dfn"
+
+    def run_key_rotate():
+        with patch("salt.master.SMaster.rotate_secrets") as rotate_secrets:
+            maintenence.handle_key_rotate(now)
+            assert dfn.exists()
+            rotate_secrets.assert_not_called()
+
+    thread = threading.Thread(target=run_key_rotate)
+    assert not dfn.exists()
+    start = time.monotonic()
+    thread.start()
+
+    while not dfn.exists():
+        if time.monotonic() - start > 30:
+            assert dfn.exists(), "dfn file never created"
+
+    assert maintenence.opts["id"] == dfn.read_text()
+
+    with salt.utils.files.set_umask(0o277):
+        if os.path.isfile(dfn) and not os.access(dfn, os.W_OK):
+            os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
+        dfn.write_text("othermaster")
+
+    thread.join()
+    assert time.time() - start >= 5
+    assert dfn.read_text() == "othermaster"
