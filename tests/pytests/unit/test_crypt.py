@@ -170,3 +170,22 @@ def test_verify_signature_bad_sig(tmp_path):
     msg = b"foo bar"
     sig = salt.crypt.sign_message(str(tmp_path.joinpath("foo.pem")), msg)
     assert not salt.crypt.verify_signature(str(tmp_path.joinpath("bar.pub")), msg, sig)
+
+
+def test_read_or_generate_key_string(tempdir):
+    keyfile = tempdir.tempdir / ".aes"
+    assert not keyfile.exists()
+    first_key = salt.crypt.Crypticle.read_or_generate_key(keyfile)
+    assert keyfile.exists()
+    second_key = salt.crypt.Crypticle.read_or_generate_key(keyfile)
+    assert first_key == second_key
+    third_key = salt.crypt.Crypticle.read_or_generate_key(keyfile, remove=True)
+    assert second_key != third_key
+
+
+def test_dropfile_contents(tempdir, master_opts):
+    salt.crypt.dropfile(
+        str(tempdir.tempdir), master_opts["user"], master_id=master_opts["id"]
+    )
+    with salt.utils.files.fopen(str(tempdir.tempdir / ".dfn"), "r") as fp:
+        assert master_opts["id"] == fp.read()

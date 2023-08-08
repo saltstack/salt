@@ -5,6 +5,7 @@ involves preparing the three listeners and the workers needed by the master.
 import collections
 import copy
 import ctypes
+import functools
 import logging
 import multiprocessing
 import os
@@ -137,7 +138,7 @@ class SMaster:
             return cls.secrets["aes"]["serial"].value
 
     @classmethod
-    def rotate_secrets(cls, opts=None, event=None, use_lock=True):
+    def rotate_secrets(cls, opts=None, event=None, use_lock=True, owner=False):
         log.info("Rotating master AES key")
         if opts is None:
             opts = {}
@@ -147,13 +148,13 @@ class SMaster:
             if use_lock:
                 with secret_map["secret"].get_lock():
                     secret_map["secret"].value = salt.utils.stringutils.to_bytes(
-                        secret_map["reload"]()
+                        secret_map["reload"](remove=owner)
                     )
                     if "serial" in secret_map:
                         secret_map["serial"].value = 0
             else:
                 secret_map["secret"].value = salt.utils.stringutils.to_bytes(
-                    secret_map["reload"]()
+                    secret_map["reload"](remove=owner)
                 )
                 if "serial" in secret_map:
                     secret_map["serial"].value = 0
@@ -182,8 +183,6 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         self.opts = opts
         # How often do we perform the maintenance tasks
         self.loop_interval = int(self.opts["loop_interval"])
-        # Track key rotation intervals
-        self.rotate = int(time.time())
         # A serializer for general maint operations
         self.restart_interval = int(self.opts["maintenance_interval"])
 
@@ -299,7 +298,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             ) as cache_file:
                 salt.payload.dump(keys, cache_file)
 
-    def handle_key_rotate(self, now):
+    def handle_key_rotate(self, now, drop_file_wait=5):
         """
         Rotate the AES key rotation
         """
@@ -310,24 +309,45 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             # Basic Windows permissions don't distinguish between
             # user/group/all. Check for read-only state instead.
             if salt.utils.platform.is_windows() and not os.access(dfn, os.W_OK):
-                to_rotate = True
+                to_rotate = (
+                    salt.crypt.read_dropfile(self.opts["cachedir"]) == self.opts["id"]
+                )
                 # Cannot delete read-only files on Windows.
                 os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
             elif stats.st_mode == 0o100400:
-                to_rotate = True
+                to_rotate = (
+                    salt.crypt.read_dropfile(self.opts["cachedir"]) == self.opts["id"]
+                )
             else:
                 log.error("Found dropfile with incorrect permissions, ignoring...")
-            os.remove(dfn)
+            if to_rotate:
+                os.remove(dfn)
         except os.error:
             pass
 
-        if self.opts.get("publish_session"):
-            if now - self.rotate >= self.opts["publish_session"]:
-                to_rotate = True
+        # There is no need to check key against publish_session if we're
+        # already rotating.
+        if not to_rotate and self.opts.get("publish_session"):
+            keyfile = os.path.join(self.opts["cachedir"], ".aes")
+            try:
+                stats = os.stat(keyfile)
+            except os.error as exc:
+                log.error("Unexpected condition while reading keyfile %s", exc)
+                return
+            if now - stats.st_mtime >= self.opts["publish_session"]:
+                salt.crypt.dropfile(
+                    self.opts["cachedir"], self.opts["user"], self.opts["id"]
+                )
+                # There is currently no concept of a leader in a master
+                # cluster. Lets fake it till we make it with a little
+                # waiting period.
+                time.sleep(drop_file_wait)
+                to_rotate = (
+                    salt.crypt.read_dropfile(self.opts["cachedir"]) == self.opts["id"]
+                )
 
         if to_rotate:
-            SMaster.rotate_secrets(self.opts, self.event)
-            self.rotate = now
+            SMaster.rotate_secrets(self.opts, self.event, owner=True)
 
     def handle_git_pillar(self):
         """
@@ -695,20 +715,22 @@ class Master(SMaster):
         # manager. We don't want the processes being started to inherit those
         # signal handlers
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+            keypath = os.path.join(self.opts["cachedir"], ".aes")
+            keygen = functools.partial(
+                salt.crypt.Crypticle.read_or_generate_key,
+                keypath,
+            )
 
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.secrets["aes"] = {
                 "secret": multiprocessing.Array(
-                    ctypes.c_char,
-                    salt.utils.stringutils.to_bytes(
-                        salt.crypt.Crypticle.generate_key_string()
-                    ),
+                    ctypes.c_char, salt.utils.stringutils.to_bytes(keygen())
                 ),
                 "serial": multiprocessing.Value(
                     ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
                 ),
-                "reload": salt.crypt.Crypticle.generate_key_string,
+                "reload": keygen,
             }
 
             log.info("Creating master process manager")
@@ -732,9 +754,9 @@ class Master(SMaster):
             )
 
             self.process_manager.add_process(
-                PublishForwarder,
+                EventMonitor,
                 args=[self.opts],
-                name="PublishForwarder",
+                name="EventMonitor",
             )
 
             if self.opts.get("reactor"):
@@ -848,12 +870,15 @@ class Master(SMaster):
         sys.exit(0)
 
 
-class PublishForwarder(salt.utils.process.SignalHandlingProcess):
+class EventMonitor(salt.utils.process.SignalHandlingProcess):
     """
-    Forward events from the event bus to the publish server.
+    Monitor the master event bus.
+
+     - Forward publish events to minion event publisher.
+     - Handle key rotate events.
     """
 
-    def __init__(self, opts, channels=None, name="PublishForwarder"):
+    def __init__(self, opts, channels=None, name="EventMonitor"):
         super().__init__(name=name)
         self.opts = opts
         if channels is None:
@@ -866,15 +891,17 @@ class PublishForwarder(salt.utils.process.SignalHandlingProcess):
         Event handler for publish forwarder
         """
         tag, data = salt.utils.event.SaltEvent.unpack(package)
-        log.error("event tag is %r", tag)
         if tag.startswith("salt/job") and tag.endswith("/publish"):
-            log.info("Forward job event to publisher server: %r", package)
+            data.pop("_stamp", None)
+            log.trace("Forward job event to publisher server: %r", data)
             if not self.channels:
                 for transport, opts in iter_transport_opts(self.opts):
                     chan = salt.channel.server.PubServerChannel.factory(opts)
                     self.channels.append(chan)
             for chan in self.channels:
                 yield chan.publish(data)
+        elif tag == "rotate_aes_key":
+            SMaster.rotate_secrets(self.opts, owner=False)
 
     def run(self):
         io_loop = tornado.ioloop.IOLoop()
