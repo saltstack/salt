@@ -488,7 +488,7 @@ def rpm(
     def _create_repo_file(create_repo_path, url_suffix, nightly_path=None):
         ctx.info(f"Creating '{repo_file_path.relative_to(repo_path)}' file ...")
         if nightly_build_from:
-            if not nightly_path:
+            if nightly_path is None:
                 nightly_path = datetime.utcnow().strftime("%Y-%m-%d")
             base_url = f"salt-dev/{nightly_build_from}/{nightly_path}/"
             repo_file_contents = "[salt-nightly-repo]"
