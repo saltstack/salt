@@ -1,32 +1,25 @@
-import os
-import time
 import shutil
+import time
 from pathlib import Path
 
 import pytest
-from saltfactories.utils import random_string
 
 
 @pytest.fixture(scope="module")
-def module_master(salt_master_factory):
-    yield salt_master_factory
-
-
-@pytest.fixture(scope="module")
-def master_minion(module_master):
+def master_minion(salt_master):
     config_overrides = {
-        "root_dir": f"/tmp/stsuite/{module_master.id}",
+        "root_dir": salt_master.config["root_dir"],
         "return_retry_timer_max": 0,
         "return_retry_timer": 5,
         "return_retry_tries": 30,
     }
-    factory = module_master.salt_minion_daemon(
-        module_master.id,
+    factory = salt_master.salt_minion_daemon(
+        salt_master.id,
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     factory.after_terminate(
-        pytest.helpers.remove_stale_minion_key, module_master, factory.id
+        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
     )
 
     with factory.started():
@@ -34,18 +27,18 @@ def master_minion(module_master):
 
 
 @pytest.fixture(scope="module")
-def second_minion(module_master, salt_minion_id):
+def second_minion(salt_master, salt_minion_id):
     config_overrides = {
         "return_retry_timer_max": 0,
         "return_retry_timer": 5,
         "return_retry_tries": 30,
     }
-    factory = module_master.salt_minion_daemon(
+    factory = salt_master.salt_minion_daemon(
         salt_minion_id,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     factory.after_terminate(
-        pytest.helpers.remove_stale_minion_key, module_master, factory.id
+        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
     )
 
     with factory.started():
@@ -62,10 +55,10 @@ def test_minions(
     salt_run_cli,
     salt_key_cli,
 ):
-    master_dir = Path(f"/tmp/stsuite/{salt_master.id}")
+    master_pki_dir = Path(salt_master.config["pki_dir"])
     shutil.copy(
-        master_dir / "pki" / "minion.pub",
-        master_dir / "pki" / "minions" / f"{salt_master.id}",
+        master_pki_dir / "minion.pub",
+        master_pki_dir / "minions" / f"{salt_master.id}",
     )
     master_minion.start()
 
