@@ -52,14 +52,14 @@ Set up a profile configuration in ``/etc/salt/cloud.profiles.d/``:
         # a minimal configuration
         provider: my-linode-provider
         size: g6-standard-1
-        image: linode/alpine3.12
+        image: linode/ubuntu22.04
         location: us-east
 
     my-linode-profile-advanced:
         # an advanced configuration
         provider: my-linode-provider
         size: g6-standard-3
-        image: linode/alpine3.10
+        image: linode/ubuntu22.04
         location: eu-west
         password: bogus123X
         assign_private_ip: true
