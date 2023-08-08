@@ -150,7 +150,7 @@ Migrating to APIv4
 Linode APIv3 has been removed, and APIv4 is the only available version.
 
 When switching to APIv4, you will also need to generate a new token. See
-`here <https://www.linode.com/docs/platform/api/getting-started-with-the-linode-api/#create-an-api-token>`_
+`here <https://www.linode.com/docs/products/tools/api/get-started/#create-an-api-token>`_
 for more information.
 
 Notable Changes
