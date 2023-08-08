@@ -10,6 +10,8 @@ from tornado.locks import Lock
 import salt.payload
 import salt.transport.base
 from salt.transport.tcp import (
+    USE_LOAD_BALANCER,
+    LoadBalancer,
     TCPPuller,
     _get_bind_addr,
     _get_socket,
@@ -19,8 +21,6 @@ from salt.transport.tcp import (
 from salt.utils.network import ip_bracket
 
 log = logging.getLogger(__name__)
-
-USE_LOAD_BALANCER = False
 
 
 class PublishClient(salt.transport.base.PublishClient):
@@ -47,7 +47,6 @@ class PublishClient(salt.transport.base.PublishClient):
         self.unpacker = salt.utils.msgpack.Unpacker()
         self.connected = False
         self._closing = False
-        # self.resolver = Resolver()
         self._stream = None
         self._closing = False
         self._closed = False
@@ -357,7 +356,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         with salt.utils.files.set_umask(0o177):
             self.pull_sock.start()
         while self._run.is_set():
-            await asyncio.sleep(.3)
+            await asyncio.sleep(0.3)
         await server.stop()
 
     def pre_fork(self, process_manager):
@@ -392,19 +391,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         """
         if not self.pub_sock:
             self.connect()
-        # if self.opts.get("ipc_mode", "") == "tcp":
-        #    pull_uri = int(self.opts.get("tcp_master_publish_pull", 4514))
-        # else:
-        #    pull_uri = os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
-        # if not self.pub_sock:
-        #    self.pub_sock = salt.utils.asynchronous.SyncWrapper(
-        #        salt.transport.ipc.IPCMessageClient,
-        #        (pull_uri,),
-        #        loop_kwarg="io_loop",
-        #    )
-        #    self.pub_sock.connect()
-        # await self.pub_sock.send(payload)
-        log.error("Publish send %r", payload)
         self.pub_sock.send(payload)
 
     async def publish_payload(self, package, *args):
@@ -468,7 +454,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             # pause here for very long time by serving HTTP requests and
             # waiting for keyboard interruption
             while self._run.is_set():
-                await asyncio.sleep(.3)
+                await asyncio.sleep(0.3)
             await self.site.stop()
 
         io_loop.spawn_callback(server)
@@ -559,4 +545,5 @@ class RequestClient(salt.transport.base.RequestClient):
             warnings.warn(
                 "unclosed publish client {self!r}", ResourceWarning, source=self
             )
+
     # pylint: enable=W1701
