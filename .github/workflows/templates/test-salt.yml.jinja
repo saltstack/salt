@@ -18,8 +18,7 @@
       arch: amd64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_windows }>
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
 
@@ -42,8 +41,7 @@
       arch: x86_64
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_macos }>
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
 
@@ -84,8 +82,7 @@
       arch: <{ arch }>
       testrun: ${{ needs.prepare-workflow.outputs.testrun }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version_linux }>
-      pull-labels: ${{ needs.prepare-workflow.outputs.pull-labels }}
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
 

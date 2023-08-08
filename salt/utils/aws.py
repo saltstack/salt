@@ -8,6 +8,7 @@ This is a base library used by a number of AWS services.
 :depends: requests
 """
 
+import copy
 import hashlib
 import hmac
 import logging
@@ -106,7 +107,7 @@ def get_metadata(path, refresh_token_if_needed=True):
 
     # Connections to instance meta-data must fail fast and never be proxied
     result = requests.get(
-        "http://169.254.169.254/latest/{}".format(path),
+        f"http://169.254.169.254/latest/{path}",
         proxies={"http": ""},
         headers=headers,
         timeout=AWS_METADATA_TIMEOUT,
@@ -159,7 +160,7 @@ def creds(provider):
             return provider["id"], provider["key"], ""
 
         try:
-            result = get_metadata("meta-data/iam/security-credentials/{}".format(role))
+            result = get_metadata(f"meta-data/iam/security-credentials/{role}")
         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
             return provider["id"], provider["key"], ""
 
@@ -201,7 +202,7 @@ def sig2(method, endpoint, params, provider, aws_api_version):
     params_with_headers["AWSAccessKeyId"] = access_key_id
     params_with_headers["SignatureVersion"] = "2"
     params_with_headers["SignatureMethod"] = "HmacSHA256"
-    params_with_headers["Timestamp"] = "{}".format(timestamp)
+    params_with_headers["Timestamp"] = f"{timestamp}"
     params_with_headers["Version"] = aws_api_version
     keys = sorted(params_with_headers.keys())
     values = list(list(map(params_with_headers.get, keys)))
@@ -230,9 +231,9 @@ def assumed_creds(prov_dict, role_arn, location=None):
     # current time in epoch seconds
     now = time.mktime(datetime.utcnow().timetuple())
 
-    for key, creds in __AssumeCache__.items():
+    for key, creds in copy.deepcopy(__AssumeCache__).items():
         if (creds["Expiration"] - now) <= 120:
-            __AssumeCache__[key].delete()
+            del __AssumeCache__[key]
 
     if role_arn in __AssumeCache__:
         c = __AssumeCache__[role_arn]
@@ -345,9 +346,7 @@ def sig4(
 
     for header in sorted(new_headers.keys(), key=str.lower):
         lower_header = header.lower()
-        a_canonical_headers.append(
-            "{}:{}".format(lower_header, new_headers[header].strip())
-        )
+        a_canonical_headers.append(f"{lower_header}:{new_headers[header].strip()}")
         a_signed_headers.append(lower_header)
     canonical_headers = "\n".join(a_canonical_headers) + "\n"
     signed_headers = ";".join(a_signed_headers)
@@ -389,7 +388,7 @@ def sig4(
 
     new_headers["Authorization"] = authorization_header
 
-    requesturl = "{}?{}".format(requesturl, querystring)
+    requesturl = f"{requesturl}?{querystring}"
     return new_headers, requesturl
 
 
@@ -484,11 +483,9 @@ def query(
 
     if endpoint is None:
         if not requesturl:
-            endpoint = prov_dict.get(
-                "endpoint", "{}.{}.{}".format(product, location, service_url)
-            )
+            endpoint = prov_dict.get("endpoint", f"{product}.{location}.{service_url}")
 
-            requesturl = "https://{}/".format(endpoint)
+            requesturl = f"https://{endpoint}/"
         else:
             endpoint = urllib.parse.urlparse(requesturl).netloc
             if endpoint == "":
@@ -507,7 +504,7 @@ def query(
 
     aws_api_version = prov_dict.get(
         "aws_api_version",
-        prov_dict.get("{}_api_version".format(product), DEFAULT_AWS_API_VERSION),
+        prov_dict.get(f"{product}_api_version", DEFAULT_AWS_API_VERSION),
     )
 
     # Fallback to ec2's id & key if none is found, for this component

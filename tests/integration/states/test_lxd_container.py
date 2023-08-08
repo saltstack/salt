@@ -31,10 +31,7 @@ class LxdContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             "lxd_image.absent",
             name="images:centos/7",
         )
-        self.run_state(
-            "lxd_container.absent",
-            name="test-container",
-        )
+        self.run_state("lxd_container.absent", name="test-container", stop=True)
 
     def test_02__create_container(self):
         ret = self.run_state(
@@ -42,6 +39,14 @@ class LxdContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             name="test-container",
             running=True,
             source={"type": "image", "alias": "images:centos/7"},
+            devices={
+                "data1": {"type": "disk", "source": "/tmp", "path": "/mnt/data"},
+                "port9000": {
+                    "type": "proxy",
+                    "listen": "tcp:127.0.0.1:9000",
+                    "connect": "tcp:127.0.0.1:9000",
+                },
+            },
         )
         name = "lxd_container_|-test-container_|-test-container_|-present"
         self.assertSaltTrueReturn(ret)
@@ -56,12 +61,50 @@ class LxdContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             name="test-container",
             running=True,
             source={"type": "image", "alias": "images:centos/7"},
+            devices={
+                "data1": {"type": "disk", "source": "/tmp", "path": "/mnt/data"},
+                "data2": {"type": "disk", "source": "/tmp", "path": "/mnt/data2"},
+                "port9000": {
+                    "type": "proxy",
+                    "listen": "tcp:127.0.0.1:9000",
+                    "connect": "tcp:127.0.0.1:9000",
+                },
+                "port9001": {
+                    "type": "proxy",
+                    "listen": "tcp:127.0.0.1:9001",
+                    "connect": "tcp:127.0.0.1:9001",
+                },
+                "port9002": {
+                    "type": "proxy",
+                    "listen": "tcp:127.0.0.1:9002",
+                    "connect": "tcp:127.0.0.1:9002",
+                },
+            },
         )
         ret = self.run_state(
             "lxd_container.present",
             name="test-container",
             running=True,
             source={"type": "image", "alias": "images:centos/7"},
+            devices={
+                "data1": {"type": "disk", "source": "/tmp", "path": "/mnt/data"},
+                "data2": {"type": "disk", "source": "/tmp", "path": "/mnt/data3"},
+                "port9000": {
+                    "type": "proxy",
+                    "listen": "tcp:127.0.0.1:9000",
+                    "connect": "tcp:127.0.0.1:9000",
+                },
+                "port9001": {
+                    "type": "proxy",
+                    "listen": "tcp:127.0.0.1:9001",
+                    "connect": "tcp:127.0.0.1:9009",
+                },
+                "port9003": {
+                    "type": "proxy",
+                    "listen": "tcp:127.0.0.1:9003",
+                    "connect": "tcp:127.0.0.1:9003",
+                },
+            },
             restart_on_change=True,
             config=[
                 {"key": "boot.autostart", "value": 1},
@@ -74,6 +117,12 @@ class LxdContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         assert ret[name]["changes"]["config"] == {
             "boot.autostart": 'Added config key "boot.autostart" = "1"',
             "security.privileged": 'Added config key "security.privileged" = "1"',
+        }
+        assert ret[name]["changes"]["devices"] == {
+            "data2": 'Changed device "data2"',
+            "port9001": 'Changed device "port9001"',
+            "port9002": 'Removed device "port9002"',
+            "port9003": 'Added device "port9003"',
         }
 
     def test_08__running_container(self):

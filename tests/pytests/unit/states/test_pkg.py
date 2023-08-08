@@ -1081,3 +1081,44 @@ def test__get_installable_versions_version_found():
         expected = {"dummy": {"new": "1.0.1", "old": ""}}
         ret = pkg._get_installable_versions({"dummy": None}, current=None)
         assert ret == expected
+
+
+def test_installed_salt_minion_windows():
+    mock_list_pkgs = MagicMock(
+        return_value={
+            "git": "1.34.1",
+            "salt-minion-py3": "3006.0",
+            "vim": "1.6",
+        }
+    )
+    mock_install = MagicMock(
+        return_value={
+            "salt-minion-py3": {"install status": "task started"},
+        }
+    )
+    mock_find_install_targets = MagicMock(
+        return_value=(
+            {"salt-minion-py3": "3006.1"},
+            {"salt-minion-py3": "3006.1"},
+            [],
+            {},
+            {},
+            [],
+            True,
+        )
+    )
+    salt_dict = {
+        "pkg.install": mock_install,
+        "pkg.list_pkgs": mock_list_pkgs,
+        "pkg_resource.check_extra_requirements": pkg_resource.check_extra_requirements,
+        "pkg_resource.version_clean": pkg_resource.version_clean,
+    }
+    with patch.dict(pkg.__salt__, salt_dict), patch.object(
+        pkg, "_find_install_targets", mock_find_install_targets
+    ):
+        expected = {
+            "salt-minion-py3": {"install status": "task started"},
+        }
+        ret = pkg.installed(name="salt-minion-py3", version="3006.1")
+        assert ret["result"]
+        assert ret["changes"] == expected

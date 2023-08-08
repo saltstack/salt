@@ -485,7 +485,7 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
                 with open(deploy_path, "w") as fp_:
                     fp_.write(script_contents)
             except OSError as err:
-                log.error("Failed to write the updated script: {}".format(err))
+                log.error(f"Failed to write the updated script: {err}")
 
         # Let's the rest of the build command
         Sdist.run(self)
@@ -544,7 +544,7 @@ class Clean(clean):
         for subdir in ("salt", "tests", "doc"):
             root = os.path.join(os.path.dirname(__file__), subdir)
             for dirname, _, _ in os.walk(root):
-                for to_remove_filename in glob.glob("{}/*.py[oc]".format(dirname)):
+                for to_remove_filename in glob.glob(f"{dirname}/*.py[oc]"):
                     os.remove(to_remove_filename)
 
 
@@ -849,14 +849,12 @@ class SaltDistribution(distutils.dist.Distribution):
         with open(SALT_LONG_DESCRIPTION_FILE, encoding="utf-8") as f:
             self.long_description = f.read()
         self.long_description_content_type = "text/x-rst"
-        self.python_requires = ">=3.6"
+        self.python_requires = ">=3.8"
         self.classifiers = [
             "Programming Language :: Python",
             "Programming Language :: Cython",
             "Programming Language :: Python :: 3",
             "Programming Language :: Python :: 3 :: Only",
-            "Programming Language :: Python :: 3.6",
-            "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",
             "Programming Language :: Python :: 3.10",
@@ -910,8 +908,8 @@ class SaltDistribution(distutils.dist.Distribution):
                 continue
             if attrname == "salt_version":
                 attrname = "version"
-            if hasattr(self.metadata, "set_{}".format(attrname)):
-                getattr(self.metadata, "set_{}".format(attrname))(attrvalue)
+            if hasattr(self.metadata, f"set_{attrname}"):
+                getattr(self.metadata, f"set_{attrname}")(attrvalue)
             elif hasattr(self.metadata, attrname):
                 try:
                     setattr(self.metadata, attrname, attrvalue)

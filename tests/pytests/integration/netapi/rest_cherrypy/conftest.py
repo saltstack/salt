@@ -34,8 +34,9 @@ def client_headers(auth_token, content_type_map):
     }
 
 
+# The order of these fixutres matters, app must come before io_loop.
 @pytest.fixture
-def http_server(io_loop, app, netapi_port, client_headers):
+def http_server(app, netapi_port, client_headers, io_loop):
     with netapi.TestsTornadoHttpServer(
         io_loop=io_loop, app=app, port=netapi_port, client_headers=client_headers
     ) as server:

@@ -8,6 +8,14 @@ on:
         type: string
         required: true
         description: The Salt version to set prior to building packages
+      relenv-version:
+        type: string
+        required: true
+        description: The relenv version to set prior to building packages.
+      python-version:
+        required: true
+        type: string
+        description: The version of python to use with relenv
       sign-packages:
         type: boolean
         default: false
@@ -29,6 +37,10 @@ jobs:
         arch:
           - x86
           - amd64
+        source:
+          - onedir
+          - src
+
     runs-on:
       - windows-latest
     env:
@@ -95,15 +107,34 @@ jobs:
 
       - name: Build Windows Packages
         run: |
-          tools pkg build windows --onedir salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip `
-            --salt-version ${{ inputs.salt-version }} --arch ${{ matrix.arch }} ${{
+          tools pkg build windows --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
+            matrix.source == 'onedir' &&
+            format(
+              '--onedir salt-{0}-onedir-windows-{1}.zip --salt-version {0} --arch {1} {2}',
+              inputs.salt-version,
+              matrix.arch,
               steps.check-pkg-sign.outputs.sign-pkgs == 'true' && '--sign' || ''
-            }}
+            )
+            ||
+            format('--salt-version {0} --arch {1}', inputs.salt-version, matrix.arch)
+          }}
 
-      - name: Upload ${{ matrix.arch }} Packages
+      - name: Set Artifact Name
+        id: set-artifact-name
+        shell: bash
+        run: |
+          if [ "${{ matrix.source }}" != "src" ]; then
+            echo "artifact-name-nsis=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS" >> "$GITHUB_OUTPUT"
+            echo "artifact-name-msi=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-MSI" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifact-name-nsis=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS-from-src" >> "$GITHUB_OUTPUT"
+            echo "artifact-name-msi=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-MSI-from-src" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload ${{ matrix.arch }} NSIS Packages
         uses: actions/upload-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-NSIS
+          name: ${{ steps.set-artifact-name.outputs.artifact-name-nsis }}
           path: pkg/windows/build/Salt-*.exe
           retention-days: 7
           if-no-files-found: error
@@ -111,7 +142,7 @@ jobs:
       - name: Upload ${{ matrix.arch }} MSI Package
         uses: actions/upload-artifact@v3
         with:
-          name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-MSI
+          name: ${{ steps.set-artifact-name.outputs.artifact-name-msi }}
           path: pkg/windows/build/Salt-*.msi
           retention-days: 7
           if-no-files-found: error

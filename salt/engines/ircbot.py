@@ -102,8 +102,7 @@ class IRCClient:
         self.allow_hosts = allow_hosts
         self.allow_nicks = allow_nicks
         self.disable_query = disable_query
-        self.io_loop = tornado.ioloop.IOLoop(make_current=False)
-        self.io_loop.make_current()
+        self.io_loop = tornado.ioloop.IOLoop()
         self._connect()
 
     def _connect(self):

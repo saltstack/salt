@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 @pytest.fixture(autouse=True)
 def _install_salt_extension(shell):
     if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
+        yield
         return
 
     script_name = "salt-pip"
@@ -55,7 +56,7 @@ def test_versions_report(salt_cli):
     ret_lines = [line.strip() for line in ret_lines]
 
     for header in expected:
-        assert "{}:".format(header) in ret_lines
+        assert f"{header}:" in ret_lines
 
     ret_dict = {}
     expected_keys = set()
@@ -79,10 +80,13 @@ def test_versions_report(salt_cli):
             assert key in expected_keys
             expected_keys.remove(key)
     assert not expected_keys
+
     if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
+        assert "pip" in ret_dict["Salt Package Information"]["Package Type"]
         # Stop any more testing
         return
 
+    assert "onedir" in ret_dict["Salt Package Information"]["Package Type"]
     assert "relenv" in ret_dict["Dependency Versions"]
     assert "Salt Extensions" in ret_dict
     assert "salt-analytics-framework" in ret_dict["Salt Extensions"]

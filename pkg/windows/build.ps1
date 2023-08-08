@@ -38,17 +38,12 @@ param(
 
     [Parameter(Mandatory=$false)]
     [ValidatePattern("^\d{1,2}.\d{1,2}.\d{1,2}$")]
-    [ValidateSet(
-        "3.11.2",
-        "3.10.10"
-    )]
     [Alias("p")]
-    # The version of Python to be built. Pythonnet only supports up to Python
-    # 3.8 for now. Pycurl stopped building wheel files after 7.43.0.5 which
-    # supported up to 3.8. So we're pinned to the latest version of Python 3.8.
-    # We may have to drop support for pycurl.
-    # Default is: 3.8.16
-    [String] $PythonVersion = "3.10.10",
+    [String] $PythonVersion = "3.10.12",
+
+    [Parameter(Mandatory=$false)]
+    [Alias("r")]
+    [String] $RelenvVersion = "0.12.3",
 
     [Parameter(Mandatory=$false)]
     [Alias("b")]
@@ -111,6 +106,7 @@ Write-Host $("#" * 80)
 Write-Host "Build Salt Installer Packages" -ForegroundColor Cyan
 Write-Host "- Salt Version:   $Version"
 Write-Host "- Python Version: $PythonVersion"
+Write-Host "- Relenv Version: $RelenvVersion"
 Write-Host "- Architecture:   $Architecture"
 Write-Host $("v" * 80)
 
@@ -165,9 +161,10 @@ if ( ! $SkipInstall ) {
   $KeywordArguments = @{
       Version = $PythonVersion
       Architecture = $Architecture
+      RelenvVersion = $RelenvVersion
   }
   if ( $Build ) {
-      $KeywordArguments["Build"] = $true
+      $KeywordArguments["Build"] = $false
   }
   if ( $CICD ) {
       $KeywordArguments["CICD"] = $true

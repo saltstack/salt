@@ -13,8 +13,15 @@ are built with the `relenv <https://github.com/saltstack/relative-environment-fo
 
 Docker Containers
 =================
-The Salt Project uses docker containers to build our packages. If you are building your own packages you can use
+The Salt Project uses docker containers to build our deb and rpm packages. If you are building your own packages you can use
 the same containers we build with in the Github piplines. These containers are documented `here <https://github.com/saltstack/salt-ci-containers/tree/main/custom/packaging>`_.
+
+Package Grain
+=============
+In the 3007.0 release a new package grain was added. This detects how Salt was installed using the `_pkg.txt`
+in the root of the Salt repo. By default this is set to ``pip``, but it is set to ``onedir`` when ``tools pkg build salt-onedir``
+is run in our pipelines when building our onedir packages. If you are building your own custom packages, please ensure you set
+``_pkg.txt`` contents to be the type of package you are creating. The options are ``pip``, ``onedir`` or ``system``.
 
 
 How to build onedir only
@@ -53,6 +60,13 @@ How to build onedir only
 
 How to build rpm packages
 =========================
+
+#. Ensure you are in the current Salt cloned git repo:
+
+    .. code-block:: bash
+
+       cd <path-to-salt-repo>
+
 #. Install the dependencies:
 
     .. code-block:: bash
@@ -72,12 +86,6 @@ How to build rpm packages
 
        pip install -r requirements/static/ci/py{python_version}/changelog.txt
 
-#. Ensure you are in the current Salt cloned git repo:
-
-    .. code-block:: bash
-
-       cd <path-to-salt-repo>
-
 #. (Optional) To build a specific Salt version, run tools and set Salt version:
 
     .. code-block:: bash
@@ -93,9 +101,14 @@ How to build rpm packages
        tools pkg build rpm --relenv-version <relenv-version> --python-version <python-version> --arch <arch>
 
 
-
 How to build deb packages
 =========================
+
+#. Ensure you are in the current Salt cloned git repo.:
+
+    .. code-block:: bash
+
+       cd <path-to-salt-repo>
 
 #. Install the dependencies:
 
@@ -113,12 +126,6 @@ How to build deb packages
 
        pip install -r requirements/static/ci/py{python_version}/changelog.txt
 
-#. Ensure you are in the current Salt cloned git repo.:
-
-    .. code-block:: bash
-
-       cd <path-to-salt-repo>
-
 #. (Optional) To build a specific Salt version, run tools and set Salt version:
 
     .. code-block:: bash
@@ -133,6 +140,56 @@ How to build deb packages
     .. code-block:: bash
 
        tools pkg build deb --relenv-version <relenv-version> --python-version <python-version> --arch <arch>
+
+
+How to build MacOS packages
+===========================
+
+#. Ensure you are in the current Salt cloned git repo.:
+
+    .. code-block:: bash
+
+       cd <path-to-salt-repo>
+
+#. Install the dependencies:
+
+    .. code-block:: bash
+
+       pip install -r requirements/static/ci/py{python_version}/tools.txt
+
+#. Build the MacOS package:
+
+    Only the salt-version argument is required, the rest are optional.
+    Do note that you will not be able to sign the packages when building them.
+
+    .. code-block:: bash
+
+       tools pkg build macos --salt-version <salt-version>
+
+
+How to build Windows packages
+=============================
+
+#. Ensure you are in the current Salt cloned git repo.:
+
+    .. code-block:: bash
+
+       cd <path-to-salt-repo>
+
+#. Install the dependencies:
+
+    .. code-block:: bash
+
+       pip install -r requirements/static/ci/py{python_version}/tools.txt
+
+#. Build the MacOS package:
+
+    Only the arch and salt-version arguments are required, the rest are optional.
+    Do note that you will not be able to sign the packages when building them.
+
+    .. code-block:: bash
+
+       tools pkg build windows --salt-version <salt-version> --arch <arch>
 
 
 How to access python binary

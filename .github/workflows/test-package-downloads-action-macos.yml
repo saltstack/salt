@@ -31,6 +31,10 @@ on:
         required: true
         type: string
         description: The latest salt release
+      pkg-type:
+        required: true
+        type: string
+        description: The type of artifact to download
       python-version:
         required: false
         type: string
@@ -76,7 +80,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
 
       - name: Download Onedir Tarball as an Artifact
         uses: actions/download-artifact@v3
@@ -180,7 +184,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: nox.${{ inputs.distro-slug }}.tar.*
-          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json') }}
+          key: ${{ inputs.cache-prefix }}|test-pkg-download-deps|${{ inputs.arch }}|${{ inputs.distro-slug }}|${{ inputs.nox-session }}|${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py') }}
           # If we get a cache miss here it means the dependencies step failed to save the cache
           fail-on-cache-miss: true
 
@@ -199,6 +203,7 @@ jobs:
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
           LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"
+          DOWNLOAD_TEST_PACKAGE_TYPE: ${{ inputs.pkg-type }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- download-pkgs
 
@@ -220,6 +225,7 @@ jobs:
           SALT_REPO_PASS: ${{ secrets.SALT_REPO_PASS }}
           SALT_REPO_DOMAIN_RELEASE: ${{ vars.SALT_REPO_DOMAIN_RELEASE || 'repo.saltproject.io' }}
           SALT_REPO_DOMAIN_STAGING: ${{ vars.SALT_REPO_DOMAIN_STAGING || 'staging.repo.saltproject.io' }}
+          DOWNLOAD_TEST_PACKAGE_TYPE: ${{ inputs.pkg-type }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- download-pkgs
 

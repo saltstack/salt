@@ -36,6 +36,7 @@ def test_saltutil_sync_all_nochange():
         "pillar": [],
         "matchers": [],
         "serializers": [],
+        "wrapper": [],
     }
     state_id = "somename"
     state_result = {
@@ -71,6 +72,7 @@ def test_saltutil_sync_all_test():
         "pillar": [],
         "matchers": [],
         "serializers": [],
+        "wrapper": [],
     }
     state_id = "somename"
     state_result = {
@@ -107,6 +109,7 @@ def test_saltutil_sync_all_change():
         "pillar": [],
         "matchers": [],
         "serializers": [],
+        "wrapper": [],
     }
     state_id = "somename"
     state_result = {
@@ -139,4 +142,4 @@ def test_saltutil_sync_states_should_match_saltutil_module():
     for fn in module_functions:
         assert (
             fn in state_functions
-        ), "modules.saltutil.{} has no matching state in states.saltutil".format(fn)
+        ), f"modules.saltutil.{fn} has no matching state in states.saltutil"
