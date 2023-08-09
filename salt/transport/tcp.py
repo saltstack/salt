@@ -200,7 +200,7 @@ class Resolver(tornado.netutil.DefaultLoopResolver):
     """
 
 
-class TCPPubClient(salt.transport.base.PublishClient):
+class PublishClient(salt.transport.base.PublishClient):
     """
     Tornado based TCP Pub Client
     """
@@ -456,7 +456,16 @@ class TCPPubClient(salt.transport.base.PublishClient):
         self.close()
 
 
-class TCPReqServer(salt.transport.base.DaemonizedRequestServer):
+class TCPPubClient(PublishClient):
+    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
+        salt.utils.versions.warn_until(
+            3009,
+            "TCPPubClient has been deprecated, use PublishClient instead.",
+        )
+        super().__init__(*args, **kwargs)
+
+
+class RequestServer(salt.transport.base.DaemonizedRequestServer):
     """
     Tornado based TCP Request/Reply Server
 
@@ -501,7 +510,7 @@ class TCPReqServer(salt.transport.base.DaemonizedRequestServer):
                 if exc.errno != 9:
                     raise
                 log.exception(
-                    "TCPReqServerChannel close generated an exception: %s", str(exc)
+                    "RequestServer close generated an exception: %s", str(exc)
                 )
             self.req_server = None
 
@@ -537,7 +546,7 @@ class TCPReqServer(salt.transport.base.DaemonizedRequestServer):
         message_handler: function to call with your payloads
         """
         self.message_handler = message_handler
-        log.info("ReqServer workers %s", socket)
+        log.info("RequestServer workers %s", socket)
 
         with salt.utils.asynchronous.current_ioloop(io_loop):
             if USE_LOAD_BALANCER:
@@ -569,6 +578,15 @@ class TCPReqServer(salt.transport.base.DaemonizedRequestServer):
 
     def decode_payload(self, payload):
         return payload
+
+
+class TCPReqServer(RequestServer):
+    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
+        salt.utils.versions.warn_until(
+            3009,
+            "TCPReqServer has been deprecated, use RequestServer instead.",
+        )
+        super().__init__(*args, **kwargs)
 
 
 class SaltMessageServer(tornado.tcpserver.TCPServer):
@@ -1254,7 +1272,7 @@ class TCPPuller:
         self.close()
 
 
-class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
+class PublishServer(salt.transport.base.DaemonizedPublishServer):
     """
     Tornado based TCP PublishServer
     """
@@ -1422,6 +1440,15 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         if self.pub_sock:
             self.pub_sock.close()
             self.pub_sock = None
+
+
+class TCPPublishServer(PublishServer):
+    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
+        salt.utils.versions.warn_until(
+            3009,
+            "TCPPublishServer has been deprecated, use PublishServer instead.",
+        )
+        super().__init__(*args, **kwargs)
 
 
 class _TCPPubServerPublisher:
@@ -1605,7 +1632,7 @@ class _TCPPubServerPublisher:
         await self.stream.write(pack)
 
 
-class TCPReqClient(salt.transport.base.RequestClient):
+class RequestClient(salt.transport.base.RequestClient):
     """
     Tornado based TCP RequestClient
     """
@@ -1806,3 +1833,12 @@ class TCPReqClient(salt.transport.base.RequestClient):
         if self._stream is not None:
             self._stream.close()
             self._stream = None
+
+
+class TCPReqClient(RequestClient):
+    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
+        salt.utils.versions.warn_until(
+            3009,
+            "TCPReqClient has been deprecated, use RequestClient instead.",
+        )
+        super().__init__(*args, **kwargs)

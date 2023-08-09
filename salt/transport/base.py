@@ -29,7 +29,7 @@ def request_server(opts, **kwargs):
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPReqServer(opts)
+        return salt.transport.tcp.RequestServer(opts)
     elif ttype == "ws":
         import salt.transport.ws
 
@@ -56,7 +56,9 @@ def request_client(opts, io_loop):
         import salt.transport.tcp
 
         resolver = salt.transport.tcp.Resolver()
-        return salt.transport.tcp.TCPReqClient(opts, resolver=resolver, io_loop=io_loop)
+        return salt.transport.tcp.RequestClient(
+            opts, resolver=resolver, io_loop=io_loop
+        )
     elif ttype == "ws":
         import salt.transport.ws
 
@@ -96,7 +98,7 @@ def publish_server(opts, **kwargs):
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPPublishServer(opts, **kwargs)
+        return salt.transport.tcp.PublishServer(opts, **kwargs)
     elif ttype == "ws":
         import salt.transport.ws
 
@@ -129,7 +131,7 @@ def publish_client(opts, io_loop, host=None, port=None, path=None, transport=Non
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPPubClient(
+        return salt.transport.tcp.PublishClient(
             opts, io_loop, host=host, port=port, path=path
         )
     elif ttype == "ws":
