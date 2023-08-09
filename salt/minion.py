@@ -1763,6 +1763,7 @@ class Minion(MinionBase):
         # python needs to be able to reconstruct the reference on the other
         # side.
         instance = self
+        creds_map = None
         multiprocessing_enabled = self.opts.get("multiprocessing", True)
         name = "ProcessPayload(jid={})".format(data["jid"])
         if multiprocessing_enabled:
@@ -1770,17 +1771,18 @@ class Minion(MinionBase):
                 # let python reconstruct the minion on the other side if we're
                 # running on windows
                 instance = None
+                creds_map = salt.crypt.AsyncAuth.creds_map
             with default_signals(signal.SIGINT, signal.SIGTERM):
                 process = SignalHandlingProcess(
                     target=self._target,
                     name=name,
-                    args=(instance, self.opts, data, self.connected),
+                    args=(instance, self.opts, data, self.connected, creds_map),
                 )
                 process.register_after_fork_method(salt.utils.crypt.reinit_crypto)
         else:
             process = threading.Thread(
                 target=self._target,
-                args=(instance, self.opts, data, self.connected),
+                args=(instance, self.opts, data, self.connected, creds_map),
                 name=name,
             )
 
@@ -1804,7 +1806,9 @@ class Minion(MinionBase):
         return exitstack
 
     @classmethod
-    def _target(cls, minion_instance, opts, data, connected):
+    def _target(cls, minion_instance, opts, data, connected, creds_map):
+        if creds_map:
+            salt.crypt.AsyncAuth.creds_map = creds_map
         if not minion_instance:
             minion_instance = cls(opts, load_grains=False)
             minion_instance.connected = connected
@@ -3879,10 +3883,10 @@ class ProxyMinion(Minion):
         return mp_call(self, data)
 
     @classmethod
-    def _target(cls, minion_instance, opts, data, connected):
+    def _target(cls, minion_instance, opts, data, connected, creds_map):
 
         mp_call = _metaproxy_call(opts, "target")
-        return mp_call(cls, minion_instance, opts, data, connected)
+        return mp_call(cls, minion_instance, opts, data, connected, creds_map)
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
