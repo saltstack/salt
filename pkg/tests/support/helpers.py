@@ -231,7 +231,7 @@ class SaltPkgInstall:
                     else:
                         log.error("Unexpected file extension: %s", self.file_ext)
                 elif platform.is_darwin():
-                    self.root = pathlib.Path(os.sep, "opt")
+                    self.root = pathlib.Path("/opt")
                     if self.file_ext == "pkg":
                         self.bin_dir = self.root / "salt" / "bin"
                         self.run_root = self.bin_dir / "run"
@@ -358,7 +358,7 @@ class SaltPkgInstall:
             self.update_process_path()
 
         elif platform.is_darwin():
-            daemons_dir = pathlib.Path(os.sep, "Library", "LaunchDaemons")
+            daemons_dir = pathlib.Path("/Library", "LaunchDaemons")
             service_name = "com.saltstack.salt.minion"
             plist_file = daemons_dir / f"{service_name}.plist"
             log.debug("Installing: %s", str(pkg))
@@ -646,7 +646,7 @@ class SaltPkgInstall:
 
         elif platform.is_darwin():
             # From here: https://stackoverflow.com/a/46118276/4581998
-            daemons_dir = pathlib.Path(os.sep, "Library", "LaunchDaemons")
+            daemons_dir = pathlib.Path("/Library", "LaunchDaemons")
             for service in ("minion", "master", "api", "syndic"):
                 service_name = f"com.saltstack.salt.{service}"
                 plist_file = daemons_dir / f"{service_name}.plist"
@@ -736,7 +736,7 @@ class SaltPkgInstall:
         ret = self.proc.run("launchctl", "list", service_name)
         # 113 means it couldn't find a service with that name
         if ret.returncode == 113:
-            daemons_dir = pathlib.Path(os.sep, "Library", "LaunchDaemons")
+            daemons_dir = pathlib.Path("/Library", "LaunchDaemons")
             plist_file = daemons_dir / f"{service_name}.plist"
             # Make sure we're using this plist file
             if plist_file.exists():
@@ -812,9 +812,7 @@ class SaltPkgInstall:
                 binary = shutil.which(binary[0]) or binary[0]
             elif isinstance(binary, list):
                 binary = " ".join(binary)
-            unit_path = pathlib.Path(
-                os.sep, "etc", "systemd", "system", f"{service}.service"
-            )
+            unit_path = pathlib.Path("/etc", "systemd", "system", f"{service}.service")
             contents = contents.format(
                 service=service, tgt=binary, conf_dir=self.conf_dir
             )
@@ -855,7 +853,7 @@ class PkgLaunchdSaltDaemonImpl(PkgSystemdSaltDaemonImpl):
 
     @plist_file.default
     def _default_plist_file(self):
-        daemons_dir = pathlib.Path(os.sep, "Library", "LaunchDaemons")
+        daemons_dir = pathlib.Path("/Library", "LaunchDaemons")
         return daemons_dir / f"{self.get_service_name()}.plist"
 
     def get_service_name(self):
