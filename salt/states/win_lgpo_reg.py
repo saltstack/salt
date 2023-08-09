@@ -93,7 +93,14 @@ def _get_current(key, name, policy_class):
     return {"pol": pol, "reg": reg}
 
 
-def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine"):
+def value_present(
+    name,
+    key,
+    v_data,
+    v_type="REG_DWORD",
+    policy_class="Machine",
+    all_users=False
+):
     r"""
     Ensure a registry setting is present in the Registry.pol file.
 
@@ -124,6 +131,21 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
             - User
 
             Default is ``Machine``
+
+        all_users (bool):
+
+            .. version-added:: 3006.3
+
+            Apply the policy to all users that have logged on to the system.
+            This will modify all sub-keys under the HKEY_USERS hive in the
+            registry that are not one of the following:
+
+            - DefaultAccount
+            - Guest
+            - WDAGUtilityAccount
+
+            This only applies to "User" policies and will be ignored for
+            "Machine" policies. Default is ``False``
 
     CLI Example:
 

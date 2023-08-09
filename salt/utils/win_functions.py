@@ -7,6 +7,8 @@ import ctypes
 import platform
 import re
 
+import salt.modules.win_useradd
+import salt.utils.win_reg
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -172,6 +174,28 @@ def get_current_user(with_domain=True):
         return False
 
     return user_name
+
+
+def get_users_sids(exclude=("DefaultAccount", "Guest", "WDAGUtilityAccount")):
+    r"""
+    Gets a list of users and their SIDs on the system.
+
+    Args:
+
+        exclude (list):
+            A list of usernames to exclude from the results
+
+    Returns:
+        list: A list of tuples containing the username with its corresponding
+            SID
+    """
+    user_sids = []
+    for user in salt.modules.win_useradd.list_users():
+        if user not in exclude:
+            sid = salt.modules.win_useradd.getUserSid(username=user)
+            if salt.utils.win_reg.key_exists(hive="HKEY_USERS", key=sid):
+                user_sids.append((user, sid))
+    return user_sids
 
 
 def get_sam_name(username):

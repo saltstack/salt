@@ -980,8 +980,12 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
             Deletes the 32bit portion of the registry on 64bit installations. On
             32bit machines this is ignored.
 
+    Raises:
+        CommandExecutionError: Invalid Hive
+
     Return:
         bool: True if successful, otherwise False
+        None: If key already missing
 
     Usage:
 
