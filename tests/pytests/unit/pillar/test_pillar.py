@@ -7,6 +7,7 @@ import salt.loader
 import salt.pillar
 import salt.utils.cache
 from salt.utils.odict import OrderedDict
+from tests.support.mock import MagicMock
 
 
 @pytest.mark.parametrize(
@@ -157,3 +158,20 @@ def test_pillar_get_cache_disk(temp_salt_minion, caplog):
             in caplog.messages
         )
         assert fresh_pillar == {}
+
+
+def test_remote_pillar_timeout(temp_salt_minion, tmp_path):
+    opts = temp_salt_minion.config.copy()
+    opts["master_uri"] = "tcp://127.0.0.1:12323"
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.RemotePillar(
+        opts,
+        grains,
+        temp_salt_minion.id,
+        "base",
+    )
+    mock = MagicMock()
+    mock.side_effect = salt.exceptions.SaltReqTimeoutError()
+    pillar.channel.crypted_transfer_decode_dictentry = mock
+    with pytest.raises(salt.exceptions.SaltClientError):
+        pillar.compile_pillar()
