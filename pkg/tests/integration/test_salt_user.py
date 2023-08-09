@@ -37,7 +37,9 @@ def pkg_paths_salt_user():
     return [
         "/etc/salt/cloud.deploy.d",
         "/var/log/salt/cloud",
-        "/opt/saltstack/salt/lib/python3.10/site-packages/salt/cloud/deploy",
+        "/opt/saltstack/salt/lib/python{}.{}/site-packages/salt/cloud/deploy".format(
+            *sys.version_info
+        ),
         "/etc/salt/pki/master",
         "/etc/salt/master.d",
         "/var/log/salt/master",
