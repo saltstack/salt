@@ -4,7 +4,7 @@ case "$1" in
     [ -z "$SALT_USER" ] && SALT_USER=salt
     [ -z "$SALT_NAME" ] && SALT_NAME="Salt"
     [ -z "$SALT_GROUP" ] && SALT_GROUP=salt
-    PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush;")
+    PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
 
     # Reset permissions to fix previous installs
     find ${SALT_HOME} /etc/salt /var/log/salt /var/cache/salt /var/run/salt \

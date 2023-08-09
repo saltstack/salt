@@ -411,7 +411,7 @@ usermod -c "%{_SALT_NAME}" \
 
 %pre master
 # Reset permissions to fix previous installs
-PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush;")
+PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
 find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
   \! \( -path /etc/salt/cloud.deploy.d\* -o -path /var/log/salt/cloud -o -path /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy\* \) -a \
   \( -user salt -o -group salt \) -exec chown root:root \{\} \;
