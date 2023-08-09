@@ -59,7 +59,9 @@ class SyncWrapper:
         loop_kwarg=None,
     ):
         self.asyncio_loop = asyncio.new_event_loop()
-        self.io_loop = tornado.ioloop.IOLoop(asyncio_loop=self.asyncio_loop)
+        self.io_loop = tornado.ioloop.IOLoop(
+            asyncio_loop=self.asyncio_loop, make_current=False
+        )
         if args is None:
             args = []
         if kwargs is None:
@@ -114,6 +116,7 @@ class SyncWrapper:
             io_loop.close(all_fds=True)
         except KeyError:
             pass
+        self.asyncio_loop.close()
 
     def __getattr__(self, key):
         if key in self._async_methods:
@@ -149,7 +152,21 @@ class SyncWrapper:
             results.append(sys.exc_info())
 
     def __enter__(self):
+        if hasattr(self.obj, "__aenter__"):
+            ret = self._wrap("__aenter__")()
+            if ret == self.obj:
+                return self
+            else:
+                return ret
+        elif hasattr(self.obj, "__enter__"):
+            ret = self.obj.__enter__()
+            if ret == self.obj:
+                return self
+            else:
+                return ret
         return self
 
     def __exit__(self, exc_type, exc_val, tb):
+        if hasattr(self.obj, "__aexit__"):
+            self._wrap("__aexit__")(exc_type, exc_val, tb)
         self.close()
