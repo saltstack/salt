@@ -22,6 +22,7 @@ import salt.utils.files
 import salt.utils.minions
 import salt.utils.stringutils
 import salt.utils.verify
+import salt.utils.versions
 from salt.utils.asynchronous import SyncWrapper
 
 try:
@@ -314,9 +315,8 @@ class AsyncReqChannel:
 
         raise tornado.gen.Return(ret)
 
-    @tornado.gen.coroutine
-    def connect(self):
-        yield self.transport.connect()
+    async def connect(self):
+        await self.transport.connect()
 
     @tornado.gen.coroutine
     def send(self, load, tries=None, timeout=None, raw=False):
@@ -367,6 +367,13 @@ class AsyncReqChannel:
     def __exit__(self, *args):
         self.close()
 
+    async def __aenter__(self):
+        await self.transport.connect()
+        return self
+
+    async def __aexit__(self, *_):
+        self.close()
+
 
 class AsyncPubChannel:
     """
@@ -405,7 +412,9 @@ class AsyncPubChannel:
             io_loop = tornado.ioloop.IOLoop.current()
 
         auth = salt.crypt.AsyncAuth(opts, io_loop=io_loop)
-        transport = salt.transport.publish_client(opts, io_loop)
+        host = opts.get("master_ip", "127.0.0.1")
+        port = int(opts.get("publish_port", 4506))
+        transport = salt.transport.publish_client(opts, io_loop, host=host, port=port)
         return cls(opts, transport, auth, io_loop)
 
     def __init__(self, opts, transport, auth, io_loop=None):
@@ -446,6 +455,8 @@ class AsyncPubChannel:
         except KeyboardInterrupt:  # pylint: disable=try-except-raise
             raise
         except Exception as exc:  # pylint: disable=broad-except
+            # TODO: Basing re-try logic off exception messages is brittle and
+            # prone to errors; use exception types or some other method.
             if "-|RETRY|-" not in str(exc):
                 raise salt.exceptions.SaltClientError(
                     f"Unable to sign_in to master: {exc}"
@@ -469,7 +480,7 @@ class AsyncPubChannel:
 
         @tornado.gen.coroutine
         def wrap_callback(messages):
-            payload = yield self.transport._decode_messages(messages)
+            payload = self.transport._decode_messages(messages)
             decoded = yield self._decode_payload(payload)
             log.debug("PubChannel received: %r", decoded)
             if decoded is not None:
@@ -612,7 +623,13 @@ class AsyncPubChannel:
         return self
 
     def __exit__(self, *args):
-        self.close()
+        self.io_loop.spawn_callback(self.close)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_):
+        await self.close()
 
 
 class AsyncPushChannel:
@@ -627,6 +644,10 @@ class AsyncPushChannel:
         """
         # FIXME for now, just UXD
         # Obviously, this makes the factory approach pointless, but we'll extend later
+        salt.utils.versions.warn_until(
+            3009,
+            "AsyncPushChannel is deprecated. Use zeromq or tcp transport instead.",
+        )
         import salt.transport.ipc
 
         return salt.transport.ipc.IPCMessageClient(opts, **kwargs)
@@ -642,6 +663,10 @@ class AsyncPullChannel:
         """
         If we have additional IPC transports other than UXD and TCP, add them here
         """
+        salt.utils.versions.warn_until(
+            3009,
+            "AsyncPullChannel is deprecated. Use zeromq or tcp transport instead.",
+        )
         import salt.transport.ipc
 
         return salt.transport.ipc.IPCMessageServer(opts, **kwargs)

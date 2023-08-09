@@ -127,17 +127,16 @@ def master_secrets():
 def _connect_and_publish(
     io_loop, channel_minion_id, channel, server, received, timeout=60
 ):
-    log.info("TEST - BEFORE CHANNEL CONNECT")
     yield channel.connect()
-    log.info("TEST - AFTER CHANNEL CONNECT")
 
     def cb(payload):
-        log.info("TEST - PUB SERVER MSG %r", payload)
         received.append(payload)
         io_loop.stop()
 
     channel.on_recv(cb)
-    server.publish({"tgt_type": "glob", "tgt": [channel_minion_id], "WTF": "SON"})
+    io_loop.spawn_callback(
+        server.publish, {"tgt_type": "glob", "tgt": [channel_minion_id], "WTF": "SON"}
+    )
     start = time.time()
     while time.time() - start < timeout:
         yield tornado.gen.sleep(1)
@@ -160,7 +159,7 @@ def test_pub_server_channel(
     req_server_channel.pre_fork(process_manager)
 
     def handle_payload(payload):
-        log.info("TEST - Req Server handle payload %r", payload)
+        log.debug("Payload handler got %r", payload)
 
     req_server_channel.post_fork(handle_payload, io_loop=io_loop)
     if master_config["transport"] == "zeromq":
