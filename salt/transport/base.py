@@ -132,7 +132,7 @@ def publish_client(opts, io_loop, host=None, port=None, path=None, transport=Non
         return salt.transport.tcp.TCPPubClient(
             opts, io_loop, host=host, port=port, path=path
         )
-    elif ttype == "tcp":
+    elif ttype == "ws":
         import salt.transport.ws
 
         return salt.transport.ws.PublishClient(
