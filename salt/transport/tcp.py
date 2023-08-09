@@ -26,6 +26,7 @@ import tornado.iostream
 import tornado.netutil
 import tornado.tcpclient
 import tornado.tcpserver
+import tornado.util
 
 import salt.master
 import salt.payload
@@ -34,6 +35,7 @@ import salt.utils.asynchronous
 import salt.utils.files
 import salt.utils.msgpack
 import salt.utils.platform
+import salt.utils.process
 import salt.utils.versions
 from salt.exceptions import SaltClientError, SaltReqTimeoutError
 from salt.utils.network import ip_bracket
@@ -44,10 +46,6 @@ if salt.utils.platform.is_windows():
 else:
     USE_LOAD_BALANCER = False
 
-if USE_LOAD_BALANCER:
-    import tornado.util
-
-    from salt.utils.process import SignalHandlingProcess
 
 log = logging.getLogger(__name__)
 
@@ -136,7 +134,7 @@ def _set_tcp_keepalive(sock, opts):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 0)
 
 
-class LoadBalancerServer(SignalHandlingProcess):
+class LoadBalancerServer(salt.utils.process.SignalHandlingProcess):
     """
     Raw TCP server which runs in its own process and will listen
     for incoming connections. Each incoming connection will be
