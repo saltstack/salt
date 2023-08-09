@@ -1,4 +1,4 @@
-python_version: "3.11.3"
-relenv_version: "0.12.3"
+python_version: "3.10.12"
+relenv_version: "0.13.2"
 release-branches:
   - "3006.x"

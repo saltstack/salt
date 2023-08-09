@@ -52,7 +52,18 @@ def _system_up_to_date(
     if grains["os_family"] == "Debian":
         ret = shell.run("apt", "update")
         assert ret.returncode == 0
-        ret = shell.run("apt", "upgrade", "-y")
+        env = os.environ.copy()
+        env["DEBIAN_FRONTEND"] = "noninteractive"
+        ret = shell.run(
+            "apt",
+            "upgrade",
+            "-y",
+            "-o",
+            "DPkg::Options::=--force-confdef",
+            "-o",
+            "DPkg::Options::=--force-confold",
+            env=env,
+        )
         assert ret.returncode == 0
     elif grains["os_family"] == "Redhat":
         ret = shell.run("yum", "update", "-y")
@@ -363,6 +374,8 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
             master_script = True
         # this check will need to be changed to install_salt.relenv
         # once the package version returns 3006 and not 3005 on master
+        if install_salt.relenv:
+            master_script = True
         elif not install_salt.upgrade:
             master_script = True
 
@@ -375,6 +388,8 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         python_executable = install_salt.bin_dir / "Scripts" / "python.exe"
         if install_salt.classic:
             python_executable = install_salt.bin_dir / "python.exe"
+        if install_salt.relenv:
+            python_executable = install_salt.install_dir / "Scripts" / "python.exe"
         factory = salt_factories.salt_master_daemon(
             random_string("master-"),
             defaults=config_defaults,

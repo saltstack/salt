@@ -1,12 +1,6 @@
 <%- extends 'layout.yml.jinja' %>
 <%- set pre_commit_version = "3.0.4" %>
 
-<%- block on %>
-on:
-  push: {}
-  pull_request: {}
-<%- endblock on %>
-
 
 <%- block jobs %>
   <{- super() }>
