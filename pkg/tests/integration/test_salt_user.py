@@ -34,7 +34,7 @@ def pkg_paths_salt_user():
     """
     Paths created by package installs and owned by salt user
     """
-    paths = [
+    return [
         "/etc/salt/cloud.deploy.d",
         "/var/log/salt/cloud",
         "/opt/saltstack/salt/lib/python3.10/site-packages/salt/cloud/deploy",
@@ -46,7 +46,6 @@ def pkg_paths_salt_user():
         "/var/cache/salt/master",
         "/var/run/salt/master",
     ]
-    return paths
 
 
 @pytest.fixture
