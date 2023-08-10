@@ -428,7 +428,11 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
 
     @salt.ext.tornado.gen.coroutine
     def handle_message(self, stream, payload):
-        payload = self.decode_payload(payload)
+        try:
+            payload = self.decode_payload(payload)
+        except salt.exceptions.SaltDeserializationError:
+            self.stream.send(self.encode_payload({"msg": "bad load"}))
+            return
         # XXX: Is header really needed?
         reply = yield self.message_handler(payload)
         self.stream.send(self.encode_payload(reply))
