@@ -55,7 +55,12 @@ def test_compare_versions(version, binary, install_salt):
     Test compare versions
     """
     if binary in install_salt.binary_paths:
-        ret = install_salt.proc.run(*install_salt.binary_paths[binary], "--version")
+        ret = install_salt.proc.run(
+            *install_salt.binary_paths[binary],
+            "--version",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
         ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
     else:
         if platform.is_windows():

@@ -383,6 +383,12 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
             master_script = True
         elif not install_salt.upgrade:
             master_script = True
+        if (
+            not install_salt.relenv
+            and install_salt.use_prev_version
+            and not install_salt.classic
+        ):
+            master_script = False
 
     if master_script:
         salt_factories.system_install = False
