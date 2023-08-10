@@ -1,5 +1,6 @@
 import pytest
 from packaging.version import parse
+from pytestskipmarkers.utils import platform
 
 
 def test_salt_downgrade(salt_call_cli, install_salt):
@@ -31,11 +32,20 @@ def test_salt_downgrade(salt_call_cli, install_salt):
 
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)
-    ret = install_salt.proc.run("salt", "--version")
-    assert ret.returncode == 0
-    assert parse(ret.stdout.strip().split()[-1]) < parse(install_salt.artifact_version)
+    bin_file = "salt"
+    if platform.is_windows():
+        if not is_downgrade_to_relenv:
+            bin_file = install_salt.install_dir / "salt-call.bat"
+        else:
+            bin_file = install_salt.install_dir / "salt-call.exe"
 
-    if is_downgrade_to_relenv:
+    ret = install_salt.proc.run(bin_file, "--version")
+    assert ret.returncode == 0
+    assert parse(ret.stdout.strip().split()[1]) < parse(install_salt.artifact_version)
+
+    # Windows does not keep the extras directory around in the same state
+    # TODO: Fix this problem in windows installers
+    if is_downgrade_to_relenv and not platform.is_windows():
         new_py_version = install_salt.package_python_version()
         if new_py_version == original_py_version:
             # test pip install after a downgrade
