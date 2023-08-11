@@ -144,9 +144,21 @@ class LoadedFunc:
 
     def __call__(self, *args, **kwargs):
         run_func = self.func
+        mod = sys.modules[run_func.__module__]
+        if isinstance(mod.__opts__, salt.loader.context.NamedLoaderContext):
+            if mod.__opts__.value() is not None:
+                mod.__opts__.value()["test"] = self.loader.opts["test"]
+        else:
+            mod.__opts__["test"] = self.loader.opts["test"]
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
-        return self.loader.run(run_func, *args, **kwargs)
+        ret = self.loader.run(run_func, *args, **kwargs)
+        if isinstance(mod.__opts__, salt.loader.context.NamedLoaderContext):
+            if mod.__opts__.value() is not None:
+                self.loader.opts["test"] = mod.__opts__["test"]
+        else:
+            self.loader.opts["test"] = mod.__opts__["test"]
+        return ret
 
     def __repr__(self):
         return "<{} name={!r}>".format(self.__class__.__name__, self.name)
