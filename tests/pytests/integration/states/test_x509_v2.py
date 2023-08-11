@@ -73,7 +73,7 @@ def test_file_managed_does_not_run_in_test_mode_after_x509_v2_invocation_without
     new_privkey = tmp_path / "new_privkey"
     new_file = tmp_path / "new_file"
     assert not new_file.exists()
-    state = f"""\
+    state = f"""
     # The result of this call is irrelevant, just that it exists
     Some private key is present:
       x509.private_key_managed:
