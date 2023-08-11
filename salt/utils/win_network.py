@@ -59,6 +59,7 @@ if IS_WINDOWS:
         try:
             # pylint: disable=unused-import
             import clr
+
             # pylint: enable=unused-import
             from System.Net import NetworkInformation
         except RuntimeError:
