@@ -13,7 +13,7 @@ def test_reauth(salt_master_factory, event_listener):
         - name: example
         - changes: True
         - result: True
-        - comment: "Nothing has acutally been changed"
+        - comment: "Nothing has actually been changed"
     """
     events = []
 
