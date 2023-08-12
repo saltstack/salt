@@ -4,7 +4,6 @@ import multiprocessing
 import socket
 import time
 import warnings
-import ssl
 
 import aiohttp
 import aiohttp.web
@@ -109,6 +108,7 @@ class PublishClient(salt.transport.base.PublishClient):
         start = time.monotonic()
         timeout = kwargs.get("timeout", None)
         while ws is None and (not self._closed and not self._closing):
+            session = None
             try:
                 ctx = None
                 if self.ssl is not None:
@@ -139,6 +139,8 @@ class PublishClient(salt.transport.base.PublishClient):
                     exc,
                     self.backoff,
                 )
+                if session:
+                    await session.close()
                 if timeout and time.monotonic() - start > timeout:
                     break
                 await asyncio.sleep(self.backoff)
@@ -374,9 +376,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             runner = aiohttp.web.ServerRunner(server)
             await runner.setup()
             site = aiohttp.web.SockSite(runner, sock, ssl_context=ctx)
-            log.info(
-                "Publisher binding to socket %s:%s", (self.pub_host, self.pub_port)
-            )
+            log.info("Publisher binding to socket %s:%s", self.pub_host, self.pub_port)
         await site.start()
 
         if self.pull_path:
@@ -548,7 +548,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self.io_loop = io_loop
         self._closing = False
         self._closed = False
-        self.ssl = self.opts("ssl", None)
+        self.ssl = self.opts.get("ssl", None)
 
     async def connect(self):
         ctx = None

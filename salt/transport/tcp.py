@@ -18,7 +18,6 @@ import time
 import urllib
 import uuid
 import warnings
-import ssl
 
 import tornado
 import tornado.concurrent
@@ -31,8 +30,8 @@ import tornado.util
 
 import salt.master
 import salt.payload
-import salt.transport.frame
 import salt.transport.base
+import salt.transport.frame
 import salt.utils.asynchronous
 import salt.utils.files
 import salt.utils.msgpack
@@ -1116,7 +1115,7 @@ class PubServer(tornado.tcpserver.TCPServer):
         to_remove = []
         if topic_list:
             for topic in topic_list:
-                sent = Falses
+                sent = False
                 for client in list(self.clients):
                     if topic == client.id_:
                         try:
