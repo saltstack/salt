@@ -18,6 +18,7 @@ import time
 import urllib
 import uuid
 import warnings
+import ssl
 
 import tornado
 import tornado.concurrent
@@ -31,6 +32,7 @@ import tornado.util
 import salt.master
 import salt.payload
 import salt.transport.frame
+import salt.transport.base
 import salt.utils.asynchronous
 import salt.utils.files
 import salt.utils.msgpack
@@ -234,6 +236,7 @@ class PublishClient(salt.transport.base.PublishClient):
         self.host = kwargs.get("host", None)
         self.port = kwargs.get("port", None)
         self.path = kwargs.get("path", None)
+        self.ssl = kwargs.get("ssl", None)
         self.source_ip = self.opts.get("source_ip")
         self.source_port = self.opts.get("source_publish_port")
         self.on_recv_task = None
@@ -275,11 +278,16 @@ class PublishClient(salt.transport.base.PublishClient):
                     self._tcp_client = TCPClientKeepAlive(
                         self.opts, resolver=self.resolver
                     )
+                    ctx = None
+                    if self.ssl is not None:
+                        ctx = salt.transport.base.ssl_context(
+                            self.ssl, server_side=False
+                        )
                     stream = await asyncio.wait_for(
                         self._tcp_client.connect(
                             ip_bracket(self.host, strip=True),
                             self.port,
-                            ssl_options=self.opts.get("ssl"),
+                            ssl_options=ctx,
                             **kwargs,
                         ),
                         1,
@@ -479,6 +487,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self.opts = opts
         self._socket = None
         self.req_server = None
+        self.ssl = self.opts.get("ssl", None)
 
     @property
     def socket(self):
@@ -549,11 +558,14 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         log.info("RequestServer workers %s", socket)
 
         with salt.utils.asynchronous.current_ioloop(io_loop):
+            ctx = None
+            if self.ssl is not None:
+                ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
             if USE_LOAD_BALANCER:
                 self.req_server = LoadBalancerWorker(
                     self.socket_queue,
                     self.handle_message,
-                    ssl_options=self.opts.get("ssl"),
+                    ssl_options=ctx,
                 )
             else:
                 if salt.utils.platform.is_windows():
@@ -564,13 +576,21 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                     self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
                 self.req_server = SaltMessageServer(
                     self.handle_message,
-                    ssl_options=self.opts.get("ssl"),
+                    ssl_options=ctx,
                     io_loop=io_loop,
                 )
                 self.req_server.add_socket(self._socket)
                 self._socket.listen(self.backlog)
 
     async def handle_message(self, stream, payload, header=None):
+        try:
+            cert = stream.socket.getpeercert()
+        except AttributeError:
+            pass
+        else:
+            if cert:
+                name = salt.transport.base.common_name(cert)
+                log.error("Request client cert %r", name)
         payload = self.decode_payload(payload)
         reply = await self.message_handler(payload)
         # XXX Handle StreamClosedError
@@ -1013,9 +1033,14 @@ class PubServer(tornado.tcpserver.TCPServer):
     """
 
     def __init__(
-        self, opts, io_loop=None, presence_callback=None, remove_presence_callback=None
+        self,
+        opts,
+        io_loop=None,
+        presence_callback=None,
+        remove_presence_callback=None,
+        ssl=None,
     ):
-        super().__init__(ssl_options=opts.get("ssl"))
+        super().__init__(ssl_options=ssl)
         self.io_loop = io_loop
         self.opts = opts
         self._closing = False
@@ -1029,6 +1054,7 @@ class PubServer(tornado.tcpserver.TCPServer):
             self.remove_presence_callback = remove_presence_callback
         else:
             self.remove_presence_callback = lambda subscriber: subscriber
+        self.ssl = ssl
 
     def close(self):
         if self._closing:
@@ -1068,6 +1094,14 @@ class PubServer(tornado.tcpserver.TCPServer):
                 continue
 
     def handle_stream(self, stream, address):
+        try:
+            cert = stream.socket.getpeercert()
+        except AttributeError:
+            pass
+        else:
+            if cert:
+                name = salt.transport.base.common_name(cert)
+                log.error("Request client cert %r", name)
         log.debug("Subscriber at %s connected", address)
         client = Subscriber(stream, address)
         self.clients.add(client)
@@ -1082,8 +1116,8 @@ class PubServer(tornado.tcpserver.TCPServer):
         to_remove = []
         if topic_list:
             for topic in topic_list:
-                sent = False
-                for client in self.clients:
+                sent = Falses
+                for client in list(self.clients):
                     if topic == client.id_:
                         try:
                             # Write the packed str
@@ -1095,7 +1129,7 @@ class PubServer(tornado.tcpserver.TCPServer):
                 if not sent:
                     log.debug("Publish target %s not connected %r", topic, self.clients)
         else:
-            for client in self.clients:
+            for client in list(self.clients):
                 try:
                     # Write the packed str
                     await client.stream.write(payload)
@@ -1296,6 +1330,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_host=None,
         pull_port=None,
         pull_path=None,
+        ssl=None,
     ):
         self.opts = opts
         self.pub_sock = None
@@ -1305,6 +1340,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pull_host = pull_host
         self.pull_port = pull_port
         self.pull_path = pull_path
+        self.ssl = ssl
 
     @property
     def topic_support(self):
@@ -1359,18 +1395,27 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if io_loop is None:
             io_loop = tornado.ioloop.IOLoop.current()
         # Spin up the publisher
+        ctx = None
+        if self.ssl is not None:
+            ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
         self.pub_server = pub_server = PubServer(
             self.opts,
             io_loop=io_loop,
             presence_callback=presence_callback,
             remove_presence_callback=remove_presence_callback,
+            ssl=ctx,
         )
         if self.pub_path:
-            log.debug("Publish server binding pub to %s", self.pub_path)
+            log.error(
+                "Publish server binding pub to %s ssl=%r", self.pub_path, self.ssl
+            )
             sock = tornado.netutil.bind_unix_socket(self.pub_path)
         else:
-            log.debug(
-                "Publish server binding pub to %s:%s", self.pub_host, self.pub_port
+            log.error(
+                "Publish server binding pub to %s:%s ssl=%r",
+                self.pub_host,
+                self.pub_port,
+                self.ssl,
             )
             sock = _get_socket(self.opts)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -1668,6 +1713,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self.disconnect_callback = _null_callback
         self.connect_callback = _null_callback
         self.backoff = opts.get("tcp_reconnect_backoff", 1)
+        self.ssl = self.opts.get("ssl", None)
 
     async def getstream(self, **kwargs):
         if self.source_ip or self.source_port:
@@ -1676,10 +1722,13 @@ class RequestClient(salt.transport.base.RequestClient):
         while stream is None and (not self._closed and not self._closing):
             try:
                 # XXX: Support ipc sockets too
+                ctx = None
+                if self.ssl is not None:
+                    ctx = salt.transport.base.ssl_context(self.ssl, server_side=False)
                 stream = await self._tcp_client.connect(
                     ip_bracket(self.host, strip=True),
                     self.port,
-                    ssl_options=self.opts.get("ssl"),
+                    ssl_options=ctx,
                     **kwargs,
                 )
             except Exception as exc:  # pylint: disable=broad-except
