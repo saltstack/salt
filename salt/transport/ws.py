@@ -4,6 +4,7 @@ import multiprocessing
 import socket
 import time
 import warnings
+import ssl
 
 import aiohttp
 import aiohttp.web
@@ -12,6 +13,7 @@ from tornado.locks import Lock
 
 import salt.payload
 import salt.transport.base
+import salt.transport.frame
 from salt.transport.tcp import (
     USE_LOAD_BALANCER,
     LoadBalancerServer,
@@ -60,6 +62,7 @@ class PublishClient(salt.transport.base.PublishClient):
         self.host = kwargs.get("host", None)
         self.port = kwargs.get("port", None)
         self.path = kwargs.get("path", None)
+        self.ssl = kwargs.get("ssl", None)
         self.source_ip = self.opts.get("source_ip")
         self.source_port = self.opts.get("source_publish_port")
         self.connect_callback = None
@@ -107,15 +110,25 @@ class PublishClient(salt.transport.base.PublishClient):
         timeout = kwargs.get("timeout", None)
         while ws is None and (not self._closed and not self._closing):
             try:
+                ctx = None
+                if self.ssl is not None:
+                    ctx = salt.transport.base.ssl_context(self.ssl, server_side=False)
                 if self.host and self.port:
                     conn = aiohttp.TCPConnector()
                     session = aiohttp.ClientSession(connector=conn)
-                    url = f"http://{self.host}:{self.port}"
+                    if self.ssl:
+                        url = f"https://{self.host}:{self.port}/ws"
+                    else:
+                        url = f"http://{self.host}:{self.port}/ws"
                 else:
                     conn = aiohttp.UnixConnector(path=self.path)
                     session = aiohttp.ClientSession(connector=conn)
-                    url = f"http://ipc.saltproject.io/ws"
-                ws = await asyncio.wait_for(session.ws_connect(url), 1)
+                    if self.ssl:
+                        url = f"https://ipc.saltproject.io/ws"
+                    else:
+                        url = f"http://ipc.saltproject.io/ws"
+                log.error("pub client connect %r %r", url, ctx)
+                ws = await asyncio.wait_for(session.ws_connect(url, ssl=ctx), 3)
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
                     "WS Message Client encountered an exception while connecting to"
@@ -259,27 +272,49 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         "close",
     ]
 
-    def __init__(self, opts, **kwargs):
+    def __init__(
+        self,
+        opts,
+        pub_host=None,
+        pub_port=None,
+        pub_path=None,
+        pull_host=None,
+        pull_port=None,
+        pull_path=None,
+        ssl=None,
+    ):
         self.opts = opts
-        self.pub_sock = None
-        self.pub_host = kwargs.get("pub_host", None)
-        self.pub_port = kwargs.get("pub_port", None)
-        self.pub_path = kwargs.get("pub_path", None)
-        self.pull_host = kwargs.get("pull_host", None)
-        self.pull_port = kwargs.get("pull_port", None)
-        self.pull_path = kwargs.get("pull_path", None)
+        self.pub_host = pub_host
+        self.pub_port = pub_port
+        self.pub_path = pub_path
+        self.pull_host = pull_host
+        self.pull_port = pull_port
+        self.pull_path = pull_path
+        self.ssl = ssl
         self.clients = set()
         self._run = None
+        self.pub_sock = None
 
     @property
     def topic_support(self):
         return not self.opts.get("order_masters", False)
 
     def __setstate__(self, state):
+        self.__init__(**state)
+
+    def __setstate__(self, state):
         self.__init__(state["opts"])
 
     def __getstate__(self):
-        return {"opts": self.opts}
+        return {
+            "opts": self.opts,
+            "pub_host": self.pub_host,
+            "pub_port": self.pub_port,
+            "pub_path": self.pub_path,
+            "pull_host": self.pull_host,
+            "pull_port": self.pull_port,
+            "pull_path": self.pull_path,
+        }
 
     def publish_daemon(
         self,
@@ -319,13 +354,15 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self._run = asyncio.Event()
         self._run.set()
 
+        ctx = None
+        if self.ssl is not None:
+            ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
         if self.pub_path:
             server = aiohttp.web.Server(self.handle_request)
             runner = aiohttp.web.ServerRunner(server)
             await runner.setup()
-            site = aiohttp.web.UnixSite(runner, self.pub_path)
-            log.info("Publisher binding to path %s", self.pub_path)
-            await site.start()
+            site = aiohttp.web.UnixSite(runner, self.pub_path, ssl_context=ctx)
+            log.info("Publisher binding to socket %s", self.pub_path)
         else:
             sock = _get_socket(self.opts)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -336,9 +373,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             server = aiohttp.web.Server(self.handle_request)
             runner = aiohttp.web.ServerRunner(server)
             await runner.setup()
-            site = aiohttp.web.SockSite(runner, sock)
-            log.info("Publisher binding to socket %s", (self.pub_host, self.pub_port))
-            await site.start()
+            site = aiohttp.web.SockSite(runner, sock, ssl_context=ctx)
+            log.info(
+                "Publisher binding to socket %s:%s", (self.pub_host, self.pub_port)
+            )
+        await site.start()
 
         if self.pull_path:
             pull_uri = self.pull_path
@@ -367,6 +406,14 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         process_manager.add_process(self.publish_daemon, name=self.__class__.__name__)
 
     async def handle_request(self, request):
+        try:
+            cert = request.get_extra_info("peercert")
+        except AttributeError:
+            pass
+        else:
+            if cert:
+                name = salt.transport.base.common_name(cert)
+                log.error("Request client cert %r", name)
         ws = aiohttp.web.WebSocketResponse()
         await ws.prepare(request)
         self.clients.add(ws)
@@ -414,6 +461,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
     def __init__(self, opts):  # pylint: disable=W0231
         self.opts = opts
         self.site = None
+        self.ssl = self.opts.get("ssl", None)
 
     def pre_fork(self, process_manager):
         """
@@ -448,7 +496,10 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             server = aiohttp.web.Server(self.handle_message)
             runner = aiohttp.web.ServerRunner(server)
             await runner.setup()
-            self.site = aiohttp.web.SockSite(runner, self._socket)
+            ctx = None
+            if self.ssl is not None:
+                ctx = tornado.netutil.ssl_options_to_context(self.ssl, server_side=True)
+            self.site = aiohttp.web.SockSite(runner, self._socket, ssl_context=ctx)
             log.info("Worker binding to socket %s", self._socket)
             await self.site.start()
             # pause here for very long time by serving HTTP requests and
@@ -460,6 +511,14 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         io_loop.spawn_callback(server)
 
     async def handle_message(self, request):
+        try:
+            cert = request.get_extra_info("peercert")
+        except AttributeError:
+            pass
+        else:
+            if cert:
+                name = salt.transport.base.common_name(cert)
+                log.error("Request client cert %r", name)
         ws = aiohttp.web.WebSocketResponse()
         await ws.prepare(request)
         async for msg in ws:
@@ -489,12 +548,16 @@ class RequestClient(salt.transport.base.RequestClient):
         self.io_loop = io_loop
         self._closing = False
         self._closed = False
+        self.ssl = self.opts("ssl", None)
 
     async def connect(self):
-        # if self.session is None:
+        ctx = None
+        if self.ssl is not None:
+            ctx = tornado.netutil.ssl_options_to_context(self.ssl, server_side=False)
         self.session = aiohttp.ClientSession()
         URL = self.get_master_uri(self.opts)
-        self.ws = await self.session.ws_connect(URL)
+        log.error("Connect to %s %s", URL, ctx)
+        self.ws = await self.session.ws_connect(URL, ssl=ctx)
 
     async def send(self, load, timeout=60):
         if self.sending or self._closing:
@@ -528,10 +591,13 @@ class RequestClient(salt.transport.base.RequestClient):
         self._closing = True
         self.close_task = asyncio.create_task(self._close())
 
-    @staticmethod
-    def get_master_uri(opts):
+    def get_master_uri(self, opts):
         if "master_uri" in opts:
+            if self.opts.get("ssl", None):
+                return opts["master_uri"].replace("tcp:", "https:", 1)
             return opts["master_uri"].replace("tcp:", "http:", 1)
+        if self.opts.get("ssl", None):
+            return f"https://{opts['master_ip']}:{opts['master_port']}/ws"
         return f"http://{opts['master_ip']}:{opts['master_port']}/ws"
 
     # pylint: disable=W1701
@@ -540,4 +606,5 @@ class RequestClient(salt.transport.base.RequestClient):
             warnings.warn(
                 "Unclosed publish client {self!r}", ResourceWarning, source=self
             )
+
     # pylint: enable=W1701

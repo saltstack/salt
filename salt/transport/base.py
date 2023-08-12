@@ -48,6 +48,7 @@ def request_client(opts, io_loop):
         ttype = opts["transport"]
     elif "transport" in opts.get("pillar", {}).get("master", {}):
         ttype = opts["pillar"]["master"]["transport"]
+
     if ttype == "zeromq":
         import salt.transport.zeromq
 
@@ -90,6 +91,9 @@ def publish_server(opts, **kwargs):
         else:
             kwargs["pull_path"] = os.path.join(opts["sock_dir"], "publish_pull.ipc")
 
+    if "ssl" not in kwargs and opts.get("ssl", None) is not None:
+        kwargs["ssl"] = opts["ssl"]
+
     # switch on available ttypes
     if ttype == "zeromq":
         import salt.transport.zeromq
@@ -110,7 +114,9 @@ def publish_server(opts, **kwargs):
     raise Exception(f"Transport type not found: {ttype}")
 
 
-def publish_client(opts, io_loop, host=None, port=None, path=None, transport=None):
+def publish_client(
+    opts, io_loop, host=None, port=None, path=None, transport=None, **kwargs
+):
     # Default to ZeroMQ for now
     ttype = "zeromq"
     # determine the ttype
@@ -121,10 +127,18 @@ def publish_client(opts, io_loop, host=None, port=None, path=None, transport=Non
     elif "transport" in opts.get("pillar", {}).get("master", {}):
         ttype = opts["pillar"]["master"]["transport"]
 
+    ssl = None
+    if "ssl" in kwargs:
+        ssl = kwargs["ssl"]
+    elif opts.get("ssl", None) is not None:
+        ssl = opts["ssl"]
+
     # switch on available ttypes
     if ttype == "zeromq":
         import salt.transport.zeromq
 
+        if ssl:
+            log.warning("TLS not supported with zeromq transport")
         return salt.transport.zeromq.PublishClient(
             opts, io_loop, host=host, port=port, path=path
         )
@@ -132,13 +146,23 @@ def publish_client(opts, io_loop, host=None, port=None, path=None, transport=Non
         import salt.transport.tcp
 
         return salt.transport.tcp.PublishClient(
-            opts, io_loop, host=host, port=port, path=path
+            opts,
+            io_loop,
+            host=host,
+            port=port,
+            path=path,
+            ssl=ssl,
         )
     elif ttype == "ws":
         import salt.transport.ws
 
         return salt.transport.ws.PublishClient(
-            opts, io_loop, host=host, port=port, path=path
+            opts,
+            io_loop,
+            host=host,
+            port=port,
+            path=path,
+            ssl=ssl,
         )
 
     raise Exception(f"Transport type not found: {ttype}")
@@ -154,7 +178,7 @@ def _minion_hash(hash_type, minion_id):
 
 def ipc_publish_client(node, opts, io_loop):
     # Default to TCP for now
-    kwargs = {"transport": "tcp"}
+    kwargs = {"transport": "tcp", "ssl": None}
     if opts["ipc_mode"] == "tcp":
         if node == "master":
             kwargs.update(
@@ -184,7 +208,7 @@ def ipc_publish_client(node, opts, io_loop):
 
 def ipc_publish_server(node, opts):
     # Default to TCP for now
-    kwargs = {"transport": "tcp"}
+    kwargs = {"transport": "tcp", "ssl": None}
     if opts["ipc_mode"] == "tcp":
         if node == "master":
             kwargs.update(
@@ -405,3 +429,54 @@ class PublishClient(Transport):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
+
+
+def ssl_context(ssl_options, server_side=False):
+    if isinstance(ssl_options, ssl.SSLContext):
+        return ssl_options
+    default_version = ssl.PROTOCOL_TLS
+    if server_side:
+        default_version = ssl.PROTOCOL_TLS_SERVER
+    elif server_side is not None:
+        default_version = ssl.PROTOCOL_TLS_CLIENT
+    context = ssl.SSLContext(ssl_options.get("ssl_version", default_version))
+    if "certfile" in ssl_options:
+        context.load_cert_chain(
+            ssl_options["certfile"], ssl_options.get("keyfile", None)
+        )
+    if "cert_reqs" in ssl_options:
+        if ssl_options["cert_reqs"] == ssl.CERT_NONE:
+            # This may have been set automatically by PROTOCOL_TLS_CLIENT but is
+            # incompatible with CERT_NONE so we must manually clear it.
+            context.check_hostname = False
+        context.verify_mode = getattr(ssl, VerifyMode, ssl_options["cert_reqs"])
+    if "ca_certs" in ssl_options:
+        context.load_verify_locations(ssl_options["ca_certs"])
+    if "verify_locations" in ssl_options:
+        for _ in ssl_options["verify_locations"]:
+            if _.lower().startswith("cafile:"):
+                cafile = _[7:]
+                context.load_verify_locations(cafile=cafile)
+            elif _.lower().startswith("capath:"):
+                capath = _[7:]
+                context.load_verify_locations(capath=capath)
+            elif _.lower().startswith("cadata:"):
+                cadata = _[7:]
+                context.load_verify_locations(cadata=cadata)
+            else:
+                cafile = _
+                context.load_verify_locations(cafile=cafile)
+    if "verify_flags" in ssl_options:
+        for flag in ssl_options["verify_flags"]:
+            context.verify_flags |= getattr(ssl.VerifyFlags, flag.upper())
+    if "ciphers" in ssl_options:
+        context.set_ciphers(ssl_options["ciphers"])
+    return context
+
+
+def common_name(cert):
+    try:
+        name = dict([_[0] for _ in cert["subject"]])["commonName"]
+    except (ValueError, KeyError):
+        return None
+    return name
