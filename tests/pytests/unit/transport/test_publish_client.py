@@ -13,6 +13,7 @@ import tornado.ioloop
 
 import salt.crypt
 import salt.transport.tcp
+import salt.transport.ws
 import salt.transport.zeromq
 import salt.utils.stringutils
 from tests.support.mock import MagicMock, patch
@@ -29,7 +30,7 @@ def transport_ids(value):
     return f"Transport({value})"
 
 
-@pytest.fixture(params=("zeromq", "tcp"), ids=transport_ids)
+@pytest.fixture(params=("zeromq", "tcp", "ws"), ids=transport_ids)
 def transport(request):
     return request.param
 
@@ -171,29 +172,28 @@ async def test_publish_client_connect_server_down(transport, io_loop):
         await client.connect()
         assert client._socket
     elif transport == "tcp":
-        client = salt.transport.tcp.TCPPubClient(opts, io_loop, host=host, port=port)
-        try:
-            # XXX: This is an implimentation detail of the tcp transport.
-            # await client.connect(port)
-            io_loop.spawn_callback(client.connect)
-        except TimeoutError:
-            pass
-        except Exception:  # pylint: disable=broad-except
-            log.error("Got exception", exc_info=True)
+        client = salt.transport.tcp.PublishClient(opts, io_loop, host=host, port=port)
+        io_loop.spawn_callback(client.connect)
         assert client._stream is None
+    elif transport == "ws":
+        client = salt.transport.ws.PublishClient(opts, io_loop, host=host, port=port)
+        io_loop.spawn_callback(client.connect)
+        assert client._ws is None
+        assert client._session is None
     client.close()
+    await asyncio.sleep(0.03)
 
 
 async def test_publish_client_connect_server_comes_up(transport, io_loop):
     opts = {"master_ip": "127.0.0.1"}
     host = "127.0.0.1"
     port = 11122
+    msg = salt.payload.dumps({"meh": 123})
     if transport == "zeromq":
         import zmq
 
         ctx = zmq.asyncio.Context()
         uri = f"tcp://{opts['master_ip']}:{port}"
-        msg = salt.payload.dumps({"meh": 123})
         log.debug("TEST - Senging %r", msg)
         client = salt.transport.zeromq.PublishClient(
             opts, io_loop, host=host, port=port
@@ -213,7 +213,8 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
 
         task = asyncio.create_task(recv())
         # Sleep to allow zmq to do it's thing.
-        await sock.send(msg)
+        await socket.send(msg)
+        await asyncio.sleep(0.03)
         await task
         response = task.result()
         assert response
@@ -223,7 +224,7 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
         ctx.term()
     elif transport == "tcp":
 
-        client = salt.transport.tcp.TCPPubClient(opts, io_loop, host=host, port=port)
+        client = salt.transport.tcp.PublishClient(opts, io_loop, host=host, port=port)
         # XXX: This is an implimentation detail of the tcp transport.
         # await client.connect(port)
         io_loop.spawn_callback(client.connect)
@@ -254,6 +255,41 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
 
         conn.send(msg)
         response = await client.recv()
-        assert response
+        assert msg == response
+    elif transport == "ws":
+        import socket
+
+        import aiohttp
+
+        client = salt.transport.ws.PublishClient(opts, io_loop, host=host, port=port)
+        io_loop.spawn_callback(client.connect)
+        assert client._ws is None
+        assert client._session is None
+        await asyncio.sleep(2)
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.setblocking(0)
+        sock.bind((opts["master_ip"], port))
+        sock.listen(128)
+
+        async def handler(request):
+            ws = aiohttp.web.WebSocketResponse()
+            await ws.prepare(request)
+            data = salt.transport.frame.frame_msg(msg, header=None)
+            await ws.send_bytes(data)
+
+        server = aiohttp.web.Server(handler)
+        runner = aiohttp.web.ServerRunner(server)
+        await runner.setup()
+        site = aiohttp.web.SockSite(runner, sock)
+        await site.start()
+
+        await asyncio.sleep(0.03)
+
+        response = await client.recv()
+        assert msg == response
     else:
         raise Exception(f"Unknown transport {transport}")
+    client.close()
+    await asyncio.sleep(0.03)

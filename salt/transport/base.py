@@ -1,9 +1,13 @@
 import hashlib
+import logging
 import os
+import ssl
 import traceback
 import warnings
 
 import salt.utils.stringutils
+
+log = logging.getLogger(__name__)
 
 TRANSPORTS = (
     "zeromq",
@@ -127,17 +131,17 @@ def publish_client(
     elif "transport" in opts.get("pillar", {}).get("master", {}):
         ttype = opts["pillar"]["master"]["transport"]
 
-    ssl = None
+    ssl_opts = None
     if "ssl" in kwargs:
-        ssl = kwargs["ssl"]
+        ssl_opts = kwargs["ssl"]
     elif opts.get("ssl", None) is not None:
-        ssl = opts["ssl"]
+        ssl_opts = opts["ssl"]
 
     # switch on available ttypes
     if ttype == "zeromq":
         import salt.transport.zeromq
 
-        if ssl:
+        if ssl_opts:
             log.warning("TLS not supported with zeromq transport")
         return salt.transport.zeromq.PublishClient(
             opts, io_loop, host=host, port=port, path=path
@@ -151,7 +155,7 @@ def publish_client(
             host=host,
             port=port,
             path=path,
-            ssl=ssl,
+            ssl=ssl_opts,
         )
     elif ttype == "ws":
         import salt.transport.ws
@@ -162,7 +166,7 @@ def publish_client(
             host=host,
             port=port,
             path=path,
-            ssl=ssl,
+            ssl=ssl_opts,
         )
 
     raise Exception(f"Transport type not found: {ttype}")
@@ -432,8 +436,6 @@ class PublishClient(Transport):
 
 
 def ssl_context(ssl_options, server_side=False):
-    if isinstance(ssl_options, ssl.SSLContext):
-        return ssl_options
     default_version = ssl.PROTOCOL_TLS
     if server_side:
         default_version = ssl.PROTOCOL_TLS_SERVER
@@ -445,27 +447,28 @@ def ssl_context(ssl_options, server_side=False):
             ssl_options["certfile"], ssl_options.get("keyfile", None)
         )
     if "cert_reqs" in ssl_options:
-        if ssl_options["cert_reqs"] == ssl.CERT_NONE:
+        if ssl_options["cert_reqs"].upper() == "CERT_NONE":
             # This may have been set automatically by PROTOCOL_TLS_CLIENT but is
             # incompatible with CERT_NONE so we must manually clear it.
             context.check_hostname = False
-        context.verify_mode = getattr(ssl, VerifyMode, ssl_options["cert_reqs"])
+        context.verify_mode = getattr(ssl.VerifyMode, ssl_options["cert_reqs"])
     if "ca_certs" in ssl_options:
         context.load_verify_locations(ssl_options["ca_certs"])
     if "verify_locations" in ssl_options:
         for _ in ssl_options["verify_locations"]:
-            if _.lower().startswith("cafile:"):
-                cafile = _[7:]
-                context.load_verify_locations(cafile=cafile)
-            elif _.lower().startswith("capath:"):
-                capath = _[7:]
-                context.load_verify_locations(capath=capath)
-            elif _.lower().startswith("cadata:"):
-                cadata = _[7:]
-                context.load_verify_locations(cadata=cadata)
+            if isinstance(_, dict):
+                for key in _:
+                    if key.lower() == "cafile":
+                        context.load_verify_locations(cafile=_[key])
+                    elif key.lower() == "capath":
+                        context.load_verify_locations(capath=_[key])
+                    elif key.lower() == "cadata":
+                        context.load_verify_locations(cadata=_[key])
+                    else:
+                        log.warning("Unkown verify location type: %s", key)
             else:
                 cafile = _
-                context.load_verify_locations(cafile=cafile)
+                context.load_verify_locations(cafile=_)
     if "verify_flags" in ssl_options:
         for flag in ssl_options["verify_flags"]:
             context.verify_flags |= getattr(ssl.VerifyFlags, flag.upper())
