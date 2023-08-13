@@ -184,23 +184,40 @@ class PublishClient(salt.transport.base.PublishClient):
         await self.message_client.send(msg, reply=False)
 
     async def recv(self, timeout=None):
-        try:
-            await self._read_in_progress.acquire(timeout=0.001)
-        except tornado.gen.TimeoutError:
-            log.error("Unable to acquire read lock")
-            return
-        try:
-            if timeout == 0:
-                if not self._ws:
-                    await asyncio.sleep(0.001)
-                    return
+        while self._ws is None:
+            await self.connect()
+            await asyncio.sleep(0.001)
+        if timeout == 0:
+            for msg in self.unpacker:
+                framed_msg = salt.transport.frame.decode_embedded_strs(msg)
+                return framed_msg["body"]
+            try:
+                raw_msg = await asyncio.wait_for(self._ws.receive(), 0.0001)
+            except TimeoutError:
+                return
+            if raw_msg.type == aiohttp.WSMsgType.TEXT:
+                if raw_msg.data == "close":
+                    await self._ws.close()
+            if raw_msg.type == aiohttp.WSMsgType.BINARY:
+                self.unpacker.feed(raw_msg.data)
                 for msg in self.unpacker:
                     framed_msg = salt.transport.frame.decode_embedded_strs(msg)
                     return framed_msg["body"]
-                try:
-                    raw_msg = await asyncio.wait_for(self._ws.receive(), 0.0001)
-                except TimeoutError:
-                    return
+            elif raw_msg.type == aiohttp.WSMsgType.ERROR:
+                log.error(
+                    "ws connection closed with exception %s", self._ws.exception()
+                )
+        elif timeout:
+            return await asyncio.wait_for(self.recv(), timeout=timeout)
+        else:
+            for msg in self.unpacker:
+                framed_msg = salt.transport.frame.decode_embedded_strs(msg)
+                return framed_msg["body"]
+            while True:
+                for msg in self.unpacker:
+                    framed_msg = salt.transport.frame.decode_embedded_strs(msg)
+                    return framed_msg["body"]
+                raw_msg = await self._ws.receive()
                 if raw_msg.type == aiohttp.WSMsgType.TEXT:
                     if raw_msg.data == "close":
                         await self._ws.close()
@@ -211,34 +228,9 @@ class PublishClient(salt.transport.base.PublishClient):
                         return framed_msg["body"]
                 elif raw_msg.type == aiohttp.WSMsgType.ERROR:
                     log.error(
-                        "ws connection closed with exception %s", self._ws.exception()
+                        "ws connection closed with exception %s",
+                        self._ws.exception(),
                     )
-            elif timeout:
-                return await asyncio.wait_for(self.recv(), timeout=timeout)
-            else:
-                for msg in self.unpacker:
-                    framed_msg = salt.transport.frame.decode_embedded_strs(msg)
-                    return framed_msg["body"]
-                while True:
-                    for msg in self.unpacker:
-                        framed_msg = salt.transport.frame.decode_embedded_strs(msg)
-                        return framed_msg["body"]
-                    raw_msg = await self._ws.receive()
-                    if raw_msg.type == aiohttp.WSMsgType.TEXT:
-                        if raw_msg.data == "close":
-                            await self._ws.close()
-                    if raw_msg.type == aiohttp.WSMsgType.BINARY:
-                        self.unpacker.feed(raw_msg.data)
-                        for msg in self.unpacker:
-                            framed_msg = salt.transport.frame.decode_embedded_strs(msg)
-                            return framed_msg["body"]
-                    elif raw_msg.type == aiohttp.WSMsgType.ERROR:
-                        log.error(
-                            "ws connection closed with exception %s",
-                            self._ws.exception(),
-                        )
-        finally:
-            self._read_in_progress.release()
 
     async def handle_on_recv(self, callback):
         while not self._ws:

@@ -56,7 +56,7 @@ def server(config):
 
 @pytest.fixture
 def client(io_loop, config):
-    client = salt.transport.tcp.TCPPubClient(
+    client = salt.transport.tcp.PublishClient(
         config.copy(), io_loop, host=config["master_ip"], port=config["publish_port"]
     )
     try:
