@@ -105,23 +105,6 @@ def test_salt_user_group(install_salt):
     assert in_group is True
 
 
-def test_salt_cloud_dirs(install_salt):
-    """
-    Test the correct user is running the Salt Master
-    """
-    if platform.is_windows() or platform.is_darwin():
-        pytest.skip("Package does not have user set. Not testing user")
-    paths = [
-        "/opt/saltstack/salt/lib/python3.10/site-packages/salt/cloud/deploy",
-        "/etc/salt/cloud.deploy.d",
-    ]
-    for name in paths:
-        path = pathlib.Path(name)
-        assert path.exists()
-        assert path.owner() == "salt"
-        assert path.group() == "salt"
-
-
 def test_pkg_paths(
     install_salt, pkg_paths, pkg_paths_salt_user, pkg_paths_salt_user_exclusions
 ):
