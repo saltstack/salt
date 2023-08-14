@@ -1,9 +1,10 @@
-import salt.utils.process
-
 import pytest
 
+import salt.utils.process
+
+
 def transport_ids(value):
-    return "Transport({})".format(value)
+    return f"Transport({value})"
 
 
 @pytest.fixture(params=("zeromq", "tcp", "ws"), ids=transport_ids)

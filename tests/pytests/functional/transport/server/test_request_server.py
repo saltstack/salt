@@ -1,6 +1,5 @@
 import asyncio
 
-
 import salt.transport
 import salt.utils.process
 

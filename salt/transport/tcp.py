@@ -1454,7 +1454,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         process_manager.add_process(
             self.publish_daemon,
             args=[self.publish_payload],
-            name=self.__class__.__name__)
+            name=self.__class__.__name__,
+        )
 
     async def publish_payload(self, payload, *args):
         return await self.pub_server.publish_payload(payload)

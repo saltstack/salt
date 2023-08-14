@@ -436,12 +436,22 @@ class PublishClient(Transport):
 
 
 def ssl_context(ssl_options, server_side=False):
+    """
+    Create an ssl context from the provided ssl_options. This method preserves
+    backwards compatability older ssl config settings but adds verify_locations
+    and verify_flags options.
+    """
     default_version = ssl.PROTOCOL_TLS
     if server_side:
         default_version = ssl.PROTOCOL_TLS_SERVER
+        purpose = ssl.Purpose.CLIENT_AUTH
     elif server_side is not None:
         default_version = ssl.PROTOCOL_TLS_CLIENT
-    context = ssl.SSLContext(ssl_options.get("ssl_version", default_version))
+        purpose = ssl.Purpose.SERVER_AUTH
+    # Use create_default_context to start with what Python considers resonably
+    # secure settings.
+    context = ssl.create_default_context(purpose)
+    context.protocol = ssl_options.get("ssl_version", default_version)
     if "certfile" in ssl_options:
         context.load_cert_chain(
             ssl_options["certfile"], ssl_options.get("keyfile", None)
