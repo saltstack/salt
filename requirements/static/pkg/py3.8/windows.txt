@@ -13,7 +13,7 @@ cffi==1.14.6
     #   -r requirements/windows.txt
     #   clr-loader
     #   cryptography
-charset-normalizer==3.1.0
+charset-normalizer==3.2.0
     # via requests
 cheroot==8.5.2
     # via cherrypy
