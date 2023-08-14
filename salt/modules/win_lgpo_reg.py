@@ -62,9 +62,7 @@ The same values can also be used to create states for setting these policies.
 import logging
 
 import salt.utils.platform
-import salt.utils.win_functions
 import salt.utils.win_lgpo_reg
-import salt.utils.win_reg
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -413,31 +411,16 @@ def set_value(
         log.error("LGPO_REG Mod: Failed to write registry.pol file")
         success = False
 
-    if not salt.utils.win_reg.set_value(
+    if not __salt__["reg.set_value"](
         hive=hive,
         key=key,
         vname=v_name,
         vdata=v_data,
         vtype=v_type,
+        all_users=all_users,
     ):
         log.error("LGPO_REG Mod: Failed to set registry entry")
         success = False
-
-    # If we're setting "user" policy class we may want to set it for all users
-    if policy_class.lower() in ["user"] and all_users:
-        # Get a list of all users and sids on the machine
-        users_sids = salt.utils.win_functions.get_users_sids()
-        # Loop through each one and set the value
-        for user, sid in users_sids:
-            if not salt.utils.win_reg.set_value(
-                hive="HKU",
-                key=f"{sid}\\{key}",
-                vname=v_name,
-                vdata=v_data,
-                vtype=v_type,
-            ):
-                log.error(f"LGPO_REG Mod: Failed to set registry entry for {user}")
-                success = False
 
     return success
 
@@ -537,31 +520,12 @@ def disable_value(key, v_name, policy_class="machine", all_users=False):
         log.error("LGPO_REG Mod: Failed to write registry.pol file")
         success = False
 
-    ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
-    if ret is None:
-        log.debug("LGPO_REG Mod: Registry key/value already missing")
-    elif not ret:
-        # It's never gonna hit this because `delete_value` will raise an
-        # error if it fails
+    ret = __salt__["reg.delete_value"](
+        hive=hive, key=key, vname=v_name, all_users=all_users
+    )
+    if not ret:
         log.error("LGPO_REG Mod: Failed to remove registry entry")
         success = False
-
-    # If we're setting "user" policy class we may want to set it for all users
-    if policy_class.lower() in ["user"] and all_users:
-        # Get a list of all users and sids on the machine
-        users_sids = salt.utils.win_functions.get_users_sids()
-        # Loop through each one and set the value
-        for user, sid in users_sids:
-            ret = salt.utils.win_reg.delete_value(
-                hive="HKU", key=f"{sid}\\{key}", vname=v_name
-            )
-            if ret is None:
-                log.debug(f"LGPO_REG Mod: Registry key/value already missing for {user}")
-            elif not ret:
-                # It's never gonna hit this because `delete_value` will raise an
-                # error if it fails
-                log.error(f"LGPO_REG Mod: Failed to delete registry entry for {user}")
-                success = False
 
     return success
 
@@ -658,31 +622,12 @@ def delete_value(key, v_name, policy_class="Machine", all_users=False):
         log.error("LGPO_REG Mod: Failed to write registry.pol file")
         success = False
 
-    ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
-    if ret is None:
-        log.debug("LGPO_REG Mod: Registry key/value already missing")
-    elif not ret:
-        # It's never gonna hit this because `delete_value` will raise an
-        # error if it fails
+    ret = __salt__["reg.delete_value"](
+        hive=hive, key=key, vname=v_name, all_users=all_users
+    )
+    if not ret:
         log.error("LGPO_REG Mod: Failed to remove registry entry")
         success = False
-
-    # If we're setting "user" policy class we may want to set it for all users
-    if policy_class.lower() in ["user"] and all_users:
-        # Get a list of all users and sids on the machine
-        users_sids = salt.utils.win_functions.get_users_sids()
-        # Loop through each one and set the value
-        for user, sid in users_sids:
-            ret = salt.utils.win_reg.delete_value(
-                hive="HKU", key=f"{sid}\\{key}", vname=v_name
-            )
-            if ret is None:
-                log.debug(f"LGPO_REG Mod: Registry key/value already missing for {user}")
-            elif not ret:
-                # It's never gonna hit this because `delete_value` will raise an
-                # error if it fails
-                log.error(f"LGPO_REG Mod: Failed to delete registry entry for {user}")
-                success = False
 
     return success
 

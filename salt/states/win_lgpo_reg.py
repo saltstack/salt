@@ -55,6 +55,8 @@ configure that policy.
 """
 import salt.utils.data
 import salt.utils.platform
+import salt.utils.win_functions
+import salt.utils.win_reg
 
 __virtualname__ = "lgpo_reg"
 
@@ -72,7 +74,7 @@ def __virtual__():
     return __virtualname__
 
 
-def _get_current(key, name, policy_class):
+def _get_current(key, name, policy_class, all_users):
     """
     Helper function to get the current state of the policy
     """
@@ -82,24 +84,37 @@ def _get_current(key, name, policy_class):
     pol = __salt__["lgpo_reg.get_value"](
         key=key, v_name=name, policy_class=policy_class
     )
-    reg_raw = __utils__["reg.read_value"](hive=hive, key=key, vname=name)
+    if hive == "HKCU" and all_users:
+        # Get a list of all users and SIDs on the machine
+        users_sids = salt.utils.win_functions.get_users_sids()
+        # Loop through each one and get the value
+        reg = {}
+        for user, sid in users_sids:
+            reg_raw = salt.utils.win_reg.read_value(
+                hive="HKEY_USERS",
+                key=f"{sid}\\{key}",
+                vname=name,
+            )
+            if reg_raw:
+                reg["user"] = {}
+                if reg_raw["vdata"] is not False:
+                    reg["user"]["data"] = reg_raw["vdata"]
+                if reg_raw["vtype"] is not False:
+                    reg["user"]["type"] = reg_raw["vtype"]
 
-    reg = {}
-    if reg_raw["vdata"] is not None:
-        reg["data"] = reg_raw["vdata"]
-    if reg_raw["vtype"] is not None:
-        reg["type"] = reg_raw["vtype"]
+    else:
+        reg_raw = salt.utils.win_reg.read_value(hive=hive, key=key, vname=name)
+        reg = {}
+        if reg_raw["vdata"] is not None:
+            reg["data"] = reg_raw["vdata"]
+        if reg_raw["vtype"] is not None:
+            reg["type"] = reg_raw["vtype"]
 
     return {"pol": pol, "reg": reg}
 
 
 def value_present(
-    name,
-    key,
-    v_data,
-    v_type="REG_DWORD",
-    policy_class="Machine",
-    all_users=False
+    name, key, v_data, v_type="REG_DWORD", policy_class="Machine", all_users=False
 ):
     r"""
     Ensure a registry setting is present in the Registry.pol file.
@@ -171,7 +186,9 @@ def value_present(
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    old = _get_current(key=key, name=name, policy_class=policy_class)
+    old = _get_current(
+        key=key, name=name, policy_class=policy_class, all_users=all_users
+    )
 
     pol_correct = (
         str(old["pol"].get("data", "")) == str(v_data)
@@ -203,9 +220,12 @@ def value_present(
         v_data=v_data,
         v_type=v_type,
         policy_class=policy_class,
+        all_users=all_users,
     )
 
-    new = _get_current(key=key, name=name, policy_class=policy_class)
+    new = _get_current(
+        key=key, name=name, policy_class=policy_class, all_users=all_users
+    )
 
     pol_correct = (
         str(new["pol"]["data"]) == str(v_data) and new["pol"]["type"] == v_type
@@ -232,7 +252,7 @@ def value_present(
     return ret
 
 
-def value_disabled(name, key, policy_class="Machine"):
+def value_disabled(name, key, policy_class="Machine", all_users=False):
     r"""
     Ensure a registry setting is disabled in the Registry.pol file.
 
@@ -250,6 +270,21 @@ def value_disabled(name, key, policy_class="Machine"):
             - User
 
             Default is ``Machine``
+
+        all_users (bool):
+
+            .. version-added:: 3006.3
+
+            Apply the policy to all users that have logged on to the system.
+            This will modify all sub-keys under the HKEY_USERS hive in the
+            registry that are not one of the following:
+
+            - DefaultAccount
+            - Guest
+            - WDAGUtilityAccount
+
+            This only applies to "User" policies and will be ignored for
+            "Machine" policies. Default is ``False``
 
     CLI Example:
 
@@ -271,7 +306,9 @@ def value_disabled(name, key, policy_class="Machine"):
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    old = _get_current(key=key, name=name, policy_class=policy_class)
+    old = _get_current(
+        key=key, name=name, policy_class=policy_class, all_users=all_users
+    )
 
     pol_correct = old["pol"].get("data", "") == "**del.{}".format(name)
     reg_correct = old["reg"] == {}
@@ -291,9 +328,13 @@ def value_disabled(name, key, policy_class="Machine"):
         ret["result"] = None
         return ret
 
-    __salt__["lgpo_reg.disable_value"](key=key, v_name=name, policy_class=policy_class)
+    __salt__["lgpo_reg.disable_value"](
+        key=key, v_name=name, policy_class=policy_class, all_users=all_users
+    )
 
-    new = _get_current(key=key, name=name, policy_class=policy_class)
+    new = _get_current(
+        key=key, name=name, policy_class=policy_class, all_users=all_users
+    )
 
     pol_correct = new["pol"].get("data", "") == "**del.{}".format(name)
     reg_correct = new["reg"] == {}
@@ -316,7 +357,7 @@ def value_disabled(name, key, policy_class="Machine"):
     return ret
 
 
-def value_absent(name, key, policy_class="Machine"):
+def value_absent(name, key, policy_class="Machine", all_users=False):
     r"""
     Ensure a registry setting is not present in the Registry.pol file.
 
@@ -334,6 +375,21 @@ def value_absent(name, key, policy_class="Machine"):
             - User
 
             Default is ``Machine``
+
+        all_users (bool):
+
+            .. version-added:: 3006.3
+
+            Apply the policy to all users that have logged on to the system.
+            This will modify all sub-keys under the HKEY_USERS hive in the
+            registry that are not one of the following:
+
+            - DefaultAccount
+            - Guest
+            - WDAGUtilityAccount
+
+            This only applies to "User" policies and will be ignored for
+            "Machine" policies. Default is ``False``
 
     CLI Example:
 
@@ -355,7 +411,9 @@ def value_absent(name, key, policy_class="Machine"):
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    old = _get_current(key=key, name=name, policy_class=policy_class)
+    old = _get_current(
+        key=key, name=name, policy_class=policy_class, all_users=all_users
+    )
 
     pol_correct = old["pol"] == {}
     reg_correct = old["reg"] == {}
@@ -375,9 +433,13 @@ def value_absent(name, key, policy_class="Machine"):
         ret["result"] = None
         return ret
 
-    __salt__["lgpo_reg.delete_value"](key=key, v_name=name, policy_class=policy_class)
+    __salt__["lgpo_reg.delete_value"](
+        key=key, v_name=name, policy_class=policy_class, all_users=all_users
+    )
 
-    new = _get_current(key=key, name=name, policy_class=policy_class)
+    new = _get_current(
+        key=key, name=name, policy_class=policy_class, all_users=all_users
+    )
 
     pol_correct = new["pol"] == {}
     reg_correct = new["reg"] == {}
