@@ -4,7 +4,6 @@ import multiprocessing
 import socket
 import time
 import warnings
-import functools
 
 import aiohttp
 import aiohttp.web
@@ -365,17 +364,21 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             await runner.setup()
             site = aiohttp.web.SockSite(runner, sock, ssl_context=ctx)
             log.info("Publisher binding to socket %s:%s", self.pub_host, self.pub_port)
-        print('start site')
+        print("start site")
         await site.start()
-        print('start puller')
+        print("start puller")
 
         self._pub_payload = publish_payload
         if self.pull_path:
             with salt.utils.files.set_umask(0o177):
-                self.puller = await asyncio.start_unix_server(self.pull_handler, self.pull_path)
+                self.puller = await asyncio.start_unix_server(
+                    self.pull_handler, self.pull_path
+                )
         else:
-            self.puller = await asyncio.start_server(self.pull_handler, self.pull_host, self.pull_port)
-        print('puller started')
+            self.puller = await asyncio.start_server(
+                self.pull_handler, self.pull_host, self.pull_port
+            )
+        print("puller started")
         while self._run.is_set():
             await asyncio.sleep(0.3)
         await self.server.stop()
@@ -399,7 +402,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         process_manager.add_process(
             self.publish_daemon,
             args=[self.publish_payload],
-            name=self.__class__.__name__)
+            name=self.__class__.__name__,
+        )
 
     async def handle_request(self, request):
         try:
@@ -418,9 +422,13 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
     async def _connect(self):
         if self.pull_path:
-            self.pub_reader, self.pub_writer = await asyncio.open_unix_connection(self.pull_path)
+            self.pub_reader, self.pub_writer = await asyncio.open_unix_connection(
+                self.pull_path
+            )
         else:
-            self.pub_reader, self.pub_writer = await asyncio.open_connection(self.pull_host, self.pull_port)
+            self.pub_reader, self.pub_writer = await asyncio.open_connection(
+                self.pull_host, self.pull_port
+            )
         self._connecting = None
 
     def connect(self):

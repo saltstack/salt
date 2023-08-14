@@ -1,4 +1,5 @@
 import asyncio
+
 import salt.transport
 
 
@@ -11,7 +12,9 @@ async def test_publsh_server(
     pub_server.pre_fork(process_manager)
     await asyncio.sleep(3)
 
-    pub_client = salt.transport.publish_client(minion_opts, io_loop, master_opts["interface"], master_opts["publish_port"])
+    pub_client = salt.transport.publish_client(
+        minion_opts, io_loop, master_opts["interface"], master_opts["publish_port"]
+    )
     await pub_client.connect()
 
     # Yield to loop in order to allow pub client to connect.
@@ -34,4 +37,4 @@ async def test_publsh_server(
         pub_client.close()
 
     # Yield to loop in order to allow background close methods to finish.
-    await asyncio.sleep(.3)
+    await asyncio.sleep(0.3)
