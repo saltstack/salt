@@ -28,8 +28,11 @@ def test_minion_load_grains_false():
     opts = {"random_startup_delay": 0, "grains": {"foo": "bar"}}
     with patch("salt.loader.grains") as grainsfunc:
         minion = salt.minion.Minion(opts, load_grains=False)
-        assert minion.opts["grains"] == opts["grains"]
-        grainsfunc.assert_not_called()
+        try:
+            assert minion.opts["grains"] == opts["grains"]
+            grainsfunc.assert_not_called()
+        finally:
+            minion.destroy()
 
 
 def test_minion_load_grains_true():
@@ -39,8 +42,11 @@ def test_minion_load_grains_true():
     opts = {"random_startup_delay": 0, "grains": {}}
     with patch("salt.loader.grains") as grainsfunc:
         minion = salt.minion.Minion(opts, load_grains=True)
-        assert minion.opts["grains"] != {}
-        grainsfunc.assert_called()
+        try:
+            assert minion.opts["grains"] != {}
+            grainsfunc.assert_called()
+        finally:
+            minion.destroy()
 
 
 def test_minion_load_grains_default():
@@ -50,8 +56,11 @@ def test_minion_load_grains_default():
     opts = {"random_startup_delay": 0, "grains": {}}
     with patch("salt.loader.grains") as grainsfunc:
         minion = salt.minion.Minion(opts)
-        assert minion.opts["grains"] != {}
-        grainsfunc.assert_called()
+        try:
+            assert minion.opts["grains"] != {}
+            grainsfunc.assert_called()
+        finally:
+            minion.destroy()
 
 
 @pytest.mark.parametrize(
@@ -80,40 +89,47 @@ def test_send_req_fires_completion_event(event, minion_opts):
         with patch("salt.loader.grains"):
             minion = salt.minion.Minion(minion_opts)
 
-            load = {"load": "value"}
-            timeout = 60
+            try:
+                load = {"load": "value"}
+                timeout = 60
 
-            # XXX This is buggy because "async" in event[0] will never evaluate
-            # to True and if it *did* evaluate to true the test would fail
-            # because you Mock isn't a co-routine.
-            if "async" in event[0]:
-                rtn = minion._send_req_async(load, timeout).result()
-            else:
-                rtn = minion._send_req_sync(load, timeout)
+                # XXX This is buggy because "async" in event[0] will never evaluate
+                # to True and if it *did* evaluate to true the test would fail
+                # because you Mock isn't a co-routine.
+                if "async" in event[0]:
+                    rtn = minion._send_req_async(load, timeout).result()
+                else:
+                    rtn = minion._send_req_sync(load, timeout)
 
-            # get the
-            for idx, call in enumerate(event.mock_calls, 1):
-                if "fire_event" in call[0]:
-                    condition_event_tag = (
-                        len(call.args) > 1
-                        and call.args[1] == "__master_req_channel_payload"
-                    )
-                    condition_event_tag_error = "{} != {}; Call(number={}): {}".format(
-                        idx, call, call.args[1], "__master_req_channel_payload"
-                    )
-                    condition_timeout = (
-                        len(call.kwargs) == 1 and call.kwargs["timeout"] == timeout
-                    )
-                    condition_timeout_error = "{} != {}; Call(number={}): {}".format(
-                        idx, call, call.kwargs["timeout"], timeout
-                    )
+                # get the
+                for idx, call in enumerate(event.mock_calls, 1):
+                    if "fire_event" in call[0]:
+                        condition_event_tag = (
+                            len(call.args) > 1
+                            and call.args[1] == "__master_req_channel_payload"
+                        )
+                        condition_event_tag_error = (
+                            "{} != {}; Call(number={}): {}".format(
+                                idx, call, call.args[1], "__master_req_channel_payload"
+                            )
+                        )
+                        condition_timeout = (
+                            len(call.kwargs) == 1 and call.kwargs["timeout"] == timeout
+                        )
+                        condition_timeout_error = (
+                            "{} != {}; Call(number={}): {}".format(
+                                idx, call, call.kwargs["timeout"], timeout
+                            )
+                        )
 
-                    fire_event_called = True
-                    assert condition_event_tag, condition_event_tag_error
-                    assert condition_timeout, condition_timeout_error
+                        fire_event_called = True
+                        assert condition_event_tag, condition_event_tag_error
+                        assert condition_timeout, condition_timeout_error
 
-            assert fire_event_called
-            assert rtn
+                assert fire_event_called
+                assert rtn
+            finally:
+                minion.destroy()
 
 
 async def test_send_req_async_regression_62453(minion_opts):
@@ -127,6 +143,7 @@ async def test_send_req_async_regression_62453(minion_opts):
     minion_opts["random_startup_delay"] = 0
     minion_opts["return_retry_tries"] = 30
     minion_opts["grains"] = {}
+    minion_opts["ipc_mode"] = "tcp"
     with patch("salt.loader.grains"):
         minion = salt.minion.Minion(minion_opts)
 
@@ -813,7 +830,7 @@ def test_minion_manage_beacons(minion_opts):
         try:
             minion_opts["beacons"] = {}
 
-            io_loop = tornado.ioloop.IOLoop()
+            io_loop = MagicMock()
 
             mock_functions = {"test.ping": None}
             minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
@@ -956,6 +973,8 @@ async def test_master_type_failover_no_masters(minion_opts):
     ):
         with pytest.raises(SaltClientError):
             minion = salt.minion.Minion(minion_opts)
+            # Mock the io_loop so calls to stop/close won't happen.
+            minion.io_loop = MagicMock()
             await minion.connect_master()
 
 
@@ -1075,7 +1094,7 @@ async def test_master_type_disable(minion_opts):
 
         try:
             minion_man = salt.minion.MinionManager(minion_opts)
-            minion_man._connect_minion(minion)
+            await minion_man._connect_minion(minion)
         except RuntimeError:
             pytest.fail("_connect_minion(minion) threw an error, This was not expected")
 
@@ -1084,4 +1103,6 @@ async def test_master_type_disable(minion_opts):
         assert "schedule" in minion.periodic_callbacks
         assert minion.connected is False
     finally:
+        # Mock the io_loop so calls to stop/close won't happen.
+        minion.io_loop = MagicMock()
         minion.destroy()

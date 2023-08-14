@@ -1,6 +1,7 @@
 import pytest
 
 import salt.utils.data
+from salt.exceptions import SaltException
 
 
 def test_get_value_simple_path():
@@ -87,3 +88,22 @@ def test_shuffle():
         "three",
         "one",
     ]
+
+
+def test_to_entries():
+    data = {"a": 1, "b": 2}
+    entries = [{"key": "a", "value": 1}, {"key": "b", "value": 2}]
+    assert salt.utils.data.to_entries(data) == entries
+
+    data = ["monkey", "donkey"]
+    entries = [{"key": 0, "value": "monkey"}, {"key": 1, "value": "donkey"}]
+    assert salt.utils.data.to_entries(data) == entries
+
+    with pytest.raises(SaltException):
+        salt.utils.data.to_entries("RAISE ON THIS")
+
+
+def test_from_entries():
+    entries = [{"key": "a", "value": 1}, {"key": "b", "value": 2}]
+    data = {"a": 1, "b": 2}
+    assert salt.utils.data.from_entries(entries) == data

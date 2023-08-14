@@ -78,7 +78,7 @@ vm.add_argument("--region", help="The AWS region.", default=AWS_REGION)
             "choices": list(AMIS),
         },
         "key_name": {
-            "help": "The SSH key name.",
+            "help": "The SSH key name. Will default to TOOLS_KEY_NAME in environment",
         },
         "instance_type": {
             "help": "The instance type to use.",
@@ -110,7 +110,7 @@ vm.add_argument("--region", help="The AWS region.", default=AWS_REGION)
 def create(
     ctx: Context,
     name: str,
-    key_name: str = os.environ.get("RUNNER_NAME"),  # type: ignore[assignment]
+    key_name: str = os.environ.get("RUNNER_NAME") or os.environ.get("TOOLS_KEY_NAME"),  # type: ignore[assignment]
     instance_type: str = None,
     no_delete: bool = False,
     no_destroy_on_failure: bool = False,
@@ -566,7 +566,9 @@ def download_artifacts(ctx: Context, name: str):
 @vm.command(
     name="sync-cache",
     arguments={
-        "key_name": {"help": "The SSH key name."},
+        "key_name": {
+            "help": "The SSH key name. Will default to TOOLS_KEY_NAME in environment"
+        },
         "delete": {
             "help": "Delete the entries in the cache that don't align with ec2",
             "action": "store_true",
@@ -575,7 +577,7 @@ def download_artifacts(ctx: Context, name: str):
 )
 def sync_cache(
     ctx: Context,
-    key_name: str = os.environ.get("RUNNER_NAME"),  # type: ignore[assignment]
+    key_name: str = os.environ.get("RUNNER_NAME") or os.environ.get("TOOLS_KEY_NAME"),  # type: ignore[assignment]
     delete: bool = False,
 ):
     """
@@ -626,7 +628,9 @@ def sync_cache(
 @vm.command(
     name="list",
     arguments={
-        "key_name": {"help": "The SSH key name."},
+        "key_name": {
+            "help": "The SSH key name. Will default to TOOLS_KEY_NAME in environment"
+        },
         "states": {
             "help": "The instance state to filter by.",
             "flags": ["-s", "-state"],
@@ -636,7 +640,7 @@ def sync_cache(
 )
 def list_vms(
     ctx: Context,
-    key_name: str = os.environ.get("RUNNER_NAME"),  # type: ignore[assignment]
+    key_name: str = os.environ.get("RUNNER_NAME") or os.environ.get("TOOLS_KEY_NAME"),  # type: ignore[assignment]
     states: set[str] = None,
 ):
     """

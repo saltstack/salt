@@ -607,8 +607,11 @@ def pytest_pyfunc_call(pyfuncitem):
 
     __tracebackhide__ = True
 
-    loop.run_sync(
-        CoroTestFunction(pyfuncitem.obj, testargs), timeout=get_test_timeout(pyfuncitem)
+    loop.asyncio_loop.run_until_complete(
+        asyncio.wait_for(
+            CoroTestFunction(pyfuncitem.obj, testargs)(),
+            timeout=get_test_timeout(pyfuncitem),
+        )
     )
     return True
 
@@ -618,15 +621,14 @@ def io_loop():
     """
     Create new io loop for each test, and tear it down after.
     """
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    asyncio_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(asyncio_loop)
     loop = tornado.ioloop.IOLoop.current()
-    loop.make_current()
     try:
         yield loop
     finally:
-        loop.clear_current()
-        loop.close(all_fds=True)
+        loop.close(all_fds=True)  # Also closes asyncio_loop
+        asyncio.set_event_loop(None)
 
 
 # <---- Async Test Fixtures ------------------------------------------------------------------------------------------

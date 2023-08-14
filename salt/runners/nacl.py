@@ -1,7 +1,7 @@
 """
 This module helps include encrypted passwords in pillars, grains and salt state files.
 
-:depends: libnacl, https://github.com/saltstack/libnacl
+:depends: PyNaCl, https://github.com/pyca/pynacl
 
 This is often useful if you wish to store your pillars in source control or
 share your pillar data with others that you trust. I don't advise making your pillars public
@@ -125,7 +125,7 @@ def __virtual__():
 
 def keygen(sk_file=None, pk_file=None, **kwargs):
     """
-    Use libnacl to generate a keypair.
+    Use PyNaCL to generate a keypair.
 
     If no `sk_file` is defined return a keypair.
 
