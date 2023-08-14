@@ -1,10 +1,15 @@
-# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
+# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated,bad-whitespace
 from __future__ import annotations
 
+import fnmatch
+import hashlib
 import json
 import os
 import pathlib
+import shutil
 import sys
+import tempfile
+import zipfile
 from datetime import datetime
 from typing import Any
 
@@ -296,3 +301,143 @@ def create_full_repo_path(
     create_repo_path = create_repo_path / "minor" / salt_version
     create_repo_path.mkdir(exist_ok=True, parents=True)
     return create_repo_path
+
+
+def get_file_checksum(fpath: pathlib.Path, hash_name: str) -> str:
+    with fpath.open("rb") as rfh:
+        try:
+            digest = hashlib.file_digest(rfh, hash_name)  # type: ignore[attr-defined]
+        except AttributeError:
+            # Python < 3.11
+            buf = bytearray(2**18)  # Reusable buffer to reduce allocations.
+            view = memoryview(buf)
+            digest = getattr(hashlib, hash_name)()
+            while True:
+                size = rfh.readinto(buf)
+                if size == 0:
+                    break  # EOF
+                digest.update(view[:size])
+    hexdigest: str = digest.hexdigest()
+    return hexdigest
+
+
+def get_github_token(ctx: Context) -> str | None:
+    """
+    Get the GITHUB_TOKEN to be able to authenticate to the API.
+    """
+    github_token = os.environ.get("GITHUB_TOKEN")
+    if github_token is None:
+        gh = shutil.which("gh")
+        ret = ctx.run(gh, "auth", "token", check=False, capture=True)
+        if ret.returncode == 0:
+            github_token = ret.stdout.decode().strip() or None
+    return github_token
+
+
+def download_artifact(
+    ctx: Context,
+    dest: pathlib.Path,
+    run_id: int,
+    repository: str = "saltstack/salt",
+    artifact_name: str | None = None,
+):
+    """
+    Download CI artifacts.
+    """
+    github_token = get_github_token(ctx)
+    if github_token is None:
+        ctx.error("Downloading artifacts requires being authenticated to GitHub.")
+        ctx.info(
+            "Either set 'GITHUB_TOKEN' to a valid token, or configure the 'gh' tool such that "
+            "'gh auth token' returns a token."
+        )
+        ctx.exit(1)
+    with ctx.web as web:
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {github_token}",
+        }
+        web.headers.update(headers)
+        page = 0
+        found_artifact = False
+        while True:
+            if found_artifact:
+                break
+            page += 1
+            ret = web.get(
+                f"https://api.github.com/repos/{repository}/actions/runs/{run_id}/artifacts?per_page=100&page={page}"
+            )
+            if ret.status_code != 200:
+                ctx.error(
+                    f"Failed to get the artifacts for the run ID {run_id} for repository {repository!r}: {ret.reason}"
+                )
+                ctx.exit(1)
+            data = ret.json()
+            if not data["artifacts"]:
+                break
+            for artifact in data["artifacts"]:
+                if fnmatch.fnmatch(artifact["name"], artifact_name):
+                    found_artifact = artifact["name"]
+                    tempdir_path = pathlib.Path(tempfile.gettempdir())
+                    download_url = artifact["archive_download_url"]
+                    ctx.info(f"Downloading {download_url}")
+                    downloaded_artifact = _download_file(
+                        ctx,
+                        download_url,
+                        tempdir_path / f"{artifact['name']}.zip",
+                        headers=headers,
+                    )
+                    ctx.info("Downloaded", downloaded_artifact)
+                    with zipfile.ZipFile(downloaded_artifact) as zfile:
+                        zfile.extractall(path=dest)
+                    break
+        if found_artifact is False:
+            ctx.error(f"Failed to find an artifact by the name of {artifact_name!r}")
+            ctx.exit(1)
+
+    return found_artifact
+
+
+def _download_file(
+    ctx: Context,
+    url: str,
+    dest: pathlib.Path,
+    auth: str | None = None,
+    headers: dict[str, str] | None = None,
+) -> pathlib.Path:
+    curl = shutil.which("curl")
+    if curl is not None:
+        command = [curl, "-sS", "-L"]
+        if headers:
+            for key, value in headers.items():
+                command.extend(["-H", f"{key}: {value}"])
+        command.extend(["-o", str(dest), url])
+        ret = ctx.run(*command)
+        if ret.returncode:
+            ctx.error(f"Failed to download {url}")
+            ctx.exit(1)
+        return dest
+    wget = shutil.which("wget")
+    if wget is not None:
+        with ctx.cwd(dest.parent):
+            command = [wget, "--no-verbose"]
+            if headers:
+                for key, value in headers.items():
+                    command.append(f"--header={key}: {value}")
+            command.append(url)
+            ret = ctx.run(*command)
+            if ret.returncode:
+                ctx.error(f"Failed to download {url}")
+                ctx.exit(1)
+        return dest
+    # NOTE the stream=True parameter below
+    ctx.info(f"Downloading {url} ...")
+    with ctx.web as web:
+        web.headers.update(headers)
+        with web.get(url, stream=True, auth=auth) as r:
+            r.raise_for_status()
+            with dest.open("wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+    return dest
