@@ -141,7 +141,7 @@ tempora==5.3.0
     # via portend
 tomli==2.0.1
     # via pytest
-tornado==6.3.2 ; python_version >= "3.8"
+tornado==6.3.3 ; python_version >= "3.8"
     # via -r requirements/base.txt
 typing-extensions==4.6.3
     # via
