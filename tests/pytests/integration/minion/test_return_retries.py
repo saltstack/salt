@@ -28,7 +28,7 @@ def salt_minion_retry(salt_master_factory, salt_minion_id):
 @pytest.mark.slow_test
 def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
     # run job that takes some time for warmup
-    rtn = salt_cli.run("test.sleep", "5", "--async", minion_tgt=salt_minion_retry.id)
+    rtn = salt_cli.run("test.sleep", "10", "--async", minion_tgt=salt_minion_retry.id)
     # obtain JID
     jid = rtn.stdout.strip().split(" ")[-1]
 

@@ -2,10 +2,15 @@
 Salt package
 """
 
+import asyncio
 import importlib
+import locale
 import os
 import sys
 import warnings
+
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 if sys.version_info < (3,):
     sys.stderr.write(
@@ -88,8 +93,6 @@ warnings.filterwarnings(
 
 
 def __define_global_system_encoding_variable__():
-    import sys
-
     # This is the most trustworthy source of the system encoding, though, if
     # salt is being imported after being daemonized, this information is lost
     # and reset to None
@@ -105,16 +108,11 @@ def __define_global_system_encoding_variable__():
         # If the system is properly configured this should return a valid
         # encoding. MS Windows has problems with this and reports the wrong
         # encoding
-        import locale
-
         try:
             encoding = locale.getencoding()
         except AttributeError:
             # Python < 3.11
             encoding = locale.getpreferredencoding(do_setlocale=True)
-
-        # This is now garbage collectable
-        del locale
 
         if not encoding:
             # This is most likely ascii which is not the best but we were
@@ -139,7 +137,6 @@ def __define_global_system_encoding_variable__():
     setattr(builtins, "__salt_system_encoding__", encoding)
 
     # This is now garbage collectable
-    del sys
     del builtins
     del encoding
 

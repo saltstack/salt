@@ -474,7 +474,15 @@ def setup_temp_handler(log_level=None):
             break
     else:
         handler = DeferredStreamHandler(sys.stderr)
-        atexit.register(handler.flush)
+
+        def tryflush():
+            try:
+                handler.flush()
+            except ValueError:
+                # File handle has already been closed.
+                pass
+
+        atexit.register(tryflush)
     handler.setLevel(log_level)
 
     # Set the default temporary console formatter config

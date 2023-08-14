@@ -1,6 +1,6 @@
 Jinja2
 jmespath
-msgpack>=0.5,!=0.5.5
+msgpack>=1.0.0
 PyYAML
 MarkupSafe
 requests>=1.0.0

@@ -1044,9 +1044,9 @@ class MinionManager(MinionBase):
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
-        self.event_publisher = salt.utils.event.AsyncEventPublisher(
-            self.opts,
-            io_loop=self.io_loop,
+        ipc_publisher = salt.transport.ipc_publish_server("minion", self.opts)
+        self.io_loop.spawn_callback(
+            ipc_publisher.publisher, ipc_publisher.publish_payload, self.io_loop
         )
         self.event = salt.utils.event.get_event(
             "minion", opts=self.opts, io_loop=self.io_loop
@@ -1118,11 +1118,8 @@ class MinionManager(MinionBase):
             self.io_loop.spawn_callback(self._connect_minion, minion)
         self.io_loop.call_later(timeout, self._check_minions)
 
-    @tornado.gen.coroutine
-    def _connect_minion(self, minion):
-        """
-        Create a minion, and asynchronously connect it to a master
-        """
+    async def _connect_minion(self, minion):
+        """Create a minion, and asynchronously connect it to a master"""
         last = 0  # never have we signed in
         auth_wait = minion.opts["acceptance_wait_time"]
         failed = False
@@ -1133,7 +1130,7 @@ class MinionManager(MinionBase):
                 if minion.opts.get("scheduler_before_connect", False):
                     minion.setup_scheduler(before_connect=True)
                 if minion.opts.get("master_type", "str") != "disable":
-                    yield minion.connect_master(failed=failed)
+                    await minion.connect_master(failed=failed)
                 minion.tune_in(start=False)
                 self.minions.append(minion)
                 break
@@ -1143,11 +1140,12 @@ class MinionManager(MinionBase):
                     "Error while bringing up minion for multi-master. Is "
                     "master at %s responding?",
                     minion.opts["master"],
+                    exc_info=True,
                 )
                 last = time.time()
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
-                yield tornado.gen.sleep(auth_wait)  # TODO: log?
+                await asyncio.sleep(auth_wait)
             except SaltMasterUnresolvableError:
                 err = (
                     "Master address: '{}' could not be resolved. Invalid or"
@@ -3243,8 +3241,7 @@ class Minion(MinionBase):
             del self.schedule
         if hasattr(self, "pub_channel") and self.pub_channel is not None:
             self.pub_channel.on_recv(None)
-            if hasattr(self.pub_channel, "close"):
-                self.pub_channel.close()
+            self.pub_channel.close()
             del self.pub_channel
         if hasattr(self, "periodic_callbacks"):
             for cb in self.periodic_callbacks.values():
