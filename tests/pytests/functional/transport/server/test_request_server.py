@@ -1,27 +1,8 @@
 import asyncio
 
-import pytest
 
 import salt.transport
 import salt.utils.process
-
-
-def transport_ids(value):
-    return "Transport({})".format(value)
-
-
-@pytest.fixture(params=("zeromq", "tcp", "ws"), ids=transport_ids)
-def transport(request):
-    return request.param
-
-
-@pytest.fixture
-def process_manager():
-    pm = salt.utils.process.ProcessManager()
-    try:
-        yield pm
-    finally:
-        pm.terminate()
 
 
 async def test_request_server(
@@ -57,5 +38,5 @@ async def test_request_server(
         req_client.close()
         req_server.close()
 
-    # Yield to loop in order to allow cleanup methods to finish.
+    # Yield to loop in order to allow background close methods to finish.
     await asyncio.sleep(0.3)

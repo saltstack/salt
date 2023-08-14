@@ -368,8 +368,7 @@ class PublishClient(salt.transport.base.PublishClient):
             await asyncio.sleep(0.001)
         if timeout == 0:
             for msg in self.unpacker:
-                framed_msg = salt.transport.frame.decode_embedded_strs(msg)
-                return framed_msg["body"]
+                return msg[b"body"]
             try:
                 events, _, _ = select.select([self._stream.socket], [], [], 0)
             except TimeoutError:
@@ -390,8 +389,7 @@ class PublishClient(salt.transport.base.PublishClient):
                             return
                         self.unpacker.feed(byts)
                         for msg in self.unpacker:
-                            framed_msg = salt.transport.frame.decode_embedded_strs(msg)
-                            return framed_msg["body"]
+                            return msg[b"body"]
         elif timeout:
             try:
                 return await asyncio.wait_for(self.recv(), timeout=timeout)
@@ -405,8 +403,7 @@ class PublishClient(salt.transport.base.PublishClient):
                 return
         else:
             for msg in self.unpacker:
-                framed_msg = salt.transport.frame.decode_embedded_strs(msg)
-                return framed_msg["body"]
+                return msg[b"body"]
             while not self._closing:
                 async with self._read_in_progress:
                     try:
@@ -423,8 +420,7 @@ class PublishClient(salt.transport.base.PublishClient):
                         continue
                     self.unpacker.feed(byts)
                     for msg in self.unpacker:
-                        framed_msg = salt.transport.frame.decode_embedded_strs(msg)
-                        return framed_msg["body"]
+                        return msg[b"body"]
 
     async def on_recv_handler(self, callback):
         while not self._stream:
@@ -1455,7 +1451,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         primarily be used to create IPC channels and create our daemon process to
         do the actual publishing
         """
-        process_manager.add_process(self.publish_daemon, name=self.__class__.__name__)
+        process_manager.add_process(
+            self.publish_daemon,
+            args=[self.publish_payload],
+            name=self.__class__.__name__)
 
     async def publish_payload(self, payload, *args):
         return await self.pub_server.publish_payload(payload)
