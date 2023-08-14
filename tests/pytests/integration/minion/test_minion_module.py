@@ -71,7 +71,7 @@ def test_minions(
 
     salt_cli.run("minion.restart", minion_tgt=second_minion.id, timeout=1)
 
-    start_pattern = "salt/minion/flay/start"
+    start_pattern = f"salt/minion/{second_minion.id}/start"
     event_pattern = (second_minion.id, start_pattern)
     matched_events = event_listener.wait_for_events(
         [event_pattern], after_time=time.time(), timeout=30
