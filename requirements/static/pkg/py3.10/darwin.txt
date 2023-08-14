@@ -111,7 +111,7 @@ tempora==5.2.2
     # via portend
 timelib==0.3.0
     # via -r requirements/darwin.txt
-tornado==6.3.2 ; python_version >= "3.8"
+tornado==6.3.3 ; python_version >= "3.8"
     # via -r requirements/base.txt
 typing-extensions==4.6.2
     # via pydantic

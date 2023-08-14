@@ -98,7 +98,7 @@ tempora==5.2.2
     # via portend
 timelib==0.2.5
     # via -r requirements/static/pkg/linux.in
-tornado==6.3.2 ; python_version >= "3.8"
+tornado==6.3.3 ; python_version >= "3.8"
     # via -r requirements/base.txt
 typing-extensions==4.6.2
     # via pydantic
