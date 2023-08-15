@@ -119,6 +119,37 @@ def __decompressContent(coding, pgctnt):
     return pgctnt
 
 
+def _decode_result_text(result_text, backend, decode_body=None, result=None):
+    """
+    Decode only the result_text
+    """
+    if backend == "requests":
+        if not isinstance(result_text, str) and decode_body:
+            result_text = result_text.decode(result.encoding or "utf-8")
+    else:
+        if isinstance(result_text, bytes) and decode_body:
+            result_text = result_text.decode("utf-8")
+    return result_text
+
+
+def _decode_result(result_text, result_headers, backend, decode_body=None, result=None):
+    """
+    Decode the result_text and headers.
+    """
+    if "Content-Type" in result_headers:
+        msg = email.message.EmailMessage()
+        msg.add_header("Content-Type", result_headers["Content-Type"])
+        if msg.get_content_type().startswith("text/"):
+            content_charset = msg.get_content_charset()
+            if content_charset and not isinstance(result_text, str):
+                result_text = result_text.decode(content_charset)
+    result_text = _decode_result_text(
+        result_text, backend, decode_body=decode_body, result=result
+    )
+
+    return result_text, result_headers
+
+
 @jinja_filter("http_query")
 def query(
     url,
@@ -388,10 +419,10 @@ def query(
         result_headers = result.headers
         result_text = result.content
         result_cookies = result.cookies
-        body = result.content
-        if not isinstance(body, str) and decode_body:
-            body = body.decode(result.encoding or "utf-8")
-        ret["body"] = body
+        result_text = _decode_result_text(
+            result_text, backend, decode_body=decode_body, result=result
+        )
+        ret["body"] = result_text
     elif backend == "urllib2":
         request = urllib.request.Request(url_full, data)
         handlers = [
@@ -482,15 +513,9 @@ def query(
         result_status_code = result.code
         result_headers = dict(result.info())
         result_text = result.read()
-        if "Content-Type" in result_headers:
-            msg = email.message.EmailMessage()
-            msg.add_header("Content-Type", result_headers["Content-Type"])
-            if msg.get_content_type().startswith("text/"):
-                content_charset = msg.get_content_charset()
-                if content_charset and not isinstance(result_text, str):
-                    result_text = result_text.decode(content_charset)
-        if isinstance(result_text, bytes) and decode_body:
-            result_text = result_text.decode("utf-8")
+        result_text, result_headers = _decode_result(
+            result_text, result_headers, backend, decode_body=decode_body, result=result
+        )
         ret["body"] = result_text
     else:
         # Tornado
@@ -615,6 +640,12 @@ def query(
         except salt.ext.tornado.httpclient.HTTPError as exc:
             ret["status"] = exc.code
             ret["error"] = str(exc)
+            ret["body"], _ = _decode_result(
+                exc.response.body,
+                exc.response.headers,
+                backend,
+                decode_body=decode_body,
+            )
             return ret
         except (socket.herror, OSError, socket.timeout, socket.gaierror) as exc:
             if status is True:
@@ -632,15 +663,9 @@ def query(
         result_status_code = result.code
         result_headers = result.headers
         result_text = result.body
-        if "Content-Type" in result_headers:
-            msg = email.message.EmailMessage()
-            msg.add_header("Content-Type", result_headers["Content-Type"])
-            if msg.get_content_type().startswith("text/"):
-                content_charset = msg.get_content_charset()
-                if content_charset and not isinstance(result_text, str):
-                    result_text = result_text.decode(content_charset)
-        if isinstance(result_text, bytes) and decode_body:
-            result_text = result_text.decode("utf-8")
+        result_text, result_headers = _decode_result(
+            result_text, result_headers, backend, decode_body=decode_body, result=result
+        )
         ret["body"] = result_text
         if "Set-Cookie" in result_headers and cookies is not None:
             result_cookies = parse_cookie_header(result_headers["Set-Cookie"])
