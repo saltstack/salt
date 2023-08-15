@@ -11,7 +11,6 @@ import shutil
 import ssl
 import stat
 import sys
-import tarfile
 import tempfile
 import types
 
@@ -549,13 +548,7 @@ def ssl_webserver(integration_files_dir, this_txt_file):
 
 
 @pytest.fixture(scope="module")
-def website_contents(integration_files_dir):
-    with tarfile.open(integration_files_dir / "test.tar.gz", "w:gz") as tar:
-        tar.add(integration_files_dir / "this.txt")
-
-
-@pytest.fixture(scope="module")
-def webserver(integration_files_dir, this_txt_file, website_contents):
+def webserver(integration_files_dir, this_txt_file):
     """
     spins up an http webserver.
     """
