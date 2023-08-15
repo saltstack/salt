@@ -918,7 +918,7 @@ def get_testing_releases(
         ctx.exit(1, "The 'GITHUB_OUTPUT' variable is not set.")
     else:
         # We aren't testing upgrades from anything before 3006.0 except the latest 3005.x
-        threshold_major = 3006
+        threshold_major = 3005
         parsed_salt_version = tools.utils.Version(salt_version)
         # We want the latest 4 major versions, removing the oldest if this version is a new major
         num_major_versions = 4
@@ -940,16 +940,6 @@ def get_testing_releases(
                 version for version in releases if version.major == major
             ]
             testing_releases.append(minors_of_major[-1])
-
-        # TODO: Remove this block when we reach version 3009.0
-        # Append the latest minor version of 3005 if we don't have enough major versions to test against
-        if len(testing_releases) != num_major_versions:
-            url = "https://repo.saltproject.io/salt/onedir/repo.json"
-            ret = ctx.web.get(url)
-            repo_data = ret.json()
-            latest = list(repo_data["latest"].keys())[0]
-            version = repo_data["latest"][latest]["version"]
-            testing_releases = [version] + testing_releases
 
         str_releases = [str(version) for version in testing_releases]
 

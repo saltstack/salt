@@ -160,7 +160,7 @@ Description: remote manager to administer servers via Salt SSH
 
 Package: salt-cloud
 Architecture: amd64 arm64
-Breaks: salt-common (<= 3006.1)
+Breaks: salt-common (<= 3006.2)
 Depends: salt-common (= ${source:Version}),
          ${misc:Depends}
 Description: public cloud VM management system
