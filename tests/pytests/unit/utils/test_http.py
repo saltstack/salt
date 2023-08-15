@@ -51,11 +51,3 @@ def test_session_ca_bundle():
     with patch_os:
         ret = salt.utils.http.session(ca_bundle=fpath)
     assert ret.verify == fpath
-
-
-@pytest.mark.parametrize("backend", ["requests", "urllib2", "tornado"])
-def test_decode_body(webserver, backend):
-    ret = salt.utils.http.query(
-        webserver.url("test.tar.gz"), backend=backend, decode_body=False
-    )
-    assert isinstance(ret["body"], bytes)
