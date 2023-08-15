@@ -36,8 +36,10 @@ def configure_loader_modules(tmp_path, mocked_opts):
 @pytest.fixture
 def file_client(mocked_opts):
     client = fileclient.Client(mocked_opts)
-    yield client
-    del client
+    try:
+        yield client
+    finally:
+        del client
 
 
 @pytest.fixture
@@ -132,7 +134,7 @@ def test_fileclient_timeout(minion_opts, master_opts):
     with fileclient.get_file_client(minion_opts) as client:
         # Authenticate must return true
         client.auth.authenticate = mock_auth
-        # Crypticla must return bytes to pass to transport.RequestClient.send
+        # Crypticle must return bytes to pass to transport.RequestClient.send
         client.auth._crypticle = Mock()
         client.auth._crypticle.dumps = mock_dumps
         with pytest.raises(salt.exceptions.SaltClientError):
@@ -143,7 +145,7 @@ def test_cache_skips_makedirs_on_race_condition(client_opts):
     """
     If cache contains already a directory, do not raise an exception.
     """
-    with patch("os.path.isfile", lambda prm: False):
+    with patch("os.path.isfile", return_value=False):
         for exists in range(2):
             with patch("os.makedirs", _fake_makedir()):
                 with fileclient.Client(client_opts)._cache_loc("testfile") as c_ref_itr:
@@ -156,7 +158,7 @@ def test_cache_raises_exception_on_non_eexist_ioerror(client_opts):
     """
     If makedirs raises other than EEXIST errno, an exception should be raised.
     """
-    with patch("os.path.isfile", lambda prm: False):
+    with patch("os.path.isfile", return_value=False):
         with patch("os.makedirs", _fake_makedir(num=errno.EROFS)):
             with pytest.raises(OSError):
                 with fileclient.Client(client_opts)._cache_loc("testfile") as c_ref_itr:
