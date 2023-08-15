@@ -12,7 +12,6 @@ from tests.support.mock import MagicMock, call, patch
 @pytest.fixture
 def load_auth():
     patches = (
-        ("salt.payload.Serial", None),
         (
             "salt.loader.auth",
             MagicMock(
@@ -100,7 +99,7 @@ def master_acl_clear_funcs(master_acl_master_opts):
     fire_event_mock = MagicMock(return_value="dummy_tag")
     patches = (
         ("zmq.Context", MagicMock()),
-        ("salt.payload.Serial.dumps", MagicMock()),
+        ("salt.payload.dumps", MagicMock()),
         ("salt.master.tagify", MagicMock()),
         ("salt.utils.event.SaltEvent.fire_event", fire_event_mock),
         ("salt.auth.LoadAuth.time_auth", MagicMock(return_value=True)),
@@ -450,11 +449,11 @@ async def test_master_minion_glob(master_acl_clear_funcs, master_acl_valid_load)
         await master_acl_clear_funcs.publish(master_acl_valid_load)
     assert (
         master_acl_clear_funcs.event.fire_event.called is True
-    ), "Did not fire {} for minion tgt {}".format(requested_function, requested_tgt)
+    ), f"Did not fire {requested_function} for minion tgt {requested_tgt}"
     assert (
         master_acl_clear_funcs.event.fire_event.call_args[0][0]["fun"]
         == requested_function
-    ), "Did not fire {} for minion glob".format(requested_function)
+    ), f"Did not fire {requested_function} for minion glob"
 
 
 @pytest.mark.skip_on_windows(reason="PAM eauth not available on Windows")
