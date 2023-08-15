@@ -131,6 +131,7 @@ Description: master-of-masters for salt, the distributed remote execution system
 
 Package: salt-ssh
 Architecture: amd64 arm64
+Breaks: salt-common (<= 3006.2)
 Depends: salt-common (= ${source:Version}),
          openssh-client,
          ${misc:Depends}
@@ -159,6 +160,7 @@ Description: remote manager to administer servers via Salt SSH
 
 Package: salt-cloud
 Architecture: amd64 arm64
+Breaks: salt-common (<= 3006.1)
 Depends: salt-common (= ${source:Version}),
          ${misc:Depends}
 Description: public cloud VM management system
