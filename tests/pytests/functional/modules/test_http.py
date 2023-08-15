@@ -4,7 +4,7 @@ import salt.modules.http as http
 
 
 @pytest.fixture
-def configure_loader_modules(minion_opts):
+def configure_loader_modules():
     return {http: {}}
 
 
