@@ -11,7 +11,6 @@ The data sent to the state calls is as follows:
       }
 """
 
-
 import copy
 import datetime
 import fnmatch
@@ -22,7 +21,6 @@ import os
 import random
 import re
 import site
-import sys
 import time
 import traceback
 
@@ -2141,9 +2139,7 @@ class State:
         if "retry" in low:
             retries = 1
             low["retry"] = instance.verify_retry_data(low["retry"])
-            if not sys.modules[instance.states[cdata["full"]].__module__].__opts__[
-                "test"
-            ]:
+            if not instance.states.opts["test"]:
                 while low["retry"]["attempts"] >= retries:
 
                     if low["retry"]["until"] == ret["result"]:
@@ -2322,8 +2318,8 @@ class State:
             inject_globals.update(self.inject_globals)
 
         if low.get("__prereq__"):
-            test = sys.modules[self.states[cdata["full"]].__module__].__opts__["test"]
-            sys.modules[self.states[cdata["full"]].__module__].__opts__["test"] = True
+            test = self.states.opts["test"]
+            self.states.opts["test"] = True
         try:
             # Let's get a reference to the salt environment to use within this
             # state call.
@@ -2419,10 +2415,7 @@ class State:
             }
         finally:
             if low.get("__prereq__"):
-                sys.modules[self.states[cdata["full"]].__module__].__opts__[
-                    "test"
-                ] = test
-
+                self.states.opts["test"] = test
             self.state_con.pop("runas", None)
             self.state_con.pop("runas_password", None)
 
@@ -2463,7 +2456,7 @@ class State:
         )
         if "retry" in low and "parallel" not in low:
             low["retry"] = self.verify_retry_data(low["retry"])
-            if not sys.modules[self.states[cdata["full"]].__module__].__opts__["test"]:
+            if not self.states.opts["test"]:
                 if low["retry"]["until"] != ret["result"]:
                     if low["retry"]["attempts"] > retries:
                         interval = low["retry"]["interval"]

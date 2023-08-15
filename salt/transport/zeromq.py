@@ -543,6 +543,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 await self._socket.send(self.encode_payload(reply))
             except asyncio.exceptions.TimeoutError:
                 continue
+            except salt.exceptions.SaltDeserializationError:
+                await self._socket.send(self.encode_payload({"msg": "bad load"}))
             except Exception as exc:  # pylint: disable=broad-except
                 log.error("Exception in request handler", exc_info=True)
                 break
@@ -559,7 +561,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         signal.signal(signal.SIGTERM, self._handle_signals)
 
     def _handle_signals(self, signum, sigframe):
-        msg = "{} received a ".format(self.__class__.__name__)
+        msg = f"{self.__class__.__name__} received a "
         if signum == signal.SIGINT:
             msg += "SIGINT"
         elif signum == signal.SIGTERM:
