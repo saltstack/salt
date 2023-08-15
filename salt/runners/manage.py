@@ -223,7 +223,7 @@ def list_state(subset=None, show_ip=False):
     detection (no commands will be sent to minions)
 
     subset : None
-        Pass in a CIDR range to filter minions by IP address.
+        Pass in a list of minion ids.
 
     show_ip : False
         Also show the IP address each minion is connecting from.
@@ -253,7 +253,7 @@ def list_not_state(subset=None, show_ip=False):
     detection (no commands will be sent to minions)
 
     subset : None
-        Pass in a CIDR range to filter minions by IP address.
+        Pass in a list of minion ids.
 
     show_ip : False
         Also show the IP address each minion is connecting from.
@@ -285,7 +285,7 @@ def present(subset=None, show_ip=False):
     detection (no commands will be sent to minions)
 
     subset : None
-        Pass in a CIDR range to filter minions by IP address.
+        Pass in a list of minion ids.
 
     show_ip : False
         Also show the IP address each minion is connecting from.
@@ -308,7 +308,7 @@ def not_present(subset=None, show_ip=False):
     detection (no commands will be sent)
 
     subset : None
-        Pass in a CIDR range to filter minions by IP address.
+        Pass in a list of minion ids.
 
     show_ip : False
         Also show the IP address each minion is connecting from.
@@ -331,7 +331,7 @@ def joined(subset=None, show_ip=False):
     detection (no commands will be sent to minions)
 
     subset : None
-        Pass in a CIDR range to filter minions by IP address.
+        Pass in a list of minion ids.
 
     show_ip : False
         Also show the IP address each minion is connecting from.
@@ -354,7 +354,7 @@ def not_joined(subset=None, show_ip=False):
     detection (no commands will be sent)
 
     subset : None
-        Pass in a CIDR range to filter minions by IP address.
+        Pass in a list of minion ids.
 
     show_ip : False
         Also show the IP address each minion is connecting from.
@@ -377,7 +377,7 @@ def allowed(subset=None, show_ip=False):
     detection (no commands will be sent to minions)
 
     subset : None
-        Pass in a CIDR range to filter minions by IP address.
+        Pass in a list of minion ids.
 
     show_ip : False
         Also show the IP address each minion is connecting from.
@@ -400,7 +400,7 @@ def not_allowed(subset=None, show_ip=False):
     detection (no commands will be sent)
 
     subset : None
-        Pass in a CIDR range to filter minions by IP address.
+        Pass in a list of minion ids.
 
     show_ip : False
         Also show the IP address each minion is connecting from.
@@ -423,7 +423,7 @@ def alived(subset=None, show_ip=False):
     detection (no commands will be sent to minions)
 
     subset : None
-        Pass in a CIDR range to filter minions by IP address.
+        Pass in a list of minion ids.
 
     show_ip : False
         Also show the IP address each minion is connecting from.
@@ -446,7 +446,7 @@ def not_alived(subset=None, show_ip=False):
     detection (no commands will be sent)
 
     subset : None
-        Pass in a CIDR range to filter minions by IP address.
+        Pass in a list of minion ids.
 
     show_ip : False
         Also show the IP address each minion is connecting from.
@@ -469,7 +469,7 @@ def reaped(subset=None, show_ip=False):
     detection (no commands will be sent to minions)
 
     subset : None
-        Pass in a CIDR range to filter minions by IP address.
+        Pass in a list of minion ids.
 
     show_ip : False
         Also show the IP address each minion is connecting from.
@@ -492,7 +492,7 @@ def not_reaped(subset=None, show_ip=False):
     detection (no commands will be sent)
 
     subset : None
-        Pass in a CIDR range to filter minions by IP address.
+        Pass in a list of minion ids.
 
     show_ip : False
         Also show the IP address each minion is connecting from.

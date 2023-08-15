@@ -19,7 +19,7 @@ def test_fcontext_get_policy_parsing():
         {
             "semanage_out": (
                 "/var/www(/.*)?     all files         "
-                " system_u:object_r:httpd_sys_content_t:s0"
+                " system_u:object_r:httpd_sys_content_t:s0 "
             ),
             "name": "/var/www(/.*)?",
             "filetype": "all files",
@@ -31,7 +31,7 @@ def test_fcontext_get_policy_parsing():
         {
             "semanage_out": (
                 "/var/www(/.*)? all files         "
-                " system_u:object_r:httpd_sys_content_t:s0"
+                " system_u:object_r:httpd_sys_content_t:s0  "
             ),
             "name": "/var/www(/.*)?",
             "filetype": "all files",
@@ -43,7 +43,7 @@ def test_fcontext_get_policy_parsing():
         {
             "semanage_out": (
                 "/var/lib/dhcp3?                                    directory      "
-                "    system_u:object_r:dhcp_state_t:s0"
+                "    system_u:object_r:dhcp_state_t:s0	"
             ),
             "name": "/var/lib/dhcp3?",
             "filetype": "directory",
