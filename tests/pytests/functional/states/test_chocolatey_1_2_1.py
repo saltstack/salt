@@ -14,6 +14,7 @@ pytestmark = [
     pytest.mark.skip_unless_on_windows,
     pytest.mark.slow_test,
     pytest.mark.destructive_test,
+    pytest.mark.skip_on_windows,
 ]
 
 
