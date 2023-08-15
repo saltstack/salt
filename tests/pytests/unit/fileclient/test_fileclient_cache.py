@@ -105,7 +105,7 @@ def test_cache_dir(mocked_opts, minion_opts):
     """
     Ensure entire directory is cached to correct location
     """
-    patched_opts = {x: y for x, y in minion_opts.items()}
+    patched_opts = minion_opts.copy()
     patched_opts.update(mocked_opts)
 
     with patch.dict(fileclient.__opts__, patched_opts):
@@ -143,7 +143,7 @@ def test_cache_dir_with_alternate_cachedir_and_absolute_path(
     Ensure entire directory is cached to correct location when an alternate
     cachedir is specified and that cachedir is an absolute path
     """
-    patched_opts = {x: y for x, y in minion_opts.items()}
+    patched_opts = minion_opts.copy()
     patched_opts.update(mocked_opts)
     alt_cachedir = os.path.join(tmp_path, "abs_cachedir")
 
@@ -178,7 +178,7 @@ def test_cache_dir_with_alternate_cachedir_and_relative_path(mocked_opts, minion
     Ensure entire directory is cached to correct location when an alternate
     cachedir is specified and that cachedir is a relative path
     """
-    patched_opts = {x: y for x, y in minion_opts.items()}
+    patched_opts = minion_opts.copy()
     patched_opts.update(mocked_opts)
     alt_cachedir = "foo"
 
@@ -329,14 +329,14 @@ def test_cache_dest(mocked_opts, minion_opts):
     with patch.dict(fileclient.__opts__, patched_opts):
         client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
 
-        _check(client.cache_dest("https://" + relpath), _external())
+        _check(client.cache_dest(f"https://{relpath}"), _external())
 
-        _check(client.cache_dest("https://" + relpath, "dev"), _external("dev"))
+        _check(client.cache_dest(f"https://{relpath}", "dev"), _external("dev"))
 
-        _check(client.cache_dest("salt://" + relpath), _salt())
+        _check(client.cache_dest(f"salt://{relpath}"), _salt())
 
-        _check(client.cache_dest("salt://" + relpath, "dev"), _salt("dev"))
+        _check(client.cache_dest(f"salt://{relpath}", "dev"), _salt("dev"))
 
-        _check(client.cache_dest("salt://" + relpath + "?saltenv=dev"), _salt("dev"))
+        _check(client.cache_dest(f"salt://{relpath}?saltenv=dev"), _salt("dev"))
 
         _check("/foo/bar", "/foo/bar")
