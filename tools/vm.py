@@ -1128,6 +1128,7 @@ class VM:
             proc = None
             checks = 0
             last_error = None
+            connection_refused_or_reset = False
             while ssh_connection_timeout_progress <= ssh_connection_timeout:
                 start = time.time()
                 if proc is None:
@@ -1167,6 +1168,11 @@ class VM:
                         break
                     proc.wait(timeout=3)
                     stderr = proc.stderr.read().strip()
+                    if connection_refused_or_reset is False and (
+                        "connection refused" in stderr.lower()
+                        or "connection reset" in stderr.lower()
+                    ):
+                        connection_refused_or_reset = True
                     if stderr:
                         stderr = f" Last Error: {stderr}"
                         last_error = stderr
@@ -1185,6 +1191,12 @@ class VM:
                     completed=ssh_connection_timeout_progress,
                     description=f"Waiting for SSH to become available at {host} ...{stderr or ''}",
                 )
+
+                if connection_refused_or_reset:
+                    # Since ssh is now running, and we're actually getting a connection
+                    # refused error message, let's try to ssh a little slower in order not
+                    # to get blocked
+                    time.sleep(10)
 
                 if checks >= 10 and proc is not None:
                     proc.kill()
@@ -1277,8 +1289,8 @@ class VM:
         rsync_remote_path = remote_path
         if self.is_windows:
             for drive in ("c:", "C:"):
-                source = source.replace(drive, "/cygdrive/c")
-                rsync_remote_path = rsync_remote_path.replace(drive, "/cygdrive/c")
+                source = source.replace(drive, "/c")
+                rsync_remote_path = rsync_remote_path.replace(drive, "/c")
             source = source.replace("\\", "/")
         destination = f"{self.name}:{rsync_remote_path}"
         description = "Rsync local checkout to VM..."
@@ -1305,7 +1317,7 @@ class VM:
         remote_path = self.upload_path.joinpath(write_env_filename).as_posix()
         if self.is_windows:
             for drive in ("c:", "C:"):
-                remote_path = remote_path.replace(drive, "/cygdrive/c")
+                remote_path = remote_path.replace(drive, "/c")
         destination = f"{self.name}:{remote_path}"
         description = f"Uploading {write_env_filename} ..."
         self.rsync(source, destination, description)
@@ -1424,7 +1436,7 @@ class VM:
         remote_path = self.upload_path.joinpath(dependencies_filename).as_posix()
         if self.is_windows:
             for drive in ("c:", "C:"):
-                remote_path = remote_path.replace(drive, "/cygdrive/c")
+                remote_path = remote_path.replace(drive, "/c")
         source = f"{self.name}:{remote_path}"
         destination = "."
         description = f"Downloading {dependencies_filename} ..."
@@ -1437,7 +1449,7 @@ class VM:
         remote_path = self.upload_path.joinpath("artifacts").as_posix()
         if self.is_windows:
             for drive in ("c:", "C:"):
-                remote_path = remote_path.replace(drive, "/cygdrive/c")
+                remote_path = remote_path.replace(drive, "/c")
         source = f"{self.name}:{remote_path}/"
         destination = "artifacts/"
         description = f"Downloading {source} ..."
