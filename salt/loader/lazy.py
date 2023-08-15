@@ -144,9 +144,22 @@ class LoadedFunc:
 
     def __call__(self, *args, **kwargs):
         run_func = self.func
+        mod = sys.modules[run_func.__module__]
+        # All modules we've imported should have __opts__ defined. There are
+        # cases in the test suite where mod ends up being something other than
+        # a module we've loaded.
+        set_test = False
+        if hasattr(mod, "__opts__"):
+            if not isinstance(mod.__opts__, salt.loader.context.NamedLoaderContext):
+                if "test" in self.loader.opts:
+                    mod.__opts__["test"] = self.loader.opts["test"]
+                    set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
-        return self.loader.run(run_func, *args, **kwargs)
+        ret = self.loader.run(run_func, *args, **kwargs)
+        if set_test:
+            self.loader.opts["test"] = mod.__opts__["test"]
+        return ret
 
     def __repr__(self):
         return "<{} name={!r}>".format(self.__class__.__name__, self.name)
