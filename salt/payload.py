@@ -233,26 +233,6 @@ def dump(msg, fn_):
     fn_.close()
 
 
-class Serial:
-    """
-    Create a serialization object, this object manages all message
-    serialization in Salt
-    """
-
-    def __init__(self, *args, **kwargs):
-        salt.utils.versions.warn_until(
-            3007,
-            "The `salt.payload.Serial` class has been deprecated, "
-            "and is set to be removed in {version}. "
-            "Please use `salt.payload.loads` and `salt.payload.dumps`.",
-        )
-
-    loads = staticmethod(loads)
-    dumps = staticmethod(dumps)
-    dump = staticmethod(dump)
-    load = staticmethod(load)
-
-
 class SREQ:
     """
     Create a generic interface to wrap salt zeromq req calls.
