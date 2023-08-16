@@ -8,7 +8,7 @@ case "$1" in
       touch /var/log/salt/key
       chmod 640 /var/log/salt/key
     fi
-    chown -R salt:salt /etc/salt/pki/master /etc/salt/master.d /etc/salt/minion.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
+    chown -R salt:salt /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
     if command -v systemctl; then systemctl enable salt-master; fi
   ;;
 esac
