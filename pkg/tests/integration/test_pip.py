@@ -29,7 +29,19 @@ def wipe_pydeps(shell, install_salt, extras_pypath):
             shell.run(
                 *(install_salt.binary_paths["pip"] + ["uninstall", "-y", dep]),
             )
-        shutil.rmtree(extras_pypath, ignore_errors=True)
+        # Let's remove everything under the extras directory, uninstalling doesn't get dependencies
+        dirs = []
+        files = []
+        for filename in extras_pypath.glob("**/**"):
+            if filename != extras_pypath and filename.exists():
+                if filename.is_dir():
+                    dirs.append(filename)
+                else:
+                    files.append(filename)
+        for fp in files:
+            fp.unlink()
+        for dirname in dirs:
+            shutil.rmtree(dirname, ignore_errors=True)
 
 
 def test_pip_install(salt_call_cli):
@@ -88,6 +100,8 @@ def test_pip_install_extras(shell, install_salt, extras_pypath_bin):
 
 def demote(user_uid, user_gid):
     def result():
+        # os.setgid does not remove group membership, so we remove them here so they are REALLY non-root
+        os.setgroups([])
         os.setgid(user_gid)
         os.setuid(user_uid)
 
