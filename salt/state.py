@@ -158,8 +158,8 @@ def _clean_tag(tag):
 
 def _l_tag(name, id_):
     low = {
-        "name": "listen_{}".format(name),
-        "__id__": "listen_{}".format(id_),
+        "name": f"listen_{name}",
+        "__id__": f"listen_{id_}",
         "state": "Listen_Error",
         "fun": "Listen_Error",
     }
@@ -1065,7 +1065,7 @@ class State:
                     return ret
             elif isinstance(entry, dict):
                 if "fun" not in entry:
-                    ret["comment"] = "no `fun` argument in onlyif: {}".format(entry)
+                    ret["comment"] = f"no `fun` argument in onlyif: {entry}"
                     log.warning(ret["comment"])
                     return ret
 
@@ -1143,7 +1143,7 @@ class State:
                     return ret
             elif isinstance(entry, dict):
                 if "fun" not in entry:
-                    ret["comment"] = "no `fun` argument in unless: {}".format(entry)
+                    ret["comment"] = f"no `fun` argument in unless: {entry}"
                     log.warning(ret["comment"])
                     return ret
 
@@ -1393,9 +1393,9 @@ class State:
                 )
                 reason = self.states.missing_fun_string(full)
                 if reason:
-                    errors.append("Reason: {}".format(reason))
+                    errors.append(f"Reason: {reason}")
             else:
-                errors.append("Specified state '{}' was not found".format(full))
+                errors.append(f"Specified state '{full}' was not found")
         else:
             # First verify that the parameters are met
             aspec = salt.utils.args.get_function_argspec(self.states[full])
@@ -2122,7 +2122,7 @@ class State:
                 "result": False,
                 "name": name,
                 "changes": {},
-                "comment": "An exception occurred in this state: {}".format(trb),
+                "comment": f"An exception occurred in this state: {trb}",
             }
 
         utc_finish_time = datetime.datetime.utcnow()
@@ -2228,7 +2228,7 @@ class State:
         proc = salt.utils.process.Process(
             target=self._call_parallel_target,
             args=(instance, self._init_kwargs, name, cdata, low),
-            name="ParallelState({})".format(name),
+            name=f"ParallelState({name})",
         )
         proc.start()
         ret = {
@@ -2264,7 +2264,7 @@ class State:
                 "comment": "",
             }
             for err in errors:
-                ret["comment"] += "{}\n".format(err)
+                ret["comment"] += f"{err}\n"
             ret["__run_num__"] = self.__run_num
             self.__run_num += 1
             format_log(ret)
@@ -2411,7 +2411,7 @@ class State:
                 "result": False,
                 "name": name,
                 "changes": {},
-                "comment": "An exception occurred in this state: {}".format(trb),
+                "comment": f"An exception occurred in this state: {trb}",
             }
         finally:
             if low.get("__prereq__"):
@@ -3423,7 +3423,7 @@ class State:
                                             lkey, lval
                                         )
                                     ),
-                                    "name": "listen_{}:{}".format(lkey, lval),
+                                    "name": f"listen_{lkey}:{lval}",
                                     "result": False,
                                     "changes": {},
                                 }
@@ -3538,9 +3538,7 @@ class State:
             return high, errors
 
         if not isinstance(high, dict):
-            errors.append(
-                "Template {} does not render to a dictionary".format(template)
-            )
+            errors.append(f"Template {template} does not render to a dictionary")
             return high, errors
 
         invalid_items = ("include", "exclude", "extends")
@@ -3915,10 +3913,10 @@ class BaseHighState:
         """
         merging_strategy = self.opts["top_file_merging_strategy"]
         try:
-            merge_attr = "_merge_tops_{}".format(merging_strategy)
+            merge_attr = f"_merge_tops_{merging_strategy}"
             merge_func = getattr(self, merge_attr)
             if not hasattr(merge_func, "__call__"):
-                msg = "'{}' is not callable".format(merge_attr)
+                msg = f"'{merge_attr}' is not callable"
                 log.error(msg)
                 raise TypeError(msg)
         except (AttributeError, TypeError):
@@ -4246,7 +4244,7 @@ class BaseHighState:
             fn_ = sls
             if not os.path.isfile(fn_):
                 errors.append(
-                    "Specified SLS {} on local filesystem cannot be found.".format(sls)
+                    f"Specified SLS {sls} on local filesystem cannot be found."
                 )
         state = None
         if not fn_:
@@ -4269,25 +4267,25 @@ class BaseHighState:
                     context=context,
                 )
             except SaltRenderError as exc:
-                msg = "Rendering SLS '{}:{}' failed: {}".format(saltenv, sls, exc)
+                msg = f"Rendering SLS '{saltenv}:{sls}' failed: {exc}"
                 log.critical(msg)
                 errors.append(msg)
             except Exception as exc:  # pylint: disable=broad-except
-                msg = "Rendering SLS {} failed, render error: {}".format(sls, exc)
+                msg = f"Rendering SLS {sls} failed, render error: {exc}"
                 log.critical(
                     msg,
                     # Show the traceback if the debug logging level is enabled
                     exc_info_on_loglevel=logging.DEBUG,
                 )
-                errors.append("{}\n{}".format(msg, traceback.format_exc()))
+                errors.append(f"{msg}\n{traceback.format_exc()}")
             try:
-                mods.add("{}:{}".format(saltenv, sls))
+                mods.add(f"{saltenv}:{sls}")
             except AttributeError:
                 pass
 
         if state:
             if not isinstance(state, dict):
-                errors.append("SLS {} does not render to a dictionary".format(sls))
+                errors.append(f"SLS {sls} does not render to a dictionary")
             else:
                 include = []
                 if "include" in state:
@@ -4390,7 +4388,7 @@ class BaseHighState:
                             r_env = (
                                 resolved_envs[0] if len(resolved_envs) == 1 else saltenv
                             )
-                            mod_tgt = "{}:{}".format(r_env, sls_target)
+                            mod_tgt = f"{r_env}:{sls_target}"
                             if mod_tgt not in mods:
                                 nstate, err = self.render_state(
                                     sls_target,
@@ -4490,7 +4488,7 @@ class BaseHighState:
                             comps[0]: [comps[1]],
                         }
                         continue
-                errors.append("ID {} in SLS {} is not a dictionary".format(name, sls))
+                errors.append(f"ID {name} in SLS {sls} is not a dictionary")
                 continue
             skeys = set()
             for key in list(state[name]):
@@ -4534,9 +4532,7 @@ class BaseHighState:
         if "extend" in state:
             ext = state.pop("extend")
             if not isinstance(ext, dict):
-                errors.append(
-                    "Extension value in SLS '{}' is not a dictionary".format(sls)
-                )
+                errors.append(f"Extension value in SLS '{sls}' is not a dictionary")
                 return
             for name in ext:
                 if not isinstance(ext[name], dict):
@@ -4603,7 +4599,7 @@ class BaseHighState:
                     statefiles = [sls_match]
 
                 for sls in statefiles:
-                    r_env = "{}:{}".format(saltenv, sls)
+                    r_env = f"{saltenv}:{sls}"
                     if r_env in mods:
                         continue
                     state, errors = self.render_state(
@@ -4614,7 +4610,7 @@ class BaseHighState:
                     for i, error in enumerate(errors[:]):
                         if "is not available" in error:
                             # match SLS foobar in environment
-                            this_sls = "SLS {} in saltenv".format(sls_match)
+                            this_sls = f"SLS {sls_match} in saltenv"
                             if this_sls in error:
                                 errors[
                                     i
@@ -4659,7 +4655,7 @@ class BaseHighState:
         try:
             highstate.update(state)
         except ValueError:
-            errors.append("Error when rendering state with contents: {}".format(state))
+            errors.append(f"Error when rendering state with contents: {state}")
 
     def _check_pillar(self, force=False):
         """
@@ -4712,7 +4708,7 @@ class BaseHighState:
                 "__run_num__": 0,
             }
         }
-        cfn = os.path.join(self.opts["cachedir"], "{}.cache.p".format(cache_name))
+        cfn = os.path.join(self.opts["cachedir"], f"{cache_name}.cache.p")
 
         if cache:
             if os.path.isfile(cfn):
