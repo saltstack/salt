@@ -652,11 +652,12 @@ class SaltPkgInstall:
                 mac_pkg_url = f"https://repo.saltproject.io/osx/{mac_pkg}"
             else:
                 if not relenv:
-                    mac_pkg = f"salt-{self.prev_version}-macos-x86_64.pkg"
-                    mac_pkg_url = f"https://repo.saltproject.io/salt/py3/macos/{self.prev_version}/{mac_pkg}"
+                    mac_pkg = f"salt-{self.prev_version}-1-macos-x86_64.pkg"
                 else:
                     mac_pkg = f"salt-{self.prev_version}-py3-x86_64.pkg"
-                    mac_pkg_url = f"https://repo.saltproject.io/salt/py3/macos/{major_ver}/{mac_pkg}"
+                mac_pkg_url = (
+                    f"https://repo.saltproject.io/salt/py3/macos/{major_ver}/{mac_pkg}"
+                )
 
             mac_pkg_path = f"/tmp/{mac_pkg}"
             if not os.path.exists(mac_pkg_path):
