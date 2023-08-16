@@ -718,9 +718,9 @@ def absent(name, **kwargs):
         # architectures of the matched repo to the architectures specified in
         # the repo string passed to this state. If the architectures do not
         # match, then invalidate the match by setting repo to an empty dict.
-        import salt.modules.aptpkg
+        from salt.modules.aptpkg import _split_repo_str
 
-        if set(salt.modules.aptpkg._split_repo_str(stripname)["architectures"]) != set(
+        if set(_split_repo_str(stripname)["architectures"]) != set(
             repo["architectures"]
         ):
             repo = {}
