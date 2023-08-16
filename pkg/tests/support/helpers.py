@@ -601,8 +601,9 @@ class SaltPkgInstall:
 
             if not self.classic:
                 if not relenv:
-                    win_pkg = f"salt-{self.prev_version}-windows-amd64.{self.file_ext}"
-                    win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{self.prev_version}/{win_pkg}"
+                    win_pkg = (
+                        f"salt-{self.prev_version}-1-windows-amd64.{self.file_ext}"
+                    )
                 else:
                     if self.file_ext == "msi":
                         win_pkg = (
@@ -610,7 +611,7 @@ class SaltPkgInstall:
                         )
                     elif self.file_ext == "exe":
                         win_pkg = f"Salt-Minion-{self.prev_version}-Py3-AMD64-Setup.{self.file_ext}"
-                    win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{major_ver}/{win_pkg}"
+                win_pkg_url = f"https://repo.saltproject.io/salt/py3/windows/{major_ver}/{win_pkg}"
             else:
                 if self.file_ext == "msi":
                     win_pkg = (
