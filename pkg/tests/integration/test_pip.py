@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import pathlib
 import shutil
@@ -6,6 +7,8 @@ import subprocess
 
 import pytest
 from pytestskipmarkers.utils import platform
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -110,6 +113,39 @@ def test_pip_non_root(shell, install_salt, test_account, extras_pypath_bin):
     assert ret.returncode == 0, ret.stderr
     assert "Usage" in ret.stdout
 
+    log.debug("XXXXXUID")
+    ret_uid = subprocess.run(
+        [
+            "id",
+            "saltdev",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        universal_newlines=True,
+    )
+
+    log.debug(ret_uid.stdout)
+    log.debug(ret_uid.stderr)
+
+    log.debug("XXXXX1")
+    ret = subprocess.run(
+        [
+            "/bin/ls",
+            "-l",
+            "/opt/saltstack",
+            "/opt/saltstack/salt",
+            "/opt/saltstack/salt/extras-3.10",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        universal_newlines=True,
+    )
+
+    log.debug(ret.stdout)
+    log.debug(ret.stderr)
+
     # Let tiamat-pip create the pypath directory for us
     ret = subprocess.run(
         install_salt.binary_paths["pip"] + ["install", "-h"],
@@ -119,6 +155,24 @@ def test_pip_non_root(shell, install_salt, test_account, extras_pypath_bin):
         universal_newlines=True,
     )
     assert ret.returncode == 0, ret.stderr
+
+    log.debug("XXXXX2")
+    ret = subprocess.run(
+        [
+            "/bin/ls",
+            "-l",
+            "/opt/saltstack",
+            "/opt/saltstack/salt",
+            "/opt/saltstack/salt/extras-3.10",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        universal_newlines=True,
+    )
+
+    log.debug(ret.stdout)
+    log.debug(ret.stderr)
 
     # Now, we should still not be able to install as non-root
     ret = subprocess.run(
@@ -130,6 +184,23 @@ def test_pip_non_root(shell, install_salt, test_account, extras_pypath_bin):
         check=False,
         universal_newlines=True,
     )
+    log.debug("XXXXX3")
+    ret_x = subprocess.run(
+        [
+            "/bin/ls",
+            "-l",
+            "/opt/saltstack",
+            "/opt/saltstack/salt",
+            "/opt/saltstack/salt/extras-3.10",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        universal_newlines=True,
+    )
+
+    log.debug(ret_x.stdout)
+    log.debug(ret_x.stderr)
     assert ret.returncode != 0, ret.stderr
     # But we should be able to install as root
     ret = subprocess.run(
