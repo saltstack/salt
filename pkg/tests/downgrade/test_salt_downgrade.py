@@ -1,5 +1,5 @@
+import packaging.version
 import pytest
-from packaging.version import parse
 from pytestskipmarkers.utils import platform
 
 
@@ -10,7 +10,9 @@ def test_salt_downgrade(salt_call_cli, install_salt):
     if not install_salt.downgrade:
         pytest.skip("Not testing a downgrade, do not run")
 
-    is_downgrade_to_relenv = parse(install_salt.prev_version) >= parse("3006.0")
+    is_downgrade_to_relenv = packaging.version.parse(
+        install_salt.prev_version
+    ) >= packaging.version.parse("3006.0")
 
     if is_downgrade_to_relenv:
         original_py_version = install_salt.package_python_version()
@@ -18,7 +20,9 @@ def test_salt_downgrade(salt_call_cli, install_salt):
     # Verify current install version is setup correctly and works
     ret = salt_call_cli.run("test.version")
     assert ret.returncode == 0
-    assert parse(ret.data) == parse(install_salt.artifact_version)
+    assert packaging.version.parse(ret.data) == packaging.version.parse(
+        install_salt.artifact_version
+    )
 
     # Test pip install before a downgrade
     dep = "PyGithub==1.56.0"
@@ -41,7 +45,9 @@ def test_salt_downgrade(salt_call_cli, install_salt):
 
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
-    assert parse(ret.stdout.strip().split()[1]) < parse(install_salt.artifact_version)
+    assert packaging.version.parse(
+        ret.stdout.strip().split()[1]
+    ) < packaging.version.parse(install_salt.artifact_version)
 
     # Windows does not keep the extras directory around in the same state
     # TODO: Fix this problem in windows installers

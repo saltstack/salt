@@ -557,15 +557,15 @@ class SaltPkgInstall:
             if downgrade:
                 pref_file = pathlib.Path("/etc", "apt", "preferences.d", "salt.pref")
                 pref_file.parent.mkdir(exist_ok=True)
-                pref_contents = textwrap.dedent(
-                    """\
+                pref_file.write_text(
+                    textwrap.dedent(
+                        """\
                 Package: salt*
                 Pin: origin "repo.saltproject.io"
                 Pin-Priority: 1001
                 """
+                    )
                 )
-                with open(pref_file, "w") as fp:
-                    fp.write(pref_contents)
                 cmd.append("--allow-downgrades")
             env = os.environ.copy()
             env["DEBIAN_FRONTEND"] = "noninteractive"
