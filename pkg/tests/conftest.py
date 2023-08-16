@@ -26,7 +26,7 @@ from tests.support.sminion import create_sminion
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def version(install_salt):
     """
     get version number from artifact

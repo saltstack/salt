@@ -2,9 +2,9 @@ import os
 import pathlib
 import subprocess
 
+import packaging.version
 import psutil
 import pytest
-from packaging.version import parse
 
 pytestmark = [
     pytest.mark.skip_unless_on_windows,
@@ -13,7 +13,9 @@ pytestmark = [
 
 @pytest.fixture(autouse=True)
 def skip_on_less_than_3006_1(install_salt):
-    if parse(install_salt.version) <= parse("3006.1"):
+    if packaging.version.parse(install_salt.version) <= packaging.version.parse(
+        "3006.1"
+    ):
         pytest.skip(
             "Multi-minion script only available on versions greater than 3006.1"
         )

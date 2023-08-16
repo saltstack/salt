@@ -1,3 +1,4 @@
+import packaging.version
 import pytest
 
 
@@ -14,7 +15,9 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     # Verify previous install version is setup correctly and works
     ret = salt_call_cli.run("test.version")
     assert ret.returncode == 0
-    assert ret.data < install_salt.artifact_version
+    assert packaging.version.parse(ret.data) < packaging.version.parse(
+        install_salt.artifact_version
+    )
 
     # Test pip install before an upgrade
     dep = "PyGithub==1.56.0"
@@ -30,7 +33,9 @@ def test_salt_upgrade(salt_call_cli, install_salt):
     install_salt.install(upgrade=True)
     ret = salt_call_cli.run("test.version")
     assert ret.returncode == 0
-    assert ret.data == install_salt.artifact_version
+    assert packaging.version.parse(ret.data) == packaging.version.parse(
+        install_salt.artifact_version
+    )
 
     if install_salt.relenv:
         new_py_version = install_salt.package_python_version()
