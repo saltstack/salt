@@ -547,6 +547,15 @@ def ssl_webserver(integration_files_dir, this_txt_file):
         yield webserver
 
 
+@pytest.fixture(scope="module")
+def webserver(integration_files_dir, this_txt_file):
+    """
+    spins up an http webserver.
+    """
+    with Webserver(root=str(integration_files_dir)) as webserver:
+        yield webserver
+
+
 # ----- Async Test Fixtures ----------------------------------------------------------------------------------------->
 # This is based on https://github.com/eukaryote/pytest-tornasync
 # The reason why we don't use that pytest plugin instead is because it has

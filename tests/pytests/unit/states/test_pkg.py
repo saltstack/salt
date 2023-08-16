@@ -1,9 +1,11 @@
 import logging
+import textwrap
 
 import pytest
 
 import salt.modules.beacons as beaconmod
 import salt.modules.cp as cp
+import salt.modules.pacmanpkg as pacmanpkg
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.yumpkg as yumpkg
 import salt.states.beacon as beaconstate
@@ -35,6 +37,10 @@ def configure_loader_modules(minion_opts):
             "__opts__": minion_opts,
         },
         beaconmod: {
+            "__salt__": {},
+            "__opts__": minion_opts,
+        },
+        pacmanpkg: {
             "__salt__": {},
             "__opts__": minion_opts,
         },
@@ -87,7 +93,6 @@ def test_uptodate_with_changes(pkgs):
             "pkg.version": version,
         },
     ):
-
         # Run state with test=false
         with patch.dict(pkg.__opts__, {"test": False}):
             ret = pkg.uptodate("dummy", test=True)
@@ -151,10 +156,8 @@ def test_uptodate_no_changes():
     with patch.dict(
         pkg.__salt__, {"pkg.list_upgrades": list_upgrades, "pkg.upgrade": upgrade}
     ):
-
         # Run state with test=false
         with patch.dict(pkg.__opts__, {"test": False}):
-
             ret = pkg.uptodate("dummy", test=True)
             assert ret["result"]
             assert ret["changes"] == {}
@@ -564,7 +567,6 @@ def test_installed_with_changes_test_true(list_pkgs):
             "pkg.list_pkgs": list_pkgs,
         },
     ):
-
         expected = {"dummy": {"new": "installed", "old": ""}}
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
@@ -617,7 +619,6 @@ def test_removed_purged_with_changes_test_true(list_pkgs, action):
             "pkg_resource.version_clean": MagicMock(return_value=None),
         },
     ):
-
         expected = {"pkga": {"new": "{}".format(action), "old": ""}}
         pkg_actions = {"removed": pkg.removed, "purged": pkg.purged}
 
@@ -845,7 +846,6 @@ def test_installed_with_single_normalize():
     ), patch.object(
         yumpkg, "list_holds", MagicMock()
     ):
-
         expected = {
             "weird-name-1.2.3-1234.5.6.test7tst.x86_64": {
                 "old": "",
@@ -940,7 +940,6 @@ def test_removed_with_single_normalize():
     ), patch.dict(
         yumpkg.__salt__, salt_dict
     ):
-
         expected = {
             "weird-name-1.2.3-1234.5.6.test7tst.x86_64": {
                 "old": "20220214-2.1",
@@ -1034,7 +1033,6 @@ def test_installed_with_single_normalize_32bit():
     ), patch.dict(
         yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 7}
     ):
-
         expected = {
             "xz-devel.i686": {
                 "old": "",
@@ -1049,3 +1047,96 @@ def test_installed_with_single_normalize_32bit():
         assert "xz-devel.i686" in call_yum_mock.mock_calls[0].args[0]
         assert ret["result"]
         assert ret["changes"] == expected
+
+
+@pytest.mark.parametrize(
+    "kwargs, expected_cli_options",
+    (
+        (
+            (
+                "fromrepo=foo,bar",
+                "someotherkwarg=test",
+                "disablerepo=ignored",
+                "enablerepo=otherignored",
+                "disableexcludes=this_argument_is_also_ignored",
+            ),
+            ("--disablerepo=*", "--enablerepo=foo,bar"),
+        ),
+        (
+            ("enablerepo=foo", "disablerepo=bar"),
+            ("--disablerepo=bar", "--enablerepo=foo"),
+        ),
+        (
+            ("disablerepo=foo",),
+            ("--disablerepo=foo",),
+        ),
+        (
+            ("enablerepo=bar",),
+            ("--enablerepo=bar",),
+        ),
+    ),
+)
+def test_yumpkg_group_installed_with_repo_options(
+    list_pkgs, kwargs, expected_cli_options
+):
+    """
+    Test that running a pkg.group_installed with repo options on RPM-based
+    systems results in the correct yum/dnf groupinfo command being run by
+    pkg.group_info.
+    """
+    kwargs = dict(item.split("=", 1) for item in kwargs)
+    run_stdout = MagicMock(
+        return_value=textwrap.dedent(
+            """\
+        Group: MyGroup
+         Group-Id: my-group
+         Description: A test group
+         Mandatory Packages:
+            pkga
+            pkgb
+        """
+        )
+    )
+
+    salt_dict = {
+        "cmd.run_stdout": run_stdout,
+        "pkg.group_diff": yumpkg.group_diff,
+        "pkg.group_info": yumpkg.group_info,
+    }
+
+    name = "MyGroup"
+    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
+        yumpkg.__salt__, salt_dict
+    ), patch.object(
+        yumpkg,
+        "list_pkgs",
+        MagicMock(return_value=list_pkgs),
+    ):
+        ret = pkg.group_installed(name, **kwargs)
+        assert ret["result"]
+        assert not ret["changes"]
+        expected = [yumpkg._yum(), "--quiet"]
+        expected.extend(expected_cli_options)
+        expected.extend(("groupinfo", name))
+        run_stdout.assert_called_once_with(
+            expected,
+            output_loglevel="trace",
+            python_shell=False,
+        )
+
+
+def test_pacmanpkg_group_installed_with_repo_options(list_pkgs):
+    """
+    Test that running a pkg.group_installed with additional arguments on
+    platforms which use pacman does not result in a traceback, but is instead
+    cleanly handled and a useful comment included in the state return.
+    """
+    salt_dict = {
+        "pkg.group_diff": pacmanpkg.group_diff,
+    }
+
+    with patch.dict(pkg.__salt__, salt_dict), patch.dict(pacmanpkg.__salt__, salt_dict):
+        ret = pkg.group_installed("foo", fromrepo="bar")
+        assert not ret["result"]
+        assert not ret["changes"]
+        assert ret["comment"] == "Repo options are not supported on this platform"
