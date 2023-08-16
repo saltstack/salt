@@ -53,7 +53,7 @@ def configure_loader_modules(tmp_path, mocked_opts):
 
 
 @pytest.fixture(autouse=True)
-def setup(fs_root, cache_root):
+def _setup(fs_root, cache_root):
     """
     No need to add a dummy foo.txt to muddy up the github repo, just make
     our own fileserver root on-the-fly.
@@ -217,7 +217,7 @@ def test_cache_file(mocked_opts, minion_opts):
     """
     Ensure file is cached to correct location
     """
-    patched_opts = {x: y for x, y in minion_opts.items()}
+    patched_opts = minion_opts.copy()
     patched_opts.update(mocked_opts)
 
     with patch.dict(fileclient.__opts__, patched_opts):
@@ -248,7 +248,7 @@ def test_cache_file_with_alternate_cachedir_and_absolute_path(
     Ensure file is cached to correct location when an alternate cachedir is
     specified and that cachedir is an absolute path
     """
-    patched_opts = {x: y for x, y in minion_opts.items()}
+    patched_opts = minion_opts.copy()
     patched_opts.update(mocked_opts)
     alt_cachedir = os.path.join(tmp_path, "abs_cachedir")
 
@@ -276,7 +276,7 @@ def test_cache_file_with_alternate_cachedir_and_relative_path(mocked_opts, minio
     Ensure file is cached to correct location when an alternate cachedir is
     specified and that cachedir is a relative path
     """
-    patched_opts = {x: y for x, y in minion_opts.items()}
+    patched_opts = minion_opts.copy()
     patched_opts.update(mocked_opts)
     alt_cachedir = "foo"
 
@@ -309,7 +309,7 @@ def test_cache_dest(mocked_opts, minion_opts):
     """
     Tests functionality for cache_dest
     """
-    patched_opts = {x: y for x, y in minion_opts.items()}
+    patched_opts = minion_opts.copy()
     patched_opts.update(mocked_opts)
 
     relpath = "foo.com/bar.txt"
