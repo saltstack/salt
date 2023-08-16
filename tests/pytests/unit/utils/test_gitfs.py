@@ -55,7 +55,7 @@ def test_provider_case_insensitive_gitfs_provider(minion_opts, role_name, role_c
     Ensure that both lowercase and non-lowercase values are supported
     """
     provider = "GitPython"
-    key = "{}_provider".format(role_name)
+    key = f"{role_name}_provider"
     with patch.object(role_class, "verify_gitpython", MagicMock(return_value=True)):
         with patch.object(role_class, "verify_pygit2", MagicMock(return_value=False)):
             args = [minion_opts, {}]
@@ -93,7 +93,7 @@ def test_valid_provider_gitfs_provider(minion_opts, role_name, role_class):
         """
         return MagicMock(return_value=verify.endswith(provider))
 
-    key = "{}_provider".format(role_name)
+    key = f"{role_name}_provider"
     for provider in salt.utils.gitfs.GIT_PROVIDERS:
         verify = "verify_gitpython"
         mock1 = _get_mock(verify, provider)
