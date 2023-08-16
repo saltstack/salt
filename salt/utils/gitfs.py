@@ -3,6 +3,7 @@ Classes which provide the shared base for GitFS, git_pillar, and winrepo
 """
 
 
+import base64
 import contextlib
 import copy
 import errno
@@ -11,10 +12,12 @@ import glob
 import hashlib
 import io
 import logging
+import multiprocessing
 import os
 import shlex
 import shutil
 import stat
+import string
 import subprocess
 import time
 import weakref
@@ -224,6 +227,10 @@ class GitProvider:
     self.provider should be set in the sub-class' __init__ function before
     invoking the parent class' __init__.
     """
+
+    # master lock should only be locked for very short periods of times "seconds"
+    # the master lock should be used when ever git provider reads or writes to one if it locks
+    _master_lock = multiprocessing.Lock()
 
     def __init__(
         self,
@@ -451,13 +458,44 @@ class GitProvider:
             failhard(self.role)
 
         hash_type = getattr(hashlib, self.opts.get("hash_type", "md5"))
+        # Generate full id.
+        # Full id helps decrease the chances of collections in the gitfs cache.
+        try:
+            target = str(self.get_checkout_target())
+        except AttributeError:
+            target = ""
+        self._full_id = "-".join(
+            [
+                getattr(self, "name", ""),
+                self.id,
+                getattr(self, "env", ""),
+                getattr(self, "_root", ""),
+                self.role,
+                getattr(self, "base", ""),
+                getattr(self, "branch", ""),
+                target,
+            ]
+        )
         # We loaded this data from yaml configuration files, so, its safe
         # to use UTF-8
-        self.hash = hash_type(self.id.encode("utf-8")).hexdigest()
-        self.cachedir_basename = getattr(self, "name", self.hash)
+        base64_hash = str(
+            base64.b64encode(hash_type(self._full_id.encode("utf-8")).digest()),
+            encoding="ascii",  # base64 only outputs ascii
+        ).replace(
+            "/", "_"
+        )  # replace "/" with "_" to not cause trouble with file system
+
+        # limit name length to 19, so we don't eat up all the path length for windows
+        # this is due to pygit2 limitations
+        # replace any unknown char with "_" to not cause trouble with file system
+        name_chars = string.ascii_letters + string.digits + "-"
+        cache_name = "".join(
+            c if c in name_chars else "_" for c in getattr(self, "name", "")[:19]
+        )
+
+        self.cachedir_basename = f"{cache_name}-{base64_hash}"
         self.cachedir = salt.utils.path.join(cache_root, self.cachedir_basename)
         self.linkdir = salt.utils.path.join(cache_root, "links", self.cachedir_basename)
-
         if not os.path.isdir(self.cachedir):
             os.makedirs(self.cachedir)
 
@@ -471,6 +509,12 @@ class GitProvider:
                 msg += " Perhaps git is not available."
             log.critical(msg, exc_info=True)
             failhard(self.role)
+
+    def full_id(self):
+        return self._full_id
+
+    def get_cachedir_basename(self):
+        return self.cachedir_basename
 
     def _get_envs_from_ref_paths(self, refs):
         """
@@ -662,6 +706,19 @@ class GitProvider:
         """
         Clear update.lk
         """
+        if self.__class__._master_lock.acquire(timeout=60) is False:
+            # if gitfs works right we should never see this timeout error.
+            log.error("gitfs master lock timeout!")
+            raise TimeoutError("gitfs master lock timeout!")
+        try:
+            return self._clear_lock(lock_type)
+        finally:
+            self.__class__._master_lock.release()
+
+    def _clear_lock(self, lock_type="update"):
+        """
+        Clear update.lk without MultiProcessing locks
+        """
         lock_file = self._get_lock_file(lock_type=lock_type)
 
         def _add_error(errlist, exc):
@@ -837,6 +894,20 @@ class GitProvider:
         """
         Place a lock file if (and only if) it does not already exist.
         """
+        if self.__class__._master_lock.acquire(timeout=60) is False:
+            # if gitfs works right we should never see this timeout error.
+            log.error("gitfs master lock timeout!")
+            raise TimeoutError("gitfs master lock timeout!")
+        try:
+            return self.__lock(lock_type, failhard)
+        finally:
+            self.__class__._master_lock.release()
+
+    def __lock(self, lock_type="update", failhard=False):
+        """
+        Place a lock file if (and only if) it does not already exist.
+        Without MultiProcessing locks.
+        """
         try:
             fh_ = os.open(
                 self._get_lock_file(lock_type), os.O_CREAT | os.O_EXCL | os.O_WRONLY
@@ -903,9 +974,9 @@ class GitProvider:
                             lock_type,
                             lock_file,
                         )
-                    success, fail = self.clear_lock()
+                    success, fail = self._clear_lock()
                     if success:
-                        return self._lock(lock_type="update", failhard=failhard)
+                        return self.__lock(lock_type="update", failhard=failhard)
                     elif failhard:
                         raise
                     return

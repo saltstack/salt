@@ -892,6 +892,15 @@ class Client:
 
         # Strip user:pass from URLs
         netloc = netloc.split("@")[-1]
+        try:
+            if url_data.port:
+                # Remove : from path
+                netloc = netloc.replace(":", "")
+        except ValueError:
+            # On Windows urllib raises a ValueError
+            # when using a file:// source and trying
+            # to access the port attribute.
+            pass
 
         if cachedir is None:
             cachedir = self.opts["cachedir"]

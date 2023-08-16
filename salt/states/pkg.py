@@ -72,6 +72,7 @@ import logging
 import os
 import re
 
+import salt.utils.args
 import salt.utils.pkg
 import salt.utils.platform
 import salt.utils.versions
@@ -257,7 +258,7 @@ def _find_download_targets(
     normalize=True,
     skip_suggestions=False,
     ignore_epoch=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Inspect the arguments to pkg.downloaded and discover what packages need to
@@ -512,7 +513,7 @@ def _find_install_targets(
     ignore_epoch=None,
     reinstall=False,
     refresh=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Inspect the arguments to pkg.installed and discover what packages need to
@@ -799,7 +800,7 @@ def _find_install_targets(
                             package_name,
                             ignore_types=ignore_types,
                             verify_options=verify_options,
-                            **kwargs
+                            **kwargs,
                         )
                     except (CommandExecutionError, SaltInvocationError) as exc:
                         failed_verify = exc.strerror
@@ -833,7 +834,7 @@ def _find_install_targets(
                             package_name,
                             ignore_types=ignore_types,
                             verify_options=verify_options,
-                            **kwargs
+                            **kwargs,
                         )
                     except (CommandExecutionError, SaltInvocationError) as exc:
                         failed_verify = exc.strerror
@@ -1006,7 +1007,7 @@ def installed(
     ignore_epoch=None,
     reinstall=False,
     update_holds=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Ensure that the package is installed, and that it is the correct version
@@ -1712,7 +1713,7 @@ def installed(
         ignore_epoch=ignore_epoch,
         reinstall=reinstall,
         refresh=refresh,
-        **kwargs
+        **kwargs,
     )
 
     try:
@@ -1879,7 +1880,7 @@ def installed(
                 update_holds=update_holds,
                 ignore_epoch=ignore_epoch,
                 split_arch=False,
-                **kwargs
+                **kwargs,
             )
         except CommandExecutionError as exc:
             ret = {"name": name, "result": False}
@@ -2096,7 +2097,7 @@ def installed(
                 reinstall_pkg,
                 ignore_types=ignore_types,
                 verify_options=verify_options,
-                **kwargs
+                **kwargs,
             )
             if verify_result:
                 failed.append(reinstall_pkg)
@@ -2285,7 +2286,7 @@ def downloaded(
             downloadonly=True,
             fromrepo=fromrepo,
             ignore_epoch=ignore_epoch,
-            **kwargs
+            **kwargs,
         )
         ret["result"] = True
         ret["changes"].update(pkg_ret)
@@ -2459,7 +2460,7 @@ def latest(
     skip_verify=False,
     pkgs=None,
     watch_flags=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Ensure that the named package is installed and the latest available
@@ -2768,7 +2769,7 @@ def latest(
                 fromrepo=fromrepo,
                 skip_verify=skip_verify,
                 pkgs=targeted_pkgs,
-                **kwargs
+                **kwargs,
             )
         except CommandExecutionError as exc:
             return {
@@ -2876,7 +2877,7 @@ def _uninstall(
     pkgs=None,
     normalize=True,
     ignore_epoch=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Common function for package removal
@@ -2940,7 +2941,6 @@ def _uninstall(
         }
 
     if __opts__["test"]:
-
         _changes = {}
         _changes.update({x: {"new": "{}d".format(action), "old": ""} for x in targets})
 
@@ -3083,7 +3083,7 @@ def removed(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **
             pkgs=pkgs,
             normalize=normalize,
             ignore_epoch=ignore_epoch,
-            **kwargs
+            **kwargs,
         )
     except CommandExecutionError as exc:
         ret = {"name": name, "result": False}
@@ -3175,7 +3175,7 @@ def purged(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **k
             pkgs=pkgs,
             normalize=normalize,
             ignore_epoch=ignore_epoch,
-            **kwargs
+            **kwargs,
         )
     except CommandExecutionError as exc:
         ret = {"name": name, "result": False}
@@ -3306,9 +3306,16 @@ def group_installed(name, skip=None, include=None, **kwargs):
     .. versionchanged:: 2016.11.0
         Added support in :mod:`pacman <salt.modules.pacman>`
 
+    .. versionchanged:: 3006.2
+        For RPM-based systems, support for ``fromrepo``, ``enablerepo``, and
+        ``disablerepo`` (as used in :py:func:`pkg.install
+        <salt.modules.yumpkg.install>`) has been added. This allows one to, for
+        example, use ``enablerepo`` to perform a group install from a repo that
+        is otherwise disabled.
+
     Ensure that an entire package group is installed. This state is currently
-    only supported for the :mod:`yum <salt.modules.yumpkg>` and :mod:`pacman <salt.modules.pacman>`
-    package managers.
+    only supported for the :mod:`yum <salt.modules.yumpkg>` and :mod:`pacman
+    <salt.modules.pacman>` package managers.
 
     skip
         Packages that would normally be installed by the package group
@@ -3337,6 +3344,45 @@ def group_installed(name, skip=None, include=None, **kwargs):
         .. versionchanged:: 2016.3.0
             This option can no longer be passed as a comma-separated list, it
             must now be passed as a list (as shown in the above example).
+
+    .. note::
+        The below options are only supported on RPM-based systems
+
+    fromrepo
+        Restrict ``yum groupinfo`` to the specified repo(s).
+        (e.g., ``yum --disablerepo='*' --enablerepo='somerepo'``)
+
+        .. code-block:: yaml
+
+            MyGroup:
+              pkg.group_installed:
+                - fromrepo: base,updates
+
+        .. versionadded:: 3006.2
+
+    enablerepo (ignored if ``fromrepo`` is specified)
+        Specify a disabled package repository (or repositories) to enable.
+        (e.g., ``yum --enablerepo='somerepo'``)
+
+        .. code-block:: yaml
+
+            MyGroup:
+              pkg.group_installed:
+                - enablerepo: myrepo
+
+        .. versionadded:: 3006.2
+
+    disablerepo (ignored if ``fromrepo`` is specified)
+        Specify an enabled package repository (or repositories) to disable.
+        (e.g., ``yum --disablerepo='somerepo'``)
+
+        .. code-block:: yaml
+
+            MyGroup:
+              pkg.group_installed:
+                - disablerepo: epel
+
+        .. versionadded:: 3006.2
 
     .. note::
         Because this is essentially a wrapper around :py:func:`pkg.install
@@ -3371,13 +3417,16 @@ def group_installed(name, skip=None, include=None, **kwargs):
                 include[idx] = str(item)
 
     try:
-        diff = __salt__["pkg.group_diff"](name)
-    except CommandExecutionError as err:
-        ret[
-            "comment"
-        ] = "An error was encountered while installing/updating group '{}': {}.".format(
-            name, err
+        diff = __salt__["pkg.group_diff"](
+            name, **salt.utils.args.clean_kwargs(**kwargs)
         )
+    except (CommandExecutionError, TypeError) as err:
+        if "unexpected keyword argument" in str(err):
+            ret["comment"] = "Repo options are not supported on this platform"
+        else:
+            ret[
+                "comment"
+            ] = f"An error was encountered while installing/updating group '{name}': {err}."
         return ret
 
     mandatory = diff["mandatory"]["installed"] + diff["mandatory"]["not installed"]

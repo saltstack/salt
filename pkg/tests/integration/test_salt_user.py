@@ -57,6 +57,24 @@ def test_salt_user_group(install_salt):
     assert in_group is True
 
 
+def test_salt_user_shell(install_salt):
+    """
+    Test the salt user's login shell
+    """
+    proc = subprocess.run(
+        ["getent", "passwd", "salt"], check=False, capture_output=True
+    )
+    assert proc.returncode == 0
+    shell = ""
+    shell_exists = False
+    try:
+        shell = proc.stdout.decode().split(":")[6].strip()
+        shell_exists = pathlib.Path(shell).exists()
+    except:
+        pass
+    assert shell_exists is True
+
+
 def test_salt_cloud_dirs(install_salt):
     """
     Test the correct user is running the Salt Master
