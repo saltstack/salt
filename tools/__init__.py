@@ -12,7 +12,8 @@ ptscripts.register_tools_module("tools.pkg.repo.create")
 ptscripts.register_tools_module("tools.pkg.repo.publish")
 ptscripts.register_tools_module("tools.pre_commit")
 ptscripts.register_tools_module("tools.release")
-ptscripts.register_tools_module("tools.ts")
+ptscripts.register_tools_module("tools.testsuite")
+ptscripts.register_tools_module("tools.testsuite.download")
 ptscripts.register_tools_module("tools.vm")
 
 for name in ("boto3", "botocore", "urllib3"):
