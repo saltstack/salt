@@ -96,12 +96,11 @@ def _get_current(key, name, policy_class, all_users):
                 vname=name,
             )
             if reg_raw:
-                reg["user"] = {}
+                reg[user] = {}
                 if reg_raw["vdata"] is not False:
-                    reg["user"]["data"] = reg_raw["vdata"]
+                    reg[user]["data"] = reg_raw["vdata"]
                 if reg_raw["vtype"] is not False:
-                    reg["user"]["type"] = reg_raw["vtype"]
-
+                    reg[user]["type"] = reg_raw["vtype"]
     else:
         reg_raw = salt.utils.win_reg.read_value(hive=hive, key=key, vname=name)
         reg = {}
