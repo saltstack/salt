@@ -1527,7 +1527,7 @@ class Crypticle:
             ret_nonce = data[:32].decode()
             data = data[32:]
             if ret_nonce != nonce:
-                raise SaltClientError("Nonce verification error")
+                raise SaltClientError(f"Nonce verification error {ret_nonce} {nonce}")
         payload = salt.payload.loads(data, raw=raw)
         if isinstance(payload, dict):
             if "serial" in payload:
