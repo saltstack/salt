@@ -1,3 +1,6 @@
+"""
+Unit tests for chocolatey state
+"""
 import logging
 
 import pytest
@@ -74,6 +77,7 @@ def test_source_present(list_sources):
         chocolatey.__salt__,
         {
             "chocolatey.list_sources": list_sources_sideeffect,
+            "chocolatey.add_source": chocolatey_mod.add_source,
         },
     ):
 
@@ -84,11 +88,6 @@ def test_source_present(list_sources):
         cmd_run_all_mock = MagicMock(return_value={"retcode": 0, "stdout": stdout_ret})
         cmd_run_which_mock = MagicMock(return_value=choco_path)
         with patch.dict(
-            chocolatey.__salt__,
-            {
-                "chocolatey.add_source": chocolatey_mod.add_source,
-            },
-        ), patch.dict(
             chocolatey_mod.__salt__,
             {
                 "cmd.which": cmd_run_which_mock,

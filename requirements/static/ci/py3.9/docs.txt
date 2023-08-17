@@ -12,11 +12,11 @@ autocommand==2.2.2
     #   jaraco.text
 babel==2.12.1
     # via sphinx
-certifi==2023.5.7
+certifi==2023.07.22
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   requests
-charset-normalizer==2.1.1
+charset-normalizer==3.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   requests
@@ -111,7 +111,7 @@ pytz==2023.3
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   tempora
-pyyaml==6.0
+pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   myst-docutils
