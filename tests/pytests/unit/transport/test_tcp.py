@@ -1,3 +1,4 @@
+import asyncio
 import os
 import socket
 
@@ -29,7 +30,7 @@ def fake_crypto():
 
 
 @pytest.fixture
-def fake_authd():
+def fake_authd(io_loop):
     @tornado.gen.coroutine
     def return_nothing():
         raise tornado.gen.Return()
@@ -80,12 +81,14 @@ def client_socket():
         yield _client_socket
 
 
-def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
+async def test_message_client_cleanup_on_close(
+    client_socket, temp_salt_master, io_loop
+):
     """
     test message client cleanup on close
     """
-    orig_loop = tornado.ioloop.IOLoop()
-    orig_loop.make_current()
+
+    orig_loop = io_loop
 
     opts = dict(temp_salt_master.config.copy(), transport="tcp")
     client = salt.transport.tcp.MessageClient(
@@ -103,11 +106,10 @@ def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
     orig_loop.stop = stop
     try:
         assert client.io_loop == orig_loop
-        client.io_loop.run_sync(client.connect)
+        await client.connect()
 
         # Ensure we are testing the _read_until_future and io_loop teardown
         assert client._stream is not None
-        assert orig_loop.stop_called is True
 
         # The run_sync call will set stop_called, reset it
         # orig_loop.stop_called = False
@@ -120,8 +122,6 @@ def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
         orig_loop.stop = orig_loop.real_stop
         del orig_loop.real_stop
         del orig_loop.stop_called
-        orig_loop.clear_current()
-        orig_loop.close(all_fds=True)
 
 
 async def test_async_tcp_pub_channel_connect_publish_port(
@@ -141,6 +141,10 @@ async def test_async_tcp_pub_channel_connect_publish_port(
     )
     patch_auth = MagicMock(return_value=True)
     transport = MagicMock(spec=salt.transport.tcp.TCPPubClient)
+    transport.connect = MagicMock()
+    future = asyncio.Future()
+    transport.connect.return_value = future
+    future.set_result(True)
     with patch("salt.crypt.AsyncAuth.gen_token", patch_auth), patch(
         "salt.crypt.AsyncAuth.authenticated", patch_auth
     ), patch("salt.transport.tcp.TCPPubClient", transport):
@@ -150,6 +154,7 @@ async def test_async_tcp_pub_channel_connect_publish_port(
             with pytest.raises(salt.exceptions.SaltClientError):
                 await channel.connect()
     # The first call to the mock is the instance's __init__, and the first argument to those calls is the opts dict
+    await asyncio.sleep(0.3)
     assert channel.transport.connect.call_args[0][0] == opts["publish_port"]
 
 
@@ -248,10 +253,7 @@ def salt_message_client():
         {}, "127.0.0.1", ports.get_unused_localhost_port(), io_loop=io_loop_mock
     )
 
-    try:
-        yield client
-    finally:
-        client.close()
+    yield client
 
 
 # XXX we don't reutnr a future anymore, this needs a different way of testing.

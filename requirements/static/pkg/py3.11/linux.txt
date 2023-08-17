@@ -10,7 +10,7 @@ certifi==2023.07.22
     # via requests
 cffi==1.15.1
     # via cryptography
-charset-normalizer==2.1.1
+charset-normalizer==3.1.0
     # via requests
 cheroot==10.0.0
     # via cherrypy
@@ -18,7 +18,7 @@ cherrypy==18.8.0
     # via -r requirements/static/pkg/linux.in
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==41.0.2
+cryptography==41.0.3
     # via
     #   -r requirements/crypto.txt
     #   -r requirements/static/pkg/linux.in
