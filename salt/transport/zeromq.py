@@ -543,14 +543,15 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 await self._socket.send(self.encode_payload(reply))
             except asyncio.exceptions.TimeoutError:
                 continue
-            except salt.exceptions.SaltDeserializationError:
-                await self._socket.send(self.encode_payload({"msg": "bad load"}))
             except Exception as exc:  # pylint: disable=broad-except
                 log.error("Exception in request handler", exc_info=True)
                 break
 
     async def handle_message(self, stream, payload):
-        payload = self.decode_payload(payload)
+        try:
+            payload = self.decode_payload(payload)
+        except salt.exceptions.SaltDeserializationError:
+            return {"msg": "bad load"}
         return await self.message_handler(payload)
 
     def encode_payload(self, payload):
