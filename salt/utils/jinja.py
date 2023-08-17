@@ -1007,6 +1007,8 @@ class SerializerExtension(Extension):
 
     @_handle_strict_undefined
     def format_json(self, value, sort_keys=True, indent=None):
+        if isinstance(value, jinja2.StrictUndefined):
+            return value
         json_txt = salt.utils.json.dumps(
             value, sort_keys=sort_keys, indent=indent
         ).strip()
@@ -1015,8 +1017,9 @@ class SerializerExtension(Extension):
         except UnicodeDecodeError:
             return Markup(salt.utils.stringutils.to_unicode(json_txt))
 
-    @_handle_strict_undefined
     def format_yaml(self, value, flow_style=True):
+        if isinstance(value, jinja2.StrictUndefined):
+            return value
         yaml_txt = salt.utils.yaml.safe_dump(
             value, default_flow_style=flow_style
         ).strip()
@@ -1036,6 +1039,8 @@ class SerializerExtension(Extension):
         :returns: Formatted XML string rendered with newlines and indentation
         :rtype: str
         """
+        if isinstance(value, jinja2.StrictUndefined):
+            return value
 
         def normalize_iter(value):
             if isinstance(value, (list, tuple)):
@@ -1084,12 +1089,14 @@ class SerializerExtension(Extension):
             ).toprettyxml(indent=" ")
         )
 
-    @_handle_strict_undefined
     def format_python(self, value):
+        if isinstance(value, jinja2.StrictUndefined):
+            return value
         return Markup(pprint.pformat(value).strip())
 
-    @_handle_strict_undefined
     def load_yaml(self, value):
+        if isinstance(value, jinja2.StrictUndefined):
+            return value
         if isinstance(value, TemplateModule):
             value = str(value)
         try:
@@ -1114,8 +1121,9 @@ class SerializerExtension(Extension):
         except AttributeError:
             raise TemplateRuntimeError(f"Unable to load yaml from {value}")
 
-    @_handle_strict_undefined
     def load_json(self, value):
+        if isinstance(value, jinja2.StrictUndefined):
+            return value
         if isinstance(value, TemplateModule):
             value = str(value)
         try:
@@ -1123,8 +1131,9 @@ class SerializerExtension(Extension):
         except (ValueError, TypeError, AttributeError):
             raise TemplateRuntimeError(f"Unable to load json from {value}")
 
-    @_handle_strict_undefined
     def load_text(self, value):
+        if isinstance(value, jinja2.StrictUndefined):
+            return value
         if isinstance(value, TemplateModule):
             value = str(value)
 
@@ -1250,7 +1259,6 @@ class SerializerExtension(Extension):
             parser, import_node.template, f"import_{converter}", body, lineno
         )
 
-    @_handle_strict_undefined
     def dict_to_sls_yaml_params(self, value, flow_style=False):
         """
         .. versionadded:: 3005
@@ -1267,6 +1275,8 @@ class SerializerExtension(Extension):
         :returns: Formatted SLS YAML string rendered with newlines and
                   indentation
         """
+        if isinstance(value, jinja2.StrictUndefined):
+            return value
         return self.format_yaml(
             [{key: val} for key, val in value.items()], flow_style=flow_style
         )
