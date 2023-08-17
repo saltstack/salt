@@ -717,6 +717,21 @@ def pkg_matrix(
         # we will have arm64 onedir packages to upgrade from
         sessions.append("upgrade")
         sessions.append("downgrade")
+
+    still_testing_3005 = False
+    for release_version in testing_releases:
+        if still_testing_3005:
+            break
+        if release_version < tools.utils.Version("3006.0"):
+            still_testing_3005 = True
+
+    if still_testing_3005 is False:
+        ctx.error(
+            f"No longer testing 3005.x releases please update {__file__} "
+            "and remove this error and the logic above the error"
+        )
+        ctx.exit(1)
+
     # TODO: Remove this block when we reach version 3009.0, we will no longer be testing upgrades from classic packages
     if (
         distro_slug
