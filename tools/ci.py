@@ -706,6 +706,7 @@ def pkg_matrix(
             "ubuntu-22.04-arm64",
             "photonos-3",
             "photonos-4",
+            "photonos-4-arm64",
         ]
         and pkg_type != "MSI"
     ):
@@ -725,6 +726,7 @@ def pkg_matrix(
             "ubuntu-22.04-arm64",
             "photonos-3",
             "photonos-4",
+            "photonos-4-arm64",
         ]
         and pkg_type != "MSI"
     ):
