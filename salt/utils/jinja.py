@@ -734,6 +734,16 @@ def show_full_context(ctx):
     )
 
 
+def _handle_strict_undefined(function):
+    @wraps(function)
+    def __handle_strict_undefined(value, *args, **kwargs):
+        if isinstance(value, jinja2.StrictUndefined):
+            return value
+        return function(value, *args, **kwargs)
+
+    return __handle_strict_undefined
+
+
 class SerializerExtension(Extension):
     '''
     Yaml and Json manipulation.
@@ -956,13 +966,15 @@ class SerializerExtension(Extension):
                 "load_json": self.load_json,
                 "load_text": self.load_text,
                 "dict_to_sls_yaml_params": self.dict_to_sls_yaml_params,
-                "combinations": itertools.combinations,
-                "combinations_with_replacement": itertools.combinations_with_replacement,
-                "compress": itertools.compress,
-                "permutations": itertools.permutations,
-                "product": itertools.product,
-                "zip": zip,
-                "zip_longest": itertools.zip_longest,
+                "combinations": _handle_strict_undefined(itertools.combinations),
+                "combinations_with_replacement": _handle_strict_undefined(
+                    itertools.combinations_with_replacement
+                ),
+                "compress": _handle_strict_undefined(itertools.compress),
+                "permutations": _handle_strict_undefined(itertools.permutations),
+                "product": _handle_strict_undefined(itertools.product),
+                "zip": _handle_strict_undefined(zip),
+                "zip_longest": _handle_strict_undefined(itertools.zip_longest),
             }
         )
 
@@ -993,6 +1005,7 @@ class SerializerExtension(Extension):
 
         return explore(data)
 
+    @_handle_strict_undefined
     def format_json(self, value, sort_keys=True, indent=None):
         json_txt = salt.utils.json.dumps(
             value, sort_keys=sort_keys, indent=indent
@@ -1002,6 +1015,7 @@ class SerializerExtension(Extension):
         except UnicodeDecodeError:
             return Markup(salt.utils.stringutils.to_unicode(json_txt))
 
+    @_handle_strict_undefined
     def format_yaml(self, value, flow_style=True):
         yaml_txt = salt.utils.yaml.safe_dump(
             value, default_flow_style=flow_style
@@ -1013,6 +1027,7 @@ class SerializerExtension(Extension):
         except UnicodeDecodeError:
             return Markup(salt.utils.stringutils.to_unicode(yaml_txt))
 
+    @_handle_strict_undefined
     def format_xml(self, value):
         """Render a formatted multi-line XML string from a complex Python
         data structure. Supports tag attributes and nested dicts/lists.
@@ -1069,9 +1084,11 @@ class SerializerExtension(Extension):
             ).toprettyxml(indent=" ")
         )
 
+    @_handle_strict_undefined
     def format_python(self, value):
         return Markup(pprint.pformat(value).strip())
 
+    @_handle_strict_undefined
     def load_yaml(self, value):
         if isinstance(value, TemplateModule):
             value = str(value)
@@ -1097,6 +1114,7 @@ class SerializerExtension(Extension):
         except AttributeError:
             raise TemplateRuntimeError(f"Unable to load yaml from {value}")
 
+    @_handle_strict_undefined
     def load_json(self, value):
         if isinstance(value, TemplateModule):
             value = str(value)
@@ -1105,6 +1123,7 @@ class SerializerExtension(Extension):
         except (ValueError, TypeError, AttributeError):
             raise TemplateRuntimeError(f"Unable to load json from {value}")
 
+    @_handle_strict_undefined
     def load_text(self, value):
         if isinstance(value, TemplateModule):
             value = str(value)
@@ -1231,6 +1250,7 @@ class SerializerExtension(Extension):
             parser, import_node.template, f"import_{converter}", body, lineno
         )
 
+    @_handle_strict_undefined
     def dict_to_sls_yaml_params(self, value, flow_style=False):
         """
         .. versionadded:: 3005
