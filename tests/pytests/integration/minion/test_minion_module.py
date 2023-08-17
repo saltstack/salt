@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pytest
 
+from saltfactories.utils import random_string
+
 
 @pytest.fixture(scope="module")
 def master_minion(salt_master):
@@ -34,7 +36,7 @@ def second_minion(salt_master, salt_minion_id):
         "return_retry_tries": 30,
     }
     factory = salt_master.salt_minion_daemon(
-        salt_minion_id,
+        random_string("2nd-minion-"),
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     factory.after_terminate(
