@@ -1,6 +1,7 @@
 import ctypes
 import logging
 import multiprocessing
+import queue
 import socket
 import time
 
@@ -73,13 +74,21 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             "rotate_master_key": self._rotate_secrets,
         }
 
+    def _teardown_listener(self):
+        if self.transport == "zeromq":
+            self.sock.close()
+            self.ctx.term()
+        else:
+            self.sock.close()
+
     def _setup_listener(self):
         if self.transport == "zeromq":
-            ctx = zmq.Context()
-            self.sock = ctx.socket(zmq.SUB)
+            self.ctx = zmq.Context()
+            self.sock = self.ctx.socket(zmq.SUB)
             self.sock.setsockopt(zmq.LINGER, -1)
             self.sock.setsockopt(zmq.SUBSCRIBE, b"")
             pub_uri = "tcp://{}:{}".format(self.interface, self.port)
+            log.info("Collector listen %s", pub_uri)
             self.sock.connect(pub_uri)
         else:
             end = time.time() + 120
@@ -108,11 +117,13 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                 raise RecvError("ZMQ Error")
         else:
             for msg in self.unpacker:
-                raise tornado.gen.Return(msg["body"])
+                serial_payload = salt.payload.loads(msg["body"])
+                raise tornado.gen.Return(serial_payload)
             byts = yield self.sock.read_bytes(8096, partial=True)
             self.unpacker.feed(byts)
             for msg in self.unpacker:
-                raise tornado.gen.Return(msg["body"])
+                serial_payload = salt.payload.loads(msg["body"])
+                raise tornado.gen.Return(serial_payload)
             raise RecvError("TCP Error")
 
     @tornado.gen.coroutine
@@ -125,40 +136,52 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             return
         self.started.set()
         last_msg = time.time()
+        self.start = last_msg
         serial = salt.payload.Serial(self.minion_config)
         crypticle = salt.crypt.Crypticle(self.minion_config, self.aes_key)
-        while True:
-            curr_time = time.time()
-            if time.time() > self.hard_timeout:
-                log.error("Hard timeout reaced in test collector!")
-                break
-            if curr_time - last_msg >= self.timeout:
-                log.error("Receive timeout reaced in test collector!")
-                break
-            try:
-                payload = yield self._recv()
-            except RecvError:
-                time.sleep(0.01)
-            else:
+        self.gotone = False
+        try:
+            while True:
+                curr_time = time.time()
+                if time.time() > self.hard_timeout:
+                    log.error("Hard timeout reaced in test collector!")
+                    break
+                if curr_time - last_msg >= self.timeout:
+                    log.error("Receive timeout reaced in test collector!")
+                    break
                 try:
-                    payload = crypticle.loads(payload["load"])
-                    if not payload:
-                        continue
-                    if "start" in payload:
-                        log.info("Collector started")
-                        self.running.set()
-                        continue
-                    if "stop" in payload:
-                        log.info("Collector stopped")
-                        break
-                    last_msg = time.time()
-                    self.results.append(payload["jid"])
-                except salt.exceptions.SaltDeserializationError:
-                    log.error("Deserializer Error")
-                    if not self.zmq_filtering:
-                        log.exception("Failed to deserialize...")
-                        break
-        loop.stop()
+                    payload = yield self._recv()
+                except RecvError:
+                    time.sleep(0.03)
+                else:
+                    try:
+                        log.trace("Colleted payload %r", payload)
+                        payload = crypticle.loads(payload["load"])
+                        if not payload:
+                            continue
+                        if "start" in payload:
+                            log.info("Collector started")
+                            self.running.set()
+                            continue
+                        if "stop" in payload:
+                            log.info("Collector stopped")
+                            break
+                        last_msg = time.time()
+                        self.results.append(payload["jid"])
+                    except salt.exceptions.SaltDeserializationError:
+                        log.error("Deserializer Error")
+                        if not self.zmq_filtering:
+                            log.exception("Failed to deserialize...")
+                            break
+                    if self.gotone is False:
+                        log.debug("Collector started recieving")
+                    self.gotone = True
+            log.debug("Collector finished recieving")
+            self.end = time.time()
+            print(f"Total time {self.end - self.start}")
+        finally:
+            self._teardown_listener()
+            loop.stop()
 
     def run(self):
         """
@@ -194,6 +217,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
 class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
     def __init__(self, master_config, minion_config, **collector_kwargs):
         super().__init__()
+        self.name = "PubServerChannelProcess"
         self._closing = False
         self.master_config = master_config
         self.minion_config = minion_config
@@ -223,17 +247,23 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             self.master_config["interface"],
             self.master_config["publish_port"],
             self.aes_key,
-            **self.collector_kwargs
+            **self.collector_kwargs,
         )
 
     def run(self):
+
+        ioloop = tornado.ioloop.IOLoop()
         try:
             while True:
-                payload = self.queue.get()
+                try:
+                    payload = self.queue.get(False)
+                except queue.Empty:
+                    time.sleep(0.03)
+                    continue
                 if payload is None:
                     log.debug("We received the stop sentinel")
                     break
-                self.pub_server_channel.publish(payload)
+                ioloop.run_sync(lambda: self.pub_server_channel.publish(payload))
         except KeyboardInterrupt:
             pass
         finally:
@@ -250,8 +280,8 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         if self.process_manager is None:
             return
         self.process_manager.terminate()
-        if hasattr(self.pub_server_channel, "pub_close"):
-            self.pub_server_channel.pub_close()
+        if hasattr(self.pub_server_channel, "close"):
+            self.pub_server_channel.close()
         # Really terminate any process still left behind
         for pid in self.process_manager._process_map:
             terminate_process(pid=pid, kill_children=True, slow_stop=False)
@@ -287,4 +317,3 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.stopped.wait(10)
         self.close()
         self.terminate()
-        log.info("The PubServerChannelProcess has terminated")

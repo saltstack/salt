@@ -8,6 +8,7 @@
 
     Test support helpers
 """
+import asyncio
 import base64
 import builtins
 import errno
@@ -1430,7 +1431,7 @@ class Webserver:
         Threading target which stands up the tornado application
         """
         self.ioloop = tornado.ioloop.IOLoop()
-        self.ioloop.make_current()
+        asyncio.set_event_loop(self.ioloop.asyncio_loop)
         if self.handler == tornado.web.StaticFileHandler:
             self.application = tornado.web.Application(
                 [(r"/(.*)", self.handler, {"path": self.root})]
@@ -1445,7 +1446,10 @@ class Webserver:
         if self.port is None:
             return False
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        return sock.connect_ex(("127.0.0.1", self.port)) == 0
+        try:
+            return sock.connect_ex(("127.0.0.1", self.port)) == 0
+        finally:
+            sock.close()
 
     def url(self, path):
         """
