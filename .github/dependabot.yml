@@ -1,0 +1,28 @@
+version: 2
+updates:
+  # master branch
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: master
+    labels:
+      - "test:full"
+
+  # 3006.x release branch
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: 3006.x
+    labels:
+      - "test:full"
+
+  # freeze release branch
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: freeze
+    labels:
+      - "test:full"
