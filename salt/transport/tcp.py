@@ -353,8 +353,9 @@ class PublishClient(salt.transport.base.PublishClient):
         if not isinstance(messages, dict):
             # TODO: For some reason we need to decode here for things
             #       to work. Fix this.
-            body = salt.utils.msgpack.loads(messages)
-            body = salt.transport.frame.decode_embedded_strs(body)
+            body = salt.payload.loads(messages)
+            #body = salt.utils.msgpack.loads(messages)
+            #body = salt.transport.frame.decode_embedded_strs(body)
         else:
             body = messages
         return body
@@ -368,6 +369,9 @@ class PublishClient(salt.transport.base.PublishClient):
             await asyncio.sleep(0.001)
         if timeout == 0:
             for msg in self.unpacker:
+                print("^" * 80)
+                print(f"RECV {msg!r}")
+                print("^" * 80)
                 return msg[b"body"]
             try:
                 events, _, _ = select.select([self._stream.socket], [], [], 0)
@@ -389,6 +393,9 @@ class PublishClient(salt.transport.base.PublishClient):
                             return
                         self.unpacker.feed(byts)
                         for msg in self.unpacker:
+                            print("^" * 80)
+                            print(f"RECV {msg!r}")
+                            print("^" * 80)
                             return msg[b"body"]
         elif timeout:
             try:
@@ -403,6 +410,9 @@ class PublishClient(salt.transport.base.PublishClient):
                 return
         else:
             for msg in self.unpacker:
+                print("^" * 80)
+                print(f"RECV {msg!r}")
+                print("^" * 80)
                 return msg[b"body"]
             while not self._closing:
                 async with self._read_in_progress:
@@ -420,6 +430,9 @@ class PublishClient(salt.transport.base.PublishClient):
                         continue
                     self.unpacker.feed(byts)
                     for msg in self.unpacker:
+                        print("^" * 80)
+                        print(f"RECV {msg!r}")
+                        print("^" * 80)
                         return msg[b"body"]
 
     async def on_recv_handler(self, callback):
@@ -427,6 +440,7 @@ class PublishClient(salt.transport.base.PublishClient):
             # Retry quickly, we may want to increase this if it's hogging cpu.
             await asyncio.sleep(0.003)
         while True:
+            print("On RECV READ")
             msg = await self.recv()
             if msg:
                 try:

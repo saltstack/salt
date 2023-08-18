@@ -276,7 +276,7 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
         async def handler(request):
             ws = aiohttp.web.WebSocketResponse()
             await ws.prepare(request)
-            data = salt.transport.frame.frame_msg(msg, header=None)
+            data = salt.transport.dumps(msg)
             await ws.send_bytes(data)
 
         server = aiohttp.web.Server(handler)

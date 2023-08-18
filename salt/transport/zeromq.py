@@ -223,6 +223,7 @@ class PublishClient(salt.transport.base.PublishClient):
         elif self.host and self.port:
             if self.path:
                 raise Exception("A host and port or a path must be provided, not both")
+        self.on_recv_task = None
 
     def close(self):
         if self._closing is True:
@@ -341,44 +342,28 @@ class PublishClient(salt.transport.base.PublishClient):
         # raise Exception("Send not supported")
         # await self._socket.send(msg)
 
-    def on_recv(self, callback):
+    async def on_recv_handler(self, callback):
+        while not self._socket:
+            # Retry quickly, we may want to increase this if it's hogging cpu.
+            await asyncio.sleep(0.003)
+        while True:
+            msg = await self.recv()
+            if msg:
+                await callback(msg)
 
+    def on_recv(self, callback):
         """
         Register a callback for received messages (that we didn't initiate)
-
-        :param func callback: A function which should be called when data is received
         """
+        if self.on_recv_task:
+            # XXX: We are not awaiting this canceled task. This still needs to
+            # be addressed.
+            self.on_recv_task.cancel()
         if callback is None:
-            callbacks = self.callbacks
-            self.callbacks = {}
-            for callback, (running, task) in callbacks.items():
-                running.clear()
-            return
+            self.on_recv_task = None
+        else:
+            self.on_recv_task = asyncio.create_task(self.on_recv_handler(callback))
 
-        running = asyncio.Event()
-        running.set()
-
-        async def consume(running):
-            try:
-                while running.is_set():
-                    try:
-                        msg = await self.recv(timeout=None)
-                    except zmq.error.ZMQError as exc:
-                        # We've disconnected just die
-                        break
-                    if msg:
-                        try:
-                            await callback(msg)
-                        except Exception:  # pylint: disable=broad-except
-                            log.error("Exception while running callback", exc_info=True)
-                    # log.debug("Callback done %r", callback)
-            except Exception as exc:  # pylint: disable=broad-except
-                log.error(
-                    "Exception while consuming%s %s", self.uri, exc, exc_info=True
-                )
-
-        task = self.io_loop.spawn_callback(consume, running)
-        self.callbacks[callback] = running, task
 
 
 class RequestServer(salt.transport.base.DaemonizedRequestServer):

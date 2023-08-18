@@ -102,6 +102,13 @@ class PublishClient(salt.transport.base.PublishClient):
             )
 
     # pylint: enable=W1701
+    def _decode_messages(self, messages):
+        if not isinstance(messages, dict):
+            body =salt.payload.loads(messages)
+        else:
+            body = messages
+        return body
+
 
     async def getstream(self, **kwargs):
         if self.source_ip or self.source_port:
@@ -327,7 +334,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         except (KeyboardInterrupt, SystemExit):
             pass
         finally:
-            print("CLOSE")
             self.close()
 
     async def publisher(
@@ -364,9 +370,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             await runner.setup()
             site = aiohttp.web.SockSite(runner, sock, ssl_context=ctx)
             log.info("Publisher binding to socket %s:%s", self.pub_host, self.pub_port)
-        print("start site")
         await site.start()
-        print("start puller")
 
         self._pub_payload = publish_payload
         if self.pull_path:
@@ -378,14 +382,12 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.puller = await asyncio.start_server(
                 self.pull_handler, self.pull_host, self.pull_port
             )
-        print("puller started")
         while self._run.is_set():
             await asyncio.sleep(0.3)
         await self.server.stop()
         await self.puller.wait_closed()
 
     async def pull_handler(self, reader, writer):
-        print("puller got connection")
         unpacker = salt.utils.msgpack.Unpacker()
         while True:
             data = await reader.read(1024)
