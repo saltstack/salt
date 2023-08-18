@@ -3,10 +3,9 @@ import pathlib
 import subprocess
 import sys
 
+import packaging.version
 import psutil
 import pytest
-import yaml
-from pytestskipmarkers.utils import platform
 
 pytestmark = [
     pytest.mark.skip_on_windows,
@@ -135,6 +134,10 @@ def test_pkg_paths(
     """
     Test package paths ownership
     """
+    if packaging.version.parse(install_salt.version) <= packaging.version.parse(
+        "3006.2"
+    ):
+        pytest.skip("Package path ownership was changed in salt 3006.3")
     salt_user_subdirs = []
     for _path in pkg_paths:
         pkg_path = pathlib.Path(_path)
