@@ -790,14 +790,14 @@ def test_mod_repo_match():
                         with patch(
                             "salt.modules.aptpkg._split_repo_str",
                             MagicMock(
-                                return_value=(
-                                    "deb",
-                                    [],
-                                    "http://cdn-aws.deb.debian.org/debian/",
-                                    "stretch",
-                                    ["main"],
-                                    "",
-                                )
+                                return_value={
+                                    "type": "deb",
+                                    "architectures": [],
+                                    "uri": "http://cdn-aws.deb.debian.org/debian/",
+                                    "dist": "stretch",
+                                    "comps": ["main"],
+                                    "signedby": "",
+                                }
                             ),
                         ):
                             source_line_no_slash = (
