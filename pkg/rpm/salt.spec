@@ -194,6 +194,7 @@ cp -R $RPM_BUILD_DIR/build/salt %{buildroot}/opt/saltstack/
 # Add some directories
 install -d -m 0755 %{buildroot}%{_var}/log/salt
 install -d -m 0755 %{buildroot}%{_var}/run/salt
+install -d -m 0755 %{buildroot}%{_var}/run/salt/master
 install -d -m 0755 %{buildroot}%{_var}/cache/salt
 install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master
 install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/minion
@@ -328,6 +329,7 @@ rm -rf %{buildroot}
 %dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions_denied/
 %dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions_pre/
 %dir %attr(0750, salt, salt) %{_sysconfdir}/salt/pki/master/minions_rejected/
+%dir %attr(0750, salt, salt) %{_var}/run/salt/master/
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/jobs/
 %dir %attr(0750, salt, salt) %{_var}/cache/salt/master/proc/
@@ -406,8 +408,14 @@ usermod -c "%{_SALT_NAME}" \
         -d %{_SALT_HOME}   \
         -g %{_SALT_GROUP}  \
          %{_SALT_USER}
-# 5. adjust file and directory permissions
-chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
+
+%pre master
+# Reset permissions to fix previous installs
+PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
+find /etc/salt /opt/saltstack/salt /var/log/salt /var/cache/salt /var/run/salt \
+  \! \( -path /etc/salt/cloud.deploy.d\* -o -path /var/log/salt/cloud -o -path /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy\* \) -a \
+  \( -user salt -o -group salt \) -exec chown root:root \{\} \;
+
 
 # assumes systemd for RHEL 7 & 8 & 9
 %preun master
@@ -424,15 +432,12 @@ chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
 
 
 %post
-chown -R %{_SALT_USER}:%{_SALT_GROUP} %{_SALT_HOME}
-chmod u=rwx,g=rwx,o=rx %{_SALT_HOME}
 ln -s -f /opt/saltstack/salt/spm %{_bindir}/spm
 ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
+/opt/saltstack/salt/bin/python3 -m compileall -qq /opt/saltstack/salt/lib
 
 
 %post cloud
-chown -R salt:salt /etc/salt/cloud.deploy.d
-chown -R salt:salt /opt/saltstack/salt/lib/python3.10/site-packages/salt/cloud/deploy
 ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
 
 
@@ -452,7 +457,6 @@ if [ $1 -lt 2 ]; then
     /bin/openssl sha256 -r -hmac orboDeJITITejsirpADONivirpUkvarP /opt/saltstack/salt/lib/libcrypto.so.1.1 | cut -d ' ' -f 1 > /opt/saltstack/salt/lib/.libcrypto.so.1.1.hmac || :
   fi
 fi
-chown -R salt:salt /etc/salt /var/log/salt /opt/saltstack/salt/ /var/cache/salt/ /var/run/salt/
 
 %post syndic
 %systemd_post salt-syndic.service
@@ -479,6 +483,43 @@ ln -s -f /opt/saltstack/salt/salt-ssh %{_bindir}/salt-ssh
 %post api
 %systemd_post salt-api.service
 ln -s -f /opt/saltstack/salt/salt-api %{_bindir}/salt-api
+
+
+%posttrans cloud
+PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
+if [ ! -e "/var/log/salt/cloud" ]; then
+  touch /var/log/salt/cloud
+  chmod 640 /var/log/salt/cloud
+fi
+chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
+
+
+%posttrans master
+if [ ! -e "/var/log/salt/master" ]; then
+  touch /var/log/salt/master
+  chmod 640 /var/log/salt/master
+fi
+if [ ! -e "/var/log/salt/key" ]; then
+  touch /var/log/salt/key
+  chmod 640 /var/log/salt/key
+fi
+chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
+
+
+%posttrans api
+if [ ! -e "/var/log/salt/api" ]; then
+  touch /var/log/salt/api
+  chmod 640 /var/log/salt/api
+fi
+chown %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/api
+
+
+%preun
+if [ $1 -eq 0 ]; then
+  # Uninstall
+  find /opt/saltstack/salt -type f -name \*\.pyc -print0 | xargs --null --no-run-if-empty rm
+  find /opt/saltstack/salt -type d -name __pycache__ -empty -print0 | xargs --null --no-run-if-empty rmdir
+fi
 
 %postun master
 %systemd_postun_with_restart salt-master.service

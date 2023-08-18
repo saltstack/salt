@@ -101,6 +101,20 @@ def test_selinux_setcontext_persist(tfile2):
     assert result == "system_u:object_r:user_tmp_t:s0"
 
 
+def test_selinux_setcontext_persist_change(tfile2):
+    """
+    Test set selinux context with persist=True
+    Assumes default selinux attributes on temporary files
+    """
+    result = filemod.set_selinux_context(tfile2, user="system_u", persist=True)
+    assert result == "system_u:object_r:user_tmp_t:s0"
+
+    result = filemod.set_selinux_context(
+        tfile2, user="unconfined_u", type="net_conf_t", persist=True
+    )
+    assert result == "unconfined_u:object_r:net_conf_t:s0"
+
+
 def test_file_check_perms(tfile3):
     expected_result = (
         {
