@@ -318,6 +318,7 @@ def test_clear_funcs_black(master_opts):
         "_prep_auth_info",
         "_prep_jid",
         "_prep_pub",
+        "_send_pub",
         "_send_ssh_pub",
         "connect",
         "destroy",
