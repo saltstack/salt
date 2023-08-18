@@ -1100,7 +1100,9 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             minions,
             is_finished,
         )
-
+        print("$" * 80)
+        print(f"Get minion returns {events!r}")
+        print("$" * 80)
         result = yield self.get_minion_returns(
             events=events,
             is_finished=is_finished,

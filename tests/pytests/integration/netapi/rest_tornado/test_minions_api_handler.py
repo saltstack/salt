@@ -19,6 +19,7 @@ async def test_get_no_mid(http_client, salt_minion, salt_sub_minion):
         method="GET",
         follow_redirects=False,
     )
+    print(f"{response!r}")
     response_obj = salt.utils.json.loads(response.body)
     assert len(response_obj["return"]) == 1
     assert isinstance(response_obj["return"][0], dict)
