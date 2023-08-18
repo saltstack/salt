@@ -893,7 +893,7 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
         """
         tag, data = salt.utils.event.SaltEvent.unpack(package)
         if tag.startswith("salt/job") and tag.endswith("/publish"):
-            data.pop("_stamp", None)
+            # data.pop("_stamp", None)
             log.trace("Forward job event to publisher server: %r", data)
             # if not self.channels:
             #     for transport, opts in iter_transport_opts(self.opts):
@@ -2381,7 +2381,11 @@ class ClearFuncs(TransportMethods):
             payload["auth_list"] = auth_list
 
         # Send it!
-        self.event.fire_event(payload, tagify([jid, "publish"], "job"))
+        # Copy the payload when firing event for now since it's adding a
+        # __pub_stamp field.
+        self.event.fire_event(payload.copy(), tagify([jid, "publish"], "job"))
+        # An alternative to copy may be to pop it
+        # payload.pop("_stamp")
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
         await self._send_pub(payload)
 
