@@ -207,7 +207,7 @@ class Runner(RunnerClient):
             print(docs[fun])
 
     # TODO: move to mixin whenever we want a salt-wheel cli
-    def run(self, full_return=False):
+    def run(self, full_return=False, show_jid=False):
         """
         Execute the runner sequence
         """
@@ -288,6 +288,9 @@ class Runner(RunnerClient):
                     return async_pub["jid"]  # return the jid
 
                 # otherwise run it in the main process
+                if show_jid:
+                    print(f"jid: {self.jid}")
+
                 if self.opts.get("eauth"):
                     ret = self.cmd_sync(low)
                     if isinstance(ret, dict) and set(ret) == {"data", "outputter"}:
