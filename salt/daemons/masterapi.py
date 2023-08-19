@@ -332,7 +332,11 @@ class AutoKey:
         """
         Check a keyid for membership in a autosign directory.
         """
-        autosign_dir = os.path.join(self.opts["pki_dir"], "minions_autosign")
+        if self.opts["cluster_id"]:
+            pki_dir = self.opts["cluster_pki_dir"]
+        else:
+            pki_dir = self.opts["pki_dir"]
+        autosign_dir = os.path.join(pki_dir, "minions_autosign")
 
         # cleanup expired files
         expire_minutes = self.opts.get("autosign_timeout", 120)

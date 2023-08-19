@@ -153,12 +153,35 @@ class Master(
                     self.config["syndic_dir"],
                     self.config["sqlite_queue_dir"],
                 ]
+                pki_dir = self.config["pki_dir"]
+                if (
+                    self.config["cluster_pki_dir"]
+                    and self.config["cluster_pki_dir"] != self.config["pki_dir"]
+                ):
+                    v_dirs.extend(
+                        [
+                            self.config["cluster_pki_dir"],
+                            os.path.join(self.config["cluster_pki_dir"], "minions"),
+                            os.path.join(self.config["cluster_pki_dir"], "minions_pre"),
+                            os.path.join(
+                                self.config["cluster_pki_dir"], "minions_denied"
+                            ),
+                            os.path.join(
+                                self.config["cluster_pki_dir"], "minions_autosign"
+                            ),
+                            os.path.join(
+                                self.config["cluster_pki_dir"], "minions_rejected"
+                            ),
+                        ]
+                    )
+                    pki_dir = [self.config["pki_dir"], self.config["cluster_pki_dir"]]
+
                 verify_env(
                     v_dirs,
                     self.config["user"],
                     permissive=self.config["permissive_pki_access"],
                     root_dir=self.config["root_dir"],
-                    pki_dir=self.config["pki_dir"],
+                    pki_dir=pki_dir,
                 )
                 # Clear out syndics from cachedir
                 for syndic_file in os.listdir(self.config["syndic_dir"]):
