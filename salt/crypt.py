@@ -371,11 +371,27 @@ class MasterKeys(dict):
     def __init__(self, opts):
         super().__init__()
         self.opts = opts
-        self.pub_path = os.path.join(self.opts["pki_dir"], "master.pub")
-        self.rsa_path = os.path.join(self.opts["pki_dir"], "master.pem")
-
+        self.master_pub_path = os.path.join(self.opts["pki_dir"], "master.pub")
+        self.master_rsa_path = os.path.join(self.opts["pki_dir"], "master.pem")
         key_pass = salt.utils.sdb.sdb_get(self.opts["key_pass"], self.opts)
-        self.key = self.__get_keys(passphrase=key_pass)
+        self.master_key = self.__get_keys(passphrase=key_pass)
+
+        self.cluster_pub_path = None
+        self.cluster_rsa_path = None
+        self.cluster_key = None
+        if self.opts["cluster_id"]:
+            self.cluster_pub_path = os.path.join(
+                self.opts["cluster_pki_dir"], "cluster.pub"
+            )
+            self.cluster_rsa_path = os.path.join(
+                self.opts["cluster_pki_dir"], "cluster.pem"
+            )
+            key_pass = salt.utils.sdb.sdb_get(self.opts["cluster_key_pass"], self.opts)
+            self.cluster_key = self.__get_keys(
+                name="cluster",
+                passphrase=key_pass,
+                pki_dir=self.opts["cluster_pki_dir"],
+            )
 
         self.pub_signature = None
 
@@ -433,15 +449,35 @@ class MasterKeys(dict):
     def __getstate__(self):
         return {"opts": self.opts}
 
-    def __get_keys(self, name="master", passphrase=None):
+    @property
+    def key(self):
+        if self.cluster_key:
+            return self.cluster_key
+        return self.master_key
+
+    @property
+    def pub_path(self):
+        if self.cluster_pub_path:
+            return self.cluster_pub_path
+        return self.master_pub_path
+
+    @property
+    def rsa_path(self):
+        if self.cluster_rsa_path:
+            return self.cluster_rsa_path
+        return self.master_rsa_path
+
+    def __get_keys(self, name="master", passphrase=None, pki_dir=None):
         """
         Returns a key object for a key in the pki-dir
         """
-        path = os.path.join(self.opts["pki_dir"], name + ".pem")
+        if pki_dir is None:
+            pki_dir = self.opts["pki_dir"]
+        path = os.path.join(pki_dir, name + ".pem")
         if not os.path.exists(path):
-            log.info("Generating %s keys: %s", name, self.opts["pki_dir"])
+            log.info("Generating %s keys: %s", name, pki_dir)
             gen_keys(
-                self.opts["pki_dir"],
+                pki_dir,
                 name,
                 self.opts["keysize"],
                 self.opts.get("user"),
@@ -465,7 +501,14 @@ class MasterKeys(dict):
         Return the string representation of a public key
         in the pki-directory
         """
-        path = os.path.join(self.opts["pki_dir"], name + ".pub")
+        if self.cluster_pub_path:
+            path = self.cluster_pub_path
+        else:
+            path = self.master_pub_path
+        # XXX We should always have a key present when this is called, if not
+        # it's an error.
+        # if not os.path.isfile(path):
+        #     raise RuntimeError(f"The key {path} does not exist.")
         if not os.path.isfile(path):
             key = self.__get_keys()
             if HAS_M2:
@@ -475,6 +518,9 @@ class MasterKeys(dict):
                     wfh.write(key.publickey().exportKey("PEM"))
         with salt.utils.files.fopen(path) as rfh:
             return rfh.read()
+
+    def get_ckey_paths(self):
+        return self.cluster_pub_path, self.cluster_rsa_path
 
     def get_mkey_paths(self):
         return self.pub_path, self.rsa_path

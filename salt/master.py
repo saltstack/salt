@@ -289,13 +289,13 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             else:
                 acc = "accepted"
 
-            for fn_ in os.listdir(os.path.join(self.opts["pki_dir"], acc)):
+            for fn_ in os.listdir(os.path.join(self.pki_dir, acc)):
                 if not fn_.startswith("."):
                     keys.append(fn_)
             log.debug("Writing master key cache")
             # Write a temporary file securely
             with salt.utils.atomicfile.atomic_open(
-                os.path.join(self.opts["pki_dir"], acc, ".key_cache"), mode="wb"
+                os.path.join(self.pki_dir, acc, ".key_cache"), mode="wb"
             ) as cache_file:
                 salt.payload.dump(keys, cache_file)
 
@@ -1309,6 +1309,10 @@ class AESFuncs(TransportMethods):
         )
         self.__setup_fileserver()
         self.masterapi = salt.daemons.masterapi.RemoteFuncs(opts)
+        if "cluster_id" in self.opts and self.opts["cluster_id"]:
+            self.pki_dir = self.opts["cluster_pki_dir"]
+        else:
+            self.pki_dir = self.opts.get("pki_dir", "")
 
     def __setup_fileserver(self):
         """
@@ -1341,8 +1345,7 @@ class AESFuncs(TransportMethods):
         """
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
-        pub_path = os.path.join(self.opts["pki_dir"], "minions", id_)
-
+        pub_path = os.path.join(self.pki_dir, "minions", id_)
         try:
             pub = salt.crypt.get_rsa_pub_key(pub_path)
         except OSError:
@@ -1764,7 +1767,7 @@ class AESFuncs(TransportMethods):
             log.trace("Verifying signed event publish from minion")
             sig = load.pop("sig")
             this_minion_pubkey = os.path.join(
-                self.opts["pki_dir"], "minions/{}".format(load["id"])
+                self.pki_dir, "minions/{}".format(load["id"])
             )
             serialized_load = salt.serializers.msgpack.serialize(load)
             if not salt.crypt.verify_signature(

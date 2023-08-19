@@ -187,3 +187,45 @@ def test_dropfile_contents(tmp_path, master_opts):
     salt.crypt.dropfile(str(tmp_path), master_opts["user"], master_id=master_opts["id"])
     with salt.utils.files.fopen(str(tmp_path / ".dfn"), "r") as fp:
         assert master_opts["id"] == fp.read()
+
+
+def test_master_keys_without_cluster_id(tmp_path, master_opts):
+    master_opts["pki_dir"] = str(tmp_path)
+    assert master_opts["cluster_id"] is None
+    assert master_opts["cluster_pki_dir"] is None
+    mkeys = salt.crypt.MasterKeys(master_opts)
+    expected_master_pub = str(tmp_path / "master.pub")
+    expected_master_rsa = str(tmp_path / "master.pem")
+    assert expected_master_pub == mkeys.master_pub_path
+    assert expected_master_rsa == mkeys.master_rsa_path
+    assert mkeys.cluster_pub_path is None
+    assert mkeys.cluster_rsa_path is None
+    assert mkeys.pub_path == expected_master_pub
+    assert mkeys.rsa_path == expected_master_rsa
+    assert mkeys.key == mkeys.master_key
+
+
+def test_master_keys_with_cluster_id(tmp_path, master_opts):
+    master_pki_path = tmp_path / "master_pki"
+    cluster_pki_path = tmp_path / "cluster_pki"
+    # The paths need to exist
+    master_pki_path.mkdir()
+    cluster_pki_path.mkdir()
+
+    master_opts["pki_dir"] = str(master_pki_path)
+    master_opts["cluster_id"] = "cluster1"
+    master_opts["cluster_pki_dir"] = str(cluster_pki_path)
+
+    mkeys = salt.crypt.MasterKeys(master_opts)
+
+    expected_master_pub = str(master_pki_path / "master.pub")
+    expected_master_rsa = str(master_pki_path / "master.pem")
+    expected_cluster_pub = str(cluster_pki_path / "cluster.pub")
+    expected_cluster_rsa = str(cluster_pki_path / "cluster.pem")
+    assert expected_master_pub == mkeys.master_pub_path
+    assert expected_master_rsa == mkeys.master_rsa_path
+    assert expected_cluster_pub == mkeys.cluster_pub_path
+    assert expected_cluster_rsa == mkeys.cluster_rsa_path
+    assert mkeys.pub_path == expected_cluster_pub
+    assert mkeys.rsa_path == expected_cluster_rsa
+    assert mkeys.key == mkeys.cluster_key

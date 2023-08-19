@@ -55,7 +55,10 @@ class ReqServerChannel:
     def __init__(self, opts, transport):
         self.opts = opts
         self.transport = transport
-        self.event = None
+        self.event = salt.utils.event.get_master_event(
+            self.opts, self.opts["sock_dir"], listen=False
+        )
+        self.master_key = salt.crypt.MasterKeys(self.opts)
 
     def pre_fork(self, process_manager):
         """
@@ -187,7 +190,10 @@ class ReqServerChannel:
         The server equivalent of ReqChannel.crypted_transfer_decode_dictentry
         """
         # encrypt with a specific AES key
-        pubfn = os.path.join(self.opts["pki_dir"], "minions", target)
+        if self.master_key.cluster_key:
+            pubfn = os.path.join(self.opts["cluster_pki_dir"], "minions", target)
+        else:
+            pubfn = os.path.join(self.opts["pki_dir"], "minions", target)
         key = salt.crypt.Crypticle.generate_key_string()
         pcrypt = salt.crypt.Crypticle(self.opts, key)
         try:
@@ -212,10 +218,9 @@ class ReqServerChannel:
             tosign = salt.payload.dumps(
                 {"key": pret["key"], "pillar": ret, "nonce": nonce}
             )
-            master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")
             signed_msg = {
                 "data": tosign,
-                "sig": salt.crypt.sign_message(master_pem_path, tosign),
+                "sig": salt.crypt.sign_message(self.master_key.rsa_path, tosign),
             }
             pret[dictkey] = pcrypt.dumps(signed_msg)
         else:
@@ -223,12 +228,11 @@ class ReqServerChannel:
         return pret
 
     def _clear_signed(self, load):
-        master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")
         tosign = salt.payload.dumps(load)
         return {
             "enc": "clear",
             "load": tosign,
-            "sig": salt.crypt.sign_message(master_pem_path, tosign),
+            "sig": salt.crypt.sign_message(self.master_key.rsa_path, tosign),
         }
 
     def _update_aes(self):
@@ -326,18 +330,21 @@ class ReqServerChannel:
                     else:
                         return {"enc": "clear", "load": {"ret": "full"}}
 
+        pki_dir = self.opts["pki_dir"]
+        if self.opts["cluster_id"]:
+            if self.opts["cluster_pki_dir"]:
+                pki_dir = self.opts["cluster_pki_dir"]
+
         # Check if key is configured to be auto-rejected/signed
         auto_reject = self.auto_key.check_autoreject(load["id"])
         auto_sign = self.auto_key.check_autosign(
             load["id"], load.get("autosign_grains", None)
         )
 
-        pubfn = os.path.join(self.opts["pki_dir"], "minions", load["id"])
-        pubfn_pend = os.path.join(self.opts["pki_dir"], "minions_pre", load["id"])
-        pubfn_rejected = os.path.join(
-            self.opts["pki_dir"], "minions_rejected", load["id"]
-        )
-        pubfn_denied = os.path.join(self.opts["pki_dir"], "minions_denied", load["id"])
+        pubfn = os.path.join(pki_dir, "minions", load["id"])
+        pubfn_pend = os.path.join(pki_dir, "minions_pre", load["id"])
+        pubfn_rejected = os.path.join(pki_dir, "minions_rejected", load["id"])
+        pubfn_denied = os.path.join(pki_dir, "minions_denied", load["id"])
         if self.opts["open_mode"]:
             # open mode is turned on, nuts to checks and overwrite whatever
             # is there
@@ -740,6 +747,7 @@ class PubServerChannel:
         self.event = salt.utils.event.get_event("master", opts=self.opts, listen=False)
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         self.present = {}
+        self.master_key = salt.crypt.MasterKeys(self.opts)
 
     def close(self):
         self.transport.close()
@@ -771,6 +779,7 @@ class PubServerChannel:
         secrets = kwargs.get("secrets", None)
         if secrets is not None:
             salt.master.SMaster.secrets = secrets
+        self.master_key = salt.crypt.MasterKeys(self.opts)
         self.transport.publish_daemon(
             self.publish_payload, self.presence_callback, self.remove_presence_callback
         )
@@ -861,9 +870,10 @@ class PubServerChannel:
         )
         payload["load"] = crypticle.dumps(load)
         if self.opts["sign_pub_messages"]:
-            master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")
             log.debug("Signing data packet")
-            payload["sig"] = salt.crypt.sign_message(master_pem_path, payload["load"])
+            payload["sig"] = salt.crypt.sign_message(
+                self.master_key.rsa_path, payload["load"]
+            )
         int_payload = {"payload": salt.payload.dumps(payload)}
 
         # If topics are upported, target matching has to happen master side
