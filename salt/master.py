@@ -329,7 +329,10 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         # There is no need to check key against publish_session if we're
         # already rotating.
         if not to_rotate and self.opts.get("publish_session"):
-            keyfile = os.path.join(self.opts["cachedir"], ".aes")
+            if self.opts.get("cluster_id", None):
+                keyfile = os.path.join(self.opts["cluster_pki_dir"], ".aes")
+            else:
+                keyfile = os.path.join(self.opts["cachedir"], ".aes")
             try:
                 stats = os.stat(keyfile)
             except os.error as exc:
@@ -716,22 +719,35 @@ class Master(SMaster):
         # manager. We don't want the processes being started to inherit those
         # signal handlers
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-            keypath = os.path.join(self.opts["cachedir"], ".aes")
-            keygen = functools.partial(
-                salt.crypt.Crypticle.read_or_generate_key,
-                keypath,
-            )
-
-            # Setup the secrets here because the PubServerChannel may need
-            # them as well.
+            if self.opts["cluster_id"]:
+                keypath = os.path.join(self.opts["cluster_pki_dir"], ".aes")
+                keygen = functools.partial(
+                    salt.crypt.Crypticle.read_or_generate_key,
+                    keypath,
+                )
+                # Setup the secrets here because the PubServerChannel may need
+                # them as well.
+                SMaster.secrets["cluster_aes"] = {
+                    "secret": multiprocessing.Array(
+                        ctypes.c_char, salt.utils.stringutils.to_bytes(keygen())
+                    ),
+                    "serial": multiprocessing.Value(
+                        ctypes.c_longlong,
+                        lock=False,  # We'll use the lock from 'secret'
+                    ),
+                    "reload": keygen,
+                }
             SMaster.secrets["aes"] = {
                 "secret": multiprocessing.Array(
-                    ctypes.c_char, salt.utils.stringutils.to_bytes(keygen())
+                    ctypes.c_char,
+                    salt.utils.stringutils.to_bytes(
+                        salt.crypt.Crypticle.generate_key_string()
+                    ),
                 ),
                 "serial": multiprocessing.Value(
                     ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
                 ),
-                "reload": keygen,
+                "reload": salt.crypt.Crypticle.generate_key_string,
             }
 
             log.info("Creating master process manager")
@@ -745,20 +761,10 @@ class Master(SMaster):
                 pub_channels.append(chan)
 
             log.info("Creating master event publisher process")
-            ipc_publisher = salt.transport.ipc_publish_server("master", self.opts)
             ipc_publisher = salt.channel.server.MasterPubServerChannel.factory(
                 self.opts
             )
             ipc_publisher.pre_fork(self.process_manager)
-
-            # self.process_manager.add_process(
-            #    ipc_publisher.publish_daemon,
-            #    args=[
-            #        ipc_publisher.publish_payload,
-            #    ],
-            #    name="EventPublisher",
-            # )
-
             self.process_manager.add_process(
                 EventMonitor,
                 args=[self.opts],
@@ -867,6 +873,9 @@ class Master(SMaster):
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
 
+        if self.opts.get("cluster_id", None):
+            # Notify the rest of the cluster we're starting.
+            ipc_publisher.send_aes_key_event()
         self.process_manager.run()
 
     def _handle_signals(self, signum, sigframe):
@@ -897,6 +906,7 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
         Event handler for publish forwarder
         """
         tag, data = salt.utils.event.SaltEvent.unpack(package)
+        log.error("got evetn %s %r", tag, data)
         if tag.startswith("salt/job") and tag.endswith("/publish"):
             # data.pop("_stamp", None)
             log.trace("Forward job event to publisher server: %r", data)
@@ -2395,6 +2405,7 @@ class ClearFuncs(TransportMethods):
         # An alternative to copy may be to pop it
         # payload.pop("_stamp")
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
+        log.error("SEND JOB PAYLOAD %r", payload)
         await self._send_pub(payload)
 
         return {

@@ -4,10 +4,12 @@ Encapsulate the different transports available to Salt.
 This includes server side transport, for the ReqServer and the Publisher
 """
 
+import asyncio
 import binascii
 import hashlib
 import logging
 import os
+import pathlib
 import shutil
 
 import tornado.gen
@@ -61,6 +63,12 @@ class ReqServerChannel:
         )
         self.master_key = salt.crypt.MasterKeys(self.opts)
 
+    @property
+    def aes_key(self):
+        if self.opts.get("cluster_id", None):
+            return salt.master.SMaster.secrets["cluster_aes"]["secret"].value
+        return salt.master.SMaster.secrets["aes"]["secret"].value
+
     def pre_fork(self, process_manager):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
@@ -84,9 +92,7 @@ class ReqServerChannel:
             )
             os.nice(self.opts["pub_server_niceness"])
         self.io_loop = io_loop
-        self.crypticle = salt.crypt.Crypticle(
-            self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
-        )
+        self.crypticle = salt.crypt.Crypticle(self.opts, self.aes_key)
         # other things needed for _auth
         # Create the event manager
         self.event = salt.utils.event.get_master_event(
@@ -198,19 +204,14 @@ class ReqServerChannel:
         key = salt.crypt.Crypticle.generate_key_string()
         pcrypt = salt.crypt.Crypticle(self.opts, key)
         try:
-            pub = salt.crypt.get_rsa_pub_key(pubfn)
+            pub = salt.crypt.PublicKey(pubfn)
         except (ValueError, IndexError, TypeError):
             return self.crypticle.dumps({})
         except OSError:
             log.error("AES key not found")
             return {"error": "AES key not found"}
         pret = {}
-        key = salt.utils.stringutils.to_bytes(key)
-        if HAS_M2:
-            pret["key"] = pub.public_encrypt(key, RSA.pkcs1_oaep_padding)
-        else:
-            cipher = PKCS1_OAEP.new(pub)
-            pret["key"] = cipher.encrypt(key)
+        pret["key"] = pub.encrypt(key)
         if ret is False:
             ret = {}
         if sign_messages:
@@ -221,7 +222,7 @@ class ReqServerChannel:
             )
             signed_msg = {
                 "data": tosign,
-                "sig": salt.crypt.sign_message(self.master_key.rsa_path, tosign),
+                "sig": salt.crypt.PrivateKey(self.master_key.rsa_path).sign(tosign),
             }
             pret[dictkey] = pcrypt.dumps(signed_msg)
         else:
@@ -647,15 +648,13 @@ class ReqServerChannel:
                         )
                     else:
                         mtoken = mcipher.decrypt(load["token"])
-                    aes = "{}_|-{}".format(
-                        salt.master.SMaster.secrets["aes"]["secret"].value, mtoken
-                    )
+                    aes = "{}_|-{}".format(self.aes_key, mtoken)
                 except Exception:  # pylint: disable=broad-except
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
                     pass
             else:
-                aes = salt.master.SMaster.secrets["aes"]["secret"].value
+                aes = self.aes_key
 
             if HAS_M2:
                 ret["aes"] = pub.public_encrypt(aes, RSA.pkcs1_oaep_padding)
@@ -679,7 +678,7 @@ class ReqServerChannel:
                     # support older minions
                     pass
 
-            aes = salt.master.SMaster.secrets["aes"]["secret"].value
+            aes = self.aes_key
             if HAS_M2:
                 ret["aes"] = pub.public_encrypt(aes, RSA.pkcs1_oaep_padding)
             else:
@@ -733,6 +732,12 @@ class PubServerChannel:
         self.present = {}
         self.presence_events = presence_events
         self.event = salt.utils.event.get_event("master", opts=self.opts, listen=False)
+
+    @property
+    def aes_key(self):
+        if self.opts.get("cluster_id", None):
+            return salt.master.SMaster.secrets["cluster_aes"]["secret"].value
+        return salt.master.SMaster.secrets["aes"]["secret"].value
 
     def __getstate__(self):
         return {
@@ -789,9 +794,7 @@ class PubServerChannel:
         if msg["enc"] != "aes":
             # We only accept 'aes' encoded messages for 'id'
             return
-        crypticle = salt.crypt.Crypticle(
-            self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
-        )
+        crypticle = salt.crypt.Crypticle(self.opts, self.aes_key)
         load = crypticle.loads(msg["load"])
         load = salt.transport.frame.decode_embedded_strs(load)
         if not self.aes_funcs.verify_minion(load["id"], load["tok"]):
@@ -865,20 +868,15 @@ class PubServerChannel:
 
     def wrap_payload(self, load):
         payload = {"enc": "aes"}
-        load["serial"] = salt.master.SMaster.get_serial()
-        crypticle = salt.crypt.Crypticle(
-            self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
-        )
+        if not self.opts.get("cluster_id", None):
+            load["serial"] = salt.master.SMaster.get_serial()
+        crypticle = salt.crypt.Crypticle(self.opts, self.aes_key)
         payload["load"] = crypticle.dumps(load)
         if self.opts["sign_pub_messages"]:
-            if self.opts["cluster_id"]:
-                master_pem_path = os.path.join(self.opts["cluster_pki_dir"], "cluster.pem")
-            else:
-                master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")
             log.debug("Signing data packet")
-            payload["sig"] = salt.crypt.sign_message(
-                self.master_key.rsa_path, payload["load"]
-            )
+            payload["sig"] = salt.crypt.PrivateKey(
+                self.master_key.rsa_path,
+            ).sign(payload["load"])
         int_payload = {"payload": salt.payload.dumps(payload)}
 
         # If topics are upported, target matching has to happen master side
@@ -926,6 +924,41 @@ class MasterPubServerChannel:
         self.opts = opts
         self.transport = transport
         self.io_loop = tornado.ioloop.IOLoop.current()
+        self.master_key = salt.crypt.MasterKeys(self.opts)
+        self.peer_keys = {}
+
+    def send_aes_key_event(self):
+        data = {"peer_id": self.opts["id"], "peers": {}}
+        for peer in self.opts.get("cluster_peers", []):
+            peer_pub = (
+                pathlib.Path(self.opts["cluster_pki_dir"]) / "peers" / f"{peer}.pub"
+            )
+            if peer_pub.exists():
+                pub = salt.crypt.PublicKey(peer_pub)
+                aes = salt.master.SMaster.secrets["aes"]["secret"].value
+                digest = salt.utils.stringutils.to_bytes(
+                    hashlib.sha256(aes).hexdigest()
+                )
+                data["peers"][peer] = {
+                    "aes": pub.encrypt(aes),
+                    "sig": salt.crypt.private_encrypt(
+                        self.master_key.master_key, digest
+                    ),
+                }
+                log.error(
+                    "WTF SEND SIG %s",
+                    hashlib.md5(data["peers"][peer]["sig"]).hexdigest(),
+                )
+            else:
+                log.error("Peer key missing %r", peer_pub)
+                data["peers"][peer] = {}
+        with salt.utils.event.get_master_event(
+            self.opts, self.opts["sock_dir"], listen=False
+        ) as event:
+            event.fire_event(
+                data,
+                salt.utils.event.tagify(self.opts["id"], "peer", "cluster"),
+            )
 
     def __getstate__(self):
         return {
@@ -949,7 +982,6 @@ class MasterPubServerChannel:
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
         if hasattr(self.transport, "publish_daemon"):
-
             process_manager.add_process(
                 self._publish_daemon, kwargs=kwargs, name="EventPublisher"
             )
@@ -967,14 +999,13 @@ class MasterPubServerChannel:
         self.io_loop = tornado.ioloop.IOLoop.current()
         tcp_master_pool_port = 4520
         self.pushers = []
-        for master in self.opts.get("master_pool", []):
+        for master in self.opts.get("cluster_peers", []):
             pusher = salt.transport.tcp.TCPPublishServer(
-                        self.opts,
-                        pull_host=master,
-                        pull_port=tcp_master_pool_port,
+                self.opts,
+                pull_host=master,
+                pull_port=tcp_master_pool_port,
             )
             self.pushers.append(pusher)
-
         self.pool_puller = salt.transport.tcp.TCPPuller(
             host=self.opts["interface"],
             port=tcp_master_pool_port,
@@ -995,23 +1026,88 @@ class MasterPubServerChannel:
         finally:
             self.close()
 
-    async def publish(self, load):
-        """
-        Publish "load" to minions
-        """
-        await self.transport.publish(load)
+    # async def publish(self, load):
+    #     """
+    #     Publish "load" to minions
+    #     """
+    #     await self.transport.publish(load)
 
-    async def handle_pool_publish(self, load, _):
-        log.error("Got event from other master")
+    async def handle_pool_publish(self, payload, _):
+        """
+        Handle incomming events from cluster peer.
+        """
         try:
-            await self.transport.publish(load)
-        # Add an extra fallback in case a forked process leeks through
+            tag, data = salt.utils.event.SaltEvent.unpack(payload)
+            log.error("recieved event from peer %s %r", tag, data)
+            if tag.startswith("cluster/peer"):
+                log.error("Got peer join %r", data)
+                peer = data["peer_id"]
+                aes = data["peers"][self.opts["id"]]["aes"]
+                sig = data["peers"][self.opts["id"]]["sig"]
+                key_str = self.master_key.master_private_decrypt(aes)
+                digest = salt.utils.stringutils.to_bytes(
+                    hashlib.sha256(key_str).hexdigest()
+                )
+                pub_path = (
+                    pathlib.Path(self.opts["cluster_pki_dir"]) / "peers" / f"{peer}.pub"
+                )
+                key = salt.crypt.PublicKey(pub_path)
+                m_digest = key.decrypt(sig)
+                if m_digest != digest:
+                    log.error("Invalid aes signature from peer: %s", peer)
+                    return
+                log.error("Received new key from peer %s", peer)
+                if peer in self.peer_keys:
+                    if self.peer_keys[peer] != key_str:
+                        self.peer_keys[peer] = key_str
+                        self.send_aes_key_event()
+                else:
+                    self.peer_keys[peer] = key_str
+                    self.send_aes_key_event()
+            elif tag.startswith("cluster/event"):
+                peer_id = tag.replace("cluster/event/", "").split("/")[0]
+                stripped_tag = tag.replace(f"cluster/event/{peer_id}/", "")
+                if peer_id in self.peer_keys:
+                    crypticle = salt.crypt.Crypticle(self.opts, self.peer_keys[peer_id])
+                    event_data = crypticle.loads(data)
+                    # __peer_id can be used to know if this event came from a
+                    # different master?
+                    event_data["__peer_id"] = peer_id
+                    await self.transport.publish_payload(
+                        salt.utils.event.SaltEvent.pack(stripped_tag, event_data)
+                    )
+            else:
+                log.error("This cluster tag not valid %s", tag)
+        ## Add an extra fallback in case a forked process leeks through
         except Exception:  # pylint: disable=broad-except
             log.critical("Unexpected error while polling master events", exc_info=True)
             return None
 
     async def publish_payload(self, load, *args):
-        await self.transport.publish_payload(load)
+        log.error("Publish event to local ipc clients")
+        tag, data = salt.utils.event.SaltEvent.unpack(load)
+        tasks = []
+        if not tag.startswith("cluster/peer"):
+            tasks = [asyncio.create_task(self.transport.publish_payload(load))]
         for pusher in self.pushers:
-            log.error("Send event to master %s:%s", pusher.pull_host, pusher.pull_port)
-            await pusher.publish(load)
+            log.error(
+                "Publish event to peer master %s:%s", pusher.pull_host, pusher.pull_port
+            )
+            if tag.startswith("cluster/peer"):
+                tasks.append(asyncio.create_task(pusher.publish(load)))
+                continue
+            crypticle = salt.crypt.Crypticle(
+                self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
+            )
+            load = {"event_payload": data}
+            event_data = salt.utils.event.SaltEvent.pack(
+                salt.utils.event.tagify(tag, self.opts["id"], "cluster/event"),
+                crypticle.dumps(load),
+            )
+            tasks.append(asyncio.create_task(pusher.publish(event_data)))
+        await asyncio.gather(*tasks, return_exceptions=True)
+        for task in tasks:
+            try:
+                task.result()
+            except Exception:  # pylint: disable=broad-except
+                log.error("Error sending task %s", exc)

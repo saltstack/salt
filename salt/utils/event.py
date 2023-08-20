@@ -424,6 +424,25 @@ class SaltEvent:
         data = salt.payload.loads(mdata, encoding="utf-8")
         return mtag, data
 
+    @classmethod
+    def pack(cls, tag, data, max_size=None):
+        tagend = TAGEND
+        serialized_data = salt.payload.dumps(data, use_bin_type=True)
+        if max_size:
+            serialized_data = salt.utils.dicttrim.trim_dict(
+                serialized_data,
+                max_size,
+                is_msgpacked=True,
+                use_bin_type=True,
+            )
+        return b"".join(
+            [
+                salt.utils.stringutils.to_bytes(tag),
+                salt.utils.stringutils.to_bytes(tagend),
+                serialized_data,
+            ]
+        )
+
     def _get_match_func(self, match_type=None):
         if match_type is None:
             match_type = self.opts["event_match_type"]
@@ -713,33 +732,7 @@ class SaltEvent:
                 return False
 
         data["_stamp"] = datetime.datetime.utcnow().isoformat()
-
-        tagend = TAGEND
-        # Since the pack / unpack logic here is for local events only,
-        # it is safe to change the wire protocol. The mechanism
-        # that sends events from minion to master is outside this
-        # file.
-        dump_data = salt.payload.dumps(data, use_bin_type=True)
-
-        serialized_data = salt.utils.dicttrim.trim_dict(
-            dump_data,
-            self.opts["max_event_size"],
-            is_msgpacked=True,
-            use_bin_type=True,
-        )
-        log.debug(
-            "Sending event(fire_event_async): tag = %s; data = %s %r",
-            tag,
-            data,
-            self.pusher,
-        )
-        event = b"".join(
-            [
-                salt.utils.stringutils.to_bytes(tag),
-                salt.utils.stringutils.to_bytes(tagend),
-                serialized_data,
-            ]
-        )
+        event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         self.pusher.publish(msg)
         if cb is not None:
@@ -774,32 +767,7 @@ class SaltEvent:
                 return False
 
         data["_stamp"] = datetime.datetime.utcnow().isoformat()
-
-        tagend = TAGEND
-        # Since the pack / unpack logic here is for local events only,
-        # it is safe to change the wire protocol. The mechanism
-        # that sends events from minion to master is outside this
-        # file.
-        dump_data = salt.payload.dumps(data, use_bin_type=True)
-
-        serialized_data = salt.utils.dicttrim.trim_dict(
-            dump_data,
-            self.opts["max_event_size"],
-            is_msgpacked=True,
-            use_bin_type=True,
-        )
-        log.debug(
-            "Sending event(fire_event): tag = %s; data = %s",
-            tag,
-            data,
-        )
-        event = b"".join(
-            [
-                salt.utils.stringutils.to_bytes(tag),
-                salt.utils.stringutils.to_bytes(tagend),
-                serialized_data,
-            ]
-        )
+        event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         if self._run_io_loop_sync:
             try:
