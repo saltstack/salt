@@ -1120,7 +1120,9 @@ class TCPPuller:
     but using either UNIX domain sockets or TCP sockets
     """
 
-    def __init__(self, host=None, port=None, path=None, io_loop=None, payload_handler=None):
+    def __init__(
+        self, host=None, port=None, path=None, io_loop=None, payload_handler=None
+    ):
         """
         Create a new Tornado IPC server
 
@@ -1216,7 +1218,9 @@ class TCPPuller:
                 if self.path:
                     log.trace("Client disconnected from IPC %s", self.path)
                 else:
-                    log.trace("Client disconnected from IPC %s:%s", self.host, self.port)
+                    log.trace(
+                        "Client disconnected from IPC %s:%s", self.host, self.port
+                    )
                 break
             except OSError as exc:
                 # On occasion an exception will occur with
@@ -1386,7 +1390,9 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
             log.debug("Publish server binding pull to %s", self.pull_path)
             pull_path = self.pull_path
         else:
-            log.info("Publish server binding pull to 127.0.0.1:%s", self.pull_port)
+            log.info(
+                "Publish server binding pull to %s:%s", self.pull_host, self.pull_port
+            )
             pull_host = self.pull_host
             pull_port = self.pull_port
 

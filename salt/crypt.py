@@ -12,6 +12,7 @@ import hashlib
 import hmac
 import logging
 import os
+import pathlib
 import random
 import stat
 import sys
@@ -186,6 +187,83 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
             # report the error
             pass
     return priv
+
+
+class PrivateKey:
+    def __init__(self, path, passphrase=None):
+        if HAS_M2:
+            self.key = RSA.load_key(path, lambda x: bytes(passphrase))
+        else:
+            with salt.utils.files.fopen(path) as f:
+                self.key = RSA.importKey(f.read(), passphrase)
+
+    def encrypt(self, data):
+        if HAS_M2:
+            return self.key.private_encrypt(data, salt.utils.rsax931.RSA_X931_PADDING)
+        else:
+            return salt.utils.rsax931.RSAX931Signer(self.key.exportKey("PEM")).sign(
+                data
+            )
+
+    def sign(self, data):
+        if HAS_M2:
+            md = EVP.MessageDigest("sha1")
+            md.update(salt.utils.stringutils.to_bytes(data))
+            digest = md.final()
+            return self.key.sign(digest)
+        else:
+            signer = PKCS1_v1_5.new(self.key)
+            return signer.sign(SHA.new(salt.utils.stringutils.to_bytes(data)))
+
+
+class PublicKey:
+    def __init__(self, path, _HAS_M2=HAS_M2):
+        self._HAS_M2 = _HAS_M2
+        if self._HAS_M2:
+            with salt.utils.files.fopen(path, "rb") as f:
+                data = f.read().replace(b"RSA ", b"")
+            bio = BIO.MemoryBuffer(data)
+            try:
+                self.key = RSA.load_pub_key_bio(bio)
+            except RSA.RSAError:
+                raise InvalidKeyError("Encountered bad RSA public key")
+        else:
+            with salt.utils.files.fopen(path) as f:
+                try:
+                    self.key = RSA.importKey(f.read())
+                except (ValueError, IndexError, TypeError):
+                    raise InvalidKeyError("Encountered bad RSA public key")
+
+    def encrypt(self, data):
+        bdata = salt.utils.stringutils.to_bytes(data)
+        if self._HAS_M2:
+            return self.key.public_encrypt(bdata, salt.crypt.RSA.pkcs1_oaep_padding)
+        else:
+            return salt.crypt.PKCS1_OAEP.new(self.key).encrypt(bdata)
+
+    def verify(self, data, signature):
+        if self._HAS_M2:
+            md = EVP.MessageDigest("sha1")
+            md.update(salt.utils.stringutils.to_bytes(data))
+            digest = md.final()
+            try:
+                return self.key.verify(digest, signature)
+            except RSA.RSAError as exc:
+                log.debug("Signature verification failed: %s", exc.args[0])
+                return False
+        else:
+            verifier = PKCS1_v1_5.new(self.key)
+            return verifier.verify(
+                SHA.new(salt.utils.stringutils.to_bytes(data)), signature
+            )
+
+    def decrypt(self, data):
+        data = salt.utils.stringutils.to_bytes(data)
+        if HAS_M2:
+            return self.key.public_decrypt(data, salt.utils.rsax931.RSA_X931_PADDING)
+        else:
+            verifier = salt.utils.rsax931.RSAX931Verifier(self.key.exportKey("PEM"))
+            return verifier.verify(data)
 
 
 @salt.utils.decorators.memoize
@@ -386,13 +464,18 @@ class MasterKeys(dict):
             self.cluster_rsa_path = os.path.join(
                 self.opts["cluster_pki_dir"], "cluster.pem"
             )
+            self.cluster_shared_path = os.path.join(
+                self.opts["cluster_pki_dir"],
+                "peers",
+                f"{self.opts['id']}.pub",
+            )
+            self.check_master_shared_pub()
             key_pass = salt.utils.sdb.sdb_get(self.opts["cluster_key_pass"], self.opts)
             self.cluster_key = self.__get_keys(
                 name="cluster",
                 passphrase=key_pass,
                 pki_dir=self.opts["cluster_pki_dir"],
             )
-
         self.pub_signature = None
 
         # set names for the signing key-pairs
@@ -467,6 +550,12 @@ class MasterKeys(dict):
             return self.cluster_rsa_path
         return self.master_rsa_path
 
+    def __key_exists(self, name="master", passphrase=None, pki_dir=None):
+        if pki_dir is None:
+            pki_dir = self.opts["pki_dir"]
+        path = os.path.join(pki_dir, name + ".pem")
+        return os.path.exists(path)
+
     def __get_keys(self, name="master", passphrase=None, pki_dir=None):
         """
         Returns a key object for a key in the pki-dir
@@ -474,7 +563,7 @@ class MasterKeys(dict):
         if pki_dir is None:
             pki_dir = self.opts["pki_dir"]
         path = os.path.join(pki_dir, name + ".pem")
-        if not os.path.exists(path):
+        if not self.__key_exists(name, passphrase, pki_dir):
             log.info("Generating %s keys: %s", name, pki_dir)
             gen_keys(
                 pki_dir,
@@ -534,6 +623,35 @@ class MasterKeys(dict):
         or None if the master has its own signing keys
         """
         return self.pub_signature
+
+    def check_master_shared_pub(self):
+        """
+        Check the status of the master's shared public key.
+
+        If the shared master key does not exist, write this master's public key
+        to the shared location. Otherwise validate the shared key matches our
+        key. Failed validation raises MasterExit
+        """
+        shared_pub = pathlib.Path(self.cluster_shared_path)
+        master_pub = pathlib.Path(self.master_pub_path)
+        if shared_pub.exists():
+            if shared_pub.read_bytes() != master_pub.read_bytes():
+                message = (
+                    f"Shared key does not match, remove it to continue: {shared_pub}"
+                )
+                log.error(message)
+                raise MasterExit(message)
+        else:
+            # permissions
+            log.debug("Writing shared key %s", shared_pub)
+            shared_pub.write_bytes(master_pub.read_bytes())
+
+    def master_private_decrypt(self, data):
+        if HAS_M2:
+            return self.master_key.private_decrypt(data, RSA.pkcs1_oaep_padding)
+        else:
+            cipher = PKCS1_OAEP.new(self.master_key)
+            return cipher.decrypt(data)
 
 
 class AsyncAuth:
@@ -863,9 +981,9 @@ class AsyncAuth:
                 raise SaltClientError("Invalid master key")
 
         master_pubkey_path = os.path.join(self.opts["pki_dir"], self.mpub)
-        if os.path.exists(master_pubkey_path) and not verify_signature(
-            master_pubkey_path, clear_signed_data, clear_signature
-        ):
+        if os.path.exists(master_pubkey_path) and not PublicKey(
+            master_pubkey_path
+        ).verify(clear_signed_data, clear_signature):
             log.critical("The payload signature did not validate.")
             raise SaltClientError("Invalid signature")
 
