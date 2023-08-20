@@ -137,7 +137,6 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         self.started.set()
         last_msg = time.time()
         self.start = last_msg
-        serial = salt.payload.Serial(self.minion_config)
         crypticle = salt.crypt.Crypticle(self.minion_config, self.aes_key)
         self.gotone = False
         try:
