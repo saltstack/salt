@@ -17,7 +17,6 @@ import os
 import shlex
 import shutil
 import stat
-import string
 import subprocess
 import time
 import weakref
@@ -252,7 +251,6 @@ class GitProvider:
             val_cb=lambda x, y: str(y),
         )
         self.conf = copy.deepcopy(per_remote_defaults)
-
         # Remove the 'salt://' from the beginning of any globally-defined
         # per-saltenv mountpoints
         for saltenv, saltenv_conf in self.global_saltenv.items():
@@ -458,46 +456,28 @@ class GitProvider:
             failhard(self.role)
 
         hash_type = getattr(hashlib, self.opts.get("hash_type", "md5"))
-        # Generate full id.
-        # Full id helps decrease the chances of collections in the gitfs cache.
-        try:
-            target = str(self.get_checkout_target())
-        except AttributeError:
-            target = ""
-        self._full_id = "-".join(
-            [
-                getattr(self, "name", ""),
-                self.id,
-                getattr(self, "env", ""),
-                getattr(self, "_root", ""),
-                self.role,
-                getattr(self, "base", ""),
-                getattr(self, "branch", ""),
-                target,
-            ]
-        )
         # We loaded this data from yaml configuration files, so, its safe
         # to use UTF-8
-        base64_hash = str(
-            base64.b64encode(hash_type(self._full_id.encode("utf-8")).digest()),
+        self._cache_basehash = str(
+            base64.b64encode(hash_type(self.id.encode("utf-8")).digest()),
             encoding="ascii",  # base64 only outputs ascii
         ).replace(
             "/", "_"
         )  # replace "/" with "_" to not cause trouble with file system
-
-        # limit name length to 19, so we don't eat up all the path length for windows
-        # this is due to pygit2 limitations
-        # replace any unknown char with "_" to not cause trouble with file system
-        name_chars = string.ascii_letters + string.digits + "-"
-        cache_name = "".join(
-            c if c in name_chars else "_" for c in getattr(self, "name", "")[:19]
+        self._cache_hash = salt.utils.path.join(cache_root, self._cache_basehash)
+        try:
+            self._cache_basename = self.get_checkout_target()
+        except AttributeError:
+            self._cache_basename = "_"
+        self._cache_full_basename = salt.utils.path.join(
+            self._cache_basehash, self._cache_basename
         )
-
-        self.cachedir_basename = f"{cache_name}-{base64_hash}"
-        self.cachedir = salt.utils.path.join(cache_root, self.cachedir_basename)
-        self.linkdir = salt.utils.path.join(cache_root, "links", self.cachedir_basename)
-        if not os.path.isdir(self.cachedir):
-            os.makedirs(self.cachedir)
+        self._cachedir = salt.utils.path.join(self._cache_hash, self._cache_basename)
+        self._linkdir = salt.utils.path.join(
+            cache_root, "links", self._cache_full_basename
+        )
+        if not os.path.isdir(self._cachedir):
+            os.makedirs(self._cachedir)
 
         try:
             self.new = self.init_remote()
@@ -510,11 +490,23 @@ class GitProvider:
             log.critical(msg, exc_info=True)
             failhard(self.role)
 
-    def full_id(self):
-        return self._full_id
+    def get_cache_basehash(self):
+        return self._cache_basehash
 
-    def get_cachedir_basename(self):
-        return self.cachedir_basename
+    def get_cache_hash(self):
+        return self._cache_hash
+
+    def get_cache_basename(self):
+        return self._cache_basename
+
+    def get_cache_full_basename(self):
+        return self._cache_full_basename
+
+    def get_cachedir(self):
+        return self._cachedir
+
+    def get_linkdir(self):
+        return self._linkdir
 
     def _get_envs_from_ref_paths(self, refs):
         """
@@ -643,7 +635,7 @@ class GitProvider:
         # No need to pass an environment to self.root() here since per-saltenv
         # configuration is a gitfs-only feature and check_root() is not used
         # for gitfs.
-        root_dir = salt.utils.path.join(self.cachedir, self.root()).rstrip(os.sep)
+        root_dir = salt.utils.path.join(self._cachedir, self.root()).rstrip(os.sep)
         if os.path.isdir(root_dir):
             return root_dir
         log.error(
@@ -1068,7 +1060,7 @@ class GitProvider:
         """
         raise NotImplementedError()
 
-    def checkout(self):
+    def checkout(self, fetch_on_fail=True):
         """
         This function must be overridden in a sub-class
         """
@@ -1274,7 +1266,7 @@ class GitPython(GitProvider):
             role,
         )
 
-    def checkout(self):
+    def checkout(self, fetch_on_fail=True):
         """
         Checkout the configured branch/tag. We catch an "Exception" class here
         instead of a specific exception class because the exceptions raised by
@@ -1344,6 +1336,15 @@ class GitPython(GitProvider):
             except Exception:  # pylint: disable=broad-except
                 continue
             return self.check_root()
+        if fetch_on_fail:
+            log.debug(
+                "Failed to checkout %s from %s remote '%s': fetch and try again",
+                tgt_ref,
+                self.role,
+                self.id,
+            )
+            self.fetch()
+            return self.checkout(fetch_on_fail=False)
         log.error(
             "Failed to checkout %s from %s remote '%s': remote ref does not exist",
             tgt_ref,
@@ -1359,16 +1360,16 @@ class GitPython(GitProvider):
         initialized by this function.
         """
         new = False
-        if not os.listdir(self.cachedir):
+        if not os.listdir(self._cachedir):
             # Repo cachedir is empty, initialize a new repo there
-            self.repo = git.Repo.init(self.cachedir)
+            self.repo = git.Repo.init(self._cachedir)
             new = True
         else:
             # Repo cachedir exists, try to attach
             try:
-                self.repo = git.Repo(self.cachedir)
+                self.repo = git.Repo(self._cachedir)
             except git.exc.InvalidGitRepositoryError:
-                log.error(_INVALID_REPO, self.cachedir, self.url, self.role)
+                log.error(_INVALID_REPO, self._cachedir, self.url, self.role)
                 return new
 
         self.gitdir = salt.utils.path.join(self.repo.working_dir, ".git")
@@ -1602,7 +1603,7 @@ class Pygit2(GitProvider):
         except AttributeError:
             return obj.get_object()
 
-    def checkout(self):
+    def checkout(self, fetch_on_fail=True):
         """
         Checkout the configured branch/tag
         """
@@ -1795,6 +1796,15 @@ class Pygit2(GitProvider):
                 exc_info=True,
             )
             return None
+        if fetch_on_fail:
+            log.debug(
+                "Failed to checkout %s from %s remote '%s': fetch and try again",
+                tgt_ref,
+                self.role,
+                self.id,
+            )
+            self.fetch()
+            return self.checkout(fetch_on_fail=False)
         log.error(
             "Failed to checkout %s from %s remote '%s': remote ref does not exist",
             tgt_ref,
@@ -1836,16 +1846,16 @@ class Pygit2(GitProvider):
         home = os.path.expanduser("~")
         pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
         new = False
-        if not os.listdir(self.cachedir):
+        if not os.listdir(self._cachedir):
             # Repo cachedir is empty, initialize a new repo there
-            self.repo = pygit2.init_repository(self.cachedir)
+            self.repo = pygit2.init_repository(self._cachedir)
             new = True
         else:
             # Repo cachedir exists, try to attach
             try:
-                self.repo = pygit2.Repository(self.cachedir)
+                self.repo = pygit2.Repository(self._cachedir)
             except KeyError:
-                log.error(_INVALID_REPO, self.cachedir, self.url, self.role)
+                log.error(_INVALID_REPO, self._cachedir, self.url, self.role)
                 return new
 
         self.gitdir = salt.utils.path.join(self.repo.workdir, ".git")
@@ -2487,7 +2497,7 @@ class GitBase:
         # Don't allow collisions in cachedir naming
         cachedir_map = {}
         for repo in self.remotes:
-            cachedir_map.setdefault(repo.cachedir, []).append(repo.id)
+            cachedir_map.setdefault(repo.get_cachedir(), []).append(repo.id)
 
         collisions = [x for x in cachedir_map if len(cachedir_map[x]) > 1]
         if collisions:
@@ -2512,10 +2522,11 @@ class GitBase:
             cachedir_ls = os.listdir(self.cache_root)
         except OSError:
             cachedir_ls = []
+        log.critical(cachedir_ls)
         # Remove actively-used remotes from list
         for repo in self.remotes:
             try:
-                cachedir_ls.remove(repo.cachedir_basename)
+                cachedir_ls.remove(repo.get_cache_basehash())
             except ValueError:
                 pass
         to_remove = []
@@ -2858,7 +2869,7 @@ class GitBase:
                 for repo in self.remotes:
                     fp_.write(
                         salt.utils.stringutils.to_str(
-                            "{} = {}\n".format(repo.cachedir_basename, repo.id)
+                            "{} = {}\n".format(repo.get_cache_basehash(), repo.id)
                         )
                     )
         except OSError:
@@ -3303,8 +3314,10 @@ class GitPillar(GitBase):
         Ensure that the mountpoint is present in the correct location and
         points at the correct path
         """
-        lcachelink = salt.utils.path.join(repo.linkdir, repo._mountpoint)
-        lcachedest = salt.utils.path.join(repo.cachedir, repo.root()).rstrip(os.sep)
+        lcachelink = salt.utils.path.join(repo.get_linkdir(), repo._mountpoint)
+        lcachedest = salt.utils.path.join(repo.get_cachedir(), repo.root()).rstrip(
+            os.sep
+        )
         wipe_linkdir = False
         create_link = False
         try:
