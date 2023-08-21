@@ -1,5 +1,3 @@
-
-
 import shutil
 import tarfile
 
@@ -19,6 +17,7 @@ def test_decode_body(webserver, integration_files_dir, backend):
         webserver.url("test.tar.gz"), backend=backend, decode_body=False
     )
     assert isinstance(ret["body"], bytes)
+
 
 pytestmark = [
     pytest.mark.slow_test,
