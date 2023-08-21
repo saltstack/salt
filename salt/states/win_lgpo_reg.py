@@ -90,17 +90,18 @@ def _get_current(key, name, policy_class, all_users):
         # Loop through each one and get the value
         reg = {}
         for user, sid in users_sids:
-            reg_raw = salt.utils.win_reg.read_value(
-                hive="HKEY_USERS",
-                key=f"{sid}\\{key}",
-                vname=name,
-            )
-            if reg_raw:
-                reg[user] = {}
-                if reg_raw["vdata"] is not False:
-                    reg[user]["data"] = reg_raw["vdata"]
-                if reg_raw["vtype"] is not False:
-                    reg[user]["type"] = reg_raw["vtype"]
+            if salt.utils.win_reg.key_exists(hive="HKEY_USERS", key=sid):
+                reg_raw = salt.utils.win_reg.read_value(
+                    hive="HKEY_USERS",
+                    key=f"{sid}\\{key}",
+                    vname=name,
+                )
+                if reg_raw:
+                    reg[user] = {}
+                    if reg_raw["vdata"] is not False:
+                        reg[user]["data"] = reg_raw["vdata"]
+                    if reg_raw["vtype"] is not False:
+                        reg[user]["type"] = reg_raw["vtype"]
     else:
         reg_raw = salt.utils.win_reg.read_value(hive=hive, key=key, vname=name)
         reg = {}

@@ -71,6 +71,8 @@ Value:
 
 import logging
 
+import salt.modules.reg
+import salt.utils.data
 import salt.utils.stringutils
 import salt.utils.win_dacl
 import salt.utils.win_functions
@@ -109,14 +111,15 @@ def _get_current(hive, key, vname, use_32bit_registry, all_users):
         # Loop through each one and get the value
         reg = {}
         for user, sid in users_sids:
-            reg_raw = salt.utils.win_reg.read_value(
-                hive="HKEY_USERS",
-                key=f"{sid}\\{key}",
-                vname=vname,
-                use_32bit_registry=use_32bit_registry,
-            )
-            if reg_raw:
-                reg[user] = reg_raw
+            if salt.utils.win_reg.key_exists(hive="HKEY_USERS", key=sid):
+                reg_raw = salt.utils.win_reg.read_value(
+                    hive="HKEY_USERS",
+                    key=f"{sid}\\{key}",
+                    vname=vname,
+                    use_32bit_registry=use_32bit_registry,
+                )
+                if reg_raw:
+                    reg[user] = reg_raw
 
     else:
         reg = salt.utils.win_reg.read_value(
@@ -305,7 +308,7 @@ def present(
 
             .. version-added:: 3006.3
 
-            Apply the setting to all users that have logged on to the system.
+            Apply the setting to all users currently logged on to the system.
             This will modify all sub-keys under the HKEY_USERS hive in the
             registry that are not one of the following:
 
@@ -419,7 +422,9 @@ def present(
 
     hive, key = _parse_key(name)
 
-    reg_current = _get_current(hive=hive, key=key, all_users=all_users)
+    old = _get_current(
+        hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry, all_users=all_users
+    )
 
     # Cast the vdata according to the vtype
     vdata_decoded = salt.utils.win_reg.cast_vdata(vdata=vdata, vtype=vtype)
@@ -427,21 +432,43 @@ def present(
     # Check if the key already exists
     # If so, check perms
     # We check `vdata` and `success` because `vdata` can be None
-    if vdata_decoded == reg_current["vdata"] and reg_current["success"]:
-        ret["comment"] = "{} in {} is already present".format(
-            salt.utils.stringutils.to_unicode(vname, "utf-8") if vname else "(Default)",
-            salt.utils.stringutils.to_unicode(name, "utf-8"),
-        )
-        return salt.utils.win_dacl.check_perms(
-            obj_name="\\".join([hive, key]),
-            obj_type="registry32" if use_32bit_registry else "registry",
-            ret=ret,
-            owner=win_owner,
-            grant_perms=win_perms,
-            deny_perms=win_deny_perms,
-            inheritance=win_inheritance,
-            reset=win_perms_reset,
-        )
+    if "vdata" in old:
+        if old and vdata_decoded == old["vdata"] and old["success"]:
+            ret["comment"] = "{} in {} is already present".format(
+                salt.utils.stringutils.to_unicode(vname, "utf-8") if vname else "(Default)",
+                salt.utils.stringutils.to_unicode(name, "utf-8"),
+            )
+            return __utils__["dacl.check_perms"](
+                obj_name="\\".join([hive, key]),
+                obj_type="registry32" if use_32bit_registry else "registry",
+                ret=ret,
+                owner=win_owner,
+                grant_perms=win_perms,
+                deny_perms=win_deny_perms,
+                inheritance=win_inheritance,
+                reset=win_perms_reset,
+            )
+    else:
+        for user in old:
+            if old[user] and vdata_decoded == old[user]["vdata"] and old[user]["success"]:
+                ret["comment"] += "{}: {} in {} is already present".format(
+                    salt.utils.stringutils.to_unicode(user, "utf-8"),
+                    salt.utils.stringutils.to_unicode(vname, "utf-8") if vname else "(Default)",
+                    salt.utils.stringutils.to_unicode(name, "utf-8"),
+                )
+                # TODO: The following code throws a recursion error after the
+                # TODO: first time through, so we can't get check perms
+                # ret["changes"][user] = __utils__["dacl.check_perms"](
+                #     obj_name="\\".join([hive, key]),
+                #     obj_type="registry32" if use_32bit_registry else "registry",
+                #     ret=ret,
+                #     owner=win_owner,
+                #     grant_perms=win_perms,
+                #     deny_perms=win_deny_perms,
+                #     inheritance=win_inheritance,
+                #     reset=win_perms_reset,
+                # )
+        return ret
 
     add_change = {
         "Key": r"{}\{}".format(hive, key),
@@ -461,24 +488,28 @@ def present(
         return ret
 
     # Configure the value
-    ret["result"] = salt.utils.win_reg.set_value(
+    ret["result"] = __salt__["reg.set_value"](
         hive=hive,
         key=key,
         vname=vname,
         vdata=vdata,
         vtype=vtype,
         use_32bit_registry=use_32bit_registry,
+        all_users=all_users,
     )
 
+    new = _get_current(
+        hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry, all_users=all_users
+    )
+    ret["changes"] = salt.utils.data.recursive_diff(old, new)
+
     if not ret["result"]:
-        ret["changes"] = {}
         ret["comment"] = r"Failed to add {} to {}\{}".format(vname, hive, key)
     else:
-        ret["changes"] = {"reg": {"Added": add_change}}
         ret["comment"] = r"Added {} to {}\{}".format(vname, hive, key)
 
     if ret["result"]:
-        ret = salt.utils.win_dacl.check_perms(
+        ret = __utils__["dacl.check_perms"](
             obj_name="\\".join([hive, key]),
             obj_type="registry32" if use_32bit_registry else "registry",
             ret=ret,
@@ -492,7 +523,7 @@ def present(
     return ret
 
 
-def absent(name, vname=None, use_32bit_registry=False):
+def absent(name, vname=None, use_32bit_registry=False, all_users=False):
     r"""
     Ensure a registry value is removed. To remove a key use key_absent.
 
@@ -518,6 +549,22 @@ def absent(name, vname=None, use_32bit_registry=False):
             Use the 32bit portion of the registry. Applies only to 64bit
             windows. 32bit Windows will ignore this parameter. Default is False.
 
+        all_users (bool):
+
+            .. version-added:: 3006.3
+
+            Delete the value from the registry hive of all users currently
+            logged on to the system. This will modify all sub-keys under the
+            ``HKEY_USERS`` hive in the registry that are not one of the
+            following:
+
+            - DefaultAccount
+            - Guest
+            - WDAGUtilityAccount
+
+            This only applies to ``HKCU`` or ``HKEY_CURRENT_USER`` hives and
+            will be ignored for all other hives. Default is ``False``
+
     Returns:
         dict: A dictionary showing the results of the registry operation.
 
@@ -538,10 +585,8 @@ def absent(name, vname=None, use_32bit_registry=False):
     hive, key = _parse_key(name)
 
     # Determine what to do
-    reg_check = salt.utils.win_reg.read_value(
-        hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
-    )
-    if not reg_check["success"] or reg_check["vdata"] == "(value not set)":
+    old = _get_current(hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry, all_users=all_users)
+    if not old["success"] or old["vdata"] == "(value not set)":
         ret["comment"] = "{} is already absent".format(name)
         return ret
 
@@ -557,14 +602,16 @@ def absent(name, vname=None, use_32bit_registry=False):
         return ret
 
     # Delete the value
-    ret["result"] = salt.utils.win_reg.delete_value(
-        hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
+    ret["result"] = __salt__["reg.delete_value"](
+        hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry, all_users=all_users
     )
+
+    new = _get_current(hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry, all_users=all_users)
+    ret["changes"] = salt.utils.data.recursive_diff(old, new)
+
     if not ret["result"]:
-        ret["changes"] = {}
         ret["comment"] = r"Failed to remove {} from {}".format(key, hive)
     else:
-        ret["changes"] = {"reg": {"Removed": remove_change}}
         ret["comment"] = r"Removed {} from {}".format(key, hive)
 
     return ret

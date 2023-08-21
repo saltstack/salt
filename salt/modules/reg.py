@@ -453,18 +453,20 @@ def set_value(
         # Get a list of all users and SIDs on the machine
         users_sids = salt.utils.win_functions.get_users_sids()
         # Loop through each one and set the value
+        print(users_sids)
         for user, sid in users_sids:
-            if not salt.utils.win_reg.set_value(
-                hive="HKEY_USERS",
-                key=f"{sid}\\{key}",
-                vname=vname,
-                vdata=vdata,
-                vtype=vtype,
-                use_32bit_registry=use_32bit_registry,
-                volatile=volatile,
-            ):
-                log.error(f"REG Mod: Failed to set registry entry for {user}")
-                success = False
+            if salt.utils.win_reg.key_exists(hive="HKEY_USERS", key=sid):
+                if not salt.utils.win_reg.set_value(
+                    hive="HKEY_USERS",
+                    key=f"{sid}\\{key}",
+                    vname=vname,
+                    vdata=vdata,
+                    vtype=vtype,
+                    use_32bit_registry=use_32bit_registry,
+                    volatile=volatile,
+                ):
+                    log.error(f"REG Mod: Failed to set registry entry for {user}")
+                    success = False
         return success
     else:
         return salt.utils.win_reg.set_value(
@@ -538,13 +540,14 @@ def delete_key_recursive(hive, key, use_32bit_registry=False, all_users=False):
         # Loop through each one and delete the value
         status = {"Deleted": [], "Failed": []}
         for _, sid in users_sids:
-            ret = salt.utils.win_reg.delete_key_recursive(
-                hive="HKEY_USERS",
-                key=f"{sid}\\{key}",
-                use_32bit_registry=use_32bit_registry,
-            )
-            status["Deleted"].extend(ret["Deleted"])
-            status["Failed"].extend(ret["Failed"])
+            if salt.utils.win_reg.key_exists(hive="HKEY_USERS", key=sid):
+                ret = salt.utils.win_reg.delete_key_recursive(
+                    hive="HKEY_USERS",
+                    key=f"{sid}\\{key}",
+                    use_32bit_registry=use_32bit_registry,
+                )
+                status["Deleted"].extend(ret["Deleted"])
+                status["Failed"].extend(ret["Failed"])
         return status
     else:
         return salt.utils.win_reg.delete_key_recursive(
@@ -610,14 +613,15 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False, all_users=Fals
         users_sids = salt.utils.win_functions.get_users_sids()
         # Loop through each one and delete the value
         for user, sid in users_sids:
-            if not salt.utils.win_reg.delete_value(
-                hive="HKEY_USERS",
-                key=f"{sid}\\{key}",
-                vname=vname,
-                use_32bit_registry=use_32bit_registry,
-            ):
-                log.error(f"REG Mod: Failed to delete registry entry for {user}")
-                success = False
+            if salt.utils.win_reg.key_exists(hive="HKEY_USERS", key=sid):
+                if not salt.utils.win_reg.delete_value(
+                    hive="HKEY_USERS",
+                    key=f"{sid}\\{key}",
+                    vname=vname,
+                    use_32bit_registry=use_32bit_registry,
+                ):
+                    log.error(f"REG Mod: Failed to delete registry entry for {user}")
+                    success = False
         return success
     else:
         return salt.utils.win_reg.delete_value(

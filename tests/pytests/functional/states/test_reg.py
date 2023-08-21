@@ -1,20 +1,12 @@
 import pytest
 
-from tests.support.mock import patch
-
-try:
-    import salt.states.reg as reg
-    import salt.utils.win_dacl as win_dacl
-    import salt.utils.win_functions as win_functions
-    import salt.utils.win_reg as reg_util
-
-    HAS_WIN_LIBS = True
-except ImportError:
-    HAS_WIN_LIBS = False
+import salt.states.reg as reg
+import salt.utils.win_dacl as win_dacl
+import salt.utils.win_functions as win_functions
+import salt.utils.win_reg as reg_util
 
 pytestmark = [
     pytest.mark.skip_unless_on_windows,
-    pytest.mark.skipif(HAS_WIN_LIBS is False, reason="Windows Libraries not available"),
     pytest.mark.windows_whitelisted,
 ]
 
@@ -35,22 +27,22 @@ class RegVars:
         self.current_user = win_functions.get_current_user(with_domain=False)
 
 
-@pytest.fixture(scope="module")
-def configure_loader_modules():
-    return {
-        reg: {
-            "__opts__": {"test": False},
-            "__salt__": {},
-            "__utils__": {
-                "reg.cast_vdata": reg_util.cast_vdata,
-                "reg.delete_value": reg_util.delete_value,
-                "reg.read_value": reg_util.read_value,
-                "reg.set_value": reg_util.set_value,
-                "dacl.check_perms": win_dacl.check_perms,
-            },
-        },
-        win_dacl: {"__opts__": {"test": False}},
-    }
+# @pytest.fixture(scope="module")
+# def configure_loader_modules():
+#     return {
+#         reg: {
+#             "__opts__": {"test": False},
+#             "__salt__": {},
+#             "__utils__": {
+#                 "reg.cast_vdata": reg_util.cast_vdata,
+#                 "reg.delete_value": reg_util.delete_value,
+#                 "reg.read_value": reg_util.read_value,
+#                 "reg.set_value": reg_util.set_value,
+#                 "dacl.check_perms": win_dacl.check_perms,
+#             },
+#         },
+#         win_dacl: {"__opts__": {"test": False}},
+#     }
 
 
 @pytest.fixture(scope="function")
@@ -59,7 +51,7 @@ def reg_vars():
 
 
 @pytest.fixture(scope="function")
-def clean(reg_vars):
+def clean(reg_vars, modules):
     """
     Make sure the key does NOT exist
     """
@@ -73,7 +65,7 @@ def clean(reg_vars):
 
 
 @pytest.fixture(scope="function")
-def reset(reg_vars):
+def reset(reg_vars, modules):
     """
     Create an existing key for testing
     """
@@ -93,40 +85,41 @@ def reset(reg_vars):
             reg_util.delete_key_recursive(hive=reg_vars.hive, key=reg_vars.key)
 
 
-def test_present(reg_vars):
+def test_present(reg_vars, clean, states):
     """
     Test reg.present
     """
+    hive_key = "\\".join([reg_vars.hive, reg_vars.key])
     expected = {
         "comment": "Added {} to {}".format(reg_vars.vname, reg_vars.name),
         "changes": {
-            "reg": {
-                "Added": {
-                    "Inheritance": True,
-                    "Perms": {"Deny": None, "Grant": None},
-                    "Value": reg_vars.vdata,
-                    "Key": reg_vars.name,
-                    "Owner": None,
-                    "Entry": reg_vars.vname,
-                }
-            }
-        },
+            "new": {
+                "success": True,
+                "vdata": reg_vars.vdata,
+                "vtype": "REG_SZ",
+            },
+            "old": {
+                "comment": f"Cannot find key: {hive_key}",
+                "success": False,
+                "vdata": None,
+                "vtype": None,
+                },
+            },
         "name": reg_vars.name,
         "result": True,
     }
-    assert (
-        reg.present(name=reg_vars.name, vname=reg_vars.vname, vdata=reg_vars.vdata)
-        == expected
-    )
+    ret = states.reg.present(name=reg_vars.name, vname=reg_vars.vname, vdata=reg_vars.vdata)
+    assert ret.filtered == expected
+
     permissions = win_dacl.get_permissions(obj_name=reg_vars.name, obj_type="registry")
     assert permissions["Not Inherited"] == {}
 
 
-def test_present_set_owner(reg_vars, clean):
+def test_present_set_owner(reg_vars, clean, states):
     """
     Test reg.present
     """
-    reg.present(
+    states.reg.present(
         name=reg_vars.name,
         vname=reg_vars.vname,
         vdata=reg_vars.vdata,
@@ -138,8 +131,8 @@ def test_present_set_owner(reg_vars, clean):
     )
 
 
-def test_present_perms_no_inherit(reg_vars, clean):
-    reg.present(
+def test_present_perms_no_inherit(reg_vars, clean, states):
+    states.reg.present(
         name=reg_vars.name,
         vname=reg_vars.vname,
         vdata=reg_vars.vdata,
@@ -150,8 +143,8 @@ def test_present_perms_no_inherit(reg_vars, clean):
     assert permissions["Inherited"] == {}
 
 
-def test_present_perms(reg_vars, clean):
-    reg.present(
+def test_present_perms(reg_vars, clean, states):
+    states.reg.present(
         name=reg_vars.name,
         vname=reg_vars.vname,
         vdata=reg_vars.vdata,
@@ -169,8 +162,8 @@ def test_present_perms(reg_vars, clean):
     assert permissions["Not Inherited"].get("Backup Operators") == expected
 
 
-def test_present_perms_reset(reg_vars, clean):
-    reg.present(
+def test_present_perms_reset(reg_vars, clean, states):
+    states.reg.present(
         name=reg_vars.name,
         vname=reg_vars.vname,
         vdata=reg_vars.vdata,
@@ -196,8 +189,8 @@ def test_present_perms_reset(reg_vars, clean):
     assert permissions["Not Inherited"] == expected
 
 
-def test_present_perms_reset_no_inherit(reg_vars, clean):
-    reg.present(
+def test_present_perms_reset_no_inherit(reg_vars, clean, states):
+    states.reg.present(
         name=reg_vars.name,
         vname=reg_vars.vname,
         vdata=reg_vars.vdata,
@@ -226,38 +219,37 @@ def test_present_perms_reset_no_inherit(reg_vars, clean):
     assert permissions["Inherited"] == {}
 
 
-def test_present_string_dword(reg_vars, clean):
+def test_present_string_dword(reg_vars, clean, states):
     """
     Test to set a registry entry.
     """
     vname = "dword_data"
     vdata = "00000001"
     vtype = "REG_DWORD"
-    expected_vdata = 1
+    hive_key = "\\".join([reg_vars.hive, reg_vars.key])
     expected = {
         "comment": "Added {} to {}".format(vname, reg_vars.name),
         "changes": {
-            "reg": {
-                "Added": {
-                    "Inheritance": True,
-                    "Perms": {"Deny": None, "Grant": None},
-                    "Value": expected_vdata,
-                    "Key": reg_vars.name,
-                    "Owner": None,
-                    "Entry": vname,
-                }
-            }
+            "new": {
+                "success": True,
+                "vdata": 1,
+                "vtype": vtype,
+            },
+            "old": {
+                "comment": f"Cannot find key: {hive_key}",
+                "success": False,
+                "vdata": None,
+                "vtype": None,
+            },
         },
         "name": reg_vars.name,
         "result": True,
     }
-    assert (
-        reg.present(name=reg_vars.name, vname=vname, vdata=vdata, vtype=vtype)
-        == expected
-    )
+    ret = states.reg.present(name=reg_vars.name, vname=vname, vdata=vdata, vtype=vtype)
+    assert ret.filtered == expected
 
 
-def test_present_string_dword_existing(reg_vars, clean):
+def test_present_string_dword_existing(reg_vars, clean, states):
     """
     Test to set a registry entry.
     """
@@ -274,13 +266,11 @@ def test_present_string_dword_existing(reg_vars, clean):
         "name": reg_vars.name,
         "result": True,
     }
-    assert (
-        reg.present(name=reg_vars.name, vname=vname, vdata=vdata, vtype=vtype)
-        == expected
-    )
+    ret = states.reg.present(name=reg_vars.name, vname=vname, vdata=vdata, vtype=vtype)
+    assert ret.filtered == expected
 
 
-def test_present_test_true(reg_vars, clean):
+def test_present_test_true(reg_vars, clean, states):
     expected = {
         "comment": "",
         "changes": {
@@ -298,25 +288,22 @@ def test_present_test_true(reg_vars, clean):
         "name": reg_vars.name,
         "result": None,
     }
-    with patch.dict(reg.__opts__, {"test": True}):
-        ret = reg.present(reg_vars.name, vname=reg_vars.vname, vdata=reg_vars.vdata)
-    assert ret == expected
+    ret = states.reg.present(name=reg_vars.name, vname=reg_vars.vname, vdata=reg_vars.vdata, test=True)
+    assert ret.filtered == expected
 
 
-def test_present_existing(reg_vars, reset):
+def test_present_existing(reg_vars, reset, states):
     expected = {
         "comment": "{} in {} is already present".format(reg_vars.vname, reg_vars.name),
         "changes": {},
         "name": reg_vars.name,
         "result": True,
     }
-    assert (
-        reg.present(name=reg_vars.name, vname=reg_vars.vname, vdata=reg_vars.vdata)
-        == expected
-    )
+    ret = states.reg.present(name=reg_vars.name, vname=reg_vars.vname, vdata=reg_vars.vdata)
+    assert ret.filtered == expected
 
 
-def test_present_existing_key_only(reg_vars, clean):
+def test_present_existing_key_only(reg_vars, clean, states):
     """
     Test setting only a key with no value name
     """
@@ -329,39 +316,51 @@ def test_present_existing_key_only(reg_vars, clean):
         "name": reg_vars.name,
         "result": True,
     }
-    assert reg.present(reg_vars.name) == expected
+    ret = states.reg.present(reg_vars.name)
+    assert ret.filtered == expected
 
 
-def test_present_existing_test_true(reg_vars, reset):
+def test_present_existing_test_true(reg_vars, reset, states):
     expected = {
         "comment": "{} in {} is already present".format(reg_vars.vname, reg_vars.name),
         "changes": {},
         "name": reg_vars.name,
         "result": True,
     }
-    with patch.dict(reg.__opts__, {"test": True}):
-        ret = reg.present(
-            name=reg_vars.name, vname=reg_vars.vname, vdata=reg_vars.vdata
-        )
-    assert ret == expected
+    ret = states.reg.present(
+        name=reg_vars.name, vname=reg_vars.vname, vdata=reg_vars.vdata, test=True
+    )
+    assert ret.filtered == expected
 
 
-def test_absent(reg_vars, reset):
+def test_absent(reg_vars, reset, states):
     """
     Test to remove a registry entry.
     """
+    hive_key = "\\".join([reg_vars.hive, reg_vars.key])
     expected = {
         "comment": "Removed {} from {}".format(reg_vars.key, reg_vars.hive),
         "changes": {
-            "reg": {"Removed": {"Entry": reg_vars.vname, "Key": reg_vars.name}}
+            "new": {
+                "comment": f"Cannot find version in {hive_key}",
+                "success": False,
+                "vdata": None,
+                "vtype": None,
+            },
+            "old": {
+                "success": True,
+                "vdata": "0.15.3",
+                "vtype": "REG_SZ",
+            },
         },
-        "name": reg_vars.name,
+        "name": hive_key,
         "result": True,
     }
-    assert reg.absent(reg_vars.name, reg_vars.vname) == expected
+    ret = states.reg.absent(name=reg_vars.name, vname=reg_vars.vname)
+    assert ret.filtered == expected
 
 
-def test_absent_test_true(reg_vars, reset):
+def test_absent_test_true(reg_vars, reset, states):
     expected = {
         "comment": "",
         "changes": {
@@ -370,12 +369,11 @@ def test_absent_test_true(reg_vars, reset):
         "name": reg_vars.name,
         "result": None,
     }
-    with patch.dict(reg.__opts__, {"test": True}):
-        ret = reg.absent(reg_vars.name, reg_vars.vname)
-    assert ret == expected
+    ret = states.reg.absent(name=reg_vars.name, vname=reg_vars.vname, test=True)
+    assert ret.filtered == expected
 
 
-def test_absent_already_absent(reg_vars, clean):
+def test_absent_already_absent(reg_vars, clean, states):
     """
     Test to remove a registry entry.
     """
@@ -385,10 +383,11 @@ def test_absent_already_absent(reg_vars, clean):
         "name": reg_vars.name,
         "result": True,
     }
-    assert reg.absent(reg_vars.name, reg_vars.vname) == expected
+    ret = states.reg.absent(reg_vars.name, reg_vars.vname)
+    assert ret.filtered == expected
 
 
-def test_absent_already_absent_test_true(reg_vars, clean):
+def test_absent_already_absent_test_true(reg_vars, clean, states):
     """
     Test to remove a registry entry.
     """
@@ -398,6 +397,23 @@ def test_absent_already_absent_test_true(reg_vars, clean):
         "name": reg_vars.name,
         "result": True,
     }
-    with patch.dict(reg.__opts__, {"test": True}):
-        ret = reg.absent(reg_vars.name, reg_vars.vname)
-    assert ret == expected
+    ret = states.reg.absent(name=reg_vars.name, vname=reg_vars.vname, test=True)
+    assert ret.filtered == expected
+
+
+def test__get_current():
+    ret = reg._get_current(
+        hive="HKCU", key="Environment", vname="Path", use_32bit_registry=False, all_users=False
+    )
+    assert ret["success"] is True
+    assert ret["vdata"]
+
+
+def test__get_current_all_users():
+    """
+    If no other users are logged in, nothing is returned
+    """
+    ret = reg._get_current(
+        hive="HKCU", key="Environment", vname="Path", use_32bit_registry=False, all_users=True
+    )
+    assert ret == {}

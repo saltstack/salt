@@ -193,8 +193,7 @@ def get_users_sids(exclude=("DefaultAccount", "Guest", "WDAGUtilityAccount")):
     for user in salt.modules.win_useradd.list_users():
         if user not in exclude:
             sid = salt.modules.win_useradd.getUserSid(username=user)
-            if salt.utils.win_reg.key_exists(hive="HKEY_USERS", key=sid):
-                user_sids.append((user, sid))
+            user_sids.append((user, sid))
     return user_sids
 
 
