@@ -139,7 +139,9 @@ class SMaster:
             return cls.secrets["aes"]["serial"].value
 
     @classmethod
-    def rotate_secrets(cls, opts=None, event=None, use_lock=True, owner=False):
+    def rotate_secrets(
+        cls, opts=None, event=None, use_lock=True, owner=False, publisher=None
+    ):
         log.info("Rotating master AES key")
         if opts is None:
             opts = {}
@@ -159,6 +161,10 @@ class SMaster:
                 )
                 if "serial" in secret_map:
                     secret_map["serial"].value = 0
+
+            if publisher:
+                publisher.send_aes_key_event()
+
             if event:
                 event.fire_event({f"rotate_{secret_key}_key": True}, tag="key")
 
@@ -180,6 +186,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         :param dict opts: The salt options
         """
         self.master_secrets = kwargs.pop("master_secrets", None)
+        self.ipc_publisher = kwargs.pop("ipc_publisher", None)
         super().__init__(**kwargs)
         self.opts = opts
         # How often do we perform the maintenance tasks
@@ -331,27 +338,31 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         if not to_rotate and self.opts.get("publish_session"):
             if self.opts.get("cluster_id", None):
                 keyfile = os.path.join(self.opts["cluster_pki_dir"], ".aes")
-            else:
-                keyfile = os.path.join(self.opts["cachedir"], ".aes")
-            try:
-                stats = os.stat(keyfile)
-            except os.error as exc:
-                log.error("Unexpected condition while reading keyfile %s", exc)
-                return
-            if now - stats.st_mtime >= self.opts["publish_session"]:
-                salt.crypt.dropfile(
-                    self.opts["cachedir"], self.opts["user"], self.opts["id"]
-                )
-                # There is currently no concept of a leader in a master
-                # cluster. Lets fake it till we make it with a little
-                # waiting period.
-                time.sleep(drop_file_wait)
-                to_rotate = (
-                    salt.crypt.read_dropfile(self.opts["cachedir"]) == self.opts["id"]
-                )
+                try:
+                    stats = os.stat(keyfile)
+                except os.error as exc:
+                    log.error("Unexpected condition while reading keyfile %s", exc)
+                    return
+                if now - stats.st_mtime >= self.opts["publish_session"]:
+                    salt.crypt.dropfile(
+                        self.opts["cachedir"], self.opts["user"], self.opts["id"]
+                    )
+                    # There is currently no concept of a leader in a master
+                    # cluster. Lets fake it till we make it with a little
+                    # waiting period.
+                    time.sleep(drop_file_wait)
+                    to_rotate = (
+                        salt.crypt.read_dropfile(self.opts["cachedir"])
+                        == self.opts["id"]
+                    )
 
         if to_rotate:
-            SMaster.rotate_secrets(self.opts, self.event, owner=True)
+            if self.opts.get("cluster_id", None):
+                SMaster.rotate_secrets(
+                    self.opts, self.event, owner=True, publisher=self.ipc_publisher
+                )
+            else:
+                SMaster.rotate_secrets(self.opts, self.event, owner=True)
 
     def handle_git_pillar(self):
         """
@@ -721,7 +732,7 @@ class Master(SMaster):
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
             if self.opts["cluster_id"]:
                 keypath = os.path.join(self.opts["cluster_pki_dir"], ".aes")
-                keygen = functools.partial(
+                cluster_keygen = functools.partial(
                     salt.crypt.Crypticle.read_or_generate_key,
                     keypath,
                 )
@@ -729,14 +740,19 @@ class Master(SMaster):
                 # them as well.
                 SMaster.secrets["cluster_aes"] = {
                     "secret": multiprocessing.Array(
-                        ctypes.c_char, salt.utils.stringutils.to_bytes(keygen())
+                        ctypes.c_char, salt.utils.stringutils.to_bytes(cluster_keygen())
                     ),
                     "serial": multiprocessing.Value(
                         ctypes.c_longlong,
                         lock=False,  # We'll use the lock from 'secret'
                     ),
-                    "reload": keygen,
+                    "reload": cluster_keygen,
                 }
+
+            # Wrap generate_key_string to ignore remove keyward arg.
+            def master_keygen(*args, **kwargs):
+                return salt.crypt.Crypticle.generate_key_string()
+
             SMaster.secrets["aes"] = {
                 "secret": multiprocessing.Array(
                     ctypes.c_char,
@@ -747,7 +763,7 @@ class Master(SMaster):
                 "serial": multiprocessing.Value(
                     ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
                 ),
-                "reload": salt.crypt.Crypticle.generate_key_string,
+                "reload": master_keygen,
             }
 
             log.info("Creating master process manager")
@@ -792,7 +808,10 @@ class Master(SMaster):
             self.process_manager.add_process(
                 Maintenance,
                 args=(self.opts,),
-                kwargs={"master_secrets": SMaster.secrets},
+                kwargs={
+                    "master_secrets": SMaster.secrets,
+                    "ipc_publisher": ipc_publisher,
+                },
                 name="Maintenance",
             )
 
@@ -900,23 +919,27 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
             channels = []
         self.channels = channels
 
-    @tornado.gen.coroutine
-    def handle_event(self, package):
+    async def handle_event(self, package):
         """
         Event handler for publish forwarder
         """
         tag, data = salt.utils.event.SaltEvent.unpack(package)
-        log.error("got evetn %s %r", tag, data)
+        log.error("got event %s %r", tag, data)
         if tag.startswith("salt/job") and tag.endswith("/publish"):
-            # data.pop("_stamp", None)
-            log.trace("Forward job event to publisher server: %r", data)
-            # if not self.channels:
-            #     for transport, opts in iter_transport_opts(self.opts):
-            #         chan = salt.channel.server.PubServerChannel.factory(opts)
-            #         self.channels.append(chan)
-            # for chan in self.channels:
-            #     yield chan.publish(data)
+            peer_id = data.pop("__peer_id", None)
+            if peer_id:
+                data.pop("_stamp", None)
+                log.error("Forward job event to publisher server: %r", data)
+                if not self.channels:
+                    for transport, opts in iter_transport_opts(self.opts):
+                        chan = salt.channel.server.PubServerChannel.factory(opts)
+                        self.channels.append(chan)
+                tasks = []
+                for chan in self.channels:
+                    tasks.append(asyncio.create_task(chan.publish(data)))
+                await asyncio.gather(*tasks)
         elif tag == "rotate_aes_key":
+            log.error("Recieved rotate_aes_key event")
             SMaster.rotate_secrets(self.opts, owner=False)
 
     def run(self):

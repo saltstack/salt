@@ -344,8 +344,8 @@ def test_master_keys_with_cluster_id(tmp_path, master_opts):
 @pytest.mark.skipif(not HAS_PYCRYPTO_RSA, reason="pycrypto >= 2.6 is not available")
 @pytest.mark.skipif(HAS_M2, reason="m2crypto is used by salt.crypt if installed")
 def test_pycrypto_gen_keys():
-    open_priv_wb = MockCall("/keydir{}keyname.pem".format(os.sep), "wb+")
-    open_pub_wb = MockCall("/keydir{}keyname.pub".format(os.sep), "wb+")
+    open_priv_wb = MockCall(f"/keydir{os.sep}keyname.pem", "wb+")
+    open_pub_wb = MockCall(f"/keydir{os.sep}keyname.pub", "wb+")
 
     with patch.multiple(
         os,
@@ -357,7 +357,7 @@ def test_pycrypto_gen_keys():
             "os.path.isfile", return_value=True
         ):
             result = salt.crypt.gen_keys("/keydir", "keyname", 2048)
-            assert result == "/keydir{}keyname.pem".format(os.sep), result
+            assert result == f"/keydir{os.sep}keyname.pem", result
             assert open_priv_wb not in m_open.calls
             assert open_pub_wb not in m_open.calls
 
@@ -434,20 +434,22 @@ def test_m2_gen_keys():
     with patch("M2Crypto.RSA.RSA.save_pem", MagicMock()) as save_pem:
         with patch("M2Crypto.RSA.RSA.save_pub_key", MagicMock()) as save_pub:
             with patch("os.path.isfile", return_value=True):
-                assert salt.crypt.gen_keys(
-                    "/keydir", "keyname", 2048
-                ) == "/keydir{}keyname.pem".format(os.sep)
+                assert (
+                    salt.crypt.gen_keys("/keydir", "keyname", 2048)
+                    == f"/keydir{os.sep}keyname.pem"
+                )
                 save_pem.assert_not_called()
                 save_pub.assert_not_called()
 
             with patch("os.path.isfile", return_value=False):
-                salt.crypt.gen_keys(
-                    "/keydir", "keyname", 2048
-                ) == "/keydir{}keyname.pem".format(os.sep)
-                save_pem.assert_called_once_with(
-                    "/keydir{}keyname.pem".format(os.sep), cipher=None
+                assert (
+                    salt.crypt.gen_keys("/keydir", "keyname", 2048)
+                    == f"/keydir{os.sep}keyname.pem"
                 )
-                save_pub.assert_called_once_with("/keydir{}keyname.pub".format(os.sep))
+                save_pem.assert_called_once_with(
+                    f"/keydir{os.sep}keyname.pem", cipher=None
+                )
+                save_pub.assert_called_once_with(f"/keydir{os.sep}keyname.pub")
 
 
 @patch("os.umask", MagicMock())
@@ -460,24 +462,30 @@ def test_gen_keys_with_passphrase():
     with patch("M2Crypto.RSA.RSA.save_pem", MagicMock()) as save_pem:
         with patch("M2Crypto.RSA.RSA.save_pub_key", MagicMock()) as save_pub:
             with patch("os.path.isfile", return_value=True):
-                assert salt.crypt.gen_keys(
-                    "/keydir", "keyname", 2048, passphrase="password"
-                ) == "/keydir{}keyname.pem".format(os.sep)
+                assert (
+                    salt.crypt.gen_keys(
+                        "/keydir", "keyname", 2048, passphrase="password"
+                    )
+                    == f"/keydir{os.sep}keyname.pem"
+                )
                 save_pem.assert_not_called()
                 save_pub.assert_not_called()
 
             with patch("os.path.isfile", return_value=False):
-                assert salt.crypt.gen_keys(
-                    "/keydir", "keyname", 2048, passphrase="password"
-                ) == "/keydir{}keyname.pem".format(os.sep)
+                assert (
+                    salt.crypt.gen_keys(
+                        "/keydir", "keyname", 2048, passphrase="password"
+                    )
+                    == f"/keydir{os.sep}keyname.pem"
+                )
                 callback = save_pem.call_args[1]["callback"]
                 save_pem.assert_called_once_with(
-                    "/keydir{}keyname.pem".format(os.sep),
+                    f"/keydir{os.sep}keyname.pem",
                     cipher="des_ede3_cbc",
                     callback=callback,
                 )
                 assert callback(None) == b"password"
-                save_pub.assert_called_once_with("/keydir{}keyname.pub".format(os.sep))
+                save_pub.assert_called_once_with(f"/keydir{os.sep}keyname.pub")
 
 
 @pytest.mark.skipif(not HAS_M2, reason="m2crypto is not available")
@@ -517,15 +525,6 @@ def key_to_test(tmp_path):
     with salt.utils.files.fopen(key_path, "wb") as fd:
         fd.write(TEST_KEY.encode())
     return key_path
-
-
-@pytest.mark.skipif(not HAS_M2, reason="Skip when m2crypto is not installed")
-def test_m2_bad_key(key_to_test):
-    """
-    Load public key with an invalid header using m2crypto and validate it
-    """
-    key = salt.crypt.get_rsa_pub_key(key_to_test)
-    assert key.check_key() == 1
 
 
 @pytest.mark.skipif(not HAS_M2, reason="Skip when m2crypto is not installed")

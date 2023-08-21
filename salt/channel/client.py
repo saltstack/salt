@@ -224,6 +224,7 @@ class AsyncReqChannel:
                 tries,
                 timeout,
             )
+        log.error("WTF %r", ret)
         if HAS_M2:
             aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
         else:
@@ -670,64 +671,3 @@ class AsyncPullChannel:
         import salt.transport.ipc
 
         return salt.transport.ipc.IPCMessageServer(opts, **kwargs)
-
-
-class AsyncMasterPubChannel:
-    """ """
-
-    async_methods = [
-        "connect",
-    ]
-
-    close_methods = [
-        "close",
-    ]
-
-    @classmethod
-    def factory(cls, opts, **kwargs):
-        io_loop = kwargs.get("io_loop")
-        if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
-        transport = salt.transport.ipc_publish_client(opts, "master")
-        return cls(opts, transport, None, io_loop)
-
-    def __init__(self, opts, transport, auth, io_loop=None):
-        self.opts = opts
-        self.io_loop = io_loop
-        self.auth = auth
-        self.transport = transport
-        self._closing = False
-        self._reconnected = False
-
-    async def connect(self):
-        """
-        Return a future which completes when connected to the remote publisher
-        """
-        await self.transport.connect()
-
-    async def recv(self, timeout=None):
-        return await self.transport.recv(timeout)
-
-    def close(self):
-        """
-        Close the channel
-        """
-        self.transport.close()
-
-    def on_recv(self, callback=None):
-        """
-        When jobs are received pass them (decoded) to callback
-        """
-        return self.transport.on_recv(callback)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.io_loop.spawn_callback(self.close)
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *_):
-        await self.close()
