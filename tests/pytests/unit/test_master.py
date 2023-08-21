@@ -1,5 +1,6 @@
 import os
 import pathlib
+import stat
 import threading
 import time
 
@@ -11,7 +12,7 @@ from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
-def maintenence_opts(master_opts):
+def maintenance_opts(master_opts):
     """
     Options needed for master's Maintenence class
     """
@@ -21,11 +22,11 @@ def maintenence_opts(master_opts):
 
 
 @pytest.fixture
-def maintenence(maintenence_opts):
+def maintenance(maintenance_opts):
     """
     The master's Maintenence class
     """
-    return salt.master.Maintenance(maintenence_opts)
+    return salt.master.Maintenance(maintenance_opts)
 
 
 @pytest.fixture
@@ -38,6 +39,29 @@ def clear_funcs(master_opts):
         yield clear_funcs
     finally:
         clear_funcs.destroy()
+
+
+@pytest.fixture
+def cluster_maintenance_opts(master_opts, tmp_path):
+    """
+    Options needed for master's Maintenence class
+    """
+    opts = master_opts.copy()
+    opts.update(
+        git_pillar_update_interval=180,
+        maintenance_interval=181,
+        cluster_pki_dir=tmp_path,
+        cluster_id="test-cluster",
+    )
+    yield opts
+
+
+@pytest.fixture
+def cluster_maintenance(cluster_maintenance_opts):
+    """
+    The master's Maintenence class
+    """
+    return salt.master.Maintenance(cluster_maintenance_opts)
 
 
 @pytest.fixture
@@ -854,7 +878,7 @@ async def test_publish_user_authorization_error(clear_funcs):
         assert await clear_funcs.publish(load) == mock_ret
 
 
-def test_run_func(maintenence):
+def test_run_func(maintenance):
     """
     Test the run function inside Maintenance class.
     """
@@ -917,7 +941,7 @@ def test_run_func(maintenence):
         "salt.utils.verify.check_max_open_files", mocked_check_max_open_files
     ):
         try:
-            maintenence.run()
+            maintenance.run()
         except RuntimeError as exc:
             assert str(exc) == "Time passes"
         assert mocked_time._calls == [60] * 4
@@ -933,51 +957,48 @@ def test_run_func(maintenence):
         assert mocked_check_max_open_files.call_times == [0, 60, 120, 180]
 
 
-def test_key_rotate_master_match(maintenence):
-    maintenence.event = MagicMock()
+def test_key_rotate_master_match(maintenance):
+    maintenance.event = MagicMock()
     now = time.monotonic()
-    dfn = pathlib.Path(maintenence.opts["cachedir"]) / ".dfn"
+    dfn = pathlib.Path(maintenance.opts["cachedir"]) / ".dfn"
     salt.crypt.dropfile(
-        maintenence.opts["cachedir"],
-        maintenence.opts["user"],
-        master_id=maintenence.opts["id"],
+        maintenance.opts["cachedir"],
+        maintenance.opts["user"],
+        master_id=maintenance.opts["id"],
     )
     assert dfn.exists()
     with patch("salt.master.SMaster.rotate_secrets") as rotate_secrets:
-        maintenence.handle_key_rotate(now)
+        maintenance.handle_key_rotate(now)
         assert not dfn.exists()
         rotate_secrets.assert_called_with(
-            maintenence.opts, maintenence.event, owner=True
+            maintenance.opts, maintenance.event, owner=True
         )
 
 
-def test_key_rotate_no_master_match(maintenence):
+def test_key_rotate_no_master_match(maintenance):
     now = time.monotonic()
-    dfn = pathlib.Path(maintenence.opts["cachedir"]) / ".dfn"
+    dfn = pathlib.Path(maintenance.opts["cachedir"]) / ".dfn"
     dfn.write_text("nomatch")
     assert dfn.exists()
     with patch("salt.master.SMaster.rotate_secrets") as rotate_secrets:
-        maintenence.handle_key_rotate(now)
+        maintenance.handle_key_rotate(now)
         assert dfn.exists()
         rotate_secrets.assert_not_called()
 
 
-import stat
-
-
 @pytest.mark.slow_test
-def test_key_dfn_wait(maintenence):
+def test_key_dfn_wait(cluster_maintenance):
     now = time.monotonic()
-    key = pathlib.Path(maintenence.opts["cachedir"]) / ".aes"
+    key = pathlib.Path(cluster_maintenance.opts["cluster_pki_dir"]) / ".aes"
     salt.crypt.Crypticle.read_or_generate_key(str(key))
-    rotate_time = time.monotonic() - (maintenence.opts["publish_session"] + 1)
+    rotate_time = time.monotonic() - (cluster_maintenance.opts["publish_session"] + 1)
     os.utime(str(key), (rotate_time, rotate_time))
 
-    dfn = pathlib.Path(maintenence.opts["cachedir"]) / ".dfn"
+    dfn = pathlib.Path(cluster_maintenance.opts["cachedir"]) / ".dfn"
 
     def run_key_rotate():
         with patch("salt.master.SMaster.rotate_secrets") as rotate_secrets:
-            maintenence.handle_key_rotate(now)
+            cluster_maintenance.handle_key_rotate(now)
             assert dfn.exists()
             rotate_secrets.assert_not_called()
 
@@ -990,7 +1011,7 @@ def test_key_dfn_wait(maintenence):
         if time.monotonic() - start > 30:
             assert dfn.exists(), "dfn file never created"
 
-    assert maintenence.opts["id"] == dfn.read_text()
+    assert cluster_maintenance.opts["id"] == dfn.read_text()
 
     with salt.utils.files.set_umask(0o277):
         if os.path.isfile(dfn) and not os.access(dfn, os.W_OK):

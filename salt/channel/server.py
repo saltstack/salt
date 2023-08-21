@@ -6,6 +6,7 @@ This includes server side transport, for the ReqServer and the Publisher
 
 import asyncio
 import binascii
+import collections
 import hashlib
 import logging
 import os
@@ -244,12 +245,16 @@ class ReqServerChannel:
         """
         import salt.master
 
+        key = "aes"
+        if self.opts.get("cluster_id", None):
+            key = "cluster_aes"
+
         if (
-            salt.master.SMaster.secrets["aes"]["secret"].value
+            salt.master.SMaster.secrets[key]["secret"].value
             != self.crypticle.key_string
         ):
             self.crypticle = salt.crypt.Crypticle(
-                self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
+                self.opts, salt.master.SMaster.secrets[key]["secret"].value
             )
             return True
         return False
@@ -648,7 +653,7 @@ class ReqServerChannel:
                         )
                     else:
                         mtoken = mcipher.decrypt(load["token"])
-                    aes = "{}_|-{}".format(self.aes_key, mtoken)
+                    aes = f"{self.aes_key}_|-{mtoken}"
                 except Exception:  # pylint: disable=broad-except
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
@@ -999,20 +1004,23 @@ class MasterPubServerChannel:
         self.io_loop = tornado.ioloop.IOLoop.current()
         tcp_master_pool_port = 4520
         self.pushers = []
-        for master in self.opts.get("cluster_peers", []):
+        self.auth_errors = {}
+        for peer in self.opts.get("cluster_peers", []):
             pusher = salt.transport.tcp.TCPPublishServer(
                 self.opts,
-                pull_host=master,
+                pull_host=peer,
                 pull_port=tcp_master_pool_port,
             )
+            self.auth_errors[peer] = collections.deque()
             self.pushers.append(pusher)
-        self.pool_puller = salt.transport.tcp.TCPPuller(
-            host=self.opts["interface"],
-            port=tcp_master_pool_port,
-            io_loop=self.io_loop,
-            payload_handler=self.handle_pool_publish,
-        )
-        self.pool_puller.start()
+        if self.opts.get("cluster_id", None):
+            self.pool_puller = salt.transport.tcp.TCPPuller(
+                host=self.opts["interface"],
+                port=tcp_master_pool_port,
+                io_loop=self.io_loop,
+                payload_handler=self.handle_pool_publish,
+            )
+            self.pool_puller.start()
         self.io_loop.add_callback(
             self.transport.publisher,
             self.publish_payload,
@@ -1061,20 +1069,46 @@ class MasterPubServerChannel:
                     if self.peer_keys[peer] != key_str:
                         self.peer_keys[peer] = key_str
                         self.send_aes_key_event()
+                        while self.auth_errors[peer]:
+                            key, data = self.auth_errors[peer].popleft()
+                            peer_id, parsed_tag = self.parse_cluster_tag(tag)
+                            try:
+                                event_data = self.extract_cluster_event(peer_id, data)
+                            except salt.exceptions.AuthenticationError:
+                                log.error(
+                                    "Event from peer failed authentication: %s", peer_id
+                                )
+                            else:
+                                await self.transport.publish_payload(
+                                    salt.utils.event.SaltEvent.pack(
+                                        parsed_tag, event_data
+                                    )
+                                )
                 else:
                     self.peer_keys[peer] = key_str
                     self.send_aes_key_event()
+                    while self.auth_errors[peer]:
+                        key, data = self.auth_errors[peer].popleft()
+                        peer_id, parsed_tag = self.parse_cluster_tag(tag)
+                        try:
+                            event_data = self.extract_cluster_event(peer_id, data)
+                        except salt.exceptions.AuthenticationError:
+                            log.error(
+                                "Event from peer failed authentication: %s", peer_id
+                            )
+                        else:
+                            await self.transport.publish_payload(
+                                salt.utils.event.SaltEvent.pack(parsed_tag, event_data)
+                            )
             elif tag.startswith("cluster/event"):
-                peer_id = tag.replace("cluster/event/", "").split("/")[0]
-                stripped_tag = tag.replace(f"cluster/event/{peer_id}/", "")
-                if peer_id in self.peer_keys:
-                    crypticle = salt.crypt.Crypticle(self.opts, self.peer_keys[peer_id])
-                    event_data = crypticle.loads(data)
-                    # __peer_id can be used to know if this event came from a
-                    # different master?
-                    event_data["__peer_id"] = peer_id
+                peer_id, parsed_tag = self.parse_cluster_tag(tag)
+                try:
+                    event_data = self.extract_cluster_event(peer_id, data)
+                except salt.exceptions.AuthenticationError:
+                    self.auth_errors[peer_id].append((tag, data))
+                else:
                     await self.transport.publish_payload(
-                        salt.utils.event.SaltEvent.pack(stripped_tag, event_data)
+                        salt.utils.event.SaltEvent.pack(parsed_tag, event_data)
                     )
             else:
                 log.error("This cluster tag not valid %s", tag)
@@ -1083,18 +1117,37 @@ class MasterPubServerChannel:
             log.critical("Unexpected error while polling master events", exc_info=True)
             return None
 
+    def parse_cluster_tag(self, tag):
+        peer_id = tag.replace("cluster/event/", "").split("/")[0]
+        stripped_tag = tag.replace(f"cluster/event/{peer_id}/", "")
+        return peer_id, stripped_tag
+
+    def extract_cluster_event(self, peer_id, data):
+        if peer_id in self.peer_keys:
+            crypticle = salt.crypt.Crypticle(self.opts, self.peer_keys[peer_id])
+            event_data = crypticle.loads(data)["event_payload"]
+            # __peer_id can be used to know if this event came from a
+            # different master?
+            event_data["__peer_id"] = peer_id
+            return event_data
+        raise salt.exceptions.AuthenticationError("Peer aes key not available")
+
     async def publish_payload(self, load, *args):
         log.error("Publish event to local ipc clients")
         tag, data = salt.utils.event.SaltEvent.unpack(load)
         tasks = []
         if not tag.startswith("cluster/peer"):
-            tasks = [asyncio.create_task(self.transport.publish_payload(load))]
+            tasks = [
+                asyncio.create_task(
+                    self.transport.publish_payload(load), name=self.opts["id"]
+                )
+            ]
         for pusher in self.pushers:
-            log.error(
-                "Publish event to peer master %s:%s", pusher.pull_host, pusher.pull_port
-            )
+            log.debug("Publish event to peer %s:%s", pusher.pull_host, pusher.pull_port)
             if tag.startswith("cluster/peer"):
-                tasks.append(asyncio.create_task(pusher.publish(load)))
+                tasks.append(
+                    asyncio.create_task(pusher.publish(load), name=pusher.pull_host)
+                )
                 continue
             crypticle = salt.crypt.Crypticle(
                 self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
@@ -1109,5 +1162,16 @@ class MasterPubServerChannel:
         for task in tasks:
             try:
                 task.result()
-            except Exception:  # pylint: disable=broad-except
-                log.error("Error sending task %s", exc)
+            # XXX This error is transport specific and should be something else
+            except tornado.iostream.StreamClosedError:
+                if task.get_name() == self.opts["id"]:
+                    log.error("Unable to forward event to local ipc bus")
+                else:
+                    log.warning(
+                        "Unable to forward event to cluster peer %s", task.get_name()
+                    )
+                continue
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Unhandled error sending task %s", task.get_name(), exc_info=True
+                )
