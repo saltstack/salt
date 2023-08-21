@@ -19,7 +19,6 @@ import salt.crypt
 import salt.master
 import salt.payload
 import salt.transport.frame
-import salt.transport.ipc
 import salt.utils.channel
 import salt.utils.event
 import salt.utils.files

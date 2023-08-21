@@ -749,21 +749,15 @@ class Master(SMaster):
                     "reload": cluster_keygen,
                 }
 
-            # Wrap generate_key_string to ignore remove keyward arg.
-            def master_keygen(*args, **kwargs):
-                return salt.crypt.Crypticle.generate_key_string()
-
             SMaster.secrets["aes"] = {
                 "secret": multiprocessing.Array(
                     ctypes.c_char,
-                    salt.utils.stringutils.to_bytes(
-                        salt.crypt.Crypticle.generate_key_string()
-                    ),
+                    salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
                 ),
                 "serial": multiprocessing.Value(
                     ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
                 ),
-                "reload": master_keygen,
+                "reload": salt.crypt.Crypticle.generate_key_string,
             }
 
             log.info("Creating master process manager")

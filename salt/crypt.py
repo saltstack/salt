@@ -1612,7 +1612,7 @@ class Crypticle:
         self.serial = serial
 
     @classmethod
-    def generate_key_string(cls, key_size=192):
+    def generate_key_string(cls, key_size=192, **kwargs):
         key = os.urandom(key_size // 8 + cls.SIG_SIZE)
         b64key = base64.b64encode(key)
         b64key = b64key.decode("utf-8")
