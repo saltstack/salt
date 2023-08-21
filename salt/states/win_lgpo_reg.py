@@ -53,6 +53,7 @@ configure that policy.
     you will have to find the values needed to set them with this module using a
     different method.
 """
+
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.win_functions
@@ -149,7 +150,7 @@ def value_present(
 
         all_users (bool):
 
-            .. version-added:: 3006.3
+            .. versionadded:: 3006.3
 
             Apply the policy to all users that have logged on to the system.
             This will modify all sub-keys under the HKEY_USERS hive in the
@@ -273,7 +274,7 @@ def value_disabled(name, key, policy_class="Machine", all_users=False):
 
         all_users (bool):
 
-            .. version-added:: 3006.3
+            .. versionadded:: 3006.3
 
             Apply the policy to all users that have logged on to the system.
             This will modify all sub-keys under the HKEY_USERS hive in the
@@ -378,7 +379,7 @@ def value_absent(name, key, policy_class="Machine", all_users=False):
 
         all_users (bool):
 
-            .. version-added:: 3006.3
+            .. versionadded:: 3006.3
 
             Apply the policy to all users that have logged on to the system.
             This will modify all sub-keys under the HKEY_USERS hive in the

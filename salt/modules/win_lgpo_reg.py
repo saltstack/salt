@@ -59,6 +59,7 @@ The same values can also be used to create states for setting these policies.
     to the "User" Policy Class when the minion is running under the Local System
     account (default) will be applied to the Default User Profile.
 """
+
 import logging
 
 import salt.utils.platform
@@ -311,9 +312,9 @@ def set_value(
 
         all_users (bool):
 
-            .. version-added:: 3006.3
+            .. versionadded:: 3006.3
 
-            Apply the policy to all users that have logged on to the system.
+            Apply the policy to all users currently logged on to the system.
             This will modify all sub-keys under the HKEY_USERS hive in the
             registry that are not one of the following:
 
@@ -447,9 +448,9 @@ def disable_value(key, v_name, policy_class="machine", all_users=False):
 
         all_users (bool):
 
-            .. version-added:: 3006.3
+            .. versionadded:: 3006.3
 
-            Apply the policy to all users that have logged on to the system.
+            Apply the policy to all users currently logged on to the system.
             This will modify all sub-keys under the HKEY_USERS hive in the
             registry that are not one of the following:
 
@@ -553,9 +554,9 @@ def delete_value(key, v_name, policy_class="Machine", all_users=False):
 
         all_users (bool):
 
-            .. version-added:: 3006.3
+            .. versionadded:: 3006.3
 
-            Apply the policy to all users that have logged on to the system.
+            Apply the policy to all users currently logged on to the system.
             This will modify all sub-keys under the HKEY_USERS hive in the
             registry that are not one of the following:
 

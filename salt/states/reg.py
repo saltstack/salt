@@ -68,7 +68,6 @@ Value:
 - Each value name has a corresponding value
 
 """
-
 import logging
 
 import salt.modules.reg
@@ -306,7 +305,7 @@ def present(
 
         all_users (bool):
 
-            .. version-added:: 3006.3
+            .. versionadded:: 3006.3
 
             Apply the setting to all users currently logged on to the system.
             This will modify all sub-keys under the HKEY_USERS hive in the
@@ -423,7 +422,11 @@ def present(
     hive, key = _parse_key(name)
 
     old = _get_current(
-        hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry, all_users=all_users
+        hive=hive,
+        key=key,
+        vname=vname,
+        use_32bit_registry=use_32bit_registry,
+        all_users=all_users,
     )
 
     # Cast the vdata according to the vtype
@@ -435,7 +438,9 @@ def present(
     if "vdata" in old:
         if old and vdata_decoded == old["vdata"] and old["success"]:
             ret["comment"] = "{} in {} is already present".format(
-                salt.utils.stringutils.to_unicode(vname, "utf-8") if vname else "(Default)",
+                salt.utils.stringutils.to_unicode(vname, "utf-8")
+                if vname
+                else "(Default)",
                 salt.utils.stringutils.to_unicode(name, "utf-8"),
             )
             return __utils__["dacl.check_perms"](
@@ -450,10 +455,16 @@ def present(
             )
     else:
         for user in old:
-            if old[user] and vdata_decoded == old[user]["vdata"] and old[user]["success"]:
+            if (
+                old[user]
+                and vdata_decoded == old[user]["vdata"]
+                and old[user]["success"]
+            ):
                 ret["comment"] += "{}: {} in {} is already present".format(
                     salt.utils.stringutils.to_unicode(user, "utf-8"),
-                    salt.utils.stringutils.to_unicode(vname, "utf-8") if vname else "(Default)",
+                    salt.utils.stringutils.to_unicode(vname, "utf-8")
+                    if vname
+                    else "(Default)",
                     salt.utils.stringutils.to_unicode(name, "utf-8"),
                 )
                 # TODO: The following code throws a recursion error after the
@@ -499,7 +510,11 @@ def present(
     )
 
     new = _get_current(
-        hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry, all_users=all_users
+        hive=hive,
+        key=key,
+        vname=vname,
+        use_32bit_registry=use_32bit_registry,
+        all_users=all_users,
     )
     ret["changes"] = salt.utils.data.recursive_diff(old, new)
 
@@ -551,7 +566,7 @@ def absent(name, vname=None, use_32bit_registry=False, all_users=False):
 
         all_users (bool):
 
-            .. version-added:: 3006.3
+            .. versionadded:: 3006.3
 
             Delete the value from the registry hive of all users currently
             logged on to the system. This will modify all sub-keys under the
@@ -585,7 +600,13 @@ def absent(name, vname=None, use_32bit_registry=False, all_users=False):
     hive, key = _parse_key(name)
 
     # Determine what to do
-    old = _get_current(hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry, all_users=all_users)
+    old = _get_current(
+        hive=hive,
+        key=key,
+        vname=vname,
+        use_32bit_registry=use_32bit_registry,
+        all_users=all_users,
+    )
     if not old["success"] or old["vdata"] == "(value not set)":
         ret["comment"] = "{} is already absent".format(name)
         return ret
@@ -603,10 +624,20 @@ def absent(name, vname=None, use_32bit_registry=False, all_users=False):
 
     # Delete the value
     ret["result"] = __salt__["reg.delete_value"](
-        hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry, all_users=all_users
+        hive=hive,
+        key=key,
+        vname=vname,
+        use_32bit_registry=use_32bit_registry,
+        all_users=all_users,
     )
 
-    new = _get_current(hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry, all_users=all_users)
+    new = _get_current(
+        hive=hive,
+        key=key,
+        vname=vname,
+        use_32bit_registry=use_32bit_registry,
+        all_users=all_users,
+    )
     ret["changes"] = salt.utils.data.recursive_diff(old, new)
 
     if not ret["result"]:

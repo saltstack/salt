@@ -2,7 +2,6 @@
 Various functions to be used by windows during start up and to monkey patch
 missing functions in other modules.
 """
-
 import ctypes
 import platform
 import re

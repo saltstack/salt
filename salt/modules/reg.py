@@ -69,6 +69,7 @@ Value:
     the Local System account (default) will be applied to the Default User
     Profile.
 """
+
 import logging
 
 import salt.utils.platform
@@ -386,9 +387,9 @@ def set_value(
 
        all_users (bool):
 
-            .. version-added:: 3006.3
+            .. versionadded:: 3006.3
 
-            Set the value in the registry hive of all users that have logged on
+            Set the value in the registry hive of all users currently logged on
             to the system. This will modify all sub-keys under the
             ``HKEY_USERS`` hive in the registry that are not one of the
             following:
@@ -453,7 +454,6 @@ def set_value(
         # Get a list of all users and SIDs on the machine
         users_sids = salt.utils.win_functions.get_users_sids()
         # Loop through each one and set the value
-        print(users_sids)
         for user, sid in users_sids:
             if salt.utils.win_reg.key_exists(hive="HKEY_USERS", key=sid):
                 if not salt.utils.win_reg.set_value(
@@ -504,11 +504,11 @@ def delete_key_recursive(hive, key, use_32bit_registry=False, all_users=False):
             Deletes the 32bit portion of the registry on 64bit
             installations. On 32bit machines this is ignored.
 
-       all_users (bool):
+        all_users (bool):
 
-            .. version-added:: 3006.3
+            .. versionadded:: 3006.3
 
-            Delete the key from the registry hive of all users that have
+            Delete the key from the registry hive of all users currently
             logged on to the system. This will modify all sub-keys under the
             ``HKEY_USERS`` hive in the registry that are not one of the
             following:
@@ -581,11 +581,11 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False, all_users=Fals
             Deletes the 32bit portion of the registry on 64bit installations. On
             32bit machines this is ignored.
 
-       all_users (bool):
+        all_users (bool):
 
-            .. version-added:: 3006.3
+            .. versionadded:: 3006.3
 
-            Delete the value from the registry hive of all users that have
+            Delete the value from the registry hive of all users currently
             logged on to the system. This will modify all sub-keys under the
             ``HKEY_USERS`` hive in the registry that are not one of the
             following:

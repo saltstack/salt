@@ -1,12 +1,21 @@
+"""
+Tests for states/reg.py
+"""
 import pytest
 
-import salt.states.reg as reg
-import salt.utils.win_dacl as win_dacl
-import salt.utils.win_functions as win_functions
-import salt.utils.win_reg as reg_util
+try:
+    import salt.states.reg as reg
+    import salt.utils.win_dacl as win_dacl
+    import salt.utils.win_functions as win_functions
+    import salt.utils.win_reg as reg_util
+
+    HAS_WIN_LIBS = True
+except ImportError:
+    HAS_WIN_LIBS = False
 
 pytestmark = [
     pytest.mark.skip_unless_on_windows,
+    pytest.mark.skipif(HAS_WIN_LIBS is False, reason="Missing pywin32 libraries"),
     pytest.mark.windows_whitelisted,
 ]
 
@@ -25,24 +34,6 @@ class RegVars:
         self.vname = "version"
         self.vdata = "0.15.3"
         self.current_user = win_functions.get_current_user(with_domain=False)
-
-
-# @pytest.fixture(scope="module")
-# def configure_loader_modules():
-#     return {
-#         reg: {
-#             "__opts__": {"test": False},
-#             "__salt__": {},
-#             "__utils__": {
-#                 "reg.cast_vdata": reg_util.cast_vdata,
-#                 "reg.delete_value": reg_util.delete_value,
-#                 "reg.read_value": reg_util.read_value,
-#                 "reg.set_value": reg_util.set_value,
-#                 "dacl.check_perms": win_dacl.check_perms,
-#             },
-#         },
-#         win_dacl: {"__opts__": {"test": False}},
-#     }
 
 
 @pytest.fixture(scope="function")
@@ -103,12 +94,14 @@ def test_present(reg_vars, clean, states):
                 "success": False,
                 "vdata": None,
                 "vtype": None,
-                },
             },
+        },
         "name": reg_vars.name,
         "result": True,
     }
-    ret = states.reg.present(name=reg_vars.name, vname=reg_vars.vname, vdata=reg_vars.vdata)
+    ret = states.reg.present(
+        name=reg_vars.name, vname=reg_vars.vname, vdata=reg_vars.vdata
+    )
     assert ret.filtered == expected
 
     permissions = win_dacl.get_permissions(obj_name=reg_vars.name, obj_type="registry")
@@ -288,7 +281,9 @@ def test_present_test_true(reg_vars, clean, states):
         "name": reg_vars.name,
         "result": None,
     }
-    ret = states.reg.present(name=reg_vars.name, vname=reg_vars.vname, vdata=reg_vars.vdata, test=True)
+    ret = states.reg.present(
+        name=reg_vars.name, vname=reg_vars.vname, vdata=reg_vars.vdata, test=True
+    )
     assert ret.filtered == expected
 
 
@@ -299,7 +294,9 @@ def test_present_existing(reg_vars, reset, states):
         "name": reg_vars.name,
         "result": True,
     }
-    ret = states.reg.present(name=reg_vars.name, vname=reg_vars.vname, vdata=reg_vars.vdata)
+    ret = states.reg.present(
+        name=reg_vars.name, vname=reg_vars.vname, vdata=reg_vars.vdata
+    )
     assert ret.filtered == expected
 
 
@@ -403,7 +400,11 @@ def test_absent_already_absent_test_true(reg_vars, clean, states):
 
 def test__get_current():
     ret = reg._get_current(
-        hive="HKCU", key="Environment", vname="Path", use_32bit_registry=False, all_users=False
+        hive="HKCU",
+        key="Environment",
+        vname="Path",
+        use_32bit_registry=False,
+        all_users=False,
     )
     assert ret["success"] is True
     assert ret["vdata"]
@@ -414,6 +415,10 @@ def test__get_current_all_users():
     If no other users are logged in, nothing is returned
     """
     ret = reg._get_current(
-        hive="HKCU", key="Environment", vname="Path", use_32bit_registry=False, all_users=True
+        hive="HKCU",
+        key="Environment",
+        vname="Path",
+        use_32bit_registry=False,
+        all_users=True,
     )
     assert ret == {}
