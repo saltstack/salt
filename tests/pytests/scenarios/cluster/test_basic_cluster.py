@@ -10,7 +10,8 @@ def test_basic_cluster_setup(
     ret = cli1.run("config.get", "cache_dir")
     assert str(cluster_cache_path) == ret.stdout
     ret = cli1.run("config.get", "cluster_peers")
-    assert ["127.0.0.2"] == ret.data
+    ret.data.sort()
+    assert ["127.0.0.2", "127.0.0.3"] == ret.data
 
     cli2 = cluster_master_2.salt_run_cli(timeout=120)
     ret = cli2.run("config.get", "cluster_pki_dir")
@@ -18,8 +19,11 @@ def test_basic_cluster_setup(
     ret = cli2.run("config.get", "cache_dir")
     assert str(cluster_cache_path) == ret.stdout
     ret = cli2.run("config.get", "cluster_peers")
-    assert ["127.0.0.1"] == ret.data
+    ret.data.sort()
+    assert ["127.0.0.1", "127.0.0.3"] == ret.data
 
+    # Check for shared keys. Note: The third master 127.0.0.3 was never
+    # started.
     peers_path = cluster_pki_path / "peers"
     unexpected = False
     found = []
@@ -60,5 +64,13 @@ def test_basic_cluster_minion_1_from_master_2(
     cluster_master_1, cluster_master_2, cluster_minion_1
 ):
     cli = cluster_master_2.salt_cli(timeout=120)
+    ret = cli.run("test.ping", minion_tgt="cluster-minion-1")
+    assert ret.data is True
+
+
+def test_basic_cluster_minion_1_from_master_3(
+    cluster_master_1, cluster_master_2, cluster_master_3, cluster_minion_1
+):
+    cli = cluster_master_3.salt_cli(timeout=120)
     ret = cli.run("test.ping", minion_tgt="cluster-minion-1")
     assert ret.data is True
