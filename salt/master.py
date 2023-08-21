@@ -752,7 +752,9 @@ class Master(SMaster):
             SMaster.secrets["aes"] = {
                 "secret": multiprocessing.Array(
                     ctypes.c_char,
-                    salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+                    salt.utils.stringutils.to_bytes(
+                        salt.crypt.Crypticle.generate_key_string()
+                    ),
                 ),
                 "serial": multiprocessing.Value(
                     ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'

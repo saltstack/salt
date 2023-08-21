@@ -435,7 +435,15 @@ class TCPPubClient(salt.transport.base.PublishClient):
         while True:
             msg = await self.recv()
             if msg:
-                await callback(msg)
+                try:
+                    # XXX This is handled better in the websocket transport work
+                    await callback(msg)
+                except Exception:
+                    log.error(
+                        "Unhandled exception while running callback %r",
+                        self,
+                        exc_info=True,
+                    )
 
     def on_recv(self, callback):
         """

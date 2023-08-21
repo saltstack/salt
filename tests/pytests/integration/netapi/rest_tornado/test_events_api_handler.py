@@ -1,5 +1,6 @@
 from functools import partial
 
+import asyncio
 import pytest
 import tornado.gen
 
@@ -45,6 +46,6 @@ async def test_get(http_client, io_loop, app):
     )
 
     while len(events_fired) < 5:
-        await tornado.gen.sleep(1)
+        await asyncio.sleep(1)
 
     assert len(events_fired) >= 5
