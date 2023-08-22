@@ -1289,8 +1289,8 @@ class VM:
         rsync_remote_path = remote_path
         if self.is_windows:
             for drive in ("c:", "C:"):
-                source = source.replace(drive, "/c")
-                rsync_remote_path = rsync_remote_path.replace(drive, "/c")
+                source = source.replace(drive, "/cygdrive/c")
+                rsync_remote_path = rsync_remote_path.replace(drive, "/cygdrive/c")
             source = source.replace("\\", "/")
         destination = f"{self.name}:{rsync_remote_path}"
         description = "Rsync local checkout to VM..."
@@ -1317,7 +1317,7 @@ class VM:
         remote_path = self.upload_path.joinpath(write_env_filename).as_posix()
         if self.is_windows:
             for drive in ("c:", "C:"):
-                remote_path = remote_path.replace(drive, "/c")
+                remote_path = remote_path.replace(drive, "/cygdrive/c")
         destination = f"{self.name}:{remote_path}"
         description = f"Uploading {write_env_filename} ..."
         self.rsync(source, destination, description)
@@ -1436,7 +1436,7 @@ class VM:
         remote_path = self.upload_path.joinpath(dependencies_filename).as_posix()
         if self.is_windows:
             for drive in ("c:", "C:"):
-                remote_path = remote_path.replace(drive, "/c")
+                remote_path = remote_path.replace(drive, "/cygdrive/c")
         source = f"{self.name}:{remote_path}"
         destination = "."
         description = f"Downloading {dependencies_filename} ..."
@@ -1449,7 +1449,7 @@ class VM:
         remote_path = self.upload_path.joinpath("artifacts").as_posix()
         if self.is_windows:
             for drive in ("c:", "C:"):
-                remote_path = remote_path.replace(drive, "/c")
+                remote_path = remote_path.replace(drive, "/cygdrive/c")
         source = f"{self.name}:{remote_path}/"
         destination = "artifacts/"
         description = f"Downloading {source} ..."
