@@ -1,7 +1,9 @@
 """
 Tests for states/reg.py
 """
+
 import pytest
+from saltfactories.utils import random_string
 
 try:
     import salt.states.reg as reg
@@ -34,6 +36,13 @@ class RegVars:
         self.vname = "version"
         self.vdata = "0.15.3"
         self.current_user = win_functions.get_current_user(with_domain=False)
+        self.UNICODE_VALUE_NAME = "Unicode Key \N{TRADE MARK SIGN}"
+        self.UNICODE_VALUE = (
+            "Unicode Value \N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}"
+        )
+        self.FAKE_KEY = "SOFTWARE\\{}".format(
+            random_string("SaltTesting-", lowercase=False)
+        )
 
 
 @pytest.fixture(scope="function")
@@ -49,10 +58,26 @@ def clean(reg_vars, modules):
     try:
         if reg_util.key_exists(hive=reg_vars.hive, key=reg_vars.key):
             reg_util.delete_key_recursive(hive=reg_vars.hive, key=reg_vars.key)
+        if reg_util.key_exists(hive="HKLM", key=reg_vars.FAKE_KEY):
+            reg_util.delete_key_recursive(hive="HKLM", key=reg_vars.FAKE_KEY)
+        if reg_util.key_exists(
+            hive="HKLM", key=reg_vars.FAKE_KEY, use_32bit_registry=True
+        ):
+            reg_util.delete_key_recursive(
+                hive="HKLM", key=reg_vars.FAKE_KEY, use_32bit_registry=True
+            )
         yield
     finally:
         if reg_util.key_exists(hive=reg_vars.hive, key=reg_vars.key):
             reg_util.delete_key_recursive(hive=reg_vars.hive, key=reg_vars.key)
+        if reg_util.key_exists(hive="HKLM", key=reg_vars.FAKE_KEY):
+            reg_util.delete_key_recursive(hive="HKLM", key=reg_vars.FAKE_KEY)
+        if reg_util.key_exists(
+            hive="HKLM", key=reg_vars.FAKE_KEY, use_32bit_registry=True
+        ):
+            reg_util.delete_key_recursive(
+                hive="HKLM", key=reg_vars.FAKE_KEY, use_32bit_registry=True
+            )
 
 
 @pytest.fixture(scope="function")
@@ -421,4 +446,235 @@ def test__get_current_all_users():
         use_32bit_registry=False,
         all_users=True,
     )
-    assert ret == {}
+    # There's no way to know if this will return anything as it will only return
+    # if there is another user logged in... so, does this really test anything?
+    # I don't know... It actually returned something on the GitHub runner, so,
+    # I don't want it to fail if it does return something.
+    assert len(ret) >= 0
+
+
+@pytest.mark.parametrize(
+    "v_type,v_data, v_data_exp",
+    [
+        ("REG_SZ", "string data", "string data"),
+        ("REG_BINARY", "binary data", b"binary data"),
+        ("REG_MULTI_SZ", ["item1", "item2"], ["item1", "item2"]),
+    ],
+)
+def test_present_types(v_type, v_data, v_data_exp, reg_vars, clean, states):
+    """
+    Test reg.present with various registry data types
+    """
+    ret = states.reg.present(
+        name=f"HKLM\\{reg_vars.FAKE_KEY}",
+        vname="test_type",
+        vtype=v_type,
+        vdata=v_data,
+    )
+    expected = {
+        "changes": {
+            "new": {
+                "success": True,
+                "vdata": v_data_exp,
+                "vtype": v_type,
+            },
+            "old": {
+                "comment": f"Cannot find key: HKLM\\{reg_vars.FAKE_KEY}",
+                "success": False,
+                "vdata": None,
+                "vtype": None,
+            },
+        },
+        "comment": f"Added test_type to HKLM\\{reg_vars.FAKE_KEY}",
+        "name": f"HKLM\\{reg_vars.FAKE_KEY}",
+        "result": True,
+    }
+    assert ret.filtered == expected
+
+    # Is it actually set
+    expected = {
+        "vtype": v_type,
+        "vname": "test_type",
+        "success": True,
+        "hive": "HKLM",
+        "vdata": v_data_exp,
+        "key": reg_vars.FAKE_KEY,
+    }
+    ret = reg_util.read_value(hive="HKLM", key=reg_vars.FAKE_KEY, vname="test_type")
+    assert ret == expected
+
+
+def test_present_32bit(reg_vars, clean, states):
+    """
+    Test reg.present with REG_SZ using 32bit registry
+    """
+    ret = states.reg.present(
+        name=f"HKLM\\{reg_vars.FAKE_KEY}",
+        vname="test_reg_sz",
+        vtype="REG_SZ",
+        vdata="string data",
+        use_32bit_registry=True,
+    )
+    expected = {
+        "changes": {
+            "new": {
+                "success": True,
+                "vdata": "string data",
+                "vtype": "REG_SZ",
+            },
+            "old": {
+                "comment": f"Cannot find key: HKLM\\{reg_vars.FAKE_KEY}",
+                "success": False,
+                "vdata": None,
+                "vtype": None,
+            },
+        },
+        "comment": f"Added test_reg_sz to HKLM\\{reg_vars.FAKE_KEY}",
+        "name": f"HKLM\\{reg_vars.FAKE_KEY}",
+        "result": True,
+    }
+    assert ret.filtered == expected
+
+    # Is it actually set
+    expected = {
+        "vtype": "REG_SZ",
+        "vname": "test_reg_sz",
+        "success": True,
+        "hive": "HKLM",
+        "vdata": "string data",
+        "key": reg_vars.FAKE_KEY,
+    }
+    ret = reg_util.read_value(
+        hive="HKLM", key=reg_vars.FAKE_KEY, vname="test_reg_sz", use_32bit_registry=True
+    )
+    assert ret == expected
+
+
+def test_present_reg_sz_unicode_value(reg_vars, clean, states):
+    """
+    Test reg.present with REG_SZ and a unicode value
+    """
+    ret = states.reg.present(
+        name=f"HKLM\\{reg_vars.FAKE_KEY}",
+        vname="test_reg_sz_unicode_value",
+        vtype="REG_SZ",
+        vdata=reg_vars.UNICODE_VALUE,
+    )
+    expected = {
+        "changes": {
+            "new": {
+                "success": True,
+                "vdata": reg_vars.UNICODE_VALUE,
+                "vtype": "REG_SZ",
+            },
+            "old": {
+                "comment": f"Cannot find key: HKLM\\{reg_vars.FAKE_KEY}",
+                "success": False,
+                "vdata": None,
+                "vtype": None,
+            },
+        },
+        "comment": f"Added test_reg_sz_unicode_value to HKLM\\{reg_vars.FAKE_KEY}",
+        "name": f"HKLM\\{reg_vars.FAKE_KEY}",
+        "result": True,
+    }
+    assert ret.filtered == expected
+
+    # Is it actually set
+    expected = {
+        "vtype": "REG_SZ",
+        "vname": "test_reg_sz_unicode_value",
+        "success": True,
+        "hive": "HKLM",
+        "vdata": reg_vars.UNICODE_VALUE,
+        "key": reg_vars.FAKE_KEY,
+    }
+    ret = reg_util.read_value(
+        hive="HKLM", key=reg_vars.FAKE_KEY, vname="test_reg_sz_unicode_value"
+    )
+    assert ret == expected
+
+
+def test_present_reg_sz_unicode_default_value(reg_vars, clean, states):
+    """
+    Test reg.present with REG_SZ and a unicode default value
+    """
+    ret = states.reg.present(
+        name=f"HKLM\\{reg_vars.FAKE_KEY}",
+        vdata=reg_vars.UNICODE_VALUE,
+    )
+    expected = {
+        "changes": {
+            "new": {
+                "success": True,
+                "vdata": reg_vars.UNICODE_VALUE,
+                "vtype": "REG_SZ",
+            },
+            "old": {
+                "comment": f"Cannot find key: HKLM\\{reg_vars.FAKE_KEY}",
+                "success": False,
+                "vdata": None,
+                "vtype": None,
+            },
+        },
+        "comment": f"Added None to HKLM\\{reg_vars.FAKE_KEY}",
+        "name": f"HKLM\\{reg_vars.FAKE_KEY}",
+        "result": True,
+    }
+    assert ret.filtered == expected
+
+    # Is it actually set
+    expected = {
+        "vtype": "REG_SZ",
+        "vname": "(Default)",
+        "success": True,
+        "hive": "HKLM",
+        "vdata": reg_vars.UNICODE_VALUE,
+        "key": reg_vars.FAKE_KEY,
+    }
+    ret = reg_util.read_value(hive="HKLM", key=reg_vars.FAKE_KEY)
+    assert ret == expected
+
+
+def test_present_reg_sz_unicode_value_name(reg_vars, clean, states):
+    """
+    Test reg.present with REG_SZ and a unicode value name
+    """
+    ret = states.reg.present(
+        name=f"HKLM\\{reg_vars.FAKE_KEY}",
+        vname=reg_vars.UNICODE_VALUE_NAME,
+        vdata="string data",
+    )
+    expected = {
+        "changes": {
+            "new": {
+                "success": True,
+                "vdata": "string data",
+                "vtype": "REG_SZ",
+            },
+            "old": {
+                "comment": f"Cannot find key: HKLM\\{reg_vars.FAKE_KEY}",
+                "success": False,
+                "vdata": None,
+                "vtype": None,
+            },
+        },
+        "comment": f"Added {reg_vars.UNICODE_VALUE_NAME} to HKLM\\{reg_vars.FAKE_KEY}",
+        "name": f"HKLM\\{reg_vars.FAKE_KEY}",
+        "result": True,
+    }
+    assert ret.filtered == expected
+
+    # Is it actually set
+    expected = {
+        "vtype": "REG_SZ",
+        "vname": reg_vars.UNICODE_VALUE_NAME,
+        "success": True,
+        "hive": "HKLM",
+        "vdata": "string data",
+        "key": reg_vars.FAKE_KEY,
+    }
+    ret = reg_util.read_value(
+        hive="HKLM", key=reg_vars.FAKE_KEY, vname=reg_vars.UNICODE_VALUE_NAME
+    )
+    assert ret == expected

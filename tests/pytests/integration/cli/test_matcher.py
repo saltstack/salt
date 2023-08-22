@@ -153,7 +153,7 @@ def test_compound_grain_regex(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id not in ret.data
 
 
-def test_coumpound_pcre_grain_regex(salt_cli, salt_minion, salt_sub_minion):
+def test_compound_pcre_grain_regex(salt_cli, salt_minion, salt_sub_minion):
     ret = salt_cli.run("-C", "test.ping", minion_tgt="P%@planets%^(mercury|saturn)$")
     assert ret.returncode == 0
     assert salt_minion.id in ret.data
