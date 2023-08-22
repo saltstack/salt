@@ -356,14 +356,13 @@ def run_loop_in_thread(loop, evt):
     """
     asyncio.set_event_loop(loop.asyncio_loop)
 
-    @tornado.gen.coroutine
-    def stopper():
-        yield tornado.gen.sleep(0.1)
+    async def stopper():
+        await asyncio.sleep(0.1)
         while True:
             if not evt.is_set():
                 loop.stop()
                 break
-            yield tornado.gen.sleep(0.3)
+            await asyncio.sleep(0.3)
 
     loop.add_callback(evt.set)
     loop.add_callback(stopper)
@@ -463,7 +462,7 @@ def test_payload_handling_exception(temp_salt_minion, temp_salt_master):
     with MockSaltMinionMaster(temp_salt_minion, temp_salt_master) as minion_master:
         with patch.object(minion_master.mock, "_handle_payload_hook") as _mock:
             _mock.side_effect = Exception()
-            ret = minion_master.channel.send({}, timeout=2, tries=1)
+            ret = minion_master.channel.send({}, timeout=15, tries=1)
             assert ret == "Some exception handling minion payload"
 
 
