@@ -125,7 +125,12 @@ def store_job(opts, load, event=None, mminion=None):
         log.error(emsg)
         raise KeyError(emsg)
 
-    if job_cache != "local_cache":
+    save_load = True
+    if job_cache == "local_cache" and mminion.returners[getfstr](load.get("jid", "")):
+        # The job was saved previously.
+        save_load = False
+
+    if save_load:
         try:
             mminion.returners[savefstr](load["jid"], load)
         except KeyError as e:
