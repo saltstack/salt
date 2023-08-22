@@ -2,6 +2,7 @@ import pathlib
 
 import pytest
 
+import salt.modules.reg as reg
 import salt.modules.win_file as win_file
 import salt.modules.win_lgpo_reg as lgpo_reg
 import salt.utils.files
@@ -24,6 +25,12 @@ def configure_loader_modules():
             "__utils__": {
                 "dacl.set_perms": salt.utils.win_dacl.set_perms,
                 "dacl.set_permissions": salt.utils.win_dacl.set_permissions,
+            },
+        },
+        lgpo_reg: {
+            "__salt__": {
+                "reg.delete_value": reg.delete_value,
+                "reg.set_value": reg.set_value,
             },
         },
     }
