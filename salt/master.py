@@ -604,6 +604,10 @@ class Master(SMaster):
         errors = []
         critical_errors = []
 
+        import salt.utils.cache
+
+        salt.utils.cache.verify_cache_version(self.opts["cachedir"])
+
         try:
             os.chdir("/")
         except OSError as err:
