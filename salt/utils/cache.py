@@ -6,6 +6,7 @@ import functools
 import logging
 import os
 import re
+import shutil
 import time
 
 import salt.config
@@ -15,6 +16,8 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.msgpack
+import salt.utils.path
+import salt.version
 from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
@@ -345,3 +348,31 @@ def context_cache(func):
         return func(*args, **kwargs)
 
     return context_cache_wrap
+
+
+def verify_cache_version(cache):
+    """
+    Check that cache version matches salt version.
+    If cache version deos not matches salt version wipe the cache.
+
+    :return: True if cache version matched. False if cache version did not match.
+    """
+    with salt.utils.files.fopen(
+        salt.utils.path.join(cache, "cache_version"), "a+"
+    ) as file:
+        file.seek(0)
+        data = "\n".join(file.readlines())
+        if data != salt.version.__version__:
+            log.warning(f"Cache version mismatch clearing: {repr(cache)}")
+            file.truncate(0)
+            file.write(salt.version.__version__)
+            for item in os.listdir(cache):
+                if item != "cache_version":
+                    log.critical(item)
+                    item_path = salt.utils.path.join(cache, item)
+                    if os.path.isfile(item_path):
+                        os.remove(item_path)
+                    else:
+                        shutil.rmtree(item_path)
+            return False
+        return True
