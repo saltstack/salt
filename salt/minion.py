@@ -2059,6 +2059,8 @@ class Minion(MinionBase):
         ret["jid"] = data["jid"]
         ret["fun"] = data["fun"]
         ret["fun_args"] = data["arg"]
+        if "user" in data:
+            ret["user"] = data["user"]
         if "master_id" in data:
             ret["master_id"] = data["master_id"]
         if "metadata" in data:
@@ -2178,6 +2180,8 @@ class Minion(MinionBase):
             ret["jid"] = data["jid"]
             ret["fun"] = data["fun"]
             ret["fun_args"] = data["arg"]
+            if "user" in data:
+                ret["user"] = data["user"]
         if "metadata" in data:
             ret["metadata"] = data["metadata"]
         if minion_instance.connected:
