@@ -1140,3 +1140,59 @@ def test_pacmanpkg_group_installed_with_repo_options(list_pkgs):
         assert not ret["result"]
         assert not ret["changes"]
         assert ret["comment"] == "Repo options are not supported on this platform"
+
+
+def test_latest():
+    """
+    Test pkg.latest
+    """
+    pkg_name = "fake_pkg"
+    old_version = "1.2.2"
+    new_version = "1.2.3"
+    latest_version_mock = MagicMock(return_value={pkg_name: new_version})
+    current_version_mock = MagicMock(return_value={pkg_name: old_version})
+    install_mock = MagicMock(
+        return_value={
+            pkg_name: {
+                "new": new_version,
+                "old": old_version,
+            },
+        }
+    )
+    salt_dict = {
+        "pkg.latest_version": latest_version_mock,
+        "pkg.version": current_version_mock,
+        "pkg.install": install_mock,
+    }
+    with patch.dict(pkg.__salt__, salt_dict):
+        ret = pkg.latest(pkg_name)
+        assert ret.get("result", False) is True
+
+
+def test_latest_multiple_versions():
+    """
+    This case arises most often when updating the kernel, where multiple versions are now installed.
+
+    See: https://github.com/saltstack/salt/issues/60931
+    """
+    pkg_name = "fake_pkg"
+    old_version = "1.2.2"
+    new_version = "1.2.3"
+    latest_version_mock = MagicMock(return_value={pkg_name: new_version})
+    current_version_mock = MagicMock(return_value={pkg_name: old_version})
+    install_mock = MagicMock(
+        return_value={
+            pkg_name: {
+                "new": f"{old_version},{new_version}",
+                "old": old_version,
+            },
+        }
+    )
+    salt_dict = {
+        "pkg.latest_version": latest_version_mock,
+        "pkg.version": current_version_mock,
+        "pkg.install": install_mock,
+    }
+    with patch.dict(pkg.__salt__, salt_dict):
+        ret = pkg.latest(pkg_name)
+        assert ret.get("result", False) is True
