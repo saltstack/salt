@@ -1,8 +1,7 @@
+import asyncio
 from functools import partial
 
-import asyncio
 import pytest
-import tornado.gen
 
 from salt.netapi.rest_tornado import saltnado
 
