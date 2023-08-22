@@ -26,8 +26,7 @@ def check_status():
         return False
 
 
-# @pytest.mark.windows_whitelisted
-# De-whitelist windows since it's hanging on the newer windows golden images
+@pytest.mark.windows_whitelisted
 @pytest.mark.skip_if_binaries_missing("ssh", "ssh-keygen", check_all=True)
 class SSHModuleTest(ModuleCase):
     """

@@ -330,9 +330,9 @@
     "ssh_username": "ubuntu"
   },
   "windows-2016": {
-    "ami": "ami-0fe12aacaae60fd64",
+    "ami": "ami-099db55543619f54a",
     "ami_description": "CI Image of Windows 2016 x86_64",
-    "ami_name": "salt-project/ci/windows/2016/x86_64/20230817.0547",
+    "ami_name": "salt-project/ci/windows/2016/x86_64/20230522.0606",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.xlarge",
@@ -340,9 +340,9 @@
     "ssh_username": "Administrator"
   },
   "windows-2019": {
-    "ami": "ami-021784d45ba88399f",
+    "ami": "ami-0860ee5bc9ee93e13",
     "ami_description": "CI Image of Windows 2019 x86_64",
-    "ami_name": "salt-project/ci/windows/2019/x86_64/20230817.0546",
+    "ami_name": "salt-project/ci/windows/2019/x86_64/20230522.0606",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.xlarge",
@@ -350,9 +350,9 @@
     "ssh_username": "Administrator"
   },
   "windows-2022": {
-    "ami": "ami-03ba16ab660d2b0e6",
+    "ami": "ami-032e3abce2aa98da7",
     "ami_description": "CI Image of Windows 2022 x86_64",
-    "ami_name": "salt-project/ci/windows/2022/x86_64/20230817.0547",
+    "ami_name": "salt-project/ci/windows/2022/x86_64/20230522.0606",
     "arch": "x86_64",
     "cloudwatch-agent-available": "true",
     "instance_type": "t3a.xlarge",
