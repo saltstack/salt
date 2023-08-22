@@ -792,7 +792,8 @@ def pytest_runtest_setup(item):
             windows_whitelisted_marker = item.get_closest_marker("windows_whitelisted")
             if windows_whitelisted_marker is None:
                 # item._skipped_by_mark = True
-                pytest.skip("Test is not whitelisted for Windows")
+                # pytest.skip("Test is not whitelisted for Windows")
+                pass
 
 
 # <---- Test Setup ---------------------------------------------------------------------------------------------------
