@@ -1299,7 +1299,11 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
                 if event["tag"] == "salt/event/exit":
                     # We're done eventing
                     self.stop = True
-                if self._filter(event):
+                if self._filter(
+                    event,
+                    allow=self.opts["event_return_whitelist"],
+                    deny=self.opts["event_return_blacklist"],
+                ):
                     # This event passed the filter, add it to the queue
                     self.event_queue.append(event)
                 too_long_in_queue = False
@@ -1347,23 +1351,40 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
 
                 self.flush_events()
 
-    def _filter(self, event):
+    @staticmethod
+    def _filter(event, allow=None, deny=None):
         """
         Take an event and run it through configured filters.
 
-        Returns True if event should be stored, else False
+        Returns True if event should be stored, else False.
+
+        Any event that has a "__peer_id" id key defined are denied outright
+        because they did not originate from this master in a clustered
+        configuration.
+
+        If no allow or deny lists are given the event is allowed. Otherwise the
+        event's tag will be checked against the allow list. Then the deny list.
         """
+
+        if "__peer_id" in event:
+            return False
+
+        if allow is None:
+            allow = []
+        if deny is None:
+            deny = []
         tag = event["tag"]
-        if self.opts["event_return_whitelist"]:
+
+        if allow:
             ret = False
         else:
             ret = True
-        for whitelist_match in self.opts["event_return_whitelist"]:
-            if fnmatch.fnmatch(tag, whitelist_match):
+        for allow_match in allow:
+            if fnmatch.fnmatch(tag, allow_match):
                 ret = True
                 break
-        for blacklist_match in self.opts["event_return_blacklist"]:
-            if fnmatch.fnmatch(tag, blacklist_match):
+        for deny_match in deny:
+            if fnmatch.fnmatch(tag, deny_match):
                 ret = False
                 break
         return ret

@@ -438,7 +438,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
                 try:
                     # XXX This is handled better in the websocket transport work
                     await callback(msg)
-                except Exception:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.error(
                         "Unhandled exception while running callback %r",
                         self,
@@ -1380,7 +1380,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
             log.debug("Publish server binding pub to %s", self.pub_path)
             sock = tornado.netutil.bind_unix_socket(self.pub_path)
         else:
-            log.info(
+            log.debug(
                 "Publish server binding pub to %s:%s", self.pub_host, self.pub_port
             )
             sock = _get_socket(self.opts)
@@ -1398,7 +1398,7 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
             log.debug("Publish server binding pull to %s", self.pull_path)
             pull_path = self.pull_path
         else:
-            log.info(
+            log.debug(
                 "Publish server binding pull to %s:%s", self.pull_host, self.pull_port
             )
             pull_host = self.pull_host

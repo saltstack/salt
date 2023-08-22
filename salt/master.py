@@ -920,12 +920,15 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
         Event handler for publish forwarder
         """
         tag, data = salt.utils.event.SaltEvent.unpack(package)
-        log.error("got event %s %r", tag, data)
+        log.debug("Event monitor got event %s %r", tag, data)
         if tag.startswith("salt/job") and tag.endswith("/publish"):
             peer_id = data.pop("__peer_id", None)
             if peer_id:
                 data.pop("_stamp", None)
-                log.error("Forward job event to publisher server: %r", data)
+                log.debug(
+                    "Event monitor forward job to publish server: jid=%s",
+                    data.get("jid", "no jid"),
+                )
                 if not self.channels:
                     for transport, opts in iter_transport_opts(self.opts):
                         chan = salt.channel.server.PubServerChannel.factory(opts)
@@ -935,7 +938,7 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
                     tasks.append(asyncio.create_task(chan.publish(data)))
                 await asyncio.gather(*tasks)
         elif tag == "rotate_aes_key":
-            log.error("Recieved rotate_aes_key event")
+            log.debug("Event monitor recieved rotate aes key event, rotating key.")
             SMaster.rotate_secrets(self.opts, owner=False)
 
     def run(self):
@@ -2424,7 +2427,6 @@ class ClearFuncs(TransportMethods):
         # An alternative to copy may be to pop it
         # payload.pop("_stamp")
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
-        log.error("SEND JOB PAYLOAD %r", payload)
         await self._send_pub(payload)
 
         return {

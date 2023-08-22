@@ -224,7 +224,6 @@ class AsyncReqChannel:
                 tries,
                 timeout,
             )
-        log.error("WTF %r", ret)
         if HAS_M2:
             aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
         else:
