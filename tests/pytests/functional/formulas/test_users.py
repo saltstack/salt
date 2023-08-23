@@ -16,13 +16,14 @@ def modules(loaders, _formula):
     return loaders.modules
 
 
+@pytest.mark.destructive_test
 def test_users_formula(modules):
     # sudo
-    ret = modules.state.sls("users.sudo", test=True)
+    ret = modules.state.sls("users.sudo")
     for staterun in ret:
         assert not staterun.result.failed
 
     # bashrc
-    ret = modules.state.sls("users.bashrc", test=True)
+    ret = modules.state.sls("users.bashrc")
     for staterun in ret:
         assert not staterun.result.failed
