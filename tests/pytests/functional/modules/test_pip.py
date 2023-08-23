@@ -52,6 +52,6 @@ def test_list_available_packages_with_index_url(modules, pip_version, tmp_path):
         available_versions = modules.pip.list_all_versions(
             package_name,
             bin_env=str(virtualenv.venv_bin_dir),
-            index_url="https://pypi.python.org/simple"
+            index_url="https://pypi.python.org/simple",
         )
         assert available_versions
