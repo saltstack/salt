@@ -15,7 +15,8 @@ def modules(loaders, _formula):
     return loaders.modules
 
 
+@pytest.mark.destructive_test
 def test_formula(modules):
-    ret = modules.state.sls("nginx", test=True)
+    ret = modules.state.sls("nginx")
     for staterun in ret:
         assert staterun.result is True
