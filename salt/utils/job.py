@@ -198,6 +198,3 @@ def get_keep_jobs_seconds(opts):
         )
         keep_jobs_seconds = keep_jobs * 3600
     return keep_jobs_seconds
-
-
-# vim:set et sts=4 ts=4 tw=80:

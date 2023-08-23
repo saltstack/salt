@@ -1090,6 +1090,3 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
         ret["comment"] = "scheduled snapshots are up to date"
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

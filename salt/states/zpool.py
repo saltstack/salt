@@ -442,6 +442,3 @@ def absent(name, export=False, force=False):
         ret["comment"] = "storage pool {} is absent".format(name)
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
