@@ -473,6 +473,7 @@ class GitProvider:
             self._cache_basehash, self._cache_basename
         )
         self._cachedir = salt.utils.path.join(self._cache_hash, self._cache_basename)
+        self._salt_working_dir = salt.utils.path.join(self._cachedir, ".git", ".salt")
         self._linkdir = salt.utils.path.join(
             cache_root, "links", self._cache_full_basename
         )
@@ -507,6 +508,9 @@ class GitProvider:
 
     def get_linkdir(self):
         return self._linkdir
+
+    def get_salt_working_dir(self):
+        return self._salt_working_dir
 
     def _get_envs_from_ref_paths(self, refs):
         """
@@ -2514,49 +2518,42 @@ class GitBase:
         if any(x.new for x in self.remotes):
             self.write_remote_map()
 
+    def _remove_cache_dir(self, cache_dir):
+        try:
+            shutil.rmtree(cache_dir)
+        except OSError as exc:
+            log.error(
+                "Unable to remove old %s remote cachedir %s: %s",
+                self.role,
+                cache_dir,
+                exc,
+            )
+            return False
+        log.debug("%s removed old cachedir %s", self.role, cache_dir)
+        return True
+
+    def _iter_remote_hashs(self):
+        for item in os.listdir(self.cache_root):
+            if item in ("hash", "refs", "links"):
+                continue
+            if os.path.isdir(salt.utils.path.join(self.cache_root, item)):
+                yield item
+
     def clear_old_remotes(self):
         """
         Remove cache directories for remotes no longer configured
         """
-        try:
-            cachedir_ls = os.listdir(self.cache_root)
-        except OSError:
-            cachedir_ls = []
-        log.critical(cachedir_ls)
-        # Remove actively-used remotes from list
-        for repo in self.remotes:
-            try:
-                cachedir_ls.remove(repo.get_cache_basehash())
-            except ValueError:
-                pass
-        to_remove = []
-        for item in cachedir_ls:
-            if item in ("hash", "refs"):
-                continue
-            path = salt.utils.path.join(self.cache_root, item)
-            if os.path.isdir(path):
-                to_remove.append(path)
-        failed = []
-        if to_remove:
-            for rdir in to_remove:
-                try:
-                    shutil.rmtree(rdir)
-                except OSError as exc:
-                    log.error(
-                        "Unable to remove old %s remote cachedir %s: %s",
-                        self.role,
-                        rdir,
-                        exc,
-                    )
-                    failed.append(rdir)
-                else:
-                    log.debug("%s removed old cachedir %s", self.role, rdir)
-        for fdir in failed:
-            to_remove.remove(fdir)
-        ret = bool(to_remove)
-        if ret:
+        change = False
+        # Remove all hash dirs not part of this group
+        remote_set = {r.get_cache_basehash() for r in self.remotes}
+        for item in self._iter_remote_hashs():
+            if item not in remote_set:
+                change = change or self._remove_cache_dir(
+                    salt.utils.path.join(self.cache_root, item)
+                )
+        if not change:
             self.write_remote_map()
-        return ret
+        return change
 
     def clear_cache(self):
         """

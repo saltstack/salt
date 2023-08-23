@@ -368,7 +368,6 @@ def verify_cache_version(cache):
             file.write(salt.version.__version__)
             for item in os.listdir(cache):
                 if item != "cache_version":
-                    log.critical(item)
                     item_path = salt.utils.path.join(cache, item)
                     if os.path.isfile(item_path):
                         os.remove(item_path)
