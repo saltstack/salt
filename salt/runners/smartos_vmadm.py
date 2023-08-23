@@ -383,6 +383,3 @@ def is_running(search):
         salt-run vmadm.is_running search='alias=julia'
     """
     return _action("is_running", search, False)
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
