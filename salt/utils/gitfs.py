@@ -493,6 +493,7 @@ class GitProvider:
 
         if not os.path.isdir(self._salt_working_dir):
             os.makedirs(self._salt_working_dir)
+        self.fetch_request_check()
 
     def get_cache_basehash(self):
         return self._cache_basehash
