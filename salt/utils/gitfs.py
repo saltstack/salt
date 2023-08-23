@@ -1190,6 +1190,18 @@ class GitProvider:
         else:
             self.url = self.id
 
+    def fetch_request_check(self):
+        fetch_request = salt.utils.path.join(self._salt_working_dir, "fetch_request")
+        if os.path.isfile(fetch_request):
+            log.debug(f"Fetch request: {self._salt_working_dir}")
+            try:
+                os.remove(fetch_request)
+            except Exception:  # pylint: disable=broad-except
+                pass
+            self.fetch()
+            return True
+        return False
+
     @property
     def linkdir_walk(self):
         """
@@ -1280,6 +1292,7 @@ class GitPython(GitProvider):
         GitPython when running these functions vary in different versions of
         GitPython.
         """
+        self.fetch_request_check()
         tgt_ref = self.get_checkout_target()
         try:
             head_sha = self.repo.rev_parse("HEAD").hexsha
@@ -1614,6 +1627,7 @@ class Pygit2(GitProvider):
         """
         Checkout the configured branch/tag
         """
+        self.fetch_request_check()
         tgt_ref = self.get_checkout_target()
         local_ref = "refs/heads/" + tgt_ref
         remote_ref = "refs/remotes/origin/" + tgt_ref
