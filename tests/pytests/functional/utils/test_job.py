@@ -3,12 +3,12 @@ import pathlib
 import salt.utils.job
 
 
-def test_store_job_save_load(temp_salt_minion, tmp_path):
+def test_store_job_save_load(minion_opts, tmp_path):
     """
     Test to ensure we create the correct files when we
     store a job in the local cache
     """
-    opts = temp_salt_minion.config.copy()
+    opts = minion_opts.copy()
     opts["master_job_cache"] = "local_cache"
     opts["job_cache"] = True
     opts["ext_job_cache"] = ""
