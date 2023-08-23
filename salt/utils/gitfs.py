@@ -491,6 +491,9 @@ class GitProvider:
             log.critical(msg, exc_info=True)
             failhard(self.role)
 
+        if not os.path.isdir(self._salt_working_dir):
+            os.makedirs(self._salt_working_dir)
+
     def get_cache_basehash(self):
         return self._cache_basehash
 
@@ -2612,6 +2615,29 @@ class GitBase:
             name = getattr(repo, "name", None)
             if not remotes or (repo.id, name) in remotes or name in remotes:
                 try:
+                    # Find and place fetch_request file for all the other branches for this repo
+                    for branch in os.listdir(repo.get_cache_hash()):
+                        # Don't place fetch request in current branch being updated
+                        if branch == repo.get_cache_basename():
+                            continue
+                        branch_salt_dir = salt.utils.path.join(
+                            repo.get_cache_hash(), branch, ".git", ".salt"
+                        )
+                        fetch_path = salt.utils.path.join(
+                            branch_salt_dir, "fetch_request"
+                        )
+                        if os.path.isdir(branch_salt_dir):
+                            try:
+                                with salt.utils.files.fopen(fetch_path, "w"):
+                                    pass
+                            except Exception as exc:  # pylint: disable=broad-except
+                                log.error(
+                                    f"Failed to place fetch request: {fetch_path}",
+                                    exc,
+                                    exc_info=True,
+                                )
+                        else:
+                            log.error(f"Failed to place fetch request: {fetch_path}")
                     if repo.fetch():
                         # We can't just use the return value from repo.fetch()
                         # because the data could still have changed if old
