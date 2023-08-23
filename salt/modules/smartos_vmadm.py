@@ -875,6 +875,3 @@ def receive(uuid, source):
         ret["Error"] = res["stderr"] if "stderr" in res else _exit_status(retcode)
         return ret
     return True
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

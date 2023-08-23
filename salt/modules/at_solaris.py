@@ -342,6 +342,3 @@ def jobcheck(**kwargs):
         return {"error": "You have given a condition"}
 
     return _atq(**kwargs)
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
