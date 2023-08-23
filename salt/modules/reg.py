@@ -387,7 +387,7 @@ def set_value(
 
        all_users (bool):
 
-            .. versionadded:: 3006.3
+            .. versionadded:: 3007.0
 
             Set the value in the registry hive of all users currently logged on
             to the system. This will modify all sub-keys under the
@@ -506,7 +506,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False, all_users=False):
 
         all_users (bool):
 
-            .. versionadded:: 3006.3
+            .. versionadded:: 3007.0
 
             Delete the key from the registry hive of all users currently
             logged on to the system. This will modify all sub-keys under the
@@ -583,7 +583,7 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False, all_users=Fals
 
         all_users (bool):
 
-            .. versionadded:: 3006.3
+            .. versionadded:: 3007.0
 
             Delete the value from the registry hive of all users currently
             logged on to the system. This will modify all sub-keys under the

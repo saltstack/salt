@@ -312,7 +312,7 @@ def set_value(
 
         all_users (bool):
 
-            .. versionadded:: 3006.3
+            .. versionadded:: 3007.0
 
             Apply the policy to all users currently logged on to the system.
             This will modify all sub-keys under the HKEY_USERS hive in the
@@ -448,7 +448,7 @@ def disable_value(key, v_name, policy_class="machine", all_users=False):
 
         all_users (bool):
 
-            .. versionadded:: 3006.3
+            .. versionadded:: 3007.0
 
             Apply the policy to all users currently logged on to the system.
             This will modify all sub-keys under the HKEY_USERS hive in the
@@ -554,7 +554,7 @@ def delete_value(key, v_name, policy_class="Machine", all_users=False):
 
         all_users (bool):
 
-            .. versionadded:: 3006.3
+            .. versionadded:: 3007.0
 
             Apply the policy to all users currently logged on to the system.
             This will modify all sub-keys under the HKEY_USERS hive in the

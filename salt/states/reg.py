@@ -305,7 +305,7 @@ def present(
 
         all_users (bool):
 
-            .. versionadded:: 3006.3
+            .. versionadded:: 3007.0
 
             Apply the setting to all users currently logged on to the system.
             This will modify all sub-keys under the HKEY_USERS hive in the
@@ -566,7 +566,7 @@ def absent(name, vname=None, use_32bit_registry=False, all_users=False):
 
         all_users (bool):
 
-            .. versionadded:: 3006.3
+            .. versionadded:: 3007.0
 
             Delete the value from the registry hive of all users currently
             logged on to the system. This will modify all sub-keys under the
