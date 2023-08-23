@@ -91,6 +91,21 @@ def test_generate_sls_context__one_level_init_implicit():
     )
 
 
+def test_generate_sls_context__one_level_init_implicit_with_trailing_dot():
+    """generate_sls_context - Basic one level with implicit init.sls with trailing dot"""
+    _test_generated_sls_context(
+        "/tmp/foo/init.sls",
+        "foo.",
+        tplfile="foo/init.sls",
+        tpldir="foo",
+        tpldot="foo",
+        slsdotpath="foo",
+        slscolonpath="foo",
+        sls_path="foo",
+        slspath="foo",
+    )
+
+
 def test_generate_sls_context__one_level_init_explicit():
     """generate_sls_context - Basic one level with explicit init.sls"""
     _test_generated_sls_context(
