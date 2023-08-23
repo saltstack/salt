@@ -22,7 +22,7 @@ param(
 
     [Parameter(Mandatory=$false)]
     [Alias("r")]
-    [String] $RelenvVersion = "0.12.3",
+    [String] $RelenvVersion = "0.13.4",
 
     [Parameter(Mandatory=$false)]
     [ValidateSet("x64", "x86", "amd64")]
