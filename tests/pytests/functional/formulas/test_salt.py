@@ -16,13 +16,14 @@ def modules(loaders, _formula):
     return loaders.modules
 
 
+@pytest.mark.destructive_test
 def test_salt_formula(modules):
     # Master Formula
-    ret = modules.state.sls("salt.master", test=True)
+    ret = modules.state.sls("salt.master")
     for staterun in ret:
         assert not staterun.result.failed
 
     # Minion Formula
-    ret = modules.state.sls("salt.minion", test=True)
+    ret = modules.state.sls("salt.minion")
     for staterun in ret:
         assert not staterun.result.failed
