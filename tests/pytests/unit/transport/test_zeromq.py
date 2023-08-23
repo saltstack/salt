@@ -25,5 +25,7 @@ async def test_req_server_garbage_request(io_loop):
         ret = await request_server.handle_message(None, badbyts)
     except Exception as exc:  # pylint: disable=broad-except
         pytest.fail(f"Exception was raised {exc}")
+    finally:
+        request_server.close()
 
     assert ret == {"msg": "bad load"}
