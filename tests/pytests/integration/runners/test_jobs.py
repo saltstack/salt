@@ -4,10 +4,13 @@ Tests for the salt-run command
 
 import pytest
 
-pytestmark = [pytest.mark.slow_test, pytest.mark.windows_whitelisted]
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.windows_whitelisted,
+]
 
 
-def test_master(salt_run_cli, salt_minion, salt_master):
+def test_master(salt_run_cli, salt_minion):
     """
     jobs.master
     """
@@ -16,7 +19,7 @@ def test_master(salt_run_cli, salt_minion, salt_master):
     assert ret.stdout.strip() == "[]"
 
 
-def test_active(salt_run_cli, salt_minion, salt_master):
+def test_active(salt_run_cli, salt_minion):
     """
     jobs.active
     """
@@ -25,7 +28,7 @@ def test_active(salt_run_cli, salt_minion, salt_master):
     assert ret.stdout.strip() == "{}"
 
 
-def test_lookup_jid(salt_run_cli, salt_minion, salt_master):
+def test_lookup_jid(salt_run_cli, salt_minion):
     """
     jobs.lookup_jid
     """
@@ -34,7 +37,7 @@ def test_lookup_jid(salt_run_cli, salt_minion, salt_master):
     assert ret.stdout.strip() == "{}"
 
 
-def test_lookup_jid_invalid(salt_run_cli, salt_minion, salt_master):
+def test_lookup_jid_invalid(salt_run_cli, salt_minion):
     """
     jobs.lookup_jid
     """
@@ -43,7 +46,7 @@ def test_lookup_jid_invalid(salt_run_cli, salt_minion, salt_master):
     assert expected in ret.stdout
 
 
-def test_list_jobs(salt_run_cli, salt_minion, salt_master, salt_cli):
+def test_list_jobs(salt_run_cli, salt_minion, salt_cli):
     """
     jobs.list_jobs
     """
@@ -55,13 +58,13 @@ def test_list_jobs(salt_run_cli, salt_minion, salt_master, salt_cli):
             continue
         if job["Arguments"] != ["test_list_jobs"]:
             continue
-        # We our job in the list, we're good with the test
+        # We found our job in the list, we're good with the test
         break
     else:
-        pytest.fail("Did not our job from the jobs.list_jobs call")
+        pytest.fail("Did not find our job from the jobs.list_jobs call")
 
 
-def test_target_info(salt_run_cli, salt_minion, salt_master, salt_cli):
+def test_target_info(salt_run_cli, salt_minion, salt_cli):
     """
     This is a test case for issue #48734
 
@@ -95,7 +98,7 @@ def test_target_info(salt_run_cli, salt_minion, salt_master, salt_cli):
     assert tgt_type == "glob"
 
 
-def test_jobs_runner(salt_run_cli, salt_minion, salt_master, salt_cli):
+def test_jobs_runner(salt_run_cli, salt_minion):
     """
     Test when running a runner job and then
     running jobs_list to ensure the job was saved
@@ -113,7 +116,7 @@ def test_jobs_runner(salt_run_cli, salt_minion, salt_master, salt_cli):
     assert get_job.data["jid"] == jid
 
 
-def test_target_info_salt_call(salt_run_cli, salt_minion, salt_master, salt_call_cli):
+def test_target_info_salt_call(salt_run_cli, salt_minion, salt_call_cli):
     """
     Check the job infor for a call initiated
     with salt call
