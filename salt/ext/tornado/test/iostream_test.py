@@ -885,7 +885,7 @@ class TestIOStreamSSL(TestIOStreamMixin, AsyncTestCase):
 @unittest.skipIf(not hasattr(ssl, 'SSLContext'), 'ssl.SSLContext not present')
 class TestIOStreamSSLContext(TestIOStreamMixin, AsyncTestCase):
     def _make_server_iostream(self, connection, **kwargs):
-        context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS)
         context.load_cert_chain(
             os.path.join(os.path.dirname(__file__), 'test.crt'),
             os.path.join(os.path.dirname(__file__), 'test.key'))
@@ -895,7 +895,7 @@ class TestIOStreamSSLContext(TestIOStreamMixin, AsyncTestCase):
         return SSLIOStream(connection, io_loop=self.io_loop, **kwargs)
 
     def _make_client_iostream(self, connection, **kwargs):
-        context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS)
         return SSLIOStream(connection, io_loop=self.io_loop,
                            ssl_options=context, **kwargs)
 

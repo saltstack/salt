@@ -903,7 +903,7 @@ VALID_OPTS = immutabletypes.freeze(
         # http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer
         # http://docs.python.org/2/library/ssl.html#ssl.wrap_socket
         # Note: to set enum arguments values like `cert_reqs` and `ssl_version` use constant names
-        # without ssl module prefix: `CERT_REQUIRED` or `PROTOCOL_SSLv23`.
+        # without ssl module prefix: `CERT_REQUIRED` or `PROTOCOL_TLS`.
         "ssl": (dict, bool, type(None)),
         # Controls how a multi-function job returns its data. If this is False,
         # it will return its data using a dictionary with the function name as

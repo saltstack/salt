@@ -69,10 +69,10 @@ if hasattr(ssl, 'SSLContext'):
             ssl.Purpose.CLIENT_AUTH)
     else:
         # Python 3.2-3.3
-        _client_ssl_defaults = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+        _client_ssl_defaults = ssl.SSLContext(ssl.PROTOCOL_TLS)
         _client_ssl_defaults.verify_mode = ssl.CERT_REQUIRED
         _client_ssl_defaults.load_verify_locations(certifi.where())
-        _server_ssl_defaults = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+        _server_ssl_defaults = ssl.SSLContext(ssl.PROTOCOL_TLS)
         if hasattr(ssl, 'OP_NO_COMPRESSION'):
             # Disable TLS compression to avoid CRIME and related attacks.
             # This constant wasn't added until python 3.3.
@@ -491,7 +491,7 @@ def ssl_options_to_context(ssl_options):
             isinstance(ssl_options, ssl.SSLContext)):
         return ssl_options
     context = ssl.SSLContext(
-        ssl_options.get('ssl_version', ssl.PROTOCOL_SSLv23))
+        ssl_options.get('ssl_version', ssl.PROTOCOL_TLS))
     if 'certfile' in ssl_options:
         context.load_cert_chain(ssl_options['certfile'], ssl_options.get('keyfile', None))
     if 'cert_reqs' in ssl_options:

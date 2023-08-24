@@ -135,7 +135,7 @@ class SSLTestMixin(object):
 
 class SSLv23Test(BaseSSLTest, SSLTestMixin):
     def get_ssl_version(self):
-        return ssl.PROTOCOL_SSLv23
+        return ssl.PROTOCOL_TLS
 
 
 @skipIfOldSSL
