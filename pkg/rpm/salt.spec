@@ -50,6 +50,7 @@ Requires: dmidecode
 Requires: pciutils
 Requires: which
 Requires: openssl
+Requires: (/usr/sbin/usermod and /usr/sbin/groupadd and /usr/sbin/useradd) or shadow or shadow-utils
 
 BuildRequires: python3
 BuildRequires: python3-pip
