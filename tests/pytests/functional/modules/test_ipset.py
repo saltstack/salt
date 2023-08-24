@@ -47,3 +47,19 @@ def test_ipset_add_comment_kwarg(ipset, setup_set):
     assert ret == "Success"
     check_set = ipset.list_sets()
     assert any([x for x in check_set if x["Name"] == setup_set])
+
+
+def test_ipset_new_set_with_family(ipset):
+    """
+    test ipset.new_set with set_type that uses family (eg. hash:ip)
+    """
+    set_name = "test_name_haship"
+    ret = ipset.new_set(name=set_name, set_type="hash:ip")
+    assert ret == True
+    check_set = ipset.list_sets()
+    try:
+        assert any([x for x in check_set if x["Name"] == set_name])
+    except Exception as e:
+        raise e
+    finally:
+        ipset.delete_set(set_name)
