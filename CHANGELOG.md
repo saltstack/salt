@@ -7,6 +7,74 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+## 3006.2 (2023-08-09)
+
+
+### Fixed
+
+- In scenarios where PythonNet fails to load, Salt will now fall back to WMI for
+  gathering grains information [#64897](https://github.com/saltstack/salt/issues/64897)
+
+
+### Security
+
+- fix CVE-2023-20897 by catching exception instead of letting exception disrupt connection [#cve-2023-20897](https://github.com/saltstack/salt/issues/cve-2023-20897)
+- Fixed gitfs cachedir_basename to avoid hash collisions. Added MP Lock to gitfs. These changes should stop race conditions. [#cve-2023-20898](https://github.com/saltstack/salt/issues/cve-2023-20898)
+- Upgrade to `requests==2.31.0`
+
+  Due to:
+    * https://github.com/advisories/GHSA-j8r2-6x86-q33q [#64336](https://github.com/saltstack/salt/issues/64336)
+- Upgrade to `cryptography==41.0.3`(and therefor `pyopenssl==23.2.0` due to https://github.com/advisories/GHSA-jm77-qphf-c4w8)
+
+  This only really impacts pip installs of Salt and the windows onedir since the linux and macos onedir build every package dependency from source, not from pre-existing wheels.
+
+  Also resolves the following cryptography advisories:
+
+  Due to:
+    * https://github.com/advisories/GHSA-5cpq-8wj7-hf2v
+    * https://github.com/advisories/GHSA-x4qr-2fvf-3mr5
+    * https://github.com/advisories/GHSA-w7pp-m8wf-vj6r
+
+  There is no security upgrade available for Py3.5 [#64595](https://github.com/saltstack/salt/issues/64595)
+- Bump to `certifi==2023.07.22` due to https://github.com/advisories/GHSA-xqr8-7jwr-rhp7 [#64718](https://github.com/saltstack/salt/issues/64718)
+- Upgrade `relenv` to `0.13.2` and Python to `3.10.12`
+
+  Addresses multiple CVEs in Python's dependencies: https://docs.python.org/release/3.10.12/whatsnew/changelog.html#python-3-10-12 [#64719](https://github.com/saltstack/salt/issues/64719)
+
+
+## Salt v3005.2 (2023-07-31)
+
+### Changed
+
+- Additional required package upgrades
+
+  * It's now `pyzmq>=20.0.0` on all platforms, and `<=22.0.3` just for windows.
+  * Upgrade to `pyopenssl==23.0.0` due to the cryptography upgrade. (#63757)
+
+
+### Security
+
+- fix CVE-2023-20897 by catching exception instead of letting exception disrupt connection (cve-2023-20897)
+- Fixed gitfs cachedir_basename to avoid hash collisions. Added MP Lock to gitfs. These changes should stop race conditions. (cve-2023-20898)
+- Upgrade to `requests==2.31.0`
+
+  Due to:
+    * https://github.com/advisories/GHSA-j8r2-6x86-q33q (#64336)
+- Upgrade to `cryptography==41.0.3`(and therefor `pyopenssl==23.2.0` due to https://github.com/advisories/GHSA-jm77-qphf-c4w8)
+
+  Also resolves the following cryptography advisories:
+
+  Due to:
+    * https://github.com/advisories/GHSA-5cpq-8wj7-hf2v
+    * https://github.com/advisories/GHSA-x4qr-2fvf-3mr5
+    * https://github.com/advisories/GHSA-w7pp-m8wf-vj6r
+
+  There is no security upgrade available for Py3.5 (#64595)
+- Bump to `certifi==2023.07.22` due to https://github.com/advisories/GHSA-xqr8-7jwr-rhp7
+
+  Python 3.5 cannot get the updated requirements since certifi no longer supports this python version (#64720)
+
+
 ## 3006.1 (2023-05-05)
 
 
@@ -41,7 +109,6 @@ Versions are `MAJOR.PATCH`.
 - Fix ``lgpo_reg`` state to work with User policy [#64200](https://github.com/saltstack/salt/issues/64200)
 - Cloud deployment directories are owned by salt user and group [#64204](https://github.com/saltstack/salt/issues/64204)
 - ``lgpo_reg`` state now enforces and reports changes to the registry [#64222](https://github.com/saltstack/salt/issues/64222)
-
 
 ## 3006.0 (2023-04-18)
 
@@ -1423,6 +1490,20 @@ Versions are `MAJOR.PATCH`.
   enable them globally for all state runs. [#63316](https://github.com/saltstack/salt/issues/63316)
 - Allow max queue size setting for state runs to prevent performance problems from queue growth [#63356](https://github.com/saltstack/salt/issues/63356)
 - Add support of exposing meta_server_grains for Azure VMs [#63606](https://github.com/saltstack/salt/issues/63606)
+
+
+## Salt v3005.1-2 (2022-11-04)
+
+Note: This release is only impacting the packages not the Salt code base.
+
+### Fixed
+
+- Updated pyzmq to version 22.0.3 on Windows builds because the old version was causing salt-minion/salt-call to hang (#62937)
+- Onedir Package Fix: Fix "No such file or directory" error on Rhel installs. (#62948)
+
+### Security
+
+- Update the onedir packages Python version to 3.8.15 for Windows and 3.9.15 for Linux and Mac
 
 
 ## Salt 3005.1 (2022-09-26)

@@ -275,36 +275,53 @@ def test_master_uri():
         "salt.transport.zeromq.ZMQ_VERSION_INFO", (16, 0, 1)
     ):
         # pass in both source_ip and source_port
-        assert salt.transport.zeromq._get_master_uri(
-            master_ip=m_ip, master_port=m_port, source_ip=s_ip, source_port=s_port
-        ) == "tcp://{}:{};{}:{}".format(s_ip, s_port, m_ip, m_port)
+        assert (
+            salt.transport.zeromq._get_master_uri(
+                master_ip=m_ip, master_port=m_port, source_ip=s_ip, source_port=s_port
+            )
+            == f"tcp://{s_ip}:{s_port};{m_ip}:{m_port}"
+        )
 
-        assert salt.transport.zeromq._get_master_uri(
-            master_ip=m_ip6, master_port=m_port, source_ip=s_ip6, source_port=s_port
-        ) == "tcp://[{}]:{};[{}]:{}".format(s_ip6, s_port, m_ip6, m_port)
+        assert (
+            salt.transport.zeromq._get_master_uri(
+                master_ip=m_ip6, master_port=m_port, source_ip=s_ip6, source_port=s_port
+            )
+            == f"tcp://[{s_ip6}]:{s_port};[{m_ip6}]:{m_port}"
+        )
 
         # source ip and source_port empty
-        assert salt.transport.zeromq._get_master_uri(
-            master_ip=m_ip, master_port=m_port
-        ) == "tcp://{}:{}".format(m_ip, m_port)
+        assert (
+            salt.transport.zeromq._get_master_uri(master_ip=m_ip, master_port=m_port)
+            == f"tcp://{m_ip}:{m_port}"
+        )
 
-        assert salt.transport.zeromq._get_master_uri(
-            master_ip=m_ip6, master_port=m_port
-        ) == "tcp://[{}]:{}".format(m_ip6, m_port)
+        assert (
+            salt.transport.zeromq._get_master_uri(master_ip=m_ip6, master_port=m_port)
+            == f"tcp://[{m_ip6}]:{m_port}"
+        )
 
         # pass in only source_ip
-        assert salt.transport.zeromq._get_master_uri(
-            master_ip=m_ip, master_port=m_port, source_ip=s_ip
-        ) == "tcp://{}:0;{}:{}".format(s_ip, m_ip, m_port)
+        assert (
+            salt.transport.zeromq._get_master_uri(
+                master_ip=m_ip, master_port=m_port, source_ip=s_ip
+            )
+            == f"tcp://{s_ip}:0;{m_ip}:{m_port}"
+        )
 
-        assert salt.transport.zeromq._get_master_uri(
-            master_ip=m_ip6, master_port=m_port, source_ip=s_ip6
-        ) == "tcp://[{}]:0;[{}]:{}".format(s_ip6, m_ip6, m_port)
+        assert (
+            salt.transport.zeromq._get_master_uri(
+                master_ip=m_ip6, master_port=m_port, source_ip=s_ip6
+            )
+            == f"tcp://[{s_ip6}]:0;[{m_ip6}]:{m_port}"
+        )
 
         # pass in only source_port
-        assert salt.transport.zeromq._get_master_uri(
-            master_ip=m_ip, master_port=m_port, source_port=s_port
-        ) == "tcp://0.0.0.0:{};{}:{}".format(s_port, m_ip, m_port)
+        assert (
+            salt.transport.zeromq._get_master_uri(
+                master_ip=m_ip, master_port=m_port, source_port=s_port
+            )
+            == f"tcp://0.0.0.0:{s_port};{m_ip}:{m_port}"
+        )
 
 
 def test_clear_req_channel_master_uri_override(temp_salt_minion, temp_salt_master):
