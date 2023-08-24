@@ -20,8 +20,15 @@ from tornado.locks import Lock
 
 import salt.transport.frame
 import salt.utils.msgpack
+from salt.utils.versions import warn_until
 
 log = logging.getLogger(__name__)
+
+
+warn_until(
+    3009,
+    "This module is deprecated. Use zeromq or tcp transport instead.",
+)
 
 
 # 'tornado.concurrent.Future' doesn't support
@@ -134,11 +141,10 @@ class IPCServer:
         else:
             self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
 
-        with salt.utils.asynchronous.current_ioloop(self.io_loop):
-            tornado.netutil.add_accept_handler(
-                self.sock,
-                self.handle_connection,
-            )
+        tornado.netutil.add_accept_handler(
+            self.sock,
+            self.handle_connection,
+        )
         self._started = True
 
     @tornado.gen.coroutine
@@ -235,12 +241,8 @@ class IPCServer:
 
     # pylint: disable=W1701
     def __del__(self):
-        try:
-            self.close()
-        except TypeError:
-            # This is raised when Python's GC has collected objects which
-            # would be needed when calling self.close()
-            pass
+        if not self._closing:
+            log.warning("%r never closed")
 
     # pylint: enable=W1701
 
@@ -338,8 +340,8 @@ class IPCClient:
                 break
 
             if self.stream is None:
-                with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                    self.stream = IOStream(socket.socket(sock_type, socket.SOCK_STREAM))
+                # with salt.utils.asynchronous.current_ioloop(self.io_loop):
+                self.stream = IOStream(socket.socket(sock_type, socket.SOCK_STREAM))
             try:
                 log.trace("IPCClient: Connecting to socket: %s", self.socket_path)
                 yield self.stream.connect(sock_addr)
@@ -382,12 +384,8 @@ class IPCClient:
 
     # pylint: disable=W1701
     def __del__(self):
-        try:
-            self.close()
-        except TypeError:
-            # This is raised when Python's GC has collected objects which
-            # would be needed when calling self.close()
-            pass
+        if not self._closing:
+            log.warning("%r never closed", self)
 
     # pylint: enable=W1701
 
@@ -440,8 +438,7 @@ class IPCMessageClient(IPCClient):
 
     # FIXME timeout unimplemented
     # FIXME tries unimplemented
-    @tornado.gen.coroutine
-    def send(self, msg, timeout=None, tries=None):
+    async def send(self, msg, timeout=None, tries=None):
         """
         Send a message to an IPC socket
 
@@ -451,9 +448,9 @@ class IPCMessageClient(IPCClient):
         :param int timeout: Timeout when sending message (Currently unimplemented)
         """
         if not self.connected():
-            yield self.connect()
+            await self.connect()
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
-        yield self.stream.write(pack)
+        await self.stream.write(pack)
 
 
 class IPCMessageServer(IPCServer):
@@ -676,7 +673,6 @@ class IPCMessageSubscriber(IPCClient):
                         self._read_stream_future = self.stream.read_bytes(
                             4096, partial=True
                         )
-
                     if timeout is None:
                         wire_bytes = yield self._read_stream_future
                     else:

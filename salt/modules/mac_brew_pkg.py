@@ -31,7 +31,7 @@ def __virtual__():
     """
     if __grains__["os"] != "MacOS":
         return False, "brew module is macos specific"
-    if not salt.utils.path.which("brew"):
+    if not _homebrew_os_bin():
         return False, "The 'brew' binary was not found"
     return __virtualname__
 
@@ -93,13 +93,23 @@ def _tap(tap, runas=None):
     return True
 
 
+def _homebrew_os_bin():
+    """
+    Fetch PATH binary brew full path eg: /usr/local/bin/brew (symbolic link)
+    """
+    return salt.utils.path.which("brew")
+
+
 def _homebrew_bin():
     """
-    Returns the full path to the homebrew binary in the PATH
+    Returns the full path to the homebrew binary in the homebrew installation folder
     """
-    ret = __salt__["cmd.run"]("brew --prefix", output_loglevel="trace")
-    ret += "/bin/brew"
-    return ret
+    brew = _homebrew_os_bin()
+    if brew:
+        # Fetch and ret brew installation folder full path eg: /opt/homebrew/bin/brew
+        brew = __salt__["cmd.run"](f"{brew} --prefix", output_loglevel="trace")
+        brew += "/bin/brew"
+    return brew
 
 
 def _call_brew(*cmd, failhard=True):
@@ -110,8 +120,8 @@ def _call_brew(*cmd, failhard=True):
     runas = user if user != __opts__["user"] else None
     _cmd = []
     if runas:
-        _cmd = ["sudo -i -n -H -u {} -- ".format(runas)]
-    _cmd = _cmd + [salt.utils.path.which("brew")] + list(cmd)
+        _cmd = [f"sudo -i -n -H -u {runas} -- "]
+    _cmd = _cmd + [_homebrew_bin()] + list(cmd)
     _cmd = " ".join(_cmd)
 
     runas = None
@@ -496,7 +506,7 @@ def list_upgrades(refresh=True, include_casks=False, **kwargs):  # pylint: disab
     try:
         data = salt.utils.json.loads(res["stdout"])
     except ValueError as err:
-        msg = 'unable to interpret output from "brew outdated": {}'.format(err)
+        msg = f'unable to interpret output from "brew outdated": {err}'
         log.error(msg)
         raise CommandExecutionError(msg)
 
@@ -637,11 +647,11 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
         ret[target] = {"name": target, "changes": {}, "result": False, "comment": ""}
 
         if target not in installed:
-            ret[target]["comment"] = "Package {} does not have a state.".format(target)
+            ret[target]["comment"] = f"Package {target} does not have a state."
         elif target not in pinned:
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret[target]["comment"] = "Package {} is set to be held.".format(target)
+                ret[target]["comment"] = f"Package {target} is set to be held."
             else:
                 result = _pin(target)
                 if result:
@@ -652,7 +662,7 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
                     )
                 else:
                     ret[target].update(result=False)
-                    ret[target]["comment"] = "Unable to hold package {}.".format(target)
+                    ret[target]["comment"] = f"Unable to hold package {target}."
         else:
             ret[target].update(result=True)
             ret[target]["comment"] = "Package {} is already set to be held.".format(
@@ -713,7 +723,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         ret[target] = {"name": target, "changes": {}, "result": False, "comment": ""}
 
         if target not in installed:
-            ret[target]["comment"] = "Package {} does not have a state.".format(target)
+            ret[target]["comment"] = f"Package {target} does not have a state."
         elif target in pinned:
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
@@ -727,7 +737,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                     ret[target].update(changes=changes, result=True)
                     ret[target][
                         "comment"
-                    ] = "Package {} is no longer being held.".format(target)
+                    ] = f"Package {target} is no longer being held."
                 else:
                     ret[target].update(result=False)
                     ret[target]["comment"] = "Unable to unhold package {}.".format(

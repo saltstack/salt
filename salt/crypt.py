@@ -122,8 +122,8 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     :return: Path on the filesystem to the RSA private key
     """
     base = os.path.join(keydir, keyname)
-    priv = "{}.pem".format(base)
-    pub = "{}.pub".format(base)
+    priv = f"{base}.pem"
+    pub = f"{base}.pub"
 
     if HAS_M2:
         gen = RSA.gen_key(keysize, 65537, lambda: None)
@@ -443,7 +443,7 @@ class MasterKeys(dict):
         try:
             key = get_rsa_key(path, passphrase)
         except key_error as e:
-            message = "Unable to read key: {}; passphrase may be incorrect".format(path)
+            message = f"Unable to read key: {path}; passphrase may be incorrect"
             log.error(message)
             raise MasterExit(message)
         log.debug("Loaded %s key: %s", name, path)
@@ -1527,7 +1527,7 @@ class Crypticle:
             ret_nonce = data[:32].decode()
             data = data[32:]
             if ret_nonce != nonce:
-                raise SaltClientError("Nonce verification error")
+                raise SaltClientError(f"Nonce verification error {ret_nonce} {nonce}")
         payload = salt.payload.loads(data, raw=raw)
         if isinstance(payload, dict):
             if "serial" in payload:

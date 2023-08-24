@@ -134,7 +134,7 @@ class ReqServerChannel:
                 raise tornado.gen.Return("bad load: id contains a null byte")
         except TypeError:
             log.error("Payload contains non-string id: %s", payload)
-            raise tornado.gen.Return("bad load: id {} is not a string".format(id_))
+            raise tornado.gen.Return(f"bad load: id {id_} is not a string")
 
         version = 0
         if "version" in payload:
@@ -837,20 +837,21 @@ class PubServerChannel:
                     data, salt.utils.event.tagify("present", "presence")
                 )
 
-    @tornado.gen.coroutine
-    def publish_payload(self, load, *args):
+    async def publish_payload(self, load, *args):
+        load = salt.payload.loads(load)
         unpacked_package = self.wrap_payload(load)
         try:
             payload = salt.payload.loads(unpacked_package["payload"])
         except KeyError:
             log.error("Invalid package %r", unpacked_package)
             raise
+        payload = salt.payload.dumps(payload)
         if "topic_lst" in unpacked_package:
             topic_list = unpacked_package["topic_lst"]
-            ret = yield self.transport.publish_payload(payload, topic_list)
+            ret = await self.transport.publish_payload(payload, topic_list)
         else:
-            ret = yield self.transport.publish_payload(payload)
-        raise tornado.gen.Return(ret)
+            ret = await self.transport.publish_payload(payload)
+        return ret
 
     def wrap_payload(self, load):
         payload = {"enc": "aes"}
@@ -885,7 +886,7 @@ class PubServerChannel:
 
         return int_payload
 
-    def publish(self, load):
+    async def publish(self, load):
         """
         Publish "load" to minions
         """
@@ -894,4 +895,5 @@ class PubServerChannel:
             load.get("jid", None),
             repr(load)[:40],
         )
-        self.transport.publish(load)
+        payload = salt.payload.dumps(load)
+        await self.transport.publish(payload)

@@ -25,13 +25,15 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3006.1
+Version: 3006.2
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
 License: ASL 2.0
 URL:     https://saltproject.io/
 
+Provides:  salt = %{version}
+Obsoletes: salt3 < 3006
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -68,6 +70,8 @@ servers, handle them quickly and through a simple and manageable interface.
 Summary:    Management component for salt, a parallel remote execution system
 Group:      System Environment/Daemons
 Requires:   %{name} = %{version}-%{release}
+Provides:   salt-master = %{version}
+Obsoletes:  salt3-master < 3006
 
 %description master
 The Salt master is the central server to which all minions connect.
@@ -77,6 +81,8 @@ The Salt master is the central server to which all minions connect.
 Summary:    Client component for Salt, a parallel remote execution system
 Group:      System Environment/Daemons
 Requires:   %{name} = %{version}-%{release}
+Provides:   salt-minion = %{version}
+Obsoletes:  salt3-minion < 3006
 
 %description minion
 The Salt minion is the agent component of Salt. It listens for instructions
@@ -87,6 +93,8 @@ from the master, runs jobs, and returns results back to the master.
 Summary:    Master-of-master component for Salt, a parallel remote execution system
 Group:      System Environment/Daemons
 Requires:   %{name}-master = %{version}-%{release}
+Provides:   salt-syndic = %{version}
+Obsoletes:  salt3-syndic < 3006
 
 %description syndic
 The Salt syndic is a master daemon which can receive instruction from a
@@ -98,6 +106,8 @@ infrastructure.
 Summary:    REST API for Salt, a parallel remote execution system
 Group:      Applications/System
 Requires:   %{name}-master = %{version}-%{release}
+Provides:   salt-api = %{version}
+Obsoletes:  salt3-api < 3006
 
 %description api
 salt-api provides a REST interface to the Salt master.
@@ -107,6 +117,8 @@ salt-api provides a REST interface to the Salt master.
 Summary:    Cloud provisioner for Salt, a parallel remote execution system
 Group:      Applications/System
 Requires:   %{name}-master = %{version}-%{release}
+Provides:   salt-cloud = %{version}
+Obsoletes:  salt3-cloud < 3006
 
 %description cloud
 The salt-cloud tool provisions new cloud VMs, installs salt-minion on them, and
@@ -117,6 +129,8 @@ adds them to the master's collection of controllable minions.
 Summary:    Agentless SSH-based version of Salt, a parallel remote execution system
 Group:      Applications/System
 Requires:   %{name} = %{version}-%{release}
+Provides:   salt-ssh = %{version}
+Obsoletes:  salt3-ssh < 3006
 
 %description ssh
 The salt-ssh tool can run remote execution functions and states without the use
@@ -498,6 +512,39 @@ fi
 
 
 %changelog
+* Wed Aug 09 2023 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.2
+
+# Fixed
+
+- In scenarios where PythonNet fails to load, Salt will now fall back to WMI for
+  gathering grains information [#64897](https://github.com/saltstack/salt/issues/64897)
+
+# Security
+
+- fix CVE-2023-20897 by catching exception instead of letting exception disrupt connection [#cve-2023-20897](https://github.com/saltstack/salt/issues/cve-2023-20897)
+- Fixed gitfs cachedir_basename to avoid hash collisions. Added MP Lock to gitfs. These changes should stop race conditions. [#cve-2023-20898](https://github.com/saltstack/salt/issues/cve-2023-20898)
+- Upgrade to `requests==2.31.0`
+
+  Due to:
+    * https://github.com/advisories/GHSA-j8r2-6x86-q33q [#64336](https://github.com/saltstack/salt/issues/64336)
+- Upgrade to `cryptography==41.0.3`(and therefor `pyopenssl==23.2.0` due to https://github.com/advisories/GHSA-jm77-qphf-c4w8)
+
+  This only really impacts pip installs of Salt and the windows onedir since the linux and macos onedir build every package dependency from source, not from pre-existing wheels.
+
+  Also resolves the following cryptography advisories:
+
+  Due to:
+    * https://github.com/advisories/GHSA-5cpq-8wj7-hf2v
+    * https://github.com/advisories/GHSA-x4qr-2fvf-3mr5
+    * https://github.com/advisories/GHSA-w7pp-m8wf-vj6r
+
+  There is no security upgrade available for Py3.5 [#64595](https://github.com/saltstack/salt/issues/64595)
+- Bump to `certifi==2023.07.22` due to https://github.com/advisories/GHSA-xqr8-7jwr-rhp7 [#64718](https://github.com/saltstack/salt/issues/64718)
+- Upgrade `relenv` to `0.13.2` and Python to `3.10.12`
+
+  Addresses multiple CVEs in Python's dependencies: https://docs.python.org/release/3.10.12/whatsnew/changelog.html#python-3-10-12 [#64719](https://github.com/saltstack/salt/issues/64719)
+
+
 * Fri May 05 2023 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.1
 
 # Fixed
