@@ -465,10 +465,13 @@ class GitProvider:
             "/", "_"
         )  # replace "/" with "_" to not cause trouble with file system
         self._cache_hash = salt.utils.path.join(cache_root, self._cache_basehash)
-        try:
-            self._cache_basename = self.get_checkout_target()
-        except AttributeError:
-            self._cache_basename = "_"
+        self._cache_basename = "_"
+        if self.id.startswith("__env__"):
+            try:
+                self._cache_basename = self.get_checkout_target()
+            except AttributeError:
+                log.critical(f"__env__ cant generate basename: {self.role} {self.id}")
+                failhard(self.role)
         self._cache_full_basename = salt.utils.path.join(
             self._cache_basehash, self._cache_basename
         )
@@ -2566,8 +2569,8 @@ class GitBase:
         remote_set = {r.get_cache_basehash() for r in self.remotes}
         for item in self._iter_remote_hashs():
             if item not in remote_set:
-                change = change or self._remove_cache_dir(
-                    salt.utils.path.join(self.cache_root, item)
+                change = self._remove_cache_dir(
+                    salt.utils.path.join(self.cache_root, item) or change
                 )
         if not change:
             self.write_remote_map()
