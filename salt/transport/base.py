@@ -90,7 +90,7 @@ def publish_server(opts, **kwargs):
         import salt.transport.local
 
         return salt.transport.local.LocalPubServerChannel(opts, **kwargs)
-    raise Exception("Transport type not found: {}".format(ttype))
+    raise Exception(f"Transport type not found: {ttype}")
 
 
 def publish_client(opts, io_loop, host=None, port=None, path=None, transport=None):
@@ -118,7 +118,7 @@ def publish_client(opts, io_loop, host=None, port=None, path=None, transport=Non
             opts, io_loop, host=host, port=port, path=path
         )
 
-    raise Exception("Transport type not found: {}".format(ttype))
+    raise Exception(f"Transport type not found: {ttype}")
 
 
 def _minion_hash(hash_type, minion_id):
@@ -154,9 +154,7 @@ def ipc_publish_client(node, opts, io_loop):
                 minion_id=opts.get("hash_id", opts["id"]),
             )
             kwargs.update(
-                path=os.path.join(
-                    opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
-                )
+                path=os.path.join(opts["sock_dir"], f"minion_event_{id_hash}_pub.ipc")
             )
     return publish_client(opts, io_loop, **kwargs)
 
@@ -190,13 +188,11 @@ def ipc_publish_server(node, opts):
                 hash_type=opts["hash_type"],
                 minion_id=opts.get("hash_id", opts["id"]),
             )
-            pub_path = os.path.join(
-                opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
-            )
+            pub_path = os.path.join(opts["sock_dir"], f"minion_event_{id_hash}_pub.ipc")
             kwargs.update(
                 pub_path=pub_path,
                 pull_path=os.path.join(
-                    opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
+                    opts["sock_dir"], f"minion_event_{id_hash}_pull.ipc"
                 ),
             )
     return publish_server(opts, **kwargs)
