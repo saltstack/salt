@@ -21,35 +21,33 @@ from tests.support.mock import MagicMock, patch
 log = logging.getLogger(__name__)
 
 
-def test_minion_load_grains_false():
+def test_minion_load_grains_false(minion_opts):
     """
     Minion does not generate grains when load_grains is False
     """
-    opts = {"random_startup_delay": 0, "grains": {"foo": "bar"}}
+    minion_opts["grains"] = {"foo": "bar"}
     with patch("salt.loader.grains") as grainsfunc:
-        minion = salt.minion.Minion(opts, load_grains=False)
-        assert minion.opts["grains"] == opts["grains"]
+        minion = salt.minion.Minion(minion_opts, load_grains=False)
+        assert minion.opts["grains"] == minion_opts["grains"]
         grainsfunc.assert_not_called()
 
 
-def test_minion_load_grains_true():
+def test_minion_load_grains_true(minion_opts):
     """
     Minion generates grains when load_grains is True
     """
-    opts = {"random_startup_delay": 0, "grains": {}}
     with patch("salt.loader.grains") as grainsfunc:
-        minion = salt.minion.Minion(opts, load_grains=True)
+        minion = salt.minion.Minion(minion_opts, load_grains=True)
         assert minion.opts["grains"] != {}
         grainsfunc.assert_called()
 
 
-def test_minion_load_grains_default():
+def test_minion_load_grains_default(minion_opts):
     """
     Minion load_grains defaults to True
     """
-    opts = {"random_startup_delay": 0, "grains": {}}
     with patch("salt.loader.grains") as grainsfunc:
-        minion = salt.minion.Minion(opts)
+        minion = salt.minion.Minion(minion_opts)
         assert minion.opts["grains"] != {}
         grainsfunc.assert_called()
 
@@ -140,22 +138,17 @@ async def test_send_req_async_regression_62453(minion_opts):
         assert rtn is False
 
 
-def test_mine_send_tries():
+def test_mine_send_tries(minion_opts):
     channel_enter = MagicMock()
     channel_enter.send.side_effect = lambda load, timeout, tries: tries
     channel = MagicMock()
     channel.__enter__.return_value = channel_enter
 
-    opts = {
-        "random_startup_delay": 0,
-        "grains": {},
-        "return_retry_tries": 20,
-        "minion_sign_messages": False,
-    }
+    minion_opts["return_retry_tries"] = 20
     with patch("salt.channel.client.ReqChannel.factory", return_value=channel), patch(
         "salt.loader.grains"
     ):
-        minion = salt.minion.Minion(opts)
+        minion = salt.minion.Minion(minion_opts)
         minion.tok = "token"
 
         data = {}
