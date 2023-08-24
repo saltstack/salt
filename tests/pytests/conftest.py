@@ -7,11 +7,9 @@ import inspect
 import logging
 import os
 import pathlib
-import random
 import shutil
 import ssl
 import stat
-import string
 import sys
 import tempfile
 import types
@@ -165,7 +163,7 @@ def salt_master_factory(
         "redundant_minions": "N@min or N@mins",
         "nodegroup_loop_a": "N@nodegroup_loop_b",
         "nodegroup_loop_b": "N@nodegroup_loop_a",
-        "missing_minion": f"L@{salt_minion_id},ghostminion",
+        "missing_minion": "L@{},ghostminion".format(salt_minion_id),
         "list_group": "N@multiline_nodegroup",
         "one_list_group": "N@one_minion_list",
         "list_group2": "N@list_nodegroup",
@@ -177,7 +175,7 @@ def salt_master_factory(
         "etcd.port": sdb_etcd_port,
     }
     config_defaults["vault"] = {
-        "url": f"http://127.0.0.1:{vault_port}",
+        "url": "http://127.0.0.1:{}".format(vault_port),
         "auth": {"method": "token", "token": "testsecret", "uses": 0},
         "policies": ["testpolicy"],
     }
@@ -211,7 +209,7 @@ def salt_master_factory(
     config_overrides["external_auth"] = {
         "pam": {
             salt_auth_account_1_factory.username: ["test.*"],
-            f"{salt_auth_account_2_factory.group_name}%": [
+            "{}%".format(salt_auth_account_2_factory.group_name): [
                 "@wheel",
                 "@runner",
                 "test.*",
@@ -309,7 +307,7 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vaul
         "etcd.port": sdb_etcd_port,
     }
     config_defaults["vault"] = {
-        "url": f"http://127.0.0.1:{vault_port}",
+        "url": "http://127.0.0.1:{}".format(vault_port),
         "auth": {"method": "token", "token": "testsecret", "uses": 0},
         "policies": ["testpolicy"],
     }
@@ -507,7 +505,7 @@ def tmp_path_world_rw(request):
     Temporary path which is world read/write for tests that run under a different account
     """
     tempdir_path = pathlib.Path(basetemp=tempfile.gettempdir()).resolve()
-    path = tempdir_path / f"world-rw-{id(request.node)}"
+    path = tempdir_path / "world-rw-{}".format(id(request.node))
     path.mkdir(exist_ok=True)
     path.chmod(0o777)
     try:
@@ -648,17 +646,6 @@ def delta_proxy_minion_ids():
         "dummy_proxy_three",
         "dummy_proxy_four",
     ]
-
-
-@pytest.fixture
-def system_user(salt_call_cli):
-    try:
-        rand_str = "".join(random.choices(string.ascii_lowercase, k=3))
-        username = f"salt-{rand_str}"
-        salt_call_cli.run("--local", "user.add", username)
-        yield username
-    finally:
-        salt_call_cli.run("--local", "user.delete", username, purge=True, force=True)
 
 
 # <---- Helpers ------------------------------------------------------------------------------------------------------
