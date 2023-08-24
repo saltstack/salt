@@ -92,7 +92,7 @@ class SyncWrapper:
             self._async_methods += self.obj._coroutines
 
     def __repr__(self):
-        return "<SyncWrapper(cls={})".format(self.cls)
+        return f"<SyncWrapper(cls={self.cls})"
 
     def close(self):
         for method in self._close_methods:

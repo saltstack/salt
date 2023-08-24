@@ -134,7 +134,7 @@ class ReqServerChannel:
                 raise tornado.gen.Return("bad load: id contains a null byte")
         except TypeError:
             log.error("Payload contains non-string id: %s", payload)
-            raise tornado.gen.Return("bad load: id {} is not a string".format(id_))
+            raise tornado.gen.Return(f"bad load: id {id_} is not a string")
 
         version = 0
         if "version" in payload:
