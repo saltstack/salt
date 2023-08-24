@@ -50,6 +50,9 @@ Requires: dmidecode
 Requires: pciutils
 Requires: which
 Requires: openssl
+Requires: /usr/sbin/usermod
+Requires: /usr/sbin/groupadd
+Requires: /usr/sbin/useradd
 
 BuildRequires: python3
 BuildRequires: python3-pip
