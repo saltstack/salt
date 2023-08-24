@@ -45,6 +45,14 @@ def configure_loader_modules():
     return {watchdog: {}}
 
 
+@pytest.fixture(autouse=True)
+def _close_watchdog(configure_loader_modules):
+    try:
+        yield
+    finally:
+        watchdog.close({})
+
+
 def assertValid(config):
     ret = watchdog.validate(config)
     assert ret == (True, "Valid beacon configuration")
