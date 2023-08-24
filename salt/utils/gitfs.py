@@ -2553,7 +2553,7 @@ class GitBase:
         log.debug("%s removed old cachedir %s", self.role, cache_dir)
         return True
 
-    def _iter_remote_hashs(self):
+    def _iter_remote_hashes(self):
         for item in os.listdir(self.cache_root):
             if item in ("hash", "refs", "links"):
                 continue
@@ -2567,7 +2567,7 @@ class GitBase:
         change = False
         # Remove all hash dirs not part of this group
         remote_set = {r.get_cache_basehash() for r in self.remotes}
-        for item in self._iter_remote_hashs():
+        for item in self._iter_remote_hashes():
             if item not in remote_set:
                 change = self._remove_cache_dir(
                     salt.utils.path.join(self.cache_root, item) or change
@@ -2650,8 +2650,7 @@ class GitBase:
                                     pass
                             except Exception as exc:  # pylint: disable=broad-except
                                 log.error(
-                                    f"Failed to place fetch request: {fetch_path}",
-                                    exc,
+                                    f"Failed to place fetch request: {fetch_path} {exc}",
                                     exc_info=True,
                                 )
                         else:

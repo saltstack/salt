@@ -350,25 +350,27 @@ def context_cache(func):
     return context_cache_wrap
 
 
-def verify_cache_version(cache):
+def verify_cache_version(cache_path):
     """
     Check that cache version matches salt version.
     If cache version deos not matches salt version wipe the cache.
 
     :return: True if cache version matched. False if cache version did not match.
     """
+    if not os.path.isdir(cache_path):
+        os.mkdir(cache_path)
     with salt.utils.files.fopen(
-        salt.utils.path.join(cache, "cache_version"), "a+"
+        salt.utils.path.join(cache_path, "cache_version"), "a+"
     ) as file:
         file.seek(0)
         data = "\n".join(file.readlines())
         if data != salt.version.__version__:
-            log.warning(f"Cache version mismatch clearing: {repr(cache)}")
+            log.warning(f"Cache version mismatch clearing: {repr(cache_path)}")
             file.truncate(0)
             file.write(salt.version.__version__)
-            for item in os.listdir(cache):
+            for item in os.listdir(cache_path):
                 if item != "cache_version":
-                    item_path = salt.utils.path.join(cache, item)
+                    item_path = salt.utils.path.join(cache_path, item)
                     if os.path.isfile(item_path):
                         os.remove(item_path)
                     else:
