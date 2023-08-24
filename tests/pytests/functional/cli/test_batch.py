@@ -140,7 +140,7 @@ class MockSubscriber:
             },
             use_bin_type=True,
         )
-        tag = "salt/job/{}/ret".format(jid).encode()
+        tag = f"salt/job/{jid}/ret".encode()
         return b"".join([tag, b"\n\n", dumped])
 
     def connect(self, timeout=None):
