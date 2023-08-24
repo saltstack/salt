@@ -2320,14 +2320,9 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
     log.trace(
         "Getting OS name, release, and codename from distro id, version, codename"
     )
-    try:
-        (osname, osrelease, oscodename) = (
-            x.strip('"').strip("'") for x in _linux_distribution()
-        )
-    except subprocess.CalledProcessError:
-        # When running under the salt user, a call to `lsb_release` might raise
-        # permissin errors.
-        return grains
+    (osname, osrelease, oscodename) = (
+        x.strip('"').strip("'") for x in _linux_distribution()
+    )
     # Try to assign these three names based on the lsb info, they tend to
     # be more accurate than what python gets from /etc/DISTRO-release.
     # It's worth noting that Ubuntu has patched their Python distribution
