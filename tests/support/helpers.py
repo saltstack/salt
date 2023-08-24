@@ -74,7 +74,7 @@ def no_symlinks():
         ret = subprocess.run(
             ["git", "config", "--get", "core.symlinks"],
             shell=False,
-            universal_newlines=True,
+            text=True,
             cwd=RUNTIME_VARS.CODE_DIR,
             stdout=subprocess.PIPE,
             check=False,
@@ -509,7 +509,7 @@ class ForceImportErrorOn:
         if name in self.__module_names:
             importerror_fromlist = self.__module_names.get(name)
             if importerror_fromlist is None:
-                raise ImportError("Forced ImportError raised for {!r}".format(name))
+                raise ImportError(f"Forced ImportError raised for {name!r}")
 
             if importerror_fromlist.intersection(set(fromlist)):
                 raise ImportError(
@@ -699,7 +699,7 @@ def with_system_user(
                 log.debug("Failed to create system user")
                 # The user was not created
                 if on_existing == "skip":
-                    cls.skipTest("Failed to create system user {!r}".format(username))
+                    cls.skipTest(f"Failed to create system user {username!r}")
 
                 if on_existing == "delete":
                     log.debug("Deleting the system user %r", username)
@@ -727,7 +727,7 @@ def with_system_user(
                     hashed_password = password
                 else:
                     hashed_password = salt.utils.pycrypto.gen_hash(password=password)
-                hashed_password = "'{}'".format(hashed_password)
+                hashed_password = f"'{hashed_password}'"
                 add_pwd = cls.run_function(
                     "shadow.set_password", [username, hashed_password]
                 )
@@ -806,7 +806,7 @@ def with_system_group(group, on_existing="delete", delete=True):
                 log.debug("Failed to create system group")
                 # The group was not created
                 if on_existing == "skip":
-                    cls.skipTest("Failed to create system group {!r}".format(group))
+                    cls.skipTest(f"Failed to create system group {group!r}")
 
                 if on_existing == "delete":
                     log.debug("Deleting the system group %r", group)
@@ -903,7 +903,7 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
                 log.debug("Failed to create system user")
                 # The user was not created
                 if on_existing == "skip":
-                    cls.skipTest("Failed to create system user {!r}".format(username))
+                    cls.skipTest(f"Failed to create system user {username!r}")
 
                 if on_existing == "delete":
                     log.debug("Deleting the system user %r", username)
@@ -930,7 +930,7 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
                 log.debug("Failed to create system group")
                 # The group was not created
                 if on_existing == "skip":
-                    cls.skipTest("Failed to create system group {!r}".format(group))
+                    cls.skipTest(f"Failed to create system group {group!r}")
 
                 if on_existing == "delete":
                     log.debug("Deleting the system group %r", group)
@@ -1099,7 +1099,7 @@ def _check_required_sminion_attributes(sminion_attr, *required_items):
     available_items = list(getattr(sminion, sminion_attr))
     not_available_items = set()
 
-    name = "__not_available_{items}s__".format(items=sminion_attr)
+    name = f"__not_available_{sminion_attr}s__"
     if not hasattr(sminion, name):
         setattr(sminion, name, set())
 
@@ -1181,13 +1181,13 @@ def skip_if_binaries_missing(*binaries, **kwargs):
             if salt.utils.path.which(binary) is None:
                 return skip(
                     "{}The {!r} binary was not found".format(
-                        message and "{}. ".format(message) or "", binary
+                        message and f"{message}. " or "", binary
                     )
                 )
     elif salt.utils.path.which_bin(binaries) is None:
         return skip(
             "{}None of the following binaries was found: {}".format(
-                message and "{}. ".format(message) or "", ", ".join(binaries)
+                message and f"{message}. " or "", ", ".join(binaries)
             )
         )
     return _id
@@ -1747,7 +1747,7 @@ class VirtualEnv:
             pytest.fail("'virtualenv' binary not found")
         cmd = [
             virtualenv,
-            "--python={}".format(self.get_real_python()),
+            f"--python={self.get_real_python()}",
         ]
         if self.system_site_packages:
             cmd.append("--system-site-packages")
@@ -1880,7 +1880,7 @@ class Keys:
 
     @property
     def pub_path(self):
-        return self.priv_path.with_name("{}.pub".format(self.priv_path.name))
+        return self.priv_path.with_name(f"{self.priv_path.name}.pub")
 
     @property
     def pub(self):

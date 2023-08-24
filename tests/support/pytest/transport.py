@@ -87,7 +87,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             self.sock = self.ctx.socket(zmq.SUB)
             self.sock.setsockopt(zmq.LINGER, -1)
             self.sock.setsockopt(zmq.SUBSCRIBE, b"")
-            pub_uri = "tcp://{}:{}".format(self.interface, self.port)
+            pub_uri = f"tcp://{self.interface}:{self.port}"
             log.info("Collector listen %s", pub_uri)
             self.sock.connect(pub_uri)
         else:
@@ -137,7 +137,6 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         self.started.set()
         last_msg = time.time()
         self.start = last_msg
-        serial = salt.payload.Serial(self.minion_config)
         crypticle = salt.crypt.Crypticle(self.minion_config, self.aes_key)
         self.gotone = False
         try:
