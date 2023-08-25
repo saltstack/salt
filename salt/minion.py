@@ -37,7 +37,6 @@ import salt.serializers.msgpack
 import salt.syspaths
 import salt.transport
 import salt.utils.args
-import salt.utils.cache
 import salt.utils.context
 import salt.utils.crypt
 import salt.utils.data
@@ -1249,7 +1248,6 @@ class Minion(MinionBase):
         self.jid_queue = [] if jid_queue is None else jid_queue
         self.periodic_callbacks = {}
 
-        salt.utils.cache.verify_cache_version(self.opts["cachedir"])
         if io_loop is None:
             self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         else:
