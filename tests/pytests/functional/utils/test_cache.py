@@ -34,7 +34,7 @@ def _dummy_files_exists(tmp_path):
     for full_path in _ROOT_DIR:
         full_path = salt.utils.path.join(tmp_path, full_path)
         path, _ = os.path.split(full_path)
-        is_file = os.path.isdir(path) and os.path.isfile(full_path)
+        is_file = os.path.isfile(full_path)
         if ret is None:
             ret = is_file
         elif ret is not is_file:

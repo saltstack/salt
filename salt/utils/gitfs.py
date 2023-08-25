@@ -1201,8 +1201,11 @@ class GitProvider:
             log.debug(f"Fetch request: {self._salt_working_dir}")
             try:
                 os.remove(fetch_request)
-            except Exception:  # pylint: disable=broad-except
-                pass
+            except OSError as exc:
+                log.error(
+                    f"Failed to remove Fetch request: {self._salt_working_dir} {exc}",
+                    exc_info=True,
+                )
             self.fetch()
             return True
         return False
@@ -1296,6 +1299,9 @@ class GitPython(GitProvider):
         instead of a specific exception class because the exceptions raised by
         GitPython when running these functions vary in different versions of
         GitPython.
+
+        fetch_on_fail
+          If checkout fails perform a fetch then try to checkout again.
         """
         self.fetch_request_check()
         tgt_ref = self.get_checkout_target()
@@ -1631,6 +1637,9 @@ class Pygit2(GitProvider):
     def checkout(self, fetch_on_fail=True):
         """
         Checkout the configured branch/tag
+
+        fetch_on_fail
+          If checkout fails perform a fetch then try to checkout again.
         """
         self.fetch_request_check()
         tgt_ref = self.get_checkout_target()
@@ -2650,13 +2659,13 @@ class GitBase:
                             try:
                                 with salt.utils.files.fopen(fetch_path, "w"):
                                     pass
-                            except Exception as exc:  # pylint: disable=broad-except
+                            except OSError as exc:  # pylint: disable=broad-except
                                 log.error(
-                                    f"Failed to place fetch request: {fetch_path} {exc}",
+                                    f"Failed to make fetch request: {fetch_path} {exc}",
                                     exc_info=True,
                                 )
                         else:
-                            log.error(f"Failed to place fetch request: {fetch_path}")
+                            log.error(f"Failed to make fetch request: {fetch_path}")
                     if repo.fetch():
                         # We can't just use the return value from repo.fetch()
                         # because the data could still have changed if old
