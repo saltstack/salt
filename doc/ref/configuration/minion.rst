@@ -3160,7 +3160,7 @@ and `Python <https://docs.python.org/3/library/ssl.html#ssl.wrap_socket>`_
 documentation.
 
 Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use
-constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_TLS``.
+constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23``.
 
 .. code-block:: yaml
 
