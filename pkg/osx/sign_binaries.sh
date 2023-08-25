@@ -68,7 +68,7 @@ quit_on_error() {
 echo "**** Setting Variables"
 INSTALL_DIR=/opt/salt
 PY_VERSION=3.9
-PY_DOT_VERSION=3.9.17
+PY_DOT_VERSION=3.9.18
 CMD_OUTPUT=$(mktemp -t cmd.log)
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
