@@ -18,6 +18,10 @@ on:
         type: boolean
         default: false
         description: Sign Windows Packages
+      skip-test-pypi-publish:
+        type: boolean
+        default: false
+        description: Skip publishing the source package to Test PyPi(For example, CVE releases)
       skip-salt-test-suite:
         type: boolean
         default: false
@@ -39,6 +43,7 @@ env:
 permissions:
   contents: read  # for dorny/paths-filter to fetch a list of changed files
   pull-requests: read  # for dorny/paths-filter to read pull requests
+  actions: read  # for technote-space/workflow-conclusion-action to get the job statuses
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}
@@ -48,7 +53,7 @@ jobs:
 
   check-requirements:
     name: Check Requirements
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     environment: staging-check
     steps:
       - name: Check For Admin Permission
@@ -59,7 +64,7 @@ jobs:
 
   prepare-workflow:
     name: Prepare Workflow Run
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     needs:
       - check-requirements
     outputs:
@@ -192,6 +197,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+          if [ "${{ github.event.repository.private }}" = "true" ]; then
+            tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
+          fi
 
       - name: Write Changed Files To A Local File
         run:
@@ -452,7 +460,7 @@ jobs:
     needs:
       - prepare-workflow
       - prepare-release
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v3
 
@@ -499,7 +507,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.13.2"
+      relenv-version: "0.13.4"
       python-version: "3.10.12"
 
   build-salt-onedir:
@@ -515,7 +523,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.13.2"
+      relenv-version: "0.13.4"
       python-version: "3.10.12"
 
   build-rpm-pkgs:
@@ -527,7 +535,7 @@ jobs:
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.2"
+      relenv-version: "0.13.4"
       python-version: "3.10.12"
 
   build-deb-pkgs:
@@ -539,7 +547,7 @@ jobs:
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.2"
+      relenv-version: "0.13.4"
       python-version: "3.10.12"
 
   build-windows-pkgs:
@@ -551,7 +559,7 @@ jobs:
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.2"
+      relenv-version: "0.13.4"
       python-version: "3.10.12"
       environment: staging
       sign-packages: ${{ inputs.sign-windows-packages }}
@@ -566,7 +574,7 @@ jobs:
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.2"
+      relenv-version: "0.13.4"
       python-version: "3.10.12"
       environment: staging
       sign-packages: true
@@ -2703,7 +2711,7 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPi(test)
-    if: ${{ github.event.repository.fork != true }}
+    if: ${{ inputs.skip-test-pypi-publish != true && github.event.repository.fork != true }}
     needs:
       - prepare-workflow
       - upload-release-artifacts
@@ -2834,7 +2842,7 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     needs:
       - check-requirements
       - prepare-workflow

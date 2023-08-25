@@ -3,6 +3,7 @@ Classes which provide the shared base for GitFS, git_pillar, and winrepo
 """
 
 
+import base64
 import contextlib
 import copy
 import errno
@@ -11,10 +12,12 @@ import glob
 import hashlib
 import io
 import logging
+import multiprocessing
 import os
 import shlex
 import shutil
 import stat
+import string
 import subprocess
 import time
 import weakref
@@ -214,7 +217,7 @@ def failhard(role):
     """
     Fatal configuration issue, raise an exception
     """
-    raise FileserverConfigError("Failed to load {}".format(role))
+    raise FileserverConfigError(f"Failed to load {role}")
 
 
 class GitProvider:
@@ -225,6 +228,10 @@ class GitProvider:
     self.provider should be set in the sub-class' __init__ function before
     invoking the parent class' __init__.
     """
+
+    # master lock should only be locked for very short periods of times "seconds"
+    # the master lock should be used when ever git provider reads or writes to one if it locks
+    _master_lock = multiprocessing.Lock()
 
     def __init__(
         self,
@@ -239,7 +246,7 @@ class GitProvider:
         self.opts = opts
         self.role = role
         self.global_saltenv = salt.utils.data.repack_dictlist(
-            self.opts.get("{}_saltenv".format(self.role), []),
+            self.opts.get(f"{self.role}_saltenv", []),
             strict=True,
             recurse=True,
             key_cb=str,
@@ -402,7 +409,7 @@ class GitProvider:
             # when instantiating an instance of a GitBase subclass. Make sure
             # that we set this attribute so we at least have a sane default and
             # are able to fetch.
-            key = "{}_refspecs".format(self.role)
+            key = f"{self.role}_refspecs"
             try:
                 default_refspecs = _DEFAULT_MASTER_OPTS[key]
             except KeyError:
@@ -452,13 +459,44 @@ class GitProvider:
             failhard(self.role)
 
         hash_type = getattr(hashlib, self.opts.get("hash_type", "md5"))
+        # Generate full id.
+        # Full id helps decrease the chances of collections in the gitfs cache.
+        try:
+            target = str(self.get_checkout_target())
+        except AttributeError:
+            target = ""
+        self._full_id = "-".join(
+            [
+                getattr(self, "name", ""),
+                self.id,
+                getattr(self, "env", ""),
+                getattr(self, "_root", ""),
+                self.role,
+                getattr(self, "base", ""),
+                getattr(self, "branch", ""),
+                target,
+            ]
+        )
         # We loaded this data from yaml configuration files, so, its safe
         # to use UTF-8
-        self.hash = hash_type(self.id.encode("utf-8")).hexdigest()
-        self.cachedir_basename = getattr(self, "name", self.hash)
+        base64_hash = str(
+            base64.b64encode(hash_type(self._full_id.encode("utf-8")).digest()),
+            encoding="ascii",  # base64 only outputs ascii
+        ).replace(
+            "/", "_"
+        )  # replace "/" with "_" to not cause trouble with file system
+
+        # limit name length to 19, so we don't eat up all the path length for windows
+        # this is due to pygit2 limitations
+        # replace any unknown char with "_" to not cause trouble with file system
+        name_chars = string.ascii_letters + string.digits + "-"
+        cache_name = "".join(
+            c if c in name_chars else "_" for c in getattr(self, "name", "")[:19]
+        )
+
+        self.cachedir_basename = f"{cache_name}-{base64_hash}"
         self.cachedir = salt.utils.path.join(cache_root, self.cachedir_basename)
         self.linkdir = salt.utils.path.join(cache_root, "links", self.cachedir_basename)
-
         if not os.path.isdir(self.cachedir):
             os.makedirs(self.cachedir)
 
@@ -472,6 +510,12 @@ class GitProvider:
                 msg += " Perhaps git is not available."
             log.critical(msg, exc_info=True)
             failhard(self.role)
+
+    def full_id(self):
+        return self._full_id
+
+    def get_cachedir_basename(self):
+        return self.cachedir_basename
 
     def _get_envs_from_ref_paths(self, refs):
         """
@@ -663,6 +707,19 @@ class GitProvider:
         """
         Clear update.lk
         """
+        if self.__class__._master_lock.acquire(timeout=60) is False:
+            # if gitfs works right we should never see this timeout error.
+            log.error("gitfs master lock timeout!")
+            raise TimeoutError("gitfs master lock timeout!")
+        try:
+            return self._clear_lock(lock_type)
+        finally:
+            self.__class__._master_lock.release()
+
+    def _clear_lock(self, lock_type="update"):
+        """
+        Clear update.lk without MultiProcessing locks
+        """
         lock_file = self._get_lock_file(lock_type=lock_type)
 
         def _add_error(errlist, exc):
@@ -838,6 +895,20 @@ class GitProvider:
         """
         Place a lock file if (and only if) it does not already exist.
         """
+        if self.__class__._master_lock.acquire(timeout=60) is False:
+            # if gitfs works right we should never see this timeout error.
+            log.error("gitfs master lock timeout!")
+            raise TimeoutError("gitfs master lock timeout!")
+        try:
+            return self.__lock(lock_type, failhard)
+        finally:
+            self.__class__._master_lock.release()
+
+    def __lock(self, lock_type="update", failhard=False):
+        """
+        Place a lock file if (and only if) it does not already exist.
+        Without MultiProcessing locks.
+        """
         try:
             fh_ = os.open(
                 self._get_lock_file(lock_type), os.O_CREAT | os.O_EXCL | os.O_WRONLY
@@ -870,7 +941,7 @@ class GitProvider:
                         )
                     )
                     if pid:
-                        msg += " Process {} obtained the lock".format(pid)
+                        msg += f" Process {pid} obtained the lock"
                         if not pid_exists(pid):
                             msg += (
                                 " but this process is not running. The "
@@ -904,9 +975,9 @@ class GitProvider:
                             lock_type,
                             lock_file,
                         )
-                    success, fail = self.clear_lock()
+                    success, fail = self._clear_lock()
                     if success:
-                        return self._lock(lock_type="update", failhard=failhard)
+                        return self.__lock(lock_type="update", failhard=failhard)
                     elif failhard:
                         raise
                     return
@@ -916,7 +987,7 @@ class GitProvider:
                 )
                 log.error(msg, exc_info=True)
                 raise GitLockError(exc.errno, msg)
-        msg = "Set {} lock for {} remote '{}'".format(lock_type, self.role, self.id)
+        msg = f"Set {lock_type} lock for {self.role} remote '{self.id}'"
         log.debug(msg)
         return msg
 
@@ -945,7 +1016,7 @@ class GitProvider:
         Set and automatically clear a lock
         """
         if not isinstance(lock_type, str):
-            raise GitLockError(errno.EINVAL, "Invalid lock_type '{}'".format(lock_type))
+            raise GitLockError(errno.EINVAL, f"Invalid lock_type '{lock_type}'")
 
         # Make sure that we have a positive integer timeout, otherwise just set
         # it to zero.
@@ -1073,7 +1144,7 @@ class GitProvider:
 
         for ref_type in self.ref_types:
             try:
-                func_name = "get_tree_from_{}".format(ref_type)
+                func_name = f"get_tree_from_{ref_type}"
                 func = getattr(self, func_name)
             except AttributeError:
                 log.error(
@@ -1089,7 +1160,7 @@ class GitProvider:
         if self.fallback:
             for ref_type in self.ref_types:
                 try:
-                    func_name = "get_tree_from_{}".format(ref_type)
+                    func_name = f"get_tree_from_{ref_type}"
                     func = getattr(self, func_name)
                 except AttributeError:
                     log.error(
@@ -1462,7 +1533,7 @@ class GitPython(GitProvider):
         """
         try:
             return git.RemoteReference(
-                self.repo, "refs/remotes/origin/{}".format(ref)
+                self.repo, f"refs/remotes/origin/{ref}"
             ).commit.tree
         except ValueError:
             return None
@@ -1472,7 +1543,7 @@ class GitPython(GitProvider):
         Return a git.Tree object matching a tag ref fetched into refs/tags/
         """
         try:
-            return git.TagReference(self.repo, "refs/tags/{}".format(ref)).commit.tree
+            return git.TagReference(self.repo, f"refs/tags/{ref}").commit.tree
         except ValueError:
             return None
 
@@ -2029,7 +2100,7 @@ class Pygit2(GitProvider):
         """
         try:
             return self.peel(
-                self.repo.lookup_reference("refs/remotes/origin/{}".format(ref))
+                self.repo.lookup_reference(f"refs/remotes/origin/{ref}")
             ).tree
         except KeyError:
             return None
@@ -2039,9 +2110,7 @@ class Pygit2(GitProvider):
         Return a pygit2.Tree object matching a tag ref fetched into refs/tags/
         """
         try:
-            return self.peel(
-                self.repo.lookup_reference("refs/tags/{}".format(ref))
-            ).tree
+            return self.peel(self.repo.lookup_reference(f"refs/tags/{ref}")).tree
         except KeyError:
             return None
 
@@ -2319,9 +2388,7 @@ class GitBase:
         # error out and do not proceed.
         override_params = copy.deepcopy(per_remote_overrides)
         global_auth_params = [
-            "{}_{}".format(self.role, x)
-            for x in AUTH_PARAMS
-            if self.opts["{}_{}".format(self.role, x)]
+            f"{self.role}_{x}" for x in AUTH_PARAMS if self.opts[f"{self.role}_{x}"]
         ]
         if self.provider in AUTH_PROVIDERS:
             override_params += AUTH_PARAMS
@@ -2344,7 +2411,7 @@ class GitBase:
         global_values = set(override_params)
         global_values.update(set(global_only))
         for param in global_values:
-            key = "{}_{}".format(self.role, param)
+            key = f"{self.role}_{param}"
             if key not in self.opts:
                 log.critical(
                     "Key '%s' not present in global configuration. This is "
@@ -2487,7 +2554,7 @@ class GitBase:
                 try:
                     shutil.rmtree(rdir)
                 except OSError as exc:
-                    errors.append("Unable to delete {}: {}".format(rdir, exc))
+                    errors.append(f"Unable to delete {rdir}: {exc}")
         return errors
 
     def clear_lock(self, remote=None, lock_type="update"):
@@ -2642,10 +2709,10 @@ class GitBase:
         """
         Determine which provider to use
         """
-        if "verified_{}_provider".format(self.role) in self.opts:
-            self.provider = self.opts["verified_{}_provider".format(self.role)]
+        if f"verified_{self.role}_provider" in self.opts:
+            self.provider = self.opts[f"verified_{self.role}_provider"]
         else:
-            desired_provider = self.opts.get("{}_provider".format(self.role))
+            desired_provider = self.opts.get(f"{self.role}_provider")
             if not desired_provider:
                 if self.verify_pygit2(quiet=True):
                     self.provider = "pygit2"
@@ -2716,7 +2783,7 @@ class GitBase:
                 _recommend()
             return False
 
-        self.opts["verified_{}_provider".format(self.role)] = "gitpython"
+        self.opts[f"verified_{self.role}_provider"] = "gitpython"
         log.debug("gitpython %s_provider enabled", self.role)
         return True
 
@@ -2772,7 +2839,7 @@ class GitBase:
                 _recommend()
             return False
 
-        self.opts["verified_{}_provider".format(self.role)] = "pygit2"
+        self.opts[f"verified_{self.role}_provider"] = "pygit2"
         log.debug("pygit2 %s_provider enabled", self.role)
         return True
 
@@ -2784,11 +2851,11 @@ class GitBase:
         try:
             with salt.utils.files.fopen(remote_map, "w+") as fp_:
                 timestamp = datetime.now().strftime("%d %b %Y %H:%M:%S.%f")
-                fp_.write("# {}_remote map as of {}\n".format(self.role, timestamp))
+                fp_.write(f"# {self.role}_remote map as of {timestamp}\n")
                 for repo in self.remotes:
                     fp_.write(
                         salt.utils.stringutils.to_str(
-                            "{} = {}\n".format(repo.cachedir_basename, repo.id)
+                            f"{repo.cachedir_basename} = {repo.id}\n"
                         )
                     )
         except OSError:
@@ -2935,12 +3002,12 @@ class GitFS(GitBase):
 
         dest = salt.utils.path.join(self.cache_root, "refs", tgt_env, path)
         hashes_glob = salt.utils.path.join(
-            self.hash_cachedir, tgt_env, "{}.hash.*".format(path)
+            self.hash_cachedir, tgt_env, f"{path}.hash.*"
         )
         blobshadest = salt.utils.path.join(
-            self.hash_cachedir, tgt_env, "{}.hash.blob_sha1".format(path)
+            self.hash_cachedir, tgt_env, f"{path}.hash.blob_sha1"
         )
-        lk_fn = salt.utils.path.join(self.hash_cachedir, tgt_env, "{}.lk".format(path))
+        lk_fn = salt.utils.path.join(self.hash_cachedir, tgt_env, f"{path}.lk")
         destdir = os.path.dirname(dest)
         hashdir = os.path.dirname(blobshadest)
         if not os.path.isdir(destdir):
