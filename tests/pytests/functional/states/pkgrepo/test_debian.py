@@ -774,22 +774,20 @@ def test_adding_repo_file_signedby_invalid_name(pkgrepo, states, repo):
     Ensure we raise an error.
     """
 
-    def _run(test=False):
-        return states.pkgrepo.managed(
-            name=repo.repo_content.strip("deb"),
-            file=str(repo.repo_file),
-            clean_file=True,
-            signedby=str(repo.key_file),
-            key_url=repo.key_url,
-            aptkey=False,
-            test=test,
-        )
-
     default_sources = pathlib.Path("/etc", "apt", "sources.list")
     with salt.utils.files.fopen(default_sources, "r") as fp:
         pre_file_content = fp.read()
 
-    ret = _run()
+    ret = states.pkgrepo.managed(
+        name=repo.repo_content.strip("deb"),
+        file=str(repo.repo_file),
+        clean_file=True,
+        signedby=str(repo.key_file),
+        key_url=repo.key_url,
+        aptkey=False,
+        test=False,
+    )
+
     assert "Failed to configure repo" in ret.comment
     assert "This must be the complete repo entry" in ret.comment
     with salt.utils.files.fopen(str(repo.repo_file), "r") as fp:
