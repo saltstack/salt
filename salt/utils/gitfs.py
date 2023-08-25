@@ -24,6 +24,7 @@ from datetime import datetime
 
 import salt.ext.tornado.ioloop
 import salt.fileserver
+import salt.utils.cache
 import salt.utils.configparser
 import salt.utils.data
 import salt.utils.files
@@ -2400,6 +2401,7 @@ class GitBase:
         self.file_list_cachedir = salt.utils.path.join(
             self.opts["cachedir"], "file_lists", self.role
         )
+        salt.utils.cache.verify_cache_version(self.cache_root)
         if init_remotes:
             self.init_remotes(
                 remotes if remotes is not None else [],
