@@ -358,7 +358,7 @@ def verify_cache_version(cache_path):
     :return: True if cache version matched. False if cache version did not match.
     """
     if not os.path.isdir(cache_path):
-        os.mkdir(cache_path)
+        os.makedirs(cache_path)
     with salt.utils.files.fopen(
         salt.utils.path.join(cache_path, "cache_version"), "a+"
     ) as file:
