@@ -8,11 +8,6 @@ import salt.utils.files
 
 log = logging.getLogger(__name__)
 
-pytestmark = [
-    pytest.mark.requires_network,
-    pytest.mark.skip_if_binaries_missing("svn"),
-]
-
 
 @pytest.fixture
 def configure_loader_modules(modules, minion_opts):
