@@ -352,10 +352,10 @@ def context_cache(func):
 
 def verify_cache_version(cache_path):
     """
-    Check that cache version matches salt version.
-    If cache version deos not matches salt version wipe the cache.
+    Check that the cached version matches the Salt version.
+    If the cached version does not match the Salt version, wipe the cache.
 
-    :return: True if cache version matched. False if cache version did not match.
+    :return: ``True`` if cache version matches, otherwise ``False``
     """
     if not os.path.isdir(cache_path):
         os.makedirs(cache_path)
