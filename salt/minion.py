@@ -3387,7 +3387,7 @@ class Syndic(Minion):
         # add handler to subscriber
         self.pub_channel.on_recv(self._process_cmd_socket)
         self.req_channel = salt.channel.client.ReqChannel.factory(self.opts)
-        self.async_req_channel = salt.channel.client.ReqChannel.factory(self.opts)
+        self.async_req_channel = salt.channel.client.AsyncReqChannel.factory(self.opts)
 
     def _process_cmd_socket(self, payload):
         if payload is not None and payload["enc"] == "aes":
