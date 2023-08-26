@@ -1243,7 +1243,7 @@ class GitProvider:
                     )
                 try:
                     # The linkdir itself goes at the beginning
-                    self._linkdir_walk.insert(0, (self._linkdirlinkdir, [parts[0]], []))
+                    self._linkdir_walk.insert(0, (self._linkdir, [parts[0]], []))
                 except IndexError:
                     pass
             return self._linkdir_walk
