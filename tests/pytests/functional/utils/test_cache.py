@@ -4,7 +4,7 @@ import salt.utils.cache
 import salt.utils.files
 import salt.utils.path
 
-_ROOT_DIR = (
+_DUMMY_FILES = (
     "data.txt",
     "foo.t2",
     "bar.t3",
@@ -15,7 +15,7 @@ _ROOT_DIR = (
 
 
 def _make_dummy_files(tmp_path):
-    for full_path in _ROOT_DIR:
+    for full_path in _DUMMY_FILES:
         full_path = salt.utils.path.join(tmp_path, full_path)
         path, _ = os.path.split(full_path)
         if not os.path.isdir(path):
@@ -31,9 +31,8 @@ def _dummy_files_exists(tmp_path):
     None if some files exists and others are missing
     """
     ret = None
-    for full_path in _ROOT_DIR:
+    for full_path in _DUMMY_FILES:
         full_path = salt.utils.path.join(tmp_path, full_path)
-        path, _ = os.path.split(full_path)
         is_file = os.path.isfile(full_path)
         if ret is None:
             ret = is_file
