@@ -497,10 +497,9 @@ class GitProvider:
         else:
             self.verify_auth()
             self.setup_callbacks()
-
-        if not os.path.isdir(self._salt_working_dir):
-            os.makedirs(self._salt_working_dir)
-        self.fetch_request_check()
+            if not os.path.isdir(self._salt_working_dir):
+                os.makedirs(self._salt_working_dir)
+            self.fetch_request_check()
 
     def get_cache_basehash(self):
         return self._cache_basehash
