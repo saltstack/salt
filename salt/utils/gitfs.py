@@ -477,7 +477,7 @@ class GitProvider:
             self._cache_basehash, self._cache_basename
         )
         self._cachedir = salt.utils.path.join(self._cache_hash, self._cache_basename)
-        self._salt_working_dir = salt.utils.path.join(self._cachedir, ".git", ".salt")
+        self._salt_working_dir = salt.utils.path.join(cache_root, "work", self._cache_full_basename)
         self._linkdir = salt.utils.path.join(
             cache_root, "links", self._cache_full_basename
         )
@@ -494,6 +494,9 @@ class GitProvider:
                 msg += " Perhaps git is not available."
             log.critical(msg, exc_info=True)
             failhard(self.role)
+        else:
+            self.verify_auth()
+            self.setup_callbacks()
 
         if not os.path.isdir(self._salt_working_dir):
             os.makedirs(self._salt_working_dir)
@@ -2483,8 +2486,6 @@ class GitBase:
             )
             if hasattr(repo_obj, "repo"):
                 # Sanity check and assign the credential parameter
-                repo_obj.verify_auth()
-                repo_obj.setup_callbacks()
                 if self.opts["__role"] == "minion" and repo_obj.new:
                     # Perform initial fetch on masterless minion
                     repo_obj.fetch()
@@ -2566,7 +2567,7 @@ class GitBase:
 
     def _iter_remote_hashes(self):
         for item in os.listdir(self.cache_root):
-            if item in ("hash", "refs", "links"):
+            if item in ("hash", "refs", "links", "work"):
                 continue
             if os.path.isdir(salt.utils.path.join(self.cache_root, item)):
                 yield item
@@ -2645,13 +2646,12 @@ class GitBase:
             if not remotes or (repo.id, name) in remotes or name in remotes:
                 try:
                     # Find and place fetch_request file for all the other branches for this repo
-                    for branch in os.listdir(repo.get_cache_hash()):
+                    repo_work_hash = os.path.split(repo.get_salt_working_dir())[0]
+                    for branch in os.listdir(repo_work_hash):
                         # Don't place fetch request in current branch being updated
                         if branch == repo.get_cache_basename():
                             continue
-                        branch_salt_dir = salt.utils.path.join(
-                            repo.get_cache_hash(), branch, ".git", ".salt"
-                        )
+                        branch_salt_dir = salt.utils.path.join(repo_work_hash, branch)
                         fetch_path = salt.utils.path.join(
                             branch_salt_dir, "fetch_request"
                         )
