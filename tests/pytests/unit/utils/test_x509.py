@@ -1070,6 +1070,7 @@ class TestCreateExtension:
         ),
         (("DNS", "example.com"), cx509.DNSName, "example.com"),
         (("DNS", "überexample.com"), cx509.DNSName, "xn--berexample-8db.com"),
+        (("DNS", "*.überexample.com"), cx509.DNSName, "*.xn--berexample-8db.com"),
         (("RID", "1.2.3.4"), cx509.RegisteredID, cx509.ObjectIdentifier("1.2.3.4")),
         (
             ("IP", "13.37.13.37"),
