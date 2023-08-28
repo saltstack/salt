@@ -397,6 +397,14 @@ jobs:
           path: |
             artifacts/coverage/
 
+      - name: Upload All Code Coverage Test Run Artifacts
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        uses: actions/upload-artifact@v3
+        with:
+          name: all-testrun-coverage-artifacts
+          path: |
+            artifacts/coverage/
+
       - name: Upload JUnit XML Test Run Artifacts
         if: always() && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         uses: actions/upload-artifact@v3

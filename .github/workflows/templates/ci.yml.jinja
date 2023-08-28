@@ -314,17 +314,21 @@
   <%- endif %>
 
   combine-all-code-coverage:
+    <%- do conclusion_needs.append("combine-all-code-coverage") %>
     name: Combine Code Coverage
     if: always() && ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }} == false
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     needs:
       - prepare-workflow
-      - centosstream-8
-      - centosstream-9
+      <%- for need in test_salt_needs.iter(consume=False) %>
+      - <{ need }>
+      <%- endfor %>
     steps:
       - name: Get coverage reports
         id: get-coverage-reports
         uses: actions/download-artifact@v3
+        with:
+          name: all-testrun-coverage-artifacts
 
       - name: Display structure of downloaded files
         run: ls -R
