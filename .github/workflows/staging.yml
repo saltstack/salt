@@ -1333,6 +1333,22 @@ jobs:
       skip-code-coverage: true
       skip-junit-reports: true
 
+  combine-all-code-coverage:
+    name: Combine Code Coverage
+    if: always() && ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }} == false
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    needs:
+      - prepare-workflow
+      - centosstream-8
+      - centosstream-9
+    steps:
+      - name: Get coverage reports
+        id: get-coverage-reports
+        uses: actions/download-artifact@v3
+
+      - name: Display structure of downloaded files
+        run: ls -R
+
   build-src-repo:
     name: Build Source Repository
     environment: staging
