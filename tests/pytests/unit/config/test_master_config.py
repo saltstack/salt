@@ -3,7 +3,7 @@ import salt.config
 
 def test_apply_no_cluster_id():
     defaults = salt.config.DEFAULT_MASTER_OPTS.copy()
-    assert "cluster_id" not in defaults
+    assert defaults["cluster_id"] is None
 
     overrides = {}
 
@@ -16,7 +16,7 @@ def test_apply_no_cluster_id():
 
 def test_apply_default_for_cluster():
     defaults = salt.config.DEFAULT_MASTER_OPTS.copy()
-    assert "cluster_id" not in defaults
+    assert defaults["cluster_id"] is None
 
     overrides = {"cluster_id": "test-cluster"}
 
@@ -35,7 +35,7 @@ def test_apply_default_for_cluster():
 
 def test_apply_for_cluster():
     defaults = salt.config.DEFAULT_MASTER_OPTS.copy()
-    assert "cluster_id" not in defaults
+    assert defaults["cluster_id"] is None
 
     cluster_dir = "/tmp/cluster"
     overrides = {
