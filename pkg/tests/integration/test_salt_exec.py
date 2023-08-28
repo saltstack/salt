@@ -15,7 +15,7 @@ def test_salt_cmd_run(salt_cli, salt_minion):
     if platform.startswith("win"):
         ret = salt_cli.run("cmd.run", "ipconfig", minion_tgt=salt_minion.id)
     else:
-        ret = salt_cli.run("cmd.run", "ls -lah /", minion_tgt=salt_minion.id)
+        ret = salt_cli.run("cmd.run", "'ls -lah /'", minion_tgt=salt_minion.id)
     assert ret
     assert ret.stdout
 
