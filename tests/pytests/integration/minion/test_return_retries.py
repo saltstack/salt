@@ -31,7 +31,7 @@ def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
     rtn = salt_cli.run("test.sleep", "10", "--async", minion_tgt=salt_minion_retry.id)
     # obtain JID
     jid = rtn.stdout.strip().split(" ")[-1]
-
+    time.sleep(1)
     # stop the salt master for some time
     with salt_master.stopped():
         # verify we don't yet have the result and sleep
