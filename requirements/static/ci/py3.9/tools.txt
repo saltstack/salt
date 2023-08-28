@@ -36,7 +36,7 @@ pygments==2.13.0
     # via rich
 python-dateutil==2.8.2
     # via botocore
-python-tools-scripts==0.12.0
+python-tools-scripts==0.18.1
     # via -r requirements/static/ci/tools.in
 pyyaml==6.0.1
     # via -r requirements/static/ci/tools.in
