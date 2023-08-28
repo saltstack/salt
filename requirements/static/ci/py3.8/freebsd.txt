@@ -63,7 +63,7 @@ cffi==1.15.1
     #   cryptography
     #   napalm
     #   pynacl
-charset-normalizer==3.1.0
+charset-normalizer==3.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.8/freebsd.txt
     #   aiohttp

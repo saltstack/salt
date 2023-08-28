@@ -52,7 +52,7 @@ permissions:
   <{ job_name }>:
   <%- do prepare_workflow_needs.append(job_name) %>
     name: Check Requirements
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     environment: <{ gh_environment }>-check
     steps:
       - name: Check For Admin Permission
@@ -115,6 +115,9 @@ permissions:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tools pkg repo confirm-unreleased --repository ${{ github.repository }} ${{ steps.setup-salt-version.outputs.salt-version }}
+          if [ "${{ github.event.repository.private }}" = "true" ]; then
+            tools pkg repo confirm-unreleased --repository saltstack/salt ${{ steps.setup-salt-version.outputs.salt-version }}
+          fi
 
       - name: Check Release Staged
         env:

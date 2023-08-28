@@ -1717,7 +1717,9 @@ class LazyLoaderRefreshFileMappingTest(TestCase):
         lock_mock = MagicMock()
         lock_mock.__enter__ = MagicMock()
         self.LOADER_CLASS._refresh_file_mapping = func_mock
-        with patch("threading.RLock", MagicMock(return_value=lock_mock)):
+        with patch.object(
+            self.LOADER_CLASS, "_get_lock", MagicMock(return_value=lock_mock)
+        ):
             loader = self.__init_loader()
         lock_mock.__enter__.assert_called()
         func_mock.assert_called()

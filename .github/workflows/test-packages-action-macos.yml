@@ -70,7 +70,7 @@ jobs:
 
   generate-matrix:
     name: Generate Package Test Matrix
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     outputs:
       pkg-matrix-include: ${{ steps.generate-pkg-matrix.outputs.matrix }}
     steps:
@@ -275,7 +275,7 @@ jobs:
 
   report:
     name: Reports for ${{ inputs.distro-slug }}(${{ matrix.test-chunk }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     if: always() && (inputs.skip-code-coverage == false || inputs.skip-junit-reports == false) && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     needs:
       - test

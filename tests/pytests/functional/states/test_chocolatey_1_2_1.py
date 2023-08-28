@@ -7,12 +7,14 @@ import pathlib
 import pytest
 
 import salt.utils.path
+import salt.utils.win_reg
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
     pytest.mark.slow_test,
     pytest.mark.destructive_test,
+    pytest.mark.skip_on_windows,
 ]
 
 
@@ -24,6 +26,11 @@ def chocolatey(states):
 @pytest.fixture(scope="module")
 def chocolatey_mod(modules):
 
+    current_path = salt.utils.win_reg.read_value(
+        hive="HKLM",
+        key=r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+        vname="PATH",
+    )["vdata"]
     url = "https://packages.chocolatey.org/chocolatey.1.2.1.nupkg"
     with pytest.helpers.temp_file(name="choco.nupkg") as nupkg:
         choco_pkg = pathlib.Path(str(nupkg))
@@ -67,10 +74,13 @@ def chocolatey_mod(modules):
                     modules.environ.setval(
                         key=env_var, val=False, false_unsets=True, permanent="HKCU"
                     )
-            # Remove Chocolatey from the Path
-            for path in modules.win_path.get_path():
-                if "chocolatey" in path.lower():
-                    modules.win_path.remove(path=path, rehash=True)
+        salt.utils.win_reg.set_value(
+            hive="HKLM",
+            key=r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+            vname="PATH",
+            vdata=current_path,
+        )
+        modules.win_path.rehash()
 
     # Remove unknown version
     if salt.utils.path.which("choco.exe"):

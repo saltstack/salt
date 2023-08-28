@@ -50,7 +50,7 @@ def root_dir(tmp_path):
 
 
 def transport_ids(value):
-    return "transport({})".format(value)
+    return f"transport({value})"
 
 
 @pytest.fixture(params=["tcp", "zeromq"], ids=transport_ids)

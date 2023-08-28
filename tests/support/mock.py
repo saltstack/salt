@@ -27,6 +27,7 @@ from mock import (
     ANY,
     DEFAULT,
     FILTER_DIR,
+    AsyncMock,
     MagicMock,
     Mock,
     NonCallableMagicMock,
@@ -202,7 +203,7 @@ class MockFH:
                 )
             elif not self.binary_mode and content_type is not str:
                 raise TypeError(
-                    "write() argument must be str, not {}".format(content_type.__name__)
+                    f"write() argument must be str, not {content_type.__name__}"
                 )
 
     def _writelines(self, lines):
@@ -233,7 +234,7 @@ class MockCall:
                 ret = ret[:-2]
         else:
             for key, val in self.kwargs.items():
-                ret += "{}={}".format(salt.utils.stringutils.to_str(key), repr(val))
+                ret += f"{salt.utils.stringutils.to_str(key)}={repr(val)}"
         ret += ")"
         return ret
 

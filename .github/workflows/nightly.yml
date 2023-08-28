@@ -38,7 +38,7 @@ jobs:
 
   workflow-requirements:
     name: Check Workflow Requirements
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     outputs:
       requirements-met: ${{ steps.check-requirements.outputs.requirements-met }}
     steps:
@@ -65,8 +65,7 @@ jobs:
   trigger-branch-nightly-builds:
     name: Trigger Branch Workflows
     if: ${{ github.event_name == 'schedule' && fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
-    runs-on:
-      - ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     needs:
       - workflow-requirements
     steps:
@@ -78,7 +77,7 @@ jobs:
 
   prepare-workflow:
     name: Prepare Workflow Run
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     if: ${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
     needs:
       - workflow-requirements
@@ -312,8 +311,7 @@ jobs:
   prepare-release:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['prepare-release'] && fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-    runs-on:
-      - ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
     needs:
       - prepare-workflow
     steps:
@@ -462,7 +460,7 @@ jobs:
     needs:
       - prepare-workflow
       - prepare-release
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "medium", "x86_64"]') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v3
 
@@ -509,7 +507,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.13.2"
+      relenv-version: "0.13.4"
       python-version: "3.10.12"
 
   build-salt-onedir:
@@ -525,7 +523,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.13.2"
+      relenv-version: "0.13.4"
       python-version: "3.10.12"
 
   build-rpm-pkgs:
@@ -537,7 +535,7 @@ jobs:
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.2"
+      relenv-version: "0.13.4"
       python-version: "3.10.12"
 
   build-deb-pkgs:
@@ -549,7 +547,7 @@ jobs:
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.2"
+      relenv-version: "0.13.4"
       python-version: "3.10.12"
 
   build-windows-pkgs:
@@ -561,7 +559,7 @@ jobs:
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.2"
+      relenv-version: "0.13.4"
       python-version: "3.10.12"
       environment: nightly
       sign-packages: false
@@ -576,7 +574,7 @@ jobs:
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.2"
+      relenv-version: "0.13.4"
       python-version: "3.10.12"
       environment: nightly
       sign-packages: true
@@ -2064,7 +2062,7 @@ jobs:
     # on a pull request instead of requiring all
     name: Set the ${{ github.workflow }} Pipeline Exit Status
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     environment: nightly
     needs:
       - workflow-requirements

@@ -145,9 +145,22 @@ class LoadedFunc:
 
     def __call__(self, *args, **kwargs):
         run_func = self.func
+        mod = sys.modules[run_func.__module__]
+        # All modules we've imported should have __opts__ defined. There are
+        # cases in the test suite where mod ends up being something other than
+        # a module we've loaded.
+        set_test = False
+        if hasattr(mod, "__opts__"):
+            if not isinstance(mod.__opts__, salt.loader.context.NamedLoaderContext):
+                if "test" in self.loader.opts:
+                    mod.__opts__["test"] = self.loader.opts["test"]
+                    set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
-        return self.loader.run(run_func, *args, **kwargs)
+        ret = self.loader.run(run_func, *args, **kwargs)
+        if set_test:
+            self.loader.opts["test"] = mod.__opts__["test"]
+        return ret
 
     def __repr__(self):
         return f"<{self.__class__.__name__} name={self.name!r}>"
@@ -306,7 +319,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.suffix_map[suffix] = (suffix, mode, kind)
             self.suffix_order.append(suffix)
 
-        self._lock = threading.RLock()
+        self._lock = self._get_lock()
+
         with self._lock:
             self._refresh_file_mapping()
 
@@ -316,6 +330,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         _generate_module(f"{self.loaded_base_name}.int.{tag}")
         _generate_module(f"{self.loaded_base_name}.ext")
         _generate_module(f"{self.loaded_base_name}.ext.{tag}")
+
+    def _get_lock(self):
+        return threading.RLock()
 
     def clean_modules(self):
         """
@@ -734,14 +751,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     spec = file_finder.find_spec(mod_namespace)
                     if spec is None:
                         raise ImportError()
-                    # TODO: Get rid of load_module in favor of
-                    # exec_module below. load_module is deprecated, but
-                    # loading using exec_module has been causing odd things
-                    # with the magic dunders we pack into the loaded
-                    # modules, most notably with salt-ssh's __opts__.
-                    mod = spec.loader.load_module()
-                    # mod = importlib.util.module_from_spec(spec)
-                    # spec.loader.exec_module(mod)
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
                     # pylint: enable=no-member
                     sys.modules[mod_namespace] = mod
                     # reload all submodules if necessary
@@ -755,14 +766,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     )
                     if spec is None:
                         raise ImportError()
-                    # TODO: Get rid of load_module in favor of
-                    # exec_module below. load_module is deprecated, but
-                    # loading using exec_module has been causing odd things
-                    # with the magic dunders we pack into the loaded
-                    # modules, most notably with salt-ssh's __opts__.
-                    mod = self.run(spec.loader.load_module)
-                    # mod = importlib.util.module_from_spec(spec)
-                    # spec.loader.exec_module(mod)
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
                     # pylint: enable=no-member
                     sys.modules[mod_namespace] = mod
         except OSError:

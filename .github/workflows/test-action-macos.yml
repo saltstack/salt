@@ -64,7 +64,7 @@ jobs:
 
   generate-matrix:
     name: Generate Test Matrix
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     outputs:
       matrix-include: ${{ steps.generate-matrix.outputs.matrix }}
       transport-matrix-include: ${{ steps.generate-transport-matrix.outputs.matrix }}
@@ -445,7 +445,7 @@ jobs:
   report:
     name: Reports for ${{ inputs.distro-slug }}(${{ matrix.transport }})
     if: always() && (inputs.skip-code-coverage == false || inputs.skip-junit-reports == false) && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     needs:
       - generate-matrix
       - test

@@ -23,7 +23,7 @@ pytestmark = [
 
 
 def transport_ids(value):
-    return "Transport({})".format(value)
+    return f"Transport({value})"
 
 
 @pytest.fixture(params=("zeromq", "tcp"), ids=transport_ids)

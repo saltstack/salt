@@ -477,8 +477,10 @@ def fcontext_get_policy(
     if filetype:
         _validate_filetype(filetype)
     re_spacer = "[ ]+"
+    re_optional_spacer = "[ |\t]*"
     cmd_kwargs = {
         "spacer": re_spacer,
+        "ospacer": re_optional_spacer,
         "filespec": re.escape(name),
         "sel_user": sel_user or "[^:]+",
         "sel_role": "[^:]+",  # se_role for file context is always object_r
@@ -490,7 +492,7 @@ def fcontext_get_policy(
     )
     cmd = (
         "semanage fcontext -l | egrep "
-        + "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}$'".format(
+        + "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}{ospacer}$'".format(
             **cmd_kwargs
         )
     )

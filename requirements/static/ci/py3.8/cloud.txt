@@ -16,7 +16,7 @@ cffi==1.15.1
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   cryptography
-charset-normalizer==3.1.0
+charset-normalizer==3.2.0
     # via
     #   -c requirements/static/ci/py3.8/linux.txt
     #   requests
