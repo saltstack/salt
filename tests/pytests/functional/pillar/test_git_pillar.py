@@ -123,6 +123,26 @@ def test_pygit2_env(pygit2_pillar_opts, grains):
     _test_env(pygit2_pillar_opts, grains)
 
 
+def _test_branch(pillar_opts, grains):
+    data = _get_ext_pillar(
+        "minion",
+        pillar_opts,
+        grains,
+        "branch https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    )
+    assert data == {"key": "data"}
+
+
+@skipif_no_gitpython
+def test_gitpython_branch(gitpython_pillar_opts, grains):
+    _test_branch(gitpython_pillar_opts, grains)
+
+
+@skipif_no_pygit2
+def test_pygit2_branch(pygit2_pillar_opts, grains):
+    _test_branch(pygit2_pillar_opts, grains)
+
+
 def _test_simple_dynamic(pillar_opts, grains):
     data = _get_ext_pillar(
         "minion",
@@ -189,3 +209,24 @@ def test_gitpython_env_dynamic(gitpython_pillar_opts, grains):
 @skipif_no_pygit2
 def test_pygit2_env_dynamic(pygit2_pillar_opts, grains):
     _test_env_dynamic(pygit2_pillar_opts, grains)
+
+
+def _test_pillarenv_dynamic(pillar_opts, grains):
+    pillar_opts["pillarenv"] = "branch"
+    data = _get_ext_pillar(
+        "minion",
+        pillar_opts,
+        grains,
+        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    )
+    assert data == {"key": "data"}
+
+
+@skipif_no_gitpython
+def test_gitpython_pillarenv_dynamic(gitpython_pillar_opts, grains):
+    _test_pillarenv_dynamic(gitpython_pillar_opts, grains)
+
+
+@skipif_no_pygit2
+def test_pygit2_pillarenv_dynamic(pygit2_pillar_opts, grains):
+    _test_pillarenv_dynamic(pygit2_pillar_opts, grains)
