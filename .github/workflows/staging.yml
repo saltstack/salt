@@ -1368,9 +1368,14 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: all-testrun-coverage-artifacts
+          path: artifacts/coverage/
 
       - name: Display structure of downloaded files
-        run: ls -R
+        run: ls -R artifacts/
+
+      - name: Combine Code Coverage
+        run: |
+          nox --force-color -e combine-coverage
 
   build-src-repo:
     name: Build Source Repository
