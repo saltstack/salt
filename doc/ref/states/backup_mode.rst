@@ -24,6 +24,14 @@ Or it can be set for each file:
         - source: salt://ssh/sshd_config
         - backup: minion
 
+
+The backup_mode can be set to any of thefollowing settings:
+
+* minion: backup to the minion
+* master: backup to the master, not yet implimented.
+* both: backup to both. currently only works the sam as minion.
+
+
 Backed-up Files
 ===============
 
