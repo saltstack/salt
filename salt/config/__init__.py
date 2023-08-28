@@ -1653,6 +1653,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "netapi_enable_clients": [],
         "maintenance_interval": 3600,
         "fileserver_interval": 3600,
+        "cluster_id": None,
+        "cluster_peers": [],
+        "cluster_pki_dir": None,
     }
 )
 
@@ -4051,12 +4054,20 @@ def apply_master_config(overrides=None, defaults=None):
         opts["cluster_id"] = None
     if opts["cluster_id"] is not None:
         if not opts.get("cluster_peers", None):
+            log.warning("Cluster id defined without defining cluster peers")
             opts["cluster_peers"] = []
         if not opts.get("cluster_pki_dir", None):
+            log.warning(
+                "Cluster id defined without defining cluster pki, falling back to pki_dir"
+            )
             opts["cluster_pki_dir"] = opts["pki_dir"]
     else:
-        opts["cluster_peers"] = []
-        opts["cluster_pki_dir"] = None
+        if opts.get("cluster_peers", None):
+            log.warning("Cluster peers defined without a cluster_id, ignoring.")
+            opts["cluster_peers"] = []
+        if opts.get("cluster_pki_dir", None):
+            log.warning("Cluster pki defined without a cluster_id, ignoring.")
+            opts["cluster_pki_dir"] = None
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
