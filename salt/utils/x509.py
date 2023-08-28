@@ -1691,7 +1691,10 @@ def _parse_general_names(val):
             if allow_leading_dot:
                 has_dot = val.startswith(".")
                 val = val.lstrip(".")
-            ret = idna.encode(val).decode()
+            ret = ".".join(
+                idna.encode(elem).decode() if elem != "*" else elem
+                for elem in val.split(".")
+            )
             if has_dot:
                 return f".{ret}"
             return ret
