@@ -82,6 +82,18 @@ def setup_testsuite(
 ):
     """
     Setup the local test suite.
+
+    Examples:
+
+     * Setup the local checkout for running tests in Photon OS 4, from the artifacts
+       in a pull request, including the built packages to run package tests:
+
+         tools ts setup --platform linux --slug photonos-4 --pr 64991 --pkg
+
+     * Setup the local checkout for running the tests in Windows 2019, from the
+       artifacts in the latest nightly build from branch 3006.x
+
+         tools ts setup --platform linux --slug windows-2019 --nightly 3006.x
     """
     if TYPE_CHECKING:
         assert platform is not None
@@ -102,6 +114,10 @@ def setup_testsuite(
 
     if "arm64" in slug:
         arch = "aarch64"
+
+    ctx.warn(
+        "Consider this in preliminary support. There are most likely things to iron out still."
+    )
 
     if run_id is None:
         run_id = tools.utils.gh.discover_run_id(
