@@ -105,7 +105,7 @@ def _test_env(pillar_opts, grains):
         pillar_opts,
         grains,
         {
-            "https://github.com/saltstack/salt-test-pillar-gitfs-2.git": [
+            "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git": [
                 {"env": "other_env"}
             ]
         },
@@ -187,30 +187,6 @@ def test_pygit2_missing_env_dynamic(pygit2_pillar_opts, grains):
     _test_missing_env_dynamic(pygit2_pillar_opts, grains)
 
 
-def _test_env_dynamic(pillar_opts, grains):
-    data = _get_ext_pillar(
-        "minion",
-        pillar_opts,
-        grains,
-        {
-            "__env__ https://github.com/saltstack/salt-test-pillar-gitfs-2.git": [
-                {"env": "other_env"}
-            ]
-        },
-    )
-    assert data == {"other": "env"}
-
-
-@skipif_no_gitpython
-def test_gitpython_env_dynamic(gitpython_pillar_opts, grains):
-    _test_env_dynamic(gitpython_pillar_opts, grains)
-
-
-@skipif_no_pygit2
-def test_pygit2_env_dynamic(pygit2_pillar_opts, grains):
-    _test_env_dynamic(pygit2_pillar_opts, grains)
-
-
 def _test_pillarenv_dynamic(pillar_opts, grains):
     pillar_opts["pillarenv"] = "branch"
     data = _get_ext_pillar(
@@ -230,3 +206,25 @@ def test_gitpython_pillarenv_dynamic(gitpython_pillar_opts, grains):
 @skipif_no_pygit2
 def test_pygit2_pillarenv_dynamic(pygit2_pillar_opts, grains):
     _test_pillarenv_dynamic(pygit2_pillar_opts, grains)
+
+
+def _test_multiple(pillar_opts, grains):
+    pillar_opts["pillarenv"] = "branch"
+    data = _get_ext_pillar(
+        "minion",
+        pillar_opts,
+        grains,
+        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    )
+    assert data == {"key": "data"}
+
+
+@skipif_no_gitpython
+def test_gitpython_multiple(gitpython_pillar_opts, grains):
+    _test_multiple(gitpython_pillar_opts, grains)
+
+
+@skipif_no_pygit2
+def test_pygit2_multiple(pygit2_pillar_opts, grains):
+    _test_multiple(pygit2_pillar_opts, grains)
