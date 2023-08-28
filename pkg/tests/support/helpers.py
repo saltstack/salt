@@ -333,7 +333,10 @@ class SaltPkgInstall:
                     )
                 else:
                     self.binary_paths["python"] = [shutil.which("salt"), "shell"]
-                    self.binary_paths["pip"] = [shutil.which("salt-pip")]
+                    if platform.is_darwin():
+                        self.binary_paths["pip"] = [self.run_root, "pip"]
+                    else:
+                        self.binary_paths["pip"] = [shutil.which("salt-pip")]
 
     @staticmethod
     def salt_factories_root_dir(system_service: bool = False) -> pathlib.Path:
