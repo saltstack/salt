@@ -1352,9 +1352,14 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: all-testrun-coverage-artifacts
+          path: artifacts/coverage/
 
       - name: Display structure of downloaded files
-        run: ls -R
+        run: ls -R artifacts/
+
+      - name: Combine Code Coverage
+        run: |
+          nox --force-color -e combine-coverage
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
