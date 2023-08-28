@@ -781,7 +781,7 @@ class PubServerChannel:
 
     def _publish_daemon(self, **kwargs):
         if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
-            log.info(
+            log.debug(
                 "setting Publish daemon niceness to %i",
                 self.opts["pub_server_niceness"],
             )
@@ -949,12 +949,8 @@ class MasterPubServerChannel:
                         self.master_key.master_key, digest
                     ),
                 }
-                log.error(
-                    "WTF SEND SIG %s",
-                    hashlib.md5(data["peers"][peer]["sig"]).hexdigest(),
-                )
             else:
-                log.error("Peer key missing %r", peer_pub)
+                log.warning("Peer key missing %r", peer_pub)
                 data["peers"][peer] = {}
         with salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
@@ -1033,12 +1029,6 @@ class MasterPubServerChannel:
         finally:
             self.close()
 
-    # async def publish(self, load):
-    #     """
-    #     Publish "load" to minions
-    #     """
-    #     await self.transport.publish(load)
-
     async def handle_pool_publish(self, payload, _):
         """
         Handle incomming events from cluster peer.
@@ -1111,9 +1101,8 @@ class MasterPubServerChannel:
                     )
             else:
                 log.error("This cluster tag not valid %s", tag)
-        ## Add an extra fallback in case a forked process leeks through
         except Exception:  # pylint: disable=broad-except
-            log.critical("Unexpected error while polling master events", exc_info=True)
+            log.critical("Unhandled error while polling master events", exc_info=True)
             return None
 
     def parse_cluster_tag(self, tag):
@@ -1126,13 +1115,12 @@ class MasterPubServerChannel:
             crypticle = salt.crypt.Crypticle(self.opts, self.peer_keys[peer_id])
             event_data = crypticle.loads(data)["event_payload"]
             # __peer_id can be used to know if this event came from a
-            # different master?
+            # different master.
             event_data["__peer_id"] = peer_id
             return event_data
         raise salt.exceptions.AuthenticationError("Peer aes key not available")
 
     async def publish_payload(self, load, *args):
-        log.error("Publish event to local ipc clients")
         tag, data = salt.utils.event.SaltEvent.unpack(load)
         tasks = []
         if not tag.startswith("cluster/peer"):
@@ -1169,7 +1157,6 @@ class MasterPubServerChannel:
                     log.warning(
                         "Unable to forward event to cluster peer %s", task.get_name()
                     )
-                continue
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     "Unhandled error sending task %s", task.get_name(), exc_info=True
