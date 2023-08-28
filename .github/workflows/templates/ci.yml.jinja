@@ -338,4 +338,8 @@
         run: |
           nox --force-color -e combine-coverage
 
+      - name: Create Code Coverage HTML Report
+        run: |
+          nox --force-color -e create-html-coverage-report
+
 <%- endblock jobs %>

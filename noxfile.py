@@ -1345,6 +1345,26 @@ def combine_coverage(session):
         pass
 
 
+@nox.session(python="3", name="create-html-coverage-report")
+def create_html_coverage_report(session):
+    _install_coverage_requirement(session)
+    env = {
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        "COVERAGE_FILE": str(COVERAGE_FILE),
+    }
+
+    # Generate html report for Salt and tests combined code coverage
+    session.run(
+        "coverage",
+        "html",
+        "-d",
+        str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
+        "--include=salt/*,tests/*",
+        env=env,
+    )
+
+
 class Tee:
     """
     Python class to mimic linux tee behaviour

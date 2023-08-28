@@ -1377,6 +1377,10 @@ jobs:
         run: |
           nox --force-color -e combine-coverage
 
+      - name: Create Code Coverage HTML Report
+        run: |
+          nox --force-color -e create-html-coverage-report
+
   build-src-repo:
     name: Build Source Repository
     environment: staging
