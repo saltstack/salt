@@ -1327,6 +1327,10 @@ jobs:
         run: |
           nox --force-color -e combine-coverage
 
+      - name: Create Code Coverage HTML Report
+        run: |
+          nox --force-color -e create-html-coverage-report
+
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
