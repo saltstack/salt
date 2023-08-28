@@ -2733,8 +2733,8 @@ class Minion(MinionBase):
                     log.error("Timeout encountered while sending %r request", data)
             else:
                 log.debug(
-                    "Skipping job return for other master: jid=%s master=%s",
-                    data["jid"],
+                    "Skipping req for other master: cmd=%s master=%s",
+                    data["cmd"],
                     job_master,
                 )
         elif tag.startswith("pillar_refresh"):

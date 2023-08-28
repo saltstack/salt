@@ -25,7 +25,6 @@ async def test_request_channel_issue_64627(io_loop, minion_opts, port):
 
     @salt.ext.tornado.gen.coroutine
     def req_handler(stream, msg):
-        print(f"REQ HANDLER {stream.send} {msg}")
         yield stream.send(msg[0])
 
     stream.on_recv_stream(req_handler)
@@ -35,6 +34,6 @@ async def test_request_channel_issue_64627(io_loop, minion_opts, port):
     rep = await request_client.send(b"foo")
     req_socket = request_client.message_client.stream.socket
     rep = await request_client.send(b"foo")
-    assert req_socket == request_client.message_client.stream.socket
+    assert req_socket is request_client.message_client.stream.socket
     request_client.close()
     assert request_client.message_client.stream is None

@@ -518,7 +518,7 @@ class AsyncReqMessageClient:
         self.send_queue = []
 
         self._closing = False
-        self.future = None
+        self._future = None
         self.lock = salt.ext.tornado.locks.Lock()
 
     def connect(self):
@@ -586,10 +586,7 @@ class AsyncReqMessageClient:
 
         :raises: SaltReqTimeoutError
         """
-        try:
-            self._future = None
-        except ValueError:
-            return
+        self._future = None
         future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     @salt.ext.tornado.gen.coroutine
