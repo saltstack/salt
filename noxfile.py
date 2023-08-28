@@ -456,6 +456,26 @@ def _run_with_coverage(session, *test_cmd, env=None):
                 "--include=salt/*",
                 env=coverage_base_env,
             )
+            # Generate html report for tests code coverage
+            session.run(
+                "coverage",
+                "html",
+                "-d",
+                str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
+                "--omit=salt/*",
+                "--include=tests/*",
+                env=coverage_base_env,
+            )
+            # Generate html report for salt code coverage
+            session.run(
+                "coverage",
+                "html",
+                "-d",
+                str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
+                "--omit=tests/*",
+                "--include=salt/*",
+                env=coverage_base_env,
+            )
 
 
 def _report_coverage(session):
