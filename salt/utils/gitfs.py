@@ -477,7 +477,9 @@ class GitProvider:
             self._cache_basehash, self._cache_basename
         )
         self._cachedir = salt.utils.path.join(self._cache_hash, self._cache_basename)
-        self._salt_working_dir = salt.utils.path.join(cache_root, "work", self._cache_full_basename)
+        self._salt_working_dir = salt.utils.path.join(
+            cache_root, "work", self._cache_full_basename
+        )
         self._linkdir = salt.utils.path.join(
             cache_root, "links", self._cache_full_basename
         )
