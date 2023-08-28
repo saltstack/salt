@@ -153,6 +153,7 @@ extensions = [
     "saltrepo",
     "myst_parser",
     "sphinxcontrib.spelling",
+    "jinja2.ext.do",
     #'saltautodoc', # Must be AFTER autodoc
 ]
 
