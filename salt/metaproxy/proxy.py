@@ -2,6 +2,7 @@
 # Proxy minion metaproxy modules
 #
 
+import copy
 import logging
 import os
 import signal
@@ -91,10 +92,13 @@ def post_master_init(self, master):
         self.opts["proxy"] = self.opts["pillar"]["proxy"]
 
     if self.opts.get("proxy_merge_pillar_in_opts"):
-        # Override proxy opts with pillar data when the user required.
+        # Override proxy opts with pillar data when the user required. But do
+        # not override master in opts.
+        pillar = copy.deepcopy(self.opts["pillar"])
+        pillar.pop("master", None)
         self.opts = salt.utils.dictupdate.merge(
             self.opts,
-            self.opts["pillar"],
+            pillar,
             strategy=self.opts.get("proxy_merge_pillar_in_opts_strategy"),
             merge_lists=self.opts.get("proxy_deep_merge_pillar_in_opts", False),
         )

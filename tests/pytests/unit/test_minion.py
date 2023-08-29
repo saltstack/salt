@@ -98,7 +98,8 @@ def test_send_req_fires_completion_event(event, minion_opts):
                 if "fire_event" in call[0]:
                     condition_event_tag = (
                         len(call.args) > 1
-                        and call.args[1] == "__master_req_channel_payload"
+                        and call.args[1]
+                        == f"__master_req_channel_payload/{minion_opts['master']}"
                     )
                     condition_event_tag_error = "{} != {}; Call(number={}): {}".format(
                         idx, call, call.args[1], "__master_req_channel_payload"
@@ -709,9 +710,11 @@ def test_gen_modules_executors(minion_opts):
 
     try:
         with patch("salt.pillar.get_pillar", return_value=MockPillarCompiler()):
-            with patch("salt.loader.executors") as execmock:
+            with patch("salt.loader.executors", mock=MagicMock()) as execmock:
                 minion.gen_modules()
-        assert execmock.called_with(minion.opts, minion.functions)
+        execmock.assert_called_once_with(
+            minion.opts, functions=minion.functions, proxy=minion.proxy, context={}
+        )
     finally:
         minion.destroy()
 
@@ -1097,3 +1100,12 @@ async def test_master_type_disable(minion_opts):
         assert minion.connected is False
     finally:
         minion.destroy()
+
+
+async def test_syndic_async_req_channel(syndic_opts):
+    syndic_opts["_minion_conf_file"] = ""
+    syndic_opts["master_uri"] = "tcp://127.0.0.1:4506"
+    syndic = salt.minion.Syndic(syndic_opts)
+    syndic.pub_channel = MagicMock()
+    syndic.tune_in_no_block()
+    assert isinstance(syndic.async_req_channel, salt.channel.client.AsyncReqChannel)

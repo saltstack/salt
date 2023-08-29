@@ -1607,7 +1607,9 @@ class Minion(MinionBase):
             "minion", opts=self.opts, listen=False
         ) as event:
             return event.fire_event(
-                load, "__master_req_channel_payload", timeout=timeout
+                load,
+                f"__master_req_channel_payload/{self.opts['master']}",
+                timeout=timeout,
             )
 
     @salt.ext.tornado.gen.coroutine
@@ -1624,7 +1626,9 @@ class Minion(MinionBase):
             "minion", opts=self.opts, listen=False
         ) as event:
             ret = yield event.fire_event_async(
-                load, "__master_req_channel_payload", timeout=timeout
+                load,
+                f"__master_req_channel_payload/{self.opts['master']}",
+                timeout=timeout,
             )
             raise salt.ext.tornado.gen.Return(ret)
 
@@ -2717,14 +2721,22 @@ class Minion(MinionBase):
                 notify=data.get("notify", False),
             )
         elif tag.startswith("__master_req_channel_payload"):
-            try:
-                yield _minion.req_channel.send(
-                    data,
-                    timeout=_minion._return_retry_timer(),
-                    tries=_minion.opts["return_retry_tries"],
+            job_master = tag.rsplit("/", 1)[1]
+            if job_master == self.opts["master"]:
+                try:
+                    yield _minion.req_channel.send(
+                        data,
+                        timeout=_minion._return_retry_timer(),
+                        tries=_minion.opts["return_retry_tries"],
+                    )
+                except salt.exceptions.SaltReqTimeoutError:
+                    log.error("Timeout encountered while sending %r request", data)
+            else:
+                log.debug(
+                    "Skipping req for other master: cmd=%s master=%s",
+                    data["cmd"],
+                    job_master,
                 )
-            except salt.exceptions.SaltReqTimeoutError:
-                log.error("Timeout encountered while sending %r request", data)
         elif tag.startswith("pillar_refresh"):
             yield _minion.pillar_refresh(
                 force_refresh=data.get("force_refresh", False),
@@ -3328,7 +3340,7 @@ class Syndic(Minion):
                 data["to"],
                 io_loop=self.io_loop,
                 callback=lambda _: None,
-                **kwargs
+                **kwargs,
             )
 
     def _send_req_sync(self, load, timeout):
@@ -3387,7 +3399,7 @@ class Syndic(Minion):
         # add handler to subscriber
         self.pub_channel.on_recv(self._process_cmd_socket)
         self.req_channel = salt.channel.client.ReqChannel.factory(self.opts)
-        self.async_req_channel = salt.channel.client.ReqChannel.factory(self.opts)
+        self.async_req_channel = salt.channel.client.AsyncReqChannel.factory(self.opts)
 
     def _process_cmd_socket(self, payload):
         if payload is not None and payload["enc"] == "aes":
