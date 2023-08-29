@@ -1390,6 +1390,18 @@ jobs:
       - ubuntu-2204
       - ubuntu-2204-arm64
     steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        if: ${{ github.event.repository.private == false }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Nox
+        run: |
+          python3 -m pip install 'nox==2022.8.7'
+
       - name: Get coverage reports
         id: get-coverage-reports
         uses: actions/download-artifact@v3
@@ -1398,7 +1410,7 @@ jobs:
           path: artifacts/coverage/
 
       - name: Display structure of downloaded files
-        run: ls -R artifacts/
+        run: tree -a artifacts/
 
       - name: Combine Code Coverage
         run: |
