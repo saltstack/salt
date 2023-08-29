@@ -246,7 +246,7 @@ if [ -d "$SCRIPTS_DIR" ]; then
 fi
 
 _msg "Creating scripts directory"
-cp "$SCRIPT_DIR/pkg-scripts" "$SCRIPTS_DIR"
+cp -r "$SCRIPT_DIR/pkg-scripts" "$SCRIPTS_DIR"
 if [ -d "$SCRIPTS_DIR" ]; then
     _success
 else
