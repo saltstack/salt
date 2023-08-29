@@ -39,11 +39,14 @@ param(
     [Parameter(Mandatory=$false)]
     [ValidatePattern("^\d{1,2}.\d{1,2}.\d{1,2}$")]
     [Alias("p")]
-    [String] $PythonVersion = "3.10.12",
+    # The version of Python to build/fetch. This is tied to the version of
+    # Relenv
+    [String] $PythonVersion,
 
     [Parameter(Mandatory=$false)]
     [Alias("r")]
-    [String] $RelenvVersion = "0.13.4",
+    # The version of Relenv to install
+    [String] $RelenvVersion,
 
     [Parameter(Mandatory=$false)]
     [Alias("b")]
@@ -57,7 +60,7 @@ param(
     [Switch] $CICD,
 
     [Parameter(Mandatory=$false)]
-    # Don't install. It should already be installed
+    # Don't install/build python. It should already be installed
     [Switch] $SkipInstall
 
 )
@@ -94,6 +97,33 @@ if ( [String]::IsNullOrEmpty($Version) ) {
     Pop-Location
     if ( [String]::IsNullOrEmpty($Version) ) {
         Write-Host "Failed to get version from $PROJECT_DIR"
+        exit 1
+    }
+}
+
+#-------------------------------------------------------------------------------
+# Verify Python and Relenv Versions
+#-------------------------------------------------------------------------------
+
+$yaml = Get-Content -Path "$PROJECT_DIR\cicd\shared-gh-workflows-context.yml"
+$dict_versions = @{}
+$yaml | ForEach-Object {
+    $val1, $val2 =  $_ -split ": "
+    $dict_versions[$val1] = $val2.Trim("""")
+}
+
+if ( [String]::IsNullOrEmpty($PythonVersion) ) {
+    $PythonVersion = $dict_versions["python_version"]
+    if ( [String]::IsNullOrEmpty($PythonVersion) ) {
+        Write-Host "Failed to load Python Version"
+        exit 1
+    }
+}
+
+if ( [String]::IsNullOrEmpty($RelenvVersion) ) {
+    $RelenvVersion = $dict_versions["relenv_version"]
+    if ( [String]::IsNullOrEmpty($RelenvVersion) ) {
+        Write-Host "Failed to load Relenv Version"
         exit 1
     }
 }
