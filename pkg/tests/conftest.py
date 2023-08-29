@@ -392,6 +392,7 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
 
     if master_script:
         salt_factories.system_service = False
+        salt_factories.generate_scripts = True
         scripts_dir = salt_factories.root_dir / "Scripts"
         scripts_dir.mkdir(exist_ok=True)
         salt_factories.scripts_dir = scripts_dir
@@ -401,13 +402,13 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
             python_executable = install_salt.bin_dir / "python.exe"
         if install_salt.relenv:
             python_executable = install_salt.install_dir / "Scripts" / "python.exe"
+        salt_factories.python_executable = python_executable
         factory = salt_factories.salt_master_daemon(
             random_string("master-"),
             defaults=config_defaults,
             overrides=config_overrides,
             factory_class=SaltMasterWindows,
             salt_pkg_install=install_salt,
-            python_executable=python_executable,
         )
         salt_factories.system_service = True
     else:
