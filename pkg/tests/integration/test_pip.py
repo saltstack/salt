@@ -12,8 +12,6 @@ from pytestskipmarkers.utils import platform
 def pypath():
     if platform.is_windows():
         return pathlib.Path(os.getenv("ProgramFiles"), "Salt Project", "Salt")
-    elif platform.is_darwin():
-        return pathlib.Path("/opt", "salt", "bin")
     else:
         return pathlib.Path("/opt", "saltstack", "salt", "pypath", "bin")
 
