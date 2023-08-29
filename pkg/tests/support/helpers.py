@@ -334,6 +334,7 @@ class SaltPkgInstall:
                     self.binary_paths["python"] = [shutil.which("salt"), "shell"]
                     if platform.is_darwin():
                         self.binary_paths["pip"] = [self.run_root, "pip"]
+                        self.binary_paths["spm"] = [shutil.which("salt-spm")]
                     else:
                         self.binary_paths["pip"] = [shutil.which("salt-pip")]
 
