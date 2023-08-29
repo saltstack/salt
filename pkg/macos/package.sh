@@ -55,7 +55,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST_XML="$SCRIPT_DIR/distribution.xml"
 BUILD_DIR="$SCRIPT_DIR/build"
 CMD_OUTPUT=$(mktemp -t cmd_log.XXX)
-SCRIPTS_DIR="$SCRIPT_DIR/scripts"
+SCRIPTS_DIR="$SCRIPT_DIR/dist_scripts"
 # Get the python version from the relenv python
 BLD_PY_BIN="$BUILD_DIR/opt/salt/bin/python3"
 PY_VER=$($BLD_PY_BIN -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
