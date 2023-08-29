@@ -1053,12 +1053,16 @@ def _pytest(session, coverage, cmd_args, env=None):
             return
 
     if coverage is True:
+        _coverage_cmd_args = []
+        if "COVERAGE_CONTEXT" in os.environ:
+            _coverage_cmd_args.append(f"--context={os.environ['COVERAGE_CONTEXT']}")
         _run_with_coverage(
             session,
             "python",
             "-m",
             "coverage",
             "run",
+            *_coverage_cmd_args,
             "-m",
             "pytest",
             *args,
@@ -1361,6 +1365,7 @@ def create_html_coverage_report(session):
         "-d",
         str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
         "--include=salt/*,tests/*",
+        "--show-contexts",
         env=env,
     )
 

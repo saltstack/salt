@@ -311,6 +311,7 @@ def test(
         "PRINT_TEST_PLAN_ONLY": "0",
         "SKIP_INITIAL_ONEDIR_FAILURES": "1",
         "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
+        "COVERAGE_CONTEXT": name,
     }
     if "LANG" in os.environ:
         env["LANG"] = os.environ["LANG"]
