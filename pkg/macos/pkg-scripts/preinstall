@@ -97,10 +97,12 @@ fi
 
 #-------------------------------------------------------------------------------
 # Remove folders and files from the INSTALL_DIR
-# Don't remove extras-3.10
+# Don't remove extras-3.##
+# The part wrapped in `@` will be replaced by the correct version of python
+# during packaging using SED
 #-------------------------------------------------------------------------------
 for dir in "$INSTALL_DIR"/*/; do
-    if [[ "$dir" != *"extras-3."* ]]; then
+    if [[ "$dir" != *"extras-@PY_VER@"* ]]; then
         log "Cleanup: Removing $dir"
         rm -rf "$dir"
     fi
