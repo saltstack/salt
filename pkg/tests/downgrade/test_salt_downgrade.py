@@ -38,12 +38,14 @@ def test_salt_downgrade(salt_call_cli, install_salt):
 
     # Downgrade Salt to the previous version and test
     install_salt.install(downgrade=True)
-    bin_file = shutil.which("salt")
+    bin_file = "salt"
     if platform.is_windows():
         if not is_downgrade_to_relenv:
             bin_file = install_salt.install_dir / "salt-call.bat"
         else:
             bin_file = install_salt.install_dir / "salt-call.exe"
+    elif platform.is_darwin() and install_salt.classic:
+        bin_file = install_salt.bin_dir / "salt-call"
 
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
