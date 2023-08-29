@@ -152,7 +152,6 @@ class SaltPkgInstall:
                 os.getenv("ProgramFiles"), "Salt Project", "Salt"
             ).resolve()
         elif platform.is_darwin():
-            # TODO: Add mac install dir path
             install_dir = pathlib.Path("/opt", "salt")
         else:
             install_dir = pathlib.Path("/opt", "saltstack", "salt")
