@@ -34,7 +34,6 @@ import types
 
 import attr
 import pytest
-import requests
 import tornado.ioloop
 import tornado.web
 from pytestshellutils.exceptions import ProcessFailed
@@ -1897,15 +1896,3 @@ class Keys:
 
     def __exit__(self, *_):
         shutil.rmtree(str(self.priv_path.parent), ignore_errors=True)
-
-
-@pytest.helpers.register
-def download_file(url, dest, auth=None):
-    # NOTE the stream=True parameter below
-    with requests.get(url, allow_redirects=True, stream=True, auth=auth) as r:
-        r.raise_for_status()
-        with salt.utils.files.fopen(dest, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-    return dest
