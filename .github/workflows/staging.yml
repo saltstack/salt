@@ -1436,6 +1436,14 @@ jobs:
         run: |
           nox --force-color -e create-html-coverage-report
 
+      - name: Upload Code Coverage HTML Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-html-report
+          path: artifacts/html
+          retention-days: 7
+          if-no-files-found: error
+
   build-src-repo:
     name: Build Source Repository
     environment: staging
