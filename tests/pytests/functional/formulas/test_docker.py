@@ -15,6 +15,7 @@ def modules(loaders, _formula):
     return loaders.modules
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.destructive_test
 def test_docker_formula(modules):
     ret = modules.state.sls("docker")
