@@ -1,5 +1,3 @@
-import copy
-
 import pytest
 
 from salt.pillar.git_pillar import ext_pillar
@@ -32,7 +30,7 @@ skipif_no_pygit2 = pytest.mark.skipif(not HAS_PYGIT2, reason="Missing pygit2")
 
 @pytest.fixture
 def git_pillar_opts(salt_master, tmp_path):
-    opts = dict(copy.deepcopy(salt_master.config))
+    opts = dict(salt_master.config)
     opts["cachedir"] = str(tmp_path)
     return opts
 
@@ -228,3 +226,31 @@ def test_gitpython_multiple(gitpython_pillar_opts, grains):
 @skipif_no_pygit2
 def test_pygit2_multiple(pygit2_pillar_opts, grains):
     _test_multiple(pygit2_pillar_opts, grains)
+
+
+def _test_multiple_2(pillar_opts, grains):
+    data = _get_ext_pillar(
+        "minion",
+        pillar_opts,
+        grains,
+        "https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        "https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    )
+    assert data == {
+        "key": "value",
+        "key1": "value1",
+        "key2": "value2",
+        "key4": "value4",
+        "data1": "d",
+        "data2": "d2",
+    }
+
+
+@skipif_no_gitpython
+def test_gitpython_multiple_2(gitpython_pillar_opts, grains):
+    _test_multiple_2(gitpython_pillar_opts, grains)
+
+
+@skipif_no_pygit2
+def test_pygit2_multiple_2(pygit2_pillar_opts, grains):
+    _test_multiple_2(pygit2_pillar_opts, grains)
