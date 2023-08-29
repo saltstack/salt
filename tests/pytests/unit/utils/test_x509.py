@@ -1053,6 +1053,7 @@ class TestCreateExtension:
     "inpt,cls,parsed",
     [
         (("email", "me@example.com"), cx509.RFC822Name, "me@example.com"),
+        (("email", ".example.com"), cx509.RFC822Name, ".example.com"),
         (
             ("email", "me@überexample.com"),
             cx509.RFC822Name,
@@ -1068,9 +1069,16 @@ class TestCreateExtension:
             cx509.UniformResourceIdentifier,
             "https://www.xn--berexample-8db.com",
         ),
+        (("URI", "some/path/only"), cx509.UniformResourceIdentifier, "some/path/only"),
         (("DNS", "example.com"), cx509.DNSName, "example.com"),
         (("DNS", "überexample.com"), cx509.DNSName, "xn--berexample-8db.com"),
         (("DNS", "*.überexample.com"), cx509.DNSName, "*.xn--berexample-8db.com"),
+        (("DNS", ".überexample.com"), cx509.DNSName, ".xn--berexample-8db.com"),
+        (
+            ("DNS", "γνῶθι.σεαυτόν.gr"),
+            cx509.DNSName,
+            "xn--oxakdo9327a.xn--mxahzvhf4c.gr",
+        ),
         (("RID", "1.2.3.4"), cx509.RegisteredID, cx509.ObjectIdentifier("1.2.3.4")),
         (
             ("IP", "13.37.13.37"),
@@ -1187,15 +1195,207 @@ class TestCreateExtension:
                 ),
             ],
         ),
+        (
+            ("DNS", "some.invalid_doma.in"),
+            salt.exceptions.CommandExecutionError,
+            "at position 8.*not allowed$",
+        ),
+        (
+            ("DNS", "some..invalid-doma.in"),
+            salt.exceptions.CommandExecutionError,
+            "Empty Label",
+        ),
+        (
+            ("DNS", "invalid*.wild.card"),
+            salt.exceptions.CommandExecutionError,
+            "at position 8.*not allowed",
+        ),
+        (
+            ("DNS", "invalid.*.wild.card"),
+            salt.exceptions.CommandExecutionError,
+            "at position 1.*not allowed",
+        ),
+        (
+            ("DNS", "*..whats.this"),
+            salt.exceptions.CommandExecutionError,
+            "Empty label",
+        ),
+        (
+            ("DNS", 42),
+            salt.exceptions.SaltInvocationError,
+            "Expected string value, got int",
+        ),
+        (
+            ("DNS", ""),
+            salt.exceptions.CommandExecutionError,
+            "Empty domain",
+        ),
+        (
+            ("DNS", "ἀνεῤῥίφθω.κύβος͵.gr"),
+            salt.exceptions.CommandExecutionError,
+            "not allowed at position 6 in 'κύβος͵'$",
+        ),
+        (
+            ("DNS", "می\u200cخواهم\u200c.iran"),
+            salt.exceptions.CommandExecutionError,
+            "^Unknown codepoint adjacent to joiner.* at position 9",
+        ),
+        (
+            ("DNS", ".*.wildcard-dot.test"),
+            salt.exceptions.CommandExecutionError,
+            "Wildcards and leading dots cannot be present together",
+        ),
+        (
+            ("email", "invalid@*.mail.address"),
+            salt.exceptions.CommandExecutionError,
+            "Wildcards are not allowed in this context",
+        ),
+        (
+            ("email", "invalid@.mail.address"),
+            salt.exceptions.CommandExecutionError,
+            "Leading dots are not allowed in this context",
+        ),
+        (
+            ("email", "Invalid Email <invalid@mail.address>"),
+            salt.exceptions.CommandExecutionError,
+            "not allowed$",
+        ),
+        (
+            ("IP", "this is not an IP address"),
+            salt.exceptions.CommandExecutionError,
+            "does not seem to be an IP address or network range.",
+        ),
+        (
+            ("URI", "https://*.χάος.σκάλα.gr"),
+            salt.exceptions.CommandExecutionError,
+            "Wildcards are not allowed in this context",
+        ),
+        (
+            ("URI", "https://.invalid.host"),
+            salt.exceptions.CommandExecutionError,
+            "Leading dots are not allowed in this context",
+        ),
+        (
+            ("dirName", "Et tu, Brute?"),
+            salt.exceptions.CommandExecutionError,
+            "Failed parsing rfc4514 dirName string",
+        ),
+        (
+            ("otherName", "otherName:1.2.3.4;UTF8:some other identifier"),
+            salt.exceptions.SaltInvocationError,
+            "otherName is currently not implemented",
+        ),
+        (
+            ("invalidType", "L'état c'est moi!"),
+            salt.exceptions.CommandExecutionError,
+            "GeneralName type invalidtype is invalid",
+        ),
     ],
 )
 def test_parse_general_names(inpt, cls, parsed):
+    if issubclass(cls, Exception):
+        with pytest.raises(cls, match=parsed):
+            x509._parse_general_names([inpt])
+        return
     expected = cls(parsed)
     res = x509._parse_general_names([inpt])
     if inpt[0] == "dirName":
         assert res[0].value == expected
     else:
         assert res[0] == expected
+
+
+@pytest.mark.parametrize(
+    "inpt,cls,parsed",
+    [
+        (("email", "me@example.com"), cx509.RFC822Name, "me@example.com"),
+        (
+            ("URI", "https://www.example.com"),
+            cx509.UniformResourceIdentifier,
+            "https://www.example.com",
+        ),
+        (("DNS", "example.com"), cx509.DNSName, "example.com"),
+        (("DNS", "*.example.com"), cx509.DNSName, "*.example.com"),
+        (("DNS", ".example.com"), cx509.DNSName, ".example.com"),
+        (
+            ("DNS", "invalid*.wild.card"),
+            salt.exceptions.CommandExecutionError,
+            "at position 8.*not allowed",
+        ),
+        (
+            ("DNS", "invalid.*.wild.card"),
+            salt.exceptions.CommandExecutionError,
+            "at position 1.*not allowed",
+        ),
+        (
+            ("DNS", ".*.wildcard-dot.test"),
+            salt.exceptions.CommandExecutionError,
+            "Wildcards and leading dots cannot be present together",
+        ),
+        (
+            ("DNS", "gott.würfelt.nicht"),
+            salt.exceptions.CommandExecutionError,
+            "Cannot encode non-ASCII strings",
+        ),
+        (
+            ("DNS", "some.invalid_doma.in"),
+            salt.exceptions.CommandExecutionError,
+            "at position 8.*not allowed$",
+        ),
+        (
+            ("DNS", "some..invalid-doma.in"),
+            salt.exceptions.CommandExecutionError,
+            "Empty Label",
+        ),
+        (
+            ("DNS", 42),
+            salt.exceptions.SaltInvocationError,
+            "Expected string value, got int",
+        ),
+        (
+            ("DNS", ""),
+            salt.exceptions.CommandExecutionError,
+            "Empty domain",
+        ),
+        (
+            ("DNS", "*..whats.this"),
+            salt.exceptions.CommandExecutionError,
+            "Empty label",
+        ),
+        (
+            ("email", "invalid@*.mail.address"),
+            salt.exceptions.CommandExecutionError,
+            "Wildcards are not allowed in this context",
+        ),
+        (
+            ("email", "invalid@.mail.address"),
+            salt.exceptions.CommandExecutionError,
+            "Leading dots are not allowed in this context",
+        ),
+        (
+            ("email", "Invalid Email <invalid@mail.address>"),
+            salt.exceptions.CommandExecutionError,
+            "not allowed$",
+        ),
+        (
+            ("URI", "https://.invalid.host"),
+            salt.exceptions.CommandExecutionError,
+            "Leading dots are not allowed in this context",
+        ),
+    ],
+)
+def test_parse_general_names_without_idna(inpt, cls, parsed):
+    with patch("salt.utils.x509.HAS_IDNA", False):
+        if issubclass(cls, Exception):
+            with pytest.raises(cls, match=parsed):
+                x509._parse_general_names([inpt])
+            return
+        expected = cls(parsed)
+        res = x509._parse_general_names([inpt])
+        if inpt[0] == "dirName":
+            assert res[0].value == expected
+        else:
+            assert res[0] == expected
 
 
 @pytest.mark.parametrize(
