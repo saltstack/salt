@@ -249,6 +249,7 @@ jobs:
           RERUN_FAILURES: "1"
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
           sudo -E nox --force-color -e ${{ inputs.nox-session }} -- ${{ matrix.test-chunk }} \
           ${{ contains(matrix.test-chunk, 'upgrade') && format('--prev-version {0}', matrix.version) || ''}}
