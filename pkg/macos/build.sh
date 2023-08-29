@@ -189,7 +189,7 @@ printf "v%.0s" {1..80}; printf "\n"
 #-------------------------------------------------------------------------------
 # Build Python
 #-------------------------------------------------------------------------------
-"$SCRIPT_DIR/build_python.sh"
+"$SCRIPT_DIR/build_python.sh" -v 3.10.12 -r 0.13.4
 
 #-------------------------------------------------------------------------------
 # Install Salt
@@ -210,15 +210,15 @@ printf "v%.0s" {1..80}; printf "\n"
 # Build and Sign Package
 #-------------------------------------------------------------------------------
 if [ "$(id -un)" != "root" ]; then
-    sudo "$SCRIPT_DIR/package.sh" "$VERSION"
+    sudo "$SCRIPT_DIR/package.sh" "$VERSION" -s
 else
-    "$SCRIPT_DIR/package.sh" "$VERSION"
+    "$SCRIPT_DIR/package.sh" "$VERSION" -s
 fi
 
 #-------------------------------------------------------------------------------
 # Notarize Package
 #-------------------------------------------------------------------------------
-"$SCRIPT_DIR/notarize.sh" "salt-$VERSION-py3-$CPU_ARCH-signed.pkg"
+"$SCRIPT_DIR/notarize.sh" "salt-$VERSION-py3-$CPU_ARCH.pkg"
 
 #-------------------------------------------------------------------------------
 # Script Completed
