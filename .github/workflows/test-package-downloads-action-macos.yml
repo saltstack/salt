@@ -220,6 +220,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
           SALT_RELEASE: "${{ inputs.salt-version }}"
           SALT_REPO_ARCH: ${{ inputs.arch }}
           LATEST_SALT_RELEASE: "${{ inputs.latest-release }}"

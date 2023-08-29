@@ -279,6 +279,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code \
@@ -296,6 +297,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --slow-tests \
@@ -313,6 +315,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --core-tests \
@@ -330,6 +333,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code
@@ -346,6 +350,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --slow-tests
@@ -362,6 +367,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --core-tests
@@ -378,6 +384,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
             -k "mac or darwin" --suppress-no-test-exit-code --no-fast-tests --flaky-jail
@@ -394,6 +401,7 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           SKIP_CODE_COVERAGE: "${{ inputs.skip-code-coverage && '1' || '0' }}"
+          COVERAGE_CONTEXT: ${{ inputs.distro-slug }}
         run: |
           sudo -E nox -e ${{ env.NOX_SESSION }} -- ${{ matrix.tests-chunk }} -- \
             --slow-tests --core-tests -k "mac or darwin"
