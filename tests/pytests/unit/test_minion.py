@@ -1093,3 +1093,12 @@ async def test_master_type_disable(minion_opts):
         assert minion.connected is False
     finally:
         minion.destroy()
+
+
+async def test_syndic_async_req_channel(syndic_opts):
+    syndic_opts["_minion_conf_file"] = ""
+    syndic_opts["master_uri"] = "tcp://127.0.0.1:4506"
+    syndic = salt.minion.Syndic(syndic_opts)
+    syndic.pub_channel = MagicMock()
+    syndic.tune_in_no_block()
+    assert isinstance(syndic.async_req_channel, salt.channel.client.AsyncReqChannel)

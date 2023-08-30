@@ -2733,8 +2733,8 @@ class Minion(MinionBase):
                     log.error("Timeout encountered while sending %r request", data)
             else:
                 log.debug(
-                    "Skipping job return for other master: jid=%s master=%s",
-                    data["jid"],
+                    "Skipping req for other master: cmd=%s master=%s",
+                    data["cmd"],
                     job_master,
                 )
         elif tag.startswith("pillar_refresh"):
@@ -3399,7 +3399,7 @@ class Syndic(Minion):
         # add handler to subscriber
         self.pub_channel.on_recv(self._process_cmd_socket)
         self.req_channel = salt.channel.client.ReqChannel.factory(self.opts)
-        self.async_req_channel = salt.channel.client.ReqChannel.factory(self.opts)
+        self.async_req_channel = salt.channel.client.AsyncReqChannel.factory(self.opts)
 
     def _process_cmd_socket(self, payload):
         if payload is not None and payload["enc"] == "aes":

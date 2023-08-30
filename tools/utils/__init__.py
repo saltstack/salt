@@ -1,11 +1,17 @@
-# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
+# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated,bad-whitespace
 from __future__ import annotations
 
+import fnmatch
+import hashlib
 import json
 import os
 import pathlib
+import shutil
 import sys
+import tempfile
+import zipfile
 from datetime import datetime
+from enum import IntEnum
 from typing import Any
 
 import packaging.version
@@ -20,19 +26,7 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 
-try:
-    import boto3
-    from botocore.exceptions import ClientError
-except ImportError:
-    print(
-        "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
-        file=sys.stderr,
-        flush=True,
-    )
-    raise
-
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 GPG_KEY_FILENAME = "SALT-PROJECT-GPG-PUBKEY-2023"
 SPB_ENVIRONMENT = os.environ.get("SPB_ENVIRONMENT") or "test"
 STAGING_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-staging"
@@ -40,13 +34,10 @@ RELEASE_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-release"
 BACKUP_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-backup"
 
 
-class UpdateProgress:
-    def __init__(self, progress, task):
-        self.progress = progress
-        self.task = task
-
-    def __call__(self, chunk_size):
-        self.progress.update(self.task, advance=chunk_size)
+class ExitCode(IntEnum):
+    OK = 0
+    FAIL = 1
+    SOFT_FAIL = 2
 
 
 def create_progress_bar(file_progress: bool = False, **kwargs):
@@ -198,101 +189,64 @@ def parse_versions(*versions: str) -> list[Version]:
     return _versions
 
 
-def get_repo_json_file_contents(
+def get_file_checksum(fpath: pathlib.Path, hash_name: str) -> str:
+    with fpath.open("rb") as rfh:
+        try:
+            digest = hashlib.file_digest(rfh, hash_name)  # type: ignore[attr-defined]
+        except AttributeError:
+            # Python < 3.11
+            buf = bytearray(2**18)  # Reusable buffer to reduce allocations.
+            view = memoryview(buf)
+            digest = getattr(hashlib, hash_name)()
+            while True:
+                size = rfh.readinto(buf)
+                if size == 0:
+                    break  # EOF
+                digest.update(view[:size])
+    hexdigest: str = digest.hexdigest()
+    return hexdigest
+
+
+def download_file(
     ctx: Context,
-    bucket_name: str,
-    repo_path: pathlib.Path,
-    repo_json_path: pathlib.Path,
-) -> dict[str, Any]:
-    s3 = boto3.client("s3")
-    repo_json: dict[str, Any] = {}
-    try:
-        ret = s3.head_object(
-            Bucket=bucket_name, Key=str(repo_json_path.relative_to(repo_path))
-        )
-        ctx.info(
-            f"Downloading existing '{repo_json_path.relative_to(repo_path)}' file "
-            f"from bucket {bucket_name}"
-        )
-        size = ret["ContentLength"]
-        with repo_json_path.open("wb") as wfh:
-            with create_progress_bar(file_progress=True) as progress:
-                task = progress.add_task(description="Downloading...", total=size)
-            s3.download_fileobj(
-                Bucket=bucket_name,
-                Key=str(repo_json_path.relative_to(repo_path)),
-                Fileobj=wfh,
-                Callback=UpdateProgress(progress, task),
-            )
-        with repo_json_path.open() as rfh:
-            repo_json = json.load(rfh)
-    except ClientError as exc:
-        if "Error" not in exc.response:
-            raise
-        if exc.response["Error"]["Code"] != "404":
-            raise
-        ctx.info(f"Could not find {repo_json_path} in bucket {bucket_name}")
-    if repo_json:
-        ctx.print(repo_json, soft_wrap=True)
-    return repo_json
-
-
-def create_top_level_repo_path(
-    ctx: Context,
-    repo_path: pathlib.Path,
-    salt_version: str,
-    distro: str,
-    distro_version: str | None = None,  # pylint: disable=bad-whitespace
-    distro_arch: str | None = None,  # pylint: disable=bad-whitespace
-    nightly_build_from: str | None = None,  # pylint: disable=bad-whitespace
-):
-    create_repo_path = repo_path
-    if nightly_build_from:
-        create_repo_path = (
-            create_repo_path
-            / "salt-dev"
-            / nightly_build_from
-            / datetime.utcnow().strftime("%Y-%m-%d")
-        )
-        create_repo_path.mkdir(exist_ok=True, parents=True)
-        with ctx.chdir(create_repo_path.parent):
-            latest_nightly_symlink = pathlib.Path("latest")
-            if not latest_nightly_symlink.exists():
-                ctx.info(
-                    f"Creating 'latest' symlink to '{create_repo_path.relative_to(repo_path)}' ..."
-                )
-                latest_nightly_symlink.symlink_to(
-                    create_repo_path.name, target_is_directory=True
-                )
-    elif "rc" in salt_version:
-        create_repo_path = create_repo_path / "salt_rc"
-    create_repo_path = create_repo_path / "salt" / "py3" / distro
-    if distro_version:
-        create_repo_path = create_repo_path / distro_version
-    if distro_arch:
-        create_repo_path = create_repo_path / distro_arch
-    create_repo_path.mkdir(exist_ok=True, parents=True)
-    return create_repo_path
-
-
-def create_full_repo_path(
-    ctx: Context,
-    repo_path: pathlib.Path,
-    salt_version: str,
-    distro: str,
-    distro_version: str | None = None,  # pylint: disable=bad-whitespace
-    distro_arch: str | None = None,  # pylint: disable=bad-whitespace
-    nightly_build_from: str | None = None,  # pylint: disable=bad-whitespace
-):
-    create_repo_path = create_top_level_repo_path(
-        ctx,
-        repo_path,
-        salt_version,
-        distro,
-        distro_version,
-        distro_arch,
-        nightly_build_from=nightly_build_from,
-    )
-    create_repo_path = create_repo_path / "minor" / salt_version
-    create_repo_path.mkdir(exist_ok=True, parents=True)
-    return create_repo_path
+    url: str,
+    dest: pathlib.Path,
+    auth: str | None = None,
+    headers: dict[str, str] | None = None,
+) -> pathlib.Path:
+    curl = shutil.which("curl")
+    if curl is not None:
+        command = [curl, "-sS", "-L"]
+        if headers:
+            for key, value in headers.items():
+                command.extend(["-H", f"{key}: {value}"])
+        command.extend(["-o", str(dest), url])
+        ret = ctx.run(*command)
+        if ret.returncode:
+            ctx.error(f"Failed to download {url}")
+            ctx.exit(1)
+        return dest
+    wget = shutil.which("wget")
+    if wget is not None:
+        with ctx.cwd(dest.parent):
+            command = [wget, "--no-verbose"]
+            if headers:
+                for key, value in headers.items():
+                    command.append(f"--header={key}: {value}")
+            command.append(url)
+            ret = ctx.run(*command)
+            if ret.returncode:
+                ctx.error(f"Failed to download {url}")
+                ctx.exit(1)
+        return dest
+    # NOTE the stream=True parameter below
+    ctx.info(f"Downloading {url} ...")
+    with ctx.web as web:
+        web.headers.update(headers)
+        with web.get(url, stream=True, auth=auth) as r:
+            r.raise_for_status()
+            with dest.open("wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+    return dest
