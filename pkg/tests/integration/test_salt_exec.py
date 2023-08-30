@@ -7,15 +7,22 @@ pytestmark = [
 ]
 
 
-def test_salt_cmd_run(salt_cli, salt_minion):
+@pytest.fixture
+def cat_file(tmp_path):
+    fp = tmp_path / "cat-file"
+    fp.write_text(fp)
+    return fp
+
+
+def test_salt_cmd_run(salt_cli, salt_minion, cat_file):
     """
-    Test salt cmd.run 'ipconfig' or 'ls -lah /'
+    Test salt cmd.run 'ipconfig' or 'cat <file>'
     """
     ret = None
     if platform.startswith("win"):
         ret = salt_cli.run("cmd.run", "ipconfig", minion_tgt=salt_minion.id)
     else:
-        ret = salt_cli.run("cmd.run", "\\'ls -lah /\\'", minion_tgt=salt_minion.id)
+        ret = salt_cli.run("cmd.run", f"cat {str(cat_file)}", minion_tgt=salt_minion.id)
     assert ret
     assert ret.stdout
 
