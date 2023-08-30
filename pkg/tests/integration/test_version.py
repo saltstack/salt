@@ -94,7 +94,9 @@ def test_symlinks_created(version, symlink, install_salt):
     """
     Test symlinks created
     """
-    if not install_salt.classic and not install_salt.relenv and symlink == "spm":
+    if install_salt.classic:
+        pytest.skip("Symlinks not created for classic macos builds, we adjust the path")
+    if not install_salt.relenv and symlink == "spm":
         symlink = "salt-spm"
     ret = install_salt.proc.run(pathlib.Path("/usr/local/sbin") / symlink, "--version")
     ret.stdout.matcher.fnmatch_lines([f"*{version}*"])
