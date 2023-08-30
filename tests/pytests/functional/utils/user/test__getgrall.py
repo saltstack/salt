@@ -9,7 +9,7 @@ import grp
 import salt.utils.user
 
 
-@pytest.fixture()
+@pytest.fixture(scope="function")
 def etc_group(tmp_path):
     etcgrp = tmp_path / "etc" / "group"
     etcgrp.parent.mkdir()
@@ -34,3 +34,18 @@ def test__getgrall(etc_group):
     grall = salt.utils.user._getgrall(root=str(etc_group.parent.parent))
 
     assert grall == expected_grall
+
+
+def test__getgrall_permission_denied(etc_group):
+    etc_group.chmod(0o000)
+
+    with pytest.raises(PermissionError):
+        salt.utils.user._getgrall(root=str(etc_group.parent.parent))
+
+
+def test__getgrall_bad_format(etc_group):
+    with etc_group.open("a") as _fp:
+        _fp.write("\n# some comment here\n")
+
+    with pytest.raises(IndexError):
+        salt.utils.user._getgrall(root=str(etc_group.parent.parent))
