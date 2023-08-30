@@ -1198,11 +1198,7 @@ class PkgMixin:
     salt_pkg_install: SaltPkgInstall = attr.ib()
 
     def get_script_path(self):
-        if (
-            platform.is_darwin()
-            and self.salt_pkg_install.classic
-            and self.salt_pkg_install.upgrade
-        ):
+        if platform.is_darwin() and self.salt_pkg_install.classic:
             if self.salt_pkg_install.run_root and os.path.exists(
                 self.salt_pkg_install.run_root
             ):
