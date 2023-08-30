@@ -111,6 +111,11 @@ warnings.filterwarnings(
     module="_distutils_hack",
 )
 
+warnings.filterwarnings(
+    "ignore",
+    message="invalid escape sequence.*",
+    category=DeprecationWarning,
+)
 
 def __define_global_system_encoding_variable__():
     import sys
