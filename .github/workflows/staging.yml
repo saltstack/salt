@@ -486,7 +486,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.13.6"
+      relenv-version: "0.13.7"
       python-version: "3.10.12"
 
   build-salt-onedir:
@@ -502,7 +502,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.13.6"
+      relenv-version: "0.13.7"
       python-version: "3.10.12"
 
   build-rpm-pkgs:
@@ -514,7 +514,7 @@ jobs:
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.6"
+      relenv-version: "0.13.7"
       python-version: "3.10.12"
 
   build-deb-pkgs:
@@ -526,7 +526,7 @@ jobs:
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.6"
+      relenv-version: "0.13.7"
       python-version: "3.10.12"
 
   build-windows-pkgs:
@@ -538,7 +538,7 @@ jobs:
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.6"
+      relenv-version: "0.13.7"
       python-version: "3.10.12"
       environment: staging
       sign-packages: ${{ inputs.sign-windows-packages }}
@@ -553,7 +553,7 @@ jobs:
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.6"
+      relenv-version: "0.13.7"
       python-version: "3.10.12"
       environment: staging
       sign-packages: true
