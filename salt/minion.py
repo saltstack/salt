@@ -2533,6 +2533,7 @@ class Minion(MinionBase):
                     current_schedule, new_schedule
                 )
                 self.opts["pillar"] = new_pillar
+                self.functions.pack["__pillar__"] = self.opts["pillar"]
             finally:
                 async_pillar.destroy()
         self.matchers_refresh()
