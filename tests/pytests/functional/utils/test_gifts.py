@@ -52,11 +52,11 @@ def _test_gitfs_simple(gitfs_opts):
     g = GitFS(gitfs_opts, ["https://github.com/saltstack/salt-test-pillar-gitfs.git"])
 
 
-# @skipif_no_gitpython
-# def test_gitpython_gitfs_simple(gitpython_gifts_opts):
-#    _test_gitfs_simple(gitpython_gifts_opts)
+@skipif_no_gitpython
+def test_gitpython_gitfs_simple(gitpython_gifts_opts):
+    _test_gitfs_simple(gitpython_gifts_opts)
 
 
-# @skipif_no_pygit2
-# def test_pygit2_gitfs_simple(pygit2_gifts_opts):
-#    _test_gitfs_simple(pygit2_gifts_opts)
+@skipif_no_pygit2
+def test_pygit2_gitfs_simple(pygit2_gifts_opts):
+    _test_gitfs_simple(pygit2_gifts_opts)

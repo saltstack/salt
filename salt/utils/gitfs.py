@@ -251,6 +251,7 @@ class GitProvider:
             key_cb=str,
             val_cb=lambda x, y: str(y),
         )
+        self.ssl_verify = self.opts.get(f"{self.role}_ssl_verify", None)
         self.conf = copy.deepcopy(per_remote_defaults)
         # Remove the 'salt://' from the beginning of any globally-defined
         # per-saltenv mountpoints
@@ -823,7 +824,7 @@ class GitProvider:
                 desired_refspecs,
             )
             if refspecs != desired_refspecs:
-                conf.set_multivar(remote_section, "fetch", self.refspecs)
+                conf.set_multivar(remote_section, "fetch", desired_refspecs)
                 log.debug(
                     "Refspecs for %s remote '%s' set to %s",
                     self.role,
@@ -856,6 +857,7 @@ class GitProvider:
                     self.id,
                     desired_ssl_verify,
                 )
+                self._ssl_verfiy = self.opts.get(f"{self.role}_ssl_verify", None)
                 conf_changed = True
 
             # Write changes, if necessary
