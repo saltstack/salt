@@ -612,8 +612,8 @@ tcp6       0      0 :::22                   :::*                    LISTEN      
             expected = [
                 "sshd",
                 [
-                    "tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      668/sshd: /usr/sbin ",
-                    "tcp6       0      0 :::22                   :::*                    LISTEN      668/sshd: /usr/sbin ",
+                    "tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      668/sshd: /usr/sbin",
+                    "tcp6       0      0 :::22                   :::*                    LISTEN      668/sshd: /usr/sbin",
                 ],
             ]
             ret = ps.netstat("sshd")
