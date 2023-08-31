@@ -10,7 +10,7 @@ pytestmark = [
 @pytest.fixture
 def cat_file(tmp_path):
     fp = tmp_path / "cat-file"
-    fp.write_text(fp)
+    fp.write_text(str(fp))
     return fp
 
 
