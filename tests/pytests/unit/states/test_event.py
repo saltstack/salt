@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.event as event
 from tests.support.mock import MagicMock, patch
 
@@ -14,7 +15,7 @@ def configure_loader_modules():
 
 def test_send():
     """
-        Test to send an event to the Salt Master
+    Test to send an event to the Salt Master
     """
     with patch.dict(event.__opts__, {"test": True}):
         assert event.send("salt") == {
@@ -37,7 +38,7 @@ def test_send():
 
 def test_wait():
     """
-        Test to fire an event on the Salt master
+    Test to fire an event on the Salt master
     """
     assert event.wait("salt") == {
         "changes": {},

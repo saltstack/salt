@@ -1,26 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 Manage the Windows System PATH
 
 Note that not all Windows applications will rehash the PATH environment variable,
-Only the ones that listen to the WM_SETTINGCHANGE message
-http://support.microsoft.com/kb/104011
+Only the ones that listen to the WM_SETTINGCHANGE message.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 import os
 
-# Import Salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.win_functions
-
-# Import 3rd-party libs
-from salt.ext.six.moves import map
 
 try:
     HAS_WIN32 = True
@@ -34,7 +26,7 @@ HIVE = "HKEY_LOCAL_MACHINE"
 KEY = "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment"
 VNAME = "PATH"
 VTYPE = "REG_EXPAND_SZ"
-PATHSEP = str(os.pathsep)  # future lint: disable=blacklisted-function
+PATHSEP = str(os.pathsep)
 
 
 def __virtual__():
@@ -92,6 +84,9 @@ def get_path():
         )["vdata"]
     ).split(";")
 
+    # If the final element happens to be an empty value, normalize_dir treats this
+    # as a valid path and inserts a period (.) so clean the list before that happens
+    ret = ret[:-1] if ret[-1] == "" else ret
     # Trim ending backslash
     return list(map(_normalize_dir, ret))
 
@@ -119,9 +114,7 @@ def exists(path):
 
 
 def _update_local_path(local_path):
-    os.environ[str("PATH")] = PATHSEP.join(
-        local_path
-    )  # future lint: disable=blacklisted-function
+    os.environ["PATH"] = PATHSEP.join(local_path)
 
 
 def add(path, index=None, **kwargs):
@@ -156,6 +149,10 @@ def add(path, index=None, **kwargs):
         salt.utils.args.invalid_kwargs(kwargs)
 
     path = _normalize_dir(path)
+    # Due to path normalization causing issues with empty strings,
+    # back out here as we don't allow Path entries to be empty
+    if path == ".":
+        return False
     path_str = salt.utils.stringutils.to_str(path)
     system_path = get_path()
 
@@ -264,7 +261,6 @@ def add(path, index=None, **kwargs):
                 # Insert the path at the desired index.
                 dirs.insert(pos, path)
                 return True
-        return False
 
     if _check_path(local_path, path_str, index):
         _update_local_path(local_path)

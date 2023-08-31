@@ -18,18 +18,18 @@ import random
 import time
 from collections.abc import Iterable, Mapping
 
+import salt.channel.client
 import salt.config
 import salt.exceptions
 import salt.loader
 import salt.payload
-import salt.transport.client
 import salt.utils.args
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.network
 import salt.utils.user
 import salt.utils.versions
-import salt.utils.zeromq
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +58,6 @@ class LoadAuth:
     def __init__(self, opts, ckminions=None):
         self.opts = opts
         self.max_fail = 1.0
-        self.serial = salt.payload.Serial(opts)
         self.auth = salt.loader.auth(opts)
         self.tokens = salt.loader.eauth_tokens(opts)
         self.ckminions = ckminions or salt.utils.minions.CkMinions(opts)
@@ -138,7 +137,7 @@ class LoadAuth:
         mod = self.opts["eauth_acl_module"]
         if not mod:
             mod = load["eauth"]
-        fstr = "{}.acl".format(mod)
+        fstr = f"{mod}.acl"
         if fstr not in self.auth:
             return None
         fcall = salt.utils.args.format_call(
@@ -268,7 +267,7 @@ class LoadAuth:
 
     def list_tokens(self):
         """
-        List all tokens in eauth_tokn storage.
+        List all tokens in eauth_tokens storage.
         """
         return self.tokens["{}.list_tokens".format(self.opts["eauth_tokens"])](
             self.opts
@@ -302,7 +301,6 @@ class LoadAuth:
         if "eauth" not in load:
             log.warning('Authentication failure of type "eauth" occurred.')
             return False
-
         if load["eauth"] not in self.opts["external_auth"]:
             log.warning('The eauth system "%s" is not enabled', load["eauth"])
             log.warning('Authentication failure of type "eauth" occurred.')
@@ -324,6 +322,7 @@ class LoadAuth:
         failure.
         """
         error_msg = 'Authentication failure of type "user" occurred.'
+
         auth_key = load.pop("key", None)
         if auth_key is None:
             log.warning(error_msg)
@@ -332,27 +331,32 @@ class LoadAuth:
         if "user" in load:
             auth_user = AuthUser(load["user"])
             if auth_user.is_sudo():
-                # If someone sudos check to make sure there is no ACL's around their username
-                if auth_key != key[self.opts.get("user", "root")]:
-                    log.warning(error_msg)
-                    return False
-                return auth_user.sudo_name()
+                for check_key in key:
+                    if auth_key == key[check_key]:
+                        return auth_user.sudo_name()
+                return False
             elif (
                 load["user"] == self.opts.get("user", "root") or load["user"] == "root"
             ):
-                if auth_key != key[self.opts.get("user", "root")]:
-                    log.warning(
-                        "Master runs as %r, but user in payload is %r",
-                        self.opts.get("user", "root"),
-                        load["user"],
-                    )
-                    log.warning(error_msg)
-                    return False
+                for check_key in key:
+                    if auth_key == key[check_key]:
+                        return True
+                log.warning(
+                    "Master runs as %r, but user in payload is %r",
+                    self.opts.get("user", "root"),
+                    load["user"],
+                )
+                log.warning(error_msg)
+                return False
+
             elif auth_user.is_running_user():
                 if auth_key != key.get(load["user"]):
                     log.warning(error_msg)
                     return False
             elif auth_key == key.get("root"):
+                pass
+            elif auth_key == key.get("salt"):
+                # there is nologin for salt
                 pass
             else:
                 if load["user"] in key:
@@ -365,9 +369,13 @@ class LoadAuth:
                     log.warning(error_msg)
                     return False
         else:
-            if auth_key != key[salt.utils.user.get_user()]:
-                log.warning(error_msg)
-                return False
+            for check_key in key:
+                if auth_key == key[check_key]:
+                    return True
+
+            log.warning(error_msg)
+            return False
+
         return True
 
     def get_auth_list(self, load, token=None):
@@ -453,8 +461,9 @@ class LoadAuth:
             if not self.authenticate_eauth(load):
                 ret["error"] = {
                     "name": "EauthAuthenticationError",
-                    "message": 'Authentication failure of type "eauth" occurred for '
-                    "user {}.".format(username),
+                    "message": 'Authentication failure of type "eauth" occurred for user {}.'.format(
+                        username
+                    ),
                 }
                 return ret
 
@@ -464,7 +473,7 @@ class LoadAuth:
             msg = 'Authentication failure of type "user" occurred'
             if not auth_ret:  # auth_ret can be a boolean or the effective user id
                 if show_username:
-                    msg = "{} for user {}.".format(msg, username)
+                    msg = f"{msg} for user {username}."
                 ret["error"] = {"name": "UserAuthenticationError", "message": msg}
                 return ret
 
@@ -508,10 +517,10 @@ class Resolver:
 
     def _send_token_request(self, load):
         master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(self.opts["interface"]),
+            salt.utils.network.ip_bracket(self.opts["interface"]),
             str(self.opts["ret_port"]),
         )
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", master_uri=master_uri
         ) as channel:
             return channel.send(load)
@@ -525,17 +534,16 @@ class Resolver:
         if not eauth:
             print("External authentication system has not been specified")
             return ret
-        fstr = "{}.auth".format(eauth)
+        fstr = f"{eauth}.auth"
         if fstr not in self.auth:
             print(
-                (
-                    'The specified external authentication system "{}" is '
-                    "not available"
-                ).format(eauth)
+                'The specified external authentication system "{}" is not available'.format(
+                    eauth
+                )
             )
             print(
                 "Available eauth types: {}".format(
-                    ", ".join([k[:-5] for k in self.auth if k.endswith(".auth")])
+                    ", ".join(sorted(k[:-5] for k in self.auth if k.endswith(".auth")))
                 )
             )
             return ret
@@ -545,14 +553,14 @@ class Resolver:
             if arg in self.opts:
                 ret[arg] = self.opts[arg]
             elif arg.startswith("pass"):
-                ret[arg] = getpass.getpass("{}: ".format(arg))
+                ret[arg] = getpass.getpass(f"{arg}: ")
             else:
-                ret[arg] = input("{}: ".format(arg))
+                ret[arg] = input(f"{arg}: ")
         for kwarg, default in list(args["kwargs"].items()):
             if kwarg in self.opts:
                 ret["kwarg"] = self.opts[kwarg]
             else:
-                ret[kwarg] = input("{} [{}]: ".format(kwarg, default))
+                ret[kwarg] = input(f"{kwarg} [{default}]: ")
 
         # Use current user if empty
         if "username" in ret and not ret["username"]:
@@ -606,7 +614,7 @@ class AuthUser:
         """
         Instantiate an AuthUser object.
 
-        Takes a user to reprsent, as a string.
+        Takes a user to represent, as a string.
         """
         self.user = user
 

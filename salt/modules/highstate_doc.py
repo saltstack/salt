@@ -507,13 +507,15 @@ def process_lowstates(**kwargs):
 
     if not isinstance(ls, list):
         raise Exception(
-            "ERROR: to see details run: [salt-call state.show_lowstate] <-----***-SEE-***"
+            "ERROR: to see details run: [salt-call state.show_lowstate]"
+            " <-----***-SEE-***"
         )
     else:
         if ls:
             if not isinstance(ls[0], dict):
                 raise Exception(
-                    "ERROR: to see details run: [salt-call state.show_lowstate] <-----***-SEE-***"
+                    "ERROR: to see details run: [salt-call state.show_lowstate]"
+                    " <-----***-SEE-***"
                 )
 
     for s in ls:

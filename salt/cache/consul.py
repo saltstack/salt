@@ -1,8 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Minion data cache plugin for Consul key/value data store.
 
 .. versionadded:: 2016.11.2
+
+.. versionchanged:: 3005
+
+    Timestamp/cache updated support added.
 
 :depends: python-consul >= 0.2.0
 
@@ -31,6 +34,12 @@ could be set in the master config. These are the defaults:
     consul.consistency: default
     consul.dc: dc1
     consul.verify: True
+    consul.timestamp_suffix: .tstamp  # Added in 3005.0
+
+In order to bring the cache APIs into conformity, in 3005.0 timestamp
+information gets stored as a separate ``{key}.tstamp`` key/value. If your
+existing functionality depends on being able to store normal keys with the
+``.tstamp`` suffix, override the ``consul.timestamp_suffix`` default config.
 
 Related docs could be found in the `python-consul documentation`_.
 
@@ -46,10 +55,11 @@ value to ``consul``:
 .. _`python-consul documentation`: https://python-consul.readthedocs.io/en/latest/#consul
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+import time
 
+import salt.payload
 from salt.exceptions import SaltCacheError
 
 try:
@@ -62,6 +72,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 api = None
+_tstamp_suffix = ".tstamp"
 
 
 # Define the module's virtual name
@@ -91,12 +102,14 @@ def __virtual__():
     }
 
     try:
-        global api
+        global api, _tstamp_suffix
+        _tstamp_suffix = __opts__.get("consul.timestamp_suffix", _tstamp_suffix)
         api = consul.Consul(**consul_kwargs)
     except AttributeError:
         return (
             False,
-            "Failed to invoke consul.Consul, please make sure you have python-consul >= 0.2.0 installed",
+            "Failed to invoke consul.Consul, please make sure you have python-consul >="
+            " 0.2.0 installed",
         )
 
     return __virtualname__
@@ -106,30 +119,29 @@ def store(bank, key, data):
     """
     Store a key value.
     """
-    c_key = "{0}/{1}".format(bank, key)
+    c_key = f"{bank}/{key}"
+    tstamp_key = f"{bank}/{key}{_tstamp_suffix}"
+
     try:
-        c_data = __context__["serial"].dumps(data)
+        c_data = salt.payload.dumps(data)
         api.kv.put(c_key, c_data)
+        api.kv.put(tstamp_key, salt.payload.dumps(int(time.time())))
     except Exception as exc:  # pylint: disable=broad-except
-        raise SaltCacheError(
-            "There was an error writing the key, {0}: {1}".format(c_key, exc)
-        )
+        raise SaltCacheError(f"There was an error writing the key, {c_key}: {exc}")
 
 
 def fetch(bank, key):
     """
     Fetch a key value.
     """
-    c_key = "{0}/{1}".format(bank, key)
+    c_key = f"{bank}/{key}"
     try:
         _, value = api.kv.get(c_key)
         if value is None:
             return {}
-        return __context__["serial"].loads(value["Value"])
+        return salt.payload.loads(value["Value"])
     except Exception as exc:  # pylint: disable=broad-except
-        raise SaltCacheError(
-            "There was an error reading the key, {0}: {1}".format(c_key, exc)
-        )
+        raise SaltCacheError(f"There was an error reading the key, {c_key}: {exc}")
 
 
 def flush(bank, key=None):
@@ -138,14 +150,16 @@ def flush(bank, key=None):
     """
     if key is None:
         c_key = bank
+        tstamp_key = None
     else:
-        c_key = "{0}/{1}".format(bank, key)
+        c_key = f"{bank}/{key}"
+        tstamp_key = f"{bank}/{key}{_tstamp_suffix}"
     try:
+        if tstamp_key:
+            api.kv.delete(tstamp_key)
         return api.kv.delete(c_key, recurse=key is None)
     except Exception as exc:  # pylint: disable=broad-except
-        raise SaltCacheError(
-            "There was an error removing the key, {0}: {1}".format(c_key, exc)
-        )
+        raise SaltCacheError(f"There was an error removing the key, {c_key}: {exc}")
 
 
 def list_(bank):
@@ -155,9 +169,7 @@ def list_(bank):
     try:
         _, keys = api.kv.get(bank + "/", keys=True, separator="/")
     except Exception as exc:  # pylint: disable=broad-except
-        raise SaltCacheError(
-            'There was an error getting the key "{0}": {1}'.format(bank, exc)
-        )
+        raise SaltCacheError(f'There was an error getting the key "{bank}": {exc}')
     if keys is None:
         keys = []
     else:
@@ -166,7 +178,7 @@ def list_(bank):
         out = set()
         for key in keys:
             out.add(key[len(bank) + 1 :].rstrip("/"))
-        keys = list(out)
+        keys = [o for o in out if not o.endswith(_tstamp_suffix)]
     return keys
 
 
@@ -174,14 +186,24 @@ def contains(bank, key):
     """
     Checks if the specified bank contains the specified key.
     """
-    if key is None:
-        return True  # any key could be a branch and a leaf at the same time in Consul
-    else:
-        try:
-            c_key = "{0}/{1}".format(bank, key)
-            _, value = api.kv.get(c_key)
-        except Exception as exc:  # pylint: disable=broad-except
-            raise SaltCacheError(
-                "There was an error getting the key, {0}: {1}".format(c_key, exc)
-            )
-        return value is not None
+    try:
+        c_key = "{}/{}".format(bank, key or "")
+        _, value = api.kv.get(c_key, keys=True)
+    except Exception as exc:  # pylint: disable=broad-except
+        raise SaltCacheError(f"There was an error getting the key, {c_key}: {exc}")
+    return value is not None
+
+
+def updated(bank, key):
+    """
+    Return the Unix Epoch timestamp of when the key was last updated. Return
+    None if key is not found.
+    """
+    c_key = f"{bank}/{key}{_tstamp_suffix}"
+    try:
+        _, value = api.kv.get(c_key)
+        if value is None:
+            return None
+        return salt.payload.loads(value["Value"])
+    except Exception as exc:  # pylint: disable=broad-except
+        raise SaltCacheError(f"There was an error reading the key, {c_key}: {exc}")

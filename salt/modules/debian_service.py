@@ -13,13 +13,9 @@ import glob
 import logging
 import os
 import re
+import shlex
 
 import salt.utils.systemd
-
-# pylint: disable=import-error
-from salt.ext.six.moves import shlex_quote as _cmd_quote
-
-# pylint: enable=import-error
 
 __func_alias__ = {"reload_": "reload"}
 
@@ -267,7 +263,7 @@ def enable(name, **kwargs):
 
         salt '*' service.enable <service name>
     """
-    cmd = "insserv {0} && update-rc.d {0} enable".format(_cmd_quote(name))
+    cmd = "insserv {0} && update-rc.d {0} enable".format(shlex.quote(name))
     return not __salt__["cmd.retcode"](cmd, python_shell=True)
 
 

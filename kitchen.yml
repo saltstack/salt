@@ -38,7 +38,7 @@ provisioner:
     - 139
   max_retries: 2
   remote_states:
-    name: git://github.com/saltstack/salt-jenkins.git
+    name: https://github.com/saltstack/salt-jenkins.git
     branch: master
     repo: git
     testingdir: /testing

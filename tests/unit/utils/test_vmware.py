@@ -8,6 +8,8 @@ import base64
 import logging
 import ssl
 
+import pytest
+
 import salt.utils.vmware
 from salt.exceptions import (
     ArgumentValueError,
@@ -20,7 +22,7 @@ from salt.exceptions import (
 )
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, PropertyMock, call, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     from pyVmomi import vim, vmodl  # pylint: disable=no-name-in-module
@@ -39,7 +41,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetClusterTestCase(TestCase):
     """
     Tests for salt.utils.vmware.get_cluster
@@ -168,7 +170,7 @@ class GetClusterTestCase(TestCase):
                     salt.utils.vmware.get_cluster(self.mock_dc, "fake_cluster")
         self.assertEqual(
             excinfo.exception.strerror,
-            "Cluster 'fake_cluster' was not found in " "datacenter 'fake_dc'",
+            "Cluster 'fake_cluster' was not found in datacenter 'fake_dc'",
         )
 
     def test_cluster_not_found(self):
@@ -184,7 +186,7 @@ class GetClusterTestCase(TestCase):
                     salt.utils.vmware.get_cluster(self.mock_dc, "fake_cluster")
         self.assertEqual(
             excinfo.exception.strerror,
-            "Cluster 'fake_cluster' was not found in " "datacenter 'fake_dc'",
+            "Cluster 'fake_cluster' was not found in datacenter 'fake_dc'",
         )
 
     def test_cluster_found(self):
@@ -200,7 +202,7 @@ class GetClusterTestCase(TestCase):
         self.assertEqual(res, self.mock_cluster2)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class CreateClusterTestCase(TestCase):
     """
     Tests for salt.utils.vmware.create_cluster
@@ -248,7 +250,7 @@ class CreateClusterTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_create_cluster_raise_vim_fault(self):
@@ -272,7 +274,7 @@ class CreateClusterTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class UpdateClusterTestCase(TestCase):
     """
     Tests for salt.utils.vmware.update_cluster
@@ -325,7 +327,7 @@ class UpdateClusterTestCase(TestCase):
             salt.utils.vmware.update_cluster(self.mock_cluster, self.mock_cluster_spec)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_reconfigure_compute_resource_raise_vim_fault(self):
@@ -359,7 +361,7 @@ class UpdateClusterTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class WaitForTaskTestCase(TestCase):
     """
     Tests for salt.utils.vmware.wait_for_task
@@ -386,7 +388,7 @@ class WaitForTaskTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_first_task_info_raise_vim_fault(self):
@@ -424,7 +426,7 @@ class WaitForTaskTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_inner_loop_task_info_raise_vim_fault(self):
@@ -528,7 +530,7 @@ class WaitForTaskTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_info_error_vim_fault(self):
@@ -594,7 +596,7 @@ class WaitForTaskTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetMorsWithPropertiesTestCase(TestCase):
     """
     Tests for salt.utils.get_mors_with_properties
@@ -846,7 +848,7 @@ class GetMorsWithPropertiesTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetPropertiesOfManagedObjectTestCase(TestCase):
     """
     Tests for salt.utils.get_properties_of_managed_object
@@ -925,7 +927,7 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
                     self.fake_mo_ref, self.mock_props
                 )
         self.assertEqual(
-            "Properties of managed object '<unnamed>' weren't " "retrieved",
+            "Properties of managed object '<unnamed>' weren't retrieved",
             excinfo.exception.strerror,
         )
 
@@ -939,12 +941,12 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
                     self.fake_mo_ref, self.mock_props
                 )
         self.assertEqual(
-            "Properties of managed object 'fake_name' weren't " "retrieved",
+            "Properties of managed object 'fake_name' weren't retrieved",
             excinfo.exception.strerror,
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetManagedObjectName(TestCase):
     """
     Tests for salt.utils.get_managed_object_name
@@ -988,7 +990,7 @@ class GetManagedObjectName(TestCase):
         self.assertEqual(ret, "fake_name")
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetContentTestCase(TestCase):
     """
     Tests for salt.utils.get_content
@@ -1139,7 +1141,7 @@ class GetContentTestCase(TestCase):
                 salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_create_container_view_raise_vim_fault(self):
@@ -1175,7 +1177,7 @@ class GetContentTestCase(TestCase):
                 salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_destroy_raise_vim_fault(self):
@@ -1255,7 +1257,7 @@ class GetContentTestCase(TestCase):
             salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_retrieve_contents_raise_vim_fault(self):
@@ -1295,7 +1297,7 @@ class GetContentTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetRootFolderTestCase(TestCase):
     """
     Tests for salt.utils.get_root_folder
@@ -1316,7 +1318,7 @@ class GetRootFolderTestCase(TestCase):
             salt.utils.vmware.get_root_folder(self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_raise_vim_fault(self):
@@ -1340,7 +1342,7 @@ class GetRootFolderTestCase(TestCase):
         self.assertEqual(ret, self.mock_root_folder)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetServiceInfoTestCase(TestCase):
     """
     Tests for salt.utils.vmware.get_service_info
@@ -1367,7 +1369,7 @@ class GetServiceInfoTestCase(TestCase):
             salt.utils.vmware.get_service_info(self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_about_raises_vim_fault(self):
@@ -1387,8 +1389,8 @@ class GetServiceInfoTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
-@skipIf(not HAS_GSSAPI, "The 'gssapi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_GSSAPI, reason="The 'gssapi' library is missing")
 class GssapiTokenTest(TestCase):
     """
     Test cases for salt.utils.vmware.get_gssapi_token
@@ -1412,7 +1414,7 @@ class GssapiTokenTest(TestCase):
                     "The gssapi library is not imported.", excinfo.exception.message
                 )
 
-    @skipIf(not HAS_GSSAPI, "The 'gssapi' library is missing")
+    @pytest.mark.skipif(not HAS_GSSAPI, reason="The 'gssapi' library is missing")
     def test_service_name(self):
         mock_name = MagicMock()
         with patch.object(salt.utils.vmware.gssapi, "Name", mock_name):
@@ -1423,7 +1425,7 @@ class GssapiTokenTest(TestCase):
                 "principal/host@domain", gssapi.C_NT_USER_NAME
             )
 
-    @skipIf(not HAS_GSSAPI, "The 'gssapi' library is missing")
+    @pytest.mark.skipif(not HAS_GSSAPI, reason="The 'gssapi' library is missing")
     def test_out_token_defined(self):
         mock_context = MagicMock(return_value=MagicMock())
         mock_context.return_value.established = False
@@ -1433,7 +1435,7 @@ class GssapiTokenTest(TestCase):
             self.assertEqual(mock_context.return_value.step.called, 1)
             self.assertEqual(ret, base64.b64encode(b"out_token"))
 
-    @skipIf(not HAS_GSSAPI, "The 'gssapi' library is missing")
+    @pytest.mark.skipif(not HAS_GSSAPI, reason="The 'gssapi' library is missing")
     def test_out_token_undefined(self):
         mock_context = MagicMock(return_value=MagicMock())
         mock_context.return_value.established = False
@@ -1444,7 +1446,7 @@ class GssapiTokenTest(TestCase):
             self.assertEqual(mock_context.return_value.step.called, 1)
             self.assertIn("Can't receive token", excinfo.exception.strerror)
 
-    @skipIf(not HAS_GSSAPI, "The 'gssapi' library is missing")
+    @pytest.mark.skipif(not HAS_GSSAPI, reason="The 'gssapi' library is missing")
     def test_context_extablished(self):
         mock_context = MagicMock(return_value=MagicMock())
         mock_context.return_value.established = True
@@ -1461,7 +1463,7 @@ class GssapiTokenTest(TestCase):
             )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class PrivateGetServiceInstanceTestCase(TestCase):
     """
     Tests for salt.utils.vmware._get_service_instance
@@ -1797,7 +1799,8 @@ class PrivateGetServiceInstanceTestCase(TestCase):
 
         self.assertEqual(mock_sc.call_count, 1)
         self.assertIn(
-            "Could not connect to host 'fake_host.fqdn'", excinfo.exception.message,
+            "Could not connect to host 'fake_host.fqdn'",
+            excinfo.exception.message,
         )
 
     def test_attempt_unsuccessful_connection_vim_fault(self):
@@ -1929,7 +1932,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             self.assertIn("VimFault", excinfo.exception.message)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetServiceInstanceTestCase(TestCase):
     """
     Tests for salt.utils.vmware.get_service_instance
@@ -2106,7 +2109,7 @@ class GetServiceInstanceTestCase(TestCase):
                 )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_current_time_raise_vim_fault(self):
@@ -2150,7 +2153,7 @@ class GetServiceInstanceTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class DisconnectTestCase(TestCase):
     """
     Tests for salt.utils.vmware.disconnect
@@ -2174,7 +2177,7 @@ class DisconnectTestCase(TestCase):
                 salt.utils.vmware.disconnect(service_instance=self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_disconnect_raise_vim_fault(self):
@@ -2194,7 +2197,7 @@ class DisconnectTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class IsConnectionToAVCenterTestCase(TestCase):
     """
     Tests for salt.utils.vmware.is_connection_to_a_vcenter
@@ -2209,7 +2212,7 @@ class IsConnectionToAVCenterTestCase(TestCase):
             salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_api_type_raise_vim_fault(self):
@@ -2255,7 +2258,7 @@ class IsConnectionToAVCenterTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
     """
     Tests for salt.utils.vmware.get_new_service_instance_stub
@@ -2332,7 +2335,7 @@ class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, self.mock_new_stub)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetServiceInstanceFromManagedObjectTestCase(TestCase):
     """
     Tests for salt.utils.vmware.get_managed_instance_from_managed_object
@@ -2386,7 +2389,7 @@ class GetServiceInstanceFromManagedObjectTestCase(TestCase):
         self.assertEqual(ret._stub, self.mock_stub)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetDatacentersTestCase(TestCase):
     """
     Tests for salt.utils.vmware.get_datacenters
@@ -2473,7 +2476,7 @@ class GetDatacentersTestCase(TestCase):
         self.assertEqual(res, [self.mock_dc1, self.mock_dc2])
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetDatacenterTestCase(TestCase):
     """
     Tests for salt.utils.vmware.get_datacenter
@@ -2517,7 +2520,7 @@ class GetDatacenterTestCase(TestCase):
         self.assertEqual(res, self.mock_dc)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class CreateDatacenterTestCase(TestCase):
     """
     Tests for salt.utils.vmware.create_datacenter
@@ -2560,7 +2563,7 @@ class CreateDatacenterTestCase(TestCase):
                 salt.utils.vmware.create_datacenter(self.mock_si, "fake_dc")
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_create_datacenter_raise_vim_fault(self):
@@ -2600,7 +2603,7 @@ class FakeTaskClass:
     pass
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetDvssTestCase(TestCase):
     def setUp(self):
         self.mock_si = MagicMock()
@@ -2695,7 +2698,7 @@ class GetDvssTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetNetworkFolderTestCase(TestCase):
     def setUp(self):
         self.mock_si = MagicMock()
@@ -2772,7 +2775,7 @@ class GetNetworkFolderTestCase(TestCase):
                 salt.utils.vmware.get_network_folder(self.mock_dc_ref)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Network folder in datacenter 'fake_dc' wasn't " "retrieved",
+            "Network folder in datacenter 'fake_dc' wasn't retrieved",
         )
 
     def test_get_network_folder(self):
@@ -2780,7 +2783,7 @@ class GetNetworkFolderTestCase(TestCase):
         self.assertEqual(ret, self.mock_entries[0]["object"])
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class CreateDvsTestCase(TestCase):
     def setUp(self):
         self.mock_dc_ref = MagicMock()
@@ -2865,7 +2868,7 @@ class CreateDvsTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_create_dvs_task_raises_vim_fault(self):
@@ -2899,7 +2902,7 @@ class CreateDvsTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class UpdateDvsTestCase(TestCase):
     def setUp(self):
         self.mock_task = MagicMock(spec=FakeTaskClass)
@@ -2952,7 +2955,7 @@ class UpdateDvsTestCase(TestCase):
             salt.utils.vmware.update_dvs(self.mock_dvs_ref, self.mock_dvs_spec)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_reconfigure_dvs_task_raises_vim_fault(self):
@@ -2980,7 +2983,7 @@ class UpdateDvsTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class SetDvsNetworkResourceManagementEnabledTestCase(TestCase):
     def setUp(self):
         self.mock_enabled = MagicMock()
@@ -3029,7 +3032,7 @@ class SetDvsNetworkResourceManagementEnabledTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_enable_network_resource_management_raises_vim_fault(self):
@@ -3052,7 +3055,7 @@ class SetDvsNetworkResourceManagementEnabledTestCase(TestCase):
         self.assertEqual(excinfo.exception.strerror, "RuntimeFault msg")
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetDvportgroupsTestCase(TestCase):
     def setUp(self):
         self.mock_si = MagicMock()
@@ -3099,7 +3102,7 @@ class GetDvportgroupsTestCase(TestCase):
             salt.utils.vmware.get_dvportgroups(MagicMock())
         self.assertEqual(
             excinfo.exception.strerror,
-            "Parent has to be either a datacenter, or a " "distributed virtual switch",
+            "Parent has to be either a datacenter, or a distributed virtual switch",
         )
 
     def test_get_managed_object_name_call(self):
@@ -3171,7 +3174,7 @@ class GetDvportgroupsTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetUplinkDvportgroupTestCase(TestCase):
     def setUp(self):
         self.mock_si = MagicMock()
@@ -3259,7 +3262,7 @@ class GetUplinkDvportgroupTestCase(TestCase):
         self.assertEqual(ret, self.mock_items[1]["object"])
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class CreateDvportgroupTestCase(TestCase):
     def setUp(self):
         self.mock_pg_spec = MagicMock()
@@ -3307,7 +3310,7 @@ class CreateDvportgroupTestCase(TestCase):
             salt.utils.vmware.create_dvportgroup(self.mock_dvs_ref, self.mock_pg_spec)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_create_dvporgroup_task_raises_vim_fault(self):
@@ -3335,7 +3338,7 @@ class CreateDvportgroupTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class UpdateDvportgroupTestCase(TestCase):
     def setUp(self):
         self.mock_pg_spec = MagicMock()
@@ -3383,7 +3386,7 @@ class UpdateDvportgroupTestCase(TestCase):
             salt.utils.vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_reconfigure_dvporgroup_task_raises_vim_fault(self):
@@ -3411,7 +3414,7 @@ class UpdateDvportgroupTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class RemoveDvportgroupTestCase(TestCase):
     def setUp(self):
         self.mock_task = MagicMock(spec=FakeTaskClass)
@@ -3456,7 +3459,7 @@ class RemoveDvportgroupTestCase(TestCase):
             salt.utils.vmware.remove_dvportgroup(self.mock_pg_ref)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_destroy_treconfigure_dvporgroup_task_raises_vim_fault(self):
@@ -3484,7 +3487,7 @@ class RemoveDvportgroupTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetHostsTestCase(TestCase):
     """
     Tests for salt.utils.vmware.get_hosts
@@ -3521,7 +3524,7 @@ class GetHostsTestCase(TestCase):
             salt.utils.vmware.get_hosts(self.mock_si, cluster_name="fake_cluster")
         self.assertEqual(
             excinfo.exception.strerror,
-            "Must specify the datacenter when specifying the " "cluster",
+            "Must specify the datacenter when specifying the cluster",
         )
 
     def test_get_si_no_datacenter_no_cluster(self):
@@ -3640,7 +3643,7 @@ class GetHostsTestCase(TestCase):
         self.assertEqual(res, [self.mock_host1])
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetLicenseManagerTestCase(TestCase):
     """
     Tests for salt.utils.vmware.get_license_manager
@@ -3665,7 +3668,7 @@ class GetLicenseManagerTestCase(TestCase):
             salt.utils.vmware.get_license_manager(self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_raise_vim_fault(self):
@@ -3689,7 +3692,7 @@ class GetLicenseManagerTestCase(TestCase):
         self.assertEqual(ret, self.mock_lic_mgr)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetLicenseAssignmentManagerTestCase(TestCase):
     """
     Tests for salt.utils.vmware.get_license_assignment_manager
@@ -3716,7 +3719,7 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
             salt.utils.vmware.get_license_assignment_manager(self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_raise_vim_fault(self):
@@ -3754,7 +3757,7 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
         self.assertEqual(ret, self.mock_lic_assign_mgr)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetLicensesTestCase(TestCase):
     """
     Tests for salt.utils.vmware.get_licenses
@@ -3804,7 +3807,7 @@ class GetLicensesTestCase(TestCase):
             salt.utils.vmware.get_licenses(self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_raise_vim_fault(self):
@@ -3828,7 +3831,7 @@ class GetLicensesTestCase(TestCase):
         self.assertEqual(ret, self.mock_licenses)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class AddLicenseTestCase(TestCase):
     """
     Tests for salt.utils.vmware.add_license
@@ -3907,7 +3910,7 @@ class AddLicenseTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_add_license_raises_vim_fault(self):
@@ -3937,7 +3940,7 @@ class AddLicenseTestCase(TestCase):
         self.assertEqual(ret, self.mock_license)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetAssignedLicensesTestCase(TestCase):
     """
     Tests for salt.utils.vmware.get_assigned_licenses
@@ -4046,7 +4049,7 @@ class GetAssignedLicensesTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_instance_uuid_raises_vim_fault(self):
@@ -4118,7 +4121,7 @@ class GetAssignedLicensesTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_query_assigned_licenses_raises_vim_fault(self):
@@ -4148,7 +4151,7 @@ class GetAssignedLicensesTestCase(TestCase):
         self.assertEqual(ret, self.mock_assignments)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class AssignLicenseTestCase(TestCase):
     """
     Tests for salt.utils.vmware.assign_license
@@ -4254,7 +4257,7 @@ class AssignLicenseTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_instance_uuid_raises_vim_fault(self):
@@ -4320,7 +4323,7 @@ class AssignLicenseTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_update_assigned_licenses_raises_vim_fault(self):
@@ -4362,7 +4365,7 @@ class AssignLicenseTestCase(TestCase):
         self.assertEqual(ret, self.mock_license)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetStorageSystemTestCase(TestCase):
     """
     Tests for salt.utils.vmware.get_storage_system
@@ -4442,7 +4445,7 @@ class GetStorageSystemTestCase(TestCase):
                 salt.utils.vmware.get_storage_system(self.mock_si, self.mock_host_ref)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Host's 'fake_host' storage system was " "not retrieved",
+            "Host's 'fake_host' storage system was not retrieved",
         )
 
     def test_valid_mors_result(self):
@@ -4450,7 +4453,7 @@ class GetStorageSystemTestCase(TestCase):
         self.assertEqual(res, self.mock_obj)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class GetDatastoresTestCase(TestCase):
     """
     Tests for salt.utils.vmware.get_datastores
@@ -4720,7 +4723,7 @@ class GetDatastoresTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class RenameDatastoreTestCase(TestCase):
     """
     Tests for salt.utils.vmware.rename_datastore
@@ -4757,7 +4760,7 @@ class RenameDatastoreTestCase(TestCase):
             salt.utils.vmware.rename_datastore(self.mock_ds_ref, "fake_new_name")
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_rename_datastore_raise_vim_fault(self):
@@ -4812,7 +4815,7 @@ class ConvertToKbTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 @patch("salt.utils.vmware.get_managed_object_name", MagicMock())
 @patch("salt.utils.vmware.wait_for_task", MagicMock())
 class CreateVirtualMachineTestCase(TestCase):
@@ -4836,7 +4839,7 @@ class CreateVirtualMachineTestCase(TestCase):
             self.mock_folder_object,
             self.mock_resourcepool_object,
         )
-        self.assert_called_once(self.mock_vm_create_task)
+        self.mock_vm_create_task.assert_called_once()
 
     def test_create_vm_host_task_call(self):
         salt.utils.vmware.create_vm(
@@ -4846,7 +4849,7 @@ class CreateVirtualMachineTestCase(TestCase):
             self.mock_resourcepool_object,
             host_object=self.mock_host_object,
         )
-        self.assert_called_once(self.mock_vm_create_task)
+        self.mock_vm_create_task.assert_called_once()
 
     def test_create_vm_raise_no_permission(self):
         exception = vim.fault.NoPermission()
@@ -4859,8 +4862,8 @@ class CreateVirtualMachineTestCase(TestCase):
                 self.mock_folder_object,
                 self.mock_resourcepool_object,
             )
-        self.assertEqual(
-            exc.exception.strerror, "Not enough permissions. Required privilege: "
+        assert exc.exception.strerror.startswith(
+            "Not enough permissions. Required privilege: "
         )
 
     def test_create_vm_raise_vim_fault(self):
@@ -4903,7 +4906,7 @@ class CreateVirtualMachineTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 @patch("salt.utils.vmware.get_managed_object_name", MagicMock())
 @patch("salt.utils.vmware.wait_for_task", MagicMock())
 class RegisterVirtualMachineTestCase(TestCase):
@@ -4928,7 +4931,7 @@ class RegisterVirtualMachineTestCase(TestCase):
             self.mock_vmx_path,
             self.mock_resourcepool_object,
         )
-        self.assert_called_once(self.mock_vm_register_task)
+        self.mock_vm_register_task.assert_called_once()
 
     def test_register_vm_host_task_call(self):
         salt.utils.vmware.register_vm(
@@ -4938,7 +4941,7 @@ class RegisterVirtualMachineTestCase(TestCase):
             self.mock_resourcepool_object,
             host_object=self.mock_host_object,
         )
-        self.assert_called_once(self.mock_vm_register_task)
+        self.mock_vm_register_task.assert_called_once()
 
     def test_register_vm_raise_no_permission(self):
         exception = vim.fault.NoPermission()
@@ -4950,8 +4953,8 @@ class RegisterVirtualMachineTestCase(TestCase):
                 self.mock_vmx_path,
                 self.mock_resourcepool_object,
             )
-        self.assertEqual(
-            exc.exception.strerror, "Not enough permissions. Required privilege: "
+        assert exc.exception.strerror.startswith(
+            "Not enough permissions. Required privilege: "
         )
 
     def test_register_vm_raise_vim_fault(self):
@@ -4994,7 +4997,7 @@ class RegisterVirtualMachineTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 @patch("salt.utils.vmware.get_managed_object_name", MagicMock())
 @patch("salt.utils.vmware.wait_for_task", MagicMock())
 class UpdateVirtualMachineTestCase(TestCase):
@@ -5010,7 +5013,7 @@ class UpdateVirtualMachineTestCase(TestCase):
 
     def test_update_vm_task_call(self):
         salt.utils.vmware.update_vm(self.mock_vm_ref, self.mock_config_spec)
-        self.assert_called_once(self.mock_vm_update_task)
+        self.mock_vm_update_task.assert_called_once()
 
     def test_update_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
@@ -5040,7 +5043,7 @@ class UpdateVirtualMachineTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 @patch("salt.utils.vmware.get_managed_object_name", MagicMock())
 @patch("salt.utils.vmware.wait_for_task", MagicMock())
 class DeleteVirtualMachineTestCase(TestCase):
@@ -5055,7 +5058,7 @@ class DeleteVirtualMachineTestCase(TestCase):
 
     def test_destroy_vm_task_call(self):
         salt.utils.vmware.delete_vm(self.mock_vm_ref)
-        self.assert_called_once(self.mock_vm_destroy_task)
+        self.mock_vm_destroy_task.assert_called_once()
 
     def test_destroy_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
@@ -5085,7 +5088,7 @@ class DeleteVirtualMachineTestCase(TestCase):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 @patch("salt.utils.vmware.get_managed_object_name", MagicMock())
 class UnregisterVirtualMachineTestCase(TestCase):
     """
@@ -5098,7 +5101,7 @@ class UnregisterVirtualMachineTestCase(TestCase):
 
     def test_unregister_vm_task_call(self):
         salt.utils.vmware.unregister_vm(self.mock_vm_ref)
-        self.assert_called_once(self.mock_vm_unregister)
+        self.mock_vm_unregister.assert_called_once()
 
     def test_unregister_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()

@@ -34,6 +34,26 @@ for any OS with a Bourne shell:
     curl -L https://bootstrap.saltstack.com -o bootstrap_salt.sh
     sudo sh bootstrap_salt.sh
 
+Before run the script, it is a good practice to verify the checksum of the downloaded
+file. You can verify the checksum with SHA256 by running this command:
+
+.. code-block:: bash
+
+    test $(sha256sum bootstrap_salt.sh | awk '{print $1}') \
+       = $(curl -sL https://bootstrap.saltproject.io/sha256 | cat -) \
+       && echo "OK" \
+       || echo "File does not match checksum"
+
+.. note::
+
+    The previous example is the preferred method because by downloading the script
+    you can investigate the contents of the bootstrap script or using it again later.
+    Alternatively, if you want to download the bash script and run it immediately,
+    use:
+
+    .. code-block:: bash
+
+        curl -L https://bootstrap.saltproject.io | sudo sh -s --
 
 See the `salt-bootstrap`_ documentation for other one liners. When using `Vagrant`_
 to test out salt, the `Vagrant salt provisioner`_ will provision the VM for you.
@@ -78,7 +98,7 @@ ensures that the server has the Apache webserver installed.
 
 .. note::
     For a complete explanation on Salt States, see the `tutorial
-    <http://docs.saltstack.com/en/latest/topics/tutorials/states_pt1.html>`_.
+    <https://docs.saltproject.io/en/latest/topics/tutorials/states_pt1.html>`_.
 
 1. Create the ``top.sls`` file:
 

@@ -1,7 +1,7 @@
 """
 This module helps include encrypted passwords in pillars, grains and salt state files.
 
-:depends: libnacl, https://github.com/saltstack/libnacl
+:depends: PyNaCl, https://github.com/pyca/pynacl
 
 This is often useful if you wish to store your pillars in source control or
 share your pillar data with others that you trust. I don't advise making your pillars public
@@ -81,7 +81,7 @@ without extra parameters:
 .. code-block:: bash
 
     salt-run nacl.enc 'asecretpass'
-    salt-run nacl.dec 'tqXzeIJnTAM9Xf0mdLcpEdklMbfBGPj2oTKmlgrm3S1DTVVHNnh9h8mU1GKllGq/+cYsk6m5WhGdk58='
+    salt-run nacl.dec data='tqXzeIJnTAM9Xf0mdLcpEdklMbfBGPj2oTKmlgrm3S1DTVVHNnh9h8mU1GKllGq/+cYsk6m5WhGdk58='
 
 .. code-block:: yaml
 
@@ -137,9 +137,9 @@ Optional small program to encrypt data without needing salt modules.
 .. code-block:: python
 
     #!/bin/python3
-    import sys, base64, libnacl.sealed
+    import sys, base64, nacl.public
     pk = base64.b64decode('YOURPUBKEY')
-    b = libnacl.sealed.SealedBox(pk)
+    b = nacl.public.SealedBox(pk)
     data = sys.stdin.buffer.read()
     print(base64.b64encode(b.encrypt(data)).decode())
 
@@ -163,7 +163,7 @@ def __virtual__():
 
 def keygen(sk_file=None, pk_file=None, **kwargs):
     """
-    Use libnacl to generate a keypair.
+    Use PyNaCl to generate a keypair.
 
     If no `sk_file` is defined return a keypair.
 

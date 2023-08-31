@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Module for gathering and managing bridging information
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 import sys
@@ -33,8 +31,9 @@ def __virtual__():
             return True
     return (
         False,
-        "The bridge execution module failed to load: requires one of the following tool/os"
-        " combinations: ifconfig on FreeBSD/OpenBSD, brctl on Linux or brconfig on NetBSD.",
+        "The bridge execution module failed to load: requires one of the following"
+        " tool/os combinations: ifconfig on FreeBSD/OpenBSD, brctl on Linux or brconfig"
+        " on NetBSD.",
     )
 
 
@@ -52,9 +51,9 @@ def _linux_brshow(br=None):
     brctl = _tool_path("brctl")
 
     if br:
-        cmd = "{0} show {1}".format(brctl, br)
+        cmd = "{} show {}".format(brctl, br)
     else:
-        cmd = "{0} show".format(brctl)
+        cmd = "{} show".format(brctl)
 
     brs = {}
 
@@ -97,7 +96,7 @@ def _linux_bradd(br):
     Internal, creates the bridge
     """
     brctl = _tool_path("brctl")
-    return __salt__["cmd.run"]("{0} addbr {1}".format(brctl, br), python_shell=False)
+    return __salt__["cmd.run"]("{} addbr {}".format(brctl, br), python_shell=False)
 
 
 def _linux_brdel(br):
@@ -105,7 +104,7 @@ def _linux_brdel(br):
     Internal, deletes the bridge
     """
     brctl = _tool_path("brctl")
-    return __salt__["cmd.run"]("{0} delbr {1}".format(brctl, br), python_shell=False)
+    return __salt__["cmd.run"]("{} delbr {}".format(brctl, br), python_shell=False)
 
 
 def _linux_addif(br, iface):
@@ -114,7 +113,7 @@ def _linux_addif(br, iface):
     """
     brctl = _tool_path("brctl")
     return __salt__["cmd.run"](
-        "{0} addif {1} {2}".format(brctl, br, iface), python_shell=False
+        "{} addif {} {}".format(brctl, br, iface), python_shell=False
     )
 
 
@@ -124,7 +123,7 @@ def _linux_delif(br, iface):
     """
     brctl = _tool_path("brctl")
     return __salt__["cmd.run"](
-        "{0} delif {1} {2}".format(brctl, br, iface), python_shell=False
+        "{} delif {} {}".format(brctl, br, iface), python_shell=False
     )
 
 
@@ -134,7 +133,7 @@ def _linux_stp(br, state):
     """
     brctl = _tool_path("brctl")
     return __salt__["cmd.run"](
-        "{0} stp {1} {2}".format(brctl, br, state), python_shell=False
+        "{} stp {} {}".format(brctl, br, state), python_shell=False
     )
 
 
@@ -152,14 +151,14 @@ def _bsd_brshow(br=None):
     if br:
         ifaces[br] = br
     else:
-        cmd = "{0} -g bridge".format(ifconfig)
+        cmd = "{} -g bridge".format(ifconfig)
         for line in __salt__["cmd.run"](cmd, python_shell=False).splitlines():
             ifaces[line] = line
 
     brs = {}
 
     for iface in ifaces:
-        cmd = "{0} {1}".format(ifconfig, iface)
+        cmd = "{} {}".format(ifconfig, iface)
         for line in __salt__["cmd.run"](cmd, python_shell=False).splitlines():
             brs[iface] = {"interfaces": [], "stp": "no"}
             line = line.lstrip()
@@ -180,9 +179,9 @@ def _netbsd_brshow(br=None):
     brconfig = _tool_path("brconfig")
 
     if br:
-        cmd = "{0} {1}".format(brconfig, br)
+        cmd = "{} {}".format(brconfig, br)
     else:
-        cmd = "{0} -a".format(brconfig)
+        cmd = "{} -a".format(brconfig)
 
     brs = {}
     start_int = False
@@ -222,7 +221,7 @@ def _bsd_bradd(br):
 
     if (
         __salt__["cmd.retcode"](
-            "{0} {1} create up".format(ifconfig, br), python_shell=False
+            "{} {} create up".format(ifconfig, br), python_shell=False
         )
         != 0
     ):
@@ -232,9 +231,7 @@ def _bsd_bradd(br):
     if kernel == "NetBSD":
         brconfig = _tool_path("brconfig")
         if (
-            __salt__["cmd.retcode"](
-                "{0} {1} up".format(brconfig, br), python_shell=False
-            )
+            __salt__["cmd.retcode"]("{} {} up".format(brconfig, br), python_shell=False)
             != 0
         ):
             return False
@@ -249,9 +246,7 @@ def _bsd_brdel(br):
     ifconfig = _tool_path("ifconfig")
     if not br:
         return False
-    return __salt__["cmd.run"](
-        "{0} {1} destroy".format(ifconfig, br), python_shell=False
-    )
+    return __salt__["cmd.run"]("{} {} destroy".format(ifconfig, br), python_shell=False)
 
 
 def _bsd_addif(br, iface):
@@ -270,7 +265,7 @@ def _bsd_addif(br, iface):
         return False
 
     return __salt__["cmd.run"](
-        "{0} {1} {2} {3}".format(cmd, br, brcmd, iface), python_shell=False
+        "{} {} {} {}".format(cmd, br, brcmd, iface), python_shell=False
     )
 
 
@@ -290,7 +285,7 @@ def _bsd_delif(br, iface):
         return False
 
     return __salt__["cmd.run"](
-        "{0} {1} {2} {3}".format(cmd, br, brcmd, iface), python_shell=False
+        "{} {} {} {}".format(cmd, br, brcmd, iface), python_shell=False
     )
 
 
@@ -309,7 +304,7 @@ def _bsd_stp(br, state, iface):
         return False
 
     return __salt__["cmd.run"](
-        "{0} {1} {2} {3}".format(cmd, br, state, iface), python_shell=False
+        "{} {} {} {}".format(cmd, br, state, iface), python_shell=False
     )
 
 
@@ -322,7 +317,7 @@ def _os_dispatch(func, *args, **kwargs):
     else:
         kernel = __grains__["kernel"].lower()
 
-    _os_func = getattr(sys.modules[__name__], "_{0}_{1}".format(kernel, func))
+    _os_func = getattr(sys.modules[__name__], "_{}_{}".format(kernel, func))
 
     if callable(_os_func):
         return _os_func(*args, **kwargs)

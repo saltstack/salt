@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Provide authentication using Django Web Framework
 
@@ -47,15 +46,10 @@ indicated above, though the model DOES NOT have to be named
 'SaltExternalAuthModel'.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import sys
-
-# Import 3rd-party libs
-from salt.ext import six
 
 # pylint: disable=import-error
 try:
@@ -118,7 +112,7 @@ def __django_auth_setup():
             django_module_name, globals(), locals(), "SaltExternalAuthModel"
         )
         # pylint: enable=possibly-unused-variable
-        DJANGO_AUTH_CLASS_str = "django_auth_module.{0}".format(django_model_name)
+        DJANGO_AUTH_CLASS_str = "django_auth_module.{}".format(django_model_name)
         DJANGO_AUTH_CLASS = eval(DJANGO_AUTH_CLASS_str)  # pylint: disable=W0123
 
 
@@ -211,7 +205,7 @@ def acl(username):
             found = False
             for d in auth_dict[a.user_fk.username]:
                 if isinstance(d, dict):
-                    if a.minion_or_fn_matcher in six.iterkeys(d):
+                    if a.minion_or_fn_matcher in d:
                         auth_dict[a.user_fk.username][a.minion_or_fn_matcher].append(
                             a.minion_fn
                         )

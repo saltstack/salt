@@ -1,13 +1,27 @@
-# -*- coding: utf-8 -*-
 """
 Execute a command and read the output as JSON. The JSON data is then directly overlaid onto the minion's Pillar data.
-"""
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
+
+Configuring the CMD_JSON ext_pillar
+====================================
+
+Set the following Salt config to setup cmd json result as external pillar source:
+
+.. code-block:: yaml
+
+  ext_pillar:
+    - cmd_json: 'echo {\"arg\":\"value\"}'
+
+This will run the command ``echo {arg: value}`` on the master.
+
+
+Module Documentation
+====================
+
+"""
+
 import logging
 
-# Import Salt libs
 import salt.utils.json
 
 # Don't "fix" the above docstring to put it on two lines, as the sphinx

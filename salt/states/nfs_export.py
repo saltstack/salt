@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of NFS exports
 ===============================================
@@ -57,7 +56,6 @@ To ensure an NFS export is absent:
         - name: '/srv/nfs'
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.path
 
@@ -142,14 +140,14 @@ def present(name, clients=None, hosts=None, options=None, exports="/etc/exports"
     if path in old:
         if old[path] == clients:
             ret["result"] = True
-            ret["comment"] = "Export {0} already configured".format(path)
+            ret["comment"] = "Export {} already configured".format(path)
             return ret
 
         ret["changes"]["new"] = clients
         ret["changes"]["old"] = old[path]
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Export {0} would be changed".format(path)
+            ret["comment"] = "Export {} would be changed".format(path)
             return ret
 
         __salt__["nfs3.del_export"](exports, path)
@@ -159,7 +157,7 @@ def present(name, clients=None, hosts=None, options=None, exports="/etc/exports"
         ret["changes"]["new"] = clients
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Export {0} would be added".format(path)
+            ret["comment"] = "Export {} would be added".format(path)
             return ret
 
     add_export = __salt__["nfs3.add_export"]
@@ -188,7 +186,7 @@ def absent(name, exports="/etc/exports"):
     old = __salt__["nfs3.list_exports"](exports)
     if path in old:
         if __opts__["test"]:
-            ret["comment"] = "Export {0} would be removed".format(path)
+            ret["comment"] = "Export {} would be removed".format(path)
             ret["changes"][path] = old[path]
             ret["result"] = None
             return ret
@@ -198,12 +196,12 @@ def absent(name, exports="/etc/exports"):
         if not try_reload["result"]:
             ret["comment"] = try_reload["stderr"]
         else:
-            ret["comment"] = "Export {0} removed".format(path)
+            ret["comment"] = "Export {} removed".format(path)
 
         ret["result"] = try_reload["result"]
         ret["changes"][path] = old[path]
     else:
-        ret["comment"] = "Export {0} already absent".format(path)
+        ret["comment"] = "Export {} already absent".format(path)
         ret["result"] = True
 
     return ret

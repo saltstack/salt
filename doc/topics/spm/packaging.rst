@@ -135,4 +135,3 @@ installed on.
 
 Please see the :ref:`SPM Development Guide <spm-development>` for information
 on creating new modules for package file management.
-

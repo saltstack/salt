@@ -7,10 +7,10 @@ import tempfile
 import textwrap
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.utils.files
-import salt.utils.versions
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
 from tests.support.helpers import with_tempdir
@@ -154,7 +154,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         """
             )
         )
-        self.assertTrue(len(result), 6)
+        self.assertEqual(len(result), 6)
         self.assertTrue(set("X A B G H".split()).issubset(set(result.keys())))
         b = result["B"]["cmd"]
         self.assertEqual(b[0], "run")

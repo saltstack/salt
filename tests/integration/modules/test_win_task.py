@@ -1,12 +1,11 @@
 import pytest
+
 import salt.modules.win_task as task
-import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 
-@skipIf(not salt.utils.platform.is_windows(), "windows test only")
+@pytest.mark.skip_unless_on_windows
 class WinTasksTest(ModuleCase):
     """
     Tests for salt.modules.win_task.

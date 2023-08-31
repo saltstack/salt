@@ -7,8 +7,14 @@ Test salt's regex git describe version parsing
 import re
 
 import pytest
+
 import salt.version
-from salt.version import SaltStackVersion, system_information, versions_report
+from salt.version import (
+    SaltStackVersion,
+    SaltVersionsInfo,
+    system_information,
+    versions_report,
+)
 from tests.support.mock import MagicMock, patch
 
 STRIP_INITIAL_NON_NUMBERS_REGEX = re.compile(r"(?:[^\d]+)?(?P<vs>.*)")
@@ -48,6 +54,10 @@ STRIP_INITIAL_NON_NUMBERS_REGEX = re.compile(r"(?:[^\d]+)?(?P<vs>.*)")
             (3000, 2, "nb", 20201214010203, 0, "1e7bc8f"),
             "3000.2nb20201214010203",
         ),
+        ("v3006.0", (3006, 0, "", 0, 0, None), "3006.0"),
+        ("v3006.0rc1", (3006, 0, "rc", 1, 0, None), "3006.0rc1"),
+        ("v3006.1", (3006, 1, "", 0, 0, None), "3006.1"),
+        ("v3006.1rc1", (3006, 1, "rc", 1, 0, None), "3006.1rc1"),
     ],
 )
 def test_version_parsing(version_string, full_info, version):
@@ -96,6 +106,9 @@ def test_version_parsing(version_string, full_info, version):
         ("v3001rc1", "v2019.2.1rc1"),
         ("v3002", "v3002nb20201213"),
         ("v3002rc1", "v3002nb20201213"),
+        ("v3006.0", "v3006.0rc1"),
+        ("v3006.1", "v3006.0rc1"),
+        ("v3006.1", "v3006.0"),
     ],
 )
 def test_version_comparison(higher_version, lower_version):
@@ -139,11 +152,15 @@ def test_version_report_lines():
     """
     Validate padding in versions report is correct
     """
-    # Get a set of all version report name lenghts including padding
+    # Get a set of all version report name lengths including padding
+    versions_report_ret = list(versions_report())
+    start_looking_index = versions_report_ret.index("Dependency Versions:") + 1
     line_lengths = {
         len(line.split(":")[0])
-        for line in list(versions_report())[4:]
-        if line != " " and line != "System Versions:"
+        for line in versions_report_ret[start_looking_index:]
+        if line != " "
+        and line
+        not in ("System Versions:", "Salt Extensions:", "Salt Package Information:")
     }
     # Check that they are all the same size (only one element in the set)
     assert len(line_lengths) == 1
@@ -172,7 +189,7 @@ def test_string_new_version_minor():
     ver = SaltStackVersion(major=maj_ver, minor=min_ver)
     assert ver.minor == min_ver
     assert not ver.bugfix
-    assert ver.string == "{}.{}".format(maj_ver, min_ver)
+    assert ver.string == f"{maj_ver}.{min_ver}"
 
 
 def test_string_new_version_minor_as_string():
@@ -186,13 +203,13 @@ def test_string_new_version_minor_as_string():
     ver = SaltStackVersion(major=maj_ver, minor=min_ver)
     assert ver.minor == int(min_ver)
     assert not ver.bugfix
-    assert ver.string == "{}.{}".format(maj_ver, min_ver)
+    assert ver.string == f"{maj_ver}.{min_ver}"
 
     # This only seems to happen on a cloned repo without its tags
     maj_ver = "3000"
     min_ver = ""
     ver = SaltStackVersion(major=maj_ver, minor=min_ver)
-    assert ver.minor is None, "{!r} is not {!r}".format(ver.minor, min_ver)
+    assert ver.minor is None, f"{ver.minor!r} is not {min_ver!r}"
     assert not ver.bugfix
     assert ver.string == maj_ver
 
@@ -207,7 +224,7 @@ def test_string_old_version():
     min_ver = "2"
     ver = SaltStackVersion(major=maj_ver, minor=min_ver)
     assert ver.bugfix == 0
-    assert ver.string == "{}.{}.0".format(maj_ver, min_ver)
+    assert ver.string == f"{maj_ver}.{min_ver}.0"
 
 
 @pytest.mark.parametrize(
@@ -308,7 +325,12 @@ def test_discover_version(major, minor, tag, expected):
 
 
 @pytest.mark.parametrize(
-    "major,minor,bugfix", [(3000, None, None), (3000, 1, None), (3001, 0, None)]
+    "major,minor,bugfix",
+    [
+        (3000, None, None),
+        (3000, 1, None),
+        (3001, 0, None),
+    ],
 )
 def test_info_new_version(major, minor, bugfix):
     """
@@ -322,7 +344,12 @@ def test_info_new_version(major, minor, bugfix):
 
 
 @pytest.mark.parametrize(
-    "major,minor,bugfix", [(2019, 2, 1), (2018, 3, 0), (2017, 7, None)]
+    "major,minor,bugfix",
+    [
+        (2019, 2, 1),
+        (2018, 3, 0),
+        (2017, 7, None),
+    ],
 )
 def test_info_old_version(major, minor, bugfix):
     """
@@ -366,7 +393,8 @@ def test_bugfix_string():
         ),
         (
             (2019, 2, 3, None, "nb", 20201214, 0, None),
-            "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3 nb=20201214>",
+            "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3"
+            " nb=20201214>",
         ),
     ],
 )
@@ -378,6 +406,28 @@ def test_version_repr(version_tuple, expected):
     assert repr(SaltStackVersion(*version_tuple)) == expected
 
 
+def test_previous_and_next_releases():
+    with patch.multiple(
+        SaltVersionsInfo,
+        _previous_release=None,
+        _next_release=None,
+        _current_release=SaltVersionsInfo.CALIFORNIUM,
+    ):
+        assert SaltVersionsInfo.current_release() == SaltVersionsInfo.CALIFORNIUM
+        assert SaltVersionsInfo.next_release() == SaltVersionsInfo.EINSTEINIUM
+        assert SaltVersionsInfo.previous_release() == SaltVersionsInfo.BERKELIUM
+
+    with patch.multiple(
+        SaltVersionsInfo,
+        _previous_release=None,
+        _next_release=None,
+        _current_release=SaltVersionsInfo.NEPTUNIUM,
+    ):
+        assert SaltVersionsInfo.current_release() == SaltVersionsInfo.NEPTUNIUM
+        assert SaltVersionsInfo.next_release() == SaltVersionsInfo.PLUTONIUM
+        assert SaltVersionsInfo.previous_release() == SaltVersionsInfo.URANIUM
+
+
 @pytest.mark.skip_unless_on_linux
 def test_system_version_linux():
     """
@@ -385,7 +435,7 @@ def test_system_version_linux():
     """
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("Manjaro Linux", "20.0.2", "Lysia")),
     ):
         versions = [item for item in system_information()]
@@ -393,7 +443,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("Debian GNU/Linux", "9", "stretch")),
     ):
         versions = [item for item in system_information()]
@@ -401,7 +451,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("Debian GNU/Linux", "10", "buster")),
     ):
         versions = [item for item in system_information()]
@@ -409,7 +459,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("CentOS Linux", "7", "Core")),
     ):
         versions = [item for item in system_information()]
@@ -417,7 +467,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("CentOS Linux", "8", "Core")),
     ):
         versions = [item for item in system_information()]
@@ -425,7 +475,7 @@ def test_system_version_linux():
         assert version in versions
 
     with patch(
-        "distro.linux_distribution",
+        "salt.utils.platform.linux_distribution",
         MagicMock(return_value=("OpenSUSE Leap", "15.1", "")),
     ):
         versions = [item for item in system_information()]
@@ -440,7 +490,8 @@ def test_system_version_osx():
     """
 
     with patch(
-        "platform.mac_ver", MagicMock(return_value=("10.15.2", ("", "", ""), "x86_64")),
+        "platform.mac_ver",
+        MagicMock(return_value=("10.15.2", ("", "", ""), "x86_64")),
     ):
         versions = [item for item in system_information()]
         version = ("version", "10.15.2 x86_64")
@@ -479,3 +530,31 @@ def test_versions_report_no_extensions_available():
     with patch("salt.utils.entrypoints.iter_entry_points", return_value=()):
         versions_information = salt.version.versions_information()
         assert "Salt Extensions" not in versions_information
+
+
+@pytest.mark.parametrize(
+    "version_str,expected_str,expected_name",
+    [
+        ("2014.1.4", "2014.1.4", "Hydrogen"),
+        ("3000.1", "3000.1", "Neon"),
+        ("3005", "3005", "Phosphorus"),
+        ("3006", "3006.0", "Sulfur"),
+        ("3006.0", "3006.0", "Sulfur"),
+        ("3006.1", "3006.1", "Sulfur"),
+        ("3015.1", "3015.1", "Manganese"),
+        ("3109.3", "3109.3", None),
+    ],
+)
+def test_parsed_version_name(version_str, expected_str, expected_name):
+    """
+    Test all versioning schemes name attribute.
+
+    The old, new, and dot zero, must properly set the version name attribut
+    test info property method with new versioning scheme
+    """
+    ver = SaltStackVersion.parse(version_str)
+    assert str(ver) == expected_str
+    if expected_name:
+        assert ver.name == expected_name
+    else:
+        assert ver.name is None

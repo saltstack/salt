@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Display profiling data in a table format
 ========================================
@@ -30,7 +29,6 @@ To get the above appearance, use settings something like these::
     out.table.prefix: ''
     out.table.suffix: ''
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.output.table_out as table_out
 
@@ -58,11 +56,11 @@ def _find_durations(data, name_max=60):
             if len(name) > name_max:
                 name = name[0 : name_max - 3] + "..."
 
-            l = len("{0:0.4f}".format(dur))
+            l = len("{:0.4f}".format(dur))
             if l > ml:
                 ml = l
 
-            ret.append([dur, name, "{0}.{1}".format(mod, fun)])
+            ret.append([dur, name, "{}.{}".format(mod, fun)])
 
     for row in ret:
         row[0] = "{0:{w}.4f}".format(row[0], w=ml)

@@ -342,7 +342,9 @@ def list_nodes_select(call=None):
 
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full(), __opts__["query.selection"], call,
+        list_nodes_full(),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -418,7 +420,10 @@ def avail_sizes(session=None, call=None):
             "The avail_sizes function must be called with -f or --function."
         )
     return {
-        "STATUS": "Sizes are build into templates. Consider running --list-images to see sizes"
+        "STATUS": (
+            "Sizes are build into templates. Consider running --list-images to see"
+            " sizes"
+        )
     }
 
 
@@ -928,8 +933,11 @@ def _get_vm(name=None, session=None):
     if session is None:
         session = _get_session()
     vms = session.xenapi.VM.get_by_name_label(name)
+    vms = [x for x in vms if not session.xenapi.VM.get_is_a_template(x)]
     if len(vms) == 1:
         return vms[0]
+    else:
+        log.error("VM %s returned %s matches. 1 match expected.", name, len(vms))
     return None
 
 
@@ -970,7 +978,7 @@ def destroy(name=None, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
     ret = {}
     __utils__["cloud.fire_event"](

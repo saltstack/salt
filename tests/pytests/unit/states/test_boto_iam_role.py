@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.boto_iam_role as boto_iam_role
 from tests.support.mock import MagicMock, patch
 

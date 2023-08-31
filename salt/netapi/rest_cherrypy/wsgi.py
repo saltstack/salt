@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# encoding: utf-8
 """
 Deployment
 ==========
@@ -44,7 +43,6 @@ An example Apache virtual host configuration::
     </VirtualHost>
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
@@ -57,8 +55,8 @@ def bootstrap_app():
     """
     Grab the opts dict of the master config by trying to import Salt
     """
-    from salt.netapi.rest_cherrypy import app
     import salt.config
+    from salt.netapi.rest_cherrypy import app
 
     __opts__ = salt.config.client_config(
         os.environ.get("SALT_MASTER_CONFIG", "/etc/salt/master")

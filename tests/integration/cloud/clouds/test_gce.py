@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
     :codeauthor: Tomas Sirny <tsirny@gmail.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
 
@@ -30,7 +26,7 @@ class GCETest(CloudTest):
 
         # create the instance
         ret_str = self.run_cloud(
-            "-p gce-test {0}".format(self.instance_name), timeout=TIMEOUT
+            "-p gce-test {}".format(self.instance_name), timeout=TIMEOUT
         )
 
         # check if instance returned with salt installed
@@ -44,7 +40,7 @@ class GCETest(CloudTest):
 
         # create the instance
         ret_str = self.run_cloud(
-            "-p gce-test-extra {0}".format(self.instance_name), timeout=TIMEOUT
+            "-p gce-test-extra {}".format(self.instance_name), timeout=TIMEOUT
         )
 
         # check if instance returned with salt installed

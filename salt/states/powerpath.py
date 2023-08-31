@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Powerpath configuration support
 ===============================
@@ -11,9 +10,6 @@ only addition/deletion of licenses is supported.
     key:
       powerpath.license_present: []
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def license_present(name):
@@ -35,12 +31,12 @@ def license_present(name):
 
     if name in licenses:
         ret["result"] = True
-        ret["comment"] = "License key {0} already present".format(name)
+        ret["comment"] = "License key {} already present".format(name)
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "License key {0} is set to be added".format(name)
+        ret["comment"] = "License key {} is set to be added".format(name)
         return ret
 
     data = __salt__["powerpath.add_license"](name)
@@ -74,12 +70,12 @@ def license_absent(name):
 
     if name not in licenses:
         ret["result"] = True
-        ret["comment"] = "License key {0} not present".format(name)
+        ret["comment"] = "License key {} not present".format(name)
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "License key {0} is set to be removed".format(name)
+        ret["comment"] = "License key {} is set to be removed".format(name)
         return ret
 
     data = __salt__["powerpath.remove_license"](name)

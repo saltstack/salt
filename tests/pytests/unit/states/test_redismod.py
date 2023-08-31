@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.redismod as redismod
 from tests.support.mock import MagicMock, patch
 

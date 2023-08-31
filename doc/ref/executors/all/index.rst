@@ -14,3 +14,4 @@ executors modules
     docker
     splay
     sudo
+    transactional_update

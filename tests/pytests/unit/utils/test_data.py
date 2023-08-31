@@ -1,7 +1,7 @@
-import sys
-
 import pytest
+
 import salt.utils.data
+from salt.exceptions import SaltException
 
 
 def test_get_value_simple_path():
@@ -9,10 +9,6 @@ def test_get_value_simple_path():
     assert [{"value": "foo"}] == salt.utils.data.get_value(data, "a:b:c")
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 6),
-    reason="Test will randomly fail since Python3.5 does not have ordered dictionaries",
-)
 def test_get_value_placeholder_dict():
     data = {"a": {"b": {"name": "foo"}, "c": {"name": "bar"}}}
     assert [
@@ -21,10 +17,6 @@ def test_get_value_placeholder_dict():
     ] == salt.utils.data.get_value(data, "a:{id}:name")
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 6),
-    reason="Test will randomly fail since Python3.5 does not have ordered dictionaries",
-)
 def test_get_value_placeholder_list():
     data = {"a": [{"name": "foo"}, {"name": "bar"}]}
     assert [
@@ -33,10 +25,6 @@ def test_get_value_placeholder_list():
     ] == salt.utils.data.get_value(data, "a:{id}:name")
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 6),
-    reason="Test will randomly fail since Python3.5 does not have ordered dictionaries",
-)
 def test_get_value_nested_placeholder():
     data = {
         "a": {
@@ -70,3 +58,52 @@ def test_get_value_simple_type_path():
 
 def test_get_value_None_path():
     assert [{"value": None}] == salt.utils.data.get_value({"a": None}, "a:b", [])
+
+
+def test_flatten_recursion_error():
+    """
+    Test the flatten function for reference cycle detection
+    """
+    data = [1, 2, 3, [4]]
+    data.append(data)
+    with pytest.raises(RecursionError) as err:
+        salt.utils.data.flatten(data)
+    assert str(err.value) == "Reference cycle detected. Check input list."
+
+
+def test_sample():
+    lst = ["one", "two", "three", "four"]
+    assert len(salt.utils.data.sample(lst, 0)) == 0
+    assert len(salt.utils.data.sample(lst, 2)) == 2
+    pytest.raises(ValueError, salt.utils.data.sample, lst, 5)
+    assert salt.utils.data.sample(lst, 2, seed="static") == ["four", "two"]
+
+
+def test_shuffle():
+    lst = ["one", "two", "three", "four"]
+    assert len(salt.utils.data.shuffle(lst)) == 4
+    assert salt.utils.data.shuffle(lst, seed="static") == [
+        "four",
+        "two",
+        "three",
+        "one",
+    ]
+
+
+def test_to_entries():
+    data = {"a": 1, "b": 2}
+    entries = [{"key": "a", "value": 1}, {"key": "b", "value": 2}]
+    assert salt.utils.data.to_entries(data) == entries
+
+    data = ["monkey", "donkey"]
+    entries = [{"key": 0, "value": "monkey"}, {"key": 1, "value": "donkey"}]
+    assert salt.utils.data.to_entries(data) == entries
+
+    with pytest.raises(SaltException):
+        salt.utils.data.to_entries("RAISE ON THIS")
+
+
+def test_from_entries():
+    entries = [{"key": "a", "value": 1}, {"key": "b", "value": 2}]
+    data = {"a": 1, "b": 2}
+    assert salt.utils.data.from_entries(entries) == data

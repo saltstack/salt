@@ -6,9 +6,10 @@ import logging
 import time
 import traceback
 
+import salt.channel.client
 import salt.crypt
 import salt.payload
-import salt.transport.client
+import salt.transport
 import salt.utils.args
 import salt.utils.dictupdate
 import salt.utils.event
@@ -44,8 +45,7 @@ def _auth():
             __context__["auth"] = salt.crypt.SAuth(__opts__)
         except SaltClientError:
             log.error(
-                "Could not authenticate with master."
-                "Mine data will not be transmitted."
+                "Could not authenticate with master. Mine data will not be transmitted."
             )
     return __context__["auth"]
 
@@ -67,16 +67,15 @@ def _mine_send(load, opts):
 
 
 def _mine_get(load, opts):
-    if opts.get("transport", "") in ("zeromq", "tcp"):
+    if opts.get("transport", "") in salt.transport.TRANSPORTS:
         try:
             load["tok"] = _auth().gen_token(b"salt")
         except AttributeError:
             log.error(
-                "Mine could not authenticate with master. "
-                "Mine could not be retrieved."
+                "Mine could not authenticate with master. Mine could not be retrieved."
             )
             return False
-    with salt.transport.client.ReqChannel.factory(opts) as channel:
+    with salt.channel.client.ReqChannel.factory(opts) as channel:
         return channel.send(load)
 
 
@@ -130,7 +129,7 @@ def update(clear=False, mine_functions=None):
     :param dict mine_functions:
         Update (or clear, see ``clear``) the mine data on these functions only.
         This will need to have the structure as defined on
-        https://docs.saltstack.com/en/latest/topics/mine/index.html#mine-functions
+        https://docs.saltproject.io/en/latest/topics/mine/index.html#mine-functions
 
         This feature can be used when updating the mine for functions
         that require a refresh at different intervals than the rest of
@@ -241,9 +240,9 @@ def send(name, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' mine.send network.ip_addrs eth0
-        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0
-        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0 allow_tgt='G@grain:value' allow_tgt_type=compound
+        salt '*' mine.send network.ip_addrs interface=eth0
+        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs interface=eth0
+        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs interface=eth0 allow_tgt='G@grain:value' allow_tgt_type=compound
     """
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     mine_function = kwargs.pop("mine_function", None)

@@ -2,6 +2,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 import pytest
+
 import salt.states.aws_sqs as aws_sqs
 from tests.support.mock import MagicMock, patch
 

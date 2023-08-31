@@ -5,6 +5,7 @@
 import copy
 
 import pytest
+
 import salt.states.boto_elb as boto_elb
 from tests.support.mock import MagicMock, patch
 

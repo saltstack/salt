@@ -1,7 +1,14 @@
 Jinja2
-msgpack>=0.5,!=0.5.5
+jmespath
+msgpack>=1.0.0
 PyYAML
 MarkupSafe
 requests>=1.0.0
 distro>=1.0.1
+psutil>=5.0.0
+packaging>=21.3
+looseversion
+# We need contextvars for salt-ssh
 contextvars
+tornado>=6.2.0 ; python_version < '3.8'
+tornado>=6.3.2 ; python_version >= '3.8'

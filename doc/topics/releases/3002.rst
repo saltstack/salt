@@ -45,7 +45,7 @@ Deprecated
 Changed
 -------
 
-- Allow to specify a custom port for Proxmox connection (#50620)
+- Allow specifying a custom port for Proxmox connection (#50620)
 - Changed the lvm.lv_present state to accept a resizefs switch. So, when
   the logical volume is resized, the filesystem will be resized too. (#55265)
 - Change the ``enable_fqdns_grains`` setting to default to ``False`` on proxy minions
@@ -195,13 +195,13 @@ Added
 - Add output filter to saltcheck to only display test failures (#57788)
 - Added an execution module for running idem exec modules
 - Added a state module for running idem states (#57969)
-- Added the ability for states to return `sub_state_run's` results frome external state engines (#57993)
+- Added the ability for states to return `sub_state_run's` results from external state engines (#57993)
 - Added salt-cloud support for Linode APIv4 via the ``api_version`` provider configuration parameter. (#58093)
 - Added support to manage services in Slackware Linux. (#58206)
-- Added list_sources to chocolatey module to have an overview of the repositories present on the minions.  
+- Added list_sources to chocolatey module to have an overview of the repositories present on the minions.
   Added source_added to chocolatey state in order to add repositories to chocolatey. (#58588)
 - Adding tests for changes to virtual function for netmiko module. Adding tests for netmiko proxy minion module. (#58609)
 - Added features config option for feature flags. Added a feature flag
   `enable_slsvars_fixes` to enable fixes to tpldir, tplfile and sls_path.
-  This flag will be depricated in the Phosphorus release when this functionality
+  This flag will be deprecated in the Phosphorus release when this functionality
   becomes the default. (#58652)

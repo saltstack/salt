@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.rbenv as rbenv
 from tests.support.mock import MagicMock, patch
 

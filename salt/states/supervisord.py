@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Interaction with the Supervisor daemon
 ======================================
@@ -12,12 +11,8 @@ Interaction with the Supervisor daemon
         - watch:
           - file: /etc/nginx/sites-enabled/wsgi_server.conf
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
-
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -114,7 +109,7 @@ def running(
     if __opts__["test"]:
         if not to_add:
             # Process/group already present, check if any need to be started
-            to_start = [x for x, y in six.iteritems(matches) if y is False]
+            to_start = [x for x, y in matches.items() if y is False]
             if to_start:
                 ret["result"] = None
                 if name.endswith(":"):
@@ -122,32 +117,32 @@ def running(
                     if len(to_start) == len(matches):
                         ret[
                             "comment"
-                        ] = "All services in group '{0}' will be started".format(name)
+                        ] = "All services in group '{}' will be started".format(name)
                     else:
                         ret[
                             "comment"
-                        ] = "The following services will be started: {0}".format(
+                        ] = "The following services will be started: {}".format(
                             " ".join(to_start)
                         )
                 else:
                     # Single program
-                    ret["comment"] = "Service {0} will be started".format(name)
+                    ret["comment"] = "Service {} will be started".format(name)
             else:
                 if name.endswith(":"):
                     # Process group
                     ret[
                         "comment"
-                    ] = "All services in group '{0}' are already running".format(name)
+                    ] = "All services in group '{}' are already running".format(name)
                 else:
-                    ret["comment"] = "Service {0} is already running".format(name)
+                    ret["comment"] = "Service {} is already running".format(name)
         else:
             ret["result"] = None
             # Process/group needs to be added
             if name.endswith(":"):
-                _type = "Group '{0}'".format(name)
+                _type = "Group '{}'".format(name)
             else:
-                _type = "Service {0}".format(name)
-            ret["comment"] = "{0} will be added and started".format(_type)
+                _type = "Service {}".format(name)
+            ret["comment"] = "{} will be added and started".format(_type)
         return ret
 
     changes = []
@@ -167,11 +162,11 @@ def running(
         ret.update(_check_error(result, comment))
         log.debug(comment)
 
-        if "{0}: updated".format(name) in result:
+        if "{}: updated".format(name) in result:
             just_updated = True
     elif to_add:
         # Not sure if this condition is precise enough.
-        comment = "Adding service: {0}".format(name)
+        comment = "Adding service: {}".format(name)
         __salt__["supervisord.reread"](user=user, conf_file=conf_file, bin_env=bin_env)
         # Causes supervisorctl to throw `ERROR: process group already active`
         # if process group exists. At this moment, I'm not sure how to handle
@@ -209,8 +204,8 @@ def running(
 
     if is_stopped is False:
         if restart and not just_updated:
-            comment = "Restarting{0}: {1}".format(
-                process_type is not None and " {0}".format(process_type) or "", name
+            comment = "Restarting{}: {}".format(
+                process_type is not None and " {}".format(process_type) or "", name
             )
             log.debug(comment)
             result = __salt__["supervisord.restart"](
@@ -219,21 +214,21 @@ def running(
             ret.update(_check_error(result, comment))
             changes.append(comment)
         elif just_updated:
-            comment = "Not starting updated{0}: {1}".format(
-                process_type is not None and " {0}".format(process_type) or "", name
+            comment = "Not starting updated{}: {}".format(
+                process_type is not None and " {}".format(process_type) or "", name
             )
             result = comment
             ret.update({"comment": comment})
         else:
-            comment = "Not starting already running{0}: {1}".format(
-                process_type is not None and " {0}".format(process_type) or "", name
+            comment = "Not starting already running{}: {}".format(
+                process_type is not None and " {}".format(process_type) or "", name
             )
             result = comment
             ret.update({"comment": comment})
 
     elif not just_updated:
-        comment = "Starting{0}: {1}".format(
-            process_type is not None and " {0}".format(process_type) or "", name
+        comment = "Starting{}: {}".format(
+            process_type is not None and " {}".format(process_type) or "", name
         )
         changes.append(comment)
         log.debug(comment)
@@ -242,7 +237,7 @@ def running(
         )
 
         ret.update(_check_error(result, comment))
-        log.debug(six.text_type(result))
+        log.debug(str(result))
 
     if ret["result"] and changes:
         ret["changes"][name] = " ".join(changes)
@@ -273,9 +268,9 @@ def dead(name, user=None, conf_file=None, bin_env=None, **kwargs):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Service {0} is set to be stopped".format(name)
+        ret["comment"] = "Service {} is set to be stopped".format(name)
     else:
-        comment = "Stopping service: {0}".format(name)
+        comment = "Stopping service: {}".format(name)
         log.debug(comment)
 
         all_processes = __salt__["supervisord.status"](
@@ -308,11 +303,11 @@ def dead(name, user=None, conf_file=None, bin_env=None, **kwargs):
                 is_stopped = False
         else:
             # process name doesn't exist
-            ret["comment"] = "Service {0} doesn't exist".format(name)
+            ret["comment"] = "Service {} doesn't exist".format(name)
             return ret
 
         if is_stopped is True:
-            ret["comment"] = "Service {0} is not running".format(name)
+            ret["comment"] = "Service {} is not running".format(name)
         else:
             result = {
                 name: __salt__["supervisord.stop"](
@@ -321,7 +316,7 @@ def dead(name, user=None, conf_file=None, bin_env=None, **kwargs):
             }
             ret.update(_check_error(result, comment))
             ret["changes"][name] = comment
-            log.debug(six.text_type(result))
+            log.debug(str(result))
     return ret
 
 

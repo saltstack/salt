@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manages configuration files via augeas
 
@@ -23,21 +22,15 @@ This module requires the ``augeas`` Python module.
     For affected Debian/Ubuntu hosts, installing ``libpython2.7`` has been
     known to resolve the issue.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 import re
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
-from salt.ext.six.moves import zip
 
 # Make sure augeas python interface is installed
 HAS_AUGEAS = False
@@ -90,8 +83,7 @@ def _recurmatch(path, aug):
 
         for i in aug.match(clean_path + "/*"):
             i = i.replace("!", "\\!")  # escape some dirs
-            for _match in _recurmatch(i, aug):
-                yield _match
+            yield from _recurmatch(i, aug)
 
 
 def _lstrip_word(word, prefix):
@@ -100,8 +92,8 @@ def _lstrip_word(word, prefix):
     from the beginning of the string
     """
 
-    if six.text_type(word).startswith(prefix):
-        return six.text_type(word)[len(prefix) :]
+    if str(word).startswith(prefix):
+        return str(word)[len(prefix) :]
     return word
 
 
@@ -110,7 +102,7 @@ def _check_load_paths(load_path):
     Checks the validity of the load_path, returns a sanitized version
     with invalid paths removed.
     """
-    if load_path is None or not isinstance(load_path, six.string_types):
+    if load_path is None or not isinstance(load_path, str):
         return None
 
     _paths = []
@@ -198,7 +190,7 @@ def execute(context=None, lens=None, commands=(), load_path=None):
             cmd, arg = command.split(" ", 1)
 
             if cmd not in METHOD_MAP:
-                ret["error"] = "Command {0} is not supported (yet)".format(cmd)
+                ret["error"] = "Command {} is not supported (yet)".format(cmd)
                 return ret
 
             method = METHOD_MAP[cmd]
@@ -207,7 +199,7 @@ def execute(context=None, lens=None, commands=(), load_path=None):
             parts = salt.utils.args.shlex_split(arg)
 
             if len(parts) not in nargs:
-                err = "{0} takes {1} args: {2}".format(method, nargs, parts)
+                err = "{} takes {} args: {}".format(method, nargs, parts)
                 raise ValueError(err)
             if method == "set":
                 path = make_path(parts[0])
@@ -226,7 +218,7 @@ def execute(context=None, lens=None, commands=(), load_path=None):
                 label, where, path = parts
                 if where not in ("before", "after"):
                     raise ValueError(
-                        'Expected "before" or "after", not {0}'.format(where)
+                        'Expected "before" or "after", not {}'.format(where)
                     )
                 path = make_path(path)
                 args = {"path": path, "label": label, "before": where == "before"}
@@ -238,10 +230,9 @@ def execute(context=None, lens=None, commands=(), load_path=None):
             # if command.split fails arg will not be set
             if "arg" not in locals():
                 arg = command
-            ret["error"] = (
-                "Invalid formatted command, "
-                "see debug log for details: {0}".format(arg)
-            )
+            ret[
+                "error"
+            ] = "Invalid formatted command, see debug log for details: {}".format(arg)
             return ret
 
         args = salt.utils.data.decode(args, to_str=True)
@@ -253,13 +244,13 @@ def execute(context=None, lens=None, commands=(), load_path=None):
     try:
         aug.save()
         ret["retval"] = True
-    except IOError as err:
-        ret["error"] = six.text_type(err)
+    except OSError as err:
+        ret["error"] = str(err)
 
         if lens and not lens.endswith(".lns"):
             ret["error"] += (
                 '\nLenses are normally configured as "name.lns". '
-                'Did you mean "{0}.lns"?'.format(lens)
+                'Did you mean "{}.lns"?'.format(lens)
             )
 
     aug.close()
@@ -296,12 +287,12 @@ def get(path, value="", load_path=None):
 
     path = path.rstrip("/")
     if value:
-        path += "/{0}".format(value.strip("/"))
+        path += "/{}".format(value.strip("/"))
 
     try:
         _match = aug.match(path)
     except RuntimeError as err:
-        return {"error": six.text_type(err)}
+        return {"error": str(err)}
 
     if _match:
         ret[path] = aug.get(path)
@@ -349,7 +340,7 @@ def setvalue(*args):
         %wheel ALL = PASSWD : ALL , NOPASSWD : /usr/bin/apt-get , /usr/bin/aptitude
     """
     load_path = None
-    load_paths = [x for x in args if six.text_type(x).startswith("load_path=")]
+    load_paths = [x for x in args if str(x).startswith("load_path=")]
     if load_paths:
         if len(load_paths) > 1:
             raise SaltInvocationError("Only one 'load_path=' value is permitted")
@@ -363,10 +354,9 @@ def setvalue(*args):
     tuples = [
         x
         for x in args
-        if not six.text_type(x).startswith("prefix=")
-        and not six.text_type(x).startswith("load_path=")
+        if not str(x).startswith("prefix=") and not str(x).startswith("load_path=")
     ]
-    prefix = [x for x in args if six.text_type(x).startswith("prefix=")]
+    prefix = [x for x in args if str(x).startswith("prefix=")]
     if prefix:
         if len(prefix) > 1:
             raise SaltInvocationError("Only one 'prefix=' value is permitted")
@@ -382,15 +372,15 @@ def setvalue(*args):
         if prefix:
             target_path = os.path.join(prefix.rstrip("/"), path.lstrip("/"))
         try:
-            aug.set(target_path, six.text_type(value))
+            aug.set(target_path, str(value))
         except ValueError as err:
-            ret["error"] = "Multiple values: {0}".format(err)
+            ret["error"] = "Multiple values: {}".format(err)
 
     try:
         aug.save()
         ret["retval"] = True
-    except IOError as err:
-        ret["error"] = six.text_type(err)
+    except OSError as err:
+        ret["error"] = str(err)
     return ret
 
 
@@ -467,8 +457,8 @@ def remove(path, load_path=None):
             ret["error"] = "Invalid node"
         else:
             ret["retval"] = True
-    except (RuntimeError, IOError) as err:
-        ret["error"] = six.text_type(err)
+    except (RuntimeError, OSError) as err:
+        ret["error"] = str(err)
 
     ret["count"] = count
 
@@ -497,7 +487,7 @@ def ls(path, load_path=None):  # pylint: disable=C0103
     """
 
     def _match(path):
-        """ Internal match function """
+        """Internal match function"""
         try:
             matches = aug.match(salt.utils.stringutils.to_str(path))
         except RuntimeError:
@@ -518,7 +508,7 @@ def ls(path, load_path=None):  # pylint: disable=C0103
     matches = _match(match_path)
     ret = {}
 
-    for key, value in six.iteritems(matches):
+    for key, value in matches.items():
         name = _lstrip_word(key, path)
         if _match(key + "/*"):
             ret[name + "/"] = value  # has sub nodes, e.g. directory

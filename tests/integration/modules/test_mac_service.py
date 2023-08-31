@@ -5,14 +5,14 @@ integration tests for mac_service
 import plistlib
 
 import pytest
+
 import salt.utils.files
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on
 
 
 @pytest.mark.skip_if_not_root
-@runs_on(kernel="Darwin")
 @pytest.mark.skip_if_binaries_missing("launchctl", "plutil")
+@pytest.mark.skip_unless_on_darwin
 class MacServiceModuleTest(ModuleCase):
     """
     Validate the mac_service module

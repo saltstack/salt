@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage LXD images.
 
@@ -29,14 +28,8 @@ Manage LXD images.
 :platform: Linux
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-import salt.ext.six as six
-
-# Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import map
 
 __docformat__ = "restructuredtext en"
 
@@ -180,7 +173,7 @@ def present(
             name, remote_addr, cert, key, verify_cert, _raw=True
         )
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
     except SaltInvocationError as e:
         # Image not found
         pass
@@ -188,7 +181,7 @@ def present(
     if image is None:
         if __opts__["test"]:
             # Test is on, just return that we would create the image
-            msg = 'Would create the image "{0}"'.format(name)
+            msg = 'Would create the image "{}"'.format(name)
             ret["changes"] = {"created": msg}
             return _unchanged(ret, msg)
 
@@ -252,31 +245,31 @@ def present(
                     _raw=True,
                 )
         except CommandExecutionError as e:
-            return _error(ret, six.text_type(e))
+            return _error(ret, str(e))
 
     # Sync aliases
     if name not in aliases:
         aliases.append(name)
 
-    old_aliases = set([six.text_type(a["name"]) for a in image.aliases])
-    new_aliases = set(map(six.text_type, aliases))
+    old_aliases = {str(a["name"]) for a in image.aliases}
+    new_aliases = set(map(str, aliases))
 
     alias_changes = []
     # Removed aliases
     for k in old_aliases.difference(new_aliases):
         if not __opts__["test"]:
             __salt__["lxd.image_alias_delete"](image, k)
-            alias_changes.append('Removed alias "{0}"'.format(k))
+            alias_changes.append('Removed alias "{}"'.format(k))
         else:
-            alias_changes.append('Would remove alias "{0}"'.format(k))
+            alias_changes.append('Would remove alias "{}"'.format(k))
 
     # New aliases
     for k in new_aliases.difference(old_aliases):
         if not __opts__["test"]:
             __salt__["lxd.image_alias_add"](image, k, "")
-            alias_changes.append('Added alias "{0}"'.format(k))
+            alias_changes.append('Added alias "{}"'.format(k))
         else:
-            alias_changes.append('Would add alias "{0}"'.format(k))
+            alias_changes.append('Would add alias "{}"'.format(k))
 
     if alias_changes:
         ret["changes"]["aliases"] = alias_changes
@@ -284,20 +277,16 @@ def present(
     # Set public
     if public is not None and image.public != public:
         if not __opts__["test"]:
-            ret["changes"]["public"] = "Setting the image public to {0!s}".format(
-                public
-            )
+            ret["changes"]["public"] = "Setting the image public to {!s}".format(public)
             image.public = public
             __salt__["lxd.pylxd_save_object"](image)
         else:
-            ret["changes"]["public"] = "Would set public to {0!s}".format(public)
+            ret["changes"]["public"] = "Would set public to {!s}".format(public)
 
     if __opts__["test"] and ret["changes"]:
-        return _unchanged(
-            ret, "Would do {0} changes".format(len(ret["changes"].keys()))
-        )
+        return _unchanged(ret, "Would do {} changes".format(len(ret["changes"].keys())))
 
-    return _success(ret, "{0} changes".format(len(ret["changes"].keys())))
+    return _success(ret, "{} changes".format(len(ret["changes"].keys())))
 
 
 def absent(name, remote_addr=None, cert=None, key=None, verify_cert=True):
@@ -344,24 +333,24 @@ def absent(name, remote_addr=None, cert=None, key=None, verify_cert=True):
             name, remote_addr, cert, key, verify_cert, _raw=True
         )
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
     except SaltInvocationError as e:
         try:
             image = __salt__["lxd.image_get"](
                 name, remote_addr, cert, key, verify_cert, _raw=True
             )
         except CommandExecutionError as e:
-            return _error(ret, six.text_type(e))
+            return _error(ret, str(e))
         except SaltInvocationError as e:
-            return _success(ret, 'Image "{0}" not found.'.format(name))
+            return _success(ret, 'Image "{}" not found.'.format(name))
 
     if __opts__["test"]:
-        ret["changes"] = {"removed": 'Image "{0}" would get deleted.'.format(name)}
+        ret["changes"] = {"removed": 'Image "{}" would get deleted.'.format(name)}
         return _success(ret, ret["changes"]["removed"])
 
     __salt__["lxd.image_delete"](image)
 
-    ret["changes"] = {"removed": 'Image "{0}" has been deleted.'.format(name)}
+    ret["changes"] = {"removed": 'Image "{}" has been deleted.'.format(name)}
     return _success(ret, ret["changes"]["removed"])
 
 

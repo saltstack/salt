@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Jenkins
 =====================
@@ -7,10 +6,9 @@ Management of Jenkins
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import difflib
+import io
 import logging
 
 # Import XML parser
@@ -19,10 +17,6 @@ import xml.etree.ElementTree as ET
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-
-# Import Salt libs
-from salt.ext import six
-from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 
@@ -62,12 +56,12 @@ def present(name, config=None, **kwargs):
         "name": name,
         "result": True,
         "changes": {},
-        "comment": ["Job {0} is up to date.".format(name)],
+        "comment": ["Job {} is up to date.".format(name)],
     }
 
     if __salt__["jenkins.job_exists"](name):
         _current_job_config = __salt__["jenkins.get_job_config"](name)
-        buf = six.moves.StringIO(_current_job_config)
+        buf = io.StringIO(_current_job_config)
         oldXML = ET.fromstring(buf.read())
 
         cached_source_path = __salt__["cp.cache_file"](config, __env__)
@@ -85,7 +79,7 @@ def present(name, config=None, **kwargs):
                 return _fail(ret, exc.strerror)
             else:
                 ret["changes"] = "".join(diff)
-                ret["comment"].append("Job '{0}' updated.".format(name))
+                ret["comment"].append("Job '{}' updated.".format(name))
 
     else:
         cached_source_path = __salt__["cp.cache_file"](config, __env__)
@@ -97,10 +91,10 @@ def present(name, config=None, **kwargs):
         except CommandExecutionError as exc:
             return _fail(ret, exc.strerror)
 
-        buf = six.moves.StringIO(new_config_xml)
+        buf = io.StringIO(new_config_xml)
         diff = difflib.unified_diff("", buf.readlines(), lineterm="")
         ret["changes"][name] = "".join(diff)
-        ret["comment"].append("Job '{0}' added.".format(name))
+        ret["comment"].append("Job '{}' added.".format(name))
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -121,7 +115,7 @@ def absent(name, **kwargs):
         except CommandExecutionError as exc:
             return _fail(ret, exc.strerror)
         else:
-            ret["comment"] = "Job '{0}' deleted.".format(name)
+            ret["comment"] = "Job '{}' deleted.".format(name)
     else:
-        ret["comment"] = "Job '{0}' already absent.".format(name)
+        ret["comment"] = "Job '{}' already absent.".format(name)
     return ret

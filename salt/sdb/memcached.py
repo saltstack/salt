@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Memcached sdb Module
 
@@ -30,12 +29,9 @@ and ``mymemcached`` refers to the name that will appear in the URI:
     password: sdb://mymemcached/mykey
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# import python libs
 import logging
 
-# import Salt libs
 import salt.utils.memcached
 
 DEFAULT_HOST = "127.0.0.1"

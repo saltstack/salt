@@ -147,7 +147,7 @@ def absent(version, name):
             return ret
 
     # fallback
-    ret["comment"] = "Cluster {}/{} is not present, so it cannot " "be removed".format(
+    ret["comment"] = "Cluster {}/{} is not present, so it cannot be removed".format(
         version, name
     )
     return ret

@@ -484,7 +484,9 @@ def jdbc_datasource_present(
         "driver": "com.mysql.jdbc.Driver",
         "datasource": "com.mysql.jdbc.jdbc2.optional.MysqlDataSource",
         "xa_datasource": "com.mysql.jdbc.jdbc2.optional.MysqlXADataSource",
-        "connection_pool_datasource": "com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource",
+        "connection_pool_datasource": (
+            "com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource"
+        ),
     }
     datasources["postgresql"] = {
         "driver": "org.postgresql.Driver",
@@ -496,7 +498,9 @@ def jdbc_datasource_present(
         "driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver",
         "datasource": "com.microsoft.sqlserver.jdbc.SQLServerDataSource",
         "xa_datasource": "com.microsoft.sqlserver.jdbc.SQLServerXADataSource",
-        "connection_pool_datasource": "com.microsoft.sqlserver.jdbc.SQLServerConnectionPoolDataSource",
+        "connection_pool_datasource": (
+            "com.microsoft.sqlserver.jdbc.SQLServerConnectionPoolDataSource"
+        ),
     }
 
     if restype == "driver":

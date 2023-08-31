@@ -3,7 +3,7 @@
 External Logging Handlers
 -------------------------
 
-.. currentmodule:: salt.log.handlers
+.. currentmodule:: salt.log_handlers
 
 .. autosummary::
     :toctree:

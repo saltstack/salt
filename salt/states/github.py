@@ -260,8 +260,9 @@ def team_present(
         if repos_to_add:
             if __opts__["test"]:
                 test_comments.append(
-                    "Team {} will have the following repos "
-                    "added: {}.".format(name, list(repos_to_add))
+                    "Team {} will have the following repos added: {}.".format(
+                        name, list(repos_to_add)
+                    )
                 )
                 ret["result"] = None
             else:
@@ -284,8 +285,9 @@ def team_present(
         if repos_to_remove:
             if __opts__["test"]:
                 test_comments.append(
-                    "Team {} will have the following repos "
-                    "removed: {}.".format(name, list(repos_to_remove))
+                    "Team {} will have the following repos removed: {}.".format(
+                        name, list(repos_to_remove)
+                    )
                 )
                 ret["result"] = None
             else:
@@ -362,7 +364,7 @@ def team_present(
                 member_change = True
                 if __opts__["test"]:
                     test_comments.append(
-                        "User {} set to be added to the " "team.".format(member)
+                        "User {} set to be added to the team.".format(member)
                     )
                     ret["result"] = None
                 else:
@@ -379,7 +381,7 @@ def team_present(
                         )
                     else:
                         ret["result"] = False
-                        ret["comment"] = "Failed to add user {} to team " "{}.".format(
+                        ret["comment"] = "Failed to add user {} to team {}.".format(
                             member, name
                         )
                         return ret
@@ -405,7 +407,7 @@ def team_present(
                     )
                 else:
                     test_comments.append(
-                        "User {} set to be removed from " "the team.".format(member)
+                        "User {} set to be removed from the team.".format(member)
                     )
                 ret["result"] = None
             else:
@@ -728,15 +730,11 @@ def repo_present(
                     return ret
                 elif current_permission != permission:
                     team_change = {
-                        "old": (
-                            "Repo {} in team {} has permission {}".format(
-                                name, team_name, current_permission
-                            )
+                        "old": "Repo {} in team {} has permission {}".format(
+                            name, team_name, current_permission
                         ),
-                        "new": (
-                            "Repo {} in team {} has permission {}".format(
-                                name, team_name, permission
-                            )
+                        "new": "Repo {} in team {} has permission {}".format(
+                            name, team_name, permission
                         ),
                     }
                     if __opts__["test"]:

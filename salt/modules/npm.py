@@ -4,13 +4,14 @@ Manage and query NPM packages.
 
 import logging
 import shlex
+import tempfile
 
 import salt.modules.cmdmod
 import salt.utils.json
 import salt.utils.path
 import salt.utils.user
 from salt.exceptions import CommandExecutionError
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -49,7 +50,8 @@ def _check_valid_version():
     res = salt.modules.cmdmod.run(
         "{npm} --version".format(npm=npm_path), output_loglevel="quiet"
     )
-    npm_version, valid_version = _LooseVersion(res), _LooseVersion("1.2")
+    npm_version = Version(res)
+    valid_version = Version("1.2")
     # pylint: enable=no-member
     if npm_version < valid_version:
         raise CommandExecutionError(
@@ -143,7 +145,10 @@ def install(
         cmd.append("--silent")
 
     if not dir:
+        cwd = tempfile.gettempdir()
         cmd.append("--global")
+    else:
+        cwd = dir
 
     if registry:
         cmd.append('--registry="{}"'.format(registry))
@@ -162,7 +167,7 @@ def install(
 
     cmd = " ".join(cmd)
     result = __salt__["cmd.run_all"](
-        cmd, python_shell=True, cwd=dir, runas=runas, env=env
+        cmd, python_shell=True, cwd=cwd, runas=runas, env=env
     )
 
     if result["retcode"] != 0:

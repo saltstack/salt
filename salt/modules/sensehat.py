@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for controlling the LED matrix or reading environment data on the SenseHat of a Raspberry Pi.
 
@@ -20,7 +19,6 @@ Example:
 
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -57,7 +55,8 @@ def __virtual__():
 
     return (
         False,
-        "The SenseHat execution module cannot be loaded: 'sense_hat' python library unavailable.",
+        "The SenseHat execution module cannot be loaded: 'sense_hat' python library"
+        " unavailable.",
     )
 
 

@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 # pylint: disable=import-error
 try:
     import pyrax
+
     from salt.utils.openstack.pyrax.authenticate import Authenticate
     from salt.utils.openstack.pyrax.queues import RackspaceQueues
 

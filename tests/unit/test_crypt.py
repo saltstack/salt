@@ -3,11 +3,12 @@ import shutil
 import tempfile
 
 import pytest
+
 import salt.utils.files
 import salt.utils.stringutils
 from salt import crypt
 from tests.support.mock import MagicMock, MockCall, mock_open, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import M2Crypto
@@ -90,8 +91,8 @@ SIG = (
 )
 
 
-@skipIf(not HAS_PYCRYPTO_RSA, "pycrypto >= 2.6 is not available")
-@skipIf(HAS_M2, "m2crypto is used by salt.crypt if installed")
+@pytest.mark.skipif(not HAS_PYCRYPTO_RSA, reason="pycrypto >= 2.6 is not available")
+@pytest.mark.skipif(HAS_M2, reason="m2crypto is used by salt.crypt if installed")
 class CryptTestCase(TestCase):
     @pytest.mark.slow_test
     def test_gen_keys(self):
@@ -166,7 +167,7 @@ class CryptTestCase(TestCase):
             self.assertTrue(crypt.verify_signature("/keydir/keyname.pub", MSG, SIG))
 
 
-@skipIf(not HAS_M2, "m2crypto is not available")
+@pytest.mark.skipif(not HAS_M2, reason="m2crypto is not available")
 class M2CryptTestCase(TestCase):
     @patch("os.umask", MagicMock())
     @patch("os.chmod", MagicMock())
@@ -293,7 +294,7 @@ class TestBadCryptodomePubKey(TestCase):
     def tearDown(self):
         shutil.rmtree(self.test_dir)
 
-    @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
+    @pytest.mark.skipif(not HAS_M2, reason="Skip when m2crypto is not installed")
     def test_m2_bad_key(self):
         """
         Load public key with an invalid header using m2crypto and validate it
@@ -301,7 +302,7 @@ class TestBadCryptodomePubKey(TestCase):
         key = salt.crypt.get_rsa_pub_key(self.key_path)
         assert key.check_key() == 1
 
-    @skipIf(HAS_M2, "Skip when m2crypto is installed")
+    @pytest.mark.skipif(HAS_M2, reason="Skip when m2crypto is installed")
     def test_crypto_bad_key(self):
         """
         Load public key with an invalid header and validate it without m2crypto
@@ -327,7 +328,7 @@ class TestM2CryptoRegression47124(TestCase):
         b"\xd9v\xf7\x833\x8e\x01"
     )
 
-    @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
+    @pytest.mark.skipif(not HAS_M2, reason="Skip when m2crypto is not installed")
     def test_m2crypto_verify_bytes(self):
         message = salt.utils.stringutils.to_unicode("meh")
         with patch(
@@ -336,7 +337,7 @@ class TestM2CryptoRegression47124(TestCase):
         ):
             salt.crypt.verify_signature("/keydir/keyname.pub", message, self.SIGNATURE)
 
-    @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
+    @pytest.mark.skipif(not HAS_M2, reason="Skip when m2crypto is not installed")
     def test_m2crypto_verify_unicode(self):
         message = salt.utils.stringutils.to_bytes("meh")
         with patch(
@@ -345,7 +346,7 @@ class TestM2CryptoRegression47124(TestCase):
         ):
             salt.crypt.verify_signature("/keydir/keyname.pub", message, self.SIGNATURE)
 
-    @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
+    @pytest.mark.skipif(not HAS_M2, reason="Skip when m2crypto is not installed")
     def test_m2crypto_sign_bytes(self):
         message = salt.utils.stringutils.to_unicode("meh")
         key = M2Crypto.RSA.load_key_string(
@@ -357,7 +358,7 @@ class TestM2CryptoRegression47124(TestCase):
             )
         self.assertEqual(signature, self.SIGNATURE)
 
-    @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
+    @pytest.mark.skipif(not HAS_M2, reason="Skip when m2crypto is not installed")
     def test_m2crypto_sign_unicode(self):
         message = salt.utils.stringutils.to_bytes("meh")
         key = M2Crypto.RSA.load_key_string(
@@ -370,9 +371,9 @@ class TestM2CryptoRegression47124(TestCase):
         self.assertEqual(signature, self.SIGNATURE)
 
 
-@skipIf(
+@pytest.mark.skipif(
     not HAS_M2 and not HAS_PYCRYPTO_RSA,
-    "No crypto library found. Install either M2Crypto or Cryptodome to run this test",
+    reason="No crypto library found. Install either M2Crypto or Cryptodome to run this test",
 )
 class TestCrypt(TestCase):
     def test_pwdata_decrypt(self):

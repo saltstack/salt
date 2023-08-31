@@ -1,15 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Management of Zabbix usermacros.
 :codeauthor: Raymond Kuiper <qix@the-wired.net>
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
-from salt.ext import six
+__deprecated__ = (
+    3009,
+    "zabbix",
+    "https://github.com/salt-extensions/saltext-zabbix",
+)
 
 
 def __virtual__():
@@ -54,35 +53,33 @@ def present(name, value, hostid=None, **kwargs):
 
     # Comment and change messages
     if hostid:
-        comment_usermacro_created = "Usermacro {0} created on hostid {1}.".format(
+        comment_usermacro_created = "Usermacro {} created on hostid {}.".format(
             name, hostid
         )
-        comment_usermacro_updated = "Usermacro {0} updated on hostid {1}.".format(
+        comment_usermacro_updated = "Usermacro {} updated on hostid {}.".format(
             name, hostid
         )
-        comment_usermacro_notcreated = "Unable to create usermacro: {0} on hostid {1}. ".format(
-            name, hostid
+        comment_usermacro_notcreated = (
+            f"Unable to create usermacro: {name} on hostid {hostid}. "
         )
-        comment_usermacro_exists = "Usermacro {0} already exists on hostid {1}.".format(
+        comment_usermacro_exists = "Usermacro {} already exists on hostid {}.".format(
             name, hostid
         )
         changes_usermacro_created = {
             name: {
-                "old": "Usermacro {0} does not exist on hostid {1}.".format(
-                    name, hostid
-                ),
-                "new": "Usermacro {0} created on hostid {1}.".format(name, hostid),
+                "old": f"Usermacro {name} does not exist on hostid {hostid}.",
+                "new": f"Usermacro {name} created on hostid {hostid}.",
             }
         }
     else:
-        comment_usermacro_created = "Usermacro {0} created.".format(name)
-        comment_usermacro_updated = "Usermacro {0} updated.".format(name)
-        comment_usermacro_notcreated = "Unable to create usermacro: {0}. ".format(name)
-        comment_usermacro_exists = "Usermacro {0} already exists.".format(name)
+        comment_usermacro_created = f"Usermacro {name} created."
+        comment_usermacro_updated = f"Usermacro {name} updated."
+        comment_usermacro_notcreated = f"Unable to create usermacro: {name}. "
+        comment_usermacro_exists = f"Usermacro {name} already exists."
         changes_usermacro_created = {
             name: {
-                "old": "Usermacro {0} does not exist.".format(name),
-                "new": "Usermacro {0} created.".format(name),
+                "old": f"Usermacro {name} does not exist.",
+                "new": f"Usermacro {name} created.",
             }
         }
 
@@ -91,7 +88,7 @@ def present(name, value, hostid=None, **kwargs):
         if isinstance(kwargs["exec_params"], list):
             kwargs["exec_params"] = "\n".join(kwargs["exec_params"]) + "\n"
         else:
-            kwargs["exec_params"] = six.text_type(kwargs["exec_params"]) + "\n"
+            kwargs["exec_params"] = str(kwargs["exec_params"]) + "\n"
     if hostid:
         usermacro_exists = __salt__["zabbix.usermacro_get"](
             name, hostids=hostid, **connection_args
@@ -109,7 +106,7 @@ def present(name, value, hostid=None, **kwargs):
             usermacroid = int(usermacroobj["globalmacroid"])
         update_value = False
 
-        if six.text_type(value) != usermacroobj["value"]:
+        if str(value) != usermacroobj["value"]:
             update_value = True
 
     # Dry run, test=true mode
@@ -165,7 +162,7 @@ def present(name, value, hostid=None, **kwargs):
             ret["changes"] = changes_usermacro_created
         else:
             ret["result"] = False
-            ret["comment"] = comment_usermacro_notcreated + six.text_type(
+            ret["comment"] = comment_usermacro_notcreated + str(
                 usermacro_create["error"]
             )
 
@@ -173,7 +170,7 @@ def present(name, value, hostid=None, **kwargs):
     if error:
         ret["changes"] = {}
         ret["result"] = False
-        ret["comment"] = six.text_type(error)
+        ret["comment"] = str(error)
 
     return ret
 
@@ -208,29 +205,29 @@ def absent(name, hostid=None, **kwargs):
 
     # Comment and change messages
     if hostid:
-        comment_usermacro_deleted = "Usermacro {0} deleted from hostid {1}.".format(
+        comment_usermacro_deleted = "Usermacro {} deleted from hostid {}.".format(
             name, hostid
         )
-        comment_usermacro_notdeleted = "Unable to delete usermacro: {0} from hostid {1}.".format(
-            name, hostid
+        comment_usermacro_notdeleted = (
+            f"Unable to delete usermacro: {name} from hostid {hostid}."
         )
-        comment_usermacro_notexists = "Usermacro {0} does not exist on hostid {1}.".format(
-            name, hostid
+        comment_usermacro_notexists = (
+            f"Usermacro {name} does not exist on hostid {hostid}."
         )
         changes_usermacro_deleted = {
             name: {
-                "old": "Usermacro {0} exists on hostid {1}.".format(name, hostid),
-                "new": "Usermacro {0} deleted from {1}.".format(name, hostid),
+                "old": f"Usermacro {name} exists on hostid {hostid}.",
+                "new": f"Usermacro {name} deleted from {hostid}.",
             }
         }
     else:
-        comment_usermacro_deleted = "Usermacro {0} deleted.".format(name)
-        comment_usermacro_notdeleted = "Unable to delete usermacro: {0}.".format(name)
-        comment_usermacro_notexists = "Usermacro {0} does not exist.".format(name)
+        comment_usermacro_deleted = f"Usermacro {name} deleted."
+        comment_usermacro_notdeleted = f"Unable to delete usermacro: {name}."
+        comment_usermacro_notexists = f"Usermacro {name} does not exist."
         changes_usermacro_deleted = {
             name: {
-                "old": "Usermacro {0} exists.".format(name),
-                "new": "Usermacro {0} deleted.".format(name),
+                "old": f"Usermacro {name} exists.",
+                "new": f"Usermacro {name} deleted.",
             }
         }
     if hostid:
@@ -276,7 +273,7 @@ def absent(name, hostid=None, **kwargs):
             ret["changes"] = changes_usermacro_deleted
         else:
             ret["result"] = False
-            ret["comment"] = comment_usermacro_notdeleted + six.text_type(
+            ret["comment"] = comment_usermacro_notdeleted + str(
                 usermacro_delete["error"]
             )
 

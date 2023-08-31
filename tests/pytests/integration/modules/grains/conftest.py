@@ -1,5 +1,6 @@
 import attr
 import pytest
+
 import salt.defaults.events
 
 

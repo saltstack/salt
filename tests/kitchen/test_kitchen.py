@@ -1,23 +1,21 @@
-# -*- coding: utf-8 -*-
 """
 Test wrapper for running all KitchenSalt tests
 
 All directories in 'tests/kitchen/' will be treated as a separate test under
 the KitchenTestCase.
 """
-from __future__ import absolute_import
 
 import os
 
-import salt.utils.path
 import setup
 from salt.modules import cmdmod as cmd
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
+import pytest
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
-@skipIf(not salt.utils.path.which("bundle"), "Bundler is not installed")
+@pytest.mark.skip_if_binaries_missing("bundle")
 class KitchenTestCase(TestCase):
     """
     Test kitchen environments
@@ -31,11 +29,13 @@ class KitchenTestCase(TestCase):
         cls.topdir = "/" + os.path.join(*CURRENT_DIR.split("/")[:-2])
         cls.use_vt = int(os.environ.get("TESTS_LOG_LEVEL")) >= 5
         cmd.run("python setup.py sdist", cwd=cls.topdir)
+        # TBD cmd.run("python -m pip install --upgrade build")          # add build when implement pyproject.toml
+        # TBD cmd.run("python -m build --sdist {}".format(cls.topdir))  # replace with build when implement pyproject.toml
         cmd.run("bundle install", cwd=CURRENT_DIR)
         cls.env = {
             "KITCHEN_YAML": os.path.join(CURRENT_DIR, ".kitchen.yml"),
             "SALT_SDIST_PATH": os.path.join(
-                cls.topdir, "dist", "salt-{0}.tar.gz".format(setup.__version__)
+                cls.topdir, "dist", "salt-{}.tar.gz".format(setup.__version__)
             ),
         }
 
@@ -60,7 +60,7 @@ def func_builder(testdir):
         if "TESTS_XML_OUTPUT_DIR" in os.environ:
             self.env[
                 "TESTS_JUNIT_XML_PATH"
-            ] = "{0}/kitchen.tests.{1}.$KITCHEN_SUITE.$KITCHEN_PLATFORM.xml".format(
+            ] = "{}/kitchen.tests.{}.$KITCHEN_SUITE.$KITCHEN_PLATFORM.xml".format(
                 os.environ.get("TESTS_XML_OUTPUT_DIR"), self.testdir,
             )
         self.assertEqual(
@@ -86,4 +86,4 @@ def func_builder(testdir):
 
 
 for testdir in os.listdir(os.path.join(CURRENT_DIR, "tests")):
-    setattr(KitchenTestCase, "test_kitchen_{0}".format(testdir), func_builder(testdir))
+    setattr(KitchenTestCase, "test_kitchen_{}".format(testdir), func_builder(testdir))

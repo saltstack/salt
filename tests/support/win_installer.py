@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :copyright: Copyright 2013-2017 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
@@ -9,14 +8,13 @@
 
     Fetches the binary Windows installer
 """
-from __future__ import absolute_import
 
 import hashlib
 
 import requests
 
 PREFIX = "Salt-Minion-"
-REPO = "https://repo.saltstack.com/windows"
+REPO = "https://repo.saltproject.io/windows"
 
 
 def latest_installer_name(arch="AMD64", **kwargs):

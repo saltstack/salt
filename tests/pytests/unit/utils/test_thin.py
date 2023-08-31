@@ -1,4 +1,5 @@
 import pytest
+
 import salt.exceptions
 import salt.utils.stringutils
 import salt.utils.thin

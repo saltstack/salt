@@ -12,13 +12,13 @@ from tests.support.unit import TestCase
 
 
 class GlusterResults:
-    """ This class holds the xml results from gluster cli transactions """
+    """This class holds the xml results from gluster cli transactions"""
 
     class v34:
-        """ This is for version 3.4 results """
+        """This is for version 3.4 results"""
 
         class list_peers:
-            """ results from "peer status" """
+            """results from "peer status" """
 
         class peer_probe:
             fail_cant_connect = fail_bad_hostname = "\n".join(
@@ -67,7 +67,8 @@ class GlusterResults:
                         "  <opRet>0</opRet>",
                         "  <opErrno>2</opErrno>",
                         "  <opErrstr>(null)</opErrstr>",
-                        "  <output>success: host 10.0.0.2 port 24007 already in peer list</output>",
+                        "  <output>success: host 10.0.0.2 port 24007 already in peer"
+                        " list</output>",
                         "</cliOutput>",
                         "",
                     ]
@@ -79,7 +80,8 @@ class GlusterResults:
                         "  <opRet>0</opRet>",
                         "  <opErrno>2</opErrno>",
                         "  <opErrstr>(null)</opErrstr>",
-                        "  <output>success: host server2 port 24007 already in peer list</output>",
+                        "  <output>success: host server2 port 24007 already in peer"
+                        " list</output>",
                         "</cliOutput>",
                         "",
                     ]
@@ -93,7 +95,8 @@ class GlusterResults:
                         "  <opRet>0</opRet>",
                         "  <opErrno>2</opErrno>",
                         "  <opErrstr>(null)</opErrstr>",
-                        "  <output>success: host 10.0.0.1 port 24007 already in peer list</output>",
+                        "  <output>success: host 10.0.0.1 port 24007 already in peer"
+                        " list</output>",
                         "</cliOutput>",
                         "",
                     ]
@@ -105,16 +108,17 @@ class GlusterResults:
                         "  <opRet>0</opRet>",
                         "  <opErrno>2</opErrno>",
                         "  <opErrstr>(null)</opErrstr>",
-                        "  <output>success: host server1 port 24007 already in peer list</output>",
+                        "  <output>success: host server1 port 24007 already in peer"
+                        " list</output>",
                         "</cliOutput>",
                         "",
                     ]
                 ),
             }
             success_first_hostname_from_second_first_time = success_other
-            success_first_hostname_from_second_second_time = success_reverse_already_peer[
-                "hostname"
-            ]
+            success_first_hostname_from_second_second_time = (
+                success_reverse_already_peer["hostname"]
+            )
             success_first_ip_from_second_first_time = success_reverse_already_peer["ip"]
 
     class v37:
@@ -125,7 +129,8 @@ class GlusterResults:
                     "<cliOutput>",
                     "  <opRet>-1</opRet>",
                     "  <opErrno>107</opErrno>",
-                    "  <opErrstr>Probe returned with Transport endpoint is not connected</opErrstr>",
+                    "  <opErrstr>Probe returned with Transport endpoint is not"
+                    " connected</opErrstr>",
                     "</cliOutput>",
                     "",
                 ]
@@ -164,7 +169,8 @@ class GlusterResults:
                         "  <opRet>0</opRet>",
                         "  <opErrno>2</opErrno>",
                         "  <opErrstr/>",
-                        "  <output>Host 10.0.0.2 port 24007 already in peer list</output>",
+                        "  <output>Host 10.0.0.2 port 24007 already in peer"
+                        " list</output>",
                         "</cliOutput>",
                         "",
                     ]
@@ -176,7 +182,8 @@ class GlusterResults:
                         "  <opRet>0</opRet>",
                         "  <opErrno>2</opErrno>",
                         "  <opErrstr/>",
-                        "  <output>Host server2 port 24007 already in peer list</output>",
+                        "  <output>Host server2 port 24007 already in peer"
+                        " list</output>",
                         "</cliOutput>",
                         "",
                     ]
@@ -190,7 +197,8 @@ class GlusterResults:
                         "  <opRet>0</opRet>",
                         "  <opErrno>2</opErrno>",
                         "  <opErrstr/>",
-                        "  <output>Host 10.0.0.1 port 24007 already in peer list</output>",
+                        "  <output>Host 10.0.0.1 port 24007 already in peer"
+                        " list</output>",
                         "</cliOutput>",
                         "",
                     ]
@@ -202,15 +210,16 @@ class GlusterResults:
                         "  <opRet>0</opRet>",
                         "  <opErrno>2</opErrno>",
                         "  <opErrstr/>",
-                        "  <output>Host server1 port 24007 already in peer list</output>",
+                        "  <output>Host server1 port 24007 already in peer"
+                        " list</output>",
                         "</cliOutput>",
                         "",
                     ]
                 ),
             }
-            success_first_hostname_from_second_first_time = success_reverse_already_peer[
-                "hostname"
-            ]
+            success_first_hostname_from_second_first_time = (
+                success_reverse_already_peer["hostname"]
+            )
             success_first_ip_from_second_first_time = success_other
             success_first_ip_from_second_second_time = success_reverse_already_peer[
                 "ip"

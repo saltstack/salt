@@ -17,7 +17,7 @@ standard ``salt`` commands.
 - Salt ssh is considered production ready in version 2014.7.0
 - Python is required on the remote system (unless using the ``-r`` option to
   send raw ssh commands).  The python version requirement is the same as that
-  for a standard :ref:`Salt installation <installation-dependencies>`.
+  for a standard Salt installation.
 - On many systems, the ``salt-ssh`` executable will be in its own package, usually named
   ``salt-ssh``
 - The Salt SSH system does not supersede the standard Salt communication
@@ -135,8 +135,7 @@ Commands with ``salt-ssh`` follow the same syntax as the ``salt`` command.
 
 The standard salt functions are available! The output is the same as ``salt``
 and many of the same flags are available. Please see
-http://docs.saltstack.com/ref/cli/salt-ssh.html for all of the available
-options.
+:ref:`Salt SSH reference <cli-salt-ssh>` for all of the available options.
 
 Raw Shell Calls
 ---------------
@@ -293,7 +292,7 @@ This is especially important when using a custom `file_roots` that differ from
 
 .. note::
 
-    Please see https://docs.saltstack.com/en/latest/topics/grains/ for more
+    Please see https://docs.saltproject.io/en/latest/topics/grains/ for more
     information on grains and custom grains.
 
 

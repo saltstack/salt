@@ -6,6 +6,7 @@ import logging
 import os
 
 import pytest
+
 import salt.modules.mysql as mysql_mod
 import salt.states.mysql_query as mysql_query
 from tests.support.mock import MagicMock, patch
@@ -74,7 +75,12 @@ def test_run():
         ret.update({"comment": comt, "result": True})
         assert (
             mysql_query.run(
-                name, database, query, output="grain", grain="grain", overwrite=False,
+                name,
+                database,
+                query,
+                output="grain",
+                grain="grain",
+                overwrite=False,
             )
             == ret
         )

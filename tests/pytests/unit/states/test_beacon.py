@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.beacon as beacon
 from tests.support.mock import MagicMock, patch
 

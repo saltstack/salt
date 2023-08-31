@@ -1,0 +1,14 @@
+[Unit]
+Description=The Salt Minion
+Documentation=man:salt-minion(1) file:///usr/share/doc/salt/html/contents.html https://docs.saltproject.io/en/latest/contents.html
+After=network.target salt-master.service
+
+[Service]
+KillMode=process
+Type=notify
+NotifyAccess=all
+LimitNOFILE=8192
+ExecStart=/usr/bin/salt-minion
+
+[Install]
+WantedBy=multi-user.target

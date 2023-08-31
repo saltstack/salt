@@ -35,7 +35,8 @@ def __virtual__():
     else:
         return (
             False,
-            "The redis execution module failed to load: the redis python library is not available.",
+            "The redis execution module failed to load: the redis python library is not"
+            " available.",
         )
 
 

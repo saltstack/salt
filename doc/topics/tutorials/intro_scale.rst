@@ -7,8 +7,8 @@ Using Salt at scale
 The focus of this tutorial will be building a Salt infrastructure for handling
 large numbers of minions. This will include tuning, topology, and best practices.
 
-For how to install the Salt Master please
-go here: `Installing saltstack <http://docs.saltstack.com/topics/installation/index.html>`_
+For how to install the Salt Master, see the
+`Salt install guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`_.
 
 .. note::
 
@@ -200,23 +200,6 @@ run in.  But here are some general tuning tips for different situations:
 The Master is CPU bound
 -----------------------
 
-Salt uses RSA-Key-Pairs on the masters and minions end. Both generate 4096
-bit key-pairs on first start. While the key-size for the Master is currently
-not configurable, the minions keysize can be configured with different
-key-sizes. For example with a 2048 bit key:
-
-.. code-block:: yaml
-
-    keysize: 2048
-
-With thousands of decryptions, the amount of time that can be saved on the
-masters end should not be neglected. See here for reference:
-`Pull Request 9235 <https://github.com/saltstack/salt/pull/9235>`_ how much
-influence the key-size can have.
-
-Downsizing the Salt Master's key is not that important, because the minions
-do not encrypt as many messages as the Master does.
-
 In installations with large or with complex pillar files, it is possible
 for the master to exhibit poor performance as a result of having to render
 many pillar files at once. This exhibit itself in a number of ways, both
@@ -258,7 +241,7 @@ the retention time defined by
 
 .. code-block:: yaml
 
-    keep_jobs: 24
+    keep_jobs_seconds: 86400
 
 .. code-block:: text
 
@@ -282,7 +265,7 @@ that information back to the waiting client before the job can be published.
 To mitigate this, a key cache may be enabled. This will reduce the load
 on the master to a single file open instead of thousands or tens of thousands.
 
-This cache is updated by the maintanence process, however, which means that
+This cache is updated by the maintenance process, however, which means that
 minions with keys that are accepted may not be targeted by the master
 for up to sixty seconds by default.
 
@@ -304,4 +287,3 @@ The job cache can be disabled:
 .. code-block:: yaml
 
    job_cache: False
-

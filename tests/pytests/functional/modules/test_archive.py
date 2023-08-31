@@ -9,6 +9,7 @@ import textwrap
 
 import attr
 import pytest
+
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -157,6 +158,7 @@ def unicode_filename(request):
     return request.param
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.skip_if_binaries_missing("tar")
 def test_tar_pack(archive, unicode_filename):
     """
@@ -168,6 +170,7 @@ def test_tar_pack(archive, unicode_filename):
         arch.assert_artifacts_in_ret(ret)
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.skip_if_binaries_missing("tar")
 def test_tar_unpack(archive, unicode_filename):
     """
@@ -183,6 +186,7 @@ def test_tar_unpack(archive, unicode_filename):
         arch.assert_artifacts_in_ret(ret)
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.skip_if_binaries_missing("tar")
 def test_tar_list(archive, unicode_filename):
     """
@@ -225,24 +229,42 @@ def test_gunzip(archive, unicode_filename):
 
 
 @pytest.mark.skip_if_binaries_missing("zip")
-def test_cmd_zip(archive, unicode_filename):
+def test_cmd_zip(archive, unicode_filename, grains):
     """
     Validate using the cmd_zip function
     """
     with Archive("zip", unicode_filename=unicode_filename) as arch:
         ret = archive.cmd_zip(str(arch.archive), str(arch.src))
         assert isinstance(ret, list)
+        if (
+            "*** buffer overflow detected ***: terminated" in ret
+            and grains["os"] == "Fedora"
+            and int(grains["osmajorrelease"]) >= 37
+        ):
+            pytest.skip(
+                f"Calling the system zip on {grains['os']} {grains['osmajorrelease']} "
+                "is currently failing with a buffer overflow error"
+            )
         arch.assert_artifacts_in_ret(ret)
 
 
 @pytest.mark.skip_if_binaries_missing("zip", "unzip")
-def test_cmd_unzip(archive, unicode_filename):
+def test_cmd_unzip(archive, unicode_filename, grains):
     """
     Validate using the cmd_unzip function
     """
     with Archive("zip", unicode_filename=unicode_filename) as arch:
         ret = archive.cmd_zip(str(arch.archive), str(arch.src))
         assert isinstance(ret, list)
+        if (
+            "*** buffer overflow detected ***: terminated" in ret
+            and grains["os"] == "Fedora"
+            and int(grains["osmajorrelease"]) >= 37
+        ):
+            pytest.skip(
+                f"Calling the system unzip on {grains['os']} {grains['osmajorrelease']} "
+                "is currently failing with a buffer overflow error"
+            )
         arch.assert_artifacts_in_ret(ret)
 
         ret = archive.cmd_unzip(str(arch.archive), str(arch.dst))
@@ -300,3 +322,73 @@ def test_unrar(archive, unicode_filename):
         ret = archive.unrar(str(arch.archive), str(arch.dst))
         assert isinstance(ret, list)
         arch.assert_artifacts_in_ret(ret)
+
+
+@pytest.mark.skip_on_windows
+@pytest.mark.skip_if_binaries_missing("tar")
+def test_tar_list_no_explicit_top_level_directory_member(archive, tmp_path):
+    rel_path = pathlib.Path("archive_top/second_level/file.txt")
+    srcfile = tmp_path / str(rel_path)
+    srcfile.parent.mkdir(parents=True, exist_ok=True)
+    srcfile.write_text("hey there")
+    archive.tar(
+        "-cvzf",
+        str(tmp_path / "tld_test.tar.gz"),
+        sources=str(rel_path.parent),
+        cwd=str(tmp_path),
+    )
+
+    expected = {
+        "dirs": ["archive_top/second_level/"],
+        "files": ["archive_top/second_level/file.txt"],
+        "links": [],
+        "top_level_dirs": ["archive_top/"],
+        "top_level_files": [],
+        "top_level_links": [],
+    }
+    ret = archive.list(
+        str(tmp_path / "tld_test.tar.gz"), archive_format="tar", verbose=True
+    )
+    assert ret == expected
+
+
+@pytest.mark.skip_on_windows
+@pytest.mark.skip_if_binaries_missing("tar")
+def test_tar_list_with_similar_top_level_dirs(archive, tmp_path):
+    rel_paths = (
+        "archive_top/second_level/file.txt",
+        "archives/second_level/file.txt",
+    )
+
+    for rel_path in rel_paths:
+        srcfile = tmp_path / str(pathlib.Path(rel_path))
+        srcfile.parent.mkdir(parents=True, exist_ok=True)
+        srcfile.write_text("hey there")
+
+    archive.tar(
+        "-cvzf",
+        str(tmp_path / "tld_test.tar.gz"),
+        sources=["archive_top", "archives"],
+        cwd=str(tmp_path),
+    )
+
+    expected = {
+        "dirs": [
+            "archive_top/",
+            "archive_top/second_level/",
+            "archives/",
+            "archives/second_level/",
+        ],
+        "files": [
+            "archive_top/second_level/file.txt",
+            "archives/second_level/file.txt",
+        ],
+        "links": [],
+        "top_level_dirs": ["archive_top/", "archives/"],
+        "top_level_files": [],
+        "top_level_links": [],
+    }
+    ret = archive.list(
+        str(tmp_path / "tld_test.tar.gz"), archive_format="tar", verbose=True
+    )
+    assert ret == expected

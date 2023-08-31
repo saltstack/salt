@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Wrap the saltcheck module to copy files to ssh minion before running tests
 """
-# Import Python libs
-from __future__ import absolute_import, print_function
 
 import logging
 import os
@@ -12,10 +9,9 @@ import tarfile
 import tempfile
 from contextlib import closing
 
+import salt.fileclient
 import salt.utils.files
 import salt.utils.json
-
-# Import salt libs
 import salt.utils.url
 
 log = logging.getLogger(__name__)
@@ -33,65 +29,62 @@ def update_master_cache(states, saltenv="base"):
     # Setup for copying states to gendir
     gendir = tempfile.mkdtemp()
     trans_tar = salt.utils.files.mkstemp()
-    if "cp.fileclient_{0}".format(id(__opts__)) not in __context__:
-        __context__[
-            "cp.fileclient_{0}".format(id(__opts__))
-        ] = salt.fileclient.get_file_client(__opts__)
+    with salt.fileclient.get_file_client(__opts__) as cp_fileclient:
 
-    # generate cp.list_states output and save to gendir
-    cp_output = salt.utils.json.dumps(__salt__["cp.list_states"]())
-    cp_output_file = os.path.join(gendir, "cp_output.txt")
-    with salt.utils.files.fopen(cp_output_file, "w") as fp:
-        fp.write(cp_output)
+        # generate cp.list_states output and save to gendir
+        cp_output = salt.utils.json.dumps(__salt__["cp.list_states"]())
+        cp_output_file = os.path.join(gendir, "cp_output.txt")
+        with salt.utils.files.fopen(cp_output_file, "w") as fp:
+            fp.write(cp_output)
 
-    # cp state directories to gendir
-    already_processed = []
-    sls_list = salt.utils.args.split_input(states)
-    for state_name in sls_list:
-        # generate low data for each state and save to gendir
-        state_low_file = os.path.join(gendir, state_name + ".low")
-        state_low_output = salt.utils.json.dumps(
-            __salt__["state.show_low_sls"](state_name)
-        )
-        with salt.utils.files.fopen(state_low_file, "w") as fp:
-            fp.write(state_low_output)
-
-        state_name = state_name.replace(".", os.sep)
-        if state_name in already_processed:
-            log.debug("Already cached state for %s", state_name)
-        else:
-            file_copy_file = os.path.join(gendir, state_name + ".copy")
-            log.debug("copying %s to %s", state_name, gendir)
-            qualified_name = salt.utils.url.create(state_name, saltenv)
-            # Duplicate cp.get_dir to gendir
-            copy_result = __context__["cp.fileclient_{0}".format(id(__opts__))].get_dir(
-                qualified_name, gendir, saltenv
+        # cp state directories to gendir
+        already_processed = []
+        sls_list = salt.utils.args.split_input(states)
+        for state_name in sls_list:
+            # generate low data for each state and save to gendir
+            state_low_file = os.path.join(gendir, state_name + ".low")
+            state_low_output = salt.utils.json.dumps(
+                __salt__["state.show_low_sls"](state_name)
             )
-            if copy_result:
-                copy_result = [dir.replace(gendir, state_cache) for dir in copy_result]
-                copy_result_output = salt.utils.json.dumps(copy_result)
-                with salt.utils.files.fopen(file_copy_file, "w") as fp:
-                    fp.write(copy_result_output)
-                already_processed.append(state_name)
+            with salt.utils.files.fopen(state_low_file, "w") as fp:
+                fp.write(state_low_output)
+
+            state_name = state_name.replace(".", os.sep)
+            if state_name in already_processed:
+                log.debug("Already cached state for %s", state_name)
             else:
-                # If files were not copied, assume state.file.sls was given and just copy state
-                state_name = os.path.dirname(state_name)
                 file_copy_file = os.path.join(gendir, state_name + ".copy")
-                if state_name in already_processed:
-                    log.debug("Already cached state for %s", state_name)
+                log.debug("copying %s to %s", state_name, gendir)
+                qualified_name = salt.utils.url.create(state_name, saltenv)
+                # Duplicate cp.get_dir to gendir
+                copy_result = cp_fileclient.get_dir(qualified_name, gendir, saltenv)
+                if copy_result:
+                    copy_result = [
+                        dir.replace(gendir, state_cache) for dir in copy_result
+                    ]
+                    copy_result_output = salt.utils.json.dumps(copy_result)
+                    with salt.utils.files.fopen(file_copy_file, "w") as fp:
+                        fp.write(copy_result_output)
+                    already_processed.append(state_name)
                 else:
-                    qualified_name = salt.utils.url.create(state_name, saltenv)
-                    copy_result = __context__[
-                        "cp.fileclient_{0}".format(id(__opts__))
-                    ].get_dir(qualified_name, gendir, saltenv)
-                    if copy_result:
-                        copy_result = [
-                            dir.replace(gendir, state_cache) for dir in copy_result
-                        ]
-                        copy_result_output = salt.utils.json.dumps(copy_result)
-                        with salt.utils.files.fopen(file_copy_file, "w") as fp:
-                            fp.write(copy_result_output)
-                        already_processed.append(state_name)
+                    # If files were not copied, assume state.file.sls was given and just copy state
+                    state_name = os.path.dirname(state_name)
+                    file_copy_file = os.path.join(gendir, state_name + ".copy")
+                    if state_name in already_processed:
+                        log.debug("Already cached state for %s", state_name)
+                    else:
+                        qualified_name = salt.utils.url.create(state_name, saltenv)
+                        copy_result = cp_fileclient.get_dir(
+                            qualified_name, gendir, saltenv
+                        )
+                        if copy_result:
+                            copy_result = [
+                                dir.replace(gendir, state_cache) for dir in copy_result
+                            ]
+                            copy_result_output = salt.utils.json.dumps(copy_result)
+                            with salt.utils.files.fopen(file_copy_file, "w") as fp:
+                                fp.write(copy_result_output)
+                            already_processed.append(state_name)
 
     # turn gendir into tarball and remove gendir
     try:
@@ -117,7 +110,7 @@ def update_master_cache(states, saltenv="base"):
     # Clean up local tar
     try:
         os.remove(trans_tar)
-    except (OSError, IOError):
+    except OSError:
         pass
 
     tar_path = os.path.join(thin_dir, os.path.basename(trans_tar))

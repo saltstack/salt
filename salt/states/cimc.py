@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A state module to manage Cisco UCS chassis devices.
 
@@ -18,8 +17,6 @@ relies on the CIMC proxy module to interface with the device.
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 

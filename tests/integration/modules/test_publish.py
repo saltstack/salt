@@ -1,4 +1,5 @@
 import pytest
+
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 

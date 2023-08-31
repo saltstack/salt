@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Installation of Composer Packages
 =================================
@@ -37,9 +36,7 @@ the location of composer in the state.
         - php: /usr/local/bin/php
         - no_dev: true
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 from salt.exceptions import SaltException
 
 
@@ -140,12 +137,10 @@ def installed(
         else:
             install_status = "not "
 
-        ret["comment"] = 'The state of "{0}" will be changed.'.format(name)
+        ret["comment"] = 'The state of "{}" will be changed.'.format(name)
         ret["changes"] = {
-            "old": "composer install has {0}been run in {1}".format(
-                install_status, name
-            ),
-            "new": "composer install will be run in {0}".format(name),
+            "old": "composer install has {}been run in {}".format(install_status, name),
+            "new": "composer install will be run in {}".format(name),
         }
         ret["result"] = None
         return ret
@@ -168,7 +163,7 @@ def installed(
         )
     except (SaltException) as err:
         ret["result"] = False
-        ret["comment"] = "Error executing composer in '{0}': {1}".format(name, err)
+        ret["comment"] = "Error executing composer in '{}': {}".format(name, err)
         return ret
 
     # If composer retcode != 0 then an exception was thrown and we dealt with it.
@@ -255,17 +250,17 @@ def update(
     # Check if composer.lock exists, if so we already ran `composer install`
     is_installed = __salt__["composer.did_composer_install"](name)
     if is_installed:
-        old_status = "composer install has not yet been run in {0}".format(name)
+        old_status = "composer install has not yet been run in {}".format(name)
     else:
-        old_status = "composer install has been run in {0}".format(name)
+        old_status = "composer install has been run in {}".format(name)
 
     # The state of the system does need to be changed. Check if we're running
     # in ``test=true`` mode.
     if __opts__["test"] is True:
-        ret["comment"] = 'The state of "{0}" will be changed.'.format(name)
+        ret["comment"] = 'The state of "{}" will be changed.'.format(name)
         ret["changes"] = {
             "old": old_status,
-            "new": "composer install/update will be run in {0}".format(name),
+            "new": "composer install/update will be run in {}".format(name),
         }
         ret["result"] = None
         return ret
@@ -288,7 +283,7 @@ def update(
         )
     except (SaltException) as err:
         ret["result"] = False
-        ret["comment"] = "Error executing composer in '{0}': {1}".format(name, err)
+        ret["comment"] = "Error executing composer in '{}': {}".format(name, err)
         return ret
 
     # If composer retcode != 0 then an exception was thrown and we dealt with it.

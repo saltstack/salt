@@ -35,7 +35,7 @@ but these are things we consider when reviewing a pull request.
   be immediately evident to the next person who comes along why this change was
   made?
 
-.. _`style guide`: https://docs.saltstack.com/en/latest/topics/development/conventions/style.html
+.. _`style guide`: https://docs.saltproject.io/en/latest/topics/development/conventions/style.html
 
 * If appropriate, has the person who wrote the code which is being modified
   been notified and included in the process?

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Display output in a table format
 =================================
@@ -43,20 +42,13 @@ CLI Example:
     salt '*' foo.bar --out=table
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import operator
 from functools import reduce  # pylint: disable=redefined-builtin
 
-# Import Salt libs
 import salt.output
 import salt.utils.color
 import salt.utils.data
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import map, zip  # pylint: disable=redefined-builtin
 
 __virtualname__ = "table"
 
@@ -65,15 +57,15 @@ def __virtual__():
     return __virtualname__
 
 
-class TableDisplay(object):
+class TableDisplay:
     """
     Manage the table display content.
     """
 
     _JUSTIFY_MAP = {
-        "center": six.text_type.center,
-        "right": six.text_type.rjust,
-        "left": six.text_type.ljust,
+        "center": str.center,
+        "right": str.rjust,
+        "left": str.ljust,
     }
 
     def __init__(
@@ -163,9 +155,7 @@ class TableDisplay(object):
 
         columns = map(lambda *args: args, *reduce(operator.add, logical_rows))
 
-        max_widths = [
-            max([len(six.text_type(item)) for item in column]) for column in columns
-        ]
+        max_widths = [max(len(str(item)) for item in column) for column in columns]
         row_separator = self.row_delimiter * (
             len(self.prefix)
             + len(self.suffix)
@@ -187,7 +177,7 @@ class TableDisplay(object):
                     self.prefix
                     + self.delim.join(
                         [
-                            justify(six.text_type(item), width)
+                            justify(str(item), width)
                             for (item, width) in zip(row, max_widths)
                         ]
                     )
@@ -236,16 +226,15 @@ class TableDisplay(object):
             temp_rows = []
             if not labels:
                 labels = [
-                    six.text_type(label).replace("_", " ").title()
-                    for label in sorted(rows[0])
+                    str(label).replace("_", " ").title() for label in sorted(rows[0])
                 ]
             for row in rows:
                 temp_row = []
                 for key in sorted(row):
-                    temp_row.append(six.text_type(row[key]))
+                    temp_row.append(str(row[key]))
                 temp_rows.append(temp_row)
             rows = temp_rows
-        elif isinstance(rows[0], six.string_types):
+        elif isinstance(rows[0], str):
             rows = [
                 [row] for row in rows
             ]  # encapsulate each row in a single-element list

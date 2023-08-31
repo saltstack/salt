@@ -1,12 +1,14 @@
 import tempfile
 
+import pytest
+
 import salt.utils.files
 from salt.modules import x509 as x509_mod
 from salt.states import x509
 from tests.support.helpers import dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import M2Crypto  # pylint: disable=unused-import
@@ -43,7 +45,9 @@ class X509FipsTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_private_key_fips_mode(self):
         """
         :return:

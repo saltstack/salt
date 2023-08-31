@@ -9,6 +9,7 @@ Tests for salt.states.zfs
 """
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.zfs as zfs
@@ -17,6 +18,10 @@ from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 from tests.support.zfs import ZFSMockData
 
+pytestmark = [
+    pytest.mark.slow_test,
+]
+
 
 @pytest.fixture
 def utils_patch():
@@ -24,11 +29,14 @@ def utils_patch():
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    utils = salt.loader.utils(opts, whitelist=["zfs"])
+def configure_loader_modules(minion_opts):
+    utils = salt.loader.utils(minion_opts, whitelist=["zfs"])
     zfs_obj = {
-        zfs: {"__opts__": opts, "__grains__": {"kernel": "SunOS"}, "__utils__": utils}
+        zfs: {
+            "__opts__": minion_opts,
+            "__grains__": {"kernel": "SunOS"},
+            "__utils__": utils,
+        },
     }
 
     return zfs_obj
@@ -97,7 +105,8 @@ def test_filesystem_absent_fail(utils_patch):
                     "error",
                     "\n".join(
                         [
-                            "cannot destroy 'myzpool/filesystem': filesystem has children",
+                            "cannot destroy 'myzpool/filesystem': filesystem has"
+                            " children",
                             "use 'recursive=True' to destroy the following datasets:",
                             "myzpool/filesystem@snap",
                         ]
@@ -411,7 +420,9 @@ def test_hold_present_fail(utils_patch):
     ret = {
         "name": "myhold",
         "result": False,
-        "comment": "cannot hold snapshot 'zsalt/filesystem@snap': dataset does not exist",
+        "comment": (
+            "cannot hold snapshot 'zsalt/filesystem@snap': dataset does not exist"
+        ),
         "changes": {},
     }
 
@@ -422,7 +433,8 @@ def test_hold_present_fail(utils_patch):
                 ("held", False),
                 (
                     "error",
-                    "cannot hold snapshot 'zsalt/filesystem@snap': dataset does not exist",
+                    "cannot hold snapshot 'zsalt/filesystem@snap': dataset does not"
+                    " exist",
                 ),
             ]
         )
@@ -446,24 +458,9 @@ def test_filesystem_present(utils_patch):
     }
 
     mock_exists = MagicMock(return_value=True)
-    mock_get = MagicMock(
-        return_value=OrderedDict(
-            [
-                (
-                    "myzpool/filesystem",
-                    OrderedDict(
-                        [
-                            ("type", OrderedDict([("value", "filesystem")])),
-                            ("compression", OrderedDict([("value", False)])),
-                        ]
-                    ),
-                ),
-            ]
-        )
-    )
     with patch.dict(zfs.__salt__, {"zfs.exists": mock_exists}), patch.dict(
-        zfs.__salt__, {"zfs.get": mock_get}
-    ), patch.dict(zfs.__utils__, utils_patch):
+        zfs.__utils__, utils_patch
+    ):
         assert ret == zfs.filesystem_present("myzpool/filesystem")
 
 
@@ -487,9 +484,54 @@ def test_filesystem_present_new(utils_patch):
 
 
 @pytest.mark.slow_test
+def test_filesystem_present_properties(utils_patch):
+    """
+    Test if filesystem is present with specified properties
+    """
+    ret = {
+        "name": "myzpool/filesystem",
+        "result": True,
+        "comment": "filesystem myzpool/filesystem is uptodate",
+        "changes": {},
+    }
+
+    mock_exists = MagicMock(return_value=True)
+    mock_get = MagicMock(
+        return_value=OrderedDict(
+            [
+                (
+                    "myzpool/filesystem",
+                    OrderedDict(
+                        [
+                            ("type", OrderedDict([("value", "filesystem")])),
+                            ("compression", OrderedDict([("value", "lz4")])),
+                        ]
+                    ),
+                ),
+            ]
+        )
+    )
+    with patch.dict(zfs.__salt__, {"zfs.exists": mock_exists}), patch.dict(
+        zfs.__salt__, {"zfs.get": mock_get}
+    ), patch.dict(zfs.__utils__, utils_patch):
+        assert ret == zfs.filesystem_present(
+            "myzpool/filesystem",
+            properties={"type": "filesystem", "compression": "lz4"},
+        )
+    mock_get.assert_called_with(
+        "myzpool/filesystem",
+        depth=0,
+        properties="compression,type",
+        fields="value",
+        parsable=True,
+        type="filesystem",
+    )
+
+
+@pytest.mark.slow_test
 def test_filesystem_present_update(utils_patch):
     """
-    Test if filesystem is present (non existing filesystem)
+    Test if filesystem is present and needs property updates
     """
     ret = {
         "name": "myzpool/filesystem",
@@ -505,12 +547,7 @@ def test_filesystem_present_update(utils_patch):
             [
                 (
                     "myzpool/filesystem",
-                    OrderedDict(
-                        [
-                            ("type", OrderedDict([("value", "filesystem")])),
-                            ("compression", OrderedDict([("value", False)])),
-                        ]
-                    ),
+                    OrderedDict([("compression", OrderedDict([("value", False)]))]),
                 ),
             ]
         )
@@ -521,8 +558,17 @@ def test_filesystem_present_update(utils_patch):
         zfs.__utils__, utils_patch
     ):
         assert ret == zfs.filesystem_present(
-            name="myzpool/filesystem", properties={"compression": "lz4"},
+            name="myzpool/filesystem",
+            properties={"compression": "lz4"},
         )
+    mock_get.assert_called_with(
+        "myzpool/filesystem",
+        depth=0,
+        properties="compression",
+        fields="value",
+        parsable=True,
+        type="filesystem",
+    )
 
 
 def test_filesystem_present_fail(utils_patch):
@@ -568,24 +614,20 @@ def test_volume_present(utils_patch):
 
     mock_exists = MagicMock(return_value=True)
     mock_get = MagicMock(
-        return_value=OrderedDict(
-            [
-                (
-                    "myzpool/volume",
-                    OrderedDict(
-                        [
-                            ("type", OrderedDict([("value", "volume")])),
-                            ("compression", OrderedDict([("value", False)])),
-                        ]
-                    ),
-                ),
-            ]
-        )
+        return_value=OrderedDict([("myzpool/volume", OrderedDict([]))])
     )
     with patch.dict(zfs.__salt__, {"zfs.exists": mock_exists}), patch.dict(
         zfs.__salt__, {"zfs.get": mock_get}
     ), patch.dict(zfs.__utils__, utils_patch):
         assert ret == zfs.volume_present("myzpool/volume", volume_size="1G")
+    mock_get.assert_called_with(
+        "myzpool/volume",
+        depth=0,
+        properties="volsize",
+        fields="value",
+        parsable=True,
+        type="volume",
+    )
 
 
 def test_volume_present_new(utils_patch):
@@ -596,7 +638,7 @@ def test_volume_present_new(utils_patch):
         "name": "myzpool/volume",
         "result": True,
         "comment": "volume myzpool/volume was created",
-        "changes": {"myzpool/volume": "created"},
+        "changes": {"myzpool/volume": {"volsize": 1073741824}},
     }
 
     mock_exists = MagicMock(return_value=False)
@@ -625,12 +667,7 @@ def test_volume_present_update(utils_patch):
             [
                 (
                     "myzpool/volume",
-                    OrderedDict(
-                        [
-                            ("type", OrderedDict([("value", "volume")])),
-                            ("compression", OrderedDict([("value", False)])),
-                        ]
-                    ),
+                    OrderedDict([("compression", OrderedDict([("value", False)]))]),
                 ),
             ]
         )
@@ -641,8 +678,18 @@ def test_volume_present_update(utils_patch):
         zfs.__utils__, utils_patch
     ):
         assert ret == zfs.volume_present(
-            name="myzpool/volume", volume_size="1G", properties={"compression": "lz4"},
+            name="myzpool/volume",
+            volume_size="1G",
+            properties={"compression": "lz4"},
         )
+    mock_get.assert_called_with(
+        "myzpool/volume",
+        depth=0,
+        properties="compression,volsize",
+        fields="value",
+        parsable=True,
+        type="volume",
+    )
 
 
 def test_volume_present_fail(utils_patch):
@@ -696,7 +743,9 @@ def test_bookmark_present_new(utils_patch):
     ret = {
         "name": "myzpool/filesystem#mybookmark",
         "result": True,
-        "comment": "myzpool/filesystem@snap bookmarked as myzpool/filesystem#mybookmark",
+        "comment": (
+            "myzpool/filesystem@snap bookmarked as myzpool/filesystem#mybookmark"
+        ),
         "changes": {"myzpool/filesystem#mybookmark": "myzpool/filesystem@snap"},
     }
 
@@ -715,7 +764,9 @@ def test_bookmark_present_fail(utils_patch):
     ret = {
         "name": "myzpool/filesystem#mybookmark",
         "result": False,
-        "comment": "cannot bookmark snapshot 'zsalt/filesystem@snap': dataset does not exist",
+        "comment": (
+            "cannot bookmark snapshot 'zsalt/filesystem@snap': dataset does not exist"
+        ),
         "changes": {},
     }
 
@@ -726,7 +777,8 @@ def test_bookmark_present_fail(utils_patch):
                 ("bookmarked", False),
                 (
                     "error",
-                    "cannot bookmark snapshot 'zsalt/filesystem@snap': dataset does not exist",
+                    "cannot bookmark snapshot 'zsalt/filesystem@snap': dataset does not"
+                    " exist",
                 ),
             ]
         )
@@ -793,7 +845,10 @@ def test_snapshot_present_fail(utils_patch):
         return_value=OrderedDict(
             [
                 ("snapshotted", False),
-                ("error", "cannot open 'myzpool/filesystem': dataset does not exist",),
+                (
+                    "error",
+                    "cannot open 'myzpool/filesystem': dataset does not exist",
+                ),
             ]
         )
     )

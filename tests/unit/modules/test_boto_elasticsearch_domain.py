@@ -3,13 +3,14 @@ import logging
 import random
 import string
 
+import pytest
+
 import salt.loader
 import salt.modules.boto_elasticsearch_domain as boto_elasticsearch_domain
-from salt.ext.six.moves import range
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # pylint: disable=import-error,no-name-in-module
 try:
@@ -36,7 +37,7 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
+    elif Version(boto3.__version__) < Version(required_boto3_version):
         return False
     else:
         return True
@@ -117,12 +118,13 @@ class BotoElasticsearchDomainTestCaseMixin:
     pass
 
 
-# @skipIf(True, "Skip these tests while investigating failures")
-@skipIf(HAS_BOTO is False, "The boto module must be installed.")
-@skipIf(
+# @pytest.mark.skip(reason="Skip these tests while investigating failures")
+@pytest.mark.skipif(HAS_BOTO is False, reason="The boto module must be installed.")
+@pytest.mark.skipif(
     _has_required_boto() is False,
-    "The boto3 module must be greater than"
-    " or equal to version {}".format(required_boto3_version),
+    reason="The boto3 module must be greater than or equal to version {}".format(
+        required_boto3_version
+    ),
 )
 class BotoElasticsearchDomainTestCase(
     BotoElasticsearchDomainTestCaseBase, BotoElasticsearchDomainTestCaseMixin

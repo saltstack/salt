@@ -289,13 +289,12 @@ def list_absent(name, value, delimiter=DEFAULT_TARGET_DELIM):
             for val in value:
                 if val not in grain:
                     comments.append(
-                        "Value {1} is absent from " "grain {0}".format(name, val)
+                        "Value {1} is absent from grain {0}".format(name, val)
                     )
                 elif __opts__["test"]:
                     ret["result"] = None
                     comments.append(
-                        "Value {1} in grain {0} is set "
-                        "to be deleted".format(name, val)
+                        "Value {1} in grain {0} is set to be deleted".format(name, val)
                     )
                     if "deleted" not in ret["changes"].keys():
                         ret["changes"] = {"deleted": []}
@@ -303,7 +302,7 @@ def list_absent(name, value, delimiter=DEFAULT_TARGET_DELIM):
                 elif val in grain:
                     __salt__["grains.remove"](name, val)
                     comments.append(
-                        "Value {1} was deleted from " "grain {0}".format(name, val)
+                        "Value {1} was deleted from grain {0}".format(name, val)
                     )
                     if "deleted" not in ret["changes"].keys():
                         ret["changes"] = {"deleted": []}
@@ -381,7 +380,7 @@ def absent(name, destructive=False, delimiter=DEFAULT_TARGET_DELIM, force=False)
             else:
                 ret[
                     "comment"
-                ] = "Value for grain {} is set to be " "deleted (None)".format(name)
+                ] = "Value for grain {} is set to be deleted (None)".format(name)
                 ret["changes"] = {"grain": name, "value": None}
             return ret
         ret = __salt__["grains.set"](name, None, destructive=destructive, force=force)
@@ -437,14 +436,13 @@ def append(name, value, convert=False, delimiter=DEFAULT_TARGET_DELIM):
     if grain or name in __grains__:
         if isinstance(grain, list):
             if value in grain:
-                ret["comment"] = (
-                    "Value {1} is already in the list "
-                    "for grain {0}".format(name, value)
-                )
+                ret[
+                    "comment"
+                ] = "Value {1} is already in the list for grain {0}".format(name, value)
                 return ret
             if __opts__["test"]:
                 ret["result"] = None
-                ret["comment"] = "Value {1} in grain {0} is set to " "be added".format(
+                ret["comment"] = "Value {1} in grain {0} is set to be added".format(
                     name, value
                 )
                 ret["changes"] = {"added": value}

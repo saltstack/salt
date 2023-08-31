@@ -18,7 +18,8 @@ def __virtual__():
         return True
     return (
         False,
-        "The sysrc execution module failed to load: the sysrc binary is not in the path.",
+        "The sysrc execution module failed to load: the sysrc binary is not in the"
+        " path.",
     )
 
 

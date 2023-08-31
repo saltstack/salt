@@ -41,7 +41,7 @@ def __virtual__():
     return (
         __virtualname__
         if HAS_JIRA
-        else (False, "Please install the jira Python libary from PyPI")
+        else (False, "Please install the jira Python library from PyPI")
     )
 
 

@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.mongodb_database as mongodb_database
 from tests.support.mock import MagicMock, patch
 

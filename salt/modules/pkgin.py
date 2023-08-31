@@ -72,7 +72,7 @@ def _supports_regex():
     """
     Check support of regexp
     """
-    return tuple([int(i) for i in _get_version()]) > (0, 5)
+    return tuple(int(i) for i in _get_version()) > (0, 5)
 
 
 @decorators.memoize
@@ -80,7 +80,7 @@ def _supports_parsing():
     """
     Check support of parsing
     """
-    return tuple([int(i) for i in _get_version()]) > (0, 6)
+    return tuple(int(i) for i in _get_version()) > (0, 6)
 
 
 def __virtual__():

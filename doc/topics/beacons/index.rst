@@ -41,8 +41,12 @@ Beacons are typically enabled by placing a ``beacons:`` top level block in
     beacons:
       inotify:
         - files:
-            /etc/important_file: {}
-            /opt: {}
+            /etc/important_file:
+              mask:
+                - modify
+            /opt:
+              mask:
+                - modify
 
 The beacon system, like many others in Salt, can also be configured via the
 minion pillar, grains, or local config file.
@@ -60,13 +64,17 @@ Multiple copies of a particular Salt beacon can be configured by including the `
 .. code-block:: yaml
 
     beacons:
-      watch_importand_file:
+      watch_important_file:
         - files:
-            /etc/important_file: {}
+            /etc/important_file:
+              mask:
+                - modify
         - beacon_module: inotify
       watch_another_file:
         - files:
-            /etc/another_file: {}
+            /etc/another_file:
+              mask:
+                - modify
         - beacon_module: inotify
 
 
@@ -82,8 +90,12 @@ and 10-second intervals:
     beacons:
       inotify:
         - files:
-            /etc/important_file: {}
-            /opt: {}
+            /etc/important_file:
+              mask:
+                - modify
+            /opt:
+              mask:
+                - modify
         - interval: 5
         - disable_during_state_run: True
       load:
@@ -120,6 +132,8 @@ which point the normal beacon interval will resume.
       inotify:
         - files:
             /etc/important_file: {}
+              mask:
+                - modify
         - disable_during_state_run: True
 
 .. _beacon-example:
@@ -232,7 +246,7 @@ Add the following to ``/srv/reactor/revert.sls``:
 
     revert-file:
       local.state.apply:
-        - tgt: {{ data['data']['id'] }}
+        - tgt: {{ data['id'] }}
         - arg:
           - maintain_important_file
 
@@ -242,12 +256,6 @@ Add the following to ``/srv/reactor/revert.sls``:
     ``disable_during_state_run: True`` for an inotify beacon whose reaction is
     to modify the watched file, it is important to ensure the state applied is
     also :term:`idempotent <Idempotent>`.
-
-.. note::
-
-    The expression ``{{ data['data']['id'] }}`` :ref:`is correct
-    <beacons-and-reactors>` as it matches the event structure :ref:`shown above
-    <beacon-event-bus>`.
 
 State SLS
 `````````

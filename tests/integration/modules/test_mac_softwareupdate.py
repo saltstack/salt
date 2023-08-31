@@ -3,13 +3,13 @@ integration tests for mac_softwareupdate
 """
 
 import pytest
+
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on
 
 
 @pytest.mark.skip_if_not_root
-@runs_on(kernel="Darwin")
 @pytest.mark.skip_if_binaries_missing("softwareupdate")
+@pytest.mark.skip_unless_on_darwin
 class MacSoftwareUpdateModuleTest(ModuleCase):
     """
     Validate the mac_softwareupdate module
@@ -59,6 +59,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
+    @pytest.mark.skip_initial_gh_actions_failure
     def test_ignore(self):
         """
         Test softwareupdate.ignore
@@ -79,6 +80,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
+    @pytest.mark.skip_initial_gh_actions_failure
     def test_schedule(self):
         """
         Test softwareupdate.schedule_enable
@@ -150,6 +152,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
+    @pytest.mark.skip_initial_gh_actions_failure
     def test_get_set_reset_catalog(self):
         """
         Test softwareupdate.download_all

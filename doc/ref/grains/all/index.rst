@@ -25,11 +25,13 @@ grains modules
     mdadm
     mdata
     metadata
+    metadata_gce
     minion_process
     napalm
     nvme
     nxos
     opts
+    package
     panos
     pending_reboot
     philips_hue

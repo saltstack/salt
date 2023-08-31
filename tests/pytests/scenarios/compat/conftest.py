@@ -9,17 +9,18 @@ import os
 import shutil
 
 import pytest
-import salt.utils.path
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
+
+import salt.utils.path
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 
 docker = pytest.importorskip("docker")
-# pylint: disable=3rd-party-module-not-gated
+# pylint: disable=3rd-party-module-not-gated,no-name-in-module
 from docker.errors import DockerException  # isort:skip
 
-# pylint: enable=3rd-party-module-not-gated
+# pylint: enable=3rd-party-module-not-gated,no-name-in-module
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -32,6 +33,9 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture(scope="session")
 def docker_client():
+    if docker is None:
+        pytest.skip("The docker python library is not available")
+
     if salt.utils.path.which("docker") is None:
         pytest.skip("The docker binary is not available")
     try:
@@ -110,7 +114,11 @@ def pillar_tree(integration_files_dir):
 
 @pytest.fixture(scope="package")
 def salt_master(
-    request, salt_factories, host_docker_network_ip_address, state_tree, pillar_tree,
+    request,
+    salt_factories,
+    host_docker_network_ip_address,
+    state_tree,
+    pillar_tree,
 ):
     master_id = random_string("master-compat-", uppercase=False)
     root_dir = salt_factories.get_root_dir_for_daemon(master_id)
@@ -145,7 +153,9 @@ def salt_master(
         }
     )
     factory = salt_factories.salt_master_daemon(
-        master_id, defaults=config_defaults, overrides=config_overrides,
+        master_id,
+        defaults=config_defaults,
+        overrides=config_overrides,
     )
     with factory.started():
         yield factory
@@ -153,7 +163,7 @@ def salt_master(
 
 @pytest.fixture
 def salt_cli(salt_master):
-    return salt_master.get_salt_cli()
+    return salt_master.salt_cli()
 
 
 @pytest.fixture

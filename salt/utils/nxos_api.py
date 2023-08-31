@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Util functions for the NXOS API modules.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python std lib
 import json
 import logging
 
-# Import salt libs
 import salt.utils.http
 from salt.exceptions import SaltException
-from salt.ext import six
 from salt.utils.args import clean_kwargs
 
 log = logging.getLogger(__name__)
@@ -36,7 +31,7 @@ def _prepare_connection(**nxos_api_kwargs):
     nxos_api_kwargs = clean_kwargs(**nxos_api_kwargs)
     init_kwargs = {}
     # Clean up any arguments that are not required
-    for karg, warg in six.iteritems(nxos_api_kwargs):
+    for karg, warg in nxos_api_kwargs.items():
         if karg in RPC_INIT_KWARGS:
             init_kwargs[karg] = warg
     if "host" not in init_kwargs:

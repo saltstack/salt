@@ -1,0 +1,4 @@
+base:
+  '*':
+    - test
+    - test2

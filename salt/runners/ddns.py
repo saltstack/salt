@@ -19,8 +19,8 @@ import salt.utils.json
 HAS_LIBS = False
 try:
     import dns.query
-    import dns.update
-    import dns.tsigkeyring
+    import dns.tsigkeyring  # pylint: disable=no-name-in-module
+    import dns.update  # pylint: disable=no-name-in-module
 
     HAS_LIBS = True
 except ImportError:

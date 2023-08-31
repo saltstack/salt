@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Managing Ruby installations with rbenv
 ======================================
@@ -52,11 +51,8 @@ and 2.x using rbenv on Ubuntu/Debian:
         - require:
           - pkg: rbenv-deps
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
-
-# Import python libs
 import re
 
 
@@ -134,9 +130,9 @@ def installed(name, default=False, user=None):
     if __opts__["test"]:
         ret = _ruby_installed(ret, name, user=user)
         if not ret["result"]:
-            ret["comment"] = "Ruby {0} is set to be installed".format(name)
+            ret["comment"] = "Ruby {} is set to be installed".format(name)
         else:
-            ret["comment"] = "Ruby {0} is already installed".format(name)
+            ret["comment"] = "Ruby {} is already installed".format(name)
         return ret
 
     rbenv_installed_ret = _check_and_install_rbenv(rbenv_installed_ret, user)
@@ -168,7 +164,7 @@ def _check_and_uninstall_ruby(ret, ruby, user=None):
             return ret
     else:
         ret["result"] = True
-        ret["comment"] = "Ruby {0} is already absent".format(ruby)
+        ret["comment"] = "Ruby {} is already absent".format(ruby)
 
     return ret
 
@@ -196,17 +192,17 @@ def absent(name, user=None):
     ret = _check_rbenv(ret, user)
     if ret["result"] is False:
         ret["result"] = True
-        ret["comment"] = "Rbenv not installed, {0} not either".format(name)
+        ret["comment"] = "Rbenv not installed, {} not either".format(name)
         return ret
     else:
         if __opts__["test"]:
             ret = _ruby_installed(ret, name, user=user)
             if ret["result"]:
                 ret["result"] = None
-                ret["comment"] = "Ruby {0} is set to be uninstalled".format(name)
+                ret["comment"] = "Ruby {} is set to be uninstalled".format(name)
             else:
                 ret["result"] = True
-                ret["comment"] = "Ruby {0} is already uninstalled".format(name)
+                ret["comment"] = "Ruby {} is already uninstalled".format(name)
             return ret
 
         return _check_and_uninstall_ruby(ret, name, user=user)

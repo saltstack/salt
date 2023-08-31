@@ -63,9 +63,9 @@ DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 try:
     import boto
     import boto.ec2
-    import boto.ec2.instance
-    import boto.ec2.blockdevicemapping as blockdevicemapping
     import boto.ec2.autoscale as autoscale
+    import boto.ec2.blockdevicemapping as blockdevicemapping
+    import boto.ec2.instance
 
     logging.getLogger("boto").setLevel(logging.CRITICAL)
     import boto3  # pylint: disable=unused-import
@@ -188,7 +188,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                 # convert SuspendedProcess objects to names
                 elif attr == "suspended_processes":
                     suspended_processes = getattr(asg, attr)
-                    ret[attr] = sorted([x.process_name for x in suspended_processes])
+                    ret[attr] = sorted(x.process_name for x in suspended_processes)
                 else:
                     ret[attr] = getattr(asg, attr)
             # scaling policies

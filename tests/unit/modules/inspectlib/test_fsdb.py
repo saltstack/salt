@@ -126,10 +126,13 @@ class InspectorFSDBTestCase(TestCase):
             "os.listdir", MagicMock(return_value=["some_table"])
         ):
             writable = Writable()
-            with patch("gzip.open", MagicMock(return_value=writable)):
+            with patch("gzip.open", MagicMock(return_value=writable)) as gzip_mock_open:
                 csvdb = CsvDB("/foobar")
                 csvdb.open()
                 csvdb.create_table_from_object(FoobarEntity())
+
+            # test the second call to gzip.open, the first is in the list_tables function
+            assert gzip_mock_open.call_args_list[1][0][1] == "wt"
 
             sorted_writable_data = sorted(writable.data[0].strip().split(","))
             sorted_expected_data = sorted("foo:int,bar:str,spam:float".split(","))
@@ -153,7 +156,7 @@ class InspectorFSDBTestCase(TestCase):
             "os.listdir", MagicMock(return_value=["some_table"])
         ):
             writable = Writable()
-            with patch("gzip.open", MagicMock(return_value=writable)):
+            with patch("gzip.open", MagicMock(return_value=writable)) as gzip_mock_open:
                 obj = FoobarEntity()
                 obj.foo = 123
                 obj.bar = "test entity"
@@ -170,6 +173,10 @@ class InspectorFSDBTestCase(TestCase):
                     )
                 }
                 csvdb.store(obj)
+
+                # test the second call to gzip.open, the first is in the list_tables function
+                assert gzip_mock_open.call_args_list[1][0][1] == "at"
+
                 assert writable.data[0].strip() == "123,test entity,0.123"
 
     def test_delete_object(self):
@@ -269,7 +276,7 @@ class InspectorFSDBTestCase(TestCase):
         """
         with patch("os.listdir", MagicMock(return_value=["test_db"])), patch(
             "gzip.open", MagicMock()
-        ), patch(
+        ) as gzip_mock_open, patch(
             "csv.reader",
             MagicMock(
                 return_value=iter(
@@ -285,6 +292,10 @@ class InspectorFSDBTestCase(TestCase):
             csvdb = CsvDB("/foobar")
             csvdb.open()
             entities = csvdb.get(FoobarEntity)
+
+            # test the second call to gzip.open, the first is in the open function
+            assert gzip_mock_open.call_args_list[1][0][1] == "rt"
+
             assert list == type(entities)
             assert len(entities) == 2
 

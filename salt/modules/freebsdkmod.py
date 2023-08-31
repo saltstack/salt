@@ -1,14 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Module to manage FreeBSD kernel modules
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import os
 import re
 
-# Import salt libs
 import salt.utils.files
 
 # Define the module's virtual name
@@ -29,7 +25,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The freebsdkmod execution module cannot be loaded: only available on FreeBSD systems.",
+        "The freebsdkmod execution module cannot be loaded: only available on FreeBSD"
+        " systems.",
     )
 
 
@@ -90,7 +87,7 @@ def _set_persistent_module(mod):
     if not mod or mod in mod_list(True) or mod not in available():
         return set()
     __salt__["file.append"](_LOADER_CONF, _LOAD_MODULE.format(mod))
-    return set([mod])
+    return {mod}
 
 
 def _remove_persistent_module(mod, comment):
@@ -106,7 +103,7 @@ def _remove_persistent_module(mod, comment):
     else:
         __salt__["file.sed"](_LOADER_CONF, _MODULE_RE.format(mod), "")
 
-    return set([mod])
+    return {mod}
 
 
 def available():
@@ -204,7 +201,7 @@ def load(mod, persist=False):
         salt '*' kmod.load bhyve
     """
     pre_mods = lsmod()
-    response = __salt__["cmd.run_all"]("kldload {0}".format(mod), python_shell=False)
+    response = __salt__["cmd.run_all"]("kldload {}".format(mod), python_shell=False)
     if response["retcode"] == 0:
         post_mods = lsmod()
         mods = _new_mods(pre_mods, post_mods)
@@ -220,7 +217,7 @@ def load(mod, persist=False):
             # It's compiled into the kernel
             return [None]
     else:
-        return "Module {0} not found".format(mod)
+        return "Module {} not found".format(mod)
 
 
 def is_loaded(mod):
@@ -257,7 +254,7 @@ def remove(mod, persist=False, comment=True):
         salt '*' kmod.remove vmm
     """
     pre_mods = lsmod()
-    res = __salt__["cmd.run_all"]("kldunload {0}".format(mod), python_shell=False)
+    res = __salt__["cmd.run_all"]("kldunload {}".format(mod), python_shell=False)
     if res["retcode"] == 0:
         post_mods = lsmod()
         mods = _rm_mods(pre_mods, post_mods)
@@ -266,4 +263,4 @@ def remove(mod, persist=False, comment=True):
             persist_mods = _remove_persistent_module(mod, comment)
         return sorted(list(mods | persist_mods))
     else:
-        return "Error removing module {0}: {1}".format(mod, res["stderr"])
+        return "Error removing module {}: {}".format(mod, res["stderr"])

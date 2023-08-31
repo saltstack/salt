@@ -24,7 +24,7 @@ from salt.modules.network import (
     subnets6,
     wol,
 )
-from salt.utils.functools import namespaced_function as _namespaced_function
+from salt.utils.functools import namespaced_function
 
 try:
     import salt.utils.winapi
@@ -39,6 +39,21 @@ try:
 except ImportError:
     HAS_DEPENDENCIES = False
 
+if salt.utils.platform.is_windows() and HAS_DEPENDENCIES:
+
+    wol = namespaced_function(wol, globals())
+    get_hostname = namespaced_function(get_hostname, globals())
+    interface = namespaced_function(interface, globals())
+    interface_ip = namespaced_function(interface_ip, globals())
+    subnets6 = namespaced_function(subnets6, globals())
+    ip_in_subnet = namespaced_function(ip_in_subnet, globals())
+    convert_cidr = namespaced_function(convert_cidr, globals())
+    calc_net = namespaced_function(calc_net, globals())
+    get_fqdn = namespaced_function(get_fqdn, globals())
+    ifacestartswith = namespaced_function(ifacestartswith, globals())
+    iphexval = namespaced_function(iphexval, globals())
+
+
 # Define the module's virtual name
 __virtualname__ = "network"
 
@@ -52,21 +67,6 @@ def __virtual__():
 
     if not HAS_DEPENDENCIES:
         return False, "Module win_network: Missing dependencies"
-
-    global wol, get_hostname, interface, interface_ip, subnets6, ip_in_subnet
-    global convert_cidr, calc_net, get_fqdn, ifacestartswith, iphexval
-
-    wol = _namespaced_function(wol, globals())
-    get_hostname = _namespaced_function(get_hostname, globals())
-    interface = _namespaced_function(interface, globals())
-    interface_ip = _namespaced_function(interface_ip, globals())
-    subnets6 = _namespaced_function(subnets6, globals())
-    ip_in_subnet = _namespaced_function(ip_in_subnet, globals())
-    convert_cidr = _namespaced_function(convert_cidr, globals())
-    calc_net = _namespaced_function(calc_net, globals())
-    get_fqdn = _namespaced_function(get_fqdn, globals())
-    ifacestartswith = _namespaced_function(ifacestartswith, globals())
-    iphexval = _namespaced_function(iphexval, globals())
 
     return __virtualname__
 

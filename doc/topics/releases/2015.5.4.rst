@@ -14,7 +14,20 @@ Statistics
 - Total Issue References: **138**
 - Total PR References: **312**
 
-- Contributors: **92** (`0xf10e`_, `AkhterAli`_, `BretFisher`_, `DmitryKuzmenko`_, `EvaSDK`_, `GideonRed-zz`_, `JohannesEbke`_, `Oro`_, `TheBigBear`_, `TronPaul`_, `UtahDave`_, `ahus1`_, `alekti`_, `alexandrsushko`_, `amontalban`_, `andre-luiz-dos-santos`_, `aneeshusa`_, `anlutro`_, `asyncsrc`_, `attiasr`_, `babilen`_, `basepi`_, `bbinet`_, `bclermont`_, `bechtoldt`_, `blackduckx`_, `bobrik`_, `cachedout`_, `colekowalski`_, `cro`_, `d--j`_, `davidjb`_, `denmat`_, `derBroBro`_, `dkiser`_, `driskell`_, `egarbi`_, `fleaflicker`_, `garethgreenaway`_, `gmcwhistler`_, `gtmanfred`_, `hasues`_, `isbm`_, `jacksontj`_, `jacobhammons`_, `jahamn`_, `jarpy`_, `jasonkeene`_, `jayeshka`_, `jfindlay`_, `jleroy`_, `jmdcal`_, `jodv`_, `joejulian`_, `jquast`_, `justinta`_, `kev009`_, `klyr`_, `l2ol33rt`_, `loa`_, `lomeroe`_, `martinhoefling`_, `mgwilliams`_, `nicholascapo`_, `niq000`_, `nmadhok`_, `nyushi`_, `oeuftete`_, `opdude`_, `pcdummy`_, `pcn`_, `peterdemin`_, `puneetk`_, `rallytime`_, `rmatulat`_, `s0undt3ch`_, `silenius`_, `sjorge`_, `stanislavb`_, `steverweber`_, `supertom`_, `t0rrant`_, `tankywoo`_, `techhat`_, `terminalmage`_, `thatch45`_, `tony-cocco`_, `twangboy`_, `uvsmtid`_, `vr-jack`_, `yanatan16`_, `zyio`_)
+- Contributors: **92** (`0xf10e`_, `AkhterAli`_, `BretFisher`_, `DmitryKuzmenko`_, `EvaSDK`_,
+  `GideonRed-zz`_, `JohannesEbke`_, `Oro`_, `TheBigBear`_, `TronPaul`_, `UtahDave`_, `ahus1`_,
+  `alekti`_, `alexandrsushko`_, `amontalban`_, `andre-luiz-dos-santos`_, `aneeshusa`_, `anlutro`_,
+  `asyncsrc`_, `attiasr`_, `babilen`_, `basepi`_, `bbinet`_, `bclermont`_, `bechtoldt`_,
+  `blackduckx`_, `bobrik`_, `cachedout`_, `colekowalski`_, `cro`_, `d--j`_, `davidjb`_, `denmat`_,
+  `derBroBro`_, `dkiser`_, `driskell`_, `egarbi`_, `fleaflicker`_, `garethgreenaway`_,
+  `gmcwhistler`_, `gtmanfred`_, `hasues`_, `isbm`_, `jacksontj`_, `jacobhammons`_, `jahamn`_,
+  `jarpy`_, `jasonkeene`_, `jayeshka`_, `jfindlay`_, `jleroy`_, `jmdcal`_, `jodv`_, `joejulian`_,
+  `jquast`_, `justinta`_, `kev009`_, `klyr`_, `l2ol33rt`_, `loa`_, `lomeroe`_, `martinhoefling`_,
+  `mgwilliams`_, `nicholascapo`_, `niq000`_, `nmadhok`_, `nyushi`_, `oeuftete`_, `opdude`_,
+  `pcdummy`_, `pcn`_, `peterdemin`_, `puneetk`_, `rallytime`_, `rmatulat`_, `s0undt3ch`_,
+  `silenius`_, `sjorge`_, `stanislavb`_, `steverweber`_, `supertom`_, `t0rrant`_, `tankywoo`_,
+  `techhat`_, `terminalmage`_, `thatch45`_, `tony-cocco`_, `twangboy`_, `uvsmtid`_, `vr-jack`_,
+  `yanatan16`_, `zyio`_)
 
 
 Bug Fixes
@@ -86,12 +99,12 @@ Changelog for v2015.5.3..v2015.5.4
 
   * a1f90fa070 Only call convert_to_arn when action name is provided
 
-* **PR** `#26288`_: (`bbinet`_) allow to delete grains which value is False
+* **PR** `#26288`_: (`bbinet`_) allow deleting grains which value is False
   @ *2015-08-13 18:24:36 UTC*
 
   * c81dc0b62f Merge pull request `#26288`_ from bbinet/grains-absent-fix
 
-  * f46722aaeb allow to delete grains which value is False
+  * f46722aaeb allow deleting grains which value is False
 
 * **ISSUE** `#24882`_: (`nmadhok`_) salt.states.openstack_config.present and salt.states.openstack_config.absent make changes when test=True (refs: `#26263`_)
 
@@ -353,7 +366,7 @@ Changelog for v2015.5.3..v2015.5.4
 
   * 08eaca4fe4 lint fixes.
 
-  * 7046b84ac8 Fixing a bug where cp.get_file_str would not work if using http(s) URLs with authentication.  The salt.utils.http library in 2015.5 defaults to using urllib instead of requests and there was no authenitication support added.  This PR adds authentication support. `#24106`_
+  * 7046b84ac8 Fixing a bug where cp.get_file_str would not work if using http(s) URLs with authentication.  The salt.utils.http library in 2015.5 defaults to using urllib instead of requests and there was no authentication support added.  This PR adds authentication support. `#24106`_
 
 * **ISSUE** `#26141`_: (`nmadhok`_) salt-cloud VMware driver fails with error in parsing configuration file (refs: `#26140`_)
 
@@ -913,7 +926,7 @@ Changelog for v2015.5.3..v2015.5.4
 
   * d7f448d501 Needed popen.wait().
 
-  * 25f8042e41 Checking for scp existance. Using command -v should be POSIX
+  * 25f8042e41 Checking for scp existence. Using command -v should be POSIX
 
   * 6b2100a30b New exitcode for SCP not found Re: https://github.com/saltstack/salt/issues/25478 and https://github.com/saltstack/salt/issues/25026
 
@@ -1006,7 +1019,7 @@ Changelog for v2015.5.3..v2015.5.4
 
   * 067ea788e9 Add salt:// to key_url options to docs for pkgrepo.managed
 
-* **ISSUE** `#22699`_: (`arthurlogilab`_) salt-cloud fails on KeyError when given a nonexistant action (refs: `#25807`_)
+* **ISSUE** `#22699`_: (`arthurlogilab`_) salt-cloud fails on KeyError when given a nonexistent action (refs: `#25807`_)
 
 * **PR** `#25807`_: (`rallytime`_) Provide helpful error when using actions with a mapfile
   @ *2015-07-29 15:30:15 UTC*
@@ -1460,7 +1473,7 @@ Changelog for v2015.5.3..v2015.5.4
 
   * 8a1765fc6f Add version_cmp function to yumpkg.py
 
-  * 457e72e273 Fix refernces to __salt__['version_cmp']
+  * 457e72e273 Fix references to __salt__['version_cmp']
 
   * a19fa2296a Avoid using single-letter variable
 
@@ -1923,11 +1936,11 @@ Changelog for v2015.5.3..v2015.5.4
 * **PR** `#25392`_: (`rallytime`_) Back-port `#25256`_ to 2015.5
   @ *2015-07-14 03:25:13 UTC*
 
-  * **PR** `#25256`_: (`yanatan16`_) Dont assume source_hash exists (refs: `#25392`_)
+  * **PR** `#25256`_: (`yanatan16`_) Don't assume source_hash exists (refs: `#25392`_)
 
   * 008e3295c6 Merge pull request `#25392`_ from rallytime/bp-25256
 
-  * 6b2da4d582 Dont assume source_hash exists
+  * 6b2da4d582 Don't assume source_hash exists
 
 * **PR** `#25398`_: (`twangboy`_) Fix date
   @ *2015-07-14 03:21:17 UTC*
@@ -2029,7 +2042,7 @@ Changelog for v2015.5.3..v2015.5.4
 
   * e13a9fd74e Fix documentation for file.blockreplace
 
-* **ISSUE** `#19288`_: (`oba11`_) AssociatePublicIpAddress doesnt work with salt-cloud 2014.7.0 (refs: `#25326`_, `#20972`_)
+* **ISSUE** `#19288`_: (`oba11`_) AssociatePublicIpAddress doesn't work with salt-cloud 2014.7.0 (refs: `#25326`_, `#20972`_)
 
 * **PR** `#25326`_: (`rallytime`_) Back-port `#20972`_ to 2015.5
   @ *2015-07-10 18:49:44 UTC*

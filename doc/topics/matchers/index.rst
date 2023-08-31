@@ -47,7 +47,7 @@ As an example, let's modify the ``list`` matcher to have the separator be a
         return bool(self.opts["id"] in tgt)
 
 
-Place this code in a file called ``list_matcher.py`` in ``_matchers`` in your
+Place this code in a file called ``list_match.py`` in a ``_matchers`` directory in your
 ``file_roots``. Sync this down to your minions with
 :py:func:`saltutil.sync_matchers <salt.modules.saltutil.sync_matchers>`.
 Then attempt to match with the following, replacing ``minionX`` with three of your minions.

@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.apache_conf as apache_conf
 from tests.support.mock import MagicMock, patch
 

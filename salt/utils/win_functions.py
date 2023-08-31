@@ -15,7 +15,7 @@ try:
     import win32api
     import win32net
     import win32security
-    from win32con import HWND_BROADCAST, WM_SETTINGCHANGE, SMTO_ABORTIFHUNG
+    from win32con import HWND_BROADCAST, SMTO_ABORTIFHUNG, WM_SETTINGCHANGE
 
     HAS_WIN32 = True
 except ImportError:

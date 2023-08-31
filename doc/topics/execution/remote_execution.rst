@@ -154,5 +154,3 @@ Shell completion scripts for the Salt CLI are available in the ``pkg`` Salt
 `source directory`_.
 
 .. _source directory: https://github.com/saltstack/salt/tree/develop/pkg
-
-

@@ -10,6 +10,14 @@ These entry points are often referred to as ``*Client()`` APIs. Each client
 accesses different parts of Salt, either from the master or from a minion. Each
 client is detailed below.
 
+.. note::
+    For Tiamat-bundled Salt distribution, you need to use the bundled Python runtime
+    as the system Python won't be able to access Salt internals.
+
+    To execute scripts via bundled Python runtime, either run the script with
+    ``/path/to/salt python script.py`` or use ``#!/path/to/salt python`` `shebang <https://en.wikipedia.org/wiki/Shebang_(Unix)>`_
+
+
 .. seealso:: There are many ways to access Salt programmatically.
 
     Salt can be used from CLI scripts as well as via a REST interface.
@@ -23,7 +31,7 @@ client is detailed below.
     Salt's `netapi module`_ provides access to Salt externally via a REST interface.
     Review the `netapi module`_ documentation for more information.
 
-.. _`netapi module`: http://docs.saltstack.com/en/latest/topics/netapi/index.html
+.. _`netapi module`: https://docs.saltproject.io/en/latest/topics/netapi/index.html
 
 Salt's ``opts`` dictionary
 ==========================

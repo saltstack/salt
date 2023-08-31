@@ -11,7 +11,14 @@ Statistics
 - Total Issue References: **48**
 - Total PR References: **279**
 
-- Contributors: **52** (`AVeenstra`_, `Ch3LL`_, `Circuitsoft`_, `DmitryKuzmenko`_, `KaiSforza`_, `Martin819`_, `OrlandoArcapix`_, `UtahDave`_, `Vaelatern`_, `abednarik`_, `asnell`_, `b1naryth1ef`_, `baniobloom`_, `basepi`_, `bdrung`_, `beornf`_, `bmcorser`_, `bowmanjd-lms`_, `damon-atkins`_, `darkpixel`_, `discogestalt`_, `doesitblend`_, `dqminh`_, `dubb-b`_, `dwoz`_, `frankiexyz`_, `frogunder`_, `fzipi`_, `garethgreenaway`_, `grokrecursion`_, `gtmanfred`_, `jacksontj`_, `jagguli`_, `lejambon`_, `lomeroe`_, `lordcirth`_, `lusche`_, `mbunkus`_, `meaksh`_, `mirceaulinic`_, `nbraud`_, `pritambaral`_, `ralex`_, `rallytime`_, `rmcintosh`_, `slaws`_, `terminalmage`_, `twangboy`_, `twellspring`_, `wyardley`_, `xetix`_, `zer0def`_)
+- Contributors: **52** (`AVeenstra`_, `Ch3LL`_, `Circuitsoft`_, `DmitryKuzmenko`_, `KaiSforza`_,
+  `Martin819`_, `OrlandoArcapix`_, `UtahDave`_, `Vaelatern`_, `abednarik`_, `asnell`_,
+  `b1naryth1ef`_, `baniobloom`_, `basepi`_, `bdrung`_, `beornf`_, `bmcorser`_, `bowmanjd-lms`_,
+  `damon-atkins`_, `darkpixel`_, `discogestalt`_, `doesitblend`_, `dqminh`_, `dubb-b`_, `dwoz`_,
+  `frankiexyz`_, `frogunder`_, `fzipi`_, `garethgreenaway`_, `grokrecursion`_, `gtmanfred`_,
+  `jacksontj`_, `jagguli`_, `lejambon`_, `lomeroe`_, `lordcirth`_, `lusche`_, `mbunkus`_,
+  `meaksh`_, `mirceaulinic`_, `nbraud`_, `pritambaral`_, `ralex`_, `rallytime`_, `rmcintosh`_,
+  `slaws`_, `terminalmage`_, `twangboy`_, `twellspring`_, `wyardley`_, `xetix`_, `zer0def`_)
 
 Security Fix
 ============
@@ -398,7 +405,7 @@ Changelog for v2017.7.7..v2017.7.8
 
   * 8a1285239a Merge pull request `#48426`_ from garethgreenaway/46689_fixing_pkg_held_when_package_is_installed
 
-  * 9b0f5dd212 Fixing identation, removing some unnecessary conditionals.
+  * 9b0f5dd212 Fixing indentation, removing some unnecessary conditionals.
 
   * 727964ab55 One last cleanup.
 
@@ -410,7 +417,7 @@ Changelog for v2017.7.7..v2017.7.8
 
 * **ISSUE** `#47689`_: (`OrlandoArcapix`_) Poor performance of pip.installed when given a list of packages (refs: `#47734`_)
 
-* **PR** `#47734`_: (`OrlandoArcapix`_) `#47689`_ improve run-speed of pip package state 
+* **PR** `#47734`_: (`OrlandoArcapix`_) `#47689`_ improve run-speed of pip package state
   @ *2018-07-31 19:15:35 UTC*
 
   * c8e69431ff Merge pull request `#47734`_ from OrlandoArcapix/Issue47689-pip-state-performance
@@ -534,12 +541,12 @@ Changelog for v2017.7.7..v2017.7.8
 
   * 365ebdf539 Fixed `enable_vnc` runner arg being passed into `seed_cmd` module arg in `virt.init`.
 
-* **PR** `#48749`_: (`Ch3LL`_) Update Saltstack Logo banner on docs.saltstack.com
+* **PR** `#48749`_: (`Ch3LL`_) Update Saltstack Logo banner on docs.saltproject.io
   @ *2018-07-25 13:05:04 UTC*
 
   * 169afea16a Merge pull request `#48749`_ from Ch3LL/logo_docs
 
-  * 73b1fc29f0 Update Saltstack Logo banner on docs.saltstack.com
+  * 73b1fc29f0 Update Saltstack Logo banner on docs.saltproject.io
 
 * **PR** `#48743`_: (`rallytime`_) Update DOCBANNER with new SaltConf18 image
   @ *2018-07-24 16:46:19 UTC*
@@ -594,7 +601,7 @@ Changelog for v2017.7.7..v2017.7.8
 
   * 83e4bba916 Merge pull request `#48635`_ from nbraud/acme
 
-  * 3673bae9de modules/acme: explicitely ignore the `perms` return value
+  * 3673bae9de modules/acme: explicitly ignore the `perms` return value
 
   * 1800a231e8 Fixup some schema expectations
 
@@ -780,9 +787,9 @@ Changelog for v2017.7.7..v2017.7.8
 
   * 1b6e6388f8 Merge pull request `#48588`_ from garethgreenaway/48415_event_send_multi_master
 
-  * fab25af1a9 Adding some quick documention about why we are setting ret=True following the channel.send.
+  * fab25af1a9 Adding some quick documentation about why we are setting ret=True following the channel.send.
 
-  * bf78f4b188 If the channel send is sucessful and does not raise an exception, we set ret to True, in case a previous exception from a previous channel send to another master has sent it to False.
+  * bf78f4b188 If the channel send is successful and does not raise an exception, we set ret to True, in case a previous exception from a previous channel send to another master has sent it to False.
 
   * 8d1551c5fb When using Salt multi-master, if we encouter a salt master that has not accepted the minion key yet we should not exit right away, rather continue on and try the next salt master available in the list.
 
@@ -951,7 +958,7 @@ Changelog for v2017.7.7..v2017.7.8
 
   * 739bf92599 upgrade dependencies for pytest tests
 
-* **PR** `#48491`_: (`grokrecursion`_) Group gid fixed as integer 
+* **PR** `#48491`_: (`grokrecursion`_) Group gid fixed as integer
   @ *2018-07-10 19:31:40 UTC*
 
   * 5372b60137 Merge pull request `#48491`_ from grokrecursion/group-fix-v2
@@ -1056,7 +1063,7 @@ Changelog for v2017.7.7..v2017.7.8
 
 * **ISSUE** `#38914`_: (`hgfischer`_) Uppercase checksums are not accepted by archive.extracted (refs: `#40754`_, `#48422`_)
 
-* **PR** `#48422`_: (`rallytime`_) Allow file.managed to work with uppercase source_hash in test=true mode 
+* **PR** `#48422`_: (`rallytime`_) Allow file.managed to work with uppercase source_hash in test=true mode
   @ *2018-07-03 16:40:59 UTC*
 
   * **PR** `#40754`_: (`lordcirth`_) file.manage_file: uppercase checksums now work (refs: `#48422`_)
@@ -1255,11 +1262,11 @@ Changelog for v2017.7.7..v2017.7.8
 * **PR** `#48293`_: (`rallytime`_) Back-port `#47453`_ to 2017.7
   @ *2018-06-25 19:06:42 UTC*
 
-  * **PR** `#47453`_: (`dqminh`_) dont reset system locale when running rabbitmqctl commands (refs: `#48293`_)
+  * **PR** `#47453`_: (`dqminh`_) don't reset system locale when running rabbitmqctl commands (refs: `#48293`_)
 
   * 06a927b2aa Merge pull request `#48293`_ from rallytime/bp-47453
 
-  * e96ab6778e dont reset system locale when running rabbitmqctl commands
+  * e96ab6778e don't reset system locale when running rabbitmqctl commands
 
 * **PR** `#48219`_: (`zer0def`_) Fix: LXC legacy configuration key warnings falsely report errors during state change
   @ *2018-06-25 13:46:07 UTC*
@@ -1286,7 +1293,7 @@ Changelog for v2017.7.7..v2017.7.8
 
   * 83d7d286c4 Merge pull request `#48080`_ from lusche/2017.7
 
-  * 917dc985fc `#47984`_ remove the line completly
+  * 917dc985fc `#47984`_ remove the line completely
 
   * ba12ee947b Merge branch '2017.7' of https://github.com/saltstack/salt into 2017.7
 
@@ -1494,7 +1501,7 @@ Changelog for v2017.7.7..v2017.7.8
 
   * 6fe711ad76 Reverse monkeypatching after test_symlink_list finishes
 
-* **PR** `#48088`_: (`rallytime`_) Update release versions for the 2017.7 branch 
+* **PR** `#48088`_: (`rallytime`_) Update release versions for the 2017.7 branch
   @ *2018-06-13 14:03:03 UTC*
 
   * 053b019a8f Merge pull request `#48088`_ from rallytime/update_version_doc_2017.7
@@ -1895,12 +1902,12 @@ Changelog for v2017.7.7..v2017.7.8
 
   * 4475ba19b8 Prevent zypper from parsing repo configuration from not .repo files
 
-* **PR** `#47781`_: (`rallytime`_) Update cloud test profile and docs to use new Linode size lables
+* **PR** `#47781`_: (`rallytime`_) Update cloud test profile and docs to use new Linode size labels
   @ *2018-05-23 13:09:13 UTC*
 
   * 0e87559ee3 Merge pull request `#47781`_ from rallytime/update-linode-sizes
 
-  * a90c1b760e Update cloud test profile and docs to use new Linode size lables
+  * a90c1b760e Update cloud test profile and docs to use new Linode size labels
 
 * **PR** `#47748`_: (`rallytime`_) [2017.7] Merge forward from 2017.7.6 to 2017.7
   @ *2018-05-22 20:53:02 UTC*
@@ -2251,12 +2258,12 @@ Changelog for v2017.7.7..v2017.7.8
 
   * d22ed7dffa added handling for the aws error ConflictingDomainExists
 
-* **PR** `#47444`_: (`terminalmage`_) Skip trying to render a template for a nonexistant SLS file
+* **PR** `#47444`_: (`terminalmage`_) Skip trying to render a template for a nonexistent SLS file
   @ *2018-05-07 13:48:24 UTC*
 
   * 7f53be6e92 Merge pull request `#47444`_ from terminalmage/render_state-spurious-error
 
-  * a1e9fe00fd Skip trying to render a template for a nonexistant SLS file
+  * a1e9fe00fd Skip trying to render a template for a nonexistent SLS file
 
 * **PR** `#47478`_: (`terminalmage`_) Rename pip state test modules to match naming convention
   @ *2018-05-07 13:13:13 UTC*

@@ -30,7 +30,7 @@ Connection module for Apache Libcloud DNS management
 
 import logging
 
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -42,9 +42,9 @@ try:
     from libcloud.dns.types import RecordType
 
     # pylint: enable=unused-import
-    if hasattr(libcloud, "__version__") and _LooseVersion(
-        libcloud.__version__
-    ) < _LooseVersion(REQUIRED_LIBCLOUD_VERSION):
+    if hasattr(libcloud, "__version__") and Version(libcloud.__version__) < Version(
+        REQUIRED_LIBCLOUD_VERSION
+    ):
         raise ImportError()
     logging.getLogger("libcloud").setLevel(logging.CRITICAL)
     HAS_LIBCLOUD = True
@@ -57,10 +57,12 @@ def __virtual__():
     Only load if libcloud libraries exist.
     """
     if not HAS_LIBCLOUD:
-        msg = (
-            "A apache-libcloud library with version at least {} was not " "found"
-        ).format(REQUIRED_LIBCLOUD_VERSION)
-        return (False, msg)
+        return (
+            False,
+            "A apache-libcloud library with version at least {} was not found".format(
+                REQUIRED_LIBCLOUD_VERSION
+            ),
+        )
     return True
 
 

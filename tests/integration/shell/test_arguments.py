@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.utils.args
 from tests.support.case import ModuleCase
 
@@ -18,7 +19,7 @@ class ArgumentTestCase(ModuleCase):
         'load_args_and_kwargs' function.
         """
         self.assertIn(
-            ("ERROR executing 'test.ping': The following keyword arguments"),
+            "ERROR executing 'test.ping': The following keyword arguments",
             self.run_function("test.ping", foo="bar"),
         )
 

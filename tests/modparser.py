@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python2
 
-from __future__ import absolute_import, print_function
 
 import modulefinder
 import os
@@ -48,7 +46,7 @@ def mod_data(opts, full):
     try:
         finder.load_file(full)
     except ImportError as exc:
-        print("ImportError - {0} (Reason: {1})".format(full, exc), file=sys.stderr)
+        print("ImportError - {} (Reason: {})".format(full, exc), file=sys.stderr)
         return ret
     for name, mod in finder.modules.items():
         basemod = name.split(".")[0]

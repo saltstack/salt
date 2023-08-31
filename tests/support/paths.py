@@ -72,7 +72,6 @@ TMP_CONF_DIR = TMP_MINION_CONF_DIR = os.path.join(TMP, "config")
 TMP_SUB_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, "sub-minion")
 TMP_SYNDIC_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, "syndic-minion")
 TMP_SYNDIC_MASTER_CONF_DIR = os.path.join(TMP_CONF_DIR, "syndic-master")
-TMP_PROXY_CONF_DIR = TMP_CONF_DIR
 TMP_SSH_CONF_DIR = TMP_MINION_CONF_DIR
 CONF_DIR = os.path.join(INTEGRATION_TEST_DIR, "files", "conf")
 PILLAR_DIR = os.path.join(FILES, "pillar")

@@ -262,7 +262,10 @@ def get_certificate(
             "certificate": {
                 "errors": {
                     "code": "unknown",
-                    "message": "Unknown error, no certificate ID passed on command line or in body returned from API",
+                    "message": (
+                        "Unknown error, no certificate ID passed on command line or in"
+                        " body returned from API"
+                    ),
                 }
             }
         }

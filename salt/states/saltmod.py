@@ -32,7 +32,8 @@ import salt.output
 import salt.syspaths
 import salt.utils.data
 import salt.utils.event
-from salt.ext import six
+import salt.utils.versions
+from salt.features import features
 
 log = logging.getLogger(__name__)
 
@@ -88,7 +89,7 @@ def _parallel_map(func, inputs):
         thread.start()
         return thread
 
-    threads = list(six.moves.map(create_thread, six.moves.range(len(inputs))))
+    threads = list(map(create_thread, range(len(inputs))))
     for thread in threads:
         thread.join()
     for error in errors:
@@ -114,6 +115,7 @@ def state(
     pillar=None,
     pillarenv=None,
     expect_minions=True,
+    exclude=None,
     fail_minions=None,
     allow_fail=0,
     concurrent=False,
@@ -123,7 +125,7 @@ def state(
     subset=None,
     orchestration_jid=None,
     failhard=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Invoke a state run on a given target
@@ -197,6 +199,9 @@ def state(
         Pass in the number of minions to allow for failure before setting
         the result of the execution to False
 
+    exclude
+        Pass exclude kwarg to state
+
     concurrent
         Allow multiple state runs to occur at once.
 
@@ -236,6 +241,18 @@ def state(
               - apache
               - django
               - core
+            - saltenv: prod
+
+    Run sls file via :py:func:`state.sls <salt.state.sls>` on target
+    minions with exclude:
+
+    .. code-block:: yaml
+
+        docker:
+          salt.state:
+            - tgt: 'docker*'
+            - sls: docker
+            - exclude: docker.swarm
             - saltenv: prod
 
     Run a full :py:func:`state.highstate <salt.state.highstate>` on target
@@ -298,6 +315,9 @@ def state(
     if saltenv is not None:
         cmd_kw["kwarg"]["saltenv"] = saltenv
 
+    if exclude is not None:
+        cmd_kw["kwarg"]["exclude"] = exclude
+
     cmd_kw["kwarg"]["queue"] = queue
 
     if isinstance(concurrent, bool):
@@ -351,7 +371,7 @@ def state(
         fail_minions = [minion.strip() for minion in fail_minions.split(",")]
     elif not isinstance(fail_minions, list):
         state_ret.setdefault("warnings", []).append(
-            "'fail_minions' needs to be a list or a comma separated " "string. Ignored."
+            "'fail_minions' needs to be a list or a comma separated string. Ignored."
         )
         fail_minions = ()
 
@@ -434,7 +454,7 @@ def function(
     batch=None,
     subset=None,
     failhard=None,
-    **kwargs
+    **kwargs,
 ):  # pylint: disable=unused-argument
     """
     Execute a single module function on a remote minion via salt or salt-ssh
@@ -476,6 +496,11 @@ def function(
     ssh
         Set to `True` to use the ssh client instead of the standard salt client
 
+    roster
+        In the event of using salt-ssh, a roster system can be set
+
+        .. versionadded:: 3005
+
     batch
         Execute the command :ref:`in batches <targeting-batch>`. E.g.: ``10%``.
 
@@ -506,6 +531,8 @@ def function(
 
     cmd_kw["tgt_type"] = tgt_type
     cmd_kw["ssh"] = ssh
+    if "roster" in kwargs:
+        cmd_kw["roster"] = kwargs["roster"]
     cmd_kw["expect_minions"] = expect_minions
     cmd_kw["_cmd_meta"] = True
 
@@ -547,7 +574,7 @@ def function(
         fail_minions = [minion.strip() for minion in fail_minions.split(",")]
     elif not isinstance(fail_minions, list):
         func_ret.setdefault("warnings", []).append(
-            "'fail_minions' needs to be a list or a comma separated " "string. Ignored."
+            "'fail_minions' needs to be a list or a comma separated string. Ignored."
         )
         fail_minions = ()
     for minion, mdata in cmd_ret.items():
@@ -575,7 +602,7 @@ def function(
         func_ret["comment"] = "No minions responded"
     else:
         if changes:
-            func_ret["changes"] = {"out": "highstate", "ret": changes}
+            func_ret["changes"] = {"ret": changes}
         if fail:
             func_ret["result"] = False
             func_ret["comment"] = "Running function {} failed on minions: {}".format(
@@ -636,12 +663,12 @@ def wait_for_event(name, id_list, event_id="id", timeout=300, node="master"):
     ret = {"name": name, "changes": {}, "comment": "", "result": False}
 
     if __opts__.get("test"):
-        ret["comment"] = "Orchestration would wait for event '{}'".format(name)
+        ret["comment"] = f"Orchestration would wait for event '{name}'"
         ret["result"] = None
         return ret
 
     with salt.utils.event.get_event(
-        node, __opts__["sock_dir"], __opts__["transport"], opts=__opts__, listen=True
+        node, __opts__["sock_dir"], opts=__opts__, listen=True
     ) as sevent:
 
         del_counter = 0
@@ -664,26 +691,50 @@ def wait_for_event(name, id_list, event_id="id", timeout=300, node="master"):
                     val = event["data"]["data"].get(event_id)
 
                 if val is not None:
-                    try:
-                        val_idx = id_list.index(val)
-                    except ValueError:
-                        log.trace(
-                            "wait_for_event: Event identifier '%s' not in "
-                            "id_list; skipping.",
-                            event_id,
-                        )
-                    else:
-                        del id_list[val_idx]
-                        del_counter += 1
-                        minions_seen = ret["changes"].setdefault("minions_seen", [])
-                        minions_seen.append(val)
+                    if isinstance(val, list):
 
-                        log.debug(
-                            "wait_for_event: Event identifier '%s' removed "
-                            "from id_list; %s items remaining.",
-                            val,
-                            len(id_list),
-                        )
+                        val_list = [id for id in id_list if id in val]
+
+                        if not val_list:
+                            log.trace(
+                                "wait_for_event: Event identifier '%s' not in "
+                                "id_list; skipping",
+                                event_id,
+                            )
+                        elif val_list:
+                            minions_seen = ret["changes"].setdefault("minions_seen", [])
+                            for found_val in val_list:
+                                id_list.remove(found_val)
+                                del_counter += 1
+                                minions_seen.append(found_val)
+                                log.debug(
+                                    "wait_for_event: Event identifier '%s' removed "
+                                    "from id_list; %s items remaining.",
+                                    found_val,
+                                    len(id_list),
+                                )
+
+                    else:
+                        try:
+                            val_idx = id_list.index(val)
+                        except ValueError:
+                            log.trace(
+                                "wait_for_event: Event identifier '%s' not in "
+                                "id_list; skipping.",
+                                event_id,
+                            )
+                        else:
+                            del id_list[val_idx]
+                            del_counter += 1
+                            minions_seen = ret["changes"].setdefault("minions_seen", [])
+                            minions_seen.append(val)
+
+                            log.debug(
+                                "wait_for_event: Event identifier '%s' removed "
+                                "from id_list; %s items remaining.",
+                                val,
+                                len(id_list),
+                            )
                 else:
                     log.trace(
                         "wait_for_event: Event identifier '%s' not in event "
@@ -729,12 +780,20 @@ def runner(name, **kwargs):
         log.debug("Unable to fire args event due to missing __orchestration_jid__")
         jid = None
 
+    try:
+        kwargs["__pub_user"] = __user__
+        log.debug(
+            f"added __pub_user to kwargs using dunder user '{__user__}', kwargs '{kwargs}'"
+        )
+    except NameError:
+        log.warning("unable to find user for fire args event due to missing __user__")
+
     if __opts__.get("test", False):
         ret = {
             "name": name,
             "result": None,
             "changes": {},
-            "comment": "Runner function '{}' would be executed.".format(name),
+            "comment": f"Runner function '{name}' would be executed.",
         }
         return ret
 
@@ -749,10 +808,18 @@ def runner(name, **kwargs):
     success = out.get("success", True)
     ret = {"name": name, "changes": {"return": runner_return}, "result": success}
     ret["comment"] = "Runner function '{}' {}.".format(
-        name, "executed" if success else "failed",
+        name,
+        "executed" if success else "failed",
     )
 
-    ret["__orchestration__"] = True
+    if features.get("enable_deprecated_orchestration_flag", False):
+        ret["__orchestration__"] = True
+        salt.utils.versions.warn_until(
+            3008,
+            "The __orchestration__ return flag will be removed in Salt Argon. "
+            "For more information see https://github.com/saltstack/salt/pull/59917.",
+        )
+
     if "jid" in out:
         ret["__jid__"] = out["jid"]
 
@@ -840,7 +907,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
             __orchestration_jid__=jid,
             __env__=__env__,
             full_return=True,
-            **(runner_config.get("kwarg", {}))
+            **(runner_config.get("kwarg", {})),
         )
 
     try:
@@ -851,15 +918,14 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
             "result": False,
             "success": False,
             "changes": {},
-            "comment": "One of the runners raised an exception: {}".format(exc),
+            "comment": f"One of the runners raised an exception: {exc}",
         }
     # We bundle the results of the runners with the IDs of the runners so that
     # we can easily identify which output belongs to which runner. At the same
     # time we exctract the actual return value of the runner (saltutil.runner
     # adds some extra information that is not interesting to us).
     outputs = {
-        runner_id: out["return"]
-        for runner_id, out in six.moves.zip(runners.keys(), outputs)
+        runner_id: out["return"] for runner_id, out in zip(runners.keys(), outputs)
     }
 
     # If each of the runners returned its output in the format compatible with
@@ -931,7 +997,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
             comment = "All runner functions executed successfully."
         else:
             if len(failed_runners) == 1:
-                comment = "Runner {} failed.".format(failed_runners[0])
+                comment = f"Runner {failed_runners[0]} failed."
             else:
                 comment = "Runners {} failed.".format(", ".join(failed_runners))
         changes = {"ret": {runner_id: out for runner_id, out in outputs.items()}}
@@ -977,7 +1043,7 @@ def wheel(name, **kwargs):
     if __opts__.get("test", False):
         ret["result"] = (None,)
         ret["changes"] = {}
-        ret["comment"] = "Wheel function '{}' would be executed.".format(name)
+        ret["comment"] = f"Wheel function '{name}' would be executed."
         return ret
 
     out = __salt__["saltutil.wheel"](
@@ -991,10 +1057,18 @@ def wheel(name, **kwargs):
     success = out.get("success", True)
     ret = {"name": name, "changes": {"return": wheel_return}, "result": success}
     ret["comment"] = "Wheel function '{}' {}.".format(
-        name, "executed" if success else "failed",
+        name,
+        "executed" if success else "failed",
     )
 
-    ret["__orchestration__"] = True
+    if features.get("enable_deprecated_orchestration_flag", False):
+        ret["__orchestration__"] = True
+        salt.utils.versions.warn_until(
+            3008,
+            "The __orchestration__ return flag will be removed in Salt Argon. "
+            "For more information see https://github.com/saltstack/salt/pull/59917.",
+        )
+
     if "jid" in out:
         ret["__jid__"] = out["jid"]
 

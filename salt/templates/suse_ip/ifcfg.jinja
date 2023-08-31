@@ -1,0 +1,34 @@
+{% if nickname %}NAME='{{nickname}}'
+{%endif%}{% if startmode %}STARTMODE='{{startmode}}'
+{%endif%}{% if proto %}BOOTPROTO='{{proto}}'
+{%endif%}{% if uuid %}UUID='{{uuid}}'
+{%endif%}{% if vlan %}VLAN='{{vlan}}'
+{%endif%}{% if team_config %}TEAM_CONFIG='{{team_config}}'
+{%endif%}{% if team_port_config %}TEAM_PORT_CONFIG='{{team_port_config}}'
+{%endif%}{% if team_master %}TEAM_MASTER='{{team_master}}'
+{%endif%}{% if ipaddr %}IPADDR='{{ipaddr}}'
+{%endif%}{% if netmask %}NETMASK='{{netmask}}'
+{%endif%}{% if prefix %}PREFIXLEN="{{prefix}}"
+{%endif%}{% if ipaddrs %}{% for i in ipaddrs -%}
+IPADDR{{loop.index}}='{{i}}'
+{% endfor -%}
+{%endif%}{% if clonenum_start %}CLONENUM_START="{{clonenum_start}}"
+{%endif%}{% if gateway %}GATEWAY="{{gateway}}"
+{%endif%}{% if arpcheck %}ARPCHECK="{{arpcheck}}"
+{%endif%}{% if srcaddr %}SRCADDR="{{srcaddr}}"
+{%endif%}{% if defroute %}DEFROUTE="{{defroute}}"
+{%endif%}{% if bridge %}BRIDGE="{{bridge}}"
+{%endif%}{% if stp %}STP="{{stp}}"
+{%endif%}{% if delay or delay == 0 %}DELAY="{{delay}}"
+{%endif%}{% if mtu %}MTU='{{mtu}}'
+{%endif%}{% if zone %}ZONE='{{zone}}'
+{%endif%}{% if bonding %}BONDING_MODULE_OPTS='{{bonding}}'
+BONDING_MASTER='yes'
+{% for sl in slaves -%}
+BONDING_SLAVE{{loop.index}}='{{sl}}'
+{% endfor -%}
+{%endif%}{% if ethtool %}ETHTOOL_OPTIONS='{{ethtool}}'
+{%endif%}{% if phys_dev %}ETHERDEVICE='{{phys_dev}}'
+{%endif%}{% if vlan_id %}VLAN_ID='{{vlan_id}}'
+{%endif%}{% if userctl %}USERCONTROL='{{userctl}}'
+{%endif%}

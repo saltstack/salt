@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Vernon Cole <vernondcole@gmail.com>`
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.utils.sdb as sdb
 from tests.support.mixins import LoaderModuleMockMixin
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 

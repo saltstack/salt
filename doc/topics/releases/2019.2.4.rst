@@ -7,7 +7,7 @@ Version 2019.2.4 is a CVE-fix release for :ref:`2019.2.0 <release-2019-2-0>`.
 Security Fix
 ============
 
-**CVE-2020-11651** 
+**CVE-2020-11651**
 
 An issue was discovered in SaltStack Salt before 2019.2.4 and 3000 before 3000.2.
 The salt-master process ClearFuncs class does not properly validate
@@ -16,7 +16,7 @@ authentication. These methods can be used to retrieve user tokens from
 the salt master and/or run arbitrary commands on salt minions.
 
 
-**CVE-2020-11652** 
+**CVE-2020-11652**
 
 An issue was discovered in SaltStack Salt before 2019.2.4 and 3000 before 3000.2.
 The salt-master process ClearFuncs class allows access to some methods

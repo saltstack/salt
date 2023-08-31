@@ -26,6 +26,7 @@ Install any kind of pkg, dmg or app file on macOS:
 import logging
 import os
 import re
+import shutil
 
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
@@ -199,7 +200,7 @@ def installed(
 
             for app in installing:
                 try:
-                    log.info("Copying {} to {}".format(app, target))
+                    log.info("Copying %s to %s", app, target)
 
                     out = __salt__["macpackage.install_app"](
                         os.path.join(mount_point, app), target
@@ -231,6 +232,9 @@ def installed(
     finally:
         if dmg:
             # Unmount to be kind
-            __salt__["macpackage.unmount"](mount_point)
+            out = __salt__["macpackage.unmount"](mount_point)
+            # If unmount succeeded cleanup mount point
+            if out["retcode"] == 0:
+                shutil.rmtree(mount_point)
 
     return ret

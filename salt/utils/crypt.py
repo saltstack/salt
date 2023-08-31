@@ -13,10 +13,31 @@ log = logging.getLogger(__name__)
 
 
 try:
-    import Crypto.Random  # nosec
+    import M2Crypto  # pylint: disable=unused-import
 
-    HAS_CRYPTO = True
+    Random = None
+    HAS_M2CRYPTO = True
 except ImportError:
+    HAS_M2CRYPTO = False
+
+if not HAS_M2CRYPTO:
+    try:
+        from Cryptodome import Random
+
+        HAS_CRYPTODOME = True
+    except ImportError:
+        HAS_CRYPTODOME = False
+else:
+    HAS_CRYPTODOME = False
+
+if not HAS_M2CRYPTO and not HAS_CRYPTODOME:
+    try:
+        from Crypto import Random  # nosec
+
+        HAS_CRYPTO = True
+    except ImportError:
+        HAS_CRYPTO = False
+else:
     HAS_CRYPTO = False
 
 
@@ -68,8 +89,9 @@ def decrypt(
     try:
         if valid_rend and rend not in valid_rend:
             raise SaltInvocationError(
-                "'{}' is not a valid decryption renderer. Valid choices "
-                "are: {}".format(rend, ", ".join(valid_rend))
+                "'{}' is not a valid decryption renderer. Valid choices are: {}".format(
+                    rend, ", ".join(valid_rend)
+                )
             )
     except TypeError as exc:
         # SaltInvocationError inherits TypeError, so check for it first and
@@ -103,8 +125,8 @@ def reinit_crypto():
         child processes after using os.fork()
 
     """
-    if HAS_CRYPTO:
-        Crypto.Random.atfork()
+    if HAS_CRYPTODOME or HAS_CRYPTO:
+        Random.atfork()
 
 
 def pem_finger(path=None, key=None, sum_type="sha256"):
@@ -121,6 +143,13 @@ def pem_finger(path=None, key=None, sum_type="sha256"):
 
         with salt.utils.files.fopen(path, "rb") as fp_:
             key = b"".join([x for x in fp_.readlines() if x.strip()][1:-1])
+            # We should never have \r\n in a key file. This will cause the
+            # finger to be different even though the only difference is the line
+            # endings.
+            key = key.replace(b"\r\n", b"\n")
+
+    if not isinstance(key, bytes):
+        key = key.encode("utf-8")
 
     pre = getattr(hashlib, sum_type)(key).hexdigest()
     finger = ""

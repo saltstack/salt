@@ -1,54 +1,30 @@
-# -*- coding: utf-8 -*-
+import contextlib
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals, with_statement
+try:
+    # Try the stdlib C extension first
+    import _contextvars as contextvars
+except ImportError:
+    # Py<3.7
+    import contextvars
 
-import threading
+DEFAULT_CTX_VAR = "request_ctxvar"
+request_ctxvar = contextvars.ContextVar(DEFAULT_CTX_VAR)
 
 
-class ClassProperty(property):
+@contextlib.contextmanager
+def request_context(data):
     """
-    Use a classmethod as a property
-    http://stackoverflow.com/a/1383402/1258307
+    A context manager that sets and un-sets the loader context.
     """
+    tok = request_ctxvar.set(data)
+    try:
+        yield
+    finally:
+        request_ctxvar.reset(tok)
 
-    def __get__(self, cls, owner):
-        return self.fget.__get__(None, owner)()  # pylint: disable=no-member
 
-
-class RequestContext(object):
+def get_request_context():
     """
-    A context manager that saves some per-thread state globally.
-    Intended for use with Tornado's StackContext.
-    https://gist.github.com/simon-weber/7755289
-    Simply import this class into any module and access the current request handler by this
-    class's class method property 'current'. If it returns None, there's no active request.
-    .. code:: python
-        from raas.utils.ctx import RequestContext
-        current_request_handler = RequestContext.current
+    Get the data from the current request context.
     """
-
-    _state = threading.local()
-    _state.current_request = {}
-
-    def __init__(self, current_request):
-        self._current_request = current_request
-
-    @ClassProperty
-    @classmethod
-    def current(cls):
-        if not hasattr(cls._state, "current_request"):
-            return {}
-        return cls._state.current_request
-
-    def __enter__(self):
-        self._prev_request = self.__class__.current
-        self.__class__._state.current_request = self._current_request
-
-    def __exit__(self, *exc):
-        self.__class__._state.current_request = self._prev_request
-        del self._prev_request
-        return False
-
-    def __call__(self):
-        return self
+    return request_ctxvar.get({})

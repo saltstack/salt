@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Control Modjk via the Apache Tomcat "Status" worker
 (http://tomcat.apache.org/connectors-doc/reference/status.html)
@@ -30,23 +29,8 @@ this module.
         realm: authentication realm2 for digest passwords
         timeout: 600
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module
-from salt.ext import six
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-from salt.ext.six.moves.urllib.request import (
-    HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
-)
-from salt.ext.six.moves.urllib.request import (
-    HTTPDigestAuthHandler as _HTTPDigestAuthHandler,
-)
-from salt.ext.six.moves.urllib.request import build_opener as _build_opener
-from salt.ext.six.moves.urllib.request import install_opener as _install_opener
-from salt.ext.six.moves.urllib.request import urlopen as _urlopen
-
-# pylint: enable=import-error,no-name-in-module
+import urllib.parse
+import urllib.request
 
 
 def __virtual__():
@@ -61,11 +45,11 @@ def _auth(url, user, passwd, realm):
     returns a authentication handler.
     """
 
-    basic = _HTTPBasicAuthHandler()
+    basic = urllib.request.HTTPBasicAuthHandler()
     basic.add_password(realm=realm, uri=url, user=user, passwd=passwd)
-    digest = _HTTPDigestAuthHandler()
+    digest = urllib.request.HTTPDigestAuthHandler()
     digest.add_password(realm=realm, uri=url, user=user, passwd=passwd)
-    return _build_opener(basic, digest)
+    return urllib.request.build_opener(basic, digest)
 
 
 def _do_http(opts, profile="default"):
@@ -75,25 +59,25 @@ def _do_http(opts, profile="default"):
 
     ret = {}
 
-    url = __salt__["config.get"]("modjk:{0}:url".format(profile), "")
-    user = __salt__["config.get"]("modjk:{0}:user".format(profile), "")
-    passwd = __salt__["config.get"]("modjk:{0}:pass".format(profile), "")
-    realm = __salt__["config.get"]("modjk:{0}:realm".format(profile), "")
-    timeout = __salt__["config.get"]("modjk:{0}:timeout".format(profile), "")
+    url = __salt__["config.get"]("modjk:{}:url".format(profile), "")
+    user = __salt__["config.get"]("modjk:{}:user".format(profile), "")
+    passwd = __salt__["config.get"]("modjk:{}:pass".format(profile), "")
+    realm = __salt__["config.get"]("modjk:{}:realm".format(profile), "")
+    timeout = __salt__["config.get"]("modjk:{}:timeout".format(profile), "")
 
     if not url:
-        raise Exception("missing url in profile {0}".format(profile))
+        raise Exception("missing url in profile {}".format(profile))
 
     if user and passwd:
         auth = _auth(url=url, realm=realm, user=user, passwd=passwd)
-        _install_opener(auth)
+        urllib.request.install_opener(auth)
 
-    url += "?{0}".format(_urlencode(opts))
+    url += "?{}".format(urllib.parse.urlencode(opts))
 
-    for line in _urlopen(url, timeout=timeout).read().splitlines():
+    for line in urllib.request.urlopen(url, timeout=timeout).read().splitlines():
         splt = line.split("=", 1)
         if splt[0] in ret:
-            ret[splt[0]] += ",{0}".format(splt[1])
+            ret[splt[0]] += ",{}".format(splt[1])
         else:
             ret[splt[0]] = splt[1]
 
@@ -187,7 +171,7 @@ def list_configured_members(lbn, profile="default"):
     config = dump_config(profile)
 
     try:
-        ret = config["worker.{0}.balance_workers".format(lbn)]
+        ret = config["worker.{}.balance_workers".format(lbn)]
     except KeyError:
         return []
 
@@ -214,7 +198,7 @@ def workers(profile="default"):
     for lb in lbn:
         try:
             worker_list.extend(
-                config["worker.{0}.balance_workers".format(lb)].split(",")
+                config["worker.{}.balance_workers".format(lb)].split(",")
             )
         except KeyError:
             pass
@@ -223,8 +207,8 @@ def workers(profile="default"):
 
     for worker in worker_list:
         ret[worker] = {
-            "activation": config["worker.{0}.activation".format(worker)],
-            "state": config["worker.{0}.state".format(worker)],
+            "activation": config["worker.{}.activation".format(worker)],
+            "state": config["worker.{}.state".format(worker)],
         }
 
     return ret
@@ -245,7 +229,7 @@ def recover_all(lbn, profile="default"):
     ret = {}
     config = get_running(profile)
     try:
-        workers_ = config["worker.{0}.balance_workers".format(lbn)].split(",")
+        workers_ = config["worker.{}.balance_workers".format(lbn)].split(",")
     except KeyError:
         return ret
 
@@ -319,7 +303,7 @@ def bulk_stop(workers, lbn, profile="default"):
 
     ret = {}
 
-    if isinstance(workers, six.string_types):
+    if isinstance(workers, str):
         workers = workers.split(",")
 
     for worker in workers:
@@ -348,7 +332,7 @@ def bulk_activate(workers, lbn, profile="default"):
 
     ret = {}
 
-    if isinstance(workers, six.string_types):
+    if isinstance(workers, str):
         workers = workers.split(",")
 
     for worker in workers:
@@ -377,7 +361,7 @@ def bulk_disable(workers, lbn, profile="default"):
 
     ret = {}
 
-    if isinstance(workers, six.string_types):
+    if isinstance(workers, str):
         workers = workers.split(",")
 
     for worker in workers:
@@ -406,7 +390,7 @@ def bulk_recover(workers, lbn, profile="default"):
 
     ret = {}
 
-    if isinstance(workers, six.string_types):
+    if isinstance(workers, str):
         workers = workers.split(",")
 
     for worker in workers:
@@ -433,8 +417,8 @@ def worker_status(worker, profile="default"):
     config = get_running(profile)
     try:
         return {
-            "activation": config["worker.{0}.activation".format(worker)],
-            "state": config["worker.{0}.state".format(worker)],
+            "activation": config["worker.{}.activation".format(worker)],
+            "state": config["worker.{}.state".format(worker)],
         }
     except KeyError:
         return False

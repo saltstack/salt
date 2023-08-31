@@ -29,12 +29,11 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The aix_group execution module failed to load: "
-        "only available on AIX systems.",
+        "The aix_group execution module failed to load: only available on AIX systems.",
     )
 
 
-def add(name, gid=None, system=False, root=None):
+def add(name, gid=None, system=False, root=None, **kwargs):
     """
     Add the specified group
 

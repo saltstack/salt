@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Infoblox host record management.
 
@@ -9,9 +8,6 @@ functions accept api_opts:
     api_username:  [default to pillar value]
     api_password:  [default to pillar value]
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def present(name=None, start_addr=None, end_addr=None, data=None, **api_opts):
@@ -136,7 +132,7 @@ def present(name=None, start_addr=None, end_addr=None, data=None, **api_opts):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "would attempt to create record {0}".format(name)
+        ret["comment"] = "would attempt to create record {}".format(name)
         return ret
 
     new_obj_ref = __salt__["infoblox.create_ipv4_range"](data, **api_opts)
@@ -203,7 +199,7 @@ def absent(name=None, start_addr=None, end_addr=None, data=None, **api_opts):
     if __salt__["infoblox.delete_object"](objref=obj["_ref"]):
         ret["result"] = True
         ret["changes"] = {
-            "old": "Found {0} - {1}".format(start_addr, end_addr),
+            "old": "Found {} - {}".format(start_addr, end_addr),
             "new": "Removed",
         }
     return ret

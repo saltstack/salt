@@ -1,18 +1,15 @@
-import sys
+import pathlib
 
 import attr
 import pytest
-import salt.transport.client
+from tornado import locks
+
 import salt.transport.ipc
-import salt.transport.server
-from salt.ext.tornado import locks
+import salt.utils.platform
 
 pytestmark = [
     # Windows does not support POSIX IPC
     pytest.mark.skip_on_windows,
-    pytest.mark.skipif(
-        sys.version_info < (3, 6), reason="The IOLoop blocks under Py3.5 on these tests"
-    ),
 ]
 
 
@@ -43,13 +40,16 @@ class IPCTester:
     @server.default
     def _server_default(self):
         return salt.transport.ipc.IPCMessageServer(
-            self.socket_path, io_loop=self.io_loop, payload_handler=self.handle_payload,
+            self.socket_path,
+            io_loop=self.io_loop,
+            payload_handler=self.handle_payload,
         )
 
     @client.default
     def _client_default(self):
         return salt.transport.ipc.IPCMessageClient(
-            self.socket_path, io_loop=self.io_loop,
+            self.socket_path,
+            io_loop=self.io_loop,
         )
 
     async def handle_payload(self, payload, reply_func):
@@ -83,6 +83,9 @@ class IPCTester:
 
 @pytest.fixture
 def ipc_socket_path(tmp_path):
+    if salt.utils.platform.is_darwin():
+        # A shorter path so that we don't hit the AF_UNIX path too long
+        tmp_path = pathlib.Path("/tmp").resolve()
     _socket_path = tmp_path / "ipc-test.ipc"
     try:
         yield _socket_path
@@ -115,7 +118,7 @@ async def test_send_many(channel):
 
 
 async def test_very_big_message(channel):
-    long_str = "".join([str(num) for num in range(10 ** 5)])
+    long_str = "".join([str(num) for num in range(10**5)])
     msg = {"long_str": long_str, "stop": True}
     await channel.send(msg)
     assert channel.payloads[0] == msg

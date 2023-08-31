@@ -29,7 +29,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The slackware_service execution module failed to load: only available on Slackware.",
+        "The slackware_service execution module failed to load: only available on"
+        " Slackware.",
     )
 
 

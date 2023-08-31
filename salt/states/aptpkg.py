@@ -32,7 +32,9 @@ def held(name):
         The name of the package, e.g., 'tmux'
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
-    state = __salt__["pkg.get_selections"](pattern=name,)
+    state = __salt__["pkg.get_selections"](
+        pattern=name,
+    )
     if not state:
         ret.update(comment="Package {} does not have a state".format(name))
     elif not salt.utils.data.is_true(state.get("hold", False)):

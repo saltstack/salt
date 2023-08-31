@@ -6,12 +6,12 @@ import pprint
 import textwrap
 
 import pytest
+
 import salt.utils.files
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 try:
     import M2Crypto  # pylint: disable=W0611
@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.usefixtures("salt_sub_minion")
-@skipIf(not HAS_M2CRYPTO, "Skip when no M2Crypto found")
+@pytest.mark.skipif(not HAS_M2CRYPTO, reason="Skip when no M2Crypto found")
 class x509Test(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def setUpClass(cls):
@@ -184,8 +184,10 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert "Certificate" in ret[first_key]["changes"]
         assert "New" in ret[first_key]["changes"]["Certificate"]
         # check whether the second defined cert is considered to match the first one
-        second_key = "x509_|-second_test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
-            RUNTIME_VARS.TMP
+        second_key = (
+            "x509_|-second_test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
+                RUNTIME_VARS.TMP
+            )
         )
         assert second_key in ret
         assert "changes" in ret[second_key]
@@ -485,7 +487,8 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             },
         )
         self.assertEqual(
-            "Certificate needs renewal: 29 days remaining but it needs to be at least 90",
+            "Certificate needs renewal: 29 days remaining but it needs to be at"
+            " least 90",
             second_run[key]["changes"]["Status"]["Old"],
         )
         expiry = datetime.datetime.strptime(

@@ -5,15 +5,15 @@ Validate the mac-keychain module
 import os
 
 import pytest
+
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on
 from tests.support.runtests import RUNTIME_VARS
 
 
 @pytest.mark.destructive_test
-@runs_on(kernel="Darwin")
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_unless_on_darwin
 class MacKeychainModuleTest(ModuleCase):
     """
     Integration tests for the mac_keychain module

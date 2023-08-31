@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     tests.unit.test_pytest_pass_fail
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Some tests to make sure our pytest usage doesn't break regular pytest behviour
 """
-from __future__ import absolute_import
 
 import pytest
 

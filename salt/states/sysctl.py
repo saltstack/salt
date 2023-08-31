@@ -35,7 +35,10 @@ def present(name, value, config=None):
         The name of the sysctl value to edit
 
     value
-        The sysctl value to apply
+        The sysctl value to apply. Make sure to set the value to the correct expected
+        output for systctl or reading the respective /proc/sys file. For example, instead
+        of adding the value `1,2,3` you might need to write `1-3`. If you do not set
+        the correct value, Salt will continue to return with changes.
 
     config
         The location of the sysctl configuration file. If not specified, the

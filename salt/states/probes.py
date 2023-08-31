@@ -338,8 +338,9 @@ def managed(name, probes, defaults=None):
         ret.update(
             {
                 "result": False,
-                "comment": "Cannot retrieve configurtion of the probes from the device: {reason}".format(
-                    reason=rpm_probes_config.get("comment")
+                "comment": (
+                    "Cannot retrieve configurtion of the probes from the device:"
+                    " {reason}".format(reason=rpm_probes_config.get("comment"))
                 ),
             }
         )

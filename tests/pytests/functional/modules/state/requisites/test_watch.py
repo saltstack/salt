@@ -1,10 +1,12 @@
 import pytest
+
 import salt.utils.platform
 
 from . import normalize_ret
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
 ]
 
 
@@ -25,12 +27,10 @@ def test_watch_in(state, state_tree):
     watch = "test_|-watch_states_|-watch_states_|-succeed_without_changes"
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert ret[changes]["__run_num__"] == 0
-        assert (
-            ret[changes]["changes"]["testing"]["new"] == "Something pretended to change"
-        )
-        assert ret[watch]["__run_num__"] == 2
-        assert ret[watch]["comment"] == "Watch statement fired."
+        assert ret[changes].full_return["__run_num__"] == 0
+        assert ret[changes].changes["testing"]["new"] == "Something pretended to change"
+        assert ret[watch].full_return["__run_num__"] == 2
+        assert ret[watch].comment == "Watch statement fired."
 
 
 def test_watch_in_failure(state, state_tree):
@@ -50,14 +50,13 @@ def test_watch_in_failure(state, state_tree):
     watch = "test_|-watch_states_|-watch_states_|-succeed_without_changes"
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert ret[fail]["result"] is False
+        assert ret[fail].result is False
         assert (
-            ret[watch]["comment"]
+            ret[watch].comment
             == "One or more requisite failed: requisite.return_changes"
         )
 
 
-@pytest.mark.slow_test
 def test_requisites_watch_any(state, state_tree):
     """
     Call sls file containing several require_in and require.
@@ -114,60 +113,58 @@ def test_requisites_watch_any(state, state_tree):
         cmd_true=cmd_true, cmd_false=cmd_false
     )
     expected_result = {
-        "cmd_|-A_|-{}_|-wait".format(cmd_true): {
+        f"cmd_|-A_|-{cmd_true}_|-wait": {
             "__run_num__": 4,
-            "comment": 'Command "{}" run'.format(cmd_true),
+            "comment": f'Command "{cmd_true}" run',
             "result": True,
             "changes": True,
         },
-        "cmd_|-B_|-{}_|-run".format(cmd_true): {
+        f"cmd_|-B_|-{cmd_true}_|-run": {
             "__run_num__": 0,
-            "comment": 'Command "{}" run'.format(cmd_true),
+            "comment": f'Command "{cmd_true}" run',
             "result": True,
             "changes": True,
         },
-        "cmd_|-C_|-{}_|-run".format(cmd_false): {
+        f"cmd_|-C_|-{cmd_false}_|-run": {
             "__run_num__": 1,
-            "comment": 'Command "{}" run'.format(cmd_false),
+            "comment": f'Command "{cmd_false}" run',
             "result": False,
             "changes": True,
         },
-        "cmd_|-D_|-{}_|-run".format(cmd_true): {
+        f"cmd_|-D_|-{cmd_true}_|-run": {
             "__run_num__": 2,
-            "comment": 'Command "{}" run'.format(cmd_true),
+            "comment": f'Command "{cmd_true}" run',
             "result": True,
             "changes": True,
         },
-        "cmd_|-E_|-{}_|-wait".format(cmd_true): {
+        f"cmd_|-E_|-{cmd_true}_|-wait": {
             "__run_num__": 9,
-            "comment": 'Command "{}" run'.format(cmd_true),
+            "comment": f'Command "{cmd_true}" run',
             "result": True,
             "changes": True,
         },
-        "cmd_|-F_|-{}_|-run".format(cmd_true): {
+        f"cmd_|-F_|-{cmd_true}_|-run": {
             "__run_num__": 5,
-            "comment": 'Command "{}" run'.format(cmd_true),
+            "comment": f'Command "{cmd_true}" run',
             "result": True,
             "changes": True,
         },
-        "cmd_|-G_|-{}_|-run".format(cmd_false): {
+        f"cmd_|-G_|-{cmd_false}_|-run": {
             "__run_num__": 6,
-            "comment": 'Command "{}" run'.format(cmd_false),
+            "comment": f'Command "{cmd_false}" run',
             "result": False,
             "changes": True,
         },
-        "cmd_|-H_|-{}_|-run".format(cmd_false): {
+        f"cmd_|-H_|-{cmd_false}_|-run": {
             "__run_num__": 7,
-            "comment": 'Command "{}" run'.format(cmd_false),
+            "comment": f'Command "{cmd_false}" run',
             "result": False,
             "changes": True,
         },
     }
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        result = normalize_ret(ret)
-        ret = pytest.helpers.state_return(ret)
-        ret.assert_return_non_empty_state_type()
+        result = normalize_ret(ret.raw)
         assert result == expected_result
 
 
@@ -195,7 +192,7 @@ def test_requisites_watch_any_fail(state, state_tree):
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert "One or more requisite failed" in ret["cmd_|-A_|-true_|-wait"]["comment"]
+        assert "One or more requisite failed" in ret["cmd_|-A_|-true_|-wait"].comment
 
 
 def test_issue_30820_requisite_in_match_by_name(state, state_tree):
@@ -218,4 +215,4 @@ def test_issue_30820_requisite_in_match_by_name(state, state_tree):
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
         assert bar_state in ret
-        assert ret[bar_state]["comment"] == 'Command "echo bar" run'
+        assert ret[bar_state].comment == 'Command "echo bar" run'

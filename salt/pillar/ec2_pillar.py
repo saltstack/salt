@@ -57,12 +57,12 @@ instance.
 import logging
 import re
 
-from salt.utils.versions import StrictVersion as _StrictVersion
+from salt.utils.versions import Version
 
 try:
     import boto.ec2
-    import boto.utils
     import boto.exception
+    import boto.utils
 
     HAS_BOTO = True
 except ImportError:
@@ -82,8 +82,8 @@ def __virtual__():
     """
     if not HAS_BOTO:
         return False
-    boto_version = _StrictVersion(boto.__version__)
-    required_boto_version = _StrictVersion("2.8.0")
+    boto_version = Version(boto.__version__)
+    required_boto_version = Version("2.8.0")
     if boto_version < required_boto_version:
         log.error(
             "%s: installed boto version %s < %s, can't retrieve instance data",
@@ -134,7 +134,7 @@ def ext_pillar(
         and re.search(r"^i-([0-9a-z]{17}|[0-9a-z]{8})$", grain_instance_id) is None
     ):
         log.error(
-            "External pillar %s, instance-id '%s' is not valid for " "'%s'",
+            "External pillar %s, instance-id '%s' is not valid for '%s'",
             __name__,
             grain_instance_id,
             minion_id,
@@ -152,7 +152,7 @@ def ext_pillar(
 
     if tag_match_key and tag_match_value not in valid_tag_match_value:
         log.error(
-            "External pillar %s, tag_value '%s' is not valid must be one " "of %s",
+            "External pillar %s, tag_value '%s' is not valid must be one of %s",
             __name__,
             tag_match_value,
             " ".join(valid_tag_match_value),

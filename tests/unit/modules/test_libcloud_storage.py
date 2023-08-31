@@ -1,15 +1,15 @@
 """
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 """
-
+import pytest
 
 import salt.modules.libcloud_storage as libcloud_storage
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
-    from libcloud.storage.base import Container, BaseDriver, Object
+    from libcloud.storage.base import BaseDriver, Container, Object
 
     HAS_LIBCLOUD = True
 except ImportError:
@@ -53,7 +53,6 @@ if HAS_LIBCLOUD:
             assert object_name == "test_obj"
             return self._TEST_OBJECT
 
-
 else:
     MockStorageDriver = object
 
@@ -62,7 +61,7 @@ def get_mock_driver():
     return MockStorageDriver()
 
 
-@skipIf(not HAS_LIBCLOUD, "No libcloud installed")
+@pytest.mark.skipif(not HAS_LIBCLOUD, reason="No libcloud installed")
 @patch(
     "salt.modules.libcloud_storage._get_driver",
     MagicMock(return_value=MockStorageDriver()),

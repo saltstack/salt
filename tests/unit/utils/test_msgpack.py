@@ -8,10 +8,11 @@ import struct
 import sys
 from io import BytesIO
 
+import pytest
+
 import salt.utils.msgpack
-from salt.ext.six.moves import range
 from salt.utils.odict import OrderedDict
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import msgpack
@@ -23,7 +24,9 @@ except ImportError:
 raw = {"raw": False} if msgpack.version > (0, 5, 2) else {}
 
 
-@skipIf(not salt.utils.msgpack.HAS_MSGPACK, "msgpack module required for these tests")
+@pytest.mark.skipif(
+    not salt.utils.msgpack.HAS_MSGPACK, reason="msgpack module required for these tests"
+)
 class TestMsgpack(TestCase):
     """
     In msgpack, the following aliases exist:
@@ -66,7 +69,10 @@ class TestMsgpack(TestCase):
         False,
         (),
         ((),),
-        ((), None,),
+        (
+            (),
+            None,
+        ),
         {None: 0},
         (1 << 23),
     ]
@@ -257,7 +263,7 @@ class TestMsgpack(TestCase):
         self.assertEqual(unpacker.unpack(), 4)
         self.assertRaises(salt.utils.msgpack.exceptions.OutOfData, unpacker.unpack)
 
-    @skipIf(
+    @pytest.mark.skipif(
         not hasattr(sys, "getrefcount"), "sys.getrefcount() is needed to pass this test"
     )
     def _test_unpacker_hook_refcnt(self, pack_func, **kwargs):
@@ -344,7 +350,6 @@ class TestMsgpack(TestCase):
         for td in test_data:
             self._check(td, pack_func, unpack_func)
 
-    @skipIf(sys.version_info < (3, 0), "Python 2 passes invalid surrogates")
     def _test_ignore_unicode_errors(self, pack_func, unpack_func):
         ret = unpack_func(
             pack_func(b"abc\xeddef", use_bin_type=False), unicode_errors="ignore", **raw
@@ -355,7 +360,6 @@ class TestMsgpack(TestCase):
         packed = pack_func(b"abc\xeddef", use_bin_type=False)
         self.assertRaises(UnicodeDecodeError, unpack_func, packed, use_list=True, **raw)
 
-    @skipIf(sys.version_info < (3, 0), "Python 2 passes invalid surrogates")
     def _test_ignore_errors_pack(self, pack_func, unpack_func):
         ret = unpack_func(
             pack_func("abc\uDC80\uDCFFdef", use_bin_type=True, unicode_errors="ignore"),
@@ -368,7 +372,7 @@ class TestMsgpack(TestCase):
         ret = unpack_func(pack_func(b"abc"), use_list=True)
         self.assertEqual(b"abc", ret)
 
-    @skipIf(
+    @pytest.mark.skipif(
         salt.utils.msgpack.version < (0, 2, 2),
         "use_single_float was added in msgpack==0.2.2",
     )
@@ -377,7 +381,8 @@ class TestMsgpack(TestCase):
             b"\xca" + struct.pack(">f", 1.0), pack_func(1.0, use_single_float=True)
         )
         self.assertEqual(
-            b"\xcb" + struct.pack(">d", 1.0), pack_func(1.0, use_single_float=False),
+            b"\xcb" + struct.pack(">d", 1.0),
+            pack_func(1.0, use_single_float=False),
         )
 
     def _test_odict(self, pack_func, unpack_func):
@@ -403,7 +408,7 @@ class TestMsgpack(TestCase):
             unpacked = unpack_func(packed, object_pairs_hook=list)
         self.assertEqual(pairlist, unpacked)
 
-    @skipIf(
+    @pytest.mark.skipif(
         salt.utils.msgpack.version < (0, 6, 0),
         "getbuffer() was added to Packer in msgpack 0.6.0",
     )
@@ -481,9 +486,8 @@ class TestMsgpack(TestCase):
                         if run:
                             if str(vanilla_run) == str(run):
                                 self.skipTest(
-                                    "Failed the same way as the vanilla msgpack module:\n{}".format(
-                                        run
-                                    )
+                                    "Failed the same way as the vanilla msgpack"
+                                    " module:\n{}".format(run)
                                 )
                 else:
                     # If subTest isn't available then run the tests collect the errors of all the tests before failing
@@ -492,9 +496,8 @@ class TestMsgpack(TestCase):
                         # If the vanilla msgpack module errored, then skip if we got the same error
                         if str(vanilla_run) == str(run):
                             self.skipTest(
-                                "Test failed the same way the vanilla msgpack module fails:\n{}".format(
-                                    run
-                                )
+                                "Test failed the same way the vanilla msgpack module"
+                                " fails:\n{}".format(run)
                             )
                         else:
                             errors[(test_func.__name__, func_name.__name__)] = run

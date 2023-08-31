@@ -5,28 +5,16 @@ import copy
 import textwrap
 
 import pytest
-import salt.config
+
 import salt.loader
 import salt.states.boto_cloudfront as boto_cloudfront
 from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
-def setup_vars():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-
-    name = "my_distribution"
-    base_ret = {"name": name, "changes": {}}
-
-    # Most attributes elided since there are so many required ones
-    config = {"Enabled": True, "HttpVersion": "http2"}
-    tags = {"test_tag1": "value1"}
-
-
-@pytest.fixture
-def configure_loader_modules(setup_vars):
+def configure_loader_modules(minion_opts):
     utils = salt.loader.utils(
-        salt.config.DEFAULT_MINION_OPTS.copy(),
+        minion_opts,
         whitelist=[
             "boto3",
             "dictdiffer",

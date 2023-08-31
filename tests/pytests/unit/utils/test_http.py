@@ -1,5 +1,6 @@
 import pytest
 import requests
+
 import salt.utils.http
 from tests.support.mock import MagicMock, patch
 

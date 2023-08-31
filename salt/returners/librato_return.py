@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Salt returner to return highstate stats to Librato
 
@@ -30,17 +29,12 @@ by adding more tags to the submission.
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.returners
-
-# Import Salt libs
 import salt.utils.jid
 
-# Import third party libs
 try:
     import librato
 
@@ -58,8 +52,7 @@ def __virtual__():
     if not HAS_LIBRATO:
         return (
             False,
-            "Could not import librato module; "
-            "librato python client is not installed.",
+            "Could not import librato module; librato python client is not installed.",
         )
     return __virtualname__
 

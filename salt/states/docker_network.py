@@ -45,6 +45,12 @@ log = logging.getLogger(__name__)
 __virtualname__ = "docker_network"
 __virtual_aliases__ = ("moby_network",)
 
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
+
 
 def __virtual__():
     """
@@ -65,7 +71,7 @@ def _normalize_pools(existing, desired):
     for pool in desired["Config"]:
         subnet = ipaddress.ip_network(pool.get("Subnet"))
         if pools["desired"][subnet.version] is not None:
-            raise ValueError("Only one IPv{} pool is permitted".format(subnet.version))
+            raise ValueError(f"Only one IPv{subnet.version} pool is permitted")
         else:
             pools["desired"][subnet.version] = pool
 
@@ -91,7 +97,7 @@ def present(
     validate_ip_addrs=True,
     containers=None,
     reconnect=True,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 2018.3.0
@@ -575,7 +581,7 @@ def present(
             skip_translate=skip_translate,
             ignore_collisions=ignore_collisions,
             validate_ip_addrs=validate_ip_addrs,
-            **__utils__["args.clean_kwargs"](**kwargs)
+            **__utils__["args.clean_kwargs"](**kwargs),
         )
     except Exception as exc:  # pylint: disable=broad-except
         ret["comment"] = exc.__str__()
@@ -619,10 +625,9 @@ def present(
 
         # Set the comment now to say that it already exists, if we need to
         # recreate the network with new config we'll update the comment later.
-        ret["comment"] = (
-            "Network '{}' already exists, and is configured "
-            "as specified".format(name)
-        )
+        ret[
+            "comment"
+        ] = f"Network '{name}' already exists, and is configured as specified"
         log.trace("Details of docker network '%s': %s", name, network)
 
         temp_net_name = "".join(
@@ -645,11 +650,21 @@ def present(
             # wouldng't know if the IPv4 subnet in the existing network was
             # explicitly configured or was automatically assigned by Docker.
             enable_ipv6 = kwargs.pop("enable_ipv6", None)
+            kwargs_tmp = kwargs
+            driver = kwargs.get(
+                "driver",
+            )
+            driver_opts = kwargs.get("options", {})
+            bridge_name = driver_opts.get("com.docker.network.bridge.name", None)
+
+            if driver == "bridge" and bridge_name is not None:
+                tmp_name = str(bridge_name) + "comp"
+                kwargs_tmp["options"]["com.docker.network.bridge.name"] = tmp_name[-14:]
             __salt__["docker.create_network"](
                 temp_net_name,
                 skip_translate=True,  # No need to translate (already did)
                 enable_ipv6=False,
-                **kwargs
+                **kwargs_tmp,
             )
         except CommandExecutionError as exc:
             ret["comment"] = "Failed to create temp network for comparison: {}".format(
@@ -791,7 +806,7 @@ def present(
             __salt__["docker.create_network"](
                 name,
                 skip_translate=True,  # No need to translate (already did)
-                **kwargs
+                **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
             ret["comment"] = "Failed to create network '{}': {}".format(
@@ -918,12 +933,12 @@ def absent(name):
 
     if network is None:
         ret["result"] = True
-        ret["comment"] = "Network '{}' already absent".format(name)
+        ret["comment"] = f"Network '{name}' already absent"
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Network '{}' will be removed".format(name)
+        ret["comment"] = f"Network '{name}' will be removed"
         return ret
 
     return _remove_network(network)
@@ -948,7 +963,7 @@ def _remove_network(network):
         try:
             __salt__["docker.disconnect_container_from_network"](cid, network["Name"])
         except CommandExecutionError as exc:
-            errors = "Failed to disconnect container '{}' : {}".format(cname, exc)
+            errors = f"Failed to disconnect container '{cname}' : {exc}"
         else:
             ret["changes"].setdefault("disconnected", []).append(cname)
 
@@ -959,7 +974,7 @@ def _remove_network(network):
     try:
         __salt__["docker.remove_network"](network["Name"])
     except CommandExecutionError as exc:
-        ret["comment"] = "Failed to remove network: {}".format(exc)
+        ret["comment"] = f"Failed to remove network: {exc}"
     else:
         ret["changes"]["removed"] = True
         ret["result"] = True

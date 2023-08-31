@@ -13,6 +13,7 @@ import salt.auth.ldap
 import salt.cache
 import salt.payload
 import salt.roster
+import salt.transport
 import salt.utils.data
 import salt.utils.files
 import salt.utils.network
@@ -80,7 +81,7 @@ def _nodegroup_regex(nodegroup, words, opers):
 
 def parse_target(target_expression):
     """Parse `target_expressing` splitting it into `engine`, `delimiter`,
-     `pattern` - returns a dict"""
+    `pattern` - returns a dict"""
 
     match = TARGET_REX.match(target_expression)
     if not match:
@@ -108,11 +109,11 @@ def get_minion_data(minion, opts):
         cache = salt.cache.factory(opts)
         if minion is None:
             for id_ in cache.list("minions"):
-                data = cache.fetch("minions/{}".format(id_), "data")
+                data = cache.fetch(f"minions/{id_}", "data")
                 if data is None:
                     continue
         else:
-            data = cache.fetch("minions/{}".format(minion), "data")
+            data = cache.fetch(f"minions/{minion}", "data")
         if data is not None:
             grains = data.get("grains", None)
             pillar = data.get("pillar", None)
@@ -191,7 +192,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
             return joined
 
         log.debug(
-            "No nested nodegroups detected. Using original nodegroup " "definition: %s",
+            "No nested nodegroups detected. Using original nodegroup definition: %s",
             nodegroups[nodegroup],
         )
         return ret
@@ -209,10 +210,9 @@ class CkMinions:
 
     def __init__(self, opts):
         self.opts = opts
-        self.serial = salt.payload.Serial(opts)
         self.cache = salt.cache.factory(opts)
         # TODO: this is actually an *auth* check
-        if self.opts.get("transport", "zeromq") in ("zeromq", "tcp"):
+        if self.opts.get("transport", "zeromq") in salt.transport.TRANSPORTS:
             self.acc = "minions"
         else:
             self.acc = "accepted"
@@ -257,7 +257,7 @@ class CkMinions:
 
     def _pki_minions(self):
         """
-        Retreive complete minion list from PKI dir.
+        Retrieve complete minion list from PKI dir.
         Respects cache if configured
         """
         minions = []
@@ -270,14 +270,12 @@ class CkMinions:
             if self.opts["key_cache"] and os.path.exists(pki_cache_fn):
                 log.debug("Returning cached minion list")
                 with salt.utils.files.fopen(pki_cache_fn, mode="rb") as fn_:
-                    return self.serial.load(fn_)
+                    return salt.payload.load(fn_)
             else:
                 for fn_ in salt.utils.data.sorted_ignorecase(
                     os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
                 ):
-                    if not fn_.startswith(".") and os.path.isfile(
-                        os.path.join(self.opts["pki_dir"], self.acc, fn_)
-                    ):
+                    if not fn_.startswith("."):
                         minions.append(fn_)
             return minions
         except OSError as exc:
@@ -305,9 +303,7 @@ class CkMinions:
             for fn_ in salt.utils.data.sorted_ignorecase(
                 os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
             ):
-                if not fn_.startswith(".") and os.path.isfile(
-                    os.path.join(self.opts["pki_dir"], self.acc, fn_)
-                ):
+                if not fn_.startswith("."):
                     minions.append(fn_)
         elif cache_enabled:
             minions = list_cached_minions()
@@ -325,7 +321,7 @@ class CkMinions:
             for id_ in cminions:
                 if greedy and id_ not in minions:
                     continue
-                mdata = self.cache.fetch("minions/{}".format(id_), "data")
+                mdata = self.cache.fetch(f"minions/{id_}", "data")
                 if mdata is None:
                     if not greedy:
                         minions.remove(id_)
@@ -410,11 +406,11 @@ class CkMinions:
                 except Exception:  # pylint: disable=broad-except
                     log.error("Invalid IP/CIDR target: %s", tgt)
                     return {"minions": [], "missing": []}
-            proto = "ipv{}".format(tgt.version)
+            proto = f"ipv{tgt.version}"
 
             minions = set(minions)
             for id_ in cminions:
-                mdata = self.cache.fetch("minions/{}".format(id_), "data")
+                mdata = self.cache.fetch(f"minions/{id_}", "data")
                 if mdata is None:
                     if not greedy:
                         minions.remove(id_)
@@ -453,9 +449,7 @@ class CkMinions:
                 for fn_ in salt.utils.data.sorted_ignorecase(
                     os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
                 ):
-                    if not fn_.startswith(".") and os.path.isfile(
-                        os.path.join(self.opts["pki_dir"], self.acc, fn_)
-                    ):
+                    if not fn_.startswith("."):
                         mlist.append(fn_)
                 return {"minions": mlist, "missing": []}
             elif cache_enabled:
@@ -564,7 +558,7 @@ class CkMinions:
                             unmatched.append(word)
                         else:
                             log.error(
-                                "Expression may begin with" " binary operator: %s", word
+                                "Expression may begin with binary operator: %s", word
                             )
                             return {"minions": [], "missing": []}
 
@@ -635,6 +629,10 @@ class CkMinions:
             if search is None:
                 return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts["publish_port"]))
+            if self.opts.get("detect_remote_minions", False):
+                addrs = addrs.union(
+                    salt.utils.network.remote_port_tcp(self.opts["remote_minions_port"])
+                )
             if "127.0.0.1" in addrs:
                 # Add in the address of a possible locally-connected minion.
                 addrs.discard("127.0.0.1")
@@ -647,7 +645,7 @@ class CkMinions:
                 search = subset
             for id_ in search:
                 try:
-                    mdata = self.cache.fetch("minions/{}".format(id_), "data")
+                    mdata = self.cache.fetch(f"minions/{id_}", "data")
                 except SaltCacheError:
                     # If a SaltCacheError is explicitly raised during the fetch operation,
                     # permission was denied to open the cached data.p file. Continue on as
@@ -681,9 +679,7 @@ class CkMinions:
         for fn_ in salt.utils.data.sorted_ignorecase(
             os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
         ):
-            if not fn_.startswith(".") and os.path.isfile(
-                os.path.join(self.opts["pki_dir"], self.acc, fn_)
-            ):
+            if not fn_.startswith("."):
                 mlist.append(fn_)
         return {"minions": mlist, "missing": []}
 
@@ -700,7 +696,7 @@ class CkMinions:
         try:
             if expr is None:
                 expr = ""
-            check_func = getattr(self, "_check_{}_minions".format(tgt_type), None)
+            check_func = getattr(self, f"_check_{tgt_type}_minions", None)
             if tgt_type in (
                 "grain",
                 "grain_pcre",
@@ -733,8 +729,14 @@ class CkMinions:
 
     def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
         """
-        Return a Bool. This function returns if the expression sent in is
-        within the scope of the valid expression
+        Validate the target minions against the possible valid minions.
+
+        If ``minions`` is provided, they will be compared against the valid
+        minions. Otherwise, ``expr`` and ``tgt_type`` will be used to expand
+        to a list of target minions.
+
+        Return True if all of the requested minions are valid minions,
+        otherwise return False.
         """
 
         v_minions = set(self.check_minions(valid, "compound").get("minions", []))
@@ -1040,11 +1042,7 @@ class CkMinions:
         for ind in auth_list:
             if isinstance(ind, str):
                 if ind[0] == "@":
-                    if (
-                        ind[1:] == mod_name
-                        or ind[1:] == form
-                        or ind == "@{}s".format(form)
-                    ):
+                    if ind[1:] == mod_name or ind[1:] == form or ind == f"@{form}s":
                         return True
             elif isinstance(ind, dict):
                 if len(ind) != 1:
@@ -1056,7 +1054,7 @@ class CkMinions:
                             ind[valid], fun_name, args.get("arg"), args.get("kwarg")
                         ):
                             return True
-                    if valid[1:] == form or valid == "@{}s".format(form):
+                    if valid[1:] == form or valid == f"@{form}s":
                         if self.__fun_check(
                             ind[valid], fun, args.get("arg"), args.get("kwarg")
                         ):

@@ -16,14 +16,12 @@ def __virtual__():
     """
     Only load if kernel is AIX
     """
-    if __grains__["kernel"] == ("AIX"):
+    if __grains__["kernel"] == "AIX":
         return __virtualname__
 
-    return (
-        False,
-        "The aix_account beacon module failed to load: "
-        "only available on AIX systems.",
-    )
+    err_msg = "Only available on AIX systems."
+    log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+    return False, err_msg
 
 
 def validate(config):
@@ -32,14 +30,11 @@ def validate(config):
     """
     # Configuration for aix_account beacon should be a dictionary
     if not isinstance(config, dict):
-        return False, ("Configuration for aix_account beacon must be a dict.")
+        return False, "Configuration for aix_account beacon must be a dict."
     if "user" not in config:
         return (
             False,
-            (
-                "Configuration for aix_account beacon must "
-                "include a user or ALL for all users."
-            ),
+            "Configuration for aix_account beacon must include a user or ALL for all users.",
         )
     return True, "Valid beacon configuration"
 

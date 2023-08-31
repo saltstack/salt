@@ -3,6 +3,7 @@ Test the saltcheck module
 """
 
 import pytest
+
 from tests.support.case import ModuleCase
 
 

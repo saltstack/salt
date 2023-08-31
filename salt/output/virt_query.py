@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 virt.query outputter
 ====================
@@ -7,12 +6,6 @@ Used to display the output from the :mod:`virt.query <salt.runners.virt.query>`
 runner.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import 3rd-party libs
-from salt.ext import six
-
 
 def output(data, **kwargs):  # pylint: disable=unused-argument
     """
@@ -20,34 +13,34 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     """
     out = ""
     for id_ in data["data"]:
-        out += "{0}\n".format(id_)
+        out += "{}\n".format(id_)
         for vm_ in data["data"][id_]["vm_info"]:
-            out += "  {0}\n".format(vm_)
+            out += "  {}\n".format(vm_)
             vm_data = data[id_]["vm_info"][vm_]
             if "cpu" in vm_data:
-                out += "    CPU: {0}\n".format(vm_data["cpu"])
+                out += "    CPU: {}\n".format(vm_data["cpu"])
             if "mem" in vm_data:
-                out += "    Memory: {0}\n".format(vm_data["mem"])
+                out += "    Memory: {}\n".format(vm_data["mem"])
             if "state" in vm_data:
-                out += "    State: {0}\n".format(vm_data["state"])
+                out += "    State: {}\n".format(vm_data["state"])
             if "graphics" in vm_data:
                 if vm_data["graphics"].get("type", "") == "vnc":
-                    out += "    Graphics: vnc - {0}:{1}\n".format(
+                    out += "    Graphics: vnc - {}:{}\n".format(
                         id_, vm_data["graphics"]["port"]
                     )
             if "disks" in vm_data:
-                for disk, d_data in six.iteritems(vm_data["disks"]):
-                    out += "    Disk - {0}:\n".format(disk)
-                    out += "      Size: {0}\n".format(d_data["disk size"])
-                    out += "      File: {0}\n".format(d_data["file"])
-                    out += "      File Format: {0}\n".format(d_data["file format"])
+                for disk, d_data in vm_data["disks"].items():
+                    out += "    Disk - {}:\n".format(disk)
+                    out += "      Size: {}\n".format(d_data["disk size"])
+                    out += "      File: {}\n".format(d_data["file"])
+                    out += "      File Format: {}\n".format(d_data["file format"])
             if "nics" in vm_data:
                 for mac in vm_data["nics"]:
-                    out += "    Nic - {0}:\n".format(mac)
-                    out += "      Source: {0}\n".format(
+                    out += "    Nic - {}:\n".format(mac)
+                    out += "      Source: {}\n".format(
                         vm_data["nics"][mac]["source"][
-                            next(six.iterkeys(vm_data["nics"][mac]["source"]))
+                            next(iter(vm_data["nics"][mac]["source"].keys()))
                         ]
                     )
-                    out += "      Type: {0}\n".format(vm_data["nics"][mac]["type"])
+                    out += "      Type: {}\n".format(vm_data["nics"][mac]["type"])
     return out

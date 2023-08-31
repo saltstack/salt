@@ -1,12 +1,14 @@
 """
 Set up the version of Salt
 """
-
+import argparse
+import operator
+import os
 import platform
 import re
 import sys
-
-import salt.utils.entrypoints
+from collections import namedtuple
+from functools import total_ordering
 
 MAX_SIZE = sys.maxsize
 VERSION_LIMIT = MAX_SIZE - 200
@@ -15,7 +17,7 @@ VERSION_LIMIT = MAX_SIZE - 200
 #
 # ALL major version bumps, new release codenames, MUST be defined in the SaltStackVersion.NAMES dictionary, i.e.:
 #
-#    class SaltStackVersion(object):
+#    class SaltStackVersion:
 #
 #        NAMES = {
 #            'Hydrogen': (2014, 1),   # <- This is the tuple to bump versions
@@ -31,6 +33,200 @@ VERSION_LIMIT = MAX_SIZE - 200
 # ALL OTHER VERSION INFORMATION IS EXTRACTED FROM THE GIT TAGS
 #
 # <---- ATTENTION ----------------------------------------------------------------------------------------------------
+
+
+@total_ordering
+class SaltVersion(namedtuple("SaltVersion", "name, info, released")):
+    __slots__ = ()
+
+    def __new__(cls, name, info, released=False):
+        if isinstance(info, int):
+            info = (info,)
+        return super().__new__(cls, name, info, released)
+
+    def __eq__(self, other):
+        return self.info == other.info
+
+    def __gt__(self, other):
+        return self.info > other.info
+
+
+class SaltVersionsInfo(type):
+
+    _sorted_versions = ()
+    _current_release = None
+    _previous_release = None
+    _next_release = None
+
+    # pylint: disable=bad-whitespace,multiple-spaces-before-operator
+    # ----- Please refrain from fixing whitespace ---------------------------------->
+    # The idea is to keep this readable.
+    # -------------------------------------------------------------------------------
+    # fmt: off
+    HYDROGEN      = SaltVersion("Hydrogen"     , info=(2014, 1),  released=True)
+    HELIUM        = SaltVersion("Helium"       , info=(2014, 7),  released=True)
+    LITHIUM       = SaltVersion("Lithium"      , info=(2015, 5),  released=True)
+    BERYLLIUM     = SaltVersion("Beryllium"    , info=(2015, 8),  released=True)
+    BORON         = SaltVersion("Boron"        , info=(2016, 3),  released=True)
+    CARBON        = SaltVersion("Carbon"       , info=(2016, 11), released=True)
+    NITROGEN      = SaltVersion("Nitrogen"     , info=(2017, 7),  released=True)
+    OXYGEN        = SaltVersion("Oxygen"       , info=(2018, 3),  released=True)
+    FLUORINE      = SaltVersion("Fluorine"     , info=(2019, 2),  released=True)
+    NEON          = SaltVersion("Neon"         , info=3000,       released=True)
+    SODIUM        = SaltVersion("Sodium"       , info=3001,       released=True)
+    MAGNESIUM     = SaltVersion("Magnesium"    , info=3002,       released=True)
+    ALUMINIUM     = SaltVersion("Aluminium"    , info=3003,       released=True)
+    SILICON       = SaltVersion("Silicon"      , info=3004,       released=True)
+    PHOSPHORUS    = SaltVersion("Phosphorus"   , info=3005,       released=True)
+    SULFUR        = SaltVersion("Sulfur"       , info=3006,       released=True)
+    CHLORINE      = SaltVersion("Chlorine"     , info=3007)
+    ARGON         = SaltVersion("Argon"        , info=3008)
+    POTASSIUM     = SaltVersion("Potassium"    , info=3009)
+    CALCIUM       = SaltVersion("Calcium"      , info=3010)
+    SCANDIUM      = SaltVersion("Scandium"     , info=3011)
+    TITANIUM      = SaltVersion("Titanium"     , info=3012)
+    VANADIUM      = SaltVersion("Vanadium"     , info=3013)
+    CHROMIUM      = SaltVersion("Chromium"     , info=3014)
+    MANGANESE     = SaltVersion("Manganese"    , info=3015)
+    IRON          = SaltVersion("Iron"         , info=3016)
+    COBALT        = SaltVersion("Cobalt"       , info=3017)
+    NICKEL        = SaltVersion("Nickel"       , info=3018)
+    COPPER        = SaltVersion("Copper"       , info=3019)
+    ZINC          = SaltVersion("Zinc"         , info=3020)
+    GALLIUM       = SaltVersion("Gallium"      , info=3021)
+    GERMANIUM     = SaltVersion("Germanium"    , info=3022)
+    ARSENIC       = SaltVersion("Arsenic"      , info=3023)
+    SELENIUM      = SaltVersion("Selenium"     , info=3024)
+    BROMINE       = SaltVersion("Bromine"      , info=3025)
+    KRYPTON       = SaltVersion("Krypton"      , info=3026)
+    RUBIDIUM      = SaltVersion("Rubidium"     , info=3027)
+    STRONTIUM     = SaltVersion("Strontium"    , info=3028)
+    YTTRIUM       = SaltVersion("Yttrium"      , info=3029)
+    ZIRCONIUM     = SaltVersion("Zirconium"    , info=3030)
+    NIOBIUM       = SaltVersion("Niobium"      , info=3031)
+    MOLYBDENUM    = SaltVersion("Molybdenum"   , info=3032)
+    TECHNETIUM    = SaltVersion("Technetium"   , info=3033)
+    RUTHENIUM     = SaltVersion("Ruthenium"    , info=3034)
+    RHODIUM       = SaltVersion("Rhodium"      , info=3035)
+    PALLADIUM     = SaltVersion("Palladium"    , info=3036)
+    SILVER        = SaltVersion("Silver"       , info=3037)
+    CADMIUM       = SaltVersion("Cadmium"      , info=3038)
+    INDIUM        = SaltVersion("Indium"       , info=3039)
+    TIN           = SaltVersion("Tin"          , info=3040)
+    ANTIMONY      = SaltVersion("Antimony"     , info=3041)
+    TELLURIUM     = SaltVersion("Tellurium"    , info=3042)
+    IODINE        = SaltVersion("Iodine"       , info=3043)
+    XENON         = SaltVersion("Xenon"        , info=3044)
+    CESIUM        = SaltVersion("Cesium"       , info=3045)
+    BARIUM        = SaltVersion("Barium"       , info=3046)
+    LANTHANUM     = SaltVersion("Lanthanum"    , info=3047)
+    CERIUM        = SaltVersion("Cerium"       , info=3048)
+    PRASEODYMIUM  = SaltVersion("Praseodymium" , info=3049)
+    NEODYMIUM     = SaltVersion("Neodymium"    , info=3050)
+    PROMETHIUM    = SaltVersion("Promethium"   , info=3051)
+    SAMARIUM      = SaltVersion("Samarium"     , info=3052)
+    EUROPIUM      = SaltVersion("Europium"     , info=3053)
+    GADOLINIUM    = SaltVersion("Gadolinium"   , info=3054)
+    TERBIUM       = SaltVersion("Terbium"      , info=3055)
+    DYSPROSIUM    = SaltVersion("Dysprosium"   , info=3056)
+    HOLMIUM       = SaltVersion("Holmium"      , info=3057)
+    ERBIUM        = SaltVersion("Erbium"       , info=3058)
+    THULIUM       = SaltVersion("Thulium"      , info=3059)
+    YTTERBIUM     = SaltVersion("Ytterbium"    , info=3060)
+    LUTETIUM      = SaltVersion("Lutetium"     , info=3061)
+    HAFNIUM       = SaltVersion("Hafnium"      , info=3062)
+    TANTALUM      = SaltVersion("Tantalum"     , info=3063)
+    TUNGSTEN      = SaltVersion("Tungsten"     , info=3064)
+    RHENIUM       = SaltVersion("Rhenium"      , info=3065)
+    OSMIUM        = SaltVersion("Osmium"       , info=3066)
+    IRIDIUM       = SaltVersion("Iridium"      , info=3067)
+    PLATINUM      = SaltVersion("Platinum"     , info=3068)
+    GOLD          = SaltVersion("Gold"         , info=3069)
+    MERCURY       = SaltVersion("Mercury"      , info=3070)
+    THALLIUM      = SaltVersion("Thallium"     , info=3071)
+    LEAD          = SaltVersion("Lead"         , info=3072)
+    BISMUTH       = SaltVersion("Bismuth"      , info=3073)
+    POLONIUM      = SaltVersion("Polonium"     , info=3074)
+    ASTATINE      = SaltVersion("Astatine"     , info=3075)
+    RADON         = SaltVersion("Radon"        , info=3076)
+    FRANCIUM      = SaltVersion("Francium"     , info=3077)
+    RADIUM        = SaltVersion("Radium"       , info=3078)
+    ACTINIUM      = SaltVersion("Actinium"     , info=3079)
+    THORIUM       = SaltVersion("Thorium"      , info=3080)
+    PROTACTINIUM  = SaltVersion("Protactinium" , info=3081)
+    URANIUM       = SaltVersion("Uranium"      , info=3082)
+    NEPTUNIUM     = SaltVersion("Neptunium"    , info=3083)
+    PLUTONIUM     = SaltVersion("Plutonium"    , info=3084)
+    AMERICIUM     = SaltVersion("Americium"    , info=3085)
+    CURIUM        = SaltVersion("Curium"       , info=3086)
+    BERKELIUM     = SaltVersion("Berkelium"    , info=3087)
+    CALIFORNIUM   = SaltVersion("Californium"  , info=3088)
+    EINSTEINIUM   = SaltVersion("Einsteinium"  , info=3089)
+    FERMIUM       = SaltVersion("Fermium"      , info=3090)
+    MENDELEVIUM   = SaltVersion("Mendelevium"  , info=3091)
+    NOBELIUM      = SaltVersion("Nobelium"     , info=3092)
+    LAWRENCIUM    = SaltVersion("Lawrencium"   , info=3093)
+    RUTHERFORDIUM = SaltVersion("Rutherfordium", info=3094)
+    DUBNIUM       = SaltVersion("Dubnium"      , info=3095)
+    SEABORGIUM    = SaltVersion("Seaborgium"   , info=3096)
+    BOHRIUM       = SaltVersion("Bohrium"      , info=3097)
+    HASSIUM       = SaltVersion("Hassium"      , info=3098)
+    MEITNERIUM    = SaltVersion("Meitnerium"   , info=3099)
+    DARMSTADTIUM  = SaltVersion("Darmstadtium" , info=3100)
+    ROENTGENIUM   = SaltVersion("Roentgenium"  , info=3101)
+    COPERNICIUM   = SaltVersion("Copernicium"  , info=3102)
+    NIHONIUM      = SaltVersion("Nihonium"     , info=3103)
+    FLEROVIUM     = SaltVersion("Flerovium"    , info=3104)
+    MOSCOVIUM     = SaltVersion("Moscovium"    , info=3105)
+    LIVERMORIUM   = SaltVersion("Livermorium"  , info=3106)
+    TENNESSINE    = SaltVersion("Tennessine"   , info=3107)
+    OGANESSON     = SaltVersion("Oganesson"    , info=3108)
+    # <---- Please refrain from fixing whitespace -----------------------------------
+    # The idea is to keep this readable.
+    # -------------------------------------------------------------------------------
+    # pylint: enable=bad-whitespace,multiple-spaces-before-operator
+    # fmt: on
+
+    @classmethod
+    def versions(cls):
+        if not cls._sorted_versions:
+            cls._sorted_versions = sorted(
+                (getattr(cls, name) for name in dir(cls) if name.isupper()),
+                key=operator.attrgetter("info"),
+            )
+        return cls._sorted_versions
+
+    @classmethod
+    def current_release(cls):
+        if cls._current_release is None:
+            for version in cls.versions():
+                if version.released is False:
+                    cls._current_release = version
+                    break
+        return cls._current_release
+
+    @classmethod
+    def next_release(cls):
+        if cls._next_release is None:
+            next_release_ahead = False
+            for version in cls.versions():
+                if next_release_ahead:
+                    cls._next_release = version
+                    break
+                if version == cls.current_release():
+                    next_release_ahead = True
+        return cls._next_release
+
+    @classmethod
+    def previous_release(cls):
+        if cls._previous_release is None:
+            previous = None
+            for version in cls.versions():
+                if version == cls.current_release():
+                    break
+                previous = version
+            cls._previous_release = previous
+        return cls._previous_release
 
 
 class SaltStackVersion:
@@ -67,134 +263,7 @@ class SaltStackVersion:
 
     git_sha_regex = re.compile(git_sha_regex)
 
-    # Salt versions after 0.17.0 will be numbered like:
-    #   <4-digit-year>.<month>.<bugfix>
-    #
-    # Since the actual version numbers will only be know on release dates, the
-    # periodic table element names will be what's going to be used to name
-    # versions and to be able to mention them.
-
-    NAMES = {
-        # Let's keep at least 3 version names uncommented counting from the
-        # latest release so we can map deprecation warnings to versions.
-        # pylint: disable=E8203
-        # ----- Please refrain from fixing PEP-8 E203 and E265 ----->
-        # The idea is to keep this readable.
-        # -----------------------------------------------------------
-        "Hydrogen": (2014, 1),
-        "Helium": (2014, 7),
-        "Lithium": (2015, 5),
-        "Beryllium": (2015, 8),
-        "Boron": (2016, 3),
-        "Carbon": (2016, 11),
-        "Nitrogen": (2017, 7),
-        "Oxygen": (2018, 3),
-        "Fluorine": (2019, 2),
-        "Neon": (3000,),
-        "Sodium": (3001,),
-        "Magnesium": (3002,),
-        "Aluminium": (3003,),
-        "Silicon": (MAX_SIZE - 95, 0),
-        "Phosphorus": (MAX_SIZE - 94, 0),
-        "Sulfur": (MAX_SIZE - 93, 0),
-        # pylint: disable=E8265
-        #'Chlorine'     : (MAX_SIZE - 92, 0),
-        #'Argon'        : (MAX_SIZE - 91, 0),
-        #'Potassium'    : (MAX_SIZE - 90, 0),
-        #'Calcium'      : (MAX_SIZE - 89, 0),
-        #'Scandium'     : (MAX_SIZE - 88, 0),
-        #'Titanium'     : (MAX_SIZE - 87, 0),
-        #'Vanadium'     : (MAX_SIZE - 86, 0),
-        #'Chromium'     : (MAX_SIZE - 85, 0),
-        #'Manganese'    : (MAX_SIZE - 84, 0),
-        #'Iron'         : (MAX_SIZE - 83, 0),
-        #'Cobalt'       : (MAX_SIZE - 82, 0),
-        #'Nickel'       : (MAX_SIZE - 81, 0),
-        #'Copper'       : (MAX_SIZE - 80, 0),
-        #'Zinc'         : (MAX_SIZE - 79, 0),
-        #'Gallium'      : (MAX_SIZE - 78, 0),
-        #'Germanium'    : (MAX_SIZE - 77, 0),
-        #'Arsenic'      : (MAX_SIZE - 76, 0),
-        #'Selenium'     : (MAX_SIZE - 75, 0),
-        #'Bromine'      : (MAX_SIZE - 74, 0),
-        #'Krypton'      : (MAX_SIZE - 73, 0),
-        #'Rubidium'     : (MAX_SIZE - 72, 0),
-        #'Strontium'    : (MAX_SIZE - 71, 0),
-        #'Yttrium'      : (MAX_SIZE - 70, 0),
-        #'Zirconium'    : (MAX_SIZE - 69, 0),
-        #'Niobium'      : (MAX_SIZE - 68, 0),
-        #'Molybdenum'   : (MAX_SIZE - 67, 0),
-        #'Technetium'   : (MAX_SIZE - 66, 0),
-        #'Ruthenium'    : (MAX_SIZE - 65, 0),
-        #'Rhodium'      : (MAX_SIZE - 64, 0),
-        #'Palladium'    : (MAX_SIZE - 63, 0),
-        #'Silver'       : (MAX_SIZE - 62, 0),
-        #'Cadmium'      : (MAX_SIZE - 61, 0),
-        #'Indium'       : (MAX_SIZE - 60, 0),
-        #'Tin'          : (MAX_SIZE - 59, 0),
-        #'Antimony'     : (MAX_SIZE - 58, 0),
-        #'Tellurium'    : (MAX_SIZE - 57, 0),
-        #'Iodine'       : (MAX_SIZE - 56, 0),
-        #'Xenon'        : (MAX_SIZE - 55, 0),
-        #'Caesium'      : (MAX_SIZE - 54, 0),
-        #'Barium'       : (MAX_SIZE - 53, 0),
-        #'Lanthanum'    : (MAX_SIZE - 52, 0),
-        #'Cerium'       : (MAX_SIZE - 51, 0),
-        #'Praseodymium' : (MAX_SIZE - 50, 0),
-        #'Neodymium'    : (MAX_SIZE - 49, 0),
-        #'Promethium'   : (MAX_SIZE - 48, 0),
-        #'Samarium'     : (MAX_SIZE - 47, 0),
-        #'Europium'     : (MAX_SIZE - 46, 0),
-        #'Gadolinium'   : (MAX_SIZE - 45, 0),
-        #'Terbium'      : (MAX_SIZE - 44, 0),
-        #'Dysprosium'   : (MAX_SIZE - 43, 0),
-        #'Holmium'      : (MAX_SIZE - 42, 0),
-        #'Erbium'       : (MAX_SIZE - 41, 0),
-        #'Thulium'      : (MAX_SIZE - 40, 0),
-        #'Ytterbium'    : (MAX_SIZE - 39, 0),
-        #'Lutetium'     : (MAX_SIZE - 38, 0),
-        #'Hafnium'      : (MAX_SIZE - 37, 0),
-        #'Tantalum'     : (MAX_SIZE - 36, 0),
-        #'Tungsten'     : (MAX_SIZE - 35, 0),
-        #'Rhenium'      : (MAX_SIZE - 34, 0),
-        #'Osmium'       : (MAX_SIZE - 33, 0),
-        #'Iridium'      : (MAX_SIZE - 32, 0),
-        #'Platinum'     : (MAX_SIZE - 31, 0),
-        #'Gold'         : (MAX_SIZE - 30, 0),
-        #'Mercury'      : (MAX_SIZE - 29, 0),
-        #'Thallium'     : (MAX_SIZE - 28, 0),
-        #'Lead'         : (MAX_SIZE - 27, 0),
-        #'Bismuth'      : (MAX_SIZE - 26, 0),
-        #'Polonium'     : (MAX_SIZE - 25, 0),
-        #'Astatine'     : (MAX_SIZE - 24, 0),
-        #'Radon'        : (MAX_SIZE - 23, 0),
-        #'Francium'     : (MAX_SIZE - 22, 0),
-        #'Radium'       : (MAX_SIZE - 21, 0),
-        #'Actinium'     : (MAX_SIZE - 20, 0),
-        #'Thorium'      : (MAX_SIZE - 19, 0),
-        #'Protactinium' : (MAX_SIZE - 18, 0),
-        #'Uranium'      : (MAX_SIZE - 17, 0),
-        #'Neptunium'    : (MAX_SIZE - 16, 0),
-        #'Plutonium'    : (MAX_SIZE - 15, 0),
-        #'Americium'    : (MAX_SIZE - 14, 0),
-        #'Curium'       : (MAX_SIZE - 13, 0),
-        #'Berkelium'    : (MAX_SIZE - 12, 0),
-        #'Californium'  : (MAX_SIZE - 11, 0),
-        #'Einsteinium'  : (MAX_SIZE - 10, 0),
-        #'Fermium'      : (MAX_SIZE - 9, 0),
-        #'Mendelevium'  : (MAX_SIZE - 8, 0),
-        #'Nobelium'     : (MAX_SIZE - 7, 0),
-        #'Lawrencium'   : (MAX_SIZE - 6, 0),
-        #'Rutherfordium': (MAX_SIZE - 5, 0),
-        #'Dubnium'      : (MAX_SIZE - 4, 0),
-        #'Seaborgium'   : (MAX_SIZE - 3, 0),
-        #'Bohrium'      : (MAX_SIZE - 2, 0),
-        #'Hassium'      : (MAX_SIZE - 1, 0),
-        #'Meitnerium'   : (MAX_SIZE - 0, 0),
-        # <---- Please refrain from fixing PEP-8 E203 and E265 ------
-        # pylint: enable=E8203,E8265
-    }
-
+    NAMES = {v.name: v.info for v in SaltVersionsInfo.versions()}
     LNAMES = {k.lower(): v for (k, v) in iter(NAMES.items())}
     VNAMES = {v: k for (k, v) in iter(NAMES.items())}
     RMATCH = {v[:2]: k for (k, v) in iter(NAMES.items())}
@@ -210,7 +279,6 @@ class SaltStackVersion:
         noc=0,
         sha=None,
     ):
-
         if isinstance(major, str):
             major = int(major)
 
@@ -220,6 +288,8 @@ class SaltStackVersion:
                 minor = None
             else:
                 minor = int(minor)
+        if self.can_have_dot_zero(major):
+            minor = minor if minor else 0
 
         if bugfix is None and not self.new_version(major=major):
             bugfix = 0
@@ -254,9 +324,11 @@ class SaltStackVersion:
         self.mbugfix = mbugfix
         self.pre_type = pre_type
         self.pre_num = pre_num
-        self.name = self.VNAMES.get((major, minor), None)
         if self.new_version(major):
-            self.name = self.VNAMES.get((major,), None)
+            vnames_key = (major,)
+        else:
+            vnames_key = (major, minor)
+        self.name = self.VNAMES.get(vnames_key)
         self.noc = noc
         self.sha = sha
 
@@ -265,6 +337,12 @@ class SaltStackVersion:
         determine if using new versioning scheme
         """
         return bool(int(major) >= 3000 and int(major) < VERSION_LIMIT)
+
+    def can_have_dot_zero(self, major):
+        """
+        determine if using new versioning scheme
+        """
+        return bool(int(major) >= 3006 and int(major) < VERSION_LIMIT)
 
     @classmethod
     def parse(cls, version_string):
@@ -277,44 +355,34 @@ class SaltStackVersion:
         )
         match = cls.git_describe_regex.match(vstr)
         if not match:
-            raise ValueError(
-                "Unable to parse version string: '{}'".format(version_string)
-            )
+            raise ValueError(f"Unable to parse version string: '{version_string}'")
         return cls(*match.groups())
 
     @classmethod
     def from_name(cls, name):
         if name.lower() not in cls.LNAMES:
-            raise ValueError("Named version '{}' is not known".format(name))
+            raise ValueError(f"Named version '{name}' is not known")
         return cls(*cls.LNAMES[name.lower()])
 
     @classmethod
     def from_last_named_version(cls):
-        return cls.from_name(
-            cls.VNAMES[
-                max(
-                    [
-                        version_info
-                        for version_info in cls.VNAMES
-                        if version_info[0] < (VERSION_LIMIT)
-                    ]
-                )
-            ]
+        import salt.utils.versions
+
+        salt.utils.versions.warn_until(
+            SaltVersionsInfo.SULFUR,
+            "The use of SaltStackVersion.from_last_named_version() is "
+            "deprecated and set to be removed in {version}. Please use "
+            "SaltStackVersion.current_release() instead.",
         )
+        return cls.current_release()
+
+    @classmethod
+    def current_release(cls):
+        return cls(*SaltVersionsInfo.current_release().info)
 
     @classmethod
     def next_release(cls):
-        return cls.from_name(
-            cls.VNAMES[
-                min(
-                    [
-                        version_info
-                        for version_info in cls.VNAMES
-                        if version_info > cls.from_last_named_version().info
-                    ]
-                )
-            ]
-        )
+        return cls(*SaltVersionsInfo.next_release().info)
 
     @property
     def sse(self):
@@ -325,6 +393,8 @@ class SaltStackVersion:
         info = [self.major]
         if self.new_version(self.major):
             if self.minor:
+                info.append(self.minor)
+            elif self.can_have_dot_zero(self.major):
                 info.append(self.minor)
         else:
             info.extend([self.minor, self.bugfix, self.mbugfix])
@@ -374,20 +444,22 @@ class SaltStackVersion:
     @property
     def string(self):
         if self.new_version(self.major):
-            version_string = "{}".format(self.major)
+            version_string = f"{self.major}"
             if self.minor:
-                version_string = "{}.{}".format(self.major, self.minor)
+                version_string = f"{self.major}.{self.minor}"
+            if not self.minor and self.can_have_dot_zero(self.major):
+                version_string = f"{self.major}.{self.minor}"
         else:
-            version_string = "{}.{}.{}".format(self.major, self.minor, self.bugfix)
+            version_string = f"{self.major}.{self.minor}.{self.bugfix}"
         if self.mbugfix:
-            version_string += ".{}".format(self.mbugfix)
+            version_string += f".{self.mbugfix}"
         if self.pre_type:
-            version_string += "{}{}".format(self.pre_type, self.pre_num)
+            version_string += f"{self.pre_type}{self.pre_num}"
         if self.noc and self.sha:
             noc = self.noc
             if noc < 0:
                 noc = "0na"
-            version_string += "+{}.{}".format(noc, self.sha)
+            version_string += f"+{noc}.{self.sha}"
         return version_string
 
     @property
@@ -401,8 +473,12 @@ class SaltStackVersion:
         version_string = self.string
         if self.sse:
             version_string += " Enterprise"
-        if (self.major, self.minor) in self.RMATCH:
-            version_string += " ({})".format(self.RMATCH[(self.major, self.minor)])
+        if self.new_version(self.major):
+            rmatch_key = (self.major,)
+        else:
+            rmatch_key = (self.major, self.minor)
+        if rmatch_key in self.RMATCH:
+            version_string += f" ({self.RMATCH[rmatch_key]})"
         return version_string
 
     @property
@@ -426,9 +502,8 @@ class SaltStackVersion:
                 other = SaltStackVersion(*other)
             else:
                 raise ValueError(
-                    "Cannot instantiate Version from type '{}'".format(type(other))
+                    f"Cannot instantiate Version from type '{type(other)}'"
                 )
-
         pre_type = self.pre_index
         other_pre_type = other.pre_index
         other_noc_info = list(other.noc_info)
@@ -476,24 +551,24 @@ class SaltStackVersion:
     def __repr__(self):
         parts = []
         if self.name:
-            parts.append("name='{}'".format(self.name))
-        parts.extend(["major={}".format(self.major), "minor={}".format(self.minor)])
+            parts.append(f"name='{self.name}'")
+        parts.extend([f"major={self.major}", f"minor={self.minor}"])
 
         if self.new_version(self.major):
-            if not self.minor:
+            if not self.can_have_dot_zero(self.major) and not self.minor:
                 parts.remove("".join([x for x in parts if re.search("^minor*", x)]))
         else:
-            parts.extend(["bugfix={}".format(self.bugfix)])
+            parts.extend([f"bugfix={self.bugfix}"])
 
         if self.mbugfix:
-            parts.append("minor-bugfix={}".format(self.mbugfix))
+            parts.append(f"minor-bugfix={self.mbugfix}")
         if self.pre_type:
-            parts.append("{}={}".format(self.pre_type, self.pre_num))
+            parts.append(f"{self.pre_type}={self.pre_num}")
         noc = self.noc
         if noc == -1:
             noc = "0na"
         if noc and self.sha:
-            parts.extend(["noc={}".format(noc), "sha={}".format(self.sha)])
+            parts.extend([f"noc={noc}", f"sha={self.sha}"])
         return "<{} {}>".format(self.__class__.__name__, " ".join(parts))
 
 
@@ -501,7 +576,7 @@ class SaltStackVersion:
 #
 #   There's no need to do anything here. The last released codename will be picked up
 # --------------------------------------------------------------------------------------------------------------------
-__saltstack_version__ = SaltStackVersion.from_last_named_version()
+__saltstack_version__ = SaltStackVersion.current_release()
 # <---- Hardcoded Salt Version Information ---------------------------------------------------------------------------
 
 
@@ -509,7 +584,6 @@ __saltstack_version__ = SaltStackVersion.from_last_named_version()
 def __discover_version(saltstack_version):
     # This might be a 'python setup.py develop' installation type. Let's
     # discover the version information at runtime.
-    import os
     import subprocess
 
     if "SETUP_DIRNAME" in globals():
@@ -537,32 +611,15 @@ def __discover_version(saltstack_version):
                 "describe",
                 "--tags",
                 "--long",
-                "--first-parent",
                 "--match",
                 "v[0-9]*",
                 "--always",
             ],
-            **kwargs
+            **kwargs,
         )
 
         out, err = process.communicate()
 
-        if process.returncode != 0:
-            # The git version running this might not support --first-parent
-            # Revert to old command
-            process = subprocess.Popen(
-                [
-                    "git",
-                    "describe",
-                    "--tags",
-                    "--long",
-                    "--match",
-                    "v[0-9]*",
-                    "--always",
-                ],
-                **kwargs
-            )
-            out, err = process.communicate()
         out = out.decode().strip()
         err = err.decode().strip()
 
@@ -591,17 +648,25 @@ def __get_version(saltstack_version):
     If we can get a version provided at installation time or from Git, use
     that instead, otherwise we carry on.
     """
-    try:
-        # Try to import the version information provided at install time
-        from salt._version import __saltstack_version__  # pylint: disable=E0611,F0401
-
-        return __saltstack_version__
-    except ImportError:
+    _hardcoded_version_file = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "_version.txt"
+    )
+    if not os.path.exists(_hardcoded_version_file):
         return __discover_version(saltstack_version)
+    with open(  # pylint: disable=resource-leakage
+        _hardcoded_version_file, encoding="utf-8"
+    ) as rfh:
+        return SaltStackVersion.parse(rfh.read().strip())
 
 
 # Get additional version information if available
 __saltstack_version__ = __get_version(__saltstack_version__)
+if __saltstack_version__.name:
+    # Set SaltVersionsInfo._current_release to avoid lookups when finding previous and next releases
+    SaltVersionsInfo._current_release = getattr(
+        SaltVersionsInfo, __saltstack_version__.name.upper()
+    )
+
 # This function has executed once, we're done with it. Delete it!
 del __get_version
 # <---- Dynamic/Runtime Salt Version Information ---------------------------------------------------------------------
@@ -620,12 +685,21 @@ def salt_information():
     yield "Salt", __version__
 
 
+def package_information():
+
+    """
+    Report package type
+    """
+    import salt.utils.package
+
+    yield "Package Type", salt.utils.package.pkg_type()
+
+
 def dependency_information(include_salt_cloud=False):
     """
     Report versions of library dependencies.
     """
     libs = [
-        ("Python", None, sys.version.rsplit("\n")[0].strip()),
         ("Jinja2", "jinja2", "__version__"),
         ("M2Crypto", "M2Crypto", "version"),
         ("msgpack", "msgpack", "version"),
@@ -650,16 +724,32 @@ def dependency_information(include_salt_cloud=False):
         ("mysql-python", "MySQLdb", "__version__"),
         ("cherrypy", "cherrypy", "__version__"),
         ("docker-py", "docker", "__version__"),
+        ("packaging", "packaging", "__version__"),
+        ("looseversion", "looseversion", None),
+        ("relenv", "relenv", "__version__"),
     ]
 
     if include_salt_cloud:
-        libs.append(("Apache Libcloud", "libcloud", "__version__"),)
+        libs.append(
+            ("Apache Libcloud", "libcloud", "__version__"),
+        )
 
-    for name, imp, attr in libs:
+    def _sort_by_lowercased_name(entry):
+        return entry[0].lower()
+
+    for name, imp, attr in sorted(libs, key=_sort_by_lowercased_name):
         if imp is None:
             yield name, attr
             continue
         try:
+            if attr is None:
+                # Late import to reduce the needed available modules and libs
+                # installed when running `python salt/version.py`
+                from salt._compat import importlib_metadata
+
+                version = importlib_metadata.version(imp)
+                yield name, version
+                continue
             imp = __import__(imp)
             version = getattr(imp, attr)
             if callable(version):
@@ -676,7 +766,7 @@ def system_information():
     Report system versions.
     """
     # Late import so that when getting called from setup.py does not break
-    from distro import linux_distribution
+    from salt.utils.platform import linux_distribution
 
     def system_version():
         """
@@ -730,7 +820,7 @@ def system_information():
                 # ie: R2
                 if re.match(r"^R\d+$", item):
                     release = item
-            release = "{}Server{}".format(version, release)
+            release = f"{version}Server{release}"
         else:
             for item in product_name.split(" "):
                 # If it's a number, decimal number, Thin or Vista, then it's the
@@ -763,6 +853,9 @@ def extensions_information():
     """
     Gather infomation about any installed salt extensions
     """
+    # Late import
+    import salt.utils.entrypoints
+
     extensions = {}
     for entry_point in salt.utils.entrypoints.iter_entry_points("salt.loader"):
         dist_nv = salt.utils.entrypoints.name_and_version_from_entry_point(entry_point)
@@ -778,14 +871,20 @@ def versions_information(include_salt_cloud=False, include_extensions=True):
     """
     Report the versions of dependent software.
     """
+    py_info = [
+        ("Python", sys.version.rsplit("\n")[0].strip()),
+    ]
     salt_info = list(salt_information())
     lib_info = list(dependency_information(include_salt_cloud))
     sys_info = list(system_information())
+    package_info = list(package_information())
 
     info = {
         "Salt Version": dict(salt_info),
+        "Python Version": dict(py_info),
         "Dependency Versions": dict(lib_info),
         "System Versions": dict(sys_info),
+        "Salt Package Information": dict(package_info),
     }
     if include_extensions:
         extensions_info = extensions_information()
@@ -815,14 +914,16 @@ def versions_report(include_salt_cloud=False, include_extensions=True):
     info = []
     for ver_type in (
         "Salt Version",
+        "Python Version",
         "Dependency Versions",
         "Salt Extensions",
+        "Salt Package Information",
         "System Versions",
     ):
         if ver_type == "Salt Extensions" and ver_type not in ver_info:
             # No salt Extensions to report
             continue
-        info.append("{}:".format(ver_type))
+        info.append(f"{ver_type}:")
         # List dependencies in alphabetical, case insensitive order
         for name in sorted(ver_info[ver_type], key=lambda x: x.lower()):
             ver = fmt.format(
@@ -834,5 +935,20 @@ def versions_report(include_salt_cloud=False, include_extensions=True):
     yield from info
 
 
+def _parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--next-release", help="Return the next release", action="store_true"
+    )
+    # When pip installing we pass in other args to this script.
+    # This allows us to catch those args but not use them
+    parser.add_argument("unknown", nargs=argparse.REMAINDER)
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    print(__version__)
+    args = _parser()
+    if args.next_release:
+        print(__saltstack_version__.next_release())
+    else:
+        print(__version__)

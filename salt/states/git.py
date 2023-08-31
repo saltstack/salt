@@ -21,7 +21,7 @@ import salt.utils.files
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -32,8 +32,8 @@ def __virtual__():
     """
     if "git.version" not in __salt__:
         return (False, "git module could not be loaded")
-    git_ver = _LooseVersion(__salt__["git.version"](versioninfo=False))
-    return git_ver >= _LooseVersion("1.6.5")
+    git_ver = Version(__salt__["git.version"](versioninfo=False))
+    return git_ver >= Version("1.6.5")
 
 
 def _revs_equal(rev1, rev2, rev_type):
@@ -88,10 +88,10 @@ def _get_branch_opts(
         return None
 
     if git_ver is None:
-        git_ver = _LooseVersion(__salt__["git.version"](versioninfo=False))
+        git_ver = Version(__salt__["git.version"](versioninfo=False))
 
     ret = []
-    if git_ver >= _LooseVersion("1.8.0"):
+    if git_ver >= Version("1.8.0"):
         ret.extend(["--set-upstream-to", desired_upstream])
     else:
         ret.append("--set-upstream")
@@ -567,8 +567,6 @@ def latest(
         directories. The example also sets up the ``ssh_known_hosts`` ssh key
         required to perform the git checkout.
 
-        Also, it has been reported that the SCP-like syntax for
-
         .. code-block:: yaml
 
             gitlab.example.com:
@@ -701,7 +699,7 @@ def latest(
     # Check to make sure rev and mirror/bare are not both in use
     if rev != "HEAD" and bare:
         return _fail(
-            ret, ("'rev' is not compatible with the 'mirror' and " "'bare' arguments")
+            ret, "'rev' is not compatible with the 'mirror' and 'bare' arguments"
         )
 
     run_check_cmd_kwargs = {"runas": user, "password": password}
@@ -734,13 +732,6 @@ def latest(
         )
     except CommandExecutionError as exc:
         return _fail(ret, "Failed to check remote refs: {}".format(_strip_exc(exc)))
-    except NameError as exc:
-        if "global name" in exc.message:
-            raise CommandExecutionError(
-                "Failed to check remote refs: You may need to install "
-                "GitPython or PyGit2"
-            )
-        raise
 
     if "HEAD" in all_remote_refs:
         head_rev = all_remote_refs["HEAD"]
@@ -834,11 +825,10 @@ def latest(
             # remote repo.
             return _fail(
                 ret,
-                "No revision matching '{}' exists in the remote "
-                "repository".format(rev),
+                "No revision matching '{}' exists in the remote repository".format(rev),
             )
 
-    git_ver = _LooseVersion(__salt__["git.version"](versioninfo=False))
+    git_ver = Version(__salt__["git.version"](versioninfo=False))
 
     check = "refs" if bare else ".git"
     gitdir = os.path.join(target, check)
@@ -903,8 +893,9 @@ def latest(
                     except CommandExecutionError as exc:
                         return _fail(
                             ret,
-                            "Unable to get position of local branch '{}': "
-                            "{}".format(branch, _strip_exc(exc)),
+                            "Unable to get position of local branch '{}': {}".format(
+                                branch, _strip_exc(exc)
+                            ),
                             comments,
                         )
 
@@ -1249,8 +1240,7 @@ def latest(
                                 )
                         else:
                             actions.append(
-                                "Branch '{}' would be checked out "
-                                "and {} to {}".format(
+                                "Branch '{}' would be checked out and {} to {}".format(
                                     branch, merge_action, _short_sha(remote_rev)
                                 )
                             )
@@ -1293,8 +1283,9 @@ def latest(
                         actions.append("Tracking branch would be unset")
                     elif desired_upstream and upstream != desired_upstream:
                         actions.append(
-                            "Tracking branch would be "
-                            "updated to {}".format(desired_upstream)
+                            "Tracking branch would be updated to {}".format(
+                                desired_upstream
+                            )
                         )
                     if ret["changes"]:
                         return _neutral_test(ret, _format_comments(actions))
@@ -1322,7 +1313,7 @@ def latest(
                     # can only do this if the git version is 1.8.0 or newer, as
                     # the --unset-upstream option was not added until that
                     # version.
-                    if git_ver >= _LooseVersion("1.8.0"):
+                    if git_ver >= Version("1.8.0"):
                         upstream_action = "Tracking branch was unset"
                         branch_opts = ["--unset-upstream"]
                     else:
@@ -1391,8 +1382,9 @@ def latest(
                                     )
                             except CommandExecutionError as exc:
                                 ret.setdefault("warnings", []).append(
-                                    "Failed to remove local tag '{}':\n\n"
-                                    "{}\n\n".format(tag_name, exc)
+                                    "Failed to remove local tag '{}':\n\n{}\n\n".format(
+                                        tag_name, exc
+                                    )
                                 )
                             else:
                                 ret["changes"].setdefault("deleted_tags", []).append(
@@ -1426,8 +1418,7 @@ def latest(
                     else:
                         if fetch_changes:
                             comments.append(
-                                "{} was fetched, resulting in updated "
-                                "refs".format(name)
+                                "{} was fetched, resulting in updated refs".format(name)
                             )
 
                     try:
@@ -1584,7 +1575,7 @@ def latest(
                             output_encoding=output_encoding,
                         ):
 
-                            if git_ver >= _LooseVersion("1.8.1.6"):
+                            if git_ver >= Version("1.8.1.6"):
                                 # --ff-only added in version 1.8.1.6. It's not
                                 # 100% necessary, but if we can use it, we'll
                                 # ensure that the merge doesn't go through if
@@ -1918,7 +1909,7 @@ def latest(
                         # we can only do this if the git version is 1.8.0 or
                         # newer, as the --unset-upstream option was not added
                         # until that version.
-                        if git_ver >= _LooseVersion("1.8.0"):
+                        if git_ver >= Version("1.8.0"):
                             upstream_action = "Tracking branch was unset"
                             branch_opts = ["--unset-upstream"]
                         else:
@@ -2520,7 +2511,7 @@ def detached(
         else:
             if fetch_changes:
                 comments.append(
-                    "Remote {} was fetched, resulting in updated " "refs".format(remote)
+                    "Remote {} was fetched, resulting in updated refs".format(remote)
                 )
 
     # get refs and checkout
@@ -2939,7 +2930,7 @@ def config_unset(
 
     if not global_ and not repo:
         return _fail(
-            ret, "Non-global config options require the 'repo' argument to be " "set"
+            ret, "Non-global config options require the 'repo' argument to be set"
         )
 
     if not isinstance(name, str):
@@ -3193,7 +3184,7 @@ def config_set(
 
     if not global_ and not repo:
         return _fail(
-            ret, "Non-global config options require the 'repo' argument to be " "set"
+            ret, "Non-global config options require the 'repo' argument to be set"
         )
 
     if not isinstance(name, str):

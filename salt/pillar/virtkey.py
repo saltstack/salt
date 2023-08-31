@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Accept a key from a hypervisor if the virt runner has already submitted an authorization request
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt libs
 import salt.utils.virt
 
 # Don't "fix" the above docstring to put it on two lines, as the sphinx

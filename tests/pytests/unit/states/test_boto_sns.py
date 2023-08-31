@@ -2,6 +2,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 import pytest
+
 import salt.states.boto_sns as boto_sns
 from tests.support.mock import MagicMock, patch
 

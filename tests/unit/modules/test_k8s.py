@@ -8,6 +8,7 @@ import time
 from subprocess import PIPE, Popen
 
 import pytest
+
 import salt.modules.k8s as k8s
 import salt.utils.files
 import salt.utils.json
@@ -113,7 +114,9 @@ class TestK8SSecrets(TestCase):
         res = k8s.get_secrets(
             "default", name, apiserver_url="http://127.0.0.1:8080", decode=True
         )
-        a = res.get("data", {}).get("testsecret",)
+        a = res.get("data", {}).get(
+            "testsecret",
+        )
         self.assertEqual(a, "teststring")
 
     def test_create_secret(self):

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for execution of ServiceNow CI (configuration items)
 
@@ -19,13 +18,8 @@ Module for execution of ServiceNow CI (configuration items)
           username: ''
           password: ''
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import third party libs
-from salt.ext import six
 
 HAS_LIBS = False
 try:
@@ -84,7 +78,7 @@ def set_change_request_state(change_id, state="approved"):
     client.table = "change_request"
     # Get the change record first
     record = client.get({"number": change_id})
-    if record is None or len(record) == 0:
+    if not record:
         log.error("Failed to fetch change record, maybe it does not exist?")
         return False
     # Use the sys_id as the unique system record
@@ -143,9 +137,9 @@ def non_structured_query(table, query=None, **kwargs):
         # try and assemble a query by keyword
         query_parts = []
         for key, value in kwargs.items():
-            query_parts.append("{0}={1}".format(key, value))
+            query_parts.append("{}={}".format(key, value))
         query = "^".join(query_parts)
-    query = six.text_type(query)
+    query = str(query)
     response = client.get(query)
     return response
 

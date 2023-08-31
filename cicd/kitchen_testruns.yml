@@ -44,11 +44,6 @@ kitchen-centos7-py3-tcp:
     TEST_PLATFORM: centos-7
     NOX_ENV_NAME: runtests-tcp
 
-kitchen-centos8-py3:
-  extends: .run-kitchen
-  variables:
-    TEST_PLATFORM: centos-8
-
 kitchen-debian9-py3:
   extends: .run-kitchen
   variables:

@@ -1,0 +1,4 @@
+{
+    "subprocess": ["pyi_rth_subprocess.py"],
+    "salt.utils.vt": ["pyi_rth_salt.utils.vt.py"],
+}

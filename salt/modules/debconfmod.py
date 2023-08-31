@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Support for Debconf
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import os
 import re
 
 import salt.utils.files
-
-# Import salt libs
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.versions
@@ -111,7 +106,7 @@ def _set_file(path):
     """
     Execute the set selections command for debconf
     """
-    cmd = "debconf-set-selections {0}".format(path)
+    cmd = "debconf-set-selections {}".format(path)
 
     __salt__["cmd.run_stdout"](cmd, python_shell=False)
 
@@ -132,7 +127,7 @@ def set_(package, question, type, value, *extra):
 
     fd_, fname = salt.utils.files.mkstemp(prefix="salt-", close_fd=False)
 
-    line = "{0} {1} {2} {3}".format(package, question, type, value)
+    line = "{} {} {} {}".format(package, question, type, value)
     os.write(fd_, salt.utils.stringutils.to_bytes(line))
     os.close(fd_)
 

@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Display return data as a progress bar
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import 3rd-party libs
 try:
     import progressbar
 
@@ -47,7 +43,7 @@ def progress_iter(progress):
         progressbar.Timer(),
         " Returns: [",
         progressbar.Counter(),
-        "/{0}]".format(progress["minion_count"]),
+        "/{}]".format(progress["minion_count"]),
     ]
     bar = progressbar.ProgressBar(widgets=widgets, maxval=progress["minion_count"])
     bar.start()

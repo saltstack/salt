@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.pagerduty as pagerduty
 from tests.support.mock import MagicMock, patch
 

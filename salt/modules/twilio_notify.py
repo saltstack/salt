@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for notifications via Twilio
 
@@ -19,27 +18,29 @@ Module for notifications via Twilio
             twilio.account_sid: AC32a3c83990934481addd5ce1659f04d2
             twilio.auth_token: mytoken
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# import 3rd party libs
-from salt.ext import six
 
 HAS_LIBS = False
 try:
     import twilio
 
     # Grab version, ensure elements are ints
-    twilio_version = tuple([int(x) for x in twilio.__version_info__])
-    if twilio_version > (5,):
-        TWILIO_5 = False
+    twilio_version = tuple(int(x) for x in twilio.__version_info__)
+    TWILIO_LT_5 = False
+    if twilio_version > (6,):
+        from twilio.base.exceptions import TwilioRestException
+        from twilio.rest import Client as TwilioRestClient
+    elif twilio_version > (5,):
+        # pylint: disable=no-name-in-module
         from twilio.rest import Client as TwilioRestClient
         from twilio.rest import TwilioException as TwilioRestException
+
+        # pylint: enable=no-name-in-module
     else:
-        TWILIO_5 = True
-        from twilio.rest import TwilioRestClient
-        from twilio import TwilioRestException
+        TWILIO_LT_5 = True
+        from twilio import TwilioRestException  # pylint: disable=no-name-in-module
+        from twilio.rest import TwilioRestClient  # pylint: disable=no-name-in-module
     HAS_LIBS = True
 except ImportError:
     pass
@@ -58,7 +59,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The twilio_notify execution module failed to load: the twilio python library is not installed.",
+        "The twilio_notify execution module failed to load: the twilio python library"
+        " is not installed.",
     )
 
 
@@ -68,7 +70,8 @@ def _get_twilio(profile):
     """
     creds = __salt__["config.option"](profile)
     client = TwilioRestClient(
-        creds.get("twilio.account_sid"), creds.get("twilio.auth_token"),
+        creds.get("twilio.account_sid"),
+        creds.get("twilio.auth_token"),
     )
 
     return client
@@ -87,7 +90,7 @@ def send_sms(profile, body, to, from_):
     ret["message"]["sid"] = None
     client = _get_twilio(profile)
     try:
-        if TWILIO_5:
+        if TWILIO_LT_5:
             message = client.sms.messages.create(body=body, to=to, from_=from_)
         else:
             message = client.messages.create(body=body, to=to, from_=from_)
@@ -105,7 +108,7 @@ def send_sms(profile, body, to, from_):
     ret["message"]["status"] = message.status
     ret["message"]["num_segments"] = message.num_segments
     ret["message"]["body"] = message.body
-    ret["message"]["date_sent"] = six.text_type(message.date_sent)
-    ret["message"]["date_created"] = six.text_type(message.date_created)
+    ret["message"]["date_sent"] = str(message.date_sent)
+    ret["message"]["date_created"] = str(message.date_created)
     log.info(ret)
     return ret

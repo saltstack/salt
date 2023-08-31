@@ -5,6 +5,7 @@ Test case for the slack utils module
 import logging
 
 import pytest
+
 import salt.utils.slack as slack
 from tests.support.mock import MagicMock, patch
 
@@ -55,7 +56,10 @@ def test_query():
 
     mock_result = {
         "status": 0,
-        "error": "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1076)",
+        "error": (
+            "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get"
+            " local issuer certificate (_ssl.c:1076)"
+        ),
     }
     mock = MagicMock(return_value=mock_result)
     with patch("salt.utils.http.query", mock):

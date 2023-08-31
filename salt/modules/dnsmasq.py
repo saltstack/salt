@@ -1,21 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing dnsmasq
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -106,7 +99,7 @@ def set_config(config_file="/etc/dnsmasq.conf", follow=True, **kwargs):
                 continue
             if filename.endswith("#") and filename.endswith("#"):
                 continue
-            includes.append("{0}/{1}".format(dnsopts["conf-dir"], filename))
+            includes.append("{}/{}".format(dnsopts["conf-dir"], filename))
 
     ret_kwargs = {}
     for key in kwargs:
@@ -117,17 +110,17 @@ def set_config(config_file="/etc/dnsmasq.conf", follow=True, **kwargs):
         ret_kwargs[key] = kwargs[key]
 
         if key in dnsopts:
-            if isinstance(dnsopts[key], six.string_types):
+            if isinstance(dnsopts[key], str):
                 for config in includes:
                     __salt__["file.sed"](
                         path=config,
-                        before="^{0}=.*".format(key),
-                        after="{0}={1}".format(key, kwargs[key]),
+                        before="^{}=.*".format(key),
+                        after="{}={}".format(key, kwargs[key]),
                     )
             else:
-                __salt__["file.append"](config_file, "{0}={1}".format(key, kwargs[key]))
+                __salt__["file.append"](config_file, "{}={}".format(key, kwargs[key]))
         else:
-            __salt__["file.append"](config_file, "{0}={1}".format(key, kwargs[key]))
+            __salt__["file.append"](config_file, "{}={}".format(key, kwargs[key]))
     return ret_kwargs
 
 
@@ -156,7 +149,7 @@ def get_config(config_file="/etc/dnsmasq.conf"):
             if filename.endswith("#") and filename.endswith("#"):
                 continue
             dnsopts.update(
-                _parse_dnamasq("{0}/{1}".format(dnsopts["conf-dir"], filename))
+                _parse_dnamasq("{}/{}".format(dnsopts["conf-dir"], filename))
             )
     return dnsopts
 
@@ -168,7 +161,7 @@ def _parse_dnamasq(filename):
     fileopts = {}
 
     if not os.path.isfile(filename):
-        raise CommandExecutionError("Error: No such file '{0}'".format(filename))
+        raise CommandExecutionError("Error: No such file '{}'".format(filename))
 
     with salt.utils.files.fopen(filename, "r") as fp_:
         for line in fp_:
@@ -180,7 +173,7 @@ def _parse_dnamasq(filename):
             if "=" in line:
                 comps = line.split("=")
                 if comps[0] in fileopts:
-                    if isinstance(fileopts[comps[0]], six.string_types):
+                    if isinstance(fileopts[comps[0]], str):
                         temp = fileopts[comps[0]]
                         fileopts[comps[0]] = [temp]
                     fileopts[comps[0]].append(comps[1].strip())

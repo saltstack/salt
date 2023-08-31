@@ -173,8 +173,8 @@ def _load_minion(minion_id, cache):
         pillar = {}
 
     addrs = {
-        4: sorted([ipaddress.IPv4Address(addr) for addr in grains.get("ipv4", [])]),
-        6: sorted([ipaddress.IPv6Address(addr) for addr in grains.get("ipv6", [])]),
+        4: sorted(ipaddress.IPv4Address(addr) for addr in grains.get("ipv4", [])),
+        6: sorted(ipaddress.IPv6Address(addr) for addr in grains.get("ipv6", [])),
     }
 
     mine = cache.fetch("minions/{}".format(minion_id), "mine")

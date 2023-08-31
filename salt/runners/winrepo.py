@@ -31,6 +31,12 @@ PER_REMOTE_ONLY = salt.utils.gitfs.PER_REMOTE_ONLY
 GLOBAL_ONLY = ("branch",)
 
 
+def _legacy_git():
+    return not any(
+        (salt.utils.gitfs.GITPYTHON_VERSION, salt.utils.gitfs.PYGIT2_VERSION)
+    )
+
+
 def genrepo(opts=None, fire_event=True):
     """
     Generate winrepo_cachefile based on sls files in the winrepo_dir
@@ -154,9 +160,7 @@ def update_git_repos(opts=None, clean=False, masterless=False):
 
     ret = {}
     for remotes, base_dir in winrepo_cfg:
-        if not any(
-            (salt.utils.gitfs.GITPYTHON_VERSION, salt.utils.gitfs.PYGIT2_VERSION)
-        ):
+        if _legacy_git():
             # Use legacy code
             winrepo_result = {}
             for remote_info in remotes:
@@ -195,14 +199,27 @@ def update_git_repos(opts=None, clean=False, masterless=False):
                         result = result[key]
                 else:
                     mminion = salt.minion.MasterMinion(opts)
-                    result = mminion.states["git.latest"](
-                        remote_url,
+                    result = mminion.functions["state.single"](
+                        "git.latest",
+                        name=remote_url,
                         rev=rev,
                         branch="winrepo",
                         target=gittarget,
                         force_checkout=True,
                         force_reset=True,
                     )
+                    if isinstance(result, list):
+                        # Errors were detected
+                        raise CommandExecutionError(
+                            "Failed to update winrepo remotes: {}".format(
+                                "\n".join(result)
+                            )
+                        )
+                    if "name" not in result:
+                        # Highstate output dict, the results are actually nested
+                        # one level down.
+                        key = next(iter(result))
+                        result = result[key]
                 winrepo_result[result["name"]] = result["result"]
             ret.update(winrepo_result)
         else:

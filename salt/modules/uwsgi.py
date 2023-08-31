@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 uWSGI stats server https://uwsgi-docs.readthedocs.io/en/latest/StatsServer.html
 
@@ -6,10 +5,7 @@ uWSGI stats server https://uwsgi-docs.readthedocs.io/en/latest/StatsServer.html
 :maturity:   new
 :platform:   all
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.json
 import salt.utils.path
 
@@ -23,7 +19,8 @@ def __virtual__():
         return cmd
     return (
         False,
-        "The uwsgi execution module failed to load: the uwsgi binary is not in the path.",
+        "The uwsgi execution module failed to load: the uwsgi binary is not in the"
+        " path.",
     )
 
 
@@ -43,6 +40,6 @@ def stats(socket):
         salt '*' uwsgi.stats 127.0.0.1:5050
     """
 
-    cmd = ["uwsgi", "--connect-and-read", "{0}".format(socket)]
+    cmd = ["uwsgi", "--connect-and-read", "{}".format(socket)]
     out = __salt__["cmd.run"](cmd, python_shell=False)
     return salt.utils.json.loads(out)

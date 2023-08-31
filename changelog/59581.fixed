@@ -1,1 +1,0 @@
-Fix typo in 'salt/states/cmd.py' to use "comment" instead of "commnd".

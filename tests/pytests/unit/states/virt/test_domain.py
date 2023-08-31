@@ -1,9 +1,14 @@
 import pytest
+
 import salt.states.virt as virt
 from salt.exceptions import CommandExecutionError
+from tests.pytests.unit.states.virt.helpers import domain_update_call
 from tests.support.mock import MagicMock, patch
 
-from .test_helpers import domain_update_call
+
+@pytest.fixture
+def configure_loader_modules(libvirt_mock):
+    return {virt: {"libvirt": libvirt_mock}}
 
 
 def test_defined_no_change(test):
@@ -202,30 +207,9 @@ def test_defined_update_error(test):
                 "comment": "Domain myvm updated with live update(s) failures",
             }
             init_mock.assert_not_called()
-            update_mock.assert_called_with(
-                "myvm",
-                cpu=2,
-                boot_dev="cdrom hd",
-                mem=None,
-                disk_profile=None,
-                disks=None,
-                nic_profile=None,
-                interfaces=None,
-                graphics=None,
-                live=True,
-                connection=None,
-                username=None,
-                password=None,
-                boot=None,
-                numatune=None,
-                test=test,
-                hypervisor_features=None,
-                clock=None,
-                serials=None,
-                consoles=None,
-                stop_on_reboot=False,
-                host_devices=None,
-            )
+            assert update_mock.call_args_list == [
+                domain_update_call("myvm", cpu=2, test=test, boot_dev="cdrom hd")
+            ]
 
 
 def test_defined_update_definition_error(test):
@@ -503,30 +487,7 @@ def test_running_update_error():
                 "result": True,
                 "comment": "Domain myvm updated with live update(s) failures",
             }
-            update_mock.assert_called_with(
-                "myvm",
-                cpu=2,
-                mem=None,
-                disk_profile=None,
-                disks=None,
-                nic_profile=None,
-                interfaces=None,
-                graphics=None,
-                live=True,
-                connection=None,
-                username=None,
-                password=None,
-                boot=None,
-                numatune=None,
-                test=False,
-                boot_dev=None,
-                hypervisor_features=None,
-                clock=None,
-                serials=None,
-                consoles=None,
-                stop_on_reboot=False,
-                host_devices=None,
-            )
+            assert update_mock.call_args_list == [domain_update_call("myvm", cpu=2)]
 
 
 @pytest.mark.parametrize("running", ["running", "shutdown"])
@@ -550,7 +511,10 @@ def test_stopped(test, running):
                 changes = {"stopped": [{"domain": "myvm", "shutdown": True}]}
                 comment = "Machine has been shut down"
             assert virt.stopped(
-                "myvm", connection="myconnection", username="user", password="secret",
+                "myvm",
+                connection="myconnection",
+                username="user",
+                password="secret",
             ) == {
                 "name": "myvm",
                 "changes": changes,
@@ -598,7 +562,8 @@ def test_stopped_not_existing(test):
     with patch.dict(virt.__opts__, {"test": test}):
         shutdown_mock = MagicMock(return_value=True)
         with patch.dict(
-            virt.__salt__, {"virt.list_domains": MagicMock(return_value=[])},
+            virt.__salt__,
+            {"virt.list_domains": MagicMock(return_value=[])},
         ):
             assert virt.stopped("myvm") == {
                 "name": "myvm",
@@ -629,7 +594,10 @@ def test_powered_off(test, running):
                 changes = {"unpowered": [{"domain": "myvm", "stop": True}]}
                 comment = "Machine has been powered off"
             assert virt.powered_off(
-                "myvm", connection="myconnection", username="user", password="secret",
+                "myvm",
+                connection="myconnection",
+                username="user",
+                password="secret",
             ) == {
                 "name": "myvm",
                 "result": True if not test or running == "shutdown" else None,
@@ -780,7 +748,10 @@ def test_rebooted(test):
             },
         ):
             assert virt.rebooted(
-                "myvm", connection="myconnection", username="user", password="secret",
+                "myvm",
+                connection="myconnection",
+                username="user",
+                password="secret",
             ) == {
                 "name": "myvm",
                 "result": True if not test else None,

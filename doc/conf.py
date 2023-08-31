@@ -33,7 +33,18 @@ import salt.version  # isort:skip
 formulas_dir = os.path.join(os.pardir, docs_basepath, "formulas")
 
 # ----- Intersphinx Settings ------------------------------------------------>
-intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
+intersphinx_mapping = {
+    "python": (
+        "https://docs.python.org/3",
+        (
+            "/usr/share/doc/python{}.{}/html/objects.inv".format(
+                sys.version_info[0], sys.version_info[1]
+            ),
+            "/usr/share/doc/python/html/objects.inv",
+            None,
+        ),
+    )
+}
 # <---- Intersphinx Settings -------------------------------------------------
 
 # -- General Configuration -----------------------------------------------------
@@ -44,10 +55,13 @@ on_saltstack = "SALT_ON_SALTSTACK" in os.environ
 project = "Salt"
 # This is the default branch on GitHub for the Salt project
 repo_primary_branch = "master"
-latest_release = (
-    # Use next unreleased version if LATEST_RELEASE is undefined env var
-    os.environ.get("LATEST_RELEASE", str(salt.version.__saltstack_version__.major))
-)  # latest release (3003)
+if "LATEST_RELEASE" not in os.environ:
+    salt_version = salt.version.__saltstack_version__
+else:
+    salt_version = salt.version.SaltStackVersion.parse(os.environ["LATEST_RELEASE"])
+
+major_version = str(salt_version.major)
+latest_release = ".".join([str(x) for x in salt_version.info])
 previous_release = os.environ.get(
     "PREVIOUS_RELEASE", "previous_release"
 )  # latest release from previous branch (3002.5)
@@ -86,7 +100,13 @@ elif build_type == "next":
     search_cx = "011515552685726825874:ht0p8miksrm"  # latest
 elif build_type == "previous":
     release = previous_release
-    if release.startswith("3003"):
+    if release.startswith("3006"):
+        search_cx = "2e4374de8af93a7b1"  # 3006
+    elif release.startswith("3005"):
+        search_cx = "57b1006b37edd9e79"  # 3005
+    elif release.startswith("3004"):
+        search_cx = "23cd7068705804111"  # 3004
+    elif release.startswith("3003"):
         search_cx = "a70a1a73eef62aecd"  # 3003
     elif release.startswith("3002"):
         search_cx = "5026f4f2af0bdbe2d"  # 3002
@@ -111,6 +131,7 @@ else:  # latest or something else
 needs_sphinx = "1.3"
 
 spelling_lang = "en_US"
+spelling_show_suggestions = True
 language = "en"
 locale_dirs = [
     "_locale",
@@ -128,19 +149,12 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.imgconverter",
     "sphinx.ext.intersphinx",
-    "httpdomain",
-    "youtube",
-    "saltrepo"
+    "sphinxcontrib.httpdomain",
+    "saltrepo",
+    "myst_parser",
+    "sphinxcontrib.spelling",
     #'saltautodoc', # Must be AFTER autodoc
-    #'shorturls',
 ]
-
-try:
-    import sphinxcontrib.spelling  # false positive, pylint: disable=unused-import
-except ImportError:
-    pass
-else:
-    extensions += ["sphinxcontrib.spelling"]
 
 modindex_common_prefix = ["salt."]
 
@@ -160,21 +174,21 @@ rst_prolog = """\
 .. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
 .. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
-.. _`salt-slack`: https://join.slack.com/t/saltstackcommunity/shared_invite/zt-3av8jjyf-oBQ2M0vhXOhJpNpRkPWBvg
+.. _`salt-slack`: https://join.slack.com/t/saltstackcommunity/shared_invite/zt-1zlfxffs1-NuEH~G9TzOeuNGdsfZIl3w
 .. |windownload| raw:: html
 
      <p>Python3 x86: <a
-     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe.md5"><strong>md5</strong></a></p>
+     href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-x86-Setup.exe.md5"><strong>md5</strong></a></p>
 
      <p>Python3 AMD64: <a
-     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+     href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
+      | <a href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
 
 .. |osxdownloadpy3| raw:: html
 
-     <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
-      | <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
+     <p>x86_64: <a href="https://repo.saltproject.io/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
+      | <a href="https://repo.saltproject.io/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
 """.format(
     release=stripped_release
@@ -184,13 +198,14 @@ rst_prolog = """\
 extlinks = {
     "blob": (
         "https://github.com/saltstack/salt/blob/%s/%%s" % repo_primary_branch,
-        None,
+        "%s",
     ),
-    "issue": ("https://github.com/saltstack/salt/issues/%s", "issue #"),
-    "pull": ("https://github.com/saltstack/salt/pull/%s", "PR #"),
-    "formula_url": ("https://github.com/saltstack-formulas/%s", ""),
+    "issue": ("https://github.com/saltstack/salt/issues/%s", "issue %s"),
+    "pull": ("https://github.com/saltstack/salt/pull/%s", "PR %s"),
+    "formula_url": ("https://github.com/saltstack-formulas/%s", "url %s"),
 }
 
+myst_gfm_only = True
 
 # ----- Localization -------------------------------------------------------->
 locale_dirs = ["locale/"]
@@ -268,7 +283,7 @@ html_show_copyright = True
 ### Latex options
 
 latex_documents = [
-    ("contents", "Salt.tex", "Salt Documentation", "SaltStack, Inc.", "manual"),
+    ("contents", "Salt.tex", "Salt Documentation", "VMware, Inc.", "manual"),
 ]
 
 latex_logo = "_static/salt-logo.png"
@@ -306,19 +321,34 @@ linkcheck_ignore = [
     r"https://salt-cloud.readthedocs.io",
     r"https://salt.readthedocs.io",
     r"http://www.pip-installer.org/",
-    r"http://www.windowsazure.com/",
     r"https://github.com/watching",
     r"dash-feed://",
     r"https://github.com/saltstack/salt/",
-    r"http://bootstrap.saltstack.org",
-    r"https://bootstrap.saltstack.com",
+    r"https://bootstrap.saltproject.io",
     r"https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh",
     r"media.readthedocs.org/dash/salt/latest/salt.xml",
     r"https://portal.aws.amazon.com/gp/aws/securityCredentials",
-    r"https://help.github.com/articles/fork-a-repo",
     r"dash-feed://https%3A//media.readthedocs.org/dash/salt/latest/salt.xml",
+    r"(?i)dns:.*",
+    r"TCP:4506",
+    r"https?://",
+    r"https://cloud.github.com/downloads/saltstack/.*",
+    r"https://INFOBLOX/.*",
+    r"https://SOMESERVERIP:.*",
+    r"https://community.saltstack.com/.*",
+    # GitHub Users
+    r"https://github.com/[^/]$",
+    # GitHub Salt Forks
+    r"https://github.com/[^/]/salt$",
+    r"tag:key=value",
+    r"jdbc:mysql:.*",
+    r"http:post",
 ]
-
+linkcheck_exclude_documents = [
+    r"topics/releases/(2015|2016)\..*\.rst",
+    r"topics/releases/saltapi/0\.8\.0.*",
+]
+linkcheck_timeout = 10
 linkcheck_anchors = False
 
 ### Manpage options
@@ -342,19 +372,18 @@ man_pages = [
     ("ref/cli/salt-ssh", "salt-ssh", "salt-ssh Documentation", authors, 1),
     ("ref/cli/salt-cloud", "salt-cloud", "Salt Cloud Command", authors, 1),
     ("ref/cli/salt-api", "salt-api", "salt-api Command", authors, 1),
-    ("ref/cli/salt-unity", "salt-unity", "salt-unity Command", authors, 1),
     ("ref/cli/spm", "spm", "Salt Package Manager Command", authors, 1),
 ]
 
 
 ### epub options
 epub_title = "Salt Documentation"
-epub_author = "SaltStack, Inc."
+epub_author = "VMware, Inc."
 epub_publisher = epub_author
 epub_copyright = copyright
 
 epub_scheme = "URL"
-epub_identifier = "http://saltstack.com/"
+epub_identifier = "http://saltproject.io/"
 
 epub_tocdup = False
 # epub_tocdepth = 3

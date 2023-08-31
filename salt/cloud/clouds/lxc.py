@@ -343,9 +343,7 @@ last message: {comment}""".format(
     keys = list(ret["changes"].items())
     keys.sort()
     for ch, comment in keys:
-        sret += ("\n" "    {}:\n" "      {}").format(
-            ch, comment.replace("\n", "\n" "      ")
-        )
+        sret += "\n    {}:\n      {}".format(ch, comment.replace("\n", "\n      "))
     if not ret["result"]:
         if "changes" in ret:
             del ret["changes"]
@@ -365,7 +363,7 @@ def destroy(vm_, call=None):
     action = __opts__.get("action", "")
     if action != "destroy" and not destroy_opt:
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
     if not get_configured_provider():
         return

@@ -943,9 +943,8 @@ def _case_password(
         ret["comment"] = " ".join(
             [
                 ret["comment"],
-                "Password for user {} could not be set.\nPlease check your password policy.".format(
-                    name
-                ),
+                "Password for user {} could not be set.\nPlease check your password"
+                " policy.".format(name),
             ]
         )
     return ret

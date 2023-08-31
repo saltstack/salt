@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return salt data via Slack using Incoming Webhooks
 
@@ -56,27 +55,14 @@ append '--return_config alternative' to the salt command.
     salt '*' test.ping --return slack_webhook --return_config alternative
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import json
-
-# Import Python libs
 import logging
+import urllib.parse
 
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six.moves.http_client
-
-# Import Salt Libs
 import salt.returners
 import salt.utils.http
 import salt.utils.yaml
-from salt.ext import six
-from salt.ext.six.moves import map, range
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
 
 log = logging.getLogger(__name__)
 
@@ -130,6 +116,7 @@ def __virtual__():
 
     :return: The virtual name of the module.
     """
+
     return __virtualname__
 
 
@@ -140,9 +127,10 @@ def _sprinkle(config_str):
     :param config_str: The string to be sprinkled
     :return: The string sprinkled
     """
+
     parts = [x for sub in config_str.split("{") for x in sub.split("}")]
     for i in range(1, len(parts), 2):
-        parts[i] = six.text_type(__grains__.get(parts[i], ""))
+        parts[i] = str(__grains__.get(parts[i], ""))
     return "".join(parts)
 
 
@@ -153,10 +141,11 @@ def _format_task(task):
 
     :return: A dictionary ready to be inserted in Slack fields array
     """
+
     return {"value": task, "short": False}
 
 
-def _generate_payload(author_icon, title, report):
+def _generate_payload(author_icon, title, report, **kwargs):
     """
     Prepare the payload for Slack
     :param author_icon: The url for the thumbnail to be displayed
@@ -164,6 +153,13 @@ def _generate_payload(author_icon, title, report):
     :param report: A dictionary with the report of the Salt function
     :return: The payload ready for Slack
     """
+
+    event_rtn = kwargs.get("event_rtn", False)
+
+    if event_rtn is True:
+        author_name = report["id"]
+    else:
+        author_name = _sprinkle("{id}")
 
     title = _sprinkle(title)
 
@@ -183,7 +179,7 @@ def _generate_payload(author_icon, title, report):
         {
             "fallback": title,
             "color": "#272727",
-            "author_name": _sprinkle("{id}"),
+            "author_name": author_name,
             "author_link": _sprinkle("{localhost}"),
             "author_icon": author_icon,
             "title": "Success: {}".format(str(report["success"])),
@@ -292,6 +288,7 @@ def _state_return(ret):
     Return True if ret is a Salt state return
     :param ret: The Salt return
     """
+
     ret_data = ret.get("return")
     if not isinstance(ret_data, dict):
         return False
@@ -333,7 +330,7 @@ def _generate_report(ret, show_tasks):
     return report
 
 
-def _post_message(webhook, author_icon, title, report):
+def _post_message(webhook, author_icon, title, report, **kwargs):
     """
     Send a message to a Slack room through a webhook
     :param webhook:     The url of the incoming webhook
@@ -343,11 +340,13 @@ def _post_message(webhook, author_icon, title, report):
     :return:            Boolean if message was sent successfully
     """
 
-    payload = _generate_payload(author_icon, title, report)
+    event_rtn = kwargs.get("event_rtn", False)
 
-    data = _urlencode({"payload": json.dumps(payload, ensure_ascii=False)})
+    payload = _generate_payload(author_icon, title, report, event_rtn=event_rtn)
 
-    webhook_url = _urljoin("https://hooks.slack.com/services/", webhook)
+    data = urllib.parse.urlencode({"payload": json.dumps(payload, ensure_ascii=False)})
+
+    webhook_url = urllib.parse.urljoin("https://hooks.slack.com/services/", webhook)
     query_result = salt.utils.http.query(webhook_url, "POST", data=data)
 
     # Sometimes the status is not available, so status 200 is assumed when it is not present
@@ -361,12 +360,14 @@ def _post_message(webhook, author_icon, title, report):
         return {"res": False, "message": query_result.get("body", query_result)}
 
 
-def returner(ret):
+def returner(ret, **kwargs):
     """
     Send a slack message with the data through a webhook
     :param ret: The Salt return
     :return: The result of the post
     """
+
+    event_rtn = kwargs.get("event_rtn", False)
 
     _options = _get_options(ret)
 
@@ -385,6 +386,28 @@ def returner(ret):
     else:
         title = _options.get("failure_title")
 
-    slack = _post_message(webhook, author_icon, title, report)
+    slack = _post_message(webhook, author_icon, title, report, event_rtn=event_rtn)
 
     return slack
+
+
+def event_return(events):
+    """
+    Send event data to returner function
+    :param events: The Salt event return
+    :return: The result of the post
+    """
+
+    results = None
+
+    for event in events:
+        ret = event.get("data", False)
+
+        if (
+            ret
+            and "saltutil.find_job" not in ret["fun"]
+            or "salt/auth" not in ret["tag"]
+        ):
+            results = returner(ret, event_rtn=True)
+
+    return results

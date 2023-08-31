@@ -1,6 +1,7 @@
 """
 Manage groups on Mac OS 10.7+
 """
+import logging
 
 import salt.utils.functools
 import salt.utils.itertools
@@ -13,6 +14,8 @@ try:
 except ImportError:
     pass
 
+log = logging.getLogger(__name__)
+
 
 # Define the module's virtual name
 __virtualname__ = "group"
@@ -23,7 +26,8 @@ def __virtual__():
     if __grains__.get("kernel") != "Darwin" or __grains__["osrelease_info"] < (10, 7):
         return (
             False,
-            "The mac_group execution module cannot be loaded: only available on Darwin-based systems >= 10.7",
+            "The mac_group execution module cannot be loaded: only available on"
+            " Darwin-based systems >= 10.7",
         )
     _dscl = salt.utils.functools.namespaced_function(_dscl, globals())
     _flush_dscl_cache = salt.utils.functools.namespaced_function(
@@ -34,7 +38,15 @@ def __virtual__():
 
 def add(name, gid=None, **kwargs):
     """
+    .. versionchanged:: 3006.0
+
     Add the specified group
+
+    name
+        Name of the new group
+
+    gid
+        Use GID for the new group
 
     CLI Example:
 
@@ -54,6 +66,8 @@ def add(name, gid=None, **kwargs):
         )
     if gid is not None and not isinstance(gid, int):
         raise SaltInvocationError("gid must be an integer")
+    if "non_unique" in kwargs:
+        log.warning("The non_unique parameter is not supported on this platform.")
     # check if gid is already in use
     gid_list = _list_gids()
     if str(gid) in gid_list:

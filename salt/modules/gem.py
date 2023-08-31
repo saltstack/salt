@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Manage ruby gems.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import re
 
-# Import Salt libs
 import salt.utils.itertools
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError

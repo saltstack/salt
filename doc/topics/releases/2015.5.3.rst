@@ -14,7 +14,16 @@ Statistics
 - Total Issue References: **69**
 - Total PR References: **207**
 
-- Contributors: **62** (`CameronNemo`_, `Lanzaa`_, `Starblade42`_, `The-Loeki`_, `TheScriptSage`_, `aboe76`_, `ahus1`_, `aneeshusa`_, `anlutro`_, `arthurlogilab`_, `basepi`_, `borutmrak`_, `cachedout`_, `cgtx`_, `codertux`_, `cro`_, `dkiser`_, `driskell`_, `eliasp`_, `garethgreenaway`_, `grischa`_, `gthb`_, `heewa`_, `infestdead`_, `jacksontj`_, `jacobhammons`_, `jayeshka`_, `jeanpralo`_, `jfindlay`_, `jodv`_, `joejulian`_, `justinta`_, `kartiksubbarao`_, `kev009`_, `kiorky`_, `lorengordon`_, `msciciel`_, `msteed`_, `nmadhok`_, `notpeter`_, `obestwalter`_, `pengyao`_, `pille`_, `porterjamesj`_, `pruiz`_, `quixoten`_, `rallytime`_, `rhertzog`_, `ruzarowski`_, `ryan-lane`_, `steverweber`_, `tankywoo`_, `tbaker57`_, `techhat`_, `terminalmage`_, `thatch45`_, `thenewwazoo`_, `trevor-h`_, `twangboy`_, `variia`_, `zefrog`_, `zhujinhe`_)
+- Contributors: **62** (`CameronNemo`_, `Lanzaa`_, `Starblade42`_, `The-Loeki`_, `TheScriptSage`_,
+  `aboe76`_, `ahus1`_, `aneeshusa`_, `anlutro`_, `arthurlogilab`_, `basepi`_, `borutmrak`_,
+  `cachedout`_, `cgtx`_, `codertux`_, `cro`_, `dkiser`_, `driskell`_, `eliasp`_,
+  `garethgreenaway`_, `grischa`_, `gthb`_, `heewa`_, `infestdead`_, `jacksontj`_, `jacobhammons`_,
+  `jayeshka`_, `jeanpralo`_, `jfindlay`_, `jodv`_, `joejulian`_, `justinta`_, `kartiksubbarao`_,
+  `kev009`_, `kiorky`_, `lorengordon`_, `msciciel`_, `msteed`_, `nmadhok`_, `notpeter`_,
+  `obestwalter`_, `pengyao`_, `pille`_, `porterjamesj`_, `pruiz`_, `quixoten`_, `rallytime`_,
+  `rhertzog`_, `ruzarowski`_, `ryan-lane`_, `steverweber`_, `tankywoo`_, `tbaker57`_, `techhat`_,
+  `terminalmage`_, `thatch45`_, `thenewwazoo`_, `trevor-h`_, `twangboy`_, `variia`_, `zefrog`_,
+  `zhujinhe`_)
 
 
 Changelog for v2015.5.2..v2015.5.3
@@ -62,7 +71,7 @@ Changelog for v2015.5.2..v2015.5.3
 
   * 564dffd14a depend on win libs rather than mocking them
 
-  * 9b9aeb8628 resolved all erors.
+  * 9b9aeb8628 resolved all errors.
 
   * aaf89354c0 adding win_groupadd unit test case.
 
@@ -221,7 +230,7 @@ Changelog for v2015.5.2..v2015.5.3
 
   * a3c1063a37 fix deprecated pymongo usage causing errors in latest pymongo
 
-* **ISSUE** `#24862`_: (`dkatsanikakis`_) gpg.import_key returns error after succesfully completed (refs: `#24994`_, `#24966`_)
+* **ISSUE** `#24862`_: (`dkatsanikakis`_) gpg.import_key returns error after successfully completed (refs: `#24994`_, `#24966`_)
 
 * **PR** `#24994`_: (`garethgreenaway`_) Another Fix to gpg.py in 2015.5
   @ *2015-06-27 22:28:15 UTC*
@@ -273,7 +282,7 @@ Changelog for v2015.5.2..v2015.5.3
 
   * 6b544227ab Only warn about digital ocean deprecation if digital ocean is configured
 
-* **ISSUE** `#24862`_: (`dkatsanikakis`_) gpg.import_key returns error after succesfully completed (refs: `#24994`_, `#24966`_)
+* **ISSUE** `#24862`_: (`dkatsanikakis`_) gpg.import_key returns error after successfully completed (refs: `#24994`_, `#24966`_)
 
 * **PR** `#24966`_: (`garethgreenaway`_) Fixes to gpg.py in 2015.5
   @ *2015-06-25 19:58:49 UTC*
@@ -583,11 +592,11 @@ Changelog for v2015.5.2..v2015.5.3
 * **PR** `#24791`_: (`rallytime`_) Back-port `#24749`_ to 2015.5
   @ *2015-06-18 17:43:15 UTC*
 
-  * **PR** `#24749`_: (`obestwalter`_) add windows specfic default for multiprocessing (refs: `#24791`_)
+  * **PR** `#24749`_: (`obestwalter`_) add windows specific default for multiprocessing (refs: `#24791`_)
 
   * 7073a9f850 Merge pull request `#24791`_ from rallytime/bp-24749
 
-  * be43b2b394 add windows specfic default for multiprocessing
+  * be43b2b394 add windows specific default for multiprocessing
 
 * **PR** `#24792`_: (`rallytime`_) Back-port `#24757`_ to 2015.5
   @ *2015-06-18 15:58:35 UTC*
@@ -1033,7 +1042,7 @@ Changelog for v2015.5.2..v2015.5.3
 
 * **ISSUE** `#24480`_: (`kiorky`_) [CRITICAL] [2015.5] tls breaks tzinfo (refs: `#24551`_)
 
-* **PR** `#24551`_: (`joejulian`_) 2015.5 dont pollute environment
+* **PR** `#24551`_: (`joejulian`_) 2015.5 don't pollute environment
   @ *2015-06-11 02:13:06 UTC*
 
   * 20ada1f8a1 Merge pull request `#24551`_ from joejulian/2015.5_dont_pollute_environment
@@ -1355,13 +1364,13 @@ Changelog for v2015.5.2..v2015.5.3
 * **PR** `#24456`_: (`rallytime`_) Back-port `#24441`_ to 2015.5
   @ *2015-06-05 22:32:25 UTC*
 
-  * **PR** `#24441`_: (`arthurlogilab`_) [doc] Alignement fix on external_auth documentation (refs: `#24456`_)
+  * **PR** `#24441`_: (`arthurlogilab`_) [doc] Alignment fix on external_auth documentation (refs: `#24456`_)
 
   * ced558a6e6 Merge pull request `#24456`_ from rallytime/bp-24441
 
   * 70028553c1 yaml indentations should be 2 spaces
 
-  * 21b51abf25 [doc] Alignement fix on external_auth documentation
+  * 21b51abf25 [doc] Alignment fix on external_auth documentation
 
 * **ISSUE** `#24397`_: (`kiorky`_) on debian: states.apt should use virtualname as it shadows system apt module (refs: `#24398`_, `#24400`_, `#24399`_)
 

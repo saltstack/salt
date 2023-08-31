@@ -95,8 +95,9 @@ def _run_all(cmd):
 
     except OSError as exc:
         raise CommandExecutionError(
-            "Unable to run command '{}' with the context '{}', "
-            "reason: {}".format(cmd, kwargs, exc)
+            "Unable to run command '{}' with the context '{}', reason: {}".format(
+                cmd, kwargs, exc
+            )
         )
 
     ret = {}
@@ -328,16 +329,16 @@ def _read_plist_file(root, file_name):
     :return:  An empty dictionary if the plist file was invalid, otherwise, a dictionary with plist data
     """
     file_path = os.path.join(root, file_name)
-    log.debug("read_plist: Gathering service info for {}".format(file_path))
+    log.debug("read_plist: Gathering service info for %s", file_path)
 
     # Must be a plist file
     if not file_path.lower().endswith(".plist"):
-        log.debug("read_plist: Not a plist file: {}".format(file_path))
+        log.debug("read_plist: Not a plist file: %s", file_path)
         return {}
 
     # ignore broken symlinks
     if not os.path.exists(os.path.realpath(file_path)):
-        log.warning("read_plist: Ignoring broken symlink: {}".format(file_path))
+        log.warning("read_plist: Ignoring broken symlink: %s", file_path)
         return {}
 
     try:
@@ -348,9 +349,8 @@ def _read_plist_file(root, file_name):
         # Raised in python3 if the file is not XML.
         # There's nothing we can do; move on to the next one.
         log.warning(
-            'read_plist: Unable to parse "{}" as it is invalid XML: InvalidFileException.'.format(
-                file_path
-            )
+            'read_plist: Unable to parse "%s" as it is invalid XML: InvalidFileException.',
+            file_path,
         )
         return {}
 
@@ -358,27 +358,22 @@ def _read_plist_file(root, file_name):
         # fixes https://github.com/saltstack/salt/issues/58143
         # choosing not to log a Warning as this would happen on BigSur+ machines.
         log.debug(
-            "Caught ValueError: '{}', while trying to parse '{}'.".format(
-                err, file_path
-            )
+            "Caught ValueError: '%s', while trying to parse '%s'.", err, file_path
         )
         return {}
 
     except xml.parsers.expat.ExpatError:
         # Raised by py3 if the file is XML, but with errors.
         log.warning(
-            'read_plist: Unable to parse "{}" as it is invalid XML: xml.parsers.expat.ExpatError.'.format(
-                file_path
-            )
+            'read_plist: Unable to parse "%s" as it is invalid XML: xml.parsers.expat.ExpatError.',
+            file_path,
         )
         return {}
 
     if "Label" not in plist:
         # not all launchd plists contain a Label key
         log.debug(
-            "read_plist: Service does not contain a Label key. Skipping {}.".format(
-                file_path
-            )
+            "read_plist: Service does not contain a Label key. Skipping %s.", file_path
         )
         return {}
 

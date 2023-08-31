@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Venafi Pillar Certificates
 
@@ -13,7 +12,6 @@ section of your ``master`` configuration file:
     ext_pillar:
       - venafi: True
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 

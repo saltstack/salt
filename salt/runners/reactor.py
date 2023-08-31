@@ -58,7 +58,6 @@ def list_(saltenv="base", test=None):
     with salt.utils.event.get_event(
         "master",
         __opts__["sock_dir"],
-        __opts__["transport"],
         opts=__opts__,
         listen=True,
     ) as sevent:
@@ -91,7 +90,6 @@ def add(event, reactors, saltenv="base", test=None):
     with salt.utils.event.get_event(
         "master",
         __opts__["sock_dir"],
-        __opts__["transport"],
         opts=__opts__,
         listen=True,
     ) as sevent:
@@ -123,7 +121,6 @@ def delete(event, saltenv="base", test=None):
     with salt.utils.event.get_event(
         "master",
         __opts__["sock_dir"],
-        __opts__["transport"],
         opts=__opts__,
         listen=True,
     ) as sevent:
@@ -154,7 +151,6 @@ def is_leader():
     with salt.utils.event.get_event(
         "master",
         __opts__["sock_dir"],
-        __opts__["transport"],
         opts=__opts__,
         listen=True,
     ) as sevent:
@@ -183,7 +179,6 @@ def set_leader(value=True):
     with salt.utils.event.get_event(
         "master",
         __opts__["sock_dir"],
-        __opts__["transport"],
         opts=__opts__,
         listen=True,
     ) as sevent:

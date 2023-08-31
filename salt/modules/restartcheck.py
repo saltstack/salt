@@ -227,8 +227,8 @@ def _format_output(
 
         if restartable:
             ret += (
-                "Of these, {} seem to contain systemd service definitions or init scripts "
-                "which can be used to restart them:\n".format(len(restartable))
+                "Of these, {} seem to contain systemd service definitions or init"
+                " scripts which can be used to restart them:\n".format(len(restartable))
             )
             for package in restartable:
                 ret += package + ":\n"
@@ -510,7 +510,10 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
     else:
         return {
             "result": False,
-            "comment": "Only available on Debian, Red Hat and NI Linux Real-Time based systems.",
+            "comment": (
+                "Only available on Debian, Red Hat and NI Linux Real-Time based"
+                " systems."
+            ),
         }
 
     # Check kernel versions
@@ -565,8 +568,9 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
         if deleted_file is False:
             return {
                 "result": False,
-                "comment": "Could not get list of processes."
-                " (Do you have root access?)",
+                "comment": (
+                    "Could not get list of processes. (Do you have root access?)"
+                ),
             }
 
         _check_timeout(start_time, timeout)

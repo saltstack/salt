@@ -179,7 +179,7 @@ def deployment_present(
 
     if (metadata or spec) and source:
         return _error(
-            ret, "'source' cannot be used in combination with 'metadata' or " "'spec'"
+            ret, "'source' cannot be used in combination with 'metadata' or 'spec'"
         )
 
     if metadata is None:
@@ -268,7 +268,7 @@ def service_present(
 
     if (metadata or spec) and source:
         return _error(
-            ret, "'source' cannot be used in combination with 'metadata' or " "'spec'"
+            ret, "'source' cannot be used in combination with 'metadata' or 'spec'"
         )
 
     if metadata is None:
@@ -724,7 +724,7 @@ def pod_present(
 
     if (metadata or spec) and source:
         return _error(
-            ret, "'source' cannot be used in combination with 'metadata' or " "'spec'"
+            ret, "'source' cannot be used in combination with 'metadata' or 'spec'"
         )
 
     if metadata is None:

@@ -14,7 +14,18 @@ Statistics
 - Total Issue References: **120**
 - Total PR References: **312**
 
-- Contributors: **78** (`AkhterAli`_, `DmitryKuzmenko`_, `MadsRC`_, `Oro`_, `The-Loeki`_, `abednarik`_, `akissa`_, `anlutro`_, `basepi`_, `bastiaanb`_, `bdrung`_, `borgstrom`_, `cachedout`_, `clan`_, `clinta`_, `cournape`_, `cro`_, `ctrlrsf`_, `dmacvicar`_, `dmurphy18`_, `dnd`_, `dr4Ke`_, `eliasp`_, `fcrozat`_, `frioux`_, `galet`_, `garethgreenaway`_, `gqgunhed`_, `gtmanfred`_, `hexedpackets`_, `isbm`_, `jacksontj`_, `jacobhammons`_, `jfindlay`_, `jleimbach`_, `job`_, `joejulian`_, `julianbrost`_, `justinta`_, `kingsquirrel152`_, `kiorky`_, `l2ol33rt`_, `lagesag`_, `lorengordon`_, `mbarrien`_, `mpreziuso`_, `multani`_, `nmadhok`_, `oeuftete`_, `opdude`_, `optix2000`_, `pass-by-value`_, `paulnivin`_, `plastikos`_, `pritambaral`_, `rallytime`_, `rasathus`_, `rmatulat`_, `ruxandraburtica`_, `ryan-lane`_, `s0undt3ch`_, `seanjnkns`_, `serge-p`_, `sjorge`_, `stanislavb`_, `tbaker57`_, `techhat`_, `terminalmage`_, `thatch45`_, `thegoodduke`_, `thomaso-mirodin`_, `ticosax`_, `timcharper`_, `tkunicki`_, `trevor-h`_, `twangboy`_, `whiteinge`_, `whytewolf`_)
+- Contributors: **78** (`AkhterAli`_, `DmitryKuzmenko`_, `MadsRC`_, `Oro`_, `The-Loeki`_,
+  `abednarik`_, `akissa`_, `anlutro`_, `basepi`_, `bastiaanb`_, `bdrung`_, `borgstrom`_,
+  `cachedout`_, `clan`_, `clinta`_, `cournape`_, `cro`_, `ctrlrsf`_, `dmacvicar`_, `dmurphy18`_,
+  `dnd`_, `dr4Ke`_, `eliasp`_, `fcrozat`_, `frioux`_, `galet`_, `garethgreenaway`_, `gqgunhed`_,
+  `gtmanfred`_, `hexedpackets`_, `isbm`_, `jacksontj`_, `jacobhammons`_, `jfindlay`_, `jleimbach`_,
+  `job`_, `joejulian`_, `julianbrost`_, `justinta`_, `kingsquirrel152`_, `kiorky`_, `l2ol33rt`_,
+  `lagesag`_, `lorengordon`_, `mbarrien`_, `mpreziuso`_, `multani`_, `nmadhok`_, `oeuftete`_,
+  `opdude`_, `optix2000`_, `pass-by-value`_, `paulnivin`_, `plastikos`_, `pritambaral`_,
+  `rallytime`_, `rasathus`_, `rmatulat`_, `ruxandraburtica`_, `ryan-lane`_, `s0undt3ch`_,
+  `seanjnkns`_, `serge-p`_, `sjorge`_, `stanislavb`_, `tbaker57`_, `techhat`_, `terminalmage`_,
+  `thatch45`_, `thegoodduke`_, `thomaso-mirodin`_, `ticosax`_, `timcharper`_, `tkunicki`_,
+  `trevor-h`_, `twangboy`_, `whiteinge`_, `whytewolf`_)
 
 
 Known Issues
@@ -126,7 +137,7 @@ Changelog for v2015.8.3..v2015.8.4
 
     * 8e56be7f4c Merge pull request `#30548`_ from jacobhammons/doc-fixes
 
-      * 03c51bb54d Added placeholder release notes for 2015.5.10 Changed old doc links from docs.saltstack.org to docs.saltstack.com
+      * 03c51bb54d Added placeholder release notes for 2015.5.10 Changed old doc links from docs.saltstack.org to docs.saltproject.io
 
     * 1aafd4c5b5 Merge pull request `#30530`_ from terminalmage/yumpkg-dnf-cleanup
 
@@ -519,7 +530,7 @@ Changelog for v2015.8.3..v2015.8.4
 * **PR** `#30384`_: (`isbm`_) Bugfix: info_available does not work correctly on SLE 11 series
   @ *2016-01-15 18:31:57 UTC*
 
-  * c478148b60 Merge pull request `#30384`_ from isbm/isbm-zypper-info-avaiable-fix
+  * c478148b60 Merge pull request `#30384`_ from isbm/isbm-zypper-info-available-fix
 
   * c7bc20e865 Split information, that is compatible with the Zypper's output on SLE11.
 
@@ -732,14 +743,14 @@ Changelog for v2015.8.3..v2015.8.4
 
   * a7c2ad5505 Fix issue where pyVmomi 6.0.0 raises SSL Error for systems using Python2.7+
 
-* **PR** `#30354`_: (`anlutro`_) Make sure all ignore_missing SLSes are catched
+* **PR** `#30354`_: (`anlutro`_) Make sure all ignore_missing SLSes are caught
   @ *2016-01-14 16:24:19 UTC*
 
   * **PR** `#19429`_: (`ryan-lane`_) Add new ignore_missing option to pillar top (refs: `#30354`_)
 
   * 7ee61f0d62 Merge pull request `#30354`_ from alprs/fix-pillar_ignore_missing
 
-  * 2f662bbc8d make sure *all* ignore_missing slses are catched
+  * 2f662bbc8d make sure *all* ignore_missing slses are caught
 
 * **PR** `#30356`_: (`nmadhok`_) Adding code author
   @ *2016-01-14 16:23:08 UTC*
@@ -1037,7 +1048,7 @@ Changelog for v2015.8.3..v2015.8.4
 
   * 0877b33026 Fixed some linting issues
 
-  * 8ec36497a1 Added note about systemd and uncleanshutdown. Also fixed line lenght of comments to max 80 characters as per PEP0008
+  * 8ec36497a1 Added note about systemd and uncleanshutdown. Also fixed line length of comments to max 80 characters as per PEP0008
 
   * a50428d02c On an unclean shutdown, if oncleanshutdown is given a path, an keyy:value of shutdown:unclean is added to the returned data. The documentation states that the key should be 'uncleanshutdown' and that the value should either be True or False. This is fixed in the code
 
@@ -1281,7 +1292,7 @@ Changelog for v2015.8.3..v2015.8.4
 
       * 56544a77f6 Update user home event when createhome is set to False
 
-    * 1a5d585d91 Merge pull request `#30127`_ from jsutton/clarify-documenation-for-random_master
+    * 1a5d585d91 Merge pull request `#30127`_ from jsutton/clarify-documentation-for-random_master
 
       * 01dbf385ef Adding random_master to reference and updating master_shuffle. Adding master_shuffle to the minion example config file as it is needed for multi-master PKI.
 
@@ -1619,12 +1630,12 @@ Changelog for v2015.8.3..v2015.8.4
 
   * 0bb83e51aa Updated Cloud msic section.
 
-* **PR** `#30029`_: (`terminalmage`_) git.latest: Fix handling of nonexistant branches
+* **PR** `#30029`_: (`terminalmage`_) git.latest: Fix handling of nonexistent branches
   @ *2015-12-28 19:39:29 UTC*
 
-  * a5f7d9c2fc Merge pull request `#30029`_ from terminalmage/git.latest-nonexistant-branch
+  * a5f7d9c2fc Merge pull request `#30029`_ from terminalmage/git.latest-nonexistent-branch
 
-  * 0b95894c9f git.latest: Fix handling of nonexistant branches
+  * 0b95894c9f git.latest: Fix handling of nonexistent branches
 
 * **PR** `#30016`_: (`anlutro`_) Properly normalize locales in locale.gen_locale
   @ *2015-12-28 15:33:48 UTC*
@@ -1834,7 +1845,7 @@ Changelog for v2015.8.3..v2015.8.4
 
   * 3b7f5540ec Add vSphere module to doc ref module tree
 
-* **ISSUE** `#29751`_: (`ether42`_) mod_hostname behavior is systemd dependant (refs: `#29767`_)
+* **ISSUE** `#29751`_: (`ether42`_) mod_hostname behavior is systemd dependent (refs: `#29767`_)
 
 * **PR** `#29767`_: (`abednarik`_) Hosts file update in mod_hostname.
   @ *2015-12-17 18:31:18 UTC*
@@ -2026,7 +2037,7 @@ Changelog for v2015.8.3..v2015.8.4
 
   * 7c50533d3f Merge pull request `#29683`_ from rallytime/vsan_fixes
 
-  * afc003079e Catch more specifc error to pass the error message through elegantly.
+  * afc003079e Catch more specific error to pass the error message through elegantly.
 
 * **PR** `#29687`_: (`basepi`_) [2015.8] Merge forward from 2015.5 to 2015.8
   @ *2015-12-15 18:38:46 UTC*
@@ -2209,9 +2220,9 @@ Changelog for v2015.8.3..v2015.8.4
 
   * b96d8ff1d9 Minor update to release notes for missing fix
 
-  * e72354aac4 Fix typo specfic -> specific
+  * e72354aac4 Fix typo of specific
 
-  * 5708355762 Fix typo comparsion -> comparison
+  * 5708355762 Fix typo of comparison
 
 * **PR** `#29540`_: (`basepi`_) [2015.8] Merge forward from 2015.5 to 2015.8
   @ *2015-12-08 21:27:01 UTC*
@@ -2545,7 +2556,7 @@ Changelog for v2015.8.3..v2015.8.4
 
   * 8fe39d0ef8 Merge pull request `#29400`_ from twangboy/fix_19332
 
-  * 7bdddaca53 Fixed grammer
+  * 7bdddaca53 Fixed grammar
 
   * d965d00a09 Fix `#19332`_
 

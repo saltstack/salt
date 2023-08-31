@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.cloud as cloud
 import salt.utils.cloud
 from tests.support.mock import MagicMock, patch
@@ -159,16 +160,12 @@ def test_profile():
             assert cloud.profile(name, profile) == ret
 
         with patch.dict(cloud.__opts__, {"test": False}):
-            comt = ("Failed to create instance {}" "using profile {}").format(
-                name, profile
-            )
+            comt = "Failed to create instance {} using profile {}".format(name, profile)
             ret.update({"comment": comt, "result": False})
             assert cloud.profile(name, profile) == ret
 
         with patch.dict(cloud.__opts__, {"test": False}):
-            comt = ("Failed to create instance {}" "using profile {}").format(
-                name, profile
-            )
+            comt = "Failed to create instance {} using profile {}".format(name, profile)
             ret.update({"comment": comt, "result": False})
             assert cloud.profile(name, profile) == ret
 
@@ -269,7 +266,9 @@ def test_volume_attached():
         cloud.__salt__, {"cloud.volume_list": mock_dict, "cloud.action": mock}
     ):
         with patch.object(
-            salt.utils.cloud, "check_name", MagicMock(side_effect=[True, False, True]),
+            salt.utils.cloud,
+            "check_name",
+            MagicMock(side_effect=[True, False, True]),
         ):
             comt = "Invalid characters in name."
             ret.update({"comment": comt})
@@ -338,7 +337,9 @@ def test_volume_detached():
         cloud.__salt__, {"cloud.volume_list": mock_dict, "cloud.action": mock}
     ):
         with patch.object(
-            salt.utils.cloud, "check_name", MagicMock(side_effect=[True, False, True]),
+            salt.utils.cloud,
+            "check_name",
+            MagicMock(side_effect=[True, False, True]),
         ):
             comt = "Invalid characters in name."
             ret.update({"comment": comt})

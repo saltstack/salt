@@ -12,7 +12,12 @@ Statistics
 - Total Issue References: **26**
 - Total PR References: **115**
 
-- Contributors: **36** (`The-Loeki`_, `abednarik`_, `cachedout`_, `cro`_, `deniszh`_, `dkruger`_, `dmurphy18`_, `eliasp`_, `farcaller`_, `galet`_, `gtmanfred`_, `hu-dabao`_, `isbm`_, `jacobhammons`_, `jacobweinstock`_, `jfindlay`_, `justinta`_, `kstreee`_, `lubyou`_, `markuskramerIgitt`_, `meaksh`_, `miihael`_, `mzupan`_, `nishigori`_, `rallytime`_, `s0undt3ch`_, `skizunov`_, `tankywoo`_, `terminalmage`_, `thatch45`_, `theredcat`_, `ticosax`_, `tonybaloney`_, `twangboy`_, `vutny`_, `whiteinge`_)
+- Contributors: **36** (`The-Loeki`_, `abednarik`_, `cachedout`_, `cro`_, `deniszh`_, `dkruger`_,
+  `dmurphy18`_, `eliasp`_, `farcaller`_, `galet`_, `gtmanfred`_, `hu-dabao`_, `isbm`_,
+  `jacobhammons`_, `jacobweinstock`_, `jfindlay`_, `justinta`_, `kstreee`_, `lubyou`_,
+  `markuskramerIgitt`_, `meaksh`_, `miihael`_, `mzupan`_, `nishigori`_, `rallytime`_, `s0undt3ch`_,
+  `skizunov`_, `tankywoo`_, `terminalmage`_, `thatch45`_, `theredcat`_, `ticosax`_, `tonybaloney`_,
+  `twangboy`_, `vutny`_, `whiteinge`_)
 
 
 Known Issues
@@ -503,7 +508,7 @@ Changelog for v2016.3.2..v2016.3.3
 
     * 8a5b47b5d7 Collect all error data from the wfuncs call
 
-    * 11864c31b7 supress a stack trace to show clean ssh error
+    * 11864c31b7 suppress a stack trace to show clean ssh error
 
     * 9fbfa282fa wow this solves an issue!
 
@@ -704,7 +709,7 @@ Changelog for v2016.3.2..v2016.3.3
 
   * f0961e741e Merge with 2016.3
 
-* **ISSUE** `#35234`_: (`Sylvain303`_) Bug: module disk.wipe dont wipe the filesystem information (refs: `#35253`_)
+* **ISSUE** `#35234`_: (`Sylvain303`_) Bug: module disk.wipe don't wipe the filesystem information (refs: `#35253`_)
 
 * **PR** `#35259`_: (`cachedout`_) Fixup 35253
   @ *2016-08-06 21:59:48 UTC*
@@ -717,7 +722,7 @@ Changelog for v2016.3.2..v2016.3.3
 
   * 6714e8f386 Fix mock call in disk wipe test
 
-* **ISSUE** `#35234`_: (`Sylvain303`_) Bug: module disk.wipe dont wipe the filesystem information (refs: `#35253`_)
+* **ISSUE** `#35234`_: (`Sylvain303`_) Bug: module disk.wipe don't wipe the filesystem information (refs: `#35253`_)
 
 * **PR** `#35253`_: (`abednarik`_) Fix disk.wipe missing option. (refs: `#35259`_)
   @ *2016-08-06 21:55:01 UTC*
@@ -822,7 +827,7 @@ Changelog for v2016.3.2..v2016.3.3
 
     * e1fcb8311d Put pkg.latest_version in try/except structure Move refreshed or refresh to different spot (just for code tidyness)
 
-    * e0b6261659 changed name of varibale 'refreshed' to 'was_refreshed'
+    * e0b6261659 changed name of variable 'refreshed' to 'was_refreshed'
 
     * 340110b4b4 Move check for rtag to outermost-nesting in function
 
@@ -858,7 +863,7 @@ Changelog for v2016.3.2..v2016.3.3
 
   * 77b1f43b0d Merge pull request `#35110`_ from hu-dabao/master-check-lighter
 
-  * 3a3b66e27d dont return job status back to master for master_alive and master_failback schedules
+  * 3a3b66e27d don't return job status back to master for master_alive and master_failback schedules
 
 * **PR** `#35104`_: (`rallytime`_) [2016.3] Merge forward from 2015.8 to 2016.3
   @ *2016-08-01 18:56:43 UTC*

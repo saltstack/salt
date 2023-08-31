@@ -1,5 +1,5 @@
 """
-A dead simple module wrapping calls to the Chocolatey package manager
+A module that wraps calls to the Chocolatey package manager
 (http://chocolatey.org)
 
 .. versionadded:: 2014.1.0
@@ -10,9 +10,10 @@ import os
 import re
 import tempfile
 
+from requests.structures import CaseInsensitiveDict
+
 import salt.utils.data
 import salt.utils.platform
-from requests.structures import CaseInsensitiveDict
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -20,7 +21,7 @@ from salt.exceptions import (
     SaltInvocationError,
 )
 from salt.utils.data import CaseInsensitiveDict
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
@@ -39,14 +40,10 @@ def __virtual__():
     salt-minion running as SYSTEM.
     """
     if not salt.utils.platform.is_windows():
-        return (False, "Cannot load module chocolatey: Chocolatey requires Windows")
+        return False, "Chocolatey: Requires Windows"
 
     if __grains__["osrelease"] in ("XP", "2003Server"):
-        return (
-            False,
-            "Cannot load module chocolatey: Chocolatey requires "
-            "Windows Vista or later",
-        )
+        return False, "Chocolatey: Requires Windows Vista or later"
 
     return __virtualname__
 
@@ -68,7 +65,7 @@ def _yes():
     """
     if "chocolatey._yes" in __context__:
         return __context__["chocolatey._yes"]
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.9.9"):
+    if Version(chocolatey_version()) >= Version("0.9.9"):
         answer = ["--yes"]
     else:
         answer = []
@@ -83,7 +80,7 @@ def _no_progress():
     """
     if "chocolatey._no_progress" in __context__:
         return __context__["chocolatey._no_progress"]
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.10.4"):
+    if Version(chocolatey_version()) >= Version("0.10.4"):
         answer = ["--no-progress"]
     else:
         log.warning("--no-progress unsupported in choco < 0.10.4")
@@ -111,6 +108,7 @@ def _find_chocolatey():
         os.path.join(
             os.environ.get("ProgramData"), "Chocolatey", "bin", "chocolatey.exe"
         ),
+        os.path.join(os.environ.get("ProgramData"), "Chocolatey", "bin", "choco.exe"),
         os.path.join(
             os.environ.get("SystemDrive"), "Chocolatey", "bin", "chocolatey.bat"
         ),
@@ -207,7 +205,7 @@ def bootstrap(force=False, source=None):
     except CommandExecutionError:
         choc_path = None
     if choc_path and not force:
-        return "Chocolatey found at {}".format(choc_path)
+        return f"Chocolatey found at {choc_path}"
 
     temp_dir = tempfile.gettempdir()
 
@@ -248,7 +246,7 @@ def bootstrap(force=False, source=None):
                 log.debug("Downloading PowerShell...")
                 __salt__["cp.get_url"](path=url, dest=dest)
             except MinionError:
-                err = "Failed to download PowerShell KB for {}" "".format(
+                err = "Failed to download PowerShell KB for {}".format(
                     __grains__["osrelease"]
                 )
                 if source:
@@ -312,9 +310,9 @@ def bootstrap(force=False, source=None):
 
     # Download Chocolatey installer
     try:
-        log.debug("Downloading Chocolatey: {}".format(os.path.basename(url)))
+        log.debug("Downloading Chocolatey: %s", os.path.basename(url))
         script = __salt__["cp.get_url"](path=url, dest=dest)
-        log.debug("Script: {}".format(script))
+        log.debug("Script: %s", script)
     except MinionError:
         err = "Failed to download Chocolatey Installer"
         if source:
@@ -323,7 +321,7 @@ def bootstrap(force=False, source=None):
 
     # If this is a nupkg download we need to unzip it first
     if os.path.splitext(os.path.basename(dest))[1] == ".nupkg":
-        log.debug("Unzipping Chocolatey: {}".format(dest))
+        log.debug("Unzipping Chocolatey: %s", dest)
         __salt__["archive.unzip"](
             zip_file=dest,
             dest=os.path.join(os.path.dirname(dest), "chocolatey"),
@@ -335,11 +333,11 @@ def bootstrap(force=False, source=None):
 
     if not os.path.exists(script):
         raise CommandExecutionError(
-            "Failed to find Chocolatey installation " "script: {}".format(script)
+            f"Failed to find Chocolatey installation script: {script}"
         )
 
     # Run the Chocolatey bootstrap
-    log.debug("Installing Chocolatey: {}".format(script))
+    log.debug("Installing Chocolatey: %s", script)
     result = __salt__["cmd.script"](
         script, cwd=os.path.dirname(script), shell="powershell", python_shell=True
     )
@@ -354,11 +352,11 @@ def unbootstrap():
     """
     Uninstall chocolatey from the system by doing the following:
 
-    .. versionadded:: 3001
-
     - Delete the Chocolatey Directory
     - Remove Chocolatey from the path
     - Remove Chocolatey environment variables
+
+    .. versionadded:: 3001
 
     Returns:
         list: A list of items that were removed, otherwise an empty list
@@ -375,9 +373,9 @@ def unbootstrap():
     choco_dir = os.environ.get("ChocolateyInstall", False)
     if choco_dir:
         if os.path.exists(choco_dir):
-            log.debug("Removing Chocolatey directory: {}".format(choco_dir))
+            log.debug("Removing Chocolatey directory: %s", choco_dir)
             __salt__["file.remove"](path=choco_dir, force=True)
-            removed.append("Removed Directory: {}".format(choco_dir))
+            removed.append(f"Removed Directory: {choco_dir}")
     else:
         known_paths = [
             os.path.join(os.environ.get("ProgramData"), "Chocolatey"),
@@ -385,28 +383,28 @@ def unbootstrap():
         ]
         for path in known_paths:
             if os.path.exists(path):
-                log.debug("Removing Chocolatey directory: {}".format(path))
+                log.debug("Removing Chocolatey directory: %s", path)
                 __salt__["file.remove"](path=path, force=True)
-                removed.append("Removed Directory: {}".format(path))
+                removed.append(f"Removed Directory: {path}")
 
     # Delete all Chocolatey environment variables
     for env_var in __salt__["environ.items"]():
         if env_var.lower().startswith("chocolatey"):
-            log.debug("Removing Chocolatey environment variable: {}" "".format(env_var))
+            log.debug("Removing Chocolatey environment variable: %s", env_var)
             __salt__["environ.setval"](
                 key=env_var, val=False, false_unsets=True, permanent="HKLM"
             )
             __salt__["environ.setval"](
                 key=env_var, val=False, false_unsets=True, permanent="HKCU"
             )
-            removed.append("Removed Environment Var: {}".format(env_var))
+            removed.append(f"Removed Environment Var: {env_var}")
 
     # Remove Chocolatey from the path:
     for path in __salt__["win_path.get_path"]():
         if "chocolatey" in path.lower():
-            log.debug("Removing Chocolatey path item: {}" "".format(path))
+            log.debug("Removing Chocolatey path item: %s", path)
             __salt__["win_path.remove"](path=path, rehash=True)
-            removed.append("Removed Path Item: {}".format(path))
+            removed.append(f"Removed Path Item: {path}")
 
     return removed
 
@@ -440,10 +438,10 @@ def list_(
             None is passed. Default is None.
 
         local_only (bool):
-            Display packages only installed locally. Default is False.
+            Only display packages that are installed locally. Default is False.
 
         exact (bool):
-            Display only packages that match ``narrow`` exactly. Default is
+            Only display packages that match ``narrow`` exactly. Default is
             False.
 
             .. versionadded:: 2017.7.0
@@ -459,7 +457,17 @@ def list_(
         salt '*' chocolatey.list <narrow> all_versions=True
     """
     choc_path = _find_chocolatey()
-    cmd = [choc_path, "list"]
+    # https://docs.chocolatey.org/en-us/guides/upgrading-to-chocolatey-v2-v6
+    if Version(chocolatey_version()) < Version("2.0.0"):
+        cmd = [choc_path, "list"]
+        if local_only:
+            cmd.append("--local-only")
+    else:
+        if local_only:
+            # Starting with 2.0.0, list only returns local packages
+            cmd = [choc_path, "list"]
+        else:
+            cmd = [choc_path, "search"]
     if narrow:
         cmd.append(narrow)
     if salt.utils.data.is_true(all_versions):
@@ -468,8 +476,6 @@ def list_(
         cmd.append("--prerelease")
     if source:
         cmd.extend(["--source", source])
-    if local_only:
-        cmd.append("--local-only")
     if exact:
         cmd.append("--exact")
 
@@ -517,7 +523,11 @@ def list_webpi():
         salt '*' chocolatey.list_webpi
     """
     choc_path = _find_chocolatey()
-    cmd = [choc_path, "list", "--source", "webpi"]
+    # https://docs.chocolatey.org/en-us/guides/upgrading-to-chocolatey-v2-v6
+    if Version(chocolatey_version()) < Version("2.0.0"):
+        cmd = [choc_path, "list", "--source", "webpi"]
+    else:
+        cmd = [choc_path, "search", "--source", "webpi"]
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:
@@ -542,7 +552,11 @@ def list_windowsfeatures():
         salt '*' chocolatey.list_windowsfeatures
     """
     choc_path = _find_chocolatey()
-    cmd = [choc_path, "list", "--source", "windowsfeatures"]
+    # https://docs.chocolatey.org/en-us/guides/upgrading-to-chocolatey-v2-v6
+    if Version(chocolatey_version()) < Version("2.0.0"):
+        cmd = [choc_path, "list", "--source", "windowsfeatures"]
+    else:
+        cmd = [choc_path, "search", "--source", "windowsfeatures"]
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:
@@ -576,12 +590,12 @@ def install(
 
         version (str):
             Install a specific version of the package. Defaults to latest
-            version. Default is None.
+            version. Default is ``None``.
 
         source (str):
             Chocolatey repository (directory, share or remote URL feed) the
             package comes from. Defaults to the official Chocolatey feed.
-            Default is None.
+            Default is ``None``.
 
             Alternate Sources:
 
@@ -593,36 +607,38 @@ def install(
 
         force (bool):
             Reinstall the current version of an existing package. Do not use
-            with ``allow_multiple``. Default is False.
+            with ``allow_multiple``. Default is ``False``.
 
         pre_versions (bool):
-            Include pre-release packages. Default is False.
+            Include pre-release packages. Default is ``False``.
 
         install_args (str):
             A list of install arguments you want to pass to the installation
-            process i.e product key or feature list. Default is None.
+            process, i.e. product key or feature list. Default is ``None``.
 
         override_args (bool):
             Set to true if you want to override the original install arguments
             (for the native installer) in the package and use your own. When
-            this is set to False install_args will be appended to the end of the
-            default arguments. Default is None.
+            this is set to ``False`` install_args will be appended to the end of
+            the default arguments. Default is ``None``.
 
         force_x86 (bool):
-            Force x86 (32bit) installation on 64 bit systems. Default is False.
+            Force x86 (32bit) installation on 64bit systems. Default is
+            ``False``.
 
         package_args (str):
-            Arguments you want to pass to the package. Default is None.
+            Arguments you want to pass to the package. Default is ``None``.
 
         allow_multiple (bool):
             Allow multiple versions of the package to be installed. Do not use
-            with ``force``. Does not work with all packages. Default is False.
+            with ``force``. Does not work with all packages. Default is
+            ``False``.
 
             .. versionadded:: 2017.7.0
 
         execution_timeout (str):
             Chocolatey execution timeout value you want to pass to the
-            installation process. Default is None.
+            installation process. Default is ``None``.
 
             .. versionadded:: 2018.3.0
 
@@ -687,18 +703,21 @@ def install_cygwin(name, install_args=None, override_args=False):
     """
     Instructs Chocolatey to install a package via Cygwin.
 
-    name
-        The name of the package to be installed. Only accepts a single argument.
+    Args:
 
-    install_args
-        A list of install arguments you want to pass to the installation process
-        i.e product key or feature list
+        name (str):
+            The name of the package to be installed. Only accepts a single
+            argument.
 
-    override_args
-        Set to true if you want to override the original install arguments (for
-        the native installer) in the package and use your own. When this is set
-        to False install_args will be appended to the end of the default
-        arguments
+        install_args (str):
+            A list of install arguments you want to pass to the installation
+            process, i.e. product key or feature list
+
+        override_args (bool):
+            Set to ``True`` if you want to override the original install
+            arguments (for the native installer) in the package and use your
+            own. When this is set to ``False`` install_args will be appended to
+            the end of the default arguments
 
     CLI Example:
 
@@ -716,22 +735,25 @@ def install_gem(name, version=None, install_args=None, override_args=False):
     """
     Instructs Chocolatey to install a package via Ruby's Gems.
 
-    name
-        The name of the package to be installed. Only accepts a single argument.
+    Args:
 
-    version
-        Install a specific version of the package. Defaults to latest version
-        available.
+        name (str):
+            The name of the package to be installed. Only accepts a single
+            argument.
 
-    install_args
-        A list of install arguments you want to pass to the installation process
-        i.e product key or feature list
+        version (str):
+            Install a specific version of the package. Defaults to the latest
+            version available.
 
-    override_args
-        Set to true if you want to override the original install arguments (for
-        the native installer) in the package and use your own. When this is set
-        to False install_args will be appended to the end of the default
-        arguments
+        install_args (str):
+            A list of install arguments you want to pass to the installation
+            process, i.e. product key or feature list
+
+        override_args (bool):
+            Set to ``True`` if you want to override the original install
+            arguments (for the native installer) in the package and use your
+            own. When this is set to ``False`` install_args will be appended to
+            the end of the default arguments
 
     CLI Example:
 
@@ -760,16 +782,19 @@ def install_missing(name, version=None, source=None):
         ``installmissing`` is deprecated as of that version and will be removed
         in Chocolatey 1.0.
 
-    name
-        The name of the package to be installed. Only accepts a single argument.
+    Args:
 
-    version
-        Install a specific version of the package. Defaults to latest version
-        available.
+        name (str):
+            The name of the package to be installed. Only accepts a single
+            argument.
 
-    source
-        Chocolatey repository (directory, share or remote URL feed) the package
-        comes from. Defaults to the official Chocolatey feed.
+        version (str):
+            Install a specific version of the package. Defaults to the latest
+            version available.
+
+        source (str):
+            Chocolatey repository (directory, share or remote URL feed) the
+            package comes from. Defaults to the official Chocolatey feed.
 
     CLI Example:
 
@@ -778,7 +803,7 @@ def install_missing(name, version=None, source=None):
         salt '*' chocolatey.install_missing <package name>
         salt '*' chocolatey.install_missing <package name> version=<package version>
     """
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.9.8.24"):
+    if Version(chocolatey_version()) >= Version("0.9.8.24"):
         log.warning("installmissing is deprecated, using install")
         return install(name, version=version)
 
@@ -803,22 +828,25 @@ def install_python(name, version=None, install_args=None, override_args=False):
     """
     Instructs Chocolatey to install a package via Python's easy_install.
 
-    name
-        The name of the package to be installed. Only accepts a single argument.
+    Args:
 
-    version
-        Install a specific version of the package. Defaults to latest version
-        available.
+        name (str):
+            The name of the package to be installed. Only accepts a single
+            argument.
 
-    install_args
-        A list of install arguments you want to pass to the installation process
-        i.e product key or feature list
+        version (str):
+            Install a specific version of the package. Defaults to the latest
+            version available.
 
-    override_args
-        Set to true if you want to override the original install arguments (for
-        the native installer) in the package and use your own. When this is set
-        to False install_args will be appended to the end of the default
-        arguments
+        install_args (str):
+            A list of install arguments you want to pass to the installation
+            process, i.e. product key or feature list.
+
+        override_args (bool):
+            Set to ``True`` if you want to override the original install
+            arguments (for the native installer) in the package and use your
+            own. When this is set to ``False`` install_args will be appended to
+            the end of the default arguments.
 
     CLI Example:
 
@@ -842,8 +870,11 @@ def install_windowsfeatures(name):
     Instructs Chocolatey to install a Windows Feature via the Deployment Image
     Servicing and Management tool.
 
-    name
-        The name of the feature to be installed. Only accepts a single argument.
+    Args:
+
+        name (str):
+            The name of the feature to be installed. Only accepts a single
+            argument.
 
     CLI Example:
 
@@ -858,18 +889,21 @@ def install_webpi(name, install_args=None, override_args=False):
     """
     Instructs Chocolatey to install a package via the Microsoft Web PI service.
 
-    name
-        The name of the package to be installed. Only accepts a single argument.
+    Args:
 
-    install_args
-        A list of install arguments you want to pass to the installation process
-        i.e product key or feature list
+        name (str):
+            The name of the package to be installed. Only accepts a single
+            argument.
 
-    override_args
-        Set to true if you want to override the original install arguments (for
-        the native installer) in the package and use your own. When this is set
-        to False install_args will be appended to the end of the default
-        arguments
+        install_args (str):
+            A list of install arguments you want to pass to the installation
+            process, i.e. product key or feature list.
+
+        override_args (bool):
+            Set to ``True`` if you want to override the original install
+            arguments (for the native installer) in the package and use your
+            own. When this is set to ``False`` install_args will be appended to
+            the end of the default arguments.
 
     CLI Example:
 
@@ -883,27 +917,35 @@ def install_webpi(name, install_args=None, override_args=False):
     )
 
 
-def uninstall(name, version=None, uninstall_args=None, override_args=False):
+def uninstall(
+    name,
+    version=None,
+    uninstall_args=None,
+    override_args=False,
+    force=False,
+):
     """
     Instructs Chocolatey to uninstall a package.
 
-    name
-        The name of the package to be uninstalled. Only accepts a single
-        argument.
+    Args:
 
-    version
-        Uninstalls a specific version of the package. Defaults to latest version
-        installed.
+        name (str):
+            The name of the package to be uninstalled. Only accepts a single
+            argument.
 
-    uninstall_args
-        A list of uninstall arguments you want to pass to the uninstallation
-        process i.e product key or feature list
+        version (str):
+            Uninstalls a specific version of the package. Defaults to the latest
+            version installed.
 
-    override_args
-        Set to true if you want to override the original uninstall arguments
-        (for the native uninstaller) in the package and use your own. When this
-        is set to False uninstall_args will be appended to the end of the
-        default arguments
+        uninstall_args (str):
+            A list of uninstall arguments you want to pass to the uninstallation
+            process, i.e. product key or feature list.
+
+        override_args
+            Set to ``True`` if you want to override the original uninstall
+            arguments (for the native uninstaller) in the package and use your
+            own. When this is set to ``False`` uninstall_args will be appended
+            to the end of the default arguments.
 
     CLI Example:
 
@@ -920,11 +962,13 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
     if uninstall_args:
         cmd.extend(["--uninstallarguments", uninstall_args])
     if override_args:
-        cmd.extend(["--overridearguments"])
+        cmd.append("--overridearguments")
+    if force:
+        cmd.append("--force")
     cmd.extend(_yes())
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
-    if result["retcode"] not in [0, 1605, 1614, 1641]:
+    if result["retcode"] not in [0, 1, 1605, 1614, 1641]:
         err = "Running chocolatey failed: {}".format(result["stdout"])
         raise CommandExecutionError(err)
 
@@ -963,26 +1007,27 @@ def upgrade(
             package comes from. Defaults to the official Chocolatey feed.
 
         force (bool):
-            Reinstall the **same** version already installed
+            Reinstall the **same** version already installed.
 
         pre_versions (bool):
-            Include pre-release packages in comparison. Defaults to False.
+            Include pre-release packages in comparison. Defaults to ``False``.
 
         install_args (str):
             A list of install arguments you want to pass to the installation
-            process i.e product key or feature list
+            process, i.e. product key or feature list.
 
-        override_args (str):
-            Set to true if you want to override the original install arguments
-            (for the native installer) in the package and use your own. When
-            this is set to False install_args will be appended to the end of the
-            default arguments
+        override_args (bool):
+            Set to ``True`` if you want to override the original install
+            arguments (for the native installer) in the package and use your
+            own. When this is set to ``False`` install_args will be appended to
+            the end of the default arguments.
 
-        force_x86
-            Force x86 (32bit) installation on 64 bit systems. Defaults to false.
+        force_x86 (bool):
+            Force x86 (32bit) installation on 64bit systems. Defaults to
+            ``False``.
 
-        package_args
-            A list of arguments you want to pass to the package
+        package_args (str):
+            A list of arguments you want to pass to the package.
 
     Returns:
         str: Results of the ``chocolatey`` command
@@ -1030,16 +1075,18 @@ def update(name, source=None, pre_versions=False):
     """
     Instructs Chocolatey to update packages on the system.
 
-    name
-        The name of the package to update, or "all" to update everything
-        installed on the system.
+    Args:
 
-    source
-        Chocolatey repository (directory, share or remote URL feed) the package
-        comes from. Defaults to the official Chocolatey feed.
+        name (str):
+            The name of the package to update, or "all" to update everything
+            installed on the system.
 
-    pre_versions
-        Include pre-release packages in comparison. Defaults to False.
+        source (str):
+            Chocolatey repository (directory, share or remote URL feed) the
+            package comes from. Defaults to the official Chocolatey feed.
+
+        pre_versions (bool):
+            Include pre-release packages in comparison. Defaults to ``False``.
 
     CLI Example:
 
@@ -1049,7 +1096,7 @@ def update(name, source=None, pre_versions=False):
         salt "*" chocolatey.update <package name> pre_versions=True
     """
     # chocolatey helpfully only supports a single package argument
-    if _LooseVersion(chocolatey_version()) >= _LooseVersion("0.9.8.24"):
+    if Version(chocolatey_version()) >= Version("0.9.8.24"):
         log.warning("update is deprecated, using upgrade")
         return upgrade(name, source=source, pre_versions=pre_versions)
 
@@ -1083,15 +1130,15 @@ def version(name, check_remote=False, source=None, pre_versions=False):
 
         check_remote (bool):
             Get the version number of the latest package from the remote feed.
-            Default is False.
+            Default is ``False``.
 
         source (str):
             Chocolatey repository (directory, share or remote URL feed) the
             package comes from. Defaults to the official Chocolatey feed.
-            Default is None.
+            Default is ``None``.
 
         pre_versions (bool):
-            Include pre-release packages in comparison. Default is False.
+            Include pre-release packages in comparison. Default is ``False``.
 
     Returns:
         dict: A dictionary of currently installed software and versions
@@ -1107,48 +1154,59 @@ def version(name, check_remote=False, source=None, pre_versions=False):
 
     packages = {}
     lower_name = name.lower()
-    for pkg in installed:
-        if lower_name in pkg.lower():
-            packages[pkg] = installed[pkg]
+    if installed:
+        for pkg in installed:
+            if lower_name == pkg.lower():
+                packages.setdefault(pkg, {})
+                packages[pkg]["installed"] = installed[pkg]
 
     if check_remote:
-        available = list_(narrow=name, pre_versions=pre_versions, source=source)
-
-        for pkg in packages:
-            # Grab the current version from the package that was installed
-            packages[pkg] = {"installed": installed[pkg]}
-
-            # If there's a remote package available, then also include that
-            # in the dictionary that we return.
-            if pkg in available:
-                packages[pkg]["available"] = available[pkg]
+        # If there's a remote package available, then also include that
+        # in the dictionary that we return.
+        available = list_(
+            narrow=name, local_only=False, pre_versions=pre_versions, source=source
+        )
+        if available:
+            for pkg in available:
+                if lower_name == pkg.lower():
+                    packages.setdefault(pkg, {})
+                    packages[pkg]["available"] = available[pkg]
 
     return packages
 
 
-def add_source(name, source_location, username=None, password=None):
+def add_source(name, source_location, username=None, password=None, priority=None):
     """
     Instructs Chocolatey to add a source.
 
-    name
-        The name of the source to be added as a chocolatey repository.
+    Args:
 
-    source
-        Location of the source you want to work with.
+        name (str):
+            The name of the source to be added as a chocolatey repository.
 
-    username
-        Provide username for chocolatey sources that need authentication
-        credentials.
+        source (str):
+            Location of the source you want to work with.
 
-    password
-        Provide password for chocolatey sources that need authentication
-        credentials.
+        username (str):
+            Provide username for chocolatey sources that need authentication
+            credentials.
+
+        password (str):
+            Provide password for chocolatey sources that need authentication
+            credentials.
+
+        priority (int):
+            The priority order of this source as compared to other sources,
+            lower is better. Defaults to 0 (no priority). All priorities
+            above 0 will be evaluated first, then zero-based values will be
+            evaluated in config file order.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' chocolatey.add_source <source name> <source_location>
+        salt '*' chocolatey.add_source <source name> <source_location> priority=100
         salt '*' chocolatey.add_source <source name> <source_location> user=<user> password=<password>
 
     """
@@ -1165,6 +1223,8 @@ def add_source(name, source_location, username=None, password=None):
         cmd.extend(["--user", username])
     if password:
         cmd.extend(["--password", password])
+    if priority:
+        cmd.extend(["--priority", priority])
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:
@@ -1178,12 +1238,13 @@ def _change_source_state(name, state):
     """
     Instructs Chocolatey to change the state of a source.
 
-    name
-        Name of the repository to affect.
+    Args:
 
-    state
-        State in which you want the chocolatey repository.
+        name (str):
+            Name of the repository to affect.
 
+        state (str):
+            State in which you want the chocolatey repository.
     """
     cmd = [_find_chocolatey(), "source", state, "--name", name]
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
@@ -1199,8 +1260,10 @@ def enable_source(name):
     """
     Instructs Chocolatey to enable a source.
 
-    name
-        Name of the source repository to enable.
+    Args:
+
+        name (str):
+            Name of the source repository to enable.
 
     CLI Example:
 
@@ -1216,8 +1279,10 @@ def disable_source(name):
     """
     Instructs Chocolatey to disable a source.
 
-    name
-        Name of the source repository to disable.
+    Args:
+
+        name (str):
+            Name of the source repository to disable.
 
     CLI Example:
 

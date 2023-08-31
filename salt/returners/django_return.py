@@ -1,5 +1,10 @@
-# -*- coding: utf-8 -*-
 """
+.. deprecated:: 3006.0
+
+.. warning::
+
+    This module has been deprecated and will be removed after January 2024.
+
 A returner that will inform a Django system that
 returns are available using Django's signal system.
 
@@ -27,13 +32,13 @@ An example Django module that registers a function called
 
 """
 # Import Python libraries
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 # Import Salt libraries
 import salt.returners
 import salt.utils.jid
+from salt.utils.versions import warn_until_date
 
 log = logging.getLogger(__name__)
 
@@ -51,6 +56,11 @@ __virtualname__ = "django"
 
 
 def __virtual__():
+    warn_until_date(
+        "20240101",
+        "The django returner is broken and deprecated, and will be removed"
+        " after {date}.",
+    )
     if not HAS_DJANGO:
         return False, "Could not import django returner; django is not installed."
     return True
@@ -64,8 +74,7 @@ def returner(ret):
 
     for signal in signaled:
         log.debug(
-            "Django returner function 'returner' signaled %s "
-            "which responded with %s",
+            "Django returner function 'returner' signaled %s which responded with %s",
             signal[0],
             signal[1],
         )
@@ -81,8 +90,7 @@ def save_load(jid, load, minions=None):
 
     for signal in signaled:
         log.debug(
-            "Django returner function 'save_load' signaled %s "
-            "which responded with %s",
+            "Django returner function 'save_load' signaled %s which responded with %s",
             signal[0],
             signal[1],
         )

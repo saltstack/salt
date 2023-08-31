@@ -1,6 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Salt state to create, update VMware ESXi Virtual Machines.
+
+.. Warning::
+    This module will be deprecated in a future release of Salt. VMware strongly
+    recommends using the
+    `VMware Salt extensions <https://docs.saltproject.io/salt/extensions/salt-ext-modules-vmware/en/latest/all.html>`_
+    instead of the ESX VSM module. Because the Salt extensions are newer and
+    actively supported by VMware, they are more compatible with current versions
+    of ESXi and they work well with the latest features in the VMware product
+    line.
+
 
 Dependencies
 ============
@@ -183,15 +192,12 @@ execution functions against ESXi hosts via a Salt Proxy Minion, and a larger sta
 example.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import sys
+from functools import wraps
 
-# Import Salt libs
 import salt.exceptions
-import salt.ext.six as six
 from salt.config.schemas.esxvm import ESXVirtualMachineConfigSchema
 
 # External libraries
@@ -227,14 +233,34 @@ def __virtual__():
 
         return (
             False,
-            (
-                "State module did not load: Incompatible versions "
-                "of Python and pyVmomi present. See Issue #29537."
-            ),
+            "State module did not load: Incompatible versions "
+            "of Python and pyVmomi present. See Issue #29537.",
         )
     return True
 
 
+def _deprecation_message(function):
+    """
+    Decorator wrapper to warn about azurearm deprecation
+    """
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        salt.utils.versions.warn_until(
+            3008,
+            "The 'esxvm' functionality in Salt has been deprecated and its "
+            "functionality will be removed in version 3008 in favor of the "
+            "saltext.vmware Salt Extension. "
+            "(https://github.com/saltstack/salt-ext-modules-vmware)",
+            category=FutureWarning,
+        )
+        ret = function(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        return ret
+
+    return wrapped
+
+
+@_deprecation_message
 def vm_configured(
     name,
     vm_name,
@@ -307,8 +333,9 @@ def vm_configured(
             if __opts__["test"]:
                 result.update(
                     {
-                        "comment": "The virtual machine {0}"
-                        " will be registered.".format(vm_name)
+                        "comment": "The virtual machine {} will be registered.".format(
+                            vm_name
+                        )
                     }
                 )
                 __salt__["vsphere.disconnect"](service_instance)
@@ -321,8 +348,9 @@ def vm_configured(
             if __opts__["test"]:
                 result.update(
                     {
-                        "comment": "The virtual machine {0}"
-                        " will be created.".format(vm_name)
+                        "comment": "The virtual machine {} will be created.".format(
+                            vm_name
+                        )
                     }
                 )
                 __salt__["vsphere.disconnect"](service_instance)
@@ -374,6 +402,7 @@ def vm_configured(
     return result
 
 
+@_deprecation_message
 def vm_cloned(name):
     """
     Clones a virtual machine from a template virtual machine if it doesn't
@@ -384,6 +413,7 @@ def vm_cloned(name):
     return result
 
 
+@_deprecation_message
 def vm_updated(
     name,
     vm_name,
@@ -437,21 +467,21 @@ def vm_updated(
             {
                 "result": True,
                 "changes": {},
-                "comment": "Virtual machine {0} is already up to date".format(vm_name),
+                "comment": f"Virtual machine {vm_name} is already up to date",
             }
         )
         return result
 
     if __opts__["test"]:
         comment = (
-            "State vm_updated will update virtual machine '{0}' "
-            "in datacenter '{1}':\n{2}".format(
+            "State vm_updated will update virtual machine '{}' "
+            "in datacenter '{}':\n{}".format(
                 vm_name,
                 datacenter,
                 "\n".join(
                     [
                         ":\n".join([key, difference.changes_str])
-                        for key, difference in six.iteritems(diffs)
+                        for key, difference in diffs.items()
                     ]
                 ),
             )
@@ -482,7 +512,7 @@ def vm_updated(
         log.error("Error: %s", exc)
         if service_instance:
             __salt__["vsphere.disconnect"](service_instance)
-        result.update({"result": False, "comment": six.text_type(exc)})
+        result.update({"result": False, "comment": str(exc)})
         return result
 
     if power_on:
@@ -492,7 +522,7 @@ def vm_updated(
             log.error("Error: %s", exc)
             if service_instance:
                 __salt__["vsphere.disconnect"](service_instance)
-            result.update({"result": False, "comment": six.text_type(exc)})
+            result.update({"result": False, "comment": str(exc)})
             return result
         changes.update({"power_on": True})
 
@@ -502,12 +532,13 @@ def vm_updated(
         "name": name,
         "result": True,
         "changes": changes,
-        "comment": "Virtual machine " "{0} was updated successfully".format(vm_name),
+        "comment": f"Virtual machine {vm_name} was updated successfully",
     }
 
     return result
 
 
+@_deprecation_message
 def vm_created(
     name,
     vm_name,
@@ -534,7 +565,7 @@ def vm_created(
     result = {"name": name, "result": None, "changes": {}, "comment": ""}
 
     if __opts__["test"]:
-        result["comment"] = "Virtual machine {0} will be created".format(vm_name)
+        result["comment"] = f"Virtual machine {vm_name} will be created"
         return result
 
     service_instance = __salt__["vsphere.get_service_instance_via_proxy"]()
@@ -562,7 +593,7 @@ def vm_created(
         log.error("Error: %s", exc)
         if service_instance:
             __salt__["vsphere.disconnect"](service_instance)
-        result.update({"result": False, "comment": six.text_type(exc)})
+        result.update({"result": False, "comment": str(exc)})
         return result
 
     if power_on:
@@ -574,7 +605,7 @@ def vm_created(
             log.error("Error: %s", exc)
             if service_instance:
                 __salt__["vsphere.disconnect"](service_instance)
-            result.update({"result": False, "comment": six.text_type(exc)})
+            result.update({"result": False, "comment": str(exc)})
             return result
         info["power_on"] = power_on
 
@@ -584,12 +615,13 @@ def vm_created(
         "name": name,
         "result": True,
         "changes": changes,
-        "comment": "Virtual machine " "{0} created successfully".format(vm_name),
+        "comment": f"Virtual machine {vm_name} created successfully",
     }
 
     return result
 
 
+@_deprecation_message
 def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
     """
     Registers a virtual machine if the machine files are available on
@@ -597,8 +629,8 @@ def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
     """
     result = {"name": vm_name, "result": None, "changes": {}, "comment": ""}
 
-    vmx_path = "{0}{1}".format(vm_file.folderPath, vm_file.file[0].path)
-    log.trace("Registering virtual machine with vmx file: {0}".format(vmx_path))
+    vmx_path = f"{vm_file.folderPath}{vm_file.file[0].path}"
+    log.trace("Registering virtual machine with vmx file: %s", vmx_path)
     service_instance = __salt__["vsphere.get_service_instance_via_proxy"]()
     try:
         __salt__["vsphere.register_vm"](
@@ -608,13 +640,13 @@ def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
         log.error("Error: %s", exc)
         if service_instance:
             __salt__["vsphere.disconnect"](service_instance)
-        result.update({"result": False, "comment": six.text_type(exc)})
+        result.update({"result": False, "comment": str(exc)})
         return result
     except salt.exceptions.VMwareVmRegisterError as exc:
         log.error("Error: %s", exc)
         if service_instance:
             __salt__["vsphere.disconnect"](service_instance)
-        result.update({"result": False, "comment": six.text_type(exc)})
+        result.update({"result": False, "comment": str(exc)})
         return result
 
     if power_on:
@@ -626,14 +658,14 @@ def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
             log.error("Error: %s", exc)
             if service_instance:
                 __salt__["vsphere.disconnect"](service_instance)
-            result.update({"result": False, "comment": six.text_type(exc)})
+            result.update({"result": False, "comment": str(exc)})
             return result
     __salt__["vsphere.disconnect"](service_instance)
     result.update(
         {
             "result": True,
             "changes": {"name": vm_name, "power_on": power_on},
-            "comment": "Virtual machine " "{0} registered successfully".format(vm_name),
+            "comment": f"Virtual machine {vm_name} registered successfully",
         }
     )
 

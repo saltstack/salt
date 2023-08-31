@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return salt data via xmpp
 
@@ -67,15 +66,12 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return xmpp --return_kwargs '{"recipient": "someone-else@xmpp.example.com"}'
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import pprint
 
-# Import salt libs
 import salt.returners
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 HAS_LIBS = False
 try:
@@ -84,7 +80,7 @@ try:
     HAS_LIBS = True
 except ImportError:
 
-    class _ClientXMPP(object):
+    class _ClientXMPP:
         """
         Fake class in order not to raise errors
         """
@@ -131,14 +127,14 @@ def __virtual__():
         import sleekxmpp  # pylint: disable=3rd-party-module-not-gated
 
         # Certain XMPP functionaility we're using doesn't work with versions under 1.3.1
-        sleekxmpp_version = _LooseVersion(sleekxmpp.__version__)
-        valid_version = _LooseVersion(min_version)
+        sleekxmpp_version = Version(sleekxmpp.__version__)
+        valid_version = Version(min_version)
         if sleekxmpp_version >= valid_version:
             return __virtualname__
     return (
         False,
         "Could not import xmpp returner; sleekxmpp python client is not "
-        "installed or is older than version '{0}'.".format(min_version),
+        "installed or is older than version '{}'.".format(min_version),
     )
 
 
@@ -146,7 +142,7 @@ class SendMsgBot(_ClientXMPP):
     def __init__(self, jid, password, recipient, msg):
         # PyLint wrongly reports an error when calling super, hence the above
         # disable call
-        super(SendMsgBot, self).__init__(jid, password)
+        super().__init__(jid, password)
 
         self.recipient = recipient
         self.msg = msg
@@ -184,13 +180,7 @@ def returner(ret):
         log.error("xmpp.recipient not defined in salt config")
         return
 
-    message = (
-        "id: {0}\r\n"
-        "function: {1}\r\n"
-        "function args: {2}\r\n"
-        "jid: {3}\r\n"
-        "return: {4}\r\n"
-    ).format(
+    message = "id: {}\r\nfunction: {}\r\nfunction args: {}\r\njid: {}\r\nreturn: {}\r\n".format(
         ret.get("id"),
         ret.get("fun"),
         ret.get("fun_args"),

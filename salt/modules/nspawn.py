@@ -81,7 +81,7 @@ def _ensure_exists(wrapped):
     @functools.wraps(wrapped)
     def check_exists(name, *args, **kwargs):
         if not exists(name):
-            raise CommandExecutionError("Container '{}' does not exist".format(name))
+            raise CommandExecutionError(f"Container '{name}' does not exist")
         return wrapped(name, *args, **salt.utils.args.clean_kwargs(**kwargs))
 
     return check_exists
@@ -115,14 +115,14 @@ def _make_container_root(name):
     path = _root(name)
     if os.path.exists(path):
         __context__["retcode"] = salt.defaults.exitcodes.SALT_BUILD_FAIL
-        raise CommandExecutionError("Container {} already exists".format(name))
+        raise CommandExecutionError(f"Container {name} already exists")
     else:
         try:
             os.makedirs(path)
             return path
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to make container root directory {}: {}".format(name, exc)
+                f"Unable to make container root directory {name}: {exc}"
             )
 
 
@@ -132,10 +132,8 @@ def _build_failed(dst, name):
         shutil.rmtree(dst)
     except OSError as exc:
         if exc.errno != errno.ENOENT:
-            raise CommandExecutionError(
-                "Unable to cleanup container root dir {}".format(dst)
-            )
-    raise CommandExecutionError("Container {} failed to build".format(name))
+            raise CommandExecutionError(f"Unable to cleanup container root dir {dst}")
+    raise CommandExecutionError(f"Container {name} failed to build")
 
 
 def _bootstrap_arch(name, **kwargs):
@@ -147,7 +145,7 @@ def _bootstrap_arch(name, **kwargs):
             "pacstrap not found, is the arch-install-scripts package installed?"
         )
     dst = _make_container_root(name)
-    cmd = "pacstrap -c -d {} base".format(dst)
+    cmd = f"pacstrap -c -d {dst} base"
     ret = __salt__["cmd.run_all"](cmd, python_shell=False)
     if ret["retcode"] != 0:
         _build_failed(dst, name)
@@ -183,7 +181,7 @@ def _bootstrap_debian(name, **kwargs):
         )
 
     dst = _make_container_root(name)
-    cmd = "debootstrap --arch=amd64 {} {}".format(version, dst)
+    cmd = f"debootstrap --arch=amd64 {version} {dst}"
     ret = __salt__["cmd.run_all"](cmd, python_shell=False)
     if ret["retcode"] != 0:
         _build_failed(dst, name)
@@ -224,7 +222,7 @@ def _bootstrap_ubuntu(name, **kwargs):
         else:
             version = "xenial"
     dst = _make_container_root(name)
-    cmd = "debootstrap --arch=amd64 {} {}".format(version, dst)
+    cmd = f"debootstrap --arch=amd64 {version} {dst}"
     ret = __salt__["cmd.run_all"](cmd, python_shell=False)
     if ret["retcode"] != 0:
         _build_failed(dst, name)
@@ -258,7 +256,7 @@ def _ensure_systemd(version):
     try:
         version = int(version)
     except ValueError:
-        raise CommandExecutionError("Invalid version '{}'".format(version))
+        raise CommandExecutionError(f"Invalid version '{version}'")
 
     try:
         installed = _sd_version()
@@ -268,8 +266,9 @@ def _ensure_systemd(version):
 
     if installed < version:
         raise CommandExecutionError(
-            "This function requires systemd >= {} "
-            "(Detected version: {}).".format(version, installed)
+            "This function requires systemd >= {} (Detected version: {}).".format(
+                version, installed
+            )
         )
 
 
@@ -279,7 +278,7 @@ def _machinectl(cmd, output_loglevel="debug", ignore_retcode=False, use_vt=False
     """
     prefix = "machinectl --no-legend --no-pager"
     return __salt__["cmd.run_all"](
-        "{} {}".format(prefix, cmd),
+        f"{prefix} {cmd}",
         output_loglevel=output_loglevel,
         ignore_retcode=ignore_retcode,
         use_vt=use_vt,
@@ -349,9 +348,7 @@ def pid(name):
     try:
         return int(info(name).get("PID"))
     except (TypeError, ValueError) as exc:
-        raise CommandExecutionError(
-            "Unable to get PID for container '{}': {}".format(name, exc)
-        )
+        raise CommandExecutionError(f"Unable to get PID for container '{name}': {exc}")
 
 
 def run(
@@ -402,7 +399,7 @@ def run(
 
     .. code-block:: bash
 
-        salt myminion nspawn.run mycontainer 'ifconfig -a'
+        salt myminion nspawn.run mycontainer 'ip addr show'
     """
     return _run(
         name,
@@ -468,7 +465,7 @@ def run_stdout(
 
     .. code-block:: bash
 
-        salt myminion nspawn.run_stdout mycontainer 'ifconfig -a'
+        salt myminion nspawn.run_stdout mycontainer 'ip addr show'
     """
     return _run(
         name,
@@ -705,9 +702,9 @@ def bootstrap_container(name, dist=None, version=None):
         dist = __grains__["os"].lower()
         log.debug("nspawn.bootstrap: no dist provided, defaulting to '%s'", dist)
     try:
-        return globals()["_bootstrap_{}".format(dist)](name, version=version)
+        return globals()[f"_bootstrap_{dist}"](name, version=version)
     except KeyError:
-        raise CommandExecutionError('Unsupported distribution "{}"'.format(dist))
+        raise CommandExecutionError(f'Unsupported distribution "{dist}"')
 
 
 def _needs_install(name):
@@ -785,7 +782,7 @@ def bootstrap_salt(
         needs_install = _needs_install(name)
     else:
         needs_install = True
-    seeded = retcode(name, "test -e '{}'".format(SEED_MARKER)) == 0
+    seeded = retcode(name, f"test -e '{SEED_MARKER}'") == 0
     tmp = tempfile.mkdtemp()
     if seeded and not unconditional_install:
         ret = True
@@ -802,20 +799,20 @@ def bootstrap_salt(
         if needs_install or force_install or unconditional_install:
             if install:
                 rstr = __salt__["test.random_hash"]()
-                configdir = "/tmp/.c_{}".format(rstr)
-                run(name, "install -m 0700 -d {}".format(configdir), python_shell=False)
+                configdir = f"/tmp/.c_{rstr}"
+                run(name, f"install -m 0700 -d {configdir}", python_shell=False)
                 bs_ = __salt__["config.gather_bootstrap_script"](
                     bootstrap=bootstrap_url
                 )
                 dest_dir = os.path.join("/tmp", rstr)
                 for cmd in [
-                    "mkdir -p {}".format(dest_dir),
-                    "chmod 700 {}".format(dest_dir),
+                    f"mkdir -p {dest_dir}",
+                    f"chmod 700 {dest_dir}",
                 ]:
                     if run_stdout(name, cmd):
                         log.error("tmpdir %s creation failed (%s)", dest_dir, cmd)
                         return False
-                copy_to(name, bs_, "{}/bootstrap.sh".format(dest_dir), makedirs=True)
+                copy_to(name, bs_, f"{dest_dir}/bootstrap.sh", makedirs=True)
                 copy_to(name, cfg_files["config"], os.path.join(configdir, "minion"))
                 copy_to(
                     name, cfg_files["privkey"], os.path.join(configdir, "minion.pem")
@@ -848,7 +845,7 @@ def bootstrap_salt(
             stop(name)
         # mark seeded upon successful install
         if ret:
-            run(name, "touch '{}'".format(SEED_MARKER), python_shell=False)
+            run(name, f"touch '{SEED_MARKER}'", python_shell=False)
     return ret
 
 
@@ -932,7 +929,7 @@ def exists(name):
 
         salt myminion nspawn.exists <name>
     """
-    contextkey = "nspawn.exists.{}".format(name)
+    contextkey = f"nspawn.exists.{name}"
     if contextkey in __context__:
         return __context__[contextkey]
     __context__[contextkey] = name in list_all()
@@ -951,7 +948,7 @@ def state(name):
         salt myminion nspawn.state <name>
     """
     try:
-        cmd = "show {} --property=State".format(name)
+        cmd = f"show {name} --property=State"
         return _machinectl(cmd, ignore_retcode=True)["stdout"].split("=")[-1]
     except IndexError:
         return "stopped"
@@ -991,11 +988,9 @@ def info(name, **kwargs):
 
     # Have to parse 'machinectl status' here since 'machinectl show' doesn't
     # contain IP address info or OS info. *shakes fist angrily*
-    c_info = _machinectl("status {}".format(name))
+    c_info = _machinectl(f"status {name}")
     if c_info["retcode"] != 0:
-        raise CommandExecutionError(
-            "Unable to get info for container '{}'".format(name)
-        )
+        raise CommandExecutionError(f"Unable to get info for container '{name}'")
     # Better human-readable names. False means key should be ignored.
     key_name_map = {
         "Iface": "Network Interface",
@@ -1051,7 +1046,7 @@ def enable(name):
 
         salt myminion nspawn.enable <name>
     """
-    cmd = "systemctl enable systemd-nspawn@{}".format(name)
+    cmd = f"systemctl enable systemd-nspawn@{name}"
     if __salt__["cmd.retcode"](cmd, python_shell=False) != 0:
         __context__["retcode"] = salt.defaults.exitcodes.EX_UNAVAILABLE
         return False
@@ -1069,7 +1064,7 @@ def disable(name):
 
         salt myminion nspawn.enable <name>
     """
-    cmd = "systemctl disable systemd-nspawn@{}".format(name)
+    cmd = f"systemctl disable systemd-nspawn@{name}"
     if __salt__["cmd.retcode"](cmd, python_shell=False) != 0:
         __context__["retcode"] = salt.defaults.exitcodes.EX_UNAVAILABLE
         return False
@@ -1088,9 +1083,9 @@ def start(name):
         salt myminion nspawn.start <name>
     """
     if _sd_version() >= 219:
-        ret = _machinectl("start {}".format(name))
+        ret = _machinectl(f"start {name}")
     else:
-        cmd = "systemctl start systemd-nspawn@{}".format(name)
+        cmd = f"systemctl start systemd-nspawn@{name}"
         ret = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if ret["retcode"] != 0:
@@ -1111,9 +1106,9 @@ def stop(name, kill=False):
             action = "terminate"
         else:
             action = "poweroff"
-        ret = _machinectl("{} {}".format(action, name))
+        ret = _machinectl(f"{action} {name}")
     else:
-        cmd = "systemctl stop systemd-nspawn@{}".format(name)
+        cmd = f"systemctl stop systemd-nspawn@{name}"
         ret = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if ret["retcode"] != 0:
@@ -1203,7 +1198,7 @@ def reboot(name, kill=False):
     """
     if _sd_version() >= 219:
         if state(name) == "running":
-            ret = _machinectl("reboot {}".format(name))
+            ret = _machinectl(f"reboot {name}")
         else:
             # 'machinectl reboot' will fail on a stopped container
             return start(name)
@@ -1213,7 +1208,7 @@ def reboot(name, kill=False):
         # we need stop and start the container in separate actions.
 
         # First stop the container
-        cmd = "systemctl stop systemd-nspawn@{}".format(name)
+        cmd = f"systemctl stop systemd-nspawn@{name}"
         ret = __salt__["cmd.run_all"](cmd, python_shell=False)
         # Now check if successful
         if ret["retcode"] != 0:
@@ -1221,7 +1216,7 @@ def reboot(name, kill=False):
             return False
         # Finally, start the container back up. No need to check the retcode a
         # second time, it'll be checked below once we exit the if/else block.
-        cmd = "systemctl start systemd-nspawn@{}".format(name)
+        cmd = f"systemctl start systemd-nspawn@{name}"
         ret = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if ret["retcode"] != 0:
@@ -1256,15 +1251,13 @@ def remove(name, stop=False):
         salt '*' nspawn.remove foo stop=True
     """
     if not stop and state(name) != "stopped":
-        raise CommandExecutionError("Container '{}' is not stopped".format(name))
+        raise CommandExecutionError(f"Container '{name}' is not stopped")
 
     def _failed_remove(name, exc):
-        raise CommandExecutionError(
-            "Unable to remove container '{}': {}".format(name, exc)
-        )
+        raise CommandExecutionError(f"Unable to remove container '{name}': {exc}")
 
     if _sd_version() >= 219:
-        ret = _machinectl("remove {}".format(name))
+        ret = _machinectl(f"remove {name}")
         if ret["retcode"] != 0:
             __context__["retcode"] = salt.defaults.exitcodes.EX_UNAVAILABLE
             _failed_remove(name, ret["stderr"])
@@ -1314,10 +1307,10 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False):
         if source.startswith("salt://"):
             cached_source = __salt__["cp.cache_file"](source)
             if not cached_source:
-                raise CommandExecutionError("Unable to cache {}".format(source))
+                raise CommandExecutionError(f"Unable to cache {source}")
             path = cached_source
     except AttributeError:
-        raise SaltInvocationError("Invalid source file {}".format(source))
+        raise SaltInvocationError(f"Invalid source file {source}")
 
     if _sd_version() >= 219:
         # TODO: Use machinectl copy-to
@@ -1345,13 +1338,13 @@ def _pull_image(pull_type, image, name, **kwargs):
     """
     _ensure_systemd(219)
     if exists(name):
-        raise SaltInvocationError("Container '{}' already exists".format(name))
+        raise SaltInvocationError(f"Container '{name}' already exists")
     if pull_type in ("raw", "tar"):
         valid_kwargs = ("verify",)
     elif pull_type == "dkr":
         valid_kwargs = ("index",)
     else:
-        raise SaltInvocationError("Unsupported image type '{}'".format(pull_type))
+        raise SaltInvocationError(f"Unsupported image type '{pull_type}'")
 
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     bad_kwargs = {
@@ -1383,7 +1376,7 @@ def _pull_image(pull_type, image, name, **kwargs):
             else:
                 if verify not in ("signature", "checksum"):
                     _bad_verify()
-                pull_opts.append("--verify={}".format(verify))
+                pull_opts.append(f"--verify={verify}")
 
     elif pull_type == "dkr":
         # No need to validate the index URL, machinectl will take care of this

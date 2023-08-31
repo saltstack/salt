@@ -198,8 +198,8 @@ def __virtual__():
     if not HAS_NAPALM_LOGS or not zmq:
         return (
             False,
-            "napalm_syslog could not be loaded. \
-            Please install napalm-logs library amd ZeroMQ.",
+            "napalm_syslog could not be loaded. Please install "
+            "napalm-logs library and ZeroMQ.",
         )
     return True
 

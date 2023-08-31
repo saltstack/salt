@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for Apache
 
@@ -6,17 +5,20 @@ Please note: The functions in here are SUSE-specific. Placing them in this
 separate file will allow them to load only on SUSE systems, while still
 loading under the ``apache`` namespace.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt libs
 import salt.utils.path
 
 log = logging.getLogger(__name__)
 
 __virtualname__ = "apache"
+
+__deprecated__ = (
+    3009,
+    "apache",
+    "https://github.com/salt-extensions/saltext-apache",
+)
 
 
 def __virtual__():
@@ -77,9 +79,9 @@ def a2enmod(mod):
     ret["Mod"] = mod
 
     if status == 1:
-        ret["Status"] = "Mod {0} Not found".format(mod)
+        ret["Status"] = f"Mod {mod} Not found"
     elif status == 0:
-        ret["Status"] = "Mod {0} enabled".format(mod)
+        ret["Status"] = f"Mod {mod} enabled"
     else:
         ret["Status"] = status
 
@@ -108,9 +110,9 @@ def a2dismod(mod):
     ret["Mod"] = mod
 
     if status == 256:
-        ret["Status"] = "Mod {0} Not found".format(mod)
+        ret["Status"] = f"Mod {mod} Not found"
     elif status == 0:
-        ret["Status"] = "Mod {0} disabled".format(mod)
+        ret["Status"] = f"Mod {mod} disabled"
     else:
         ret["Status"] = status
 

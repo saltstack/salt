@@ -9,7 +9,7 @@ pytest.importorskip("libcloud", reason="salt-cloud requires >= libcloud 0.11.4")
 
 def test_function_arguments(salt_cloud_cli):
     ret = salt_cloud_cli.run("--function", "show_image", "-h")
-    assert ret.exitcode != 0
+    assert ret.returncode != 0
     assert (
         "error: --function expects two arguments: <function-name> <provider>"
         in ret.stderr
@@ -18,7 +18,7 @@ def test_function_arguments(salt_cloud_cli):
 
 def test_list_providers_accepts_no_arguments(salt_cloud_cli):
     ret = salt_cloud_cli.run("--list-providers", "ec2")
-    assert ret.exitcode != 0
+    assert ret.returncode != 0
     assert "error: '--list-providers' does not accept any arguments" in ret.stderr
 
 
@@ -36,7 +36,7 @@ def test_mutually_exclusive_query_options(salt_cloud_cli, query_option):
         conflicting_option = "--list-providers"
 
     ret = salt_cloud_cli.run(query_option, conflicting_option)
-    assert ret.exitcode != 0
+    assert ret.returncode != 0
     assert "are mutually exclusive. Please only choose one of them" in ret.stderr
 
 
@@ -52,5 +52,5 @@ def test_mutually_exclusive_list_options(salt_cloud_cli, list_option):
         conflicting__option = "--list-sizes"
 
     ret = salt_cloud_cli.run(list_option, "ec2", conflicting__option, "ec2")
-    assert ret.exitcode != 0
+    assert ret.returncode != 0
     assert "are mutually exclusive. Please only choose one of them" in ret.stderr

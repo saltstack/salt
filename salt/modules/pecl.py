@@ -1,26 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Manage PHP pecl extensions.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import re
+import shlex
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.path
-
-# Import 3rd-party libs
-from salt.ext import six
-
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
-
 
 __func_alias__ = {"list_": "list"}
 
@@ -43,9 +30,9 @@ def _pecl(command, defaults=False):
     """
     Execute the command passed with pecl
     """
-    cmdline = "pecl {0}".format(command)
+    cmdline = "pecl {}".format(command)
     if salt.utils.data.is_true(defaults):
-        cmdline = "yes " "''" + " | " + cmdline
+        cmdline = "yes ''" + " | " + cmdline
 
     ret = __salt__["cmd.run_all"](cmdline, python_shell=True)
 
@@ -79,17 +66,17 @@ def install(pecls, defaults=False, force=False, preferred_state="stable"):
 
         salt '*' pecl.install fuse
     """
-    if isinstance(pecls, six.string_types):
+    if isinstance(pecls, str):
         pecls = [pecls]
-    preferred_state = "-d preferred_state={0}".format(_cmd_quote(preferred_state))
+    preferred_state = "-d preferred_state={}".format(shlex.quote(preferred_state))
     if force:
         return _pecl(
-            "{0} install -f {1}".format(preferred_state, _cmd_quote(" ".join(pecls))),
+            "{} install -f {}".format(preferred_state, shlex.quote(" ".join(pecls))),
             defaults=defaults,
         )
     else:
         _pecl(
-            "{0} install {1}".format(preferred_state, _cmd_quote(" ".join(pecls))),
+            "{} install {}".format(preferred_state, shlex.quote(" ".join(pecls))),
             defaults=defaults,
         )
         if not isinstance(pecls, list):
@@ -102,7 +89,7 @@ def install(pecls, defaults=False, force=False, preferred_state="stable"):
                 channel = None
             installed_pecls = list_(channel)
             for pecl in installed_pecls:
-                installed_pecl_with_version = "{0}-{1}".format(
+                installed_pecl_with_version = "{}-{}".format(
                     pecl, installed_pecls.get(pecl)[0]
                 )
                 if pecl in installed_pecl_with_version:
@@ -125,9 +112,9 @@ def uninstall(pecls):
 
         salt '*' pecl.uninstall fuse
     """
-    if isinstance(pecls, six.string_types):
+    if isinstance(pecls, str):
         pecls = [pecls]
-    return _pecl("uninstall {0}".format(_cmd_quote(" ".join(pecls))))
+    return _pecl("uninstall {}".format(shlex.quote(" ".join(pecls))))
 
 
 def update(pecls):
@@ -143,9 +130,9 @@ def update(pecls):
 
         salt '*' pecl.update fuse
     """
-    if isinstance(pecls, six.string_types):
+    if isinstance(pecls, str):
         pecls = [pecls]
-    return _pecl("install -U {0}".format(_cmd_quote(" ".join(pecls))))
+    return _pecl("install -U {}".format(shlex.quote(" ".join(pecls))))
 
 
 def list_(channel=None):
@@ -162,7 +149,7 @@ def list_(channel=None):
     pecls = {}
     command = "list"
     if channel:
-        command = "{0} -c {1}".format(command, _cmd_quote(channel))
+        command = "{} -c {}".format(command, shlex.quote(channel))
     lines = _pecl(command).splitlines()
     lines = (l for l in lines if pecl_channel_pat.match(l))
 

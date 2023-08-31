@@ -1,0 +1,35 @@
+.. _release-3003-4:
+
+========================
+Salt 3003.4 (2022-02-25)
+========================
+
+Version 3003.4 is a CVE security fix release for :ref:`3003 <release-3003>`.
+
+
+Important notice about upgrading
+--------------------------------
+
+Version 3003.4 is a security release. 3003.4 minions are not able to
+communicate with masters older than 3003.4. You must upgrade your masters
+before upgrading minions.
+
+
+Minion authentication security
+------------------------------
+
+Authentication between masters and minions rely on public/private key
+encryption and message signing. To secure minion authentication before you must
+pre-seed the master's public key on minions. To pre-seed the minions' master
+key, place a copy of the master's public key in the minion's pki directory as
+``minion_master.pub``.
+
+
+Security
+--------
+
+- Sign authentication replies to prevent MiTM (cve-2022-22935)
+- Prevent job and fileserver replays (cve-2022-22936)
+- Sign pillar data to prevent MiTM attacks. (cve-2202-22934)
+- Fixed targeting bug, especially visible when using syndic and user auth. (CVE-2022-22941) (#60413)
+- Fix denial of service in junos ifconfig output parsing.

@@ -1,30 +1,21 @@
-# -*- coding: utf-8 -*-
 """
 Functions for working with Mako templates
 """
-from __future__ import absolute_import, unicode_literals
 
 try:
-    from mako.lookup import (
-        TemplateCollection,
-        TemplateLookup,
-    )  # pylint: disable=import-error,3rd-party-module-not-gated
+    # pylint: disable=import-error,3rd-party-module-not-gated,no-name-in-module
+    from mako.lookup import TemplateCollection, TemplateLookup
+
+    # pylint: enable=import-error,3rd-party-module-not-gated,no-name-in-module
 
     HAS_MAKO = True
 except ImportError:
     HAS_MAKO = False
 
 if HAS_MAKO:
-    # Import Python libs
     import os
+    import urllib.parse
 
-    # Import third-party libs
-    # pylint: disable=import-error,no-name-in-module
-    from salt.ext.six.moves.urllib.parse import urlparse
-
-    # pylint: enable=import-error,no-name-in-module
-
-    # Import salt libs
     import salt.fileclient
     import salt.utils.url
 
@@ -75,13 +66,11 @@ if HAS_MAKO:
             return self._file_client
 
         def adjust_uri(self, uri, filename):
-            scheme = urlparse(uri).scheme
+            scheme = urllib.parse.urlparse(uri).scheme
             if scheme in ("salt", "file"):
                 return uri
             elif scheme:
-                raise ValueError(
-                    "Unsupported URL scheme({0}) in {1}".format(scheme, uri)
-                )
+                raise ValueError(f"Unsupported URL scheme({scheme}) in {uri}")
             return self.lookup.adjust_uri(uri, filename)
 
         def get_template(self, uri, relativeto=None):
@@ -108,3 +97,12 @@ if HAS_MAKO:
                 self.cache[fpath] = self.file_client().get_file(
                     fpath, "", True, self.saltenv
                 )
+
+        def destroy(self):
+            if self._file_client:
+                file_client = self._file_client
+                self._file_client = None
+                try:
+                    file_client.destroy()
+                except AttributeError:
+                    pass

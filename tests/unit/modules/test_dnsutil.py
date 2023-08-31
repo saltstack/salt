@@ -1,20 +1,15 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt Libs
+import pytest
+
 import salt.modules.dnsutil as dnsutil
 import salt.utils.stringutils
 from tests.support.mock import MagicMock, mock_open, patch
-
-# Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -112,7 +107,7 @@ class DNSUtilTestCase(TestCase):
             writes = m_open.write_calls()
             assert writes == mock_writes_list, writes
 
-    @skipIf(True, "Waiting on bug report fixes")
+    @pytest.mark.skip(reason="Waiting on bug report fixes")
     def test_parse_zone(self):
         with patch("salt.utils.files.fopen", mock_open(read_data=mock_soa_zone)):
             log.debug(mock_soa_zone)

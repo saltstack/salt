@@ -6,6 +6,7 @@ import os
 import textwrap
 
 import pytest
+
 import salt.utils.files
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin

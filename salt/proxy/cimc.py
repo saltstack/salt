@@ -98,7 +98,7 @@ def _validate_response_code(response_code_to_check, cookie_to_logout=None):
     if formatted_response_code not in ["200", "201", "202", "204"]:
         if cookie_to_logout:
             logout(cookie_to_logout)
-        log.error("Received error HTTP status code: {}".format(formatted_response_code))
+        log.error("Received error HTTP status code: %s", formatted_response_code)
         raise salt.exceptions.CommandExecutionError(
             "Did not receive a valid response from host."
         )
@@ -193,8 +193,10 @@ def get_config_resolver_class(cid=None, hierarchical=False):
     if hierarchical is True:
         h = "true"
 
-    payload = '<configResolveClass cookie="{}" inHierarchical="{}" classId="{}"/>'.format(
-        cookie, h, cid
+    payload = (
+        '<configResolveClass cookie="{}" inHierarchical="{}" classId="{}"/>'.format(
+            cookie, h, cid
+        )
     )
     r = __utils__["http.query"](
         DETAILS["url"],

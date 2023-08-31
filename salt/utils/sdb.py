@@ -5,14 +5,10 @@ For configuration options, see the docs for specific sdb
 modules.
 """
 
-# Import python libs
 import random
 
-# Import salt libs
 import salt.loader
 from salt.exceptions import SaltInvocationError
-from salt.ext.six import string_types
-from salt.ext.six.moves import range
 
 
 def sdb_get(uri, opts, utils=None, strict=False):
@@ -20,7 +16,7 @@ def sdb_get(uri, opts, utils=None, strict=False):
     Get a value from a db, using a uri in the form of ``sdb://<profile>/<key>``. If
     the uri provided is not valid, then it will be returned as-is, unless ``strict=True`` was passed.
     """
-    if not isinstance(uri, string_types) or not uri.startswith("sdb://"):
+    if not isinstance(uri, str) or not uri.startswith("sdb://"):
         if strict:
             raise SaltInvocationError('SDB uri must start with "sdb://"')
         else:
@@ -35,7 +31,8 @@ def sdb_get(uri, opts, utils=None, strict=False):
     if (indx == -1) or not uri[(indx + 1) :]:
         if strict:
             raise SaltInvocationError(
-                "SDB uri must have a profile name as a first part of the uri before the /"
+                "SDB uri must have a profile name as a first part of the uri before"
+                " the /"
             )
         else:
             return uri
@@ -66,7 +63,7 @@ def sdb_set(uri, value, opts, utils=None):
     If the uri provided does not start with ``sdb://`` or the value is not
     successfully set, return ``False``.
     """
-    if not isinstance(uri, string_types) or not uri.startswith("sdb://"):
+    if not isinstance(uri, str) or not uri.startswith("sdb://"):
         return False
 
     if utils is None:
@@ -97,7 +94,7 @@ def sdb_delete(uri, opts, utils=None):
     the uri provided does not start with ``sdb://`` or the value is not successfully
     deleted, return ``False``.
     """
-    if not isinstance(uri, string_types) or not uri.startswith("sdb://"):
+    if not isinstance(uri, str) or not uri.startswith("sdb://"):
         return False
 
     if utils is None:
@@ -134,7 +131,7 @@ def sdb_get_or_set_hash(
     random string and store it.  This can be used for storing secrets in a
     centralized place.
     """
-    if not isinstance(uri, string_types) or not uri.startswith("sdb://"):
+    if not isinstance(uri, str) or not uri.startswith("sdb://"):
         return False
 
     if utils is None:

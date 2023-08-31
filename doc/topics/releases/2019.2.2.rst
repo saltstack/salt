@@ -13,7 +13,8 @@ Statistics
 - Total Issue References: **12**
 - Total PR References: **26**
 
-- Contributors: **13** (`Akm0d`_, `Ch3LL`_, `Oloremo`_, `OrlandoArcapix`_, `bryceml`_, `dhiltonp`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `javierbertoli`_, `pizzapanther`_, `s0undt3ch`_, `twangboy`_)
+- Contributors: **13** (`Akm0d`_, `Ch3LL`_, `Oloremo`_, `OrlandoArcapix`_, `bryceml`_, `dhiltonp`_, `dwoz`_,
+  `frogunder`_, `garethgreenaway`_, `javierbertoli`_, `pizzapanther`_, `s0undt3ch`_, `twangboy`_)
 
 Changelog for v2019.2.1..v2019.2.2
 ==================================
@@ -97,7 +98,7 @@ Changelog for v2019.2.1..v2019.2.2
 
   * 9e3914a Merge pull request `#54826`_ from dwoz/issue_54755
 
-  * 0bad9cb Handle locals and globals separatly
+  * 0bad9cb Handle locals and globals separately
 
   * bcbe9a2 Only purge pip when needed
 
@@ -114,7 +115,7 @@ Changelog for v2019.2.1..v2019.2.2
 
 * **ISSUE** `#54521`_: (`Oloremo`_) [Regression] Failhard, batch and retcodes (refs: `#54806`_)
 
-* **PR** `#54806`_: (`Oloremo`_) [Regression] Batch with failhard fix 
+* **PR** `#54806`_: (`Oloremo`_) [Regression] Batch with failhard fix
   @ *2019-10-01 14:51:47 UTC*
 
   * 433b6fa Merge pull request `#54806`_ from Oloremo/failhard-batch-fix-2019.2.1

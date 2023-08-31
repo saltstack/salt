@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Subversion SCM
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import re
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
 _INI_RE = re.compile(r"^([^:]+):\s+(\S.*)$", re.M)
 
@@ -458,6 +453,6 @@ def export(
     revision_args = "-r"
     opts += (
         revision_args,
-        six.text_type(revision),
+        str(revision),
     )
     return _run_svn("export", cwd, user, username, password, opts)

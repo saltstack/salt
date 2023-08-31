@@ -2,6 +2,7 @@ import logging
 import time
 
 import pytest
+
 from salt.utils.timeout import wait_for
 from tests.support.unit import TestCase
 
@@ -75,6 +76,7 @@ class WaitForTests(TestCase):
         self.assertFalse(ret)
 
     @pytest.mark.slow_test
+    @pytest.mark.skip_initial_gh_actions_failure
     def test_wait_for_with_big_step(self):
         ret = wait_for(self.true_after_1s, timeout=1.5, step=2)
         self.assertTrue(ret)

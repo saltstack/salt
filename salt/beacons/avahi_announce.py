@@ -14,6 +14,7 @@ Dependencies
 import logging
 import time
 
+import salt.utils.beacons
 import salt.utils.stringutils
 
 try:
@@ -53,35 +54,29 @@ def __virtual__():
     if HAS_PYAVAHI:
         if HAS_DBUS:
             return __virtualname__
-        return (
-            False,
-            "The {} beacon cannot be loaded. The "
-            "'python-dbus' dependency is missing.".format(__virtualname__),
-        )
-    return (
-        False,
-        "The {} beacon cannot be loaded. The "
-        "'python-avahi' dependency is missing.".format(__virtualname__),
-    )
+        err_msg = "The 'python-dbus' dependency is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
+
+    err_msg = "The 'python-avahi' dependency is missing."
+    log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+    return False, err_msg
 
 
 def validate(config):
     """
     Validate the beacon configuration
     """
-    _config = {}
-    list(map(_config.update, config))
+
+    _config = salt.utils.beacons.list_to_dict(config)
 
     if not isinstance(config, list):
-        return False, ("Configuration for avahi_announce beacon must be a list.")
+        return False, "Configuration for avahi_announce beacon must be a list."
 
     elif not all(x in _config for x in ("servicetype", "port", "txt")):
         return (
             False,
-            (
-                "Configuration for avahi_announce beacon "
-                "must contain servicetype, port and txt items."
-            ),
+            "Configuration for avahi_announce beacon must contain servicetype, port and txt items.",
         )
     return True, "Valid beacon configuration."
 
@@ -166,28 +161,27 @@ def beacon(config):
 
     global LAST_GRAINS
 
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
-    if "servicename" in _config:
-        servicename = _config["servicename"]
+    if "servicename" in config:
+        servicename = config["servicename"]
     else:
         servicename = __grains__["host"]
         # Check for hostname change
         if LAST_GRAINS and LAST_GRAINS["host"] != servicename:
             changes["servicename"] = servicename
 
-    if LAST_GRAINS and _config.get("reset_on_change", False):
+    if LAST_GRAINS and config.get("reset_on_change", False):
         # Check for IP address change in the case when we reset on change
         if LAST_GRAINS.get("ipv4", []) != __grains__.get("ipv4", []):
             changes["ipv4"] = __grains__.get("ipv4", [])
         if LAST_GRAINS.get("ipv6", []) != __grains__.get("ipv6", []):
             changes["ipv6"] = __grains__.get("ipv6", [])
 
-    for item in _config["txt"]:
+    for item in config["txt"]:
         changes_key = "txt." + salt.utils.stringutils.to_unicode(item)
-        if _config["txt"][item].startswith("grains."):
-            grain = _config["txt"][item][7:]
+        if config["txt"][item].startswith("grains."):
+            grain = config["txt"][item][7:]
             grain_index = None
             square_bracket = grain.find("[")
             if square_bracket != -1 and grain[-1] == "]":
@@ -206,7 +200,7 @@ def beacon(config):
             ):
                 changes[changes_key] = txt[item]
         else:
-            txt[item] = _enforce_txt_record_maxlen(item, _config["txt"][item])
+            txt[item] = _enforce_txt_record_maxlen(item, config["txt"][item])
 
         if not LAST_GRAINS:
             changes[changes_key] = txt[item]
@@ -214,8 +208,8 @@ def beacon(config):
     if changes:
         if not LAST_GRAINS:
             changes["servicename"] = servicename
-            changes["servicetype"] = _config["servicetype"]
-            changes["port"] = _config["port"]
+            changes["servicetype"] = config["servicetype"]
+            changes["port"] = config["port"]
             changes["ipv4"] = __grains__.get("ipv4", [])
             changes["ipv6"] = __grains__.get("ipv6", [])
             GROUP.AddService(
@@ -223,18 +217,18 @@ def beacon(config):
                 avahi.PROTO_UNSPEC,
                 dbus.UInt32(0),
                 servicename,
-                _config["servicetype"],
+                config["servicetype"],
                 "",
                 "",
-                dbus.UInt16(_config["port"]),
+                dbus.UInt16(config["port"]),
                 avahi.dict_to_txt_array(txt),
             )
             GROUP.Commit()
-        elif _config.get("reset_on_change", False) or "servicename" in changes:
+        elif config.get("reset_on_change", False) or "servicename" in changes:
             # A change in 'servicename' requires a reset because we can only
             # directly update TXT records
             GROUP.Reset()
-            reset_wait = _config.get("reset_wait", 0)
+            reset_wait = config.get("reset_wait", 0)
             if reset_wait > 0:
                 time.sleep(reset_wait)
             GROUP.AddService(
@@ -242,10 +236,10 @@ def beacon(config):
                 avahi.PROTO_UNSPEC,
                 dbus.UInt32(0),
                 servicename,
-                _config["servicetype"],
+                config["servicetype"],
                 "",
                 "",
-                dbus.UInt16(_config["port"]),
+                dbus.UInt16(config["port"]),
                 avahi.dict_to_txt_array(txt),
             )
             GROUP.Commit()
@@ -255,14 +249,14 @@ def beacon(config):
                 avahi.PROTO_UNSPEC,
                 dbus.UInt32(0),
                 servicename,
-                _config["servicetype"],
+                config["servicetype"],
                 "",
                 avahi.dict_to_txt_array(txt),
             )
 
         ret.append({"tag": "result", "changes": changes})
 
-    if _config.get("copy_grains", False):
+    if config.get("copy_grains", False):
         LAST_GRAINS = __grains__.copy()
     else:
         LAST_GRAINS = __grains__

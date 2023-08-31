@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 from tests.support.case import ShellCase, SPMCase
 
 

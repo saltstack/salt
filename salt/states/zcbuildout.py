@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of zc.buildout
 =========================
@@ -35,14 +34,9 @@ Available Functions
           - onlyif: /bin/test_else_installed
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import sys
-
-# Import salt libs
-from salt.ext.six import string_types
 
 # Define the module's virtual name
 __virtualname__ = "buildout"
@@ -58,7 +52,7 @@ def __virtual__():
     return (False, "buildout module could not be loaded")
 
 
-INVALID_RESPONSE = "We did not get any expectable answer from docker"
+INVALID_RESPONSE = "Unexpected response from docker"
 VALID_RESPONSE = ""
 NOTSET = object()
 MAPPING_CACHE = {}
@@ -87,11 +81,11 @@ def _ret_status(
         out = exec_status.get("out", "")
         if not quiet:
             if out:
-                if isinstance(out, string_types):
+                if isinstance(out, str):
                     comment += "\n" + out
             outlog = exec_status.get("outlog", None)
             if outlog:
-                if isinstance(outlog, string_types):
+                if isinstance(outlog, str):
                     comment += "\n" + outlog
     return {
         "changes": changes,
@@ -215,7 +209,7 @@ def installed(
     output_loglevel = kwargs.get("output_loglevel", None)
     if output_loglevel and not loglevel:
         log.warning(
-            "Passing 'output_loglevel' is deprecated," " please use loglevel instead"
+            "Passing 'output_loglevel' is deprecated, please use loglevel instead"
         )
     try:
         test_release = int(test_release)

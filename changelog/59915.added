@@ -1,1 +1,0 @@
-Add a salt.util.platform check to detect the AArch64 64-bit extension of the ARM architecture.

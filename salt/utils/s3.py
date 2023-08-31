@@ -142,8 +142,8 @@ def query(
     path = urllib.parse.quote(path)
 
     if not requesturl:
-        requesturl = (("https" if https_enable else "http") + "://{0}/{1}").format(
-            endpoint, path
+        requesturl = "{}://{}/{}".format(
+            "https" if https_enable else "http", endpoint, path
         )
         headers, requesturl = salt.utils.aws.sig4(
             method,

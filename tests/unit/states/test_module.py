@@ -4,7 +4,7 @@
 
 
 import logging
-from inspect import ArgSpec
+from inspect import FullArgSpec
 
 import salt.states.module as module
 from tests.support.mixins import LoaderModuleMockMixin
@@ -65,7 +65,13 @@ STATE_APPLY_RET = {
 }
 
 
-def _mocked_func_named(name, names=("Fred", "Swen",)):
+def _mocked_func_named(
+    name,
+    names=(
+        "Fred",
+        "Swen",
+    ),
+):
     """
     Mocked function with named defaults.
 
@@ -101,15 +107,35 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {module: {"__opts__": {"test": False}, "__salt__": {CMD: MagicMock()}}}
+        return {
+            module: {
+                "__opts__": {"test": False},
+                "__salt__": {CMD: MagicMock()},
+                "__low__": {"__id__": "test"},
+            },
+        }
 
     @classmethod
     def setUpClass(cls):
-        cls.aspec = ArgSpec(
-            args=["hello", "world"], varargs=None, keywords=None, defaults=False
+        cls.aspec = FullArgSpec(
+            args=["hello", "world"],
+            varargs=None,
+            varkw=None,
+            defaults=False,
+            kwonlyargs=None,
+            kwonlydefaults=None,
+            annotations=None,
         )
 
-        cls.bspec = ArgSpec(args=[], varargs="names", keywords="kwargs", defaults=None)
+        cls.bspec = FullArgSpec(
+            args=[],
+            varargs="names",
+            varkw=None,
+            defaults=None,
+            kwonlyargs="kwargs",
+            kwonlydefaults=None,
+            annotations=None,
+        )
 
     @classmethod
     def tearDownClass(cls):
@@ -125,8 +151,8 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             module.__opts__, {"use_superseded": ["module.run"]}
         ):
             ret = module.run(**{CMD: None})
-        if ret["comment"] != "Unavailable function: {}.".format(CMD) or ret["result"]:
-            self.fail("module.run did not fail as expected: {}".format(ret))
+        if ret["comment"] != f"Unavailable function: {CMD}." or ret["result"]:
+            self.fail(f"module.run did not fail as expected: {ret}")
 
     def test_run_module_not_available_testmode(self):
         """
@@ -139,10 +165,10 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         ):
             ret = module.run(**{CMD: None})
         if (
-            ret["comment"] != "Unavailable function: {}.".format(CMD)
+            ret["comment"] != f"Unavailable function: {CMD}."
             or ret["result"] is not False
         ):
-            self.fail("module.run did not fail as expected: {}".format(ret))
+            self.fail(f"module.run did not fail as expected: {ret}")
 
     def test_run_module_noop(self):
         """
@@ -154,7 +180,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         ):
             ret = module.run()
         if ret["comment"] != "No function provided." or ret["result"] is not False:
-            self.fail("module.run did not fail as expected: {}".format(ret))
+            self.fail(f"module.run did not fail as expected: {ret}")
 
     def test_module_run_hidden_varargs(self):
         """
@@ -164,7 +190,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with patch(
             "salt.utils.args.get_function_argspec", MagicMock(return_value=self.bspec)
         ):
-            ret = module._run(CMD, m_names="anyname")
+            ret = module._legacy_run(CMD, m_names="anyname")
         self.assertEqual(ret["comment"], "'names' must be a list.")
 
     def test_run_testmode(self):
@@ -177,10 +203,10 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         ):
             ret = module.run(**{CMD: None})
         if (
-            ret["comment"] != "Function {} to be executed.".format(CMD)
+            ret["comment"] != f"Function {CMD} to be executed."
             or ret["result"] is not None
         ):
-            self.fail("module.run failed: {}".format(ret))
+            self.fail(f"module.run failed: {ret}")
 
     def test_run_missing_arg(self):
         """
@@ -191,9 +217,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             module.__opts__, {"use_superseded": ["module.run"]}
         ):
             ret = module.run(**{CMD: None})
-        self.assertEqual(
-            ret["comment"], "'{}' failed: Missing arguments: name".format(CMD)
-        )
+        self.assertEqual(ret["comment"], f"'{CMD}' failed: Missing arguments: name")
 
     def test_run_correct_arg(self):
         """
@@ -204,8 +228,8 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             module.__opts__, {"use_superseded": ["module.run"]}
         ):
             ret = module.run(**{CMD: ["Fred"]})
-        if ret["comment"] != "{}: Success".format(CMD) or not ret["result"]:
-            self.fail("module.run failed: {}".format(ret))
+        if ret["comment"] != f"{CMD}: Success" or not ret["result"]:
+            self.fail(f"module.run failed: {ret}")
 
     def test_run_state_apply_result_false(self):
         """
@@ -251,9 +275,8 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             module_function = module.__salt__[CMD].__name__
         self.assertEqual(
             ret["comment"],
-            (
-                "'{}' failed: {}() got an unexpected keyword argument "
-                "'foo'".format(CMD, module_function)
+            "'{}' failed: {}() got an unexpected keyword argument 'foo'".format(
+                CMD, module_function
             ),
         )
         self.assertFalse(ret["result"])
@@ -283,9 +306,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         ):
             ret = module.run(**{CMD: ["bla", {"example": "bla"}]})
         self.assertFalse(ret["result"])
-        self.assertEqual(
-            ret["comment"], "'{}' failed: Missing arguments: arg2".format(CMD)
-        )
+        self.assertEqual(ret["comment"], f"'{CMD}' failed: Missing arguments: arg2")
 
     def test_run_42270_kwargs_to_args(self):
         """
@@ -327,7 +348,10 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             0,
             "a",
             "",
-            (1, 2,),
+            (
+                1,
+                2,
+            ),
             (),
             [1, 2],
             [],
@@ -374,21 +398,17 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         name isn't available
         """
         with patch.dict(module.__salt__, {}, clear=True):
-            ret = module._run(CMD)
+            ret = module._legacy_run(CMD)
         self.assertFalse(ret["result"])
-        self.assertEqual(
-            ret["comment"], "Module function {} is not available".format(CMD)
-        )
+        self.assertEqual(ret["comment"], f"Module function {CMD} is not available")
 
     def test_module_run_test_true(self):
         """
         Tests the return of module.run state when test=True is passed in
         """
         with patch.dict(module.__opts__, {"test": True}):
-            ret = module._run(CMD)
-        self.assertEqual(
-            ret["comment"], "Module function {} is set to execute".format(CMD)
-        )
+            ret = module._legacy_run(CMD)
+        self.assertEqual(ret["comment"], f"Module function {CMD} is set to execute")
 
     def test_module_run_missing_arg(self):
         """
@@ -397,7 +417,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with patch(
             "salt.utils.args.get_function_argspec", MagicMock(return_value=self.aspec)
         ):
-            ret = module._run(CMD)
+            ret = module._legacy_run(CMD)
         self.assertIn("The following arguments are missing:", ret["comment"])
         self.assertIn("world", ret["comment"])
         self.assertIn("hello", ret["comment"])

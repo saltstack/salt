@@ -17,7 +17,17 @@ Statistics
 - Total Issue References: **146**
 - Total PR References: **312**
 
-- Contributors: **74** (`Ch3LL`_, `DmitryKuzmenko`_, `JohannesEbke`_, `RabidCicada`_, `Talkless`_, `The-Loeki`_, `abednarik`_, `anlutro`_, `basepi`_, `bdrung`_, `cachedout`_, `captaininspiration`_, `clarkperkins`_, `clinta`_, `cro`_, `darix`_, `dmacvicar`_, `dr4Ke`_, `dschaller`_, `edencrane`_, `garethgreenaway`_, `gladiatr72`_, `gtmanfred`_, `iacopo-papalini`_, `isbm`_, `jacksontj`_, `jacobhammons`_, `jakehilton`_, `jespada`_, `jfindlay`_, `joejulian`_, `justinta`_, `kiorky`_, `kraney`_, `llua`_, `mcalmer`_, `mchugh19`_, `mew1033`_, `mlalpho`_, `moltob`_, `multani`_, `myii`_, `opdude`_, `paiou`_, `pass-by-value`_, `peripatetic-sojourner`_, `pprince`_, `rallytime`_, `redmcg`_, `replicant0wnz`_, `rhansen`_, `rmtmckenzie`_, `s0undt3ch`_, `sakateka`_, `sbreidba`_, `seanjnkns`_, `sjmh`_, `sjorge`_, `skizunov`_, `szeestraten`_, `tbaker57`_, `techhat`_, `terminalmage`_, `thusoy`_, `ticosax`_, `twangboy`_, `virtualguy`_, `vutny`_, `whiteinge`_, `xmj`_, `xopher-mc`_, `yannis666`_, `youngnick`_, `zygiss`_)
+- Contributors: **74** (`Ch3LL`_, `DmitryKuzmenko`_, `JohannesEbke`_, `RabidCicada`_, `Talkless`_,
+  `The-Loeki`_, `abednarik`_, `anlutro`_, `basepi`_, `bdrung`_, `cachedout`_,
+  `captaininspiration`_, `clarkperkins`_, `clinta`_, `cro`_, `darix`_, `dmacvicar`_, `dr4Ke`_,
+  `dschaller`_, `edencrane`_, `garethgreenaway`_, `gladiatr72`_, `gtmanfred`_, `iacopo-papalini`_,
+  `isbm`_, `jacksontj`_, `jacobhammons`_, `jakehilton`_, `jespada`_, `jfindlay`_, `joejulian`_,
+  `justinta`_, `kiorky`_, `kraney`_, `llua`_, `mcalmer`_, `mchugh19`_, `mew1033`_, `mlalpho`_,
+  `moltob`_, `multani`_, `myii`_, `opdude`_, `paiou`_, `pass-by-value`_, `peripatetic-sojourner`_,
+  `pprince`_, `rallytime`_, `redmcg`_, `replicant0wnz`_, `rhansen`_, `rmtmckenzie`_, `s0undt3ch`_,
+  `sakateka`_, `sbreidba`_, `seanjnkns`_, `sjmh`_, `sjorge`_, `skizunov`_, `szeestraten`_,
+  `tbaker57`_, `techhat`_, `terminalmage`_, `thusoy`_, `ticosax`_, `twangboy`_, `virtualguy`_,
+  `vutny`_, `whiteinge`_, `xmj`_, `xopher-mc`_, `yannis666`_, `youngnick`_, `zygiss`_)
 
 
 Security Fix
@@ -92,7 +102,7 @@ Changelog for v2015.8.7..v2015.8.8
 
   * d661081016 Lint.
 
-  * 59e0a6f923 Dont add this file
+  * 59e0a6f923 Don't add this file
 
   * c68b968403 Old-style proxymodules need to be setup earlier in minion init. Also include more correct comments in config.py
 
@@ -359,7 +369,7 @@ Changelog for v2015.8.7..v2015.8.8
 
 * **ISSUE** `#31293`_: (`deuscapturus`_) Git Pillars lose HEAD reference over time (refs: `#31836`_)
 
-* **ISSUE** `#29239`_: (`timwsuqld`_) Occasionaly git_pillar pull fails causing incorrect results of highstate (when running highstate for multiple minions) (refs: `#31836`_)
+* **ISSUE** `#29239`_: (`timwsuqld`_) Occasionally git_pillar pull fails causing incorrect results of highstate (when running highstate for multiple minions) (refs: `#31836`_)
 
 * **PR** `#31836`_: (`terminalmage`_) Fix git_pillar race condition
   @ *2016-03-14 15:48:28 UTC*
@@ -552,7 +562,7 @@ Changelog for v2015.8.7..v2015.8.8
 
   * ec90294442 Merge pull request `#31733`_ from jacobhammons/cloud-docs
 
-  * 209c641a41 Made udpates as suggested by @rallytime
+  * 209c641a41 Made updates as suggested by @rallytime
 
   * 26d4991cb3 moved previous intro to new quick start topic (topics/cloud/qs.rst) added new intro that explains the salt cloud configuration files added an inheritance and minion startup state example to topics/cloud/config.rst
 
@@ -594,12 +604,12 @@ Changelog for v2015.8.7..v2015.8.8
 
   * 1349bdd2e8 fix influxdb user functionality for version 0.9+
 
-* **PR** `#31743`_: (`Talkless`_) Fix parentheses missmatch in documentation
+* **PR** `#31743`_: (`Talkless`_) Fix parentheses mismatch in documentation
   @ *2016-03-08 18:01:23 UTC*
 
   * c0868307df Merge pull request `#31743`_ from Talkless/patch-1
 
-  * 26ff46dbc6 Fix parenthesis missmatch in documentation
+  * 26ff46dbc6 Fix parenthesis mismatch in documentation
 
 * **PR** `#31162`_: (`isbm`_) Remove MD5 digest from everywhere and default to SHA256
   @ *2016-03-07 19:11:36 UTC*
@@ -642,7 +652,7 @@ Changelog for v2015.8.7..v2015.8.8
 
   * f0d931f4d0 Use hash_type configuration for the Cloud
 
-  * 95cb59dec7 Set defalt hash as SHA1 in config and explain why.
+  * 95cb59dec7 Set default hash as SHA1 in config and explain why.
 
   * 8f9543c292 Set config hash_type to SHA1
 
@@ -1518,7 +1528,7 @@ Changelog for v2015.8.7..v2015.8.8
 
   * 274e6467be do not change kwargs in refresh while checking a value
 
-  * 644b14c273 simplify checking the refresh paramater
+  * 644b14c273 simplify checking the refresh parameter
 
   * db0e0de2fd add refresh option to more functions
 
@@ -1544,7 +1554,7 @@ Changelog for v2015.8.7..v2015.8.8
 
 * **ISSUE** `#28004`_: (`warden`_) dockerng.image_present should allow public repository pulling by default (refs: `#31354`_)
 
-* **PR** `#31354`_: (`ticosax`_) [dockerng] Dont require auth for all registries
+* **PR** `#31354`_: (`ticosax`_) [dockerng] Don't require auth for all registries
   @ *2016-02-20 05:45:10 UTC*
 
   * 174ee10fc2 Merge pull request `#31354`_ from ticosax/dont-require-auth-for-all-registries
@@ -1795,7 +1805,7 @@ Changelog for v2015.8.7..v2015.8.8
 
   * 29e3dd091d Merge pull request `#31271`_ from rallytime/bp-30689
 
-  * 3dae79d516 fix nested grains always show update due to __grains__.get() not supporting the ":" seperator
+  * 3dae79d516 fix nested grains always show update due to __grains__.get() not supporting the ":" separator
 
 * **ISSUE** `#30461`_: (`jfindlay`_) update documentation on bootstrap-supported platforms (refs: `#31255`_)
 
@@ -1988,7 +1998,7 @@ Changelog for v2015.8.7..v2015.8.8
 
   * 47ecb7a150 include all ips in public_ips or private_ips
 
-  * b2e8202f5d dont exit on a missing server
+  * b2e8202f5d don't exit on a missing server
 
   * 8ad1ee6db4 clean up references to access_ip extra network
 
@@ -2533,49 +2543,49 @@ Changelog for v2015.8.7..v2015.8.8
 
   * 4372851ad9 Merge pull request `#30895`_ from bdrung/2015.8
 
-  * 708f2ff8ea Fix typo reponse -> response
+  * 708f2ff8ea Fix typo of response
 
-  * 72c4eab6d7 Fix typo propogate -> propagate
+  * 72c4eab6d7 Fix typo of propagate
 
-  * 4912e365cb Fix typo directores -> directories
+  * 4912e365cb Fix typo of directories
 
-  * 74c8aba03e Fix typo exeption -> exception
+  * 74c8aba03e Fix typo of exception
 
   * 4692d84b07 Fix typos of improvement
 
-  * 213fc2d858 Fix typo occuring -> occurring
+  * 213fc2d858 Fix typo of occurring
 
-  * fe6124003b Fix typo nonexistant -> nonexistent
+  * fe6124003b Fix typo of nonexistent
 
-  * 56ce7479b1 Fix typo catched -> caught
+  * 56ce7479b1 Fix typo of caught
 
-  * 821e690e65 Fix typo develoment -> development
+  * 821e690e65 Fix typo of development
 
-  * b51279e086 Fix typo overide -> override
+  * b51279e086 Fix typo of override
 
-  * 4f2f04ea7d Fix typo relevent -> relevant
+  * 4f2f04ea7d Fix typo of relevant
 
-  * fe8be562c5 Fix typo existance -> existence
+  * fe8be562c5 Fix typo of existence
 
-  * 4a2f4de1a8 Fix typo accross -> across
+  * 4a2f4de1a8 Fix typo of across
 
-  * 9ae50c993e Fix typo Lenth -> Length
+  * 9ae50c993e Fix typo of Length
 
-  * 20e79981e1 Fix typo preferrably -> preferably
+  * 20e79981e1 Fix typo of preferably
 
-  * f8d9f608dd Fix typo addres -> address
+  * f8d9f608dd Fix typo of address
 
-  * a7f12a13f0 Fix typo keywork -> keyword
+  * a7f12a13f0 Fix typo of keyword
 
-  * bf92c3663b Fix typo formating -> formatting
+  * bf92c3663b Fix typo of formatting
 
-  * ca4450d881 Fix typo wont -> won't
+  * ca4450d881 Fix typo of won't
 
-  * cd72b12161 Fix typo thats -> that's
+  * cd72b12161 Fix typo of that's
 
-  * 6db9724ec7 Fix typo doesnt -> doesn't
+  * 6db9724ec7 Fix typo of doesn't
 
-  * 58d46a7e98 Fix typo certficate -> certificate
+  * 58d46a7e98 Fix typo of certificate
 
 * **ISSUE** `#30887`_: (`anlutro`_) salt-ssh fails on import msgpack - 2015.8 (refs: `#30889`_)
 
@@ -3199,7 +3209,7 @@ Changelog for v2015.8.7..v2015.8.8
 
   * 57b7e6cc93 Add glance state to list of state modules
 
-* **ISSUE** `#19288`_: (`oba11`_) AssociatePublicIpAddress doesnt work with salt-cloud 2014.7.0 (refs: `#20972`_, `#30591`_)
+* **ISSUE** `#19288`_: (`oba11`_) AssociatePublicIpAddress doesn't work with salt-cloud 2014.7.0 (refs: `#20972`_, `#30591`_)
 
 * **PR** `#30618`_: (`rallytime`_) Back-port `#30591`_ to 2015.8
   @ *2016-01-25 23:55:20 UTC*

@@ -18,7 +18,18 @@ Statistics
 - Total Issue References: **111**
 - Total PR References: **412**
 
-- Contributors: **76** (`5uper5hoot`_, `Ch3LL`_, `ClaudiuPID`_, `Giandom`_, `KaiSforza`_, `MTecknology`_, `ManicoW`_, `OrangeDog`_, `ShantonRU`_, `The-Loeki`_, `Yxnt`_, `aarnaud`_, `amendlik`_, `angeloudy`_, `bartlaarhoven`_, `bbh-kmd`_, `bbinet`_, `bdrung`_, `bergmannf`_, `bluesliverx`_, `bornwitbugs`_, `brejoc`_, `cachedout`_, `casselt`_, `cro`_, `cstarke`_, `dgmorrisjr`_, `dmurphy18`_, `dubb-b`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `gtmanfred`_, `isbm`_, `jacobweinstock`_, `jgleissner`_, `jodok`_, `jpsv`_, `jyurdal`_, `kiemlicz`_, `kunal-bajpai`_, `lexvella`_, `lomeroe`_, `m03`_, `madrisan`_, `mat813`_, `mattp-`_, `max-arnold`_, `mchugh19`_, `meaksh`_, `michaelgibson`_, `nhavens`_, `pirogoeth`_, `rallytime`_, `rkrieger`_, `rmarcinik`_, `rongzeng54`_, `rwaweber`_, `s0undt3ch`_, `sathieu`_, `sheagcraig`_, `silenius`_, `sunyq`_, `t0fik`_, `terminalmage`_, `terrible-broom`_, `thebluesnevrdie`_, `thetaurean`_, `tlemarchand`_, `tonybaloney`_, `twangboy`_, `waynew`_, `weswhet`_, `whytewolf`_, `yosnoop`_, `zwo-bot`_)
+- Contributors: **76** (`5uper5hoot`_, `Ch3LL`_, `ClaudiuPID`_, `Giandom`_, `KaiSforza`_,
+  `MTecknology`_, `ManicoW`_, `OrangeDog`_, `ShantonRU`_, `The-Loeki`_, `Yxnt`_, `aarnaud`_,
+  `amendlik`_, `angeloudy`_, `bartlaarhoven`_, `bbh-kmd`_, `bbinet`_, `bdrung`_, `bergmannf`_,
+  `bluesliverx`_, `bornwitbugs`_, `brejoc`_, `cachedout`_, `casselt`_, `cro`_, `cstarke`_,
+  `dgmorrisjr`_, `dmurphy18`_, `dubb-b`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `gtmanfred`_,
+  `isbm`_, `jacobweinstock`_, `jgleissner`_, `jodok`_, `jpsv`_, `jyurdal`_, `kiemlicz`_,
+  `kunal-bajpai`_, `lexvella`_, `lomeroe`_, `m03`_, `madrisan`_, `mat813`_, `mattp-`_,
+  `max-arnold`_, `mchugh19`_, `meaksh`_, `michaelgibson`_, `nhavens`_, `pirogoeth`_, `rallytime`_,
+  `rkrieger`_, `rmarcinik`_, `rongzeng54`_, `rwaweber`_, `s0undt3ch`_, `sathieu`_, `sheagcraig`_,
+  `silenius`_, `sunyq`_, `t0fik`_, `terminalmage`_, `terrible-broom`_, `thebluesnevrdie`_,
+  `thetaurean`_, `tlemarchand`_, `tonybaloney`_, `twangboy`_, `waynew`_, `weswhet`_, `whytewolf`_,
+  `yosnoop`_, `zwo-bot`_)
 
 
 Changelog for v2018.3.3..v2018.3.4
@@ -487,7 +498,9 @@ Changelog for v2018.3.3..v2018.3.4
 
   * f7a100c Merge pull request `#51151`_ from Ch3LL/bp_51061
 
-  * ffdae27 When writing output to stdout we want to ensure that the data is a string not bytes.  Under py2 the salt.utils.data.encode function results in a string but under py3 the result is a bytestring.  Swapping out salt.utils.data.encode for salt.utils.stringutils.to_str.
+  * ffdae27 When writing output to stdout we want to ensure that the data is a string not bytes.
+    Under py2 the salt.utils.data.encode function results in a string but under py3 the result is a
+    bytestring. Swapping out salt.utils.data.encode for salt.utils.stringutils.to_str.
 
 * **PR** `#51150`_: (`Ch3LL`_) Back-port `#49508`_ to 2018.3
   @ *2019-01-12 03:18:19 UTC*
@@ -513,7 +526,9 @@ Changelog for v2018.3.3..v2018.3.4
 
   * e8c8c0f Adding some tests to ensure "ALL PRIVILEGES" is handled correctly in 8.0 and 5.6
 
-  * b4bfd9f Add additional grants.  Adding logic to handle when ALL or ALL PRIVILEGES is passed for the grant, including some logic to handle the fact that the grants are split when show grants is run for a particular user.
+  * b4bfd9f Add additional grants.  Adding logic to handle when ALL or ALL PRIVILEGES is passed for
+    the grant, including some logic to handle the fact that the grants are split when show grants
+    is run for a particular user.
 
     * 74edfd9 Fix pylint
 
@@ -1203,7 +1218,7 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 7019d47 Fix grafana dashboard updating when nothing has changed
 
-* **PR** `#50737`_: (`garethgreenaway`_) [develop] Merge forward from 2017.7 to 2018.8 
+* **PR** `#50737`_: (`garethgreenaway`_) [develop] Merge forward from 2017.7 to 2018.8
   @ *2018-12-04 16:02:13 UTC*
 
   * ae81498 Merge pull request `#50737`_ from garethgreenaway/merge-2017.7
@@ -1251,11 +1266,14 @@ Changelog for v2018.3.3..v2018.3.4
 
     * 1236b51 Merge pull request `#50659`_ from garethgreenaway/49954_gem_installed_less_than_greater_than_support
 
-      * 0ec8bcf When using the gem installed state, when passing a version that includes greater than or less than symbols, ensure that the installed versions meets that requirement.
+      * 0ec8bcf When using the gem installed state, when passing a version that includes greater
+        than or less than symbols, ensure that the installed versions meets that requirement.
 
     * 6317f3a Merge pull request `#50583`_ from damon-atkins/jenkins_pylint
 
-      * 2d1f51c Fix lint only changes, full lint on merge forwards - lint only changes previous diff picked up out of data files, when the branch was out of date. - full limit on merge forward to pick up changes in the lint checks between versions. - update CODEOWNERS for .ci/*
+      * 2d1f51c Fix lint only changes, full lint on merge forwards - lint only changes previous diff
+        picked up out of data files, when the branch was out of date. - full limit on merge forward
+        to pick up changes in the lint checks between versions. - update CODEOWNERS for .ci/*
 
     * 15bf09a Merge pull request `#50605`_ from Oloremo/fix-supervisord-dead-state-idempotency
 
@@ -1304,7 +1322,8 @@ Changelog for v2018.3.3..v2018.3.4
 
   * b604785 Merge pull request `#50683`_ from garethgreenaway/48759_adding_aliases_include_expand
 
-  * 3940a0f When adding alises to an existing Certbot certificate, if we see a message about expanding in the stderr returned from cmd.run_all we should rerun the cmd with --expand included.
+  * 3940a0f When adding alises to an existing Certbot certificate, if we see a message about
+    expanding in the stderr returned from cmd.run_all we should rerun the cmd with --expand included.
 
 * **ISSUE** `#50406`_: (`glkappe`_) salt-ssh can't use Mongo returner (refs: `#50664`_)
 
@@ -1313,7 +1332,9 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 15f9ae4 Merge pull request `#50664`_ from garethgreenaway/50406_salt_ssh_returner_configuration
 
-  * 3525411 When pulling values out of the available configuration for returners we should always default to using keys for those returners, eg. mongo.user for the username.  Otherwise in certain situations, eg. when using salt-ssh we will end up with the wrong value for the user.
+  * 3525411 When pulling values out of the available configuration for returners we should always
+    default to using keys for those returners, eg. mongo.user for the username. Otherwise in
+    certain situations, eg. when using salt-ssh we will end up with the wrong value for the user.
 
 * **PR** `#50652`_: (`twangboy`_) Fix `unit.utils.test_mac_utils` on Windows
   @ *2018-11-27 20:45:41 UTC*
@@ -1348,7 +1369,11 @@ Changelog for v2018.3.3..v2018.3.4
 
     * 6679242 Merge pull request `#50590`_ from garethgreenaway/bp-50333
 
-      * 1f5aa4b pkg.installed currently fails when sources is used along with hold: True.  This was due to a change in `#48426`_ that swapped out sending the pkgs variable for the desired variable instead.  This caused problems with pkg.hold because desired and sources are always populated, and pkg.hold can only include one or the other.  This change just includes desired in the call to pkg.hold since desired has the same value for sources.
+      * 1f5aa4b pkg.installed currently fails when sources is used along with hold: True.
+        This was due to a change in `#48426`_ that swapped out sending the pkgs variable for the
+        desired variable instead. This caused problems with pkg.hold because desired and sources
+        are always populated, and pkg.hold can only include one or the other. This change just
+        includes desired in the call to pkg.hold since desired has the same value for sources.
 
         * 39e811b Add issue url to tests
 
@@ -1385,7 +1410,10 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 722be43 Fixing lint
 
-  * 65b4421 Adding some master specific functions to uitls/masters.py to determine if a Salt process is running.  Updating utils/schedule.py to use the appropriate running function either from utils/master.py or utils/minion.py depending on where the scheduled job is running.  Adding tests to test maxrunning in scheduled jobs for both the minion and master.
+  * 65b4421 Adding some master specific functions to uitls/masters.py to determine if a Salt
+    process is running. Updating utils/schedule.py to use the appropriate running function either
+    from utils/master.py or utils/minion.py depending on where the scheduled job is running. Adding
+    tests to test maxrunning in scheduled jobs for both the minion and master.
 
   * 0d65304 Swapping manual mocking to autodoc_mock_imports
 
@@ -1404,7 +1432,8 @@ Changelog for v2018.3.3..v2018.3.4
 
   * db89b27 Merge branch '2018.3' into 50542_mysql_ensure_verify_login_uses_connection_host
 
-  * 0284323 Ensure that verify_login is using the host from the connection_args and not the host associated with the user.  Adding a test to ensure user_exists when the passed host is the MySQL wildcard %.
+  * 0284323 Ensure that verify_login is using the host from the connection_args and not the host associated with the user.
+    Adding a test to ensure user_exists when the passed host is the MySQL wildcard %.
 
 * **PR** `#50619`_: (`s0undt3ch`_) Don't squash tracebacks and Unicode fixes
   @ *2018-11-26 17:04:31 UTC*
@@ -1465,7 +1494,7 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 60b4622 Merge pull request `#50366`_ from jdsieci/2018.3-fix-issue50254
 
-  * a9b9fa2 Fixed pylint warnigs
+  * a9b9fa2 Fixed pylint warnings
 
   * 342786b Issue `#50254`_ fixed
 
@@ -1567,7 +1596,10 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 4f30611 lint
 
-  * 4f9eb95 Fixing a typo in the _virtual function, should be checking for existing grains in osdata not grains.  Updating the detection to look for /sys/bus/xen/drivers/xenconsole instead of specifically looking for any files under /sys/bus/xen/drivers.  Some systems that are not running as Xen PV hosts include files under that location, particular Oracle Linux.
+  * 4f9eb95 Fixing a typo in the _virtual function, should be checking for existing grains in
+    osdata not grains. Updating the detection to look for /sys/bus/xen/drivers/xenconsole instead
+    of specifically looking for any files under /sys/bus/xen/drivers. Some systems that are not
+    running as Xen PV hosts include files under that location, particular Oracle Linux.
 
 * **ISSUE** `#50224`_: (`mruepp`_) Augeas changes state with setm not working (refs: `#50526`_)
 
@@ -1642,7 +1674,7 @@ Changelog for v2018.3.3..v2018.3.4
 
 * **ISSUE** `#43453`_: (`kunal-bajpai`_) Runner job `load` is never saved to job cache (refs: `#43454`_)
 
-* **PR** `#50328`_: (`rallytime`_) Fix issue with salt-run jobs.list_jobs where Target: unknown-target 
+* **PR** `#50328`_: (`rallytime`_) Fix issue with salt-run jobs.list_jobs where Target: unknown-target
   @ *2018-11-13 19:49:58 UTC*
 
   * **PR** `#43454`_: (`kunal-bajpai`_) Fix save_load which is never called for returner jobs (refs: `#50328`_)
@@ -1814,9 +1846,10 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 3aaad17 Merge pull request `#50468`_ from garethgreenaway/50461_fix_elementary_os_family_grain
 
-  * 77e8dcc On later versions of elementary, the os_family is being populated as elementary.  In order for the aptpkg module to function, we need to override is to be Debian.
+  * 77e8dcc On later versions of elementary, the os_family is being populated as elementary.
+    In order for the aptpkg module to function, we need to override is to be Debian.
 
-* **ISSUE** `#50311`_: (`marek-obuchowicz`_) pkg.installed state fails even though it suceeded (refs: `#50590`_, `#50333`_)
+* **ISSUE** `#50311`_: (`marek-obuchowicz`_) pkg.installed state fails even though it succeeded (refs: `#50590`_, `#50333`_)
 
 * **ISSUE** `#46689`_: (`mxork`_) pkg.installed: hold: True not applied to a package which is already installed. (refs: `#48426`_)
 
@@ -1829,7 +1862,11 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 7bc9b3d Merge branch '2018.3' into 50311_pkg_installed_fails_sources_hold
 
-  * 6e96728 pkg.installed currently fails when sources is used along with hold: True.  This was due to a change in `#48426`_ that swapped out sending the pkgs variable for the desired variable instead.  This caused problems with pkg.hold because desired and sources are always populated, and pkg.hold can only include one or the other.  This change just includes desired in the call to pkg.hold since desired has the same value for sources.
+  * 6e96728 pkg.installed currently fails when sources is used along with hold: True.  This was due
+    to a change in `#48426`_ that swapped out sending the pkgs variable for the desired variable
+    instead. This caused problems with pkg.hold because desired and sources are always populated,
+    and pkg.hold can only include one or the other. This change just includes desired in the call
+    to pkg.hold since desired has the same value for sources.
 
 * **PR** `#50434`_: (`rallytime`_) [2018.3] Merge forward from 2017.7 to 2018.3
   @ *2018-11-08 17:40:39 UTC*
@@ -2056,7 +2093,7 @@ Changelog for v2018.3.3..v2018.3.4
   * 271bd70 capture and print exception information
 
   * bc94b8e update method for creating size field of \*\*delvals items for py3 compatibility
-  
+
   * d9fe28a fix clobbering of admx_search_results which was keeping some policies from being properly detected
 
 * **PR** `#50340`_: (`garethgreenaway`_) [2018.3] Backporting `#48087`_ to 2018.3
@@ -2434,7 +2471,7 @@ Changelog for v2018.3.3..v2018.3.4
 
     * f28a4fa Merge pull request `#50211`_ from channias/fix-spm-modules-install
 
-      * 9b203d5 Fix broken install of additionnal modules in SPM packages
+      * 9b203d5 Fix broken install of additional modules in SPM packages
 
     * 6b4e07b Merge pull request `#50212`_ from dwoz/test_no_fail
 
@@ -2473,7 +2510,11 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 51b3fa4 Merge pull request `#50216`_ from garethgreenaway/50162_when_plus_splay_endless_loop
 
-  * 685509f Fixing an issue when a combination of the when parameter as a list plus using the splay parameter would cause the schedule to continuously run jobs in an endless loop, regardless of if their scheduled time had been receached.  Also fixing a related issue where scheduled jobs that rely on _next_fire_time were not being run as the corrected splayed time but rather running at the original scheduled time.  Adding new tests.
+  * 685509f Fixing an issue when a combination of the when parameter as a list plus using the splay
+    parameter would cause the schedule to continuously run jobs in an endless loop, regardless of
+    if their scheduled time had been receached. Also fixing a related issue where scheduled jobs
+    that rely on _next_fire_time were not being run as the corrected splayed time but rather
+    running at the original scheduled time. Adding new tests.
 
 * **PR** `#50190`_: (`dwoz`_) Fix test_managed_file_with_grains_data on Windows
   @ *2018-10-24 22:43:35 UTC*
@@ -2819,14 +2860,21 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 27ef1e0 Redact any passwords that are in http/https based source paths.
 
-* **PR** `#50068`_: (`garethgreenaway`_) [2018.3] Updating salt.utils.mac_utils 
+* **PR** `#50068`_: (`garethgreenaway`_) [2018.3] Updating salt.utils.mac_utils
   @ *2018-10-16 09:07:10 UTC*
 
   * ab2cb51 Merge pull request `#50068`_ from garethgreenaway/1140_mac_system_tests_2018_3_failing
 
   * eedeacb Updating another reference to salt.utils.mac_utils to use __utils__
 
-                            * 6ef5ce4 Due to a previous PR the test_sdb_runner in sdb.test_vault was failing because of a exception that was being swallowed in the test run_run function.  The cause was that when vault related functions were being run, if they were being run on the master then they were being forced to run through the _get_token_and_url_from_master() function, which is pull the id element out of the grains dictionary.  When the call was taking place from a runner, the exception was popping up since there is no id when called from a runner.  This fix checks to see if the id exists in the dictionary first, if it is there then _get_token_and_url_from_master() is called, otherwise _use_local_config is called.
+  * 6ef5ce4 Due to a previous PR the test_sdb_runner in sdb.test_vault was failing because of a
+    exception that was being swallowed in the test run_run function. The cause was that when vault
+    related functions were being run, if they were being run on the master then they were being
+    forced to run through the _get_token_and_url_from_master() function, which is pull the id
+    element out of the grains dictionary. When the call was taking place from a runner, the
+    exception was popping up since there is no id when called from a runner. This fix checks to see
+    if the id exists in the dictionary first, if it is there then _get_token_and_url_from_master()
+    is called, otherwise _use_local_config is called.
 
 * **PR** `#49987`_: (`terminalmage`_) Make Pillar no longer munge file_roots
   @ *2018-10-15 21:58:08 UTC*
@@ -3157,7 +3205,7 @@ Changelog for v2018.3.3..v2018.3.4
 
   * eee82d3 Merge pull request `#49875`_ from dwoz/win_spm_tests
 
-  * e76a751 Use os.path.split for more consistancy
+  * e76a751 Use os.path.split for more consistency
 
   * bc54d15 Fix wart in spm on windows
 
@@ -3218,7 +3266,7 @@ Changelog for v2018.3.3..v2018.3.4
 
     * 9ef9206 Actually catch the exception when we fail
 
-            * 19072f0 Use os.path.split for more consistancy
+            * 19072f0 Use os.path.split for more consistency
 
             * 6c22459 Merge remote-tracking branch 'origin/shelltests' into shelltests
 
@@ -3356,13 +3404,13 @@ Changelog for v2018.3.3..v2018.3.4
 * **PR** `#49846`_: (`rallytime`_) Back-port `#49650`_ and `#49827`_ to 2018.3
   @ *2018-10-01 20:05:24 UTC*
 
-  * **PR** `#49827`_: (`dgmorrisjr`_) fixing mis-spelling of lattrs in file.py, referncing `#49204`_  (refs: `#49846`_)
+  * **PR** `#49827`_: (`dgmorrisjr`_) fixing mis-spelling of lattrs in file.py, referencing `#49204`_  (refs: `#49846`_)
 
   * **PR** `#49650`_: (`Yxnt`_) fix aliyun cloud typeerror (refs: `#49846`_)
 
   * 93d064a Merge pull request `#49846`_ from rallytime/bp-49650
 
-  * fb7fed7 referncing `#49204`_, fixing mis-spelling of lattrs on line 4514 per request from @gtmanfred
+  * fb7fed7 referencing `#49204`_, fixing mis-spelling of lattrs on line 4514 per request from @gtmanfred
 
   * ec9fa92 use stringutils instead of hard code
 
@@ -3383,7 +3431,7 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 44ee2ec Updating default for retry_dns_count
 
-  * 75f64a6 Removing unneccesary code.
+  * 75f64a6 Removing unnecessary code.
 
   * e66dc18 Updating the resolve_dns function in minion.py to include a new minion configuration option which will control how many attempts will be made when the master hostname is unable to be resolved before giving up.
 
@@ -3643,7 +3691,7 @@ Changelog for v2018.3.3..v2018.3.4
 
   * d40c034 Fix index error when running on Python 3
 
-* **PR** `#49720`_: (`cstarke`_) Seperate prlctl and prlsrvctl checks into each requiring function
+* **PR** `#49720`_: (`cstarke`_) Separate prlctl and prlsrvctl checks into each requiring function
   @ *2018-09-21 13:32:46 UTC*
 
   * e7bbb83 Merge pull request `#49720`_ from cstarke/2018.3
@@ -3656,7 +3704,7 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 9034c4e Add import for CommandExecutionError
 
-  * 752b6f8 Seperate prlctl and prlsrvctl checks into each requiring function
+  * 752b6f8 Separate prlctl and prlsrvctl checks into each requiring function
 
 * **PR** `#49615`_: (`terminalmage`_) ping_interval: use service.restart instead of signaling
   @ *2018-09-21 13:26:41 UTC*

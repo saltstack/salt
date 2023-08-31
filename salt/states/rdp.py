@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Manage RDP Service on Windows servers
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():

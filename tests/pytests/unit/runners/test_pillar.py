@@ -7,6 +7,7 @@ import os
 import shutil
 
 import pytest
+
 import salt.runners.pillar as pillar_runner
 import salt.utils.files
 import salt.utils.gitfs

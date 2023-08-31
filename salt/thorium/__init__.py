@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The thorium system allows for advanced event tracking and reactions
 """
@@ -9,23 +8,17 @@ The thorium system allows for advanced event tracking and reactions
 # Create the thorium plugin system
 # Add dynamic recompile of thorium ruleset on given interval
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import time
 import traceback
 
-# Import Salt libs
 import salt.cache
 import salt.loader
 import salt.payload
 import salt.state
 from salt.exceptions import SaltRenderError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -56,7 +49,7 @@ class ThorState(salt.state.HighState):
         regdata = {}
         if self.reg_ret is not None:
             try:
-                regdata = self.returners["{0}.load_reg".format(self.reg_ret)]()
+                regdata = self.returners["{}.load_reg".format(self.reg_ret)]()
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(exc)
 
@@ -74,7 +67,7 @@ class ThorState(salt.state.HighState):
                 if not minions:
                     return cache
                 for minion in minions:
-                    total = self.cache.fetch("minions/{0}".format(minion), "data")
+                    total = self.cache.fetch("minions/{}".format(minion), "data")
 
                     if "pillar" in total:
                         if self.pillar_keys:
@@ -131,7 +124,7 @@ class ThorState(salt.state.HighState):
         matches = self.matches_whitelist(matches, whitelist)
         high, errors = self.render_highstate(matches)
         if exclude:
-            if isinstance(exclude, six.string_types):
+            if isinstance(exclude, str):
                 exclude = exclude.split(",")
             if "__exclude__" in high:
                 high["__exclude__"].extend(exclude)
@@ -182,5 +175,5 @@ class ThorState(salt.state.HighState):
                 cache = self.gather_cache()
                 chunks = self.get_chunks()
                 if self.reg_ret is not None:
-                    self.returners["{0}.save_reg".format(self.reg_ret)](chunks)
+                    self.returners["{}.save_reg".format(self.reg_ret)](chunks)
                 r_start = time.time()

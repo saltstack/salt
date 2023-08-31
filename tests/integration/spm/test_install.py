@@ -1,11 +1,10 @@
 """
 Tests for the spm install utility
 """
-
 import os
-import shutil
 
 import pytest
+
 import salt.utils.files
 import salt.utils.path
 import salt.utils.yaml
@@ -29,6 +28,7 @@ class SPMInstallTest(SPMCase):
             self.webserver = Webserver()
             self.webserver.root = self.spm_build_dir
             self.webserver.start()
+            self.addCleanup(self.webserver.stop)
             self.repo_dir = self.config["spm_repos_config"] + ".d"
             self.repo = os.path.join(self.repo_dir, "spm.repo")
             url = {"my_repo": {"url": self.webserver.url("")[:-1]}}
@@ -83,8 +83,3 @@ class SPMInstallTest(SPMCase):
         sls = os.path.join(self.config["formula_path"], "apache", "apache.sls")
 
         self.assertTrue(os.path.exists(sls))
-
-    def tearDown(self):
-        if "http" in self.id():
-            self.webserver.stop()
-        shutil.rmtree(self._tmp_spm)

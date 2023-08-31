@@ -99,15 +99,32 @@ class NetmikoTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(netmiko_mod, "HAS_NETMIKO", True):
                     ret = netmiko_mod.__virtual__()
                     self.assertTrue(ret)
+                    self.assertEqual(ret, "netmiko")
 
-        _expected = (False, "Not a proxy minion of type netmiko.")
         with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):
             with patch.dict(netmiko_mod.__opts__, {"proxy": {"proxytype": "esxi"}}):
                 with patch.object(netmiko_mod, "HAS_NETMIKO", True):
                     ret = netmiko_mod.__virtual__()
-                    self.assertEqual(ret, _expected)
+                    self.assertTrue(ret)
+                    self.assertEqual(ret, "netmiko")
 
         with patch("salt.utils.platform.is_proxy", return_value=False, autospec=True):
             with patch.object(netmiko_mod, "HAS_NETMIKO", True):
                 ret = netmiko_mod.__virtual__()
                 self.assertEqual(ret, "netmiko")
+
+        with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):
+            with patch.dict(netmiko_mod.__opts__, {"proxy": {"proxytype": "napalm"}}):
+                with patch.object(netmiko_mod, "HAS_NETMIKO", True):
+                    ret = netmiko_mod.__virtual__()
+                    self.assertTrue(ret)
+                    self.assertEqual(ret, "netmiko")
+
+        _expected = (False, "Unsupported proxy minion type.")
+        with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):
+            with patch.dict(
+                netmiko_mod.__opts__, {"proxy": {"proxytype": "deltaproxy"}}
+            ):
+                with patch.object(netmiko_mod, "HAS_NETMIKO", True):
+                    ret = netmiko_mod.__virtual__()
+                    self.assertEqual(ret, _expected)

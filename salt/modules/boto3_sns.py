@@ -50,8 +50,8 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=unused-import
 try:
-    import botocore
     import boto3
+    import botocore
     import jmespath
 
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
@@ -116,8 +116,8 @@ def describe_topic(name, region=None, key=None, keyid=None, profile=None):
                 arn, region=region, key=key, keyid=keyid, profile=profile
             )
             # Grab extended attributes for the above subscriptions
-            for sub in range(len(ret["Subscriptions"])):
-                sub_arn = ret["Subscriptions"][sub]["SubscriptionArn"]
+            for sub in ret["Subscriptions"]:
+                sub_arn = sub["SubscriptionArn"]
                 if not sub_arn.startswith("arn:aws:sns:"):
                     # Sometimes a sub is in e.g. PendingAccept or other
                     # wierd states and doesn't have an ARN yet
@@ -415,8 +415,8 @@ def unsubscribe(SubscriptionArn, region=None, key=None, keyid=None, profile=None
         # Note that anything left in PendingConfirmation will be auto-deleted by AWS after 30 days
         # anyway, so this isn't as ugly a hack as it might seem at first...
         log.info(
-            "Invalid subscription ARN `%s` passed - likely a PendingConfirmaton or such.  "
-            "Skipping unsubscribe attempt as it would almost certainly fail...",
+            "Invalid subscription ARN `%s` passed - likely a PendingConfirmaton or"
+            " such.  Skipping unsubscribe attempt as it would almost certainly fail...",
             SubscriptionArn,
         )
         return True

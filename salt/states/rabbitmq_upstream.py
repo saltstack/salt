@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage RabbitMQ Upstreams
 =========================
@@ -18,13 +17,10 @@ Example:
 .. versionadded:: 3000
 """
 
-# Import python libs
-from __future__ import absolute_import
 
 import json
 import logging
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.dictdiffer
 from salt.exceptions import CommandExecutionError
@@ -126,7 +122,7 @@ def present(
     try:
         current_upstreams = __salt__["rabbitmq.list_upstreams"](runas=runas)
     except CommandExecutionError as err:
-        ret["comment"] = "Error: {0}".format(err)
+        ret["comment"] = "Error: {}".format(err)
         return ret
     new_config = salt.utils.data.filter_falsey(
         {
@@ -199,7 +195,7 @@ def absent(name, runas=None):
     try:
         upstream_exists = __salt__["rabbitmq.upstream_exists"](name, runas=runas)
     except CommandExecutionError as err:
-        ret["comment"] = "Error: {0}".format(err)
+        ret["comment"] = "Error: {}".format(err)
         return ret
 
     if upstream_exists:
@@ -214,7 +210,7 @@ def absent(name, runas=None):
                     ret["comment"] = 'Upstream "{}" has been deleted.'.format(name)
                     ret["changes"] = {"old": name, "new": None}
             except CommandExecutionError as err:
-                ret["comment"] = "Error: {0}".format(err)
+                ret["comment"] = "Error: {}".format(err)
     else:
         ret["result"] = True
         ret["comment"] = 'The upstream "{}" is already absent.'.format(name)

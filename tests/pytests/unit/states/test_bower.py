@@ -2,6 +2,7 @@
     :codeauthor: Alexander Pyatkin <asp@thexyz.net>
 """
 import pytest
+
 import salt.states.bower as bower
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch

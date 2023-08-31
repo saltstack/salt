@@ -1,23 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Manage a local persistent data structure that can hold any arbitrary data
 specific to the minion
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ast
 import logging
-
-# Import python libs
 import os
 
 import salt.payload
-
-# Import salt libs
 import salt.utils.files
-
-# Import 3rd-party lib
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +26,7 @@ def clear():
     """
     try:
         os.remove(os.path.join(__opts__["cachedir"], "datastore"))
-    except (IOError, OSError):
+    except OSError:
         pass
     return True
 
@@ -50,13 +41,11 @@ def load():
 
         salt '*' data.load
     """
-    serial = salt.payload.Serial(__opts__)
-
     try:
         datastore_path = os.path.join(__opts__["cachedir"], "datastore")
         with salt.utils.files.fopen(datastore_path, "rb") as rfh:
-            return serial.loads(rfh.read())
-    except (IOError, OSError, NameError):
+            return salt.payload.loads(rfh.read())
+    except (OSError, NameError):
         return {}
 
 
@@ -79,12 +68,11 @@ def dump(new_data):
     try:
         datastore_path = os.path.join(__opts__["cachedir"], "datastore")
         with salt.utils.files.fopen(datastore_path, "w+b") as fn_:
-            serial = salt.payload.Serial(__opts__)
-            serial.dump(new_data, fn_)
+            salt.payload.dump(new_data, fn_)
 
         return True
 
-    except (IOError, OSError, NameError):
+    except (OSError, NameError):
         return False
 
 
@@ -159,7 +147,7 @@ def get(key, default=None):
     """
     store = load()
 
-    if isinstance(key, six.string_types):
+    if isinstance(key, str):
         return store.get(key, default)
     elif default is None:
         return [store[k] for k in key if k in store]
@@ -180,7 +168,7 @@ def keys():
         salt '*' data.keys
     """
     store = load()
-    return store.keys()
+    return [k for k in store.keys()]
 
 
 def values():
@@ -196,7 +184,7 @@ def values():
         salt '*' data.values
     """
     store = load()
-    return store.values()
+    return [v for v in store.values()]
 
 
 def items():
@@ -212,7 +200,7 @@ def items():
         salt '*' data.items
     """
     store = load()
-    return store.items()
+    return store
 
 
 def has_key(key):

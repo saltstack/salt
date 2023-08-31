@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Top level package command wrapper, used to translate the os detected by grains
 to the correct service manager
@@ -10,16 +9,12 @@ to the correct service manager
     <module-provider-override>`.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
 import logging
 import re
 
 import salt.utils.odict as odict
-
-# Import salt libs
 import salt.utils.systemd
 
 # Set up logging
@@ -93,11 +88,11 @@ def _disable_delta(name, requested_runlevels):
 
 
 def _service_cmd(*args):
-    return "/etc/init.d/{0} {1}".format(args[0], " ".join(args[1:]))
+    return "/etc/init.d/{} {}".format(args[0], " ".join(args[1:]))
 
 
 def _enable_disable_cmd(name, command, runlevels=()):
-    return "rc-update {0} {1} {2}".format(
+    return "rc-update {} {} {}".format(
         command, name, " ".join(sorted(runlevels))
     ).strip()
 
@@ -177,7 +172,7 @@ def get_all():
     (enabled_services, disabled_services) = _get_service_list(
         include_enabled=True, include_disabled=True
     )
-    enabled_services.update(dict([(s, []) for s in disabled_services]))
+    enabled_services.update({s: [] for s in disabled_services})
     return odict.OrderedDict(enabled_services)
 
 

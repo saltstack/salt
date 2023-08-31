@@ -1,3 +1,5 @@
+.. _startup_states:
+
 ==============
 Startup States
 ==============

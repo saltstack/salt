@@ -14,6 +14,7 @@ Package support for openSUSE via the zypper package manager
 
 import configparser
 import datetime
+import errno
 import fnmatch
 import logging
 import os
@@ -37,12 +38,15 @@ import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 from salt.utils.versions import LooseVersion
 
+if salt.utils.files.is_fcntl_available():
+    import fcntl
+
 log = logging.getLogger(__name__)
 
 HAS_ZYPP = False
 ZYPP_HOME = "/etc/zypp"
-LOCKS = "{}/locks".format(ZYPP_HOME)
-REPOS = "{}/repos.d".format(ZYPP_HOME)
+LOCKS = f"{ZYPP_HOME}/locks"
+REPOS = f"{ZYPP_HOME}/repos.d"
 DEFAULT_PRIORITY = 99
 PKG_ARCH_SEPARATOR = "."
 
@@ -83,18 +87,26 @@ class _Zypper:
     WARNING_EXIT_CODES = {
         6: "No repositories are defined.",
         7: "The ZYPP library is locked.",
-        106: "Some repository had to be disabled temporarily because it failed to refresh. "
-        "You should check your repository configuration (e.g. zypper ref -f).",
-        107: "Installation basically succeeded, but some of the packages %post install scripts returned an error. "
-        "These packages were successfully unpacked to disk and are registered in the rpm database, "
-        "but due to the failed install script they may not work as expected. The failed scripts output might "
-        "reveal what actually went wrong. Any scripts output is also logged to /var/log/zypp/history.",
+        106: (
+            "Some repository had to be disabled temporarily because it failed to"
+            " refresh. You should check your repository configuration (e.g. zypper ref"
+            " -f)."
+        ),
+        107: (
+            "Installation basically succeeded, but some of the packages %post install"
+            " scripts returned an error. These packages were successfully unpacked to"
+            " disk and are registered in the rpm database, but due to the failed"
+            " install script they may not work as expected. The failed scripts output"
+            " might reveal what actually went wrong. Any scripts output is also logged"
+            " to /var/log/zypp/history."
+        ),
     }
 
     LOCK_EXIT_CODE = 7
     XML_DIRECTIVES = ["-x", "--xmlout"]
     # ZYPPER_LOCK is not affected by --root
     ZYPPER_LOCK = "/var/run/zypp.pid"
+    RPM_LOCK = "/var/lib/rpm/.rpm.lock"
     TAG_RELEASED = "zypper/released"
     TAG_BLOCKED = "zypper/blocked"
 
@@ -225,13 +237,30 @@ class _Zypper:
             and self.exit_code not in self.WARNING_EXIT_CODES
         )
 
-    def _is_lock(self):
+    def _is_zypper_lock(self):
         """
         Is this is a lock error code?
 
         :return:
         """
         return self.exit_code == self.LOCK_EXIT_CODE
+
+    def _is_rpm_lock(self):
+        """
+        Is this an RPM lock error?
+        """
+        if salt.utils.files.is_fcntl_available():
+            if self.exit_code > 0 and os.path.exists(self.RPM_LOCK):
+                with salt.utils.files.fopen(self.RPM_LOCK, mode="w+") as rfh:
+                    try:
+                        fcntl.lockf(rfh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    except OSError as err:
+                        if err.errno == errno.EAGAIN:
+                            return True
+                    else:
+                        fcntl.lockf(rfh, fcntl.LOCK_UN)
+
+        return False
 
     def _is_xml_mode(self):
         """
@@ -255,7 +284,7 @@ class _Zypper:
             raise CommandExecutionError("No output result from Zypper?")
 
         self.exit_code = self.__call_result["retcode"]
-        if self._is_lock():
+        if self._is_zypper_lock() or self._is_rpm_lock():
             return False
 
         if self._is_error():
@@ -264,6 +293,11 @@ class _Zypper:
                 msg = (
                     self.__call_result["stderr"]
                     and self.__call_result["stderr"].strip()
+                    or ""
+                )
+                msg += (
+                    self.__call_result["stdout"]
+                    and self.__call_result["stdout"].strip()
                     or ""
                 )
                 if msg:
@@ -306,7 +340,9 @@ class _Zypper:
         if self.__no_lock:
             kwargs["env"][
                 "ZYPP_READONLY_HACK"
-            ] = "1"  # Disables locking for read-only operations. Do not try that at home!
+            ] = (  # Disables locking for read-only operations. Do not try that at home!
+                "1"
+            )
 
         # Zypper call will stuck here waiting, if another zypper hangs until forever.
         # However, Zypper lock needs to be always respected.
@@ -321,46 +357,11 @@ class _Zypper:
             if self._check_result():
                 break
 
-            if os.path.exists(self.ZYPPER_LOCK):
-                try:
-                    with salt.utils.files.fopen(self.ZYPPER_LOCK) as rfh:
-                        data = __salt__["ps.proc_info"](
-                            int(rfh.readline()),
-                            attrs=["pid", "name", "cmdline", "create_time"],
-                        )
-                        data["cmdline"] = " ".join(data["cmdline"])
-                        data["info"] = "Blocking process created at {}.".format(
-                            datetime.datetime.utcfromtimestamp(
-                                data["create_time"]
-                            ).isoformat()
-                        )
-                        data["success"] = True
-                except Exception as err:  # pylint: disable=broad-except
-                    data = {
-                        "info": "Unable to retrieve information about blocking process: {}".format(
-                            err.message
-                        ),
-                        "success": False,
-                    }
-            else:
-                data = {
-                    "info": "Zypper is locked, but no Zypper lock has been found.",
-                    "success": False,
-                }
-
-            if not data["success"]:
-                log.debug("Unable to collect data about blocking process.")
-            else:
-                log.debug("Collected data about blocking process.")
-
-            __salt__["event.fire_master"](data, self.TAG_BLOCKED)
-            log.debug(
-                "Fired a Zypper blocked event to the master with the data: %s", data
-            )
-            log.debug("Waiting 5 seconds for Zypper gets released...")
-            time.sleep(5)
-            if not was_blocked:
-                was_blocked = True
+            if self._is_zypper_lock():
+                self._handle_zypper_lock_file()
+            if self._is_rpm_lock():
+                self._handle_rpm_lock_file()
+            was_blocked = True
 
         if was_blocked:
             __salt__["event.fire_master"](
@@ -371,9 +372,7 @@ class _Zypper:
                 self.TAG_RELEASED,
             )
         if self.error_msg and not self.__no_raise and not self.__ignore_repo_failure:
-            raise CommandExecutionError(
-                "Zypper command failure: {}".format(self.error_msg)
-            )
+            raise CommandExecutionError(f"Zypper command failure: {self.error_msg}")
 
         return (
             self._is_xml_mode()
@@ -382,6 +381,50 @@ class _Zypper:
             )
             or self.__call_result["stdout"]
         )
+
+    def _handle_zypper_lock_file(self):
+        if os.path.exists(self.ZYPPER_LOCK):
+            try:
+                with salt.utils.files.fopen(self.ZYPPER_LOCK) as rfh:
+                    data = __salt__["ps.proc_info"](
+                        int(rfh.readline()),
+                        attrs=["pid", "name", "cmdline", "create_time"],
+                    )
+                    data["cmdline"] = " ".join(data["cmdline"])
+                    data["info"] = "Blocking process created at {}.".format(
+                        datetime.datetime.utcfromtimestamp(
+                            data["create_time"]
+                        ).isoformat()
+                    )
+                    data["success"] = True
+            except Exception as err:  # pylint: disable=broad-except
+                data = {
+                    "info": (
+                        "Unable to retrieve information about "
+                        "blocking process: {}".format(err)
+                    ),
+                    "success": False,
+                }
+        else:
+            data = {
+                "info": "Zypper is locked, but no Zypper lock has been found.",
+                "success": False,
+            }
+        if not data["success"]:
+            log.debug("Unable to collect data about blocking process.")
+        else:
+            log.debug("Collected data about blocking process.")
+        __salt__["event.fire_master"](data, self.TAG_BLOCKED)
+        log.debug("Fired a Zypper blocked event to the master with the data: %s", data)
+        log.debug("Waiting 5 seconds for Zypper gets released...")
+        time.sleep(5)
+
+    def _handle_rpm_lock_file(self):
+        data = {"info": "RPM is temporarily locked.", "success": True}
+        __salt__["event.fire_master"](data, self.TAG_BLOCKED)
+        log.debug("Fired an RPM blocked event to the master with the data: %s", data)
+        log.debug("Waiting 5 seconds for RPM to get released...")
+        time.sleep(5)
 
 
 __zypper__ = _Zypper()
@@ -424,10 +467,8 @@ class Wildcard:
             self.name = pkg_name
             self._set_version(pkg_version)  # Dissects possible operator
             versions = sorted(
-                [
-                    LooseVersion(vrs)
-                    for vrs in self._get_scope_versions(self._get_available_versions())
-                ]
+                LooseVersion(vrs)
+                for vrs in self._get_scope_versions(self._get_available_versions())
             )
             return versions and "{}{}".format(self._op or "", versions[-1]) or None
 
@@ -440,9 +481,7 @@ class Wildcard:
             "se", "-xv", self.name
         ).getElementsByTagName("solvable")
         if not solvables:
-            raise CommandExecutionError(
-                "No packages found matching '{}'".format(self.name)
-            )
+            raise CommandExecutionError(f"No packages found matching '{self.name}'")
 
         return sorted(
             {
@@ -477,7 +516,7 @@ class Wildcard:
         self._op = version.replace(exact_version, "") or None
         if self._op and self._op not in self.Z_OP:
             raise CommandExecutionError(
-                'Zypper do not supports operator "{}".'.format(self._op)
+                f'Zypper do not supports operator "{self._op}".'
             )
         self.version = exact_version
 
@@ -871,14 +910,14 @@ def list_pkgs(versions_as_list=False, root=None, includes=None, **kwargs):
         return {}
 
     attr = kwargs.get("attr")
-    if attr is not None:
+    if attr is not None and attr != "all":
         attr = salt.utils.args.split_input(attr)
 
     includes = includes if includes else []
 
     # Results can be different if a different root or a different
     # inclusion types are passed
-    contextkey = "pkg.list_pkgs_{}_{}".format(root, includes)
+    contextkey = f"pkg.list_pkgs_{root}_{includes}"
 
     if contextkey in __context__ and kwargs.get("use_context", True):
         return _list_pkgs_from_context(versions_as_list, contextkey, attr)
@@ -946,7 +985,7 @@ def list_pkgs(versions_as_list=False, root=None, includes=None, **kwargs):
             else:
                 elements = []
             for element in elements:
-                extended_name = "{}:{}".format(include, element)
+                extended_name = f"{include}:{element}"
                 info = info_available(extended_name, refresh=False, root=root)
                 _ret[extended_name] = [
                     {
@@ -1069,7 +1108,7 @@ def list_repo_pkgs(*args, **kwargs):
             # Sort versions newest to oldest
             for pkgname in ret[reponame]:
                 sorted_versions = sorted(
-                    [LooseVersion(x) for x in ret[reponame][pkgname]], reverse=True
+                    (LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
                 )
                 ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
         return ret
@@ -1080,7 +1119,7 @@ def list_repo_pkgs(*args, **kwargs):
                 byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
         for pkgname in byrepo_ret:
             sorted_versions = sorted(
-                [LooseVersion(x) for x in byrepo_ret[pkgname]], reverse=True
+                (LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
             )
             byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
         return byrepo_ret
@@ -1102,7 +1141,7 @@ def _get_configured_repos(root=None):
             ]
         )
     else:
-        log.warning("Repositories not found in {}".format(repos))
+        log.warning("Repositories not found in %s", repos)
 
     return repos_cfg
 
@@ -1187,7 +1226,7 @@ def del_repo(repo, root=None):
                     "message": msg[0].childNodes[0].nodeValue,
                 }
 
-    raise CommandExecutionError("Repository '{}' not found.".format(repo))
+    raise CommandExecutionError(f"Repository '{repo}' not found.")
 
 
 def mod_repo(repo, **kwargs):
@@ -1204,6 +1243,9 @@ def mod_repo(repo, **kwargs):
     enabled
         Enable or disable (True or False) repository,
         but do not remove if disabled.
+
+    name
+        This is used as the descriptive name value in the repo file.
 
     refresh
         Enable or disable (True or False) auto-refresh of the repository.
@@ -1271,7 +1313,7 @@ def mod_repo(repo, **kwargs):
 
             if new_url == base_url:
                 raise CommandExecutionError(
-                    "Repository '{}' already exists as '{}'.".format(repo, alias)
+                    f"Repository '{repo}' already exists as '{alias}'."
                 )
 
         # Add new repo
@@ -1320,7 +1362,16 @@ def mod_repo(repo, **kwargs):
         cmd_opt.append("--priority={}".format(kwargs.get("priority", DEFAULT_PRIORITY)))
 
     if "humanname" in kwargs:
+        salt.utils.versions.warn_until(
+            3009,
+            "Passing 'humanname' to 'mod_repo' is deprecated, slated "
+            "for removal in {version}. Please use 'name' instead.",
+        )
         cmd_opt.append("--name='{}'".format(kwargs.get("humanname")))
+
+    if "name" in kwargs:
+        cmd_opt.append("--name")
+        cmd_opt.append(kwargs.get("name"))
 
     if kwargs.get("gpgautoimport") is True:
         global_cmd_opt.append("--gpg-auto-import-keys")
@@ -1418,7 +1469,7 @@ def install(
     ignore_repo_failure=False,
     no_recommends=False,
     root=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -1561,7 +1612,7 @@ def install(
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     version_num = Wildcard(__zypper__(root=root))(name, version)
@@ -1572,7 +1623,7 @@ def install(
             pkg_params = {name: version_num}
         else:
             log.warning(
-                '"version" parameter will be ignored for multiple ' "package targets"
+                '"version" parameter will be ignored for multiple package targets'
             )
 
     if pkg_type == "repository":
@@ -1585,7 +1636,7 @@ def install(
                 prefix, verstr = salt.utils.pkg.split_comparison(version_num)
                 if not prefix:
                     prefix = "="
-                target = "{}{}{}".format(param, prefix, verstr)
+                target = f"{param}{prefix}{verstr}"
                 log.debug("targeting package: %s", target)
                 targets.append(target)
     elif pkg_type == "advisory":
@@ -1593,9 +1644,7 @@ def install(
         cur_patches = list_patches(root=root)
         for advisory_id in pkg_params:
             if advisory_id not in cur_patches:
-                raise CommandExecutionError(
-                    'Advisory id "{}" not found'.format(advisory_id)
-                )
+                raise CommandExecutionError(f'Advisory id "{advisory_id}" not found')
             else:
                 # If we add here the `patch:` prefix, the
                 # `_find_types` helper will take the patches into the
@@ -1648,7 +1697,7 @@ def install(
     # if the name of the package is already prefixed with 'patch:' we
     # can avoid listing them in the `advisory_ids` field.
     if pkg_type == "advisory":
-        targets = ["patch:{}".format(t) for t in targets]
+        targets = [f"patch:{t}" for t in targets]
 
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
@@ -1701,6 +1750,8 @@ def install(
 
 
 def upgrade(
+    name=None,
+    pkgs=None,
     refresh=True,
     dryrun=False,
     dist_upgrade=False,
@@ -1709,7 +1760,8 @@ def upgrade(
     skip_verify=False,
     no_recommends=False,
     root=None,
-    **kwargs
+    diff_attr=None,
+    **kwargs,
 ):  # pylint: disable=unused-argument
     """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -1727,6 +1779,27 @@ def upgrade(
     .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
 
     Run a full system upgrade, a zypper upgrade
+
+    name
+        The name of the package to be installed. Note that this parameter is
+        ignored if ``pkgs`` is passed or if ``dryrun`` is set to True.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install name=<package name>
+
+    pkgs
+        A list of packages to install from a software repository. Must be
+        passed as a python list. Note that this parameter is ignored if
+        ``dryrun`` is set to True.
+
+        CLI Examples:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install pkgs='["foo", "bar"]'
 
     refresh
         force a refresh if set to True (default).
@@ -1755,6 +1828,26 @@ def upgrade(
     root
         Operate on a different root directory.
 
+    diff_attr:
+        If a list of package attributes is specified, returned value will
+        contain them, eg.::
+
+            {'<package>': {
+                'old': {
+                    'version': '<old-version>',
+                    'arch': '<old-arch>'},
+
+                'new': {
+                    'version': '<new-version>',
+                    'arch': '<new-arch>'}}}
+
+        Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
+        ``install_date``, ``install_date_time_t``.
+
+        If ``all`` is specified, all valid attributes will be returned.
+
+        .. versionadded:: 3006.0
+
     Returns a dictionary containing the changes:
 
     .. code-block:: python
@@ -1762,11 +1855,27 @@ def upgrade(
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
+    If an attribute list is specified in ``diff_attr``, the dict will also contain
+    any specified attribute, eg.::
+
+    .. code-block:: python
+
+        {'<package>': {
+            'old': {
+                'version': '<old-version>',
+                'arch': '<old-arch>'},
+
+            'new': {
+                'version': '<new-version>',
+                'arch': '<new-arch>'}}}
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.upgrade
+        salt '*' pkg.upgrade name=mypackage
+        salt '*' pkg.upgrade pkgs='["package1", "package2"]'
         salt '*' pkg.upgrade dist_upgrade=True fromrepo='["MyRepoName"]' novendorchange=True
         salt '*' pkg.upgrade dist_upgrade=True dryrun=True
     """
@@ -1812,12 +1921,23 @@ def upgrade(
             __zypper__(systemd_scope=_systemd_scope(), root=root).noraise.call(
                 *cmd_update + ["--debug-solver"]
             )
+    else:
+        if name or pkgs:
+            try:
+                (pkg_params, _) = __salt__["pkg_resource.parse_targets"](
+                    name=name, pkgs=pkgs, sources=None, **kwargs
+                )
+                if pkg_params:
+                    cmd_update.extend(pkg_params.keys())
 
-    old = list_pkgs(root=root)
+            except MinionError as exc:
+                raise CommandExecutionError(exc)
+
+    old = list_pkgs(root=root, attr=diff_attr)
 
     __zypper__(systemd_scope=_systemd_scope(), root=root).noraise.call(*cmd_update)
     _clean_cache()
-    new = list_pkgs(root=root)
+    new = list_pkgs(root=root, attr=diff_attr)
     ret = salt.utils.data.compare_dicts(old, new)
 
     if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
@@ -2007,6 +2127,75 @@ def purge(name=None, pkgs=None, root=None, **kwargs):  # pylint: disable=unused-
     return _uninstall(name=name, pkgs=pkgs, root=root)
 
 
+def list_holds(pattern=None, full=True, root=None, **kwargs):
+    """
+    .. versionadded:: 3005
+
+    List information on locked packages.
+
+    .. note::
+        This function returns the computed output of ``list_locks``
+        to show exact locked packages.
+
+    pattern
+        Regular expression used to match the package name
+
+    full : True
+        Show the full hold definition including version and epoch. Set to
+        ``False`` to return just the name of the package(s) being held.
+
+    root
+        Operate on a different root directory.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_holds
+        salt '*' pkg.list_holds full=False
+    """
+    locks = list_locks(root=root)
+    ret = []
+    inst_pkgs = {}
+    for solv_name, lock in locks.items():
+        if lock.get("type", "package") != "package":
+            continue
+        try:
+            found_pkgs = search(
+                solv_name,
+                root=root,
+                match=None if "*" in solv_name else "exact",
+                case_sensitive=(lock.get("case_sensitive", "on") == "on"),
+                installed_only=True,
+                details=True,
+            )
+        except CommandExecutionError:
+            continue
+        if found_pkgs:
+            for pkg in found_pkgs:
+                if pkg not in inst_pkgs:
+                    inst_pkgs.update(
+                        info_installed(
+                            pkg, root=root, attr="edition,epoch", all_versions=True
+                        )
+                    )
+
+    ptrn_re = re.compile(rf"{pattern}-\S+") if pattern else None
+    for pkg_name, pkg_editions in inst_pkgs.items():
+        for pkg_info in pkg_editions:
+            pkg_ret = (
+                "{}-{}:{}.*".format(
+                    pkg_name, pkg_info.get("epoch", 0), pkg_info.get("edition")
+                )
+                if full
+                else pkg_name
+            )
+            if pkg_ret not in ret and (not ptrn_re or ptrn_re.match(pkg_ret)):
+                ret.append(pkg_ret)
+
+    return ret
+
+
 def list_locks(root=None):
     """
     List current package locks.
@@ -2036,14 +2225,14 @@ def list_locks(root=None):
                 for element in [el for el in meta if el]:
                     if ":" in element:
                         lock.update(
-                            dict([tuple([i.strip() for i in element.split(":", 1)])])
+                            dict([tuple(i.strip() for i in element.split(":", 1))])
                         )
                 if lock.get("solvable_name"):
                     locks[lock.pop("solvable_name")] = lock
     except OSError:
         pass
     except Exception:  # pylint: disable=broad-except
-        log.warning("Detected a problem when accessing {}".format(_locks))
+        log.warning("Detected a problem when accessing %s", _locks)
 
     return locks
 
@@ -2077,7 +2266,7 @@ def clean_locks(root=None):
     return out
 
 
-def unhold(name=None, pkgs=None, **kwargs):
+def unhold(name=None, pkgs=None, root=None, **kwargs):
     """
     .. versionadded:: 3003
 
@@ -2091,6 +2280,8 @@ def unhold(name=None, pkgs=None, **kwargs):
         A list of packages to unhold.  The ``name`` parameter will be ignored if
         this option is passed.
 
+    root
+        operate on a different root directory.
 
     CLI Example:
 
@@ -2106,77 +2297,45 @@ def unhold(name=None, pkgs=None, **kwargs):
 
     targets = []
     if pkgs:
-        for pkg in salt.utils.data.repack_dictlist(pkgs):
-            targets.append(pkg)
+        targets.extend(pkgs)
     else:
         targets.append(name)
 
-    locks = list_locks()
+    locks = list_locks(root=root)
     removed = []
-    missing = []
 
     for target in targets:
+        version = None
+        if isinstance(target, dict):
+            (target, version) = next(iter(target.items()))
         ret[target] = {"name": target, "changes": {}, "result": True, "comment": ""}
         if locks.get(target):
-            removed.append(target)
-            ret[target]["changes"]["new"] = ""
-            ret[target]["changes"]["old"] = "hold"
-            ret[target]["comment"] = "Package {} is no longer held.".format(target)
+            lock_ver = None
+            if "version" in locks.get(target):
+                lock_ver = locks.get(target)["version"]
+                lock_ver = lock_ver.lstrip("= ")
+            if version and lock_ver != version:
+                ret[target]["result"] = False
+                ret[target][
+                    "comment"
+                ] = "Unable to unhold package {} as it is held with the other version.".format(
+                    target
+                )
+            else:
+                removed.append(target if not lock_ver else f"{target}={lock_ver}")
+                ret[target]["changes"]["new"] = ""
+                ret[target]["changes"]["old"] = "hold"
+                ret[target]["comment"] = f"Package {target} is no longer held."
         else:
-            missing.append(target)
-            ret[target]["comment"] = "Package {} was already unheld.".format(target)
-
-    if removed:
-        __zypper__.call("rl", *removed)
-
-    return ret
-
-
-def remove_lock(name, root=None, **kwargs):
-    """
-    .. deprecated:: 3003
-        This function is deprecated. Please use ``unhold()`` instead.
-
-    Remove specified package lock.
-
-    name
-        A package name, or a comma-separated list of package names.
-
-    root
-        operate on a different root directory.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' pkg.remove_lock <package name>
-        salt '*' pkg.remove_lock <package1>,<package2>,<package3>
-    """
-
-    salt.utils.versions.warn_until(
-        "Phosphorus", "This function is deprecated. Please use unhold() instead."
-    )
-    locks = list_locks(root)
-    try:
-        packages = list(__salt__["pkg_resource.parse_targets"](name)[0].keys())
-    except MinionError as exc:
-        raise CommandExecutionError(exc)
-
-    removed = []
-    missing = []
-    for pkg in packages:
-        if locks.get(pkg):
-            removed.append(pkg)
-        else:
-            missing.append(pkg)
+            ret[target]["comment"] = f"Package {target} was already unheld."
 
     if removed:
         __zypper__(root=root).call("rl", *removed)
 
-    return {"removed": len(removed), "not_found": missing}
+    return ret
 
 
-def hold(name=None, pkgs=None, **kwargs):
+def hold(name=None, pkgs=None, root=None, **kwargs):
     """
     .. versionadded:: 3003
 
@@ -2190,6 +2349,8 @@ def hold(name=None, pkgs=None, **kwargs):
         A list of packages to hold.  The ``name`` parameter will be ignored if
         this option is passed.
 
+    root
+        operate on a different root directory.
 
     CLI Example:
 
@@ -2205,67 +2366,32 @@ def hold(name=None, pkgs=None, **kwargs):
 
     targets = []
     if pkgs:
-        for pkg in salt.utils.data.repack_dictlist(pkgs):
-            targets.append(pkg)
+        targets.extend(pkgs)
     else:
         targets.append(name)
 
-    locks = list_locks()
+    locks = list_locks(root=root)
     added = []
 
     for target in targets:
+        version = None
+        if isinstance(target, dict):
+            (target, version) = next(iter(target.items()))
         ret[target] = {"name": target, "changes": {}, "result": True, "comment": ""}
         if not locks.get(target):
-            added.append(target)
+            added.append(target if not version else f"{target}={version}")
             ret[target]["changes"]["new"] = "hold"
             ret[target]["changes"]["old"] = ""
-            ret[target]["comment"] = "Package {} is now being held.".format(target)
+            ret[target]["comment"] = f"Package {target} is now being held."
         else:
             ret[target]["comment"] = "Package {} is already set to be held.".format(
                 target
             )
 
     if added:
-        __zypper__.call("al", *added)
-
-    return ret
-
-
-def add_lock(name, root=None, **kwargs):
-    """
-    .. deprecated:: 3003
-        This function is deprecated. Please use ``hold()`` instead.
-
-    Add a package lock. Specify packages to lock by exact name.
-
-    root
-        operate on a different root directory.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' pkg.add_lock <package name>
-        salt '*' pkg.add_lock <package1>,<package2>,<package3>
-    """
-    salt.utils.versions.warn_until(
-        "Phosphorus", "This function is deprecated. Please use hold() instead."
-    )
-    locks = list_locks(root)
-    added = []
-    try:
-        packages = list(__salt__["pkg_resource.parse_targets"](name)[0].keys())
-    except MinionError as exc:
-        raise CommandExecutionError(exc)
-
-    for pkg in packages:
-        if not locks.get(pkg):
-            added.append(pkg)
-
-    if added:
         __zypper__(root=root).call("al", *added)
 
-    return {"added": len(added), "packages": added}
+    return ret
 
 
 def verify(*names, **kwargs):
@@ -2606,7 +2732,7 @@ def search(criteria, refresh=False, **kwargs):
         .getElementsByTagName("solvable")
     )
     if not solvables:
-        raise CommandExecutionError("No packages found matching '{}'".format(criteria))
+        raise CommandExecutionError(f"No packages found matching '{criteria}'")
 
     out = {}
     for solvable in solvables:

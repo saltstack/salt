@@ -12,7 +12,14 @@ Statistics
 - Total Issue References: **58**
 - Total PR References: **153**
 
-- Contributors: **49** (`BenoitKnecht`_, `Ch3LL`_, `Enquier`_, `F30`_, `Foxlik`_, `The-Loeki`_, `UtahDave`_, `abednarik`_, `alex-zel`_, `arif-ali`_, `automate-solutions`_, `axmetishe`_, `bdrung`_, `cachedout`_, `cro`_, `darenjacobs`_, `dmurphy18`_, `dschaller`_, `epcim`_, `garethgreenaway`_, `github-abcde`_, `gtmanfred`_, `isbm`_, `jettero`_, `jmarinaro`_, `kiorky`_, `lomeroe`_, `lordcirth`_, `lorengordon`_, `lubyou`_, `mcalmer`_, `moio`_, `onlyanegg`_, `peter-funktionIT`_, `pkazmierczak`_, `pprkut`_, `rallytime`_, `ricohouse`_, `seanjnkns`_, `sebw`_, `skizunov`_, `svinota`_, `t0fik`_, `terminalmage`_, `tmeneau`_, `tonybaloney`_, `twangboy`_, `whiteinge`_, `yannj-fr`_)
+- Contributors: **49** (`BenoitKnecht`_, `Ch3LL`_, `Enquier`_, `F30`_, `Foxlik`_, `The-Loeki`_,
+  `UtahDave`_, `abednarik`_, `alex-zel`_, `arif-ali`_, `automate-solutions`_, `axmetishe`_,
+  `bdrung`_, `cachedout`_, `cro`_, `darenjacobs`_, `dmurphy18`_, `dschaller`_, `epcim`_,
+  `garethgreenaway`_, `github-abcde`_, `gtmanfred`_, `isbm`_, `jettero`_, `jmarinaro`_, `kiorky`_,
+  `lomeroe`_, `lordcirth`_, `lorengordon`_, `lubyou`_, `mcalmer`_, `moio`_, `onlyanegg`_,
+  `peter-funktionIT`_, `pkazmierczak`_, `pprkut`_, `rallytime`_, `ricohouse`_, `seanjnkns`_,
+  `sebw`_, `skizunov`_, `svinota`_, `t0fik`_, `terminalmage`_, `tmeneau`_, `tonybaloney`_,
+  `twangboy`_, `whiteinge`_, `yannj-fr`_)
 
 
 Changelog for v2016.11.5..v2016.11.6
@@ -193,7 +200,9 @@ Changelog for v2016.11.5..v2016.11.6
 
       * 687872a488 Lint
 
-      * dadf4b851c Add documentation to the example master and minion configuration files. Move minion event signing to a saner place. Enable dropping messages when signature does not verify or when minion is not adding the signature to its payloads.
+      * dadf4b851c Add documentation to the example master and minion configuration files. Move
+        minion event signing to a saner place. Enable dropping messages when signature does not
+        verify or when minion is not adding the signature to its payloads.
 
       * e44673cdae Add caching of key.
 
@@ -457,7 +466,7 @@ Changelog for v2016.11.5..v2016.11.6
 
   * 1592687294 Document aptpkg architectures parameter
 
-* **ISSUE** `#41478`_: (`jf`_) security / information leak with consul pillar when subsitution values are not present (refs: `#41530`_)
+* **ISSUE** `#41478`_: (`jf`_) security / information leak with consul pillar when substitution values are not present (refs: `#41530`_)
 
 * **PR** `#41530`_: (`gtmanfred`_) Set default for consul_pillar to None
   @ *2017-06-08 18:13:15 UTC*
@@ -524,14 +533,14 @@ Changelog for v2016.11.5..v2016.11.6
 
   * 53bca96328 Update __init__.py
 
-* **PR** `#41552`_: (`Enquier`_) Adding logic so that update_floatingip can dissassociate floatingip's
+* **PR** `#41552`_: (`Enquier`_) Adding logic so that update_floatingip can disassociate floatingip's
   @ *2017-06-06 18:25:56 UTC*
 
   * 846ca54688 Merge pull request `#41552`_ from Enquier/neutron-floatingip-remove
 
   * aeed51c1e3 Adding port=None default and documentation
 
-  * fcce05e1e4 Adding logic so that update_floatingip can dissassociate floatingip's Previously update_floatingip would cause an error if port is set to None.
+  * fcce05e1e4 Adding logic so that update_floatingip can disassociate floatingip's Previously update_floatingip would cause an error if port is set to None.
 
 * **PR** `#41569`_: (`gtmanfred`_) Check all entries in result
   @ *2017-06-06 18:18:17 UTC*
@@ -549,7 +558,15 @@ Changelog for v2016.11.5..v2016.11.6
 
   * d9546c6283 Merge pull request `#41599`_ from garethgreenaway/41540_fixes_to_archive_module
 
-  * 66a136e6d8 Fixing issues raised in `#41540`_ when a zip file is created on a Windows system.  The issue has two parts, first directories that end up in the archive end up in the results of aarchive.list twice as they show up as both files and directories because of the logic to handle the fact that Windows doesn't mark them as directories.  This issue shows up when an extraction is run a second time since the module verified the file types and the subdirectory is not a file.  The second issue is related to permissions, if Salt is told to extract permissions (which is the default) then the directory and files end up being unreadable since the permissions are not available.  This change sets the permissions to what the default umask for the user running Salt is.
+  * 66a136e6d8 Fixing issues raised in `#41540`_ when a zip file is created on a Windows system.
+    The issue has two parts, first directories that end up in the archive end up in the results of
+    aarchive.list twice as they show up as both files and directories because of the logic to
+    handle the fact that Windows doesn't mark them as directories. This issue shows up when an
+    extraction is run a second time since the module verified the file types and the subdirectory
+    is not a file. The second issue is related to permissions, if Salt is told to extract
+    permissions (which is the default) then the directory and files end up being unreadable since
+    the permissions are not available. This change sets the permissions to what the default umask
+    for the user running Salt is.
 
 * **ISSUE** `#40950`_: (`idokaplan`_) Import certificate (refs: `#41453`_, `#41383`_)
 
@@ -564,7 +581,7 @@ Changelog for v2016.11.5..v2016.11.6
 
   * ef8e3ef569 Update win_pki.py
 
-* **PR** `#41557`_: (`dmurphy18`_) Add symbolic link for salt-proxy service similar to other serivce files
+* **PR** `#41557`_: (`dmurphy18`_) Add symbolic link for salt-proxy service similar to other service files
   @ *2017-06-06 17:13:52 UTC*
 
   * 3335fcbc7d Merge pull request `#41557`_ from dmurphy18/fix-proxy-service
@@ -809,7 +826,7 @@ Changelog for v2016.11.5..v2016.11.6
 
   * 66ab1e5184 Re-adding neutron dependency check
 
-  * cce07eefc2 Updating Neutron module to suport KeystoneAuth
+  * cce07eefc2 Updating Neutron module to support KeystoneAuth
 
 * **ISSUE** `#34460`_: (`Ch3LL`_) Receive an error when using salt-api to call a runner (refs: `#41409`_)
 
@@ -828,7 +845,9 @@ Changelog for v2016.11.5..v2016.11.6
 
   * 3f950596f4 Fixing lint issues.
 
-  * f3a6531a69 On occasion an exception will occur which results in the  event not returning properly, even though the wire_bytes  is correctly populated. In this situation, we log to trace  and continue. `#34460`_
+  * f3a6531a69 On occasion an exception will occur which results in the event not returning
+    properly, even though the wire_bytes is correctly populated. In this situation, we log to trace
+    and continue. `#34460`_
 
 * **PR** `#41421`_: (`UtahDave`_) Correct doc to actually blacklist a module
   @ *2017-05-25 21:01:46 UTC*
@@ -985,7 +1004,9 @@ Changelog for v2016.11.5..v2016.11.6
 
   * 5039fe12fb Removing chdir as it is no needed with this change
 
-  * 4550c3ce49 Updating the code that is pulling in the list of cached minions to use self.cache.list instead of relying on checking the local file system, which only works for the localfs cache method.  `#40748`_
+  * 4550c3ce49 Updating the code that is pulling in the list of cached minions to use
+    self.cache.list instead of relying on checking the local file system, which only works for the
+    localfs cache method. `#40748`_
 
 * **ISSUE** `#38894`_: (`amendlik`_) salt.runner and salt.wheel ignore test=True (refs: `#41309`_, `#41611`_)
 
@@ -1001,7 +1022,7 @@ Changelog for v2016.11.5..v2016.11.6
 * **PR** `#41319`_: (`lomeroe`_) backport `#41307`_ to 2016.11, properly pack version numbers into single
   @ *2017-05-19 18:25:00 UTC*
 
-  * **PR** `#41307`_: (`lomeroe`_) properly pack/unpack the verison numbers into a number (refs: `#41319`_)
+  * **PR** `#41307`_: (`lomeroe`_) properly pack/unpack the version numbers into a number (refs: `#41319`_)
 
   * 140b0427e1 Merge pull request `#41319`_ from lomeroe/bp_41307
 

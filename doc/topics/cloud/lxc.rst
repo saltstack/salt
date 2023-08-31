@@ -199,4 +199,3 @@ Driver Support
 - Container creation
 - Image listing (LXC templates)
 - Running container information (IP addresses, etc.)
-

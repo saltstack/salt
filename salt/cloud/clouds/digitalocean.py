@@ -197,7 +197,9 @@ def list_nodes_select(call=None):
     Return a list of the VMs that are on the provider, with select fields
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -221,9 +223,7 @@ def get_image(vm_):
             if images[image]["slug"] is not None:
                 return images[image]["slug"]
             return int(images[image]["id"])
-    raise SaltCloudNotFound(
-        "The specified image, '{}', could not be found.".format(vm_image)
-    )
+    raise SaltCloudNotFound(f"The specified image, '{vm_image}', could not be found.")
 
 
 def get_size(vm_):
@@ -237,9 +237,7 @@ def get_size(vm_):
     for size in sizes:
         if vm_size.lower() == sizes[size]["slug"]:
             return sizes[size]["slug"]
-    raise SaltCloudNotFound(
-        "The specified size, '{}', could not be found.".format(vm_size)
-    )
+    raise SaltCloudNotFound(f"The specified size, '{vm_size}', could not be found.")
 
 
 def get_location(vm_):
@@ -255,7 +253,7 @@ def get_location(vm_):
         if vm_location in (locations[location]["name"], locations[location]["slug"]):
             return locations[location]["slug"]
     raise SaltCloudNotFound(
-        "The specified location, '{}', could not be found.".format(vm_location)
+        f"The specified location, '{vm_location}', could not be found."
     )
 
 
@@ -331,7 +329,7 @@ def create(vm_):
 
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            "The defined key_filename '{}' does not exist".format(key_filename)
+            f"The defined key_filename '{key_filename}' does not exist"
         )
 
     if not __opts__.get("ssh_agent", False) and key_filename is None:
@@ -349,28 +347,50 @@ def create(vm_):
         kwargs["ssh_interface"] = ssh_interface
     else:
         raise SaltCloudConfigError(
-            "The DigitalOcean driver requires ssh_interface to be defined as 'public' or 'private'."
+            "The DigitalOcean driver requires ssh_interface to be defined as 'public'"
+            " or 'private'."
         )
 
-    private_networking = config.get_cloud_config_value(
-        "private_networking", vm_, __opts__, search_global=False, default=None,
+    vpc_name = config.get_cloud_config_value(
+        "vpc_name",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
 
-    if private_networking is not None:
-        if not isinstance(private_networking, bool):
-            raise SaltCloudConfigError(
-                "'private_networking' should be a boolean value."
-            )
-        kwargs["private_networking"] = private_networking
-
-    if not private_networking and ssh_interface == "private":
-        raise SaltCloudConfigError(
-            "The DigitalOcean driver requires ssh_interface if defined as 'private' "
-            "then private_networking should be set as 'True'."
+    if vpc_name is not None:
+        vpc = _get_vpc_by_name(vpc_name)
+        if vpc is None:
+            raise SaltCloudConfigError("Invalid VPC name provided")
+        else:
+            kwargs["vpc_uuid"] = vpc[vpc_name]["id"]
+    else:
+        private_networking = config.get_cloud_config_value(
+            "private_networking",
+            vm_,
+            __opts__,
+            search_global=False,
+            default=None,
         )
+        if private_networking is not None:
+            if not isinstance(private_networking, bool):
+                raise SaltCloudConfigError(
+                    "'private_networking' should be a boolean value."
+                )
+            kwargs["private_networking"] = private_networking
 
+        if not private_networking and ssh_interface == "private":
+            raise SaltCloudConfigError(
+                "The DigitalOcean driver requires ssh_interface if defined as 'private' "
+                "then private_networking should be set as 'True'."
+            )
     backups_enabled = config.get_cloud_config_value(
-        "backups_enabled", vm_, __opts__, search_global=False, default=None,
+        "backups_enabled",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
 
     if backups_enabled is not None:
@@ -379,7 +399,11 @@ def create(vm_):
         kwargs["backups"] = backups_enabled
 
     ipv6 = config.get_cloud_config_value(
-        "ipv6", vm_, __opts__, search_global=False, default=None,
+        "ipv6",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
 
     if ipv6 is not None:
@@ -388,7 +412,11 @@ def create(vm_):
         kwargs["ipv6"] = ipv6
 
     monitoring = config.get_cloud_config_value(
-        "monitoring", vm_, __opts__, search_global=False, default=None,
+        "monitoring",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
 
     if monitoring is not None:
@@ -413,7 +441,11 @@ def create(vm_):
             log.exception("Failed to read userdata from %s: %s", userdata_file, exc)
 
     create_dns_record = config.get_cloud_config_value(
-        "create_dns_record", vm_, __opts__, search_global=False, default=None,
+        "create_dns_record",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
 
     if create_dns_record:
@@ -422,7 +454,8 @@ def create(vm_):
         dns_domain_name = vm_["name"].split(".")
         if len(dns_domain_name) > 2:
             log.debug(
-                "create_dns_record: inferring default dns_hostname, dns_domain from minion name as FQDN"
+                "create_dns_record: inferring default dns_hostname, dns_domain from"
+                " minion name as FQDN"
             )
             default_dns_hostname = ".".join(dns_domain_name[:-2])
             default_dns_domain = ".".join(dns_domain_name[-2:])
@@ -586,11 +619,14 @@ def query(
             default="https://api.digitalocean.com/v2",
         )
     )
-
-    path = "{}/{}/".format(base_path, method)
+    # vpcs method doesn't like the / at the end.
+    if method == "vpcs":
+        path = f"{base_path}/{method}"
+    else:
+        path = f"{base_path}/{method}/"
 
     if droplet_id:
-        path += "{}/".format(droplet_id)
+        path += f"{droplet_id}/"
 
     if command:
         path += command
@@ -677,7 +713,7 @@ def _get_node(name):
         except KeyError:
             attempts -= 1
             log.debug(
-                "Failed to get the data for node '%s'. Remaining " "attempts: %s",
+                "Failed to get the data for node '%s'. Remaining attempts: %s",
                 name,
                 attempts,
             )
@@ -701,7 +737,8 @@ def list_keypairs(call=None):
 
     while fetch:
         items = query(
-            method="account/keys", command="?page=" + str(page) + "&per_page=100",
+            method="account/keys",
+            command="?page=" + str(page) + "&per_page=100",
         )
 
         for key_pair in items["ssh_keys"]:
@@ -838,13 +875,13 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{}/destroying".format(name),
+        f"salt/cloud/{name}/destroying",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -881,7 +918,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{}/destroyed".format(name),
+        f"salt/cloud/{name}/destroyed",
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -956,7 +993,7 @@ def destroy_dns_records(fqdn):
                 ret = query(
                     method="domains",
                     droplet_id=domain,
-                    command="records/{}".format(id_),
+                    command=f"records/{id_}",
                     http_method="delete",
                 )
             except SaltCloudSystemExit:
@@ -1031,7 +1068,8 @@ def list_floating_ips(call=None):
 
     while fetch:
         items = query(
-            method="floating_ips", command="?page=" + str(page) + "&per_page=200",
+            method="floating_ips",
+            command="?page=" + str(page) + "&per_page=200",
         )
 
         for floating_ip in items["floating_ips"]:
@@ -1226,6 +1264,41 @@ def unassign_floating_ip(kwargs=None, call=None):
     return result
 
 
+def _get_vpc_by_name(name):
+    """
+    Helper function to format and parse vpc data. It's pretty expensive as it
+    retrieves a list of vpcs and iterates through them till it finds the correct
+    vpc by name.
+    """
+    fetch = True
+    page = 1
+    ret = {}
+
+    log.debug("Matching vpc name with: %s", name)
+    while fetch:
+        items = query(method="vpcs", command=f"?page={str(page)}&per_page=200")
+        for node in items["vpcs"]:
+            log.debug("Node returned : %s", node["name"])
+            if name == node["name"]:
+                log.debug("Matched VPC node")
+                ret[name] = {
+                    "id": node["id"],
+                    "urn": node["urn"],
+                    "name": name,
+                    "description": node["description"],
+                    "region": node["region"],
+                    "ip_range": node["ip_range"],
+                    "default": node["default"],
+                }
+                return ret
+        page += 1
+        try:
+            fetch = "next" in items["links"]["pages"]
+        except KeyError:
+            fetch = False
+    return None
+
+
 def _list_nodes(full=False, for_output=False):
     """
     Helper function to format and parse node data.
@@ -1235,7 +1308,7 @@ def _list_nodes(full=False, for_output=False):
     ret = {}
 
     while fetch:
-        items = query(method="droplets", command="?page=" + str(page) + "&per_page=200")
+        items = query(method="droplets", command=f"?page={str(page)}&per_page=200")
         for node in items["droplets"]:
             name = node["name"]
             ret[name] = {}

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Insert minion return data into a sqlite3 database
 
@@ -80,21 +79,13 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return sqlite3 --return_kwargs '{"db": "/var/lib/salt/another-salt.db"}'
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
-
-# Import python libs
 import logging
 
 import salt.returners
-
-# Import Salt libs
 import salt.utils.jid
 import salt.utils.json
-
-# Import 3rd-party libs
-from salt.ext import six
 
 # Better safe than sorry here. Even though sqlite3 is included in python
 try:
@@ -172,8 +163,8 @@ def returner(ret):
             "fun": ret["fun"],
             "jid": ret["jid"],
             "id": ret["id"],
-            "fun_args": six.text_type(ret["fun_args"]) if ret.get("fun_args") else None,
-            "date": six.text_type(datetime.datetime.now()),
+            "fun_args": str(ret["fun_args"]) if ret.get("fun_args") else None,
+            "date": str(datetime.datetime.now()),
             "full_ret": salt.utils.json.dumps(ret["return"]),
             "success": ret.get("success", ""),
         },
@@ -228,7 +219,7 @@ def get_jid(jid):
     log.debug("query result: %s", data)
     ret = {}
     if data and len(data) > 1:
-        ret = {six.text_type(data[0]): {"return": salt.utils.json.loads(data[1])}}
+        ret = {str(data[0]): {"return": salt.utils.json.loads(data[1])}}
         log.debug("ret: %s", ret)
     _close_conn(conn)
     return ret

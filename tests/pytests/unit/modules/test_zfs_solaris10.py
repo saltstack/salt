@@ -3,7 +3,7 @@ Tests for salt.modules.zfs on Solaris
 """
 
 import pytest
-import salt.config
+
 import salt.loader
 import salt.modules.zfs as zfs
 import salt.utils.zfs
@@ -17,12 +17,11 @@ def utils_patch():
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    utils = salt.loader.utils(opts, whitelist=["zfs"])
+def configure_loader_modules(minion_opts):
+    utils = salt.loader.utils(minion_opts, whitelist=["zfs"])
     zfs_obj = {
         zfs: {
-            "__opts__": opts,
+            "__opts__": minion_opts,
             "__grains__": {
                 "osarch": "sparcv9",
                 "os_family": "Solaris",
@@ -37,7 +36,7 @@ def configure_loader_modules():
     return zfs_obj
 
 
-@pytest.mark.skip_unless_on_sunos(reason="test to ensure no -t only applies to Solaris")
+@pytest.mark.skip_unless_on_sunos
 def test_get_success_solaris():
     """
     Tests zfs get success

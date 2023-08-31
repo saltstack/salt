@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 JSON5 Renderer for Salt
 
@@ -12,13 +11,8 @@ This renderer requires the `json5 python bindings`__, installable via pip.
 .. __: https://pypi.python.org/pypi/json5
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
-
-# Import salt libs
-from salt.ext import six
 
 try:
     import json5 as json
@@ -47,7 +41,7 @@ def render(json_data, saltenv="base", sls="", **kws):
 
     :rtype: A Python data structure
     """
-    if not isinstance(json_data, six.string_types):
+    if not isinstance(json_data, str):
         json_data = json_data.read()
 
     if json_data.startswith("#!"):

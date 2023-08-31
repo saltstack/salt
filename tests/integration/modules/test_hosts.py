@@ -7,6 +7,7 @@ import os
 import shutil
 
 import pytest
+
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase

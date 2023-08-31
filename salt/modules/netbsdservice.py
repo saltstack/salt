@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The service module for NetBSD
 
@@ -8,12 +7,9 @@ The service module for NetBSD
     *'service.start' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
 import glob
-
-# Import python libs
 import os
 import re
 
@@ -45,7 +41,7 @@ def start(name):
 
         salt '*' service.start <service name>
     """
-    cmd = "/etc/rc.d/{0} onestart".format(name)
+    cmd = "/etc/rc.d/{} onestart".format(name)
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -59,7 +55,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     """
-    cmd = "/etc/rc.d/{0} onestop".format(name)
+    cmd = "/etc/rc.d/{} onestop".format(name)
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -73,7 +69,7 @@ def restart(name):
 
         salt '*' service.restart <service name>
     """
-    cmd = "/etc/rc.d/{0} onerestart".format(name)
+    cmd = "/etc/rc.d/{} onerestart".format(name)
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -87,7 +83,7 @@ def reload_(name):
 
         salt '*' service.reload <service name>
     """
-    cmd = "/etc/rc.d/{0} onereload".format(name)
+    cmd = "/etc/rc.d/{} onereload".format(name)
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -101,7 +97,7 @@ def force_reload(name):
 
         salt '*' service.force_reload <service name>
     """
-    cmd = "/etc/rc.d/{0} forcereload".format(name)
+    cmd = "/etc/rc.d/{} forcereload".format(name)
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -138,7 +134,7 @@ def status(name, sig=None):
         services = [name]
     results = {}
     for service in services:
-        cmd = "/etc/rc.d/{0} onestatus".format(service)
+        cmd = "/etc/rc.d/{} onestatus".format(service)
         results[service] = not __salt__["cmd.retcode"](cmd, ignore_retcode=True)
     if contains_globbing:
         return results
@@ -150,9 +146,9 @@ def _get_svc(rcd, service_status):
     Returns a unique service status
     """
     ena = None
-    lines = __salt__["cmd.run"]("{0} rcvar".format(rcd)).splitlines()
+    lines = __salt__["cmd.run"]("{} rcvar".format(rcd)).splitlines()
     for rcvar in lines:
-        if rcvar.startswith("$") and "={0}".format(service_status) in rcvar:
+        if rcvar.startswith("$") and "={}".format(service_status) in rcvar:
             ena = "yes"
         elif rcvar.startswith("#"):
             svc = rcvar.split(" ", 1)[1]
@@ -170,7 +166,7 @@ def _get_svc_list(service_status):
     """
     prefix = "/etc/rc.d/"
     ret = set()
-    lines = glob.glob("{0}*".format(prefix))
+    lines = glob.glob("{}*".format(prefix))
     for line in lines:
         svc = _get_svc(line, service_status)
         if svc is not None:
@@ -253,9 +249,9 @@ def _rcconf_status(name, service_status):
     can be started via /etc/rc.d/<service>
     """
     rcconf = "/etc/rc.conf"
-    rxname = "^{0}=.*".format(name)
-    newstatus = "{0}={1}".format(name, service_status)
-    ret = __salt__["cmd.retcode"]("grep '{0}' {1}".format(rxname, rcconf))
+    rxname = "^{}=.*".format(name)
+    newstatus = "{}={}".format(name, service_status)
+    ret = __salt__["cmd.retcode"]("grep '{}' {}".format(rxname, rcconf))
     if ret == 0:  # service found in rc.conf, modify its status
         __salt__["file.replace"](rcconf, rxname, newstatus)
     else:
@@ -300,7 +296,7 @@ def enabled(name, **kwargs):
 
         salt '*' service.enabled <service name>
     """
-    return _get_svc("/etc/rc.d/{0}".format(name), "YES")
+    return _get_svc("/etc/rc.d/{}".format(name), "YES")
 
 
 def disabled(name):
@@ -313,7 +309,7 @@ def disabled(name):
 
         salt '*' service.disabled <service name>
     """
-    return _get_svc("/etc/rc.d/{0}".format(name), "NO")
+    return _get_svc("/etc/rc.d/{}".format(name), "NO")
 
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

@@ -48,6 +48,12 @@ log = logging.getLogger(__name__)
 __virtualname__ = "docker_image"
 __virtual_aliases__ = ("moby_image",)
 
+__deprecated__ = (
+    3009,
+    "docker",
+    "https://github.com/saltstack/saltext-docker",
+)
+
 
 def __virtual__():
     """
@@ -72,7 +78,7 @@ def present(
     saltenv="base",
     pillarenv=None,
     pillar=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionchanged:: 2018.3.0
@@ -230,7 +236,7 @@ def present(
         full_image = ":".join((name, tag))
     else:
         if tag:
-            name = "{}:{}".format(name, tag)
+            name = f"{name}:{tag}"
         full_image = name
 
     try:
@@ -248,7 +254,7 @@ def present(
         # Specified image is present
         if not force:
             ret["result"] = True
-            ret["comment"] = "Image {} already present".format(full_image)
+            ret["comment"] = f"Image {full_image} already present"
             return ret
 
     if build or sls:
@@ -261,7 +267,7 @@ def present(
     if __opts__["test"]:
         ret["result"] = None
         if (image_info is not None and force) or image_info is None:
-            ret["comment"] = "Image {} will be {}".format(full_image, action)
+            ret["comment"] = f"Image {full_image} will be {action}"
             return ret
 
     if build:
@@ -325,7 +331,7 @@ def present(
                 name, insecure_registry=insecure_registry, client_timeout=client_timeout
             )
         except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = "Encountered error pulling {}: {}".format(full_image, exc)
+            ret["comment"] = f"Encountered error pulling {full_image}: {exc}"
             return ret
         if (
             image_info is not None
@@ -359,7 +365,7 @@ def present(
                 name, action
             )
         else:
-            ret["comment"] = "Image '{}' was {}".format(full_image, action)
+            ret["comment"] = f"Image '{full_image}' was {action}"
     return ret
 
 
@@ -436,7 +442,7 @@ def absent(name=None, images=None, force=False):
     if not to_delete:
         ret["result"] = True
         if len(targets) == 1:
-            ret["comment"] = "Image {} is not present".format(name)
+            ret["comment"] = f"Image {name} is not present"
         else:
             ret["comment"] = "All specified images are not present"
         return ret
@@ -444,7 +450,7 @@ def absent(name=None, images=None, force=False):
     if __opts__["test"]:
         ret["result"] = None
         if len(to_delete) == 1:
-            ret["comment"] = "Image {} will be removed".format(to_delete[0])
+            ret["comment"] = f"Image {to_delete[0]} will be removed"
         else:
             ret["comment"] = "The following images will be removed: {}".format(
                 ", ".join(to_delete)
@@ -470,7 +476,7 @@ def absent(name=None, images=None, force=False):
     else:
         ret["changes"] = result
         if len(to_delete) == 1:
-            ret["comment"] = "Image {} was removed".format(to_delete[0])
+            ret["comment"] = f"Image {to_delete[0]} was removed"
         else:
             ret["comment"] = "The following images were removed: {}".format(
                 ", ".join(to_delete)
@@ -499,5 +505,5 @@ def mod_watch(name, sfun=None, **kwargs):
         "name": name,
         "changes": {},
         "result": False,
-        "comment": "watch requisite is not implemented for " "{}".format(sfun),
+        "comment": f"watch requisite is not implemented for {sfun}",
     }

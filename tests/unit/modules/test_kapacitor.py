@@ -1,14 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.modules.kapacitor as kapacitor
-
-# Import Salt libs
 import salt.utils.json
-
-# Import Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock, patch
 from tests.support.unit import TestCase
@@ -61,8 +52,7 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(kapacitor.__salt__, {"cmd.run_all": cmd_mock}):
             kapacitor.define_task("taskname", "/tmp/script.tick", dbrps=["db.rp"])
         cmd_mock.assert_called_once_with(
-            "kapacitor define taskname "
-            "-tick /tmp/script.tick -type stream -dbrp db.rp",
+            "kapacitor define taskname -tick /tmp/script.tick -type stream -dbrp db.rp",
             env=self.__class__.env,
         )
 

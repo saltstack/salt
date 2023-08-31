@@ -209,8 +209,9 @@ can be found on GitHub in the `saltstack-formulas`_ collection of repositories.
 .. _`saltstack-formulas`: https://github.com/saltstack-formulas
 
 If you have any questions, suggestions, or just want to chat with other people
-who are using Salt, we have a very :ref:`active community <salt-community>`
-and we'd love to hear from you.
+who are using Salt, we have a very active community and we'd love to hear from
+you. One of the best places to talk to the community is on the
+`Salt Project Slack workspace <https://saltstackcommunity.slack.com/>`_.
 
 In addition, by continuing to the :ref:`Orchestrate Runner <orchestrate-runner>` docs,
 you can learn about the powerful orchestration of which Salt is capable.

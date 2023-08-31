@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 def __virtual__():
     return True
 

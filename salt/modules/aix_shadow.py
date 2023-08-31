@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage account locks on AIX systems
 
@@ -7,7 +6,6 @@ Manage account locks on AIX systems
 :depends: none
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python librarie
 import logging
@@ -43,7 +41,7 @@ def login_failures(user):
         salt <minion_id> shadow.login_failures ALL
     """
 
-    cmd = "lsuser -a unsuccessful_login_count {0}".format(user)
+    cmd = "lsuser -a unsuccessful_login_count {}".format(user)
     cmd += " | grep -E 'unsuccessful_login_count=([3-9]|[0-9][0-9]+)'"
     out = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=True)
 
@@ -67,7 +65,7 @@ def locked(user):
         salt <minion_id> shadow.locked ALL
     """
 
-    cmd = "lsuser -a account_locked {0}".format(user)
+    cmd = "lsuser -a account_locked {}".format(user)
     cmd += ' | grep "account_locked=true"'
     out = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=True)
 

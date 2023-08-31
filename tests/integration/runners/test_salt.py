@@ -5,6 +5,7 @@ Tests for the salt runner
 """
 
 import pytest
+
 from tests.support.case import ShellCase
 
 

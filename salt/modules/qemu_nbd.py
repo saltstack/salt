@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Qemu Command Wrapper
 
@@ -6,8 +5,6 @@ The qemu system comes with powerful tools, such as qemu-img and qemu-nbd which
 are used here to build up kvm images.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import glob
 import logging
@@ -16,12 +13,7 @@ import tempfile
 import time
 
 import salt.crypt
-
-# Import salt libs
 import salt.utils.path
-
-# Import 3rd-party libs
-from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -35,7 +27,8 @@ def __virtual__():
         return "qemu_nbd"
     return (
         False,
-        "The qemu_nbd execution module cannot be loaded: the qemu-nbd binary is not in the path.",
+        "The qemu_nbd execution module cannot be loaded: the qemu-nbd binary is not in"
+        " the path.",
     )
 
 
@@ -59,13 +52,14 @@ def connect(image):
         fdisk = "fdisk -l"
     __salt__["cmd.run"]("modprobe nbd max_part=63")
     for nbd in glob.glob("/dev/nbd?"):
-        if __salt__["cmd.retcode"]("{0} {1}".format(fdisk, nbd)):
+        if __salt__["cmd.retcode"]("{} {}".format(fdisk, nbd)):
             while True:
                 # Sometimes nbd does not "take hold", loop until we can verify
                 __salt__["cmd.run"](
-                    "qemu-nbd -c {0} {1}".format(nbd, image), python_shell=False,
+                    "qemu-nbd -c {} {}".format(nbd, image),
+                    python_shell=False,
                 )
-                if not __salt__["cmd.retcode"]("{0} {1}".format(fdisk, nbd)):
+                if not __salt__["cmd.retcode"]("{} {}".format(fdisk, nbd)):
                     break
             return nbd
     log.warning("Could not connect image: %s", image)
@@ -84,12 +78,13 @@ def mount(nbd, root=None):
         salt '*' qemu_nbd.mount /dev/nbd0
     """
     __salt__["cmd.run"](
-        "partprobe {0}".format(nbd), python_shell=False,
+        "partprobe {}".format(nbd),
+        python_shell=False,
     )
     ret = {}
     if root is None:
         root = os.path.join(tempfile.gettempdir(), "nbd", os.path.basename(nbd))
-    for part in glob.glob("{0}p*".format(nbd)):
+    for part in glob.glob("{}p*".format(nbd)):
         m_pt = os.path.join(root, os.path.basename(part))
         time.sleep(1)
         mnt = __salt__["mount.mount"](m_pt, part, True)
@@ -130,7 +125,7 @@ def clear(mnt):
     """
     ret = {}
     nbds = set()
-    for m_pt, dev in six.iteritems(mnt):
+    for m_pt, dev in mnt.items():
         mnt_ret = __salt__["mount.umount"](m_pt)
         if mnt_ret is not True:
             ret[m_pt] = dev
@@ -138,5 +133,5 @@ def clear(mnt):
     if ret:
         return ret
     for nbd in nbds:
-        __salt__["cmd.run"]("qemu-nbd -d {0}".format(nbd), python_shell=False)
+        __salt__["cmd.run"]("qemu-nbd -d {}".format(nbd), python_shell=False)
     return ret

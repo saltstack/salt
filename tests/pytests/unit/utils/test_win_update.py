@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.win_update as win_update
 from tests.support.mock import MagicMock, patch
 

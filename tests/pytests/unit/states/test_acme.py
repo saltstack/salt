@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.acme as acme
 from tests.support.mock import MagicMock, patch
 

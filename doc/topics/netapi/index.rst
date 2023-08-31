@@ -4,45 +4,76 @@
 ``netapi`` modules
 ==================
 
-Introduction to netapi modules
-==============================
+netapi modules provide API access to Salt functionality over the network.
 
-netapi modules provide API-centric access to Salt. Usually externally-facing
-services such as REST or WebSockets, XMPP, XMLRPC, etc.
+The included :ref:`netapi modules <all-netapi-modules>` support REST (over
+HTTP and WSGI) and WebSockets.
 
-In general netapi modules bind to a port and start a service. They are
-purposefully open-ended. A single module can be configured to run as well as
-multiple modules simultaneously.
+Modules expose functions from the :py:class:`NetapiClient <salt.netapi.NetapiClient>`
+and give access to the same functionality as the Salt commandline tools
+(:command:`salt`, :command:`salt-run`, etc).
 
-netapi modules are enabled by adding configuration to your Salt Master config
-file and then starting the :command:`salt-api` daemon. Check the docs for each
-module to see external requirements and configuration settings.
-
-Communication with Salt and Salt satellite projects is done using Salt's own
-:ref:`Python API <python-api>`. A list of available client interfaces is below.
-
-.. admonition:: salt-api
-
-    Prior to Salt's 2014.7.0 release, netapi modules lived in the separate sister
-    projected ``salt-api``. That project has been merged into the main Salt
-    project.
-
-.. seealso:: :ref:`The full list of netapi modules <all-netapi-modules>`
 
 Client interfaces
 =================
 
-Salt's client interfaces expose executing functions by crafting a dictionary of
-values that are mapped to function arguments. This allows calling functions
-simply by creating a data structure. (And this is exactly how much of Salt's
-own internals work!)
+Salt's client interfaces provide the ability to execute functions from
+execution, runnner, and wheel modules.
 
-.. autoclass:: salt.netapi.NetapiClient
-    :members: local, local_async, local_subset, ssh, runner, runner_async,
-        wheel, wheel_async
+The client interfaces available via netapi modules are defined in the
+:py:class:`NetapiClient <salt.netapi.NetapiClient>`, which is a
+limited version of the :ref:`Python API <python-api>`.
+
+The client interfaces accept a dictionary with values for the function
+and its arguments.
+
+Available interfaces:
+
+* local - run execution modules on minions
+* local_subset - run execution modules on a subset of minions
+* runner - run runner modules on master
+* ssh - run salt-ssh commands
+* wheel - run wheel modules
+
+The local, runner, and wheel clients also have async variants to run
+modules asynchronously.
+
+
+Configuration
+=============
+
+The :conf_master:`netapi_enable_clients` list in the master config sets which
+client interfaces are available. It is recommended to only enable the client
+interfaces required to complete the tasks needed to reduce the amount of Salt
+functionality exposed via the netapi. See the
+:ref:`netapi_enable clients <netapi-enable-clients>` documentation.
 
 .. toctree::
 
-    ../tutorials/http
-    writing
+    netapi-enable-clients
 
+Individual netapi modules can be enabled by adding the module configuration
+section to the master config. The required configuration and dependencies are
+documented for each :ref:`module <all-netapi-modules>`.
+
+The :command:`salt-api` daemon manages netapi modules instances and must be
+started to enable the configured netapi modules. It is possible to run
+multiple netapi modules and multiple instances of each module.
+
+.. admonition:: :conf_master:`netapi_enable_clients`
+
+    Prior to Salt's 3006.0 release all client interfaces were enabled and it
+    was not possible to disable clients individually.
+
+
+Developing modules
+==================
+
+Developing custom netapi modules for new transports or protocols is documented in
+the :ref:`Writing netapi modules <netapi-writing>` and :ref:`NetapiClient <netapi-client>`
+documentation.
+
+.. toctree::
+
+     writing
+     netapiclient
