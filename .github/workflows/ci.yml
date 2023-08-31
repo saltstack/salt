@@ -1328,7 +1328,7 @@ jobs:
 
   combine-all-code-coverage:
     name: Combine Code Coverage
-    if: always() && ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] == false }}
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] == false }}
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
     needs:
       - prepare-workflow
