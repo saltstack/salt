@@ -1,6 +1,7 @@
 import pytest
 
 from salt.pillar.git_pillar import ext_pillar
+from salt.utils.immutabletypes import ImmutableDict, ImmutableList
 from tests.support.mock import patch
 
 pytestmark = [
@@ -32,6 +33,11 @@ skipif_no_pygit2 = pytest.mark.skipif(not HAS_PYGIT2, reason="Missing pygit2")
 def git_pillar_opts(salt_master, tmp_path):
     opts = dict(salt_master.config)
     opts["cachedir"] = str(tmp_path)
+    for key, item in opts.items():
+        if isinstance(item, ImmutableDict):
+            opts[key] = dict(item)
+        elif isinstance(item, ImmutableList):
+            opts[key] = list(item)
     return opts
 
 
