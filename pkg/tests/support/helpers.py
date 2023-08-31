@@ -342,12 +342,14 @@ class SaltPkgInstall:
                             "ssh": [self.bin_dir / "salt-ssh"],
                             "syndic": [self.bin_dir / "salt-syndic"],
                             "spm": [self.bin_dir / "spm"],
-                            "python": [str(pathlib.Path("/usr/bin/python3"))],
+                            "python": [str(self.bin_dir / "python3")],
+                            "pip": [str(self.bin_dir / "pip3")],
                         }
-                    self.binary_paths["pip"] = [str(pathlib.Path("/usr/bin/pip3"))]
-                    self.proc.run(
-                        *self.binary_paths["pip"], "install", "-U", "pyopenssl"
-                    )
+                    else:
+                        self.binary_paths["pip"] = [str(pathlib.Path("/usr/bin/pip3"))]
+                        self.proc.run(
+                            *self.binary_paths["pip"], "install", "-U", "pyopenssl"
+                        )
                 else:
                     self.binary_paths["python"] = [shutil.which("salt"), "shell"]
                     if platform.is_darwin():
