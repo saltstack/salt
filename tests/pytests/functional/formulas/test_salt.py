@@ -13,6 +13,9 @@ def _formula(saltstack_formula):
 
 @pytest.fixture(scope="module")
 def modules(loaders, _formula):
+    loaders.opts["file_roots"]["base"].append(
+        str(_formula.state_tree_path / f"{_formula.name}-{_formula.tag}")
+    )
     return loaders.modules
 
 
@@ -21,10 +24,14 @@ def modules(loaders, _formula):
 def test_salt_formula(modules):
     # Master Formula
     ret = modules.state.sls("salt.master")
+    assert not ret.errors
+    assert not ret.failed
     for staterun in ret:
-        assert not staterun.result.failed
+        assert staterun.result
 
     # Minion Formula
     ret = modules.state.sls("salt.minion")
+    assert not ret.errors
+    assert not ret.failed
     for staterun in ret:
-        assert not staterun.result.failed
+        assert staterun.result

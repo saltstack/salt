@@ -12,6 +12,9 @@ def _formula(saltstack_formula):
 
 @pytest.fixture(scope="module")
 def modules(loaders, _formula):
+    loaders.opts["file_roots"]["base"].append(
+        str(_formula.state_tree_path / f"{_formula.name}-{_formula.tag}")
+    )
     return loaders.modules
 
 
@@ -19,5 +22,7 @@ def modules(loaders, _formula):
 @pytest.mark.destructive_test
 def test_docker_formula(modules):
     ret = modules.state.sls("docker")
+    assert not ret.errors
+    assert not ret.failed
     for staterun in ret:
-        assert not staterun.result.failed
+        assert staterun.result
