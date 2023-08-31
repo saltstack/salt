@@ -326,10 +326,6 @@ class SaltPkgInstall:
                     "python": [str(pathlib.Path("/usr/bin/python3"))],
                 }
                 if self.classic:
-                    self.binary_paths["pip"] = [str(pathlib.Path("/usr/bin/pip3"))]
-                    self.proc.run(
-                        *self.binary_paths["pip"], "install", "-U", "pyopenssl"
-                    )
                     if platform.is_darwin():
                         # `which` is not catching the right paths on downgrades, explicitly defining them here
                         self.binary_paths = {
@@ -348,6 +344,10 @@ class SaltPkgInstall:
                             "spm": [self.bin_dir / "spm"],
                             "python": [str(pathlib.Path("/usr/bin/python3"))],
                         }
+                    self.binary_paths["pip"] = [str(pathlib.Path("/usr/bin/pip3"))]
+                    self.proc.run(
+                        *self.binary_paths["pip"], "install", "-U", "pyopenssl"
+                    )
                 else:
                     self.binary_paths["python"] = [shutil.which("salt"), "shell"]
                     if platform.is_darwin():
