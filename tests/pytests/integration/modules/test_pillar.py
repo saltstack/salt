@@ -691,7 +691,7 @@ def test_pillar_refresh_pillar_beacons(
                 "saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id
             )
 
-            event_tag = f"salt/beacon/{salt_master.id}/load/"
+            event_tag = f"salt/beacon/*/load/"
             start_time = time.time()
 
             event_pattern = (salt_master.id, event_tag)
