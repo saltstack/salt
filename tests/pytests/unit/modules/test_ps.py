@@ -15,6 +15,11 @@ psutil = pytest.importorskip("salt.utils.psutil_compat")
 
 
 @pytest.fixture
+def configure_loader_modules():
+    return {ps: {}}
+
+
+@pytest.fixture
 def sample_process():
     status = b"fnord"
     extra_data = {
@@ -158,6 +163,25 @@ STUB_DISK_IO = namedtuple(
 )(1000, 2000, 500, 600, 2000, 3000)
 
 
+@pytest.fixture
+def stub_memory_usage():
+    return namedtuple(
+        "vmem",
+        "total available percent used free active inactive buffers cached shared",
+    )(
+        15722012672,
+        9329594368,
+        40.7,
+        5137018880,
+        4678086656,
+        6991405056,
+        2078953472,
+        1156378624,
+        4750528512,
+        898908160,
+    )
+
+
 @pytest.fixture(scope="module")
 def stub_user():
     return namedtuple("user", "name, terminal, host, started")(
@@ -217,6 +241,12 @@ class DummyProcess:
         self._pid = salt.utils.data.decode(
             pid if pid is not None else 12345, to_str=True
         )
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self):
+        pass
 
     def cmdline(self):
         return self._cmdline
@@ -506,3 +536,267 @@ def test_status_when_access_denied_from_psutil_then_raise_exception():
 # @patch('salt.utils.psutil_compat.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
 # def test_get_users_utmp():
 #     pass
+
+
+def test_psaux():
+    """
+    Testing psaux function in the ps module
+    """
+
+    cmd_run_mock = """
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root           1  0.0  0.0 171584 15740 ?        Ss   Aug09   4:18 /usr/lib/systemd/systemd --system --deserialize=83
+root           2  0.0  0.0      0     0 ?        S    Aug09   0:02 [kthreadd]
+root     2710129  0.0  0.0  18000  7428 pts/4    S+   Aug21   0:33 sudo -E salt-master -l debug
+root     2710131  0.0  0.0  18000  1196 pts/6    Ss   Aug21   0:00 sudo -E salt-master -l debug
+"""
+
+    with patch.dict(ps.__salt__, {"cmd.run": MagicMock(return_value=cmd_run_mock)}):
+        expected = [
+            "salt-master",
+            [
+                "root     2710129  0.0  0.0  18000  7428 pts/4    S+   Aug21   0:33 sudo -E salt-master -l debug",
+                "root     2710131  0.0  0.0  18000  1196 pts/6    Ss   Aug21   0:00 sudo -E salt-master -l debug",
+            ],
+            "2 occurrence(s).",
+        ]
+        ret = ps.psaux("salt-master")
+        assert ret == expected
+
+        expected = ["salt-minion", [], "0 occurrence(s)."]
+        ret = ps.psaux("salt-minion")
+        assert ret == expected
+
+
+def test_ss():
+    """
+    Testing ss function in the ps module
+    """
+
+    cmd_run_mock = """
+tcp   LISTEN     0      128                                                                               0.0.0.0:22                                            0.0.0.0:*        ino:31907 sk:364b cgroup:/system.slice/sshd.service <->
+
+tcp   LISTEN     0      128                                                                                  [::]:22                                               [::]:*        ino:31916 sk:36c4 cgroup:/system.slice/sshd.service v6only:1 <->
+"""
+
+    with patch.dict(ps.__salt__, {"cmd.run": MagicMock(return_value=cmd_run_mock)}):
+        expected = [
+            "sshd",
+            [
+                "tcp   LISTEN     0      128                                                                               0.0.0.0:22                                            0.0.0.0:*        ino:31907 sk:364b cgroup:/system.slice/sshd.service <->",
+                "tcp   LISTEN     0      128                                                                                  [::]:22                                               [::]:*        ino:31916 sk:36c4 cgroup:/system.slice/sshd.service v6only:1 <->",
+            ],
+        ]
+        ret = ps.ss("sshd")
+        assert ret == expected
+
+        expected = ["apache2", []]
+        ret = ps.ss("apache2")
+        assert ret == expected
+
+
+def test_netstat():
+    """
+    Testing netstat function in the ps module
+    """
+
+    cmd_run_mock = """
+Active Internet connections (servers and established)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      668/sshd: /usr/sbin
+tcp6       0      0 :::22                   :::*                    LISTEN      668/sshd: /usr/sbin
+"""
+
+    with patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/netstat")):
+        with patch.dict(ps.__salt__, {"cmd.run": MagicMock(return_value=cmd_run_mock)}):
+            expected = [
+                "sshd",
+                [
+                    "tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      668/sshd: /usr/sbin ",
+                    "tcp6       0      0 :::22                   :::*                    LISTEN      668/sshd: /usr/sbin ",
+                ],
+            ]
+            ret = ps.netstat("sshd")
+            assert ret == expected
+
+            expected = ["apache2", []]
+            ret = ps.netstat("apache2")
+            assert ret == expected
+
+
+def test_lsof():
+    """
+    Testing lsof function in the ps module
+    """
+
+    sshd_cmd_run_mock = """
+COMMAND  PID USER   FD   TYPE             DEVICE SIZE/OFF    NODE NAME
+sshd    1743 root  cwd    DIR              254,0     4096       2 /
+sshd    1743 root  rtd    DIR              254,0     4096       2 /
+sshd    1743 root  txt    REG              254,0   925000 7533685 /usr/bin/sshd (deleted)
+sshd    1743 root  DEL    REG              254,0          7481413 /usr/lib/libc.so.6
+sshd    1743 root  DEL    REG              254,0          7477716 /usr/lib/libcrypto.so.3
+sshd    1743 root  mem    REG              254,0    26520 7482162 /usr/lib/libcap-ng.so.0.0.0
+sshd    1743 root  DEL    REG              254,0          7512187 /usr/lib/libresolv.so.2
+sshd    1743 root  mem    REG              254,0    22400 7481786 /usr/lib/libkeyutils.so.1.10
+sshd    1743 root  mem    REG              254,0    55352 7480841 /usr/lib/libkrb5support.so.0.1
+sshd    1743 root  mem    REG              254,0    18304 7475778 /usr/lib/libcom_err.so.2.1
+sshd    1743 root  mem    REG              254,0   182128 7477432 /usr/lib/libk5crypto.so.3.1
+sshd    1743 root  DEL    REG              254,0          7485543 /usr/lib/libaudit.so.1.0.0
+sshd    1743 root  DEL    REG              254,0          7485432 /usr/lib/libz.so.1.2.13
+sshd    1743 root  mem    REG              254,0   882552 7480814 /usr/lib/libkrb5.so.3.3
+sshd    1743 root  mem    REG              254,0   344160 7475833 /usr/lib/libgssapi_krb5.so.2.2
+sshd    1743 root  mem    REG              254,0    67536 7482132 /usr/lib/libpam.so.0.85.1
+sshd    1743 root  mem    REG              254,0   165832 7481746 /usr/lib/libcrypt.so.2.0.0
+sshd    1743 root  DEL    REG              254,0          7480993 /usr/lib/ld-linux-x86-64.so.2
+sshd    1743 root    0r   CHR                1,3      0t0       4 /dev/null
+sshd    1743 root    1u  unix 0x0000000000000000      0t0   32930 type=STREAM (CONNECTED)
+sshd    1743 root    2u  unix 0x0000000000000000      0t0   32930 type=STREAM (CONNECTED)
+sshd    1743 root    3u  IPv4              31907      0t0     TCP *:ssh (LISTEN)
+sshd    1743 root    4u  IPv6              31916      0t0     TCP *:ssh (LISTEN)
+"""
+
+    apache2_cmd_run_mock = ""
+
+    with patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/netstat")):
+        with patch.dict(
+            ps.__salt__, {"cmd.run": MagicMock(return_value=sshd_cmd_run_mock)}
+        ):
+            expected = [
+                "sshd",
+                "\nCOMMAND  PID USER   FD   TYPE             DEVICE SIZE/OFF    NODE NAME\nsshd    1743 root  cwd    DIR              254,0     4096       2 /\nsshd    1743 root  rtd    DIR              254,0     4096       2 /\nsshd    1743 root  txt    REG              254,0   925000 7533685 /usr/bin/sshd (deleted)\nsshd    1743 root  DEL    REG              254,0          7481413 /usr/lib/libc.so.6\nsshd    1743 root  DEL    REG              254,0          7477716 /usr/lib/libcrypto.so.3\nsshd    1743 root  mem    REG              254,0    26520 7482162 /usr/lib/libcap-ng.so.0.0.0\nsshd    1743 root  DEL    REG              254,0          7512187 /usr/lib/libresolv.so.2\nsshd    1743 root  mem    REG              254,0    22400 7481786 /usr/lib/libkeyutils.so.1.10\nsshd    1743 root  mem    REG              254,0    55352 7480841 /usr/lib/libkrb5support.so.0.1\nsshd    1743 root  mem    REG              254,0    18304 7475778 /usr/lib/libcom_err.so.2.1\nsshd    1743 root  mem    REG              254,0   182128 7477432 /usr/lib/libk5crypto.so.3.1\nsshd    1743 root  DEL    REG              254,0          7485543 /usr/lib/libaudit.so.1.0.0\nsshd    1743 root  DEL    REG              254,0          7485432 /usr/lib/libz.so.1.2.13\nsshd    1743 root  mem    REG              254,0   882552 7480814 /usr/lib/libkrb5.so.3.3\nsshd    1743 root  mem    REG              254,0   344160 7475833 /usr/lib/libgssapi_krb5.so.2.2\nsshd    1743 root  mem    REG              254,0    67536 7482132 /usr/lib/libpam.so.0.85.1\nsshd    1743 root  mem    REG              254,0   165832 7481746 /usr/lib/libcrypt.so.2.0.0\nsshd    1743 root  DEL    REG              254,0          7480993 /usr/lib/ld-linux-x86-64.so.2\nsshd    1743 root    0r   CHR                1,3      0t0       4 /dev/null\nsshd    1743 root    1u  unix 0x0000000000000000      0t0   32930 type=STREAM (CONNECTED)\nsshd    1743 root    2u  unix 0x0000000000000000      0t0   32930 type=STREAM (CONNECTED)\nsshd    1743 root    3u  IPv4              31907      0t0     TCP *:ssh (LISTEN)\nsshd    1743 root    4u  IPv6              31916      0t0     TCP *:ssh (LISTEN)\n",
+            ]
+            ret = ps.lsof("sshd")
+            assert ret == expected
+
+        with patch.dict(
+            ps.__salt__, {"cmd.run": MagicMock(return_value=apache2_cmd_run_mock)}
+        ):
+            expected = ["apache2", ""]
+            ret = ps.lsof("apache2")
+            assert ret == expected
+
+
+def test_boot_time():
+    """
+    Testing boot_time function in the ps module
+    """
+
+    with patch(
+        "salt.utils.psutil_compat.boot_time", MagicMock(return_value=1691593290.0)
+    ):
+        expected = 1691593290
+        ret = ps.boot_time()
+        assert ret == expected
+
+        expected = "Wed Aug  9 08:01:30 2023"
+        ret = ps.boot_time(time_format="%c")
+        assert ret == expected
+
+        expected = "08/09/2023 08:01"
+        ret = ps.boot_time(time_format="%m/%d/%Y %I:%M")
+        assert ret == expected
+
+
+def test_num_cpus():
+    """
+    Testing num_cpus function in the ps module
+    """
+
+    with patch("salt.utils.psutil_compat.cpu_count") as mock_cpu_count:
+        mock_cpu_count.side_effect = AttributeError()
+        with patch("salt.utils.psutil_compat.NUM_CPUS", create=True, new=5):
+            ret = ps.num_cpus()
+            assert ret == 5
+
+    with patch("salt.utils.psutil_compat.cpu_count") as mock_cpu_count:
+        mock_cpu_count.return_value = 5
+        ret = ps.num_cpus()
+        assert ret == 5
+
+
+def test_total_physical_memory():
+    """
+    Testing total_physical_memory function in the ps module
+    """
+
+    with patch("psutil.virtual_memory", MagicMock(return_value=stub_memory_usage)):
+        ret = ps.total_physical_memory()
+        assert ret == 67159048192
+
+
+def test_proc_info():
+    """
+    Testing proc_info function in the ps module
+    """
+    status = b"fnord"
+    extra_data = {
+        "utime": "42",
+        "stime": "42",
+        "children_utime": "42",
+        "children_stime": "42",
+        "ttynr": "42",
+        "cpu_time": "42",
+        "blkio_ticks": "99",
+        "ppid": "99",
+        "cpu_num": "9999999",
+    }
+    important_data = {
+        "name": b"blerp",
+        "status": status,
+        "create_time": "393829200",
+    }
+    important_data.update(extra_data)
+    patch_stat_file = patch(
+        "psutil._psplatform.Process._parse_stat_file",
+        return_value=important_data,
+        create=True,
+    )
+    patch_exe = patch(
+        "psutil._psplatform.Process.exe",
+        return_value=important_data["name"].decode(),
+        create=True,
+    )
+    patch_oneshot = patch(
+        "psutil._psplatform.Process.oneshot",
+        return_value={
+            # These keys can be found in psutil/_psbsd.py
+            1: important_data["status"].decode(),
+            # create
+            9: float(important_data["create_time"]),
+            # user
+            14: float(important_data["create_time"]),
+            # sys
+            15: float(important_data["create_time"]),
+            # ch_user
+            16: float(important_data["create_time"]),
+            # ch_sys -- we don't really care what they are, obviously
+            17: float(important_data["create_time"]),
+            24: important_data["name"].decode(),
+        },
+        create=True,
+    )
+    patch_kinfo = patch(
+        "psutil._psplatform.Process._get_kinfo_proc",
+        return_value={
+            # These keys can be found in psutil/_psosx.py
+            9: important_data["status"].decode(),
+            8: float(important_data["create_time"]),
+            10: important_data["name"].decode(),
+        },
+        create=True,
+    )
+    patch_status = patch(
+        "psutil._psplatform.Process.status", return_value=status.decode()
+    )
+    patch_create_time = patch(
+        "psutil._psplatform.Process.create_time", return_value=393829200
+    )
+    with patch_stat_file, patch_status, patch_create_time, patch_exe, patch_oneshot, patch_kinfo:
+        expected = {"ppid": 99, "username": "root"}
+        actual_result = salt.modules.ps.proc_info(pid=99, attrs=["username", "ppid"])
+        assert actual_result == expected
+
+        expected = {"pid": 99, "name": "blerp"}
+        actual_result = salt.modules.ps.proc_info(pid=99, attrs=["pid", "name"])
+        assert actual_result == expected
