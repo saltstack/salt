@@ -131,8 +131,8 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
     """
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
-    _octal = {"r": 4, "w": 2, "x": 1, "-": 0}
-    _octal_lookup = {0: "-", 1: "r", 2: "w", 4: "x"}
+    _octal = {"r": 4, "w": 2, "x": 1, "X": 1, "-": 0}
+    _octal_lookup = {4: "r", 2: "w", 1: "x", 0: "-"}
 
     if not os.path.exists(name):
         ret["comment"] = "{} does not exist".format(name)
@@ -174,7 +174,8 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
             user = None
 
         if user:
-            octal_sum = sum(_octal.get(i, i) for i in perms)
+            octal_new = sum(_octal.get(i, i) for i in perms)
+            conditional_x = bool(perms.endswith("X"))
             need_refresh = False
             # If recursive check all paths retrieved via acl.getfacl
             if recurse:
@@ -188,11 +189,15 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                     else:
                         _current_perms_path = __current_perms[path]
                     for user_acl in _current_perms_path.get(_acl_type, []):
-                        if (
-                            _search_name in user_acl
-                            and user_acl[_search_name]["octal"] == octal_sum
-                        ):
-                            acl_found = True
+                        if _search_name in user_acl:
+                            octal_current = user_acl[_search_name]["octal"]
+                            executable = bool(octal_current % 2 == 1)
+                            if octal_current == octal_new or (
+                                conditional_x
+                                and not executable
+                                and octal_current == (octal_new - 1)
+                            ):
+                                acl_found = True
                     if not acl_found:
                         need_refresh = True
                         break
@@ -208,17 +213,17 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                 ret["comment"] = "Permissions are in the desired state"
             else:
                 _num = user[_search_name]["octal"]
-                new_perms = "{}{}{}".format(
-                    _octal_lookup[_num & 1],
-                    _octal_lookup[_num & 2],
+                old_perms = "{}{}{}".format(
                     _octal_lookup[_num & 4],
+                    _octal_lookup[_num & 2],
+                    _octal_lookup[_num & 1],
                 )
                 changes = {
                     "new": {"acl_name": acl_name, "acl_type": acl_type, "perms": perms},
                     "old": {
                         "acl_name": acl_name,
                         "acl_type": acl_type,
-                        "perms": new_perms,
+                        "perms": old_perms,
                     },
                 }
 
@@ -227,7 +232,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                         {
                             "comment": (
                                 "Updated permissions will be applied for "
-                                "{}: {} -> {}".format(acl_name, new_perms, perms)
+                                "{}: {} -> {}".format(acl_name, old_perms, perms)
                             ),
                             "result": None,
                             "changes": changes,
