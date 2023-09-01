@@ -220,3 +220,89 @@ def test_gitpython_multiple_repos(gitpython_pillar_opts):
 @skipif_no_pygit2
 def test_pygit2_multiple_repos(pygit2_pillar_opts):
     _test_multiple_repos(pygit2_pillar_opts)
+
+
+def _test_fetch_request(opts):
+    p = _get_pillar(
+        opts,
+        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    )
+    frequest = os.path.join(p.remotes[0].get_salt_working_dir(), "fetch_request")
+    frequest_other = os.path.join(p.remotes[1].get_salt_working_dir(), "fetch_request")
+    opts["pillarenv"] = "main"
+    p2 = _get_pillar(
+        opts, "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git"
+    )
+    frequest2 = os.path.join(p2.remotes[0].get_salt_working_dir(), "fetch_request")
+    assert frequest != frequest2
+    assert os.path.isfile(frequest) is False
+    assert os.path.isfile(frequest2) is False
+    assert os.path.isfile(frequest_other) is False
+    p.fetch_remotes()
+    assert os.path.isfile(frequest) is False
+    # fetch request was placed
+    assert os.path.isfile(frequest2) is True
+    p2.checkout()
+    # fetch request was found
+    assert os.path.isfile(frequest2) is False
+    p2.fetch_remotes()
+    assert os.path.isfile(frequest) is True
+    assert os.path.isfile(frequest2) is False
+    assert os.path.isfile(frequest_other) is False
+    for _ in range(3):
+        p2.fetch_remotes()
+    assert os.path.isfile(frequest) is True
+    assert os.path.isfile(frequest2) is False
+    assert os.path.isfile(frequest_other) is False
+    # fetch request should still be processed even on fetch_on_fail=False
+    p.checkout(fetch_on_fail=False)
+    assert os.path.isfile(frequest) is False
+    assert os.path.isfile(frequest2) is False
+    assert os.path.isfile(frequest_other) is False
+
+
+@skipif_no_gitpython
+def test_gitpython_fetch_request(gitpython_pillar_opts):
+    _test_fetch_request(gitpython_pillar_opts)
+
+
+@skipif_no_pygit2
+def test_pygit2_fetch_request(pygit2_pillar_opts):
+    _test_fetch_request(pygit2_pillar_opts)
+
+
+def _test_clear_old_remotes(opts):
+    p = _get_pillar(
+        opts,
+        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    )
+    repo = p.remotes[0]
+    repo2 = p.remotes[1]
+    opts["pillarenv"] = "main"
+    p2 = _get_pillar(
+        opts, "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git"
+    )
+    repo3 = p2.remotes[0]
+    assert os.path.isdir(repo.get_cachedir()) is True
+    assert os.path.isdir(repo2.get_cachedir()) is True
+    assert os.path.isdir(repo3.get_cachedir()) is True
+    p.clear_old_remotes()
+    assert os.path.isdir(repo.get_cachedir()) is True
+    assert os.path.isdir(repo2.get_cachedir()) is True
+    assert os.path.isdir(repo3.get_cachedir()) is True
+    p2.clear_old_remotes()
+    assert os.path.isdir(repo.get_cachedir()) is True
+    assert os.path.isdir(repo2.get_cachedir()) is False
+    assert os.path.isdir(repo3.get_cachedir()) is True
+
+
+@skipif_no_gitpython
+def test_gitpython_clear_old_remotes(gitpython_pillar_opts):
+    _test_clear_old_remotes(gitpython_pillar_opts)
+
+
+@skipif_no_pygit2
+def test_pygit2_clear_old_remotes(pygit2_pillar_opts):
+    _test_clear_old_remotes(pygit2_pillar_opts)
