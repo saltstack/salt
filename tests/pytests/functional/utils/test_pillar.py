@@ -95,6 +95,7 @@ def _test_env(opts):
     assert len(p.remotes) == 1
     p.checkout()
     repo = p.remotes[0]
+    # test that two different pillarenvs can exist at the same time
     files = set(os.listdir(repo.get_cachedir()))
     for f in (".gitignore", "README.md", "file.sls", "top.sls"):
         assert f in files
@@ -115,6 +116,24 @@ def _test_env(opts):
     for f in (".gitignore", "README.md", "file.sls", "top.sls"):
         assert f in files
 
+    # double check cache paths
+    assert (
+        repo.get_cache_hash() == repo2.get_cache_hash()
+    )  # __env__ repos share same hash
+    assert repo.get_cache_basename() != repo2.get_cache_basename()
+    assert repo.get_linkdir() != repo2.get_linkdir()
+    assert repo.get_salt_working_dir() != repo2.get_salt_working_dir()
+    assert repo.get_cache_basename() == "master"
+    assert repo2.get_cache_basename() == "main"
+
+    assert repo.get_cache_basename() in repo.get_cachedir()
+    assert (
+        os.path.join(repo.get_cache_basehash(), repo.get_cache_basename())
+        == repo.get_cache_full_basename()
+    )
+    assert repo.get_linkdir() not in repo.get_cachedir()
+    assert repo.get_salt_working_dir() not in repo.get_cachedir()
+
 
 @skipif_no_gitpython
 def test_gitpython_env(gitpython_pillar_opts):
@@ -124,3 +143,18 @@ def test_gitpython_env(gitpython_pillar_opts):
 @skipif_no_pygit2
 def test_pygit2_env(pygit2_pillar_opts):
     _test_env(pygit2_pillar_opts)
+
+
+def _test_checkout_fetch_on_fail(opts):
+    p = _get_pillar(opts, "https://github.com/saltstack/salt-test-pillar-gitfs.git")
+    p.checkout(fetch_on_fail=False)  # TODO write me
+
+
+@skipif_no_gitpython
+def test_gitpython_checkout_fetch_on_fail(gitpython_pillar_opts):
+    _test_checkout_fetch_on_fail(gitpython_pillar_opts)
+
+
+@skipif_no_pygit2
+def test_pygit2_checkout_fetch_on_fail(pygit2_pillar_opts):
+    _test_checkout_fetch_on_fail(pygit2_pillar_opts)
