@@ -158,3 +158,65 @@ def test_gitpython_checkout_fetch_on_fail(gitpython_pillar_opts):
 @skipif_no_pygit2
 def test_pygit2_checkout_fetch_on_fail(pygit2_pillar_opts):
     _test_checkout_fetch_on_fail(pygit2_pillar_opts)
+
+
+def _test_multiple_repos(opts):
+    p = _get_pillar(
+        opts,
+        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        "main https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        "branch https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+        "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    )
+    p.checkout()
+    assert len(p.remotes) == 5
+    # make sure all repos dont share cache and working dir
+    assert len({r.get_cachedir() for r in p.remotes}) == 5
+    assert len({r.get_salt_working_dir() for r in p.remotes}) == 5
+
+    p2 = _get_pillar(
+        opts,
+        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        "main https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        "branch https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+        "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    )
+    p2.checkout()
+    assert len(p2.remotes) == 5
+    # make sure that repos are given same cache dir
+    for repo, repo2 in zip(p.remotes, p2.remotes):
+        assert repo.get_cachedir() == repo2.get_cachedir()
+        assert repo.get_salt_working_dir() == repo2.get_salt_working_dir()
+    opts["pillarenv"] = "main"
+    p3 = _get_pillar(
+        opts,
+        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        "main https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        "branch https://github.com/saltstack/salt-test-pillar-gitfs.git",
+        "__env__ https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+        "other https://github.com/saltstack/salt-test-pillar-gitfs-2.git",
+    )
+    p3.checkout()
+    # check that __env__ has different cache with different pillarenv
+    assert p.remotes[0].get_cachedir() != p3.remotes[0].get_cachedir()
+    assert p.remotes[1].get_cachedir() == p3.remotes[1].get_cachedir()
+    assert p.remotes[2].get_cachedir() == p3.remotes[2].get_cachedir()
+    assert p.remotes[3].get_cachedir() != p3.remotes[3].get_cachedir()
+    assert p.remotes[4].get_cachedir() == p3.remotes[4].get_cachedir()
+
+    # check that other branch data is in cache
+    files = set(os.listdir(p.remotes[4].get_cachedir()))
+    for f in (".gitignore", "README.md", "file.sls", "top.sls", "other_env.sls"):
+        assert f in files
+
+
+@skipif_no_gitpython
+def test_gitpython_multiple_repos(gitpython_pillar_opts):
+    _test_multiple_repos(gitpython_pillar_opts)
+
+
+@skipif_no_pygit2
+def test_pygit2_multiple_repos(pygit2_pillar_opts):
+    _test_multiple_repos(pygit2_pillar_opts)
