@@ -36,6 +36,7 @@ def test__getgrall(etc_group):
     assert grall == expected_grall
 
 
+@pytest.mark.skip_if_root()
 def test__getgrall_permission_denied(etc_group):
     etc_group.chmod(0o000)
 
