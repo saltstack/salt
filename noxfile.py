@@ -456,6 +456,26 @@ def _run_with_coverage(session, *test_cmd, env=None):
                 "--include=salt/*",
                 env=coverage_base_env,
             )
+            # Generate html report for tests code coverage
+            session.run(
+                "coverage",
+                "html",
+                "-d",
+                str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
+                "--omit=salt/*",
+                "--include=tests/*",
+                env=coverage_base_env,
+            )
+            # Generate html report for salt code coverage
+            session.run(
+                "coverage",
+                "html",
+                "-d",
+                str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
+                "--omit=tests/*",
+                "--include=salt/*",
+                env=coverage_base_env,
+            )
 
 
 def _report_coverage(session):
@@ -1033,12 +1053,16 @@ def _pytest(session, coverage, cmd_args, env=None):
             return
 
     if coverage is True:
+        _coverage_cmd_args = []
+        if "COVERAGE_CONTEXT" in os.environ:
+            _coverage_cmd_args.append(f"--context={os.environ['COVERAGE_CONTEXT']}")
         _run_with_coverage(
             session,
             "python",
             "-m",
             "coverage",
             "run",
+            *_coverage_cmd_args,
             "-m",
             "pytest",
             *args,
@@ -1323,6 +1347,27 @@ def combine_coverage(session):
         # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
         # exception
         pass
+
+
+@nox.session(python="3", name="create-html-coverage-report")
+def create_html_coverage_report(session):
+    _install_coverage_requirement(session)
+    env = {
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        "COVERAGE_FILE": str(COVERAGE_FILE),
+    }
+
+    # Generate html report for Salt and tests combined code coverage
+    session.run(
+        "coverage",
+        "html",
+        "-d",
+        str(COVERAGE_OUTPUT_DIR.joinpath("html").relative_to(REPO_ROOT)),
+        "--include=salt/*,tests/*",
+        "--show-contexts",
+        env=env,
+    )
 
 
 class Tee:
