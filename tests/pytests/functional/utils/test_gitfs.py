@@ -47,23 +47,29 @@ def gitfs_opts(salt_factories, tmp_path):
 @pytest.fixture
 def gitpython_gitfs_opts(gitfs_opts):
     gitfs_opts["verified_gitfs_provider"] = "gitpython"
-    GitFS.instance_map.clear()
+    GitFS.instance_map.clear()  # wipe instance_map object map for clean run
     return gitfs_opts
 
 
 @pytest.fixture
 def pygit2_gitfs_opts(gitfs_opts):
     gitfs_opts["verified_gitfs_provider"] = "pygit2"
-    GitFS.instance_map.clear()
+    GitFS.instance_map.clear()  # wipe instance_map object map for clean run
     return gitfs_opts
 
 
-def _test_gitfs_simple(gitfs_opts):
-    g = GitFS(
-        gitfs_opts,
-        ["https://github.com/saltstack/salt-test-pillar-gitfs.git"],
+def _get_gitfs(opts, *remotes):
+    return GitFS(
+        opts,
+        remotes,
         per_remote_overrides=PER_REMOTE_OVERRIDES,
         per_remote_only=PER_REMOTE_ONLY,
+    )
+
+
+def _test_gitfs_simple(gitfs_opts):
+    g = _get_gitfs(
+        gitfs_opts, "https://github.com/saltstack/salt-test-pillar-gitfs.git"
     )
     g.fetch_remotes()
     assert len(g.remotes) == 1
@@ -81,11 +87,8 @@ def test_pygit2_gitfs_simple(pygit2_gitfs_opts):
 
 
 def _test_gitfs_simple_base(gitfs_opts):
-    g = GitFS(
-        gitfs_opts,
-        ["https://github.com/saltstack/salt-test-pillar-gitfs.git"],
-        per_remote_overrides=PER_REMOTE_OVERRIDES,
-        per_remote_only=PER_REMOTE_ONLY,
+    g = _get_gitfs(
+        gitfs_opts, "https://github.com/saltstack/salt-test-pillar-gitfs.git"
     )
     g.fetch_remotes()
     assert len(g.remotes) == 1
@@ -109,11 +112,8 @@ def test_pygit2_gitfs_simple_base(pygit2_gitfs_opts):
 
 @skipif_no_gitpython
 def test_gitpython_gitfs_provider(gitpython_gitfs_opts):
-    g = GitFS(
-        gitpython_gitfs_opts,
-        ["https://github.com/saltstack/salt-test-pillar-gitfs.git"],
-        per_remote_overrides=PER_REMOTE_OVERRIDES,
-        per_remote_only=PER_REMOTE_ONLY,
+    g = _get_gitfs(
+        gitpython_gitfs_opts, "https://github.com/saltstack/salt-test-pillar-gitfs.git"
     )
     assert len(g.remotes) == 1
     assert g.provider == "gitpython"
@@ -122,11 +122,8 @@ def test_gitpython_gitfs_provider(gitpython_gitfs_opts):
 
 @skipif_no_pygit2
 def test_pygit2_gitfs_provider(pygit2_gitfs_opts):
-    g = GitFS(
-        pygit2_gitfs_opts,
-        ["https://github.com/saltstack/salt-test-pillar-gitfs.git"],
-        per_remote_overrides=PER_REMOTE_OVERRIDES,
-        per_remote_only=PER_REMOTE_ONLY,
+    g = _get_gitfs(
+        pygit2_gitfs_opts, "https://github.com/saltstack/salt-test-pillar-gitfs.git"
     )
     assert len(g.remotes) == 1
     assert g.provider == "pygit2"
