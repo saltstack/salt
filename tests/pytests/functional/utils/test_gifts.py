@@ -1,7 +1,7 @@
 import pytest
 
 from salt.fileserver.gitfs import PER_REMOTE_ONLY, PER_REMOTE_OVERRIDES
-from salt.utils.gitfs import GitFS
+from salt.utils.gitfs import GitFS, GitPython, Pygit2
 from salt.utils.immutabletypes import ImmutableDict, ImmutableList
 
 pytestmark = [
@@ -45,14 +45,16 @@ def gitfs_opts(salt_factories, tmp_path):
 
 
 @pytest.fixture
-def gitpython_gifts_opts(gitfs_opts):
-    gitfs_opts["verified_gifts_provider"] = "gitpython"
+def gitpython_gitfs_opts(gitfs_opts):
+    gitfs_opts["verified_gitfs_provider"] = "gitpython"
+    GitFS.instance_map.clear()
     return gitfs_opts
 
 
 @pytest.fixture
-def pygit2_gifts_opts(gitfs_opts):
-    gitfs_opts["verified_gifts_provider"] = "pygit2"
+def pygit2_gitfs_opts(gitfs_opts):
+    gitfs_opts["verified_gitfs_provider"] = "pygit2"
+    GitFS.instance_map.clear()
     return gitfs_opts
 
 
@@ -65,14 +67,67 @@ def _test_gitfs_simple(gitfs_opts):
     )
     g.fetch_remotes()
     assert len(g.remotes) == 1
-    assert g.file_list({"saltenv": "main"}) == [".gitignore", "README.md"]
+    assert set(g.file_list({"saltenv": "main"})) == {".gitignore", "README.md"}
 
 
 @skipif_no_gitpython
-def test_gitpython_gitfs_simple(gitpython_gifts_opts):
-    _test_gitfs_simple(gitpython_gifts_opts)
+def test_gitpython_gitfs_simple(gitpython_gitfs_opts):
+    _test_gitfs_simple(gitpython_gitfs_opts)
 
 
 @skipif_no_pygit2
-def test_pygit2_gitfs_simple(pygit2_gifts_opts):
-    _test_gitfs_simple(pygit2_gifts_opts)
+def test_pygit2_gitfs_simple(pygit2_gitfs_opts):
+    _test_gitfs_simple(pygit2_gitfs_opts)
+
+
+def _test_gitfs_simple_base(gitfs_opts):
+    g = GitFS(
+        gitfs_opts,
+        ["https://github.com/saltstack/salt-test-pillar-gitfs.git"],
+        per_remote_overrides=PER_REMOTE_OVERRIDES,
+        per_remote_only=PER_REMOTE_ONLY,
+    )
+    g.fetch_remotes()
+    assert len(g.remotes) == 1
+    assert set(g.file_list({"saltenv": "base"})) == {
+        ".gitignore",
+        "README.md",
+        "file.sls",
+        "top.sls",
+    }
+
+
+@skipif_no_gitpython
+def test_gitpython_gitfs_simple_base(gitpython_gitfs_opts):
+    _test_gitfs_simple_base(gitpython_gitfs_opts)
+
+
+@skipif_no_pygit2
+def test_pygit2_gitfs_simple_base(pygit2_gitfs_opts):
+    _test_gitfs_simple_base(pygit2_gitfs_opts)
+
+
+@skipif_no_gitpython
+def test_gitpython_gitfs_provider(gitpython_gitfs_opts):
+    g = GitFS(
+        gitpython_gitfs_opts,
+        ["https://github.com/saltstack/salt-test-pillar-gitfs.git"],
+        per_remote_overrides=PER_REMOTE_OVERRIDES,
+        per_remote_only=PER_REMOTE_ONLY,
+    )
+    assert len(g.remotes) == 1
+    assert g.provider == "gitpython"
+    assert isinstance(g.remotes[0], GitPython)
+
+
+@skipif_no_pygit2
+def test_pygit2_gitfs_provider(pygit2_gitfs_opts):
+    g = GitFS(
+        pygit2_gitfs_opts,
+        ["https://github.com/saltstack/salt-test-pillar-gitfs.git"],
+        per_remote_overrides=PER_REMOTE_OVERRIDES,
+        per_remote_only=PER_REMOTE_ONLY,
+    )
+    assert len(g.remotes) == 1
+    assert g.provider == "pygit2"
+    assert isinstance(g.remotes[0], Pygit2)
