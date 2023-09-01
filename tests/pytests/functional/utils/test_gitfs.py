@@ -128,3 +128,29 @@ def test_pygit2_gitfs_provider(pygit2_gitfs_opts):
     assert len(g.remotes) == 1
     assert g.provider == "pygit2"
     assert isinstance(g.remotes[0], Pygit2)
+
+
+def _test_gitfs_minion(gitfs_opts):
+    gitfs_opts["__role"] = "minion"
+    g = _get_gitfs(
+        gitfs_opts, "https://github.com/saltstack/salt-test-pillar-gitfs.git"
+    )
+    g.fetch_remotes()
+    assert len(g.remotes) == 1
+    assert set(g.file_list({"saltenv": "base"})) == {
+        ".gitignore",
+        "README.md",
+        "file.sls",
+        "top.sls",
+    }
+    assert set(g.file_list({"saltenv": "main"})) == {".gitignore", "README.md"}
+
+
+@skipif_no_gitpython
+def test_gitpython_gitfs_minion(gitpython_gitfs_opts):
+    _test_gitfs_minion(gitpython_gitfs_opts)
+
+
+@skipif_no_pygit2
+def test_pygit2_gitfs_minion(pygit2_gitfs_opts):
+    _test_gitfs_minion(pygit2_gitfs_opts)
