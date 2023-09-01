@@ -1,8 +1,11 @@
 import os
 
+import pytest
+
 import salt.utils.cache
 import salt.utils.files
 import salt.utils.path
+import salt.version
 
 _DUMMY_FILES = (
     "data.txt",
@@ -41,14 +44,25 @@ def _dummy_files_exists(tmp_path):
     return ret
 
 
+def test_verify_cache_version_bad_path():
+    with pytest.raises(ValueError):
+        # cache version should fail if given bad file python
+        salt.utils.cache.verify_cache_version("\0/bad/path")
+
+
 def test_verify_cache_version(tmp_path):
-    tmp_path = str(tmp_path)
+    # cache version should make dir if it does not exist
+    tmp_path = str(salt.utils.path.join(str(tmp_path), "work", "salt"))
     cache_version = salt.utils.path.join(tmp_path, "cache_version")
 
     # check that cache clears when no cache_version is present
     _make_dummy_files(tmp_path)
     assert salt.utils.cache.verify_cache_version(tmp_path) is False
     assert _dummy_files_exists(tmp_path) is False
+
+    # check that cache_version has correct salt version
+    with salt.utils.files.fopen(cache_version, "r") as file:
+        assert "\n".join(file.readlines()) == salt.version.__version__
 
     # check that cache does not get clear when check is called multiple times
     _make_dummy_files(tmp_path)

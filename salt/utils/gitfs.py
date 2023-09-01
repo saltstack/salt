@@ -2931,15 +2931,18 @@ class GitBase:
         else:
             log.info("Wrote new %s remote map to %s", self.role, remote_map)
 
-    def do_checkout(self, repo):
+    def do_checkout(self, repo, fetch_on_fail=True):
         """
         Common code for git_pillar/winrepo to handle locking and checking out
         of a repo.
+
+        fetch_on_fail
+          If checkout fails perform a fetch then try to checkout again.
         """
         time_start = time.time()
         while time.time() - time_start <= 5:
             try:
-                return repo.checkout()
+                return repo.checkout(fetch_on_fail=fetch_on_fail)
             except GitLockError as exc:
                 if exc.errno == errno.EEXIST:
                     time.sleep(0.1)
@@ -3334,14 +3337,17 @@ class GitPillar(GitBase):
 
     role = "git_pillar"
 
-    def checkout(self):
+    def checkout(self, fetch_on_fail=True):
         """
         Checkout the targeted branches/tags from the git_pillar remotes
+
+        fetch_on_fail
+          If checkout fails perform a fetch then try to checkout again.
         """
         self.pillar_dirs = OrderedDict()
         self.pillar_linked_dirs = []
         for repo in self.remotes:
-            cachedir = self.do_checkout(repo)
+            cachedir = self.do_checkout(repo, fetch_on_fail=fetch_on_fail)
             if cachedir is not None:
                 # Figure out which environment this remote should be assigned
                 if repo.branch == "__env__" and hasattr(repo, "all_saltenvs"):
@@ -3493,6 +3499,9 @@ class GitPillar(GitBase):
 class WinRepo(GitBase):
     """
     Functionality specific to the winrepo runner
+
+    fetch_on_fail
+          If checkout fails perform a fetch then try to checkout again.
     """
 
     role = "winrepo"
@@ -3500,12 +3509,12 @@ class WinRepo(GitBase):
     # out the repos.
     winrepo_dirs = {}
 
-    def checkout(self):
+    def checkout(self, fetch_on_fail=True):
         """
         Checkout the targeted branches/tags from the winrepo remotes
         """
         self.winrepo_dirs = {}
         for repo in self.remotes:
-            cachedir = self.do_checkout(repo)
+            cachedir = self.do_checkout(repo, fetch_on_fail=fetch_on_fail)
             if cachedir is not None:
                 self.winrepo_dirs[repo.id] = cachedir
