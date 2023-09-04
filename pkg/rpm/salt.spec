@@ -19,6 +19,9 @@
 %define _SALT_NAME Salt
 %define _SALT_HOME /opt/saltstack/salt
 
+# Disable debugsource template
+%define _debugsource_template %{nil}
+
 # Disable python bytecompile for MANY reasons
 %global __os_install_post %(echo '%{__os_install_post}' | sed -e 's!/usr/lib[^[:space:]]*/brp-python-bytecompile[[:space:]].*$!!g')
 
@@ -56,6 +59,10 @@ BuildRequires: git
 BuildRequires: libxcrypt-compat
 %endif
 %endif
+
+# Build debuginfo package
+%debug_package
+%_no_recompute_build_ids 1
 
 %description
 Salt is a distributed remote execution system used to execute commands and
