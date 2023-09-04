@@ -251,7 +251,6 @@ class GitProvider:
             key_cb=str,
             val_cb=lambda x, y: str(y),
         )
-        self.ssl_verify = self.opts.get(f"{self.role}_ssl_verify", None)
         self.conf = copy.deepcopy(per_remote_defaults)
         # Remove the 'salt://' from the beginning of any globally-defined
         # per-saltenv mountpoints
