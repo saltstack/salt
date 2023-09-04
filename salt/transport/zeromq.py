@@ -586,8 +586,9 @@ class AsyncReqMessageClient:
 
         :raises: SaltReqTimeoutError
         """
-        self._future = None
-        future.set_exception(SaltReqTimeoutError("Message timed out"))
+        if self._future == future:
+            self._future = None
+            future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     @salt.ext.tornado.gen.coroutine
     def send(self, message, timeout=None, callback=None):

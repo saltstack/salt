@@ -19,6 +19,7 @@ import salt.channel.server
 import salt.config
 import salt.crypt
 import salt.exceptions
+import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.transport.zeromq
@@ -1473,3 +1474,26 @@ async def test_req_chan_bad_payload_to_decode(pki_dir, io_loop):
         server._decode_payload({})
     with pytest.raises(salt.exceptions.SaltDeserializationError):
         server._decode_payload(12345)
+
+
+async def test_client_timeout_msg(minion_opts):
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+    assert hasattr(client, "_future")
+    assert client._future is None
+    future = salt.ext.tornado.concurrent.Future()
+    client._future = future
+    client.timeout_message(future)
+    with pytest.raises(salt.exceptions.SaltReqTimeoutError):
+        await future
+    assert client._future is None
+
+    future_a = salt.ext.tornado.concurrent.Future()
+    future_b = salt.ext.tornado.concurrent.Future()
+    future_b.set_exception = MagicMock()
+    client._future = future_a
+    client.timeout_message(future_b)
+
+    assert client._future == future_a
+    future_b.set_exception.assert_not_called()
