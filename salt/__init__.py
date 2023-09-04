@@ -13,6 +13,7 @@ if sys.version_info < (3,):
     )
     sys.stderr.flush()
 
+
 USE_VENDORED_TORNADO = True
 
 
@@ -116,6 +117,7 @@ warnings.filterwarnings(
     message="invalid escape sequence.*",
     category=DeprecationWarning,
 )
+
 
 def __define_global_system_encoding_variable__():
     import sys
