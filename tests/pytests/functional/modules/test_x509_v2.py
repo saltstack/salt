@@ -1359,6 +1359,14 @@ def test_create_csr_with_extensions(x509, rsa_privkey):
     assert res.startswith("-----BEGIN CERTIFICATE REQUEST-----")
 
 
+def test_create_csr_with_wildcard_san(x509, rsa_privkey):
+    """
+    Test that wildcards in SAN extension are supported. Issue #65072
+    """
+    res = x509.create_csr(private_key=rsa_privkey, subjectAltName="DNS:*.salt.ca")
+    assert res.startswith("-----BEGIN CERTIFICATE REQUEST-----")
+
+
 @pytest.mark.parametrize("encoding", ["pem", "der"])
 def test_create_csr_write_to_path(x509, encoding, rsa_privkey, tmp_path):
     tgt = tmp_path / "csr"
