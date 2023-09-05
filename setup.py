@@ -1216,6 +1216,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 "salt-key = salt.scripts:salt_key",
                 "salt-master = salt.scripts:salt_master",
                 "salt-minion = salt.scripts:salt_minion",
+                "salt-proxy = salt.scripts:salt_proxy",
                 "salt-ssh = salt.scripts:salt_ssh",
                 "salt-syndic = salt.scripts:salt_syndic",
                 "spm = salt.scripts:salt_spm",
