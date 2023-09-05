@@ -11,7 +11,7 @@ import shlex
 import time
 import uuid
 import warnings
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Hashable, Mapping, Sequence
 from functools import wraps
 from xml.dom import minidom
 from xml.etree.ElementTree import Element, SubElement, tostring
@@ -739,13 +739,14 @@ def _has_strict_undefined(value):
         return True
     elif isinstance(value, Mapping):
         for key, item in value.items():
-            if _handle_strict_undefined(key):
+            # StrictUndefined cant be a key in dict, but still check for other mapping types
+            if _has_strict_undefined(key):
                 return True
-            if _handle_strict_undefined(item):
+            if _has_strict_undefined(item):
                 return True
-    elif isinstance(value, Iterable):
+    elif isinstance(value, Sequence) and not isinstance(value, str):
         for item in value:
-            if _handle_strict_undefined(item):
+            if _has_strict_undefined(item):
                 return True
     return False
 
