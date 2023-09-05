@@ -967,6 +967,40 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
 
+  debian-12-ci-deps:
+    name: Debian 12 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-linux
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: debian-12
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
+  debian-12-arm64-ci-deps:
+    name: Debian 12 Arm64 Deps
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-salt-onedir-linux
+    uses: ./.github/workflows/build-deps-ci-action.yml
+    with:
+      distro-slug: debian-12-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+
   fedora-37-ci-deps:
     name: Fedora 37 Deps
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['build-deps-ci'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -1313,6 +1347,50 @@ jobs:
     uses: ./.github/workflows/test-packages-action.yml
     with:
       distro-slug: debian-11-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  debian-12-pkg-tests:
+    name: Debian 12 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-deb-pkgs-onedir
+      - debian-12-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: debian-12
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      pkg-type: deb
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+      testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
+
+  debian-12-arm64-pkg-tests:
+    name: Debian 12 Arm64 Package Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test-pkg'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - build-deb-pkgs-onedir
+      - debian-12-arm64-ci-deps
+    uses: ./.github/workflows/test-packages-action.yml
+    with:
+      distro-slug: debian-12-arm64
       nox-session: ci-test-onedir
       platform: linux
       arch: aarch64
@@ -1913,6 +1991,46 @@ jobs:
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
       skip-junit-reports: ${{ github.event_name == 'pull_request' }}
 
+  debian-12:
+    name: Debian 12 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - debian-12-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-12
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: x86_64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
+  debian-12-arm64:
+    name: Debian 12 Arm64 Test
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
+    needs:
+      - prepare-workflow
+      - debian-12-arm64-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      distro-slug: debian-12-arm64
+      nox-session: ci-test-onedir
+      platform: linux
+      arch: aarch64
+      nox-version: 2022.8.7
+      python-version: "3.10"
+      testrun: ${{ needs.prepare-workflow.outputs.testrun }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
+      skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] }}
+      skip-junit-reports: ${{ github.event_name == 'pull_request' }}
+
   fedora-37:
     name: Fedora 37 Test
     if: ${{ fromJSON(needs.prepare-workflow.outputs.jobs)['test'] && fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
@@ -2139,6 +2257,8 @@ jobs:
       - debian-10-ci-deps
       - debian-11-ci-deps
       - debian-11-arm64-ci-deps
+      - debian-12-ci-deps
+      - debian-12-arm64-ci-deps
       - fedora-37-ci-deps
       - fedora-37-arm64-ci-deps
       - fedora-38-ci-deps
@@ -2165,6 +2285,8 @@ jobs:
       - debian-10
       - debian-11
       - debian-11-arm64
+      - debian-12
+      - debian-12-arm64
       - fedora-37
       - fedora-38
       - opensuse-15
@@ -2294,6 +2416,8 @@ jobs:
       - debian-10-ci-deps
       - debian-11-ci-deps
       - debian-11-arm64-ci-deps
+      - debian-12-ci-deps
+      - debian-12-arm64-ci-deps
       - fedora-37-ci-deps
       - fedora-37-arm64-ci-deps
       - fedora-38-ci-deps
@@ -2320,6 +2444,8 @@ jobs:
       - debian-10
       - debian-11
       - debian-11-arm64
+      - debian-12
+      - debian-12-arm64
       - fedora-37
       - fedora-38
       - opensuse-15
@@ -2337,6 +2463,8 @@ jobs:
       - debian-10-pkg-tests
       - debian-11-pkg-tests
       - debian-11-arm64-pkg-tests
+      - debian-12-pkg-tests
+      - debian-12-arm64-pkg-tests
       - photonos-3-pkg-tests
       - photonos-4-pkg-tests
       - photonos-4-arm64-pkg-tests
