@@ -11,7 +11,7 @@ import shlex
 import time
 import uuid
 import warnings
-from collections.abc import Hashable
+from collections.abc import Hashable, Iterable, Mapping
 from functools import wraps
 from xml.dom import minidom
 from xml.etree.ElementTree import Element, SubElement, tostring
@@ -734,10 +734,26 @@ def show_full_context(ctx):
     )
 
 
+def _has_strict_undefined(value):
+    if isinstance(value, jinja2.StrictUndefined):
+        return True
+    elif isinstance(value, Mapping):
+        for key, item in value.items():
+            if _handle_strict_undefined(key):
+                return True
+            if _handle_strict_undefined(item):
+                return True
+    elif isinstance(value, Iterable):
+        for item in value:
+            if _handle_strict_undefined(item):
+                return True
+    return False
+
+
 def _handle_strict_undefined(function):
     @wraps(function)
     def __handle_strict_undefined(value, *args, **kwargs):
-        if isinstance(value, jinja2.StrictUndefined):
+        if _has_strict_undefined(value):
             return value
         return function(value, *args, **kwargs)
 
@@ -1007,7 +1023,7 @@ class SerializerExtension(Extension):
 
     @_handle_strict_undefined
     def format_json(self, value, sort_keys=True, indent=None):
-        if isinstance(value, jinja2.StrictUndefined):
+        if _has_strict_undefined(value):
             return value
         json_txt = salt.utils.json.dumps(
             value, sort_keys=sort_keys, indent=indent
@@ -1018,7 +1034,7 @@ class SerializerExtension(Extension):
             return Markup(salt.utils.stringutils.to_unicode(json_txt))
 
     def format_yaml(self, value, flow_style=True):
-        if isinstance(value, jinja2.StrictUndefined):
+        if _has_strict_undefined(value):
             return value
         yaml_txt = salt.utils.yaml.safe_dump(
             value, default_flow_style=flow_style
@@ -1039,7 +1055,7 @@ class SerializerExtension(Extension):
         :returns: Formatted XML string rendered with newlines and indentation
         :rtype: str
         """
-        if isinstance(value, jinja2.StrictUndefined):
+        if _has_strict_undefined(value):
             return value
 
         def normalize_iter(value):
@@ -1090,12 +1106,12 @@ class SerializerExtension(Extension):
         )
 
     def format_python(self, value):
-        if isinstance(value, jinja2.StrictUndefined):
+        if _has_strict_undefined(value):
             return value
         return Markup(pprint.pformat(value).strip())
 
     def load_yaml(self, value):
-        if isinstance(value, jinja2.StrictUndefined):
+        if _has_strict_undefined(value):
             return value
         if isinstance(value, TemplateModule):
             value = str(value)
@@ -1122,7 +1138,7 @@ class SerializerExtension(Extension):
             raise TemplateRuntimeError(f"Unable to load yaml from {value}")
 
     def load_json(self, value):
-        if isinstance(value, jinja2.StrictUndefined):
+        if _has_strict_undefined(value):
             return value
         if isinstance(value, TemplateModule):
             value = str(value)
@@ -1132,7 +1148,7 @@ class SerializerExtension(Extension):
             raise TemplateRuntimeError(f"Unable to load json from {value}")
 
     def load_text(self, value):
-        if isinstance(value, jinja2.StrictUndefined):
+        if _has_strict_undefined(value):
             return value
         if isinstance(value, TemplateModule):
             value = str(value)
@@ -1275,7 +1291,7 @@ class SerializerExtension(Extension):
         :returns: Formatted SLS YAML string rendered with newlines and
                   indentation
         """
-        if isinstance(value, jinja2.StrictUndefined):
+        if _has_strict_undefined(value):
             return value
         return self.format_yaml(
             [{key: val} for key, val in value.items()], flow_style=flow_style
