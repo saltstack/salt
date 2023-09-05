@@ -22,6 +22,9 @@
 # Disable debugsource template
 %define _debugsource_template %{nil}
 
+# Needed for packages built from source.
+%define _unpackaged_files_terminate_build 0
+
 # Disable python bytecompile for MANY reasons
 %global __os_install_post %(echo '%{__os_install_post}' | sed -e 's!/usr/lib[^[:space:]]*/brp-python-bytecompile[[:space:]].*$!!g')
 
