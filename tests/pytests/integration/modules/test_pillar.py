@@ -614,7 +614,9 @@ def test_pillar_refresh_pillar_beacons(
     event_listerner_timeout,
 ):
     """
-    Ensure beacons jobs in pillar are only updated when values change.
+    Ensure beacons jobs in pillar are started after
+    a pillar refresh and then not running when pillar
+    is cleared.
     """
 
     top_sls = """
@@ -629,23 +631,9 @@ def test_pillar_refresh_pillar_beacons(
 
     test_beacons_sls = """
         beacons:
-          load:
-            - averages:
-                1m:
-                 - 0.0
-                 - 5.0
-                5m:
-                 - 0.0
-                 - 5.0
-                15m:
-                  - 0.0
-                  - 5.0
-            - emitatstartup: True
-            - onchangeonly: False
-        """
-
-    test_beacons_sls2 = """
-        beacons: {}
+          status:
+            - loadavg:
+              - 1-min
         """
 
     assert salt_minion.is_running()
@@ -673,7 +661,7 @@ def test_pillar_refresh_pillar_beacons(
             # Give the beacons a chance to start
             time.sleep(5)
 
-            event_tag = f"salt/beacon/*/load/"
+            event_tag = f"salt/beacon/*/status/*"
             start_time = time.time()
 
             event_pattern = (salt_master.id, event_tag)
@@ -697,14 +685,14 @@ def test_pillar_refresh_pillar_beacons(
             # Give the beacons a chance to stop
             time.sleep(5)
 
-            event_tag = f"salt/beacon/*/load/"
+            event_tag = f"salt/beacon/*/status/*"
             start_time = time.time()
 
             event_pattern = (salt_master.id, event_tag)
             matched_events = event_listener.wait_for_events(
                 [event_pattern],
                 after_time=start_time,
-                timeout=event_listerner_timeout.catch,
+                timeout=event_listerner_timeout.miss,
             )
 
             assert not matched_events.found_all_events
