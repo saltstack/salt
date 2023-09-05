@@ -69,7 +69,8 @@ def _get_gitfs(opts, *remotes):
 
 def _test_gitfs_simple(gitfs_opts):
     g = _get_gitfs(
-        gitfs_opts, "https://github.com/saltstack/salt-test-pillar-gitfs.git"
+        gitfs_opts,
+        {"https://github.com/saltstack/salt-test-pillar-gitfs.git": [{"name": "bob"}]},
     )
     g.fetch_remotes()
     assert len(g.remotes) == 1
@@ -154,3 +155,32 @@ def test_gitpython_gitfs_minion(gitpython_gitfs_opts):
 @skipif_no_pygit2
 def test_pygit2_gitfs_minion(pygit2_gitfs_opts):
     _test_gitfs_minion(pygit2_gitfs_opts)
+
+
+def _test_fetch_request_with_mountpoint(opts):
+    mpoint = [{"mountpoint": "salt/m"}]
+    p = _get_gitfs(
+        opts,
+        {"https://github.com/saltstack/salt-test-pillar-gitfs.git": mpoint},
+    )
+    p.fetch_remotes()
+    assert len(p.remotes) == 1
+    repo = p.remotes[0]
+    assert repo.mountpoint("testmount") == "salt/m"
+    assert set(p.file_list({"saltenv": "testmount"})) == {
+        "salt/m/test_dir1/testfile3",
+        "salt/m/test_dir1/test_dir2/testfile2",
+        "salt/m/.gitignore",
+        "salt/m/README.md",
+        "salt/m/test_dir1/test_dir2/testfile1",
+    }
+
+
+@skipif_no_gitpython
+def test_gitpython_fetch_request_with_mountpoint(gitpython_gitfs_opts):
+    _test_fetch_request_with_mountpoint(gitpython_gitfs_opts)
+
+
+@skipif_no_pygit2
+def test_pygit2_fetch_request_with_mountpoint(pygit2_gitfs_opts):
+    _test_fetch_request_with_mountpoint(pygit2_gitfs_opts)
