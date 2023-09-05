@@ -306,3 +306,25 @@ def test_gitpython_clear_old_remotes(gitpython_pillar_opts):
 @skipif_no_pygit2
 def test_pygit2_clear_old_remotes(pygit2_pillar_opts):
     _test_clear_old_remotes(pygit2_pillar_opts)
+
+
+def _test_remote_map(opts):
+    p = _get_pillar(
+        opts,
+        "https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    )
+    p.fetch_remotes()
+    assert len(p.remotes) == 1
+    assert os.path.isfile(
+        os.path.join(opts["cachedir"], "git_pillar", "remote_map.txt")
+    )
+
+
+@skipif_no_gitpython
+def test_gitpython_remote_map(gitpython_pillar_opts):
+    _test_remote_map(gitpython_pillar_opts)
+
+
+@skipif_no_pygit2
+def test_pygit2_remote_map(pygit2_pillar_opts):
+    _test_remote_map(pygit2_pillar_opts)

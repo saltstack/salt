@@ -455,16 +455,18 @@ class GitProvider:
                 self.id,
             )
             failhard(self.role)
-
-        hash_type = getattr(hashlib, self.opts.get("hash_type", "md5"))
-        # We loaded this data from yaml configuration files, so, its safe
-        # to use UTF-8
-        self._cache_basehash = str(
-            base64.b64encode(hash_type(self.id.encode("utf-8")).digest()),
-            encoding="ascii",  # base64 only outputs ascii
-        ).replace(
-            "/", "_"
-        )  # replace "/" with "_" to not cause trouble with file system
+        if hasattr(self, "name"):
+            self._cache_basehash = self.name
+        else:
+            hash_type = getattr(hashlib, self.opts.get("hash_type", "md5"))
+            # We loaded this data from yaml configuration files, so, its safe
+            # to use UTF-8
+            self._cache_basehash = str(
+                base64.b64encode(hash_type(self.id.encode("utf-8")).digest()),
+                encoding="ascii",  # base64 only outputs ascii
+            ).replace(
+                "/", "_"
+            )  # replace "/" with "_" to not cause trouble with file system
         self._cache_hash = salt.utils.path.join(cache_root, self._cache_basehash)
         self._cache_basename = "_"
         if self.id.startswith("__env__"):
@@ -496,12 +498,11 @@ class GitProvider:
                 msg += " Perhaps git is not available."
             log.critical(msg, exc_info=True)
             failhard(self.role)
-        else:
-            self.verify_auth()
-            self.setup_callbacks()
-            if not os.path.isdir(self._salt_working_dir):
-                os.makedirs(self._salt_working_dir)
-            self.fetch_request_check()
+        self.verify_auth()
+        self.setup_callbacks()
+        if not os.path.isdir(self._salt_working_dir):
+            os.makedirs(self._salt_working_dir)
+        self.fetch_request_check()
 
     def get_cache_basehash(self):
         return self._cache_basehash
