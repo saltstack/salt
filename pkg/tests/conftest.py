@@ -474,11 +474,16 @@ def salt_minion(salt_factories, salt_master, install_salt):
             "winrepo_dir_ng"
         ] = rf"{salt_factories.root_dir}\srv\salt\win\repo_ng"
         config_overrides["winrepo_source_dir"] = r"salt://win/repo_ng"
+
+    if install_salt.classic and platform.is_windows():
+        salt_factories.python_executable = None
+
     factory = salt_master.salt_minion_daemon(
         minion_id,
         overrides=config_overrides,
         defaults=config_defaults,
     )
+
     # Salt factories calls salt.utils.verify.verify_env
     # which sets root perms on /srv/salt and /srv/pillar since we are running
     # the test suite as root, but we want to run Salt master as salt
