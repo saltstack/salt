@@ -107,3 +107,23 @@ def test_gitpython_winrepo_simple(gitpython_winrepo_opts):
 @skipif_no_pygit2
 def test_pygit2_winrepo_simple(pygit2_winrepo_opts):
     _test_winrepo_simple(pygit2_winrepo_opts)
+
+
+def _test_remote_map(opts):
+    p = _get_winrepo(
+        opts,
+        "https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    )
+    p.fetch_remotes()
+    assert len(p.remotes) == 1
+    assert os.path.isfile(os.path.join(opts["cachedir"], "winrepo", "remote_map.txt"))
+
+
+@skipif_no_gitpython
+def test_gitpython_remote_map(gitpython_winrepo_opts):
+    _test_remote_map(gitpython_winrepo_opts)
+
+
+@skipif_no_pygit2
+def test_pygit2_remote_map(pygit2_winrepo_opts):
+    _test_remote_map(pygit2_winrepo_opts)
