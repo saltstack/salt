@@ -1,3 +1,5 @@
+import os.path
+
 import pytest
 
 from salt.fileserver.gitfs import PER_REMOTE_ONLY, PER_REMOTE_OVERRIDES
@@ -184,3 +186,55 @@ def test_gitpython_fetch_request_with_mountpoint(gitpython_gitfs_opts):
 @skipif_no_pygit2
 def test_pygit2_fetch_request_with_mountpoint(pygit2_gitfs_opts):
     _test_fetch_request_with_mountpoint(pygit2_gitfs_opts)
+
+
+def _test_name(opts):
+    p = _get_gitfs(
+        opts,
+        {
+            "https://github.com/saltstack/salt-test-pillar-gitfs.git": [
+                {"name": "name1"}
+            ]
+        },
+        {
+            "https://github.com/saltstack/salt-test-pillar-gitfs.git": [
+                {"name": "name2"}
+            ]
+        },
+    )
+    p.fetch_remotes()
+    assert len(p.remotes) == 2
+    repo = p.remotes[0]
+    repo2 = p.remotes[1]
+    assert repo.get_cache_basehash() == "name1"
+    assert repo2.get_cache_basehash() == "name2"
+
+
+@skipif_no_gitpython
+def test_gitpython_name(gitpython_gitfs_opts):
+    _test_name(gitpython_gitfs_opts)
+
+
+@skipif_no_pygit2
+def test_pygit2_name(pygit2_gitfs_opts):
+    _test_name(pygit2_gitfs_opts)
+
+
+def _test_remote_map(opts):
+    p = _get_gitfs(
+        opts,
+        "https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    )
+    p.fetch_remotes()
+    assert len(p.remotes) == 1
+    assert os.path.isfile(os.path.join(opts["cachedir"], "gitfs", "remote_map.txt"))
+
+
+@skipif_no_gitpython
+def test_gitpython_remote_map(gitpython_gitfs_opts):
+    _test_remote_map(gitpython_gitfs_opts)
+
+
+@skipif_no_pygit2
+def test_pygit2_remote_map(pygit2_gitfs_opts):
+    _test_remote_map(pygit2_gitfs_opts)
