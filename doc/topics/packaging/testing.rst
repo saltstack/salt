@@ -8,13 +8,13 @@ The Package Test Suite
 ======================
 
 The salt repo provides a test suite for testing basic functionality of our packages at ``<repo-root>/pkg/tests/``.
-The install, upgrade, and downgrade tests can be run locally, and are run on most PRs that are submitted against Salt.
+The install, upgrade, and downgrade tests can be run locally and are run on most PRs that are submitted against Salt.
 
 
 .. warning::
 
     These tests are destructive to your system, as they install the built packages onto the
-    system, and can also install older versions in the case of upgrades or downgrades.
+    system. They may also install older versions in the case of upgrades or downgrades.
     It is recommended to run these in an isolated system, preferrably a VM.
 
 Setup
