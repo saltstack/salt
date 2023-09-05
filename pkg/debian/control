@@ -14,6 +14,14 @@ Vcs-Browser: https://github.com/saltstack/salt.git
 Vcs-Git: git://github.com/saltstack/salt.git
 
 
+Package: salt-dbg
+Architecture: amd64 arm64
+Section: debug
+Priority: extra
+Homepage: http://saltproject.io/
+Description: Salt debug symbols
+
+
 Package: salt-common
 Architecture: amd64 arm64
 Depends: ${misc:Depends}

@@ -139,6 +139,7 @@ nox.*.tar.xz
 /pkg/debian/salt-api
 /pkg/debian/salt-common
 /pkg/debian/salt-cloud
+/pkg/debian/salt-dbg
 /pkg/debian/salt-master
 /pkg/debian/salt-minion
 /pkg/debian/salt-ssh
