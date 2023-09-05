@@ -531,10 +531,22 @@ class SaltPkgInstall:
             ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
             self._check_retcode(ret)
             cmd_action = "downgrade" if downgrade else "install"
+            pkgs_to_install = self.salt_pkgs.copy()
+            if self.distro_version == "8" and self.classic:
+                # centosstream 8 doesn't downgrade properly using the downgrade command for some reason
+                # So we explicitly install the correct version here
+                list_ret = self.proc.run(
+                    self.pkg_mngr, "list", "--available", "salt"
+                ).stdout.split("\n")
+                list_ret = [_.strip() for _ in list_ret]
+                idx = list_ret.index("Available Packages")
+                old_ver = list_ret[idx + 1].split()[1]
+                pkgs_to_install = [f"{pkg}-{old_ver}" for pkg in pkgs_to_install]
+                cmd_action = "install"
             ret = self.proc.run(
                 self.pkg_mngr,
                 cmd_action,
-                *self.salt_pkgs,
+                *pkgs_to_install,
                 "-y",
             )
             self._check_retcode(ret)
