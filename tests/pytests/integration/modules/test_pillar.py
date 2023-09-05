@@ -633,13 +633,13 @@ def test_pillar_refresh_pillar_beacons(
             - averages:
                 1m:
                  - 0.0
-                 - 2.0
+                 - 5.0
                 5m:
                  - 0.0
-                 - 1.5
+                 - 5.0
                 15m:
-                  - 0.1
-                  - 1.0
+                  - 0.0
+                  - 5.0
             - emitatstartup: True
             - onchangeonly: False
         """
