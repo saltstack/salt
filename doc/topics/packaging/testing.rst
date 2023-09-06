@@ -61,7 +61,7 @@ An analogous process can be performed for artifacts from nightly builds.
 #. Download the artifacts
 
     Under the summary page for the most recent actions run for that PR, there is a list of available artifacts from that run that can be downloaded.
-    Download the package artifacts by finding ``salt-<major>.<minor>+<number>.<sha>-<arch>-<pkg-type>``.  For example, the x86_64 deb packages
+    Download the package artifacts by finding ``salt-<major>.<minor>+<number>.<sha>-<arch>-<pkg-type>``.  For example, the amd64 deb packages
     might look like ``salt-3006.2+123.01234567890-x86_64-deb``.
 
     The onedir artifact will look like ``salt-<major>.<minor>+<number>.<sha>-onedir-<platform>-<arch>.tar.xz``.
@@ -72,7 +72,7 @@ An analogous process can be performed for artifacts from nightly builds.
         Windows onedir artifacts have ``.zip`` extensions instead of ``tar.xz``
 
     While it is optional, it is recommended to download the ``nox`` session artifact as well.  This will have the form of ``nox-<os-name>-test-pkgs-onedir-<arch>``.
-    The x86_64 Ubuntu 20.04 nox artifact may look like ``nox-ubuntu-20.04-test-pkgs-onedir-x86_64``.
+    The amd64 Ubuntu 20.04 nox artifact may look like ``nox-ubuntu-20.04-test-pkgs-onedir-x86_64``.
 
 #. Placing the artifacts in the correct location
 
