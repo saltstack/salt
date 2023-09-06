@@ -31,6 +31,10 @@ on:
         required: true
         type: string
         description: A JSON list of releases to test upgrades against
+      nox-version:
+        required: true
+        type: string
+        description: The nox version to install
       package-name:
         required: false
         type: string
@@ -54,7 +58,6 @@ on:
 
 
 env:
-  NOX_VERSION: "2022.8.7"
   COLUMNS: 160
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"

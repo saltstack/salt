@@ -313,4 +313,56 @@
   <%- include "test-salt.yml.jinja" %>
   <%- endif %>
 
+  <%- if skip_test_coverage_check == "false" or "skip_code_coverage" in skip_test_coverage_check %>
+
+  combine-all-code-coverage:
+    <%- do conclusion_needs.append("combine-all-code-coverage") %>
+    name: Combine Code Coverage
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.testrun)['skip_code_coverage'] == false }}
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted", "linux", "x86_64"]') || 'ubuntu-latest' }}
+    needs:
+      - prepare-workflow
+      <%- for need in test_salt_needs.iter(consume=False) %>
+      - <{ need }>
+      <%- endfor %>
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        if: ${{ github.event.repository.private == false }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Nox
+        run: |
+          python3 -m pip install 'nox==<{ nox_version }>'
+
+      - name: Get coverage reports
+        id: get-coverage-reports
+        uses: actions/download-artifact@v3
+        with:
+          name: all-testrun-coverage-artifacts
+          path: artifacts/coverage/
+
+      - name: Display structure of downloaded files
+        run: tree -a artifacts/
+
+      - name: Combine Code Coverage
+        run: |
+          nox --force-color -e combine-coverage
+
+      - name: Create Code Coverage HTML Report
+        run: |
+          nox --force-color -e create-html-coverage-report
+
+      - name: Upload Code Coverage HTML Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-html-report
+          path: artifacts/coverage/html
+          retention-days: 7
+          if-no-files-found: error
+  <%- endif %>
+
 <%- endblock jobs %>

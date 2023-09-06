@@ -311,6 +311,7 @@ def test(
         "PRINT_TEST_PLAN_ONLY": "0",
         "SKIP_INITIAL_ONEDIR_FAILURES": "1",
         "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
+        "COVERAGE_CONTEXT": name,
     }
     if "LANG" in os.environ:
         env["LANG"] = os.environ["LANG"]
@@ -591,8 +592,10 @@ def sync_cache(
     cached_instances = {}
     if STATE_DIR.exists():
         for state_path in STATE_DIR.iterdir():
-            instance_id = (state_path / "instance-id").read_text()
-            cached_instances[instance_id] = state_path.name
+            instance_id_path = state_path / "instance-id"
+            if instance_id_path.exists():
+                instance_id = instance_id_path.read_text()
+                cached_instances[instance_id] = state_path.name
 
     # Find what instances we are missing in our cached states
     to_write = {}

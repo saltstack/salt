@@ -755,6 +755,3 @@ def parse_command_result(res, label=None):
             del ret["error"]
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

@@ -13,3 +13,4 @@
 /var/cache/salt/master/roots
 /var/cache/salt/master/syndics
 /var/cache/salt/master/tokens
+/var/run/salt/master

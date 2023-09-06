@@ -35,6 +35,10 @@ on:
         required: true
         type: string
         description: The type of artifact to download
+      nox-version:
+        required: true
+        type: string
+        description: The nox version to install
       package-name:
         required: false
         type: string
@@ -53,7 +57,6 @@ on:
 
 
 env:
-  NOX_VERSION: "2022.8.7"
   COLUMNS: 160
   AWS_MAX_ATTEMPTS: "10"
   AWS_RETRY_MODE: "adaptive"
@@ -313,7 +316,7 @@ jobs:
 
       - name: Install Nox
         run: |
-          python3 -m pip install 'nox==${{ env.NOX_VERSION }}'
+          python3 -m pip install 'nox==${{ inputs.nox-version }}'
 
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v3

@@ -296,6 +296,3 @@ def mod_watch(name, **kwargs):
         ret = present(**kwargs)
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

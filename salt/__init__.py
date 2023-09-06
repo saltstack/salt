@@ -13,6 +13,7 @@ if sys.version_info < (3,):
     )
     sys.stderr.flush()
 
+
 USE_VENDORED_TORNADO = True
 
 
@@ -109,6 +110,12 @@ warnings.filterwarnings(
     message="Setuptools is replacing distutils.",
     category=UserWarning,
     module="_distutils_hack",
+)
+
+warnings.filterwarnings(
+    "ignore",
+    message="invalid escape sequence.*",
+    category=DeprecationWarning,
 )
 
 

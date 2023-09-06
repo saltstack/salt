@@ -263,6 +263,3 @@ def delete(name, force=False):
             if "stderr" not in res and res["stderr"] == ""
             else res["stderr"]
         }
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

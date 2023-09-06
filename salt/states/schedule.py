@@ -214,11 +214,15 @@ def present(name, **kwargs):
         Whether the scheduled job should run immediately after the skip_during_range time
         period ends.
 
+    offline
+        Add the scheduled job to the Salt minion when the Salt minion is not running.
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    current_schedule = __salt__["schedule.list"](show_all=True, return_yaml=False)
+    current_schedule = __salt__["schedule.list"](
+        show_all=True, return_yaml=False, offline=kwargs.get("offline")
+    )
 
     if name in current_schedule:
         new_item = __salt__["schedule.build_schedule_item"](name, **kwargs)
@@ -289,7 +293,9 @@ def absent(name, **kwargs):
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    current_schedule = __salt__["schedule.list"](show_all=True, return_yaml=False)
+    current_schedule = __salt__["schedule.list"](
+        show_all=True, return_yaml=False, offline=kwargs.get("offline")
+    )
     if name in current_schedule:
         if "test" in __opts__ and __opts__["test"]:
             kwargs["test"] = True
@@ -357,11 +363,15 @@ def disabled(name, **kwargs):
     persist
         Whether changes to the scheduled job should be saved, defaults to True.
 
+    offline
+        Delete the scheduled job to the Salt minion when the Salt minion is not running.
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    current_schedule = __salt__["schedule.list"](show_all=True, return_yaml=False)
+    current_schedule = __salt__["schedule.list"](
+        show_all=True, return_yaml=False, offline=kwargs.get("offline")
+    )
     if name in current_schedule:
         if "test" in __opts__ and __opts__["test"]:
             kwargs["test"] = True

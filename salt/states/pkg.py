@@ -2789,7 +2789,7 @@ def latest(
                 x
                 for x in targets
                 if not changes.get(x)
-                or changes[x].get("new") != targets[x]
+                or targets[x] not in changes[x].get("new").split(",")
                 and targets[x] != "latest"
             ]
             successful = [x for x in targets if x not in failed]

@@ -732,6 +732,12 @@ def test_mod_repo_enabled():
     """
     Checks if a repo is enabled or disabled depending on the passed kwargs.
     """
+    source_type = "deb"
+    source_uri = "http://cdn-aws.deb.debian.org/debian/"
+    source_line = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
+
+    mock_source = MockSourceEntry(source_uri, source_type, source_line, False)
+
     with patch.dict(
         aptpkg.__salt__,
         {"config.option": MagicMock(), "no_proxy": MagicMock(return_value=False)},
@@ -742,7 +748,9 @@ def test_mod_repo_enabled():
             ) as data_is_true:
                 with patch("salt.modules.aptpkg.SourcesList", MagicMock(), create=True):
                     with patch(
-                        "salt.modules.aptpkg.SourceEntry", MagicMock(), create=True
+                        "salt.modules.aptpkg.SourceEntry",
+                        MagicMock(return_value=mock_source),
+                        create=True,
                     ):
                         with patch("pathlib.Path", MagicMock()):
                             repo = aptpkg.mod_repo("foo", enabled=False)

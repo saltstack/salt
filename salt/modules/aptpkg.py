@@ -1750,11 +1750,19 @@ def _split_repo_str(repo):
     Return APT source entry as a dictionary
     """
     entry = SourceEntry(repo)
+    invalid = entry.invalid
     if not HAS_APT:
         signedby = entry.signedby
     else:
         signedby = _get_opts(line=repo)["signedby"].get("value", "")
+        if signedby:
+            # python3-apt does not support signedby. So if signedby
+            # is in the repo we have to check our code to see if the
+            # repo is invalid ourselves.
+            _, invalid, _, _ = _invalid(repo)
+
     return {
+        "invalid": invalid,
         "type": entry.type,
         "architectures": entry.architectures,
         "uri": entry.uri,
@@ -2736,6 +2744,10 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     mod_source = None
     try:
         repo_entry = _split_repo_str(repo)
+        if repo_entry.get("invalid"):
+            raise SaltInvocationError(
+                f"Name {repo} is not valid. This must be the complete repo entry as seen in the sources file"
+            )
     except SyntaxError:
         raise SyntaxError(
             "Error: repo '{}' not a well formatted definition".format(repo)

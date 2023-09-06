@@ -799,6 +799,3 @@ def info(zone, show_all=False):
             ret[resname].append(resdata)
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

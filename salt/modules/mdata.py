@@ -176,6 +176,3 @@ def delete_(*keyname):
             ret[k] = True
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
