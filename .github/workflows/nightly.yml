@@ -491,7 +491,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.13.9"
+      relenv-version: "0.13.10"
       python-version: "3.10.13"
 
   build-salt-onedir:
@@ -507,7 +507,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       self-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['self-hosted'] }}
       github-hosted-runners: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
-      relenv-version: "0.13.9"
+      relenv-version: "0.13.10"
       python-version: "3.10.13"
 
   build-rpm-pkgs:
@@ -519,7 +519,7 @@ jobs:
     uses: ./.github/workflows/build-rpm-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.9"
+      relenv-version: "0.13.10"
       python-version: "3.10.13"
 
   build-deb-pkgs:
@@ -531,7 +531,7 @@ jobs:
     uses: ./.github/workflows/build-deb-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.9"
+      relenv-version: "0.13.10"
       python-version: "3.10.13"
 
   build-windows-pkgs:
@@ -543,7 +543,7 @@ jobs:
     uses: ./.github/workflows/build-windows-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.9"
+      relenv-version: "0.13.10"
       python-version: "3.10.13"
       environment: nightly
       sign-packages: false
@@ -558,7 +558,7 @@ jobs:
     uses: ./.github/workflows/build-macos-packages.yml
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.13.9"
+      relenv-version: "0.13.10"
       python-version: "3.10.13"
       environment: nightly
       sign-packages: true
