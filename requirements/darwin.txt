@@ -5,7 +5,7 @@
 apache-libcloud>=2.4.0
 backports.ssl_match_hostname>=3.7.0.1; python_version < '3.7'
 cherrypy>=17.4.1
-gitpython>=3.1.30
+gitpython>=3.1.34
 cryptography>=41.0.3
 idna>=2.8
 linode-python>=1.1.1
