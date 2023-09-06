@@ -42,7 +42,7 @@ def wipe_pydeps(shell, install_salt, extras_pypath):
             shutil.rmtree(dirname, ignore_errors=True)
 
 
-def test_pip_install(salt_call_cli, install_salt):
+def test_pip_install(salt_call_cli, install_salt, shell):
     """
     Test pip.install and ensure module can use installed library
     """
@@ -50,6 +50,15 @@ def test_pip_install(salt_call_cli, install_salt):
     repo = "https://github.com/saltstack/salt.git"
 
     try:
+        if (
+            install_salt.classic
+            and install_salt.distro_id == "debian"
+            and install_salt.distro_version == "10"
+        ):
+            pip_upgrade = salt_call_cli.run(
+                "--local", "pip.install", "pip", "upgrade=True"
+            )
+            assert pip_upgrade.returncode == 0
         install = salt_call_cli.run("--local", "pip.install", dep)
         assert install.returncode == 0
 
