@@ -66,18 +66,19 @@ def test_minion_load_grains_default(minion_opts):
         ),
     ],
 )
-def test_send_req_fires_completion_event(event, minion_opts):
+def test_send_req_fires_completion_event(event):
     event_enter = MagicMock()
     event_enter.send.side_effect = event[1]
     event = MagicMock()
     event.__enter__.return_value = event_enter
 
     with patch("salt.utils.event.get_event", return_value=event):
-        minion_opts["random_startup_delay"] = 0
-        minion_opts["return_retry_tries"] = 30
-        minion_opts["grains"] = {}
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        opts["random_startup_delay"] = 0
+        opts["return_retry_tries"] = 30
+        opts["grains"] = {}
         with patch("salt.loader.grains"):
-            minion = salt.minion.Minion(minion_opts)
+            minion = salt.minion.Minion(opts)
 
             load = {"load": "value"}
             timeout = 60
@@ -95,8 +96,7 @@ def test_send_req_fires_completion_event(event, minion_opts):
                 if "fire_event" in call[0]:
                     condition_event_tag = (
                         len(call.args) > 1
-                        and call.args[1]
-                        == f"__master_req_channel_payload/{minion_opts['master']}"
+                        and call.args[1] == "__master_req_channel_payload"
                     )
                     condition_event_tag_error = "{} != {}; Call(number={}): {}".format(
                         idx, call, call.args[1], "__master_req_channel_payload"
@@ -116,7 +116,7 @@ def test_send_req_fires_completion_event(event, minion_opts):
             assert rtn
 
 
-async def test_send_req_async_regression_62453(minion_opts):
+async def test_send_req_async_regression_62453():
     event_enter = MagicMock()
     event_enter.send.side_effect = (
         lambda data, tag, cb=None, timeout=60: salt.ext.tornado.gen.maybe_future(True)
@@ -124,11 +124,12 @@ async def test_send_req_async_regression_62453(minion_opts):
     event = MagicMock()
     event.__enter__.return_value = event_enter
 
-    minion_opts["random_startup_delay"] = 0
-    minion_opts["return_retry_tries"] = 30
-    minion_opts["grains"] = {}
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    opts["random_startup_delay"] = 0
+    opts["return_retry_tries"] = 30
+    opts["grains"] = {}
     with patch("salt.loader.grains"):
-        minion = salt.minion.Minion(minion_opts)
+        minion = salt.minion.Minion(opts)
 
         load = {"load": "value"}
         timeout = 60
@@ -138,16 +139,16 @@ async def test_send_req_async_regression_62453(minion_opts):
         assert rtn is False
 
 
-def test_mine_send_tries(minion_opts):
+@patch("salt.channel.client.ReqChannel.factory")
+def test_mine_send_tries(req_channel_factory, minion_opts):
     channel_enter = MagicMock()
     channel_enter.send.side_effect = lambda load, timeout, tries: tries
     channel = MagicMock()
     channel.__enter__.return_value = channel_enter
+    req_channel_factory.return_value = channel
 
     minion_opts["return_retry_tries"] = 20
-    with patch("salt.channel.client.ReqChannel.factory", return_value=channel), patch(
-        "salt.loader.grains"
-    ):
+    with patch("salt.loader.grains"):
         minion = salt.minion.Minion(minion_opts)
         minion.tok = "token"
 
@@ -158,20 +159,21 @@ def test_mine_send_tries(minion_opts):
         assert rtn == 20
 
 
-def test_invalid_master_address(minion_opts):
-    minion_opts.update(
+def test_invalid_master_address():
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    with patch.dict(
+        opts,
         {
             "ipv6": False,
             "master": float("127.0"),
             "master_port": "4555",
             "retry_dns": False,
-        }
-    )
-    with pytest.raises(SaltSystemExit):
-        salt.minion.resolve_dns(minion_opts)
+        },
+    ):
+        pytest.raises(SaltSystemExit, salt.minion.resolve_dns, opts)
 
 
-def test_source_int_name_local(minion_opts):
+def test_source_int_name_local():
     """
     test when file_client local and
     source_interface_name is set
@@ -190,7 +192,9 @@ def test_source_int_name_local(minion_opts):
             ],
         }
     }
-    minion_opts.update(
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    with patch.dict(
+        opts,
         {
             "ipv6": False,
             "master": "127.0.0.1",
@@ -200,9 +204,8 @@ def test_source_int_name_local(minion_opts):
             "source_ret_port": 49017,
             "source_publish_port": 49018,
         },
-    )
-    with patch("salt.utils.network.interfaces", MagicMock(return_value=interfaces)):
-        assert salt.minion.resolve_dns(minion_opts) == {
+    ), patch("salt.utils.network.interfaces", MagicMock(return_value=interfaces)):
+        assert salt.minion.resolve_dns(opts) == {
             "master_ip": "127.0.0.1",
             "source_ip": "111.1.0.1",
             "source_ret_port": 49017,
@@ -212,7 +215,7 @@ def test_source_int_name_local(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_source_int_name_remote(minion_opts):
+def test_source_int_name_remote():
     """
     test when file_client remote and
     source_interface_name is set and
@@ -232,7 +235,9 @@ def test_source_int_name_remote(minion_opts):
             ],
         }
     }
-    minion_opts.update(
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    with patch.dict(
+        opts,
         {
             "ipv6": False,
             "master": "127.0.0.1",
@@ -242,9 +247,8 @@ def test_source_int_name_remote(minion_opts):
             "source_ret_port": 49017,
             "source_publish_port": 49018,
         },
-    )
-    with patch("salt.utils.network.interfaces", MagicMock(return_value=interfaces)):
-        assert salt.minion.resolve_dns(minion_opts) == {
+    ), patch("salt.utils.network.interfaces", MagicMock(return_value=interfaces)):
+        assert salt.minion.resolve_dns(opts) == {
             "master_ip": "127.0.0.1",
             "source_ret_port": 49017,
             "source_publish_port": 49018,
@@ -253,7 +257,7 @@ def test_source_int_name_remote(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_source_address(minion_opts):
+def test_source_address():
     """
     test when source_address is set
     """
@@ -271,7 +275,9 @@ def test_source_address(minion_opts):
             ],
         }
     }
-    minion_opts.update(
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    with patch.dict(
+        opts,
         {
             "ipv6": False,
             "master": "127.0.0.1",
@@ -282,9 +288,8 @@ def test_source_address(minion_opts):
             "source_ret_port": 49017,
             "source_publish_port": 49018,
         },
-    )
-    with patch("salt.utils.network.interfaces", MagicMock(return_value=interfaces)):
-        assert salt.minion.resolve_dns(minion_opts) == {
+    ), patch("salt.utils.network.interfaces", MagicMock(return_value=interfaces)):
+        assert salt.minion.resolve_dns(opts) == {
             "source_publish_port": 49018,
             "source_ret_port": 49017,
             "master_uri": "tcp://127.0.0.1:4555",
@@ -295,7 +300,7 @@ def test_source_address(minion_opts):
 
 # Tests for _handle_decoded_payload in the salt.minion.Minion() class: 3
 @pytest.mark.slow_test
-def test_handle_decoded_payload_jid_match_in_jid_queue(minion_opts):
+def test_handle_decoded_payload_jid_match_in_jid_queue():
     """
     Tests that the _handle_decoded_payload function returns when a jid is given that is already present
     in the jid_queue.
@@ -305,10 +310,11 @@ def test_handle_decoded_payload_jid_match_in_jid_queue(minion_opts):
     return None BEFORE any of the processes are spun up because we should be avoiding firing duplicate
     jobs.
     """
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
     mock_data = {"fun": "foo.bar", "jid": 123}
     mock_jid_queue = [123]
     minion = salt.minion.Minion(
-        minion_opts,
+        mock_opts,
         jid_queue=copy.copy(mock_jid_queue),
         io_loop=salt.ext.tornado.ioloop.IOLoop(),
     )
@@ -321,7 +327,7 @@ def test_handle_decoded_payload_jid_match_in_jid_queue(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_handle_decoded_payload_jid_queue_addition(minion_opts):
+def test_handle_decoded_payload_jid_queue_addition():
     """
     Tests that the _handle_decoded_payload function adds a jid to the minion's jid_queue when the new
     jid isn't already present in the jid_queue.
@@ -334,10 +340,11 @@ def test_handle_decoded_payload_jid_queue_addition(minion_opts):
         MagicMock(return_value=True),
     ):
         mock_jid = 11111
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_data = {"fun": "foo.bar", "jid": mock_jid}
         mock_jid_queue = [123, 456]
         minion = salt.minion.Minion(
-            minion_opts,
+            mock_opts,
             jid_queue=copy.copy(mock_jid_queue),
             io_loop=salt.ext.tornado.ioloop.IOLoop(),
         )
@@ -358,7 +365,7 @@ def test_handle_decoded_payload_jid_queue_addition(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_handle_decoded_payload_jid_queue_reduced_minion_jid_queue_hwm(minion_opts):
+def test_handle_decoded_payload_jid_queue_reduced_minion_jid_queue_hwm():
     """
     Tests that the _handle_decoded_payload function removes a jid from the minion's jid_queue when the
     minion's jid_queue high water mark (minion_jid_queue_hwm) is hit.
@@ -370,11 +377,12 @@ def test_handle_decoded_payload_jid_queue_reduced_minion_jid_queue_hwm(minion_op
         "salt.utils.process.SignalHandlingProcess.join",
         MagicMock(return_value=True),
     ):
-        minion_opts["minion_jid_queue_hwm"] = 2
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        mock_opts["minion_jid_queue_hwm"] = 2
         mock_data = {"fun": "foo.bar", "jid": 789}
         mock_jid_queue = [123, 456]
         minion = salt.minion.Minion(
-            minion_opts,
+            mock_opts,
             jid_queue=copy.copy(mock_jid_queue),
             io_loop=salt.ext.tornado.ioloop.IOLoop(),
         )
@@ -394,7 +402,7 @@ def test_handle_decoded_payload_jid_queue_reduced_minion_jid_queue_hwm(minion_op
 
 
 @pytest.mark.slow_test
-def test_process_count_max(minion_opts):
+def test_process_count_max():
     """
     Tests that the _handle_decoded_payload function does not spawn more than the configured amount of processes,
     as per process_count_max.
@@ -412,12 +420,13 @@ def test_process_count_max(minion_opts):
         MagicMock(return_value=salt.ext.tornado.concurrent.Future()),
     ):
         process_count_max = 10
-        minion_opts["__role"] = "minion"
-        minion_opts["minion_jid_queue_hwm"] = 100
-        minion_opts["process_count_max"] = process_count_max
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        mock_opts["__role"] = "minion"
+        mock_opts["minion_jid_queue_hwm"] = 100
+        mock_opts["process_count_max"] = process_count_max
 
         io_loop = salt.ext.tornado.ioloop.IOLoop()
-        minion = salt.minion.Minion(minion_opts, jid_queue=[], io_loop=io_loop)
+        minion = salt.minion.Minion(mock_opts, jid_queue=[], io_loop=io_loop)
         try:
 
             # mock gen.sleep to throw a special Exception when called, so that we detect it
@@ -459,7 +468,7 @@ def test_process_count_max(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_beacons_before_connect(minion_opts):
+def test_beacons_before_connect():
     """
     Tests that the 'beacons_before_connect' option causes the beacons to be initialized before connect.
     """
@@ -473,10 +482,11 @@ def test_beacons_before_connect(minion_opts):
         "salt.utils.process.SignalHandlingProcess.join",
         MagicMock(return_value=True),
     ):
-        minion_opts["beacons_before_connect"] = True
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        mock_opts["beacons_before_connect"] = True
         io_loop = salt.ext.tornado.ioloop.IOLoop()
         io_loop.make_current()
-        minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+        minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
         try:
 
             try:
@@ -492,7 +502,7 @@ def test_beacons_before_connect(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_scheduler_before_connect(minion_opts):
+def test_scheduler_before_connect():
     """
     Tests that the 'scheduler_before_connect' option causes the scheduler to be initialized before connect.
     """
@@ -506,10 +516,11 @@ def test_scheduler_before_connect(minion_opts):
         "salt.utils.process.SignalHandlingProcess.join",
         MagicMock(return_value=True),
     ):
-        minion_opts["scheduler_before_connect"] = True
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        mock_opts["scheduler_before_connect"] = True
         io_loop = salt.ext.tornado.ioloop.IOLoop()
         io_loop.make_current()
-        minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+        minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
         try:
             try:
                 minion.tune_in(start=True)
@@ -523,7 +534,7 @@ def test_scheduler_before_connect(minion_opts):
             minion.destroy()
 
 
-def test_minion_module_refresh(minion_opts):
+def test_minion_module_refresh(tmp_path):
     """
     Tests that the 'module_refresh' just return in case there is no 'schedule'
     because destroy method was already called.
@@ -536,13 +547,13 @@ def test_minion_module_refresh(minion_opts):
         MagicMock(return_value=True),
     ):
         try:
+            mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+            mock_opts["cachedir"] = str(tmp_path)
             minion = salt.minion.Minion(
-                minion_opts,
+                mock_opts,
                 io_loop=salt.ext.tornado.ioloop.IOLoop(),
             )
-            minion.schedule = salt.utils.schedule.Schedule(
-                minion_opts, {}, returners={}
-            )
+            minion.schedule = salt.utils.schedule.Schedule(mock_opts, {}, returners={})
             assert hasattr(minion, "schedule")
             minion.destroy()
             assert not hasattr(minion, "schedule")
@@ -551,7 +562,7 @@ def test_minion_module_refresh(minion_opts):
             minion.destroy()
 
 
-def test_minion_module_refresh_beacons_refresh(minion_opts):
+def test_minion_module_refresh_beacons_refresh(tmp_path):
     """
     Tests that 'module_refresh' calls beacons_refresh and that the
     minion object has a beacons attribute with beacons.
@@ -564,13 +575,13 @@ def test_minion_module_refresh_beacons_refresh(minion_opts):
         MagicMock(return_value=True),
     ):
         try:
+            mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+            mock_opts["cachedir"] = str(tmp_path)
             minion = salt.minion.Minion(
-                minion_opts,
+                mock_opts,
                 io_loop=salt.ext.tornado.ioloop.IOLoop(),
             )
-            minion.schedule = salt.utils.schedule.Schedule(
-                minion_opts, {}, returners={}
-            )
+            minion.schedule = salt.utils.schedule.Schedule(mock_opts, {}, returners={})
             assert not hasattr(minion, "beacons")
             minion.module_refresh()
             assert hasattr(minion, "beacons")
@@ -582,9 +593,7 @@ def test_minion_module_refresh_beacons_refresh(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_callbacks(
-    minion_opts,
-):
+def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_callbacks():
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
         "salt.minion.Minion.sync_connect_master",
         MagicMock(side_effect=RuntimeError("stop execution")),
@@ -595,10 +604,11 @@ def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_call
         "salt.utils.process.SignalHandlingProcess.join",
         MagicMock(return_value=True),
     ):
-        minion_opts["ping_interval"] = 10
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        mock_opts["ping_interval"] = 10
         io_loop = salt.ext.tornado.ioloop.IOLoop()
         io_loop.make_current()
-        minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+        minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
         try:
             try:
                 minion.connected = MagicMock(side_effect=(False, True))
@@ -614,13 +624,14 @@ def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_call
 
 
 @pytest.mark.slow_test
-def test_when_passed_start_event_grains(minion_opts):
+def test_when_passed_start_event_grains():
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
     # provide mock opts an os grain since we'll look for it later.
-    minion_opts["grains"]["os"] = "linux"
-    minion_opts["start_event_grains"] = ["os"]
+    mock_opts["grains"]["os"] = "linux"
+    mock_opts["start_event_grains"] = ["os"]
     io_loop = salt.ext.tornado.ioloop.IOLoop()
     io_loop.make_current()
-    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
     try:
         minion.tok = MagicMock()
         minion._send_req_sync = MagicMock()
@@ -636,10 +647,11 @@ def test_when_passed_start_event_grains(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_when_not_passed_start_event_grains(minion_opts):
+def test_when_not_passed_start_event_grains():
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
     io_loop = salt.ext.tornado.ioloop.IOLoop()
     io_loop.make_current()
-    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
     try:
         minion.tok = MagicMock()
         minion._send_req_sync = MagicMock()
@@ -652,11 +664,12 @@ def test_when_not_passed_start_event_grains(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_when_other_events_fired_and_start_event_grains_are_set(minion_opts):
-    minion_opts["start_event_grains"] = ["os"]
+def test_when_other_events_fired_and_start_event_grains_are_set():
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    mock_opts["start_event_grains"] = ["os"]
     io_loop = salt.ext.tornado.ioloop.IOLoop()
     io_loop.make_current()
-    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
     try:
         minion.tok = MagicMock()
         minion._send_req_sync = MagicMock()
@@ -669,12 +682,14 @@ def test_when_other_events_fired_and_start_event_grains_are_set(minion_opts):
 
 
 @pytest.mark.slow_test
-def test_minion_retry_dns_count(minion_opts):
+def test_minion_retry_dns_count():
     """
     Tests that the resolve_dns will retry dns look ups for a maximum of
     3 times before raising a SaltMasterUnresolvableError exception.
     """
-    minion_opts.update(
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    with patch.dict(
+        opts,
         {
             "ipv6": False,
             "master": "dummy",
@@ -682,19 +697,19 @@ def test_minion_retry_dns_count(minion_opts):
             "retry_dns": 1,
             "retry_dns_count": 3,
         },
-    )
-    with pytest.raises(SaltMasterUnresolvableError):
-        salt.minion.resolve_dns(minion_opts)
+    ):
+        pytest.raises(SaltMasterUnresolvableError, salt.minion.resolve_dns, opts)
 
 
 @pytest.mark.slow_test
-def test_gen_modules_executors(minion_opts):
+def test_gen_modules_executors():
     """
     Ensure gen_modules is called with the correct arguments #54429
     """
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
     io_loop = salt.ext.tornado.ioloop.IOLoop()
     io_loop.make_current()
-    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
 
     class MockPillarCompiler:
         def compile_pillar(self):
@@ -702,49 +717,47 @@ def test_gen_modules_executors(minion_opts):
 
     try:
         with patch("salt.pillar.get_pillar", return_value=MockPillarCompiler()):
-            with patch("salt.loader.executors", mock=MagicMock()) as execmock:
+            with patch("salt.loader.executors") as execmock:
                 minion.gen_modules()
-        execmock.assert_called_once_with(
-            minion.opts, functions=minion.functions, proxy=minion.proxy, context={}
-        )
+        assert execmock.called_with(minion.opts, minion.functions)
     finally:
         minion.destroy()
 
 
-def test_reinit_crypto_on_fork(minion_opts):
+@patch("salt.utils.process.default_signals")
+@pytest.mark.slow_test
+def test_reinit_crypto_on_fork(def_mock):
     """
     Ensure salt.utils.crypt.reinit_crypto() is executed when forking for new job
     """
-    minion_opts["multiprocessing"] = True
-    with patch("salt.utils.process.default_signals"):
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    mock_opts["multiprocessing"] = True
 
-        io_loop = salt.ext.tornado.ioloop.IOLoop()
-        io_loop.make_current()
-        minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop.make_current()
+    minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
 
-        job_data = {"jid": "test-jid", "fun": "test.ping"}
+    job_data = {"jid": "test-jid", "fun": "test.ping"}
 
-        def mock_start(self):
-            # pylint: disable=comparison-with-callable
-            assert (
-                len(
-                    [
-                        x
-                        for x in self._after_fork_methods
-                        if x[0] == salt.utils.crypt.reinit_crypto
-                    ]
-                )
-                == 1
+    def mock_start(self):
+        # pylint: disable=comparison-with-callable
+        assert (
+            len(
+                [
+                    x
+                    for x in self._after_fork_methods
+                    if x[0] == salt.utils.crypt.reinit_crypto
+                ]
             )
-            # pylint: enable=comparison-with-callable
+            == 1
+        )
+        # pylint: enable=comparison-with-callable
 
-        with patch.object(
-            salt.utils.process.SignalHandlingProcess, "start", mock_start
-        ):
-            io_loop.run_sync(lambda: minion._handle_decoded_payload(job_data))
+    with patch.object(salt.utils.process.SignalHandlingProcess, "start", mock_start):
+        io_loop.run_sync(lambda: minion._handle_decoded_payload(job_data))
 
 
-def test_minion_manage_schedule(minion_opts):
+def test_minion_manage_schedule():
     """
     Tests that the manage_schedule will call the add function, adding
     schedule data into opts.
@@ -759,6 +772,7 @@ def test_minion_manage_schedule(minion_opts):
         "salt.utils.process.SignalHandlingProcess.join",
         MagicMock(return_value=True),
     ):
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         io_loop = salt.ext.tornado.ioloop.IOLoop()
         io_loop.make_current()
 
@@ -766,9 +780,9 @@ def test_minion_manage_schedule(minion_opts):
             try:
                 mock_functions = {"test.ping": None}
 
-                minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+                minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
                 minion.schedule = salt.utils.schedule.Schedule(
-                    minion_opts,
+                    mock_opts,
                     mock_functions,
                     returners={},
                     new_instance=True,
@@ -801,7 +815,7 @@ def test_minion_manage_schedule(minion_opts):
                 del minion
 
 
-def test_minion_manage_beacons(minion_opts):
+def test_minion_manage_beacons():
     """
     Tests that the manage_beacons will call the add function, adding
     beacon data into opts.
@@ -817,14 +831,15 @@ def test_minion_manage_beacons(minion_opts):
         MagicMock(return_value=True),
     ):
         try:
-            minion_opts["beacons"] = {}
+            mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+            mock_opts["beacons"] = {}
 
             io_loop = salt.ext.tornado.ioloop.IOLoop()
             io_loop.make_current()
 
             mock_functions = {"test.ping": None}
-            minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
-            minion.beacons = salt.beacons.Beacon(minion_opts, mock_functions)
+            minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
+            minion.beacons = salt.beacons.Beacon(mock_opts, mock_functions)
 
             bdata = [{"salt-master": "stopped"}, {"apache2": "stopped"}]
             data = {"name": "ps", "beacon_data": bdata, "func": "add"}
@@ -869,7 +884,7 @@ def test_prep_ip_port():
 
 
 @pytest.mark.skip_if_not_root
-def test_sock_path_len(minion_opts):
+def test_sock_path_len():
     """
     This tests whether or not a larger hash causes the sock path to exceed
     the system's max sock path length. See the below link for more
@@ -877,32 +892,33 @@ def test_sock_path_len(minion_opts):
 
     https://github.com/saltstack/salt/issues/12172#issuecomment-43903643
     """
-    minion_opts.update(
-        {
-            "id": "salt-testing",
-            "hash_type": "sha512",
-            "sock_dir": os.path.join(salt.syspaths.SOCK_DIR, "minion"),
-            "extension_modules": "",
-        }
-    )
-    try:
-        event_publisher = event.AsyncEventPublisher(minion_opts)
-        result = True
-    except ValueError:
-        #  There are rare cases where we operate a closed socket, especially in containers.
-        # In this case, don't fail the test because we'll catch it down the road.
-        result = True
-    except SaltSystemExit:
-        result = False
+    opts = {
+        "id": "salt-testing",
+        "hash_type": "sha512",
+        "sock_dir": os.path.join(salt.syspaths.SOCK_DIR, "minion"),
+        "extension_modules": "",
+    }
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    with patch.dict(opts, opts):
+        try:
+            event_publisher = event.AsyncEventPublisher(opts)
+            result = True
+        except ValueError:
+            #  There are rare cases where we operate a closed socket, especially in containers.
+            # In this case, don't fail the test because we'll catch it down the road.
+            result = True
+        except SaltSystemExit:
+            result = False
     assert result
 
 
 @pytest.mark.skip_on_windows(reason="Skippin, no Salt master running on Windows.")
-async def test_master_type_failover(minion_opts):
+async def test_master_type_failover():
     """
     Tests master_type "failover" to not fall back to 127.0.0.1 address when master does not resolve in DNS
     """
-    minion_opts.update(
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    mock_opts.update(
         {
             "master_type": "failover",
             "master": ["master1", "master2"],
@@ -937,15 +953,16 @@ async def test_master_type_failover(minion_opts):
         "salt.channel.client.AsyncPubChannel.factory", mock_channel_factory
     ), patch("salt.loader.grains", MagicMock(return_value=[])):
         with pytest.raises(SaltClientError):
-            minion = salt.minion.Minion(minion_opts)
+            minion = salt.minion.Minion(mock_opts)
             await minion.connect_master()
 
 
-async def test_master_type_failover_no_masters(minion_opts):
+async def test_master_type_failover_no_masters():
     """
     Tests master_type "failover" to not fall back to 127.0.0.1 address when no master can be resolved
     """
-    minion_opts.update(
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    mock_opts.update(
         {
             "master_type": "failover",
             "master": ["master1", "master2"],
@@ -962,7 +979,7 @@ async def test_master_type_failover_no_masters(minion_opts):
         "salt.loader.grains", MagicMock(return_value=[])
     ):
         with pytest.raises(SaltClientError):
-            minion = salt.minion.Minion(minion_opts)
+            minion = salt.minion.Minion(mock_opts)
             await minion.connect_master()
 
 
@@ -974,18 +991,19 @@ def test_config_cache_path_overrides():
     assert mminion.opts["cachedir"] == cachedir
 
 
-def test_minion_grains_refresh_pre_exec_false(minion_opts):
+def test_minion_grains_refresh_pre_exec_false():
     """
     Minion does not refresh grains when grains_refresh_pre_exec is False
     """
-    minion_opts["multiprocessing"] = False
-    minion_opts["grains_refresh_pre_exec"] = False
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    mock_opts["multiprocessing"] = False
+    mock_opts["grains_refresh_pre_exec"] = False
     mock_data = {"fun": "foo.bar", "jid": 123}
     with patch("salt.loader.grains") as grainsfunc, patch(
         "salt.minion.Minion._target", MagicMock(return_value=True)
     ):
         minion = salt.minion.Minion(
-            minion_opts,
+            mock_opts,
             jid_queue=None,
             io_loop=salt.ext.tornado.ioloop.IOLoop(),
             load_grains=False,
@@ -997,18 +1015,19 @@ def test_minion_grains_refresh_pre_exec_false(minion_opts):
             minion.destroy()
 
 
-def test_minion_grains_refresh_pre_exec_true(minion_opts):
+def test_minion_grains_refresh_pre_exec_true():
     """
     Minion refreshes grains when grains_refresh_pre_exec is True
     """
-    minion_opts["multiprocessing"] = False
-    minion_opts["grains_refresh_pre_exec"] = True
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    mock_opts["multiprocessing"] = False
+    mock_opts["grains_refresh_pre_exec"] = True
     mock_data = {"fun": "foo.bar", "jid": 123}
     with patch("salt.loader.grains") as grainsfunc, patch(
         "salt.minion.Minion._target", MagicMock(return_value=True)
     ):
         minion = salt.minion.Minion(
-            minion_opts,
+            mock_opts,
             jid_queue=None,
             io_loop=salt.ext.tornado.ioloop.IOLoop(),
             load_grains=False,
@@ -1023,7 +1042,7 @@ def test_minion_grains_refresh_pre_exec_true(minion_opts):
 @pytest.mark.skip_on_darwin(
     reason="Skip on MacOS, where this does not raise an exception."
 )
-def test_valid_ipv4_master_address_ipv6_enabled(minion_opts):
+def test_valid_ipv4_master_address_ipv6_enabled():
     """
     Tests that the lookups fail back to ipv4 when ipv6 fails.
     """
@@ -1041,7 +1060,9 @@ def test_valid_ipv4_master_address_ipv6_enabled(minion_opts):
             ],
         }
     }
-    minion_opts.update(
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    with patch.dict(
+        opts,
         {
             "ipv6": True,
             "master": "127.0.0.1",
@@ -1052,22 +1073,22 @@ def test_valid_ipv4_master_address_ipv6_enabled(minion_opts):
             "source_ret_port": 49017,
             "source_publish_port": 49018,
         },
-    )
-    with patch("salt.utils.network.interfaces", MagicMock(return_value=interfaces)):
+    ), patch("salt.utils.network.interfaces", MagicMock(return_value=interfaces)):
         expected = {
             "source_publish_port": 49018,
             "master_uri": "tcp://127.0.0.1:4555",
             "source_ret_port": 49017,
             "master_ip": "127.0.0.1",
         }
-        assert salt.minion.resolve_dns(minion_opts) == expected
+        assert salt.minion.resolve_dns(opts) == expected
 
 
-async def test_master_type_disable(minion_opts):
+async def test_master_type_disable():
     """
     Tests master_type "disable" to not even attempt connecting to a master.
     """
-    minion_opts.update(
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    mock_opts.update(
         {
             "master_type": "disable",
             "master": None,
@@ -1077,11 +1098,11 @@ async def test_master_type_disable(minion_opts):
         }
     )
 
-    minion = salt.minion.Minion(minion_opts)
+    minion = salt.minion.Minion(mock_opts)
     try:
 
         try:
-            minion_man = salt.minion.MinionManager(minion_opts)
+            minion_man = salt.minion.MinionManager(mock_opts)
             minion_man._connect_minion(minion)
         except RuntimeError:
             pytest.fail("_connect_minion(minion) threw an error, This was not expected")
@@ -1092,12 +1113,3 @@ async def test_master_type_disable(minion_opts):
         assert minion.connected is False
     finally:
         minion.destroy()
-
-
-async def test_syndic_async_req_channel(syndic_opts):
-    syndic_opts["_minion_conf_file"] = ""
-    syndic_opts["master_uri"] = "tcp://127.0.0.1:4506"
-    syndic = salt.minion.Syndic(syndic_opts)
-    syndic.pub_channel = MagicMock()
-    syndic.tune_in_no_block()
-    assert isinstance(syndic.async_req_channel, salt.channel.client.AsyncReqChannel)
