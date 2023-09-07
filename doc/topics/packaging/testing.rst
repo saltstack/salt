@@ -22,13 +22,13 @@ Setup
 In order to run the package tests, the `relenv <https://github.com/saltstack/relative-environment-for-python>`_
 onedir and built pacakges need to be placed in the correct locations.
 
-All salt packages for the wanted testing version must be placed in ``<repo-root>/pkg/artifacts``,
-and the onedir must be located at ``<repo-root>/artifacts/salt``. Additionally, to ensure complete parity with Salt's CI/CD
+All salt packages for the wanted testing version must be placed in ``<repo-root>/pkg/artifacts/``,
+and the onedir must be located under ``<repo-root>/artifacts/``. Additionally, to ensure complete parity with Salt's CI/CD
 suite, the ``nox`` virtual environment can be placed at ``<repo-root>/.nox/test-pkgs-onedir`` The following are a few ways this can be accomplished easily.
 
 Using ``tools``
 ---------------
-There is preliminary support for setting up the package test suite in the ``tools`` command suite that is located under ``<repo-root>/tools/testsuite``.
+There is preliminary support for setting up the package test suite in the ``tools`` command suite that is located under ``<repo-root>/tools/testsuite/``.
 This does require the Github CLI tool ``gh`` to be properly configured for interaction with the salt repo.
 
 #. Install the dependencies
@@ -76,12 +76,12 @@ An analogous process can be performed for artifacts from nightly builds.
 
 #. Placing the artifacts in the correct location
 
-    The packages should be unzipped and placed under ``<repo-root>/pkg/artifacts``.
+    The packages should be unzipped and placed under ``<repo-root>/pkg/artifacts/``.
 
-    The onedir artifact must be unzipped and untarred (or unzipped again, for windows onedirs) under ``<repo-root>/artifacts``.
+    The onedir artifact must be unzipped and untarred (or unzipped again, for windows onedirs) under ``<repo-root>/artifacts/``.
     There should then be a ``<repo-root>/artifacts/salt`` directory that contains the uncompressed onedir.
 
-    Lastly, the ``nox`` artifact should be fully uncompressed and placed under ``<repo-root>/.nox``.
+    Lastly, the ``nox`` artifact should be fully uncompressed and placed under ``<repo-root>/.nox/``.
 
 Running the Tests
 =================
