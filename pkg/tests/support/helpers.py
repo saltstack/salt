@@ -347,6 +347,7 @@ class SaltPkgInstall:
                         }
                     else:
                         self.binary_paths["pip"] = [str(pathlib.Path("/usr/bin/pip3"))]
+                        self.proc.run(*self.binary_paths["pip"], "install", "-U", "pip")
                         self.proc.run(
                             *self.binary_paths["pip"], "install", "-U", "pyopenssl"
                         )
