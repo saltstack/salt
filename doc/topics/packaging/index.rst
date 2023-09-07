@@ -194,7 +194,7 @@ on linux the default location would be ``/opt/saltstack/salt/bin/python3``.
 Testing the packages
 ====================
 
-If you want to test your built pacakges, or any other collection of salt packages post 3006.0, follow :ref:`this guide <pkging-testing>`
+If you want to test your built packages, or any other collection of salt packages post 3006.0, follow :ref:`this guide <pkging-testing>`
 
 .. toctree::
 
