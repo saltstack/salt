@@ -50,15 +50,6 @@ def test_pip_install(salt_call_cli, install_salt, shell):
     repo = "https://github.com/saltstack/salt.git"
 
     try:
-        if (
-            install_salt.classic
-            and install_salt.distro_id == "debian"
-            and install_salt.distro_version == "10"
-        ):
-            pip_upgrade = salt_call_cli.run(
-                "--local", "pip.install", "pip", "upgrade=True"
-            )
-            assert pip_upgrade.returncode == 0
         install = salt_call_cli.run("--local", "pip.install", dep)
         assert install.returncode == 0
 
