@@ -613,6 +613,15 @@ def _fcontext_add_or_delete_policy(
         raise SaltInvocationError(
             f'Actions supported are "add" and "delete", not "{action}".'
         )
+
+    if "add" == action:
+        # need to use --modify if context for name file exists, otherwise ValueError
+        filespec = re.escape(name)
+        cmd = f"semanage fcontext -l | egrep {filespec}"
+        current_entry_text = __salt__["cmd.shell"](cmd, ignore_retcode=True)
+        if current_entry_text != "":
+            action = "modify"
+
     cmd = f"semanage fcontext --{action}"
     # "semanage --ftype a" isn't valid on Centos 6,
     # don't pass --ftype since "a" is the default filetype.

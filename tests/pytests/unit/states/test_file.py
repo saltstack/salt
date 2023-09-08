@@ -4,12 +4,17 @@ import pytest
 
 import salt.modules.file as filemod
 import salt.states.file as file
-from tests.support.mock import call, create_autospec, patch
+from tests.support.mock import MagicMock, call, create_autospec, patch
 
 
 @pytest.fixture(autouse=True)
 def setup_loader(request):
-    setup_loader_modules = {file: {"__opts__": {"test": False}}}
+    setup_loader_modules = {
+        file: {
+            "__opts__": {"test": False},
+            "__env__": "base",
+        }
+    }
     with pytest.helpers.loader_mock(request, setup_loader_modules) as loader_mock:
         yield loader_mock
 
@@ -67,3 +72,21 @@ def test_file_copy_should_use_provided_force_mode_for_file_remove(fake_remove):
         file.copy_("/tmp/foo", source="/tmp/bar", group="fnord", force=True, mode=777)
 
     fake_remove.assert_called_with("/tmp/foo", force=True)
+
+
+def test_file_recurse_directory_test():
+    salt_dunder = {
+        "cp.list_master_dirs": MagicMock(return_value=[]),
+        "file.source_list": MagicMock(return_value=("salt://does_not_exist", "")),
+    }
+    with patch.dict(file.__salt__, salt_dunder):
+        ret = file.recurse("/tmp/test", "salt://does_not_exist", saltenv="base")
+        assert ret == {
+            "changes": {},
+            "comment": "The directory 'does_not_exist' does not exist on the salt fileserver in saltenv 'base'",
+            "name": "/tmp/test",
+            "result": False,
+        }
+        assert salt_dunder["cp.list_master_dirs"].called_once_with(
+            prefix="does_not_exist/"
+        )

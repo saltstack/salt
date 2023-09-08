@@ -4,6 +4,7 @@
 
 import asyncio
 import concurrent.futures
+import copy
 import logging
 import os
 import signal
@@ -99,9 +100,11 @@ def post_master_init(self, master):
     if "proxy" not in self.opts:
         self.opts["proxy"] = self.opts["pillar"]["proxy"]
 
+    pillar = copy.deepcopy(self.opts["pillar"])
+    pillar.pop("master", None)
     self.opts = salt.utils.dictupdate.merge(
         self.opts,
-        self.opts["pillar"],
+        pillar,
         strategy=self.opts.get("proxy_merge_pillar_in_opts_strategy"),
         merge_lists=self.opts.get("proxy_deep_merge_pillar_in_opts", False),
     )
