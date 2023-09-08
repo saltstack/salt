@@ -216,7 +216,7 @@ class SaltPkgInstall:
         if platform.is_windows():
             file_ext_re = "exe|msi"
 
-        for f_path in ARTIFACTS_DIR.glob("**/*.*"):
+        for f_path in ARTIFACTS_DIR.rglob("."):
             f_path = str(f_path)
             if re.search(f"salt-(.*).({file_ext_re})$", f_path, re.IGNORECASE):
                 self.file_ext = os.path.splitext(f_path)[1].strip(".")
@@ -1223,11 +1223,6 @@ class PkgMixin:
             else:
                 return str(self.salt_pkg_install.install_dir / self.script_name)
         return super().get_script_path()
-
-    def get_base_script_args(self):
-        base_script_args = []
-        base_script_args.extend(super().get_base_script_args())
-        return base_script_args
 
     def cmdline(self, *args, **kwargs):
         _cmdline = super().cmdline(*args, **kwargs)

@@ -12,7 +12,7 @@ pytestmark = [
 
 
 @pytest.fixture(autouse=True)
-def skip_on_less_than_3006_1(install_salt):
+def _skip_on_less_than_3006_1(install_salt):
     if packaging.version.parse(install_salt.version) <= packaging.version.parse(
         "3006.1"
     ):
