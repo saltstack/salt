@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture(autouse=True)
-def skip_on_non_relenv(install_salt):
+def _skip_on_non_relenv(install_salt):
     if not install_salt.relenv:
         pytest.skip("This test is for relenv versions of salt")
 
