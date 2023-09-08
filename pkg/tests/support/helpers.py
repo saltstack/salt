@@ -216,7 +216,7 @@ class SaltPkgInstall:
         if platform.is_windows():
             file_ext_re = "exe|msi"
 
-        for f_path in ARTIFACTS_DIR.rglob("."):
+        for f_path in ARTIFACTS_DIR.glob("**/*.*"):
             f_path = str(f_path)
             if re.search(f"salt-(.*).({file_ext_re})$", f_path, re.IGNORECASE):
                 self.file_ext = os.path.splitext(f_path)[1].strip(".")
