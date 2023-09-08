@@ -489,6 +489,3 @@ def stp(br=None, state="disable", iface=None):
         return _os_dispatch("stp", br, states[state], iface)
     else:
         return False
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
