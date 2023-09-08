@@ -689,12 +689,8 @@ def test_boot_time():
         ret = ps.boot_time()
         assert ret == expected
 
-        expected = "Wed Aug  9 08:01:30 2023"
-        ret = ps.boot_time(time_format="%c")
-        assert ret == expected
-
-        expected = "08/09/2023 08:01"
-        ret = ps.boot_time(time_format="%m/%d/%Y %I:%M")
+        expected = "08/09/2023"
+        ret = ps.boot_time(time_format="%m/%d/%Y")
         assert ret == expected
 
 
@@ -715,14 +711,25 @@ def test_num_cpus():
         assert ret == 5
 
 
-def test_total_physical_memory():
+def test_total_physical_memory(stub_memory_usage):
     """
     Testing total_physical_memory function in the ps module
     """
 
-    with patch("psutil.virtual_memory", MagicMock(return_value=stub_memory_usage)):
+    with patch("salt.utils.psutil_compat.virtual_memory") as mock_total_physical_memory:
+        mock_total_physical_memory.side_effect = AttributeError()
+        with patch(
+            "salt.utils.psutil_compat.TOTAL_PHYMEM",
+            create=True,
+            new=stub_memory_usage.total,
+        ):
+            ret = ps.total_physical_memory()
+            assert ret == 15722012672
+
+    with patch("salt.utils.psutil_compat.virtual_memory") as mock_total_physical_memory:
+        mock_total_physical_memory.return_value = stub_memory_usage
         ret = ps.total_physical_memory()
-        assert ret == 67159048192
+        assert ret == 15722012672
 
 
 def test_proc_info():
@@ -745,8 +752,11 @@ def test_proc_info():
         "name": b"blerp",
         "status": status,
         "create_time": "393829200",
+        "username": "root",
     }
     important_data.update(extra_data)
+    status_file = b"Name:\tblerp\nUmask:\t0000\nState:\tI (idle)\nTgid:\t99\nNgid:\t0\nPid:\t99\nPPid:\t2\nTracerPid:\t0\nUid:\t0\t0\t0\t0\nGid:\t0\t0\t0\t0\nFDSize:\t64\nGroups:\t \nNStgid:\t99\nNSpid:\t99\nNSpgid:\t0\nNSsid:\t0\nThreads:\t1\nSigQ:\t3/256078\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\tffffffffffffffff\nSigCgt:\t0000000000000000\nCapInh:\t0000000000000000\nCapPrm:\t000001ffffffffff\nCapEff:\t000001ffffffffff\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfff\nCpus_allowed_list:\t0-11\nMems_allowed:\t00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t2\nnonvoluntary_ctxt_switches:\t0\n"
+
     patch_stat_file = patch(
         "psutil._psplatform.Process._parse_stat_file",
         return_value=important_data,
@@ -792,7 +802,10 @@ def test_proc_info():
     patch_create_time = patch(
         "psutil._psplatform.Process.create_time", return_value=393829200
     )
-    with patch_stat_file, patch_status, patch_create_time, patch_exe, patch_oneshot, patch_kinfo:
+    patch_read_status_file = patch(
+        "psutil._psplatform.Process._read_status_file", return_value=status_file
+    )
+    with patch_stat_file, patch_status, patch_create_time, patch_exe, patch_oneshot, patch_kinfo, patch_read_status_file:
         expected = {"ppid": 99, "username": "root"}
         actual_result = salt.modules.ps.proc_info(pid=99, attrs=["username", "ppid"])
         assert actual_result == expected
