@@ -1864,8 +1864,8 @@ def _set_line(
     if mode != "delete" and content is None:
         raise CommandExecutionError("Content can only be empty if mode is delete")
 
-    if not match and before is None and after is None:
-        match = content
+    if match is None and before is None and after is None:
+        match = re.escape(content)
 
     after = _regex_to_static(lines, after)
     before = _regex_to_static(lines, before)
