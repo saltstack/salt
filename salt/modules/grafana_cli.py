@@ -40,6 +40,8 @@ def _prepare_cmd(binary="grafana-cli", command=None, options=None, arguments=Non
     for option, value in options.items():
         if option == "plugins_dir" and value is not None:
             cmd += ("--pluginsDir", value)
+        if option == "repo" and value is not None:
+            cmd += ("--repo", value)
 
     if command is not None:
         cmd += (command,)
@@ -91,5 +93,32 @@ def plugins_ls(plugins_dir=None, user=None):
     """
     options = {"plugins_dir": plugins_dir}
     arguments = ("ls",)
+
+    return _run_cmd(command="plugins", options=options, arguments=arguments, user=user)
+
+
+def plugins_list_versions(name, repo=None, user=None):
+    """
+    Interface with `grafana-cli plugins list-versions`.
+
+    :param str name:
+        The ID of the plugin.
+
+    :param str repo:
+        Allows you to download and install or update plugins from a repository other than the
+        default Grafana repo.
+
+    :param str user:
+        User name under which to run the grafana-cli command. By default, the command is run by the
+        user under which the minion is running.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grafana_cli.plugins_list_versions foo
+    """
+    options = {"repo": repo}
+    arguments = ("list-versions", name)
 
     return _run_cmd(command="plugins", options=options, arguments=arguments, user=user)
