@@ -579,7 +579,9 @@ tcp   LISTEN     0      128                                                     
 tcp   LISTEN     0      128                                                                                  [::]:22                                               [::]:*        ino:31916 sk:36c4 cgroup:/system.slice/sshd.service v6only:1 <->
 """
 
-    with patch.dict(ps.__salt__, {"cmd.run": MagicMock(return_value=cmd_run_mock)}):
+    with patch(
+        "salt.utils.path.which", MagicMock(return_value="/usr/sbin/ss")
+    ), patch.dict(ps.__salt__, {"cmd.run": MagicMock(return_value=cmd_run_mock)}):
         expected = [
             "sshd",
             [
