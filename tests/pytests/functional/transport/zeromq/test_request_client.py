@@ -1,9 +1,9 @@
 import pytest
 import pytestshellutils.utils.ports
+import tornado.gen
 import zmq
 import zmq.eventloop.zmqstream
 
-import salt.ext.tornado.gen
 import salt.transport.zeromq
 
 
@@ -23,7 +23,7 @@ async def test_request_channel_issue_64627(io_loop, minion_opts, port):
     socket.bind(minion_opts["master_uri"])
     stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def req_handler(stream, msg):
         yield stream.send(msg[0])
 
