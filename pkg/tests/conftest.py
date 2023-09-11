@@ -412,6 +412,10 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
         )
         salt_factories.system_service = True
     else:
+
+        if install_salt.classic and platform.is_darwin():
+            os.environ["PATH"] += ":/opt/salt/bin"
+
         factory = salt_factories.salt_master_daemon(
             random_string("master-"),
             defaults=config_defaults,
@@ -477,6 +481,9 @@ def salt_minion(salt_factories, salt_master, install_salt):
 
     if install_salt.classic and platform.is_windows():
         salt_factories.python_executable = None
+
+    if install_salt.classic and platform.is_darwin():
+        os.environ["PATH"] += ":/opt/salt/bin"
 
     factory = salt_master.salt_minion_daemon(
         minion_id,
