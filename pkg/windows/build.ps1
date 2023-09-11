@@ -108,6 +108,7 @@ if ( [String]::IsNullOrEmpty($Version) ) {
 $yaml = Get-Content -Path "$PROJECT_DIR\cicd\shared-gh-workflows-context.yml"
 $dict_versions = @{}
 $yaml | ForEach-Object {
+    if ( $_.Name.Trim().EndsWith(":") ) { return }  # This is likely a nested structure
     $val1, $val2 =  $_ -split ": "
     $dict_versions[$val1] = $val2.Trim("""")
 }
