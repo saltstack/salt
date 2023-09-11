@@ -1196,3 +1196,24 @@ def test_latest_multiple_versions():
     with patch.dict(pkg.__salt__, salt_dict):
         ret = pkg.latest(pkg_name)
         assert ret.get("result", False) is True
+
+
+def test_latest_no_change_windows():
+    """
+    Test pkg.latest with no change to the package version for winrepo packages
+
+    See: https://github.com/saltstack/salt/issues/65165
+    """
+    pkg_name = "fake_pkg"
+    version = "1.2.2"
+    latest_version_mock = MagicMock(return_value={pkg_name: version})
+    current_version_mock = MagicMock(return_value={pkg_name: version})
+    install_mock = MagicMock(return_value={pkg_name: {"install status": "success"}})
+    salt_dict = {
+        "pkg.latest_version": latest_version_mock,
+        "pkg.version": current_version_mock,
+        "pkg.install": install_mock,
+    }
+    with patch.dict(pkg.__salt__, salt_dict):
+        ret = pkg.latest(pkg_name)
+        assert ret.get("result", False) is True
