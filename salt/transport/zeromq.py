@@ -16,6 +16,7 @@ import tornado
 import tornado.concurrent
 import tornado.gen
 import tornado.ioloop
+import tornado.locks
 import zmq.asyncio
 import zmq.error
 import zmq.eventloop.zmqstream
@@ -638,7 +639,7 @@ class AsyncReqMessageClient:
 
         self._closing = False
         self._future = None
-        self.lock = salt.ext.tornado.locks.Lock()
+        self.lock = tornado.locks.Lock()
 
     def connect(self):
         if hasattr(self, "stream"):

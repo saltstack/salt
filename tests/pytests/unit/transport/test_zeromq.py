@@ -3,6 +3,7 @@ import multiprocessing
 
 import msgpack
 import pytest
+import tornado.concurrent
 
 import salt.config
 import salt.transport.zeromq
@@ -81,15 +82,15 @@ async def test_client_timeout_msg(minion_opts):
     )
     assert hasattr(client, "_future")
     assert client._future is None
-    future = salt.ext.tornado.concurrent.Future()
+    future = tornado.concurrent.Future()
     client._future = future
     client.timeout_message(future)
     with pytest.raises(salt.exceptions.SaltReqTimeoutError):
         await future
     assert client._future is None
 
-    future_a = salt.ext.tornado.concurrent.Future()
-    future_b = salt.ext.tornado.concurrent.Future()
+    future_a = tornado.concurrent.Future()
+    future_b = tornado.concurrent.Future()
     future_b.set_exception = MagicMock()
     client._future = future_a
     client.timeout_message(future_b)
