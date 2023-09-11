@@ -152,3 +152,122 @@ def plugin_installed(
         ret["comment"] += "\n".join(messages)
 
     return ret
+
+
+def plugin_removed(name, plugins=None, plugins_dir=None, user=None):
+    """
+    Verify that a plugin is not installed, calling grafana_cli.plugins_remove if necessary.
+
+    :param str name:
+        The ID of the plugin to be removed. This parameter is ignored if ``plugins`` is used.
+
+    :param list plugins:
+        A list of plugins to remove.
+        All plugins listed under ``plugins`` will be removed via a single command.
+
+        Example:
+
+        ... code-block:: yaml
+
+            myplugins:
+              grafana-cli.plugin_removed:
+                - plugins:
+                  - foo
+                  - bar
+                  - baz
+
+    :param str plugins_dir:
+        Overrides the path to where your local Grafana instance stores plugins.
+
+    :param str user:
+        User name under which to run the grafana-cli command. By default, the command is run by the
+        user under which the minion is running.
+    """
+    if isinstance(plugins, list) and len(plugins) == 0:
+        return {
+            "name": name,
+            "result": True,
+            "changes": {},
+            "comment": "No plugins to remove provided",
+        }
+
+    if plugins is None:
+        plugins = [name]
+
+    ret = {"name": name, "result": True, "changes": {}, "comment": ""}
+
+    changes = {}
+    messages = []
+    newly_removed = []
+    already_removed = []
+
+    for plugin in plugins:
+        result = __salt__["grafana_cli.plugins_get_status"](
+            plugin, plugins_dir=plugins_dir, user=user
+        )
+
+        if result["retcode"] != 0:
+            ret["result"] = False
+            messages.append(result["stdout"])
+            break
+
+        if not result["installed"]:
+            already_removed.append(plugin)
+            continue
+
+        changes[plugin] = "{0} -> None".format(result["version"])
+
+        if __opts__["test"]:
+            ret["result"] = None
+            newly_removed.append(plugin)
+            continue
+
+        result = __salt__["grafana_cli.plugins_remove"](plugin, plugins_dir=plugins_dir, user=user)
+
+        if result["retcode"] != 0:
+            ret["result"] = False
+            messages.append(result["stdout"])
+            break
+
+        result = __salt__["grafana_cli.plugins_get_status"](
+            plugin, plugins_dir=plugins_dir, user=user
+        )
+
+        if result["retcode"] != 0:
+            ret["result"] = False
+            messages.append(result["stdout"])
+            break
+
+        if not result["installed"]:
+            newly_removed.append(plugin)
+        else:
+            ret["result"] = False
+            messages.append("{0} failed to remove".format(plugin))
+            break
+
+    ret["changes"] = changes
+
+    if len(newly_removed) > 0:
+        newly_removed.sort()
+
+        if __opts__["test"]:
+            ret["comment"] += "The following plugins would be removed:\n"
+        else:
+            ret["comment"] += "The following plugins have been removed:\n"
+
+        for x in newly_removed:
+            ret["comment"] += "  - {0}\n".format(x)
+
+    if len(already_removed) > 0:
+        already_removed.sort()
+
+        ret["comment"] += "The following plugins are already removed:\n"
+
+        for x in already_removed:
+            ret["comment"] += "  - {0}\n".format(x)
+
+    if len(messages) > 0:
+        ret["comment"] += "Messages:\n"
+        ret["comment"] += "\n".join(messages)
+
+    return ret
