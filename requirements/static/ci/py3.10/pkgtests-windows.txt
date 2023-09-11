@@ -128,7 +128,7 @@ pytest==7.2.1
     #   pytest-skip-markers
     #   pytest-system-statistics
     #   pytest-tempdir
-pythonnet==3.0.1 ; python_version >= "3.7"
+pythonnet==3.0.1
     # via -r requirements/static/ci/pkgtests-windows.in
 pytz==2022.7.1
     # via tempora
