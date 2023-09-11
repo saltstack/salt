@@ -153,3 +153,40 @@ def plugins_get_latest_version(name, repo=None, user=None):
     latest_version = result["stdout"].split("\n")[0]
 
     return {"retcode": 0, "version": latest_version}
+
+
+def plugins_get_status(name, plugins_dir=None, user=None):
+    """
+    Get the status of the plugin.
+
+    :param str name:
+        The ID of the plugin.
+
+    :param str plugins_dir:
+        Overrides the path to where your local Grafana instance stores plugins.
+
+    :param str user:
+        User name under which to run the grafana-cli command. By default, the command is run by the
+        user under which the minion is running.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grafana_cli.plugins_get_status foo
+    """
+    result = plugins_ls(plugins_dir=plugins_dir, user=user)
+
+    if result["retcode"] != 0:
+        return result
+
+    plugins = result["stdout"].split("\n")[1:]
+
+    for plugin in plugins:
+        plugin_name = plugin.split("@")[0].strip()
+        plugin_version = plugin.split("@")[1].strip()
+
+        if name == plugin_name:
+            return {"retcode": 0, "installed": True, "version": plugin_version}
+
+    return {"retcode": 0, "installed": False, "version": None}
