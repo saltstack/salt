@@ -335,7 +335,7 @@ bcrypt==3.2.0
     # via
     #   paramiko
     #   passlib
-boto3==1.21.46 ; python_version >= "3.6"
+boto3==1.21.46
     # via
     #   -r requirements/static/ci/common.in
     #   moto
@@ -420,7 +420,7 @@ docker==6.1.3
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
-etcd3-py==0.1.6 ; python_version >= "3.6"
+etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 exceptiongroup==1.0.4
     # via pytest
@@ -442,7 +442,7 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.7
     # via gitpython
-gitpython==3.1.32 ; python_version >= "3.7"
+gitpython==3.1.32
     # via -r requirements/static/ci/common.in
 google-auth==2.1.0
     # via kubernetes
@@ -526,7 +526,7 @@ more-itertools==8.8.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-moto==3.0.1 ; python_version >= "3.6"
+moto==3.0.1
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via
@@ -628,7 +628,7 @@ multidict==6.0.2
     # via
     #   aiohttp
     #   yarl
-napalm==3.3.1 ; sys_platform != "win32" and python_version > "3.6" and python_version < "3.10"
+napalm==3.3.1 ; sys_platform != "win32" and python_version < "3.10"
     # via -r requirements/static/ci/common.in
 ncclient==0.6.12
     # via
@@ -754,7 +754,7 @@ pytest-tempdir==2019.10.12
     #   pytest-salt-factories
 pytest-timeout==2.0.2
     # via -r requirements/pytest.txt
-pytest==7.2.0 ; python_version > "3.6"
+pytest==7.2.0
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
