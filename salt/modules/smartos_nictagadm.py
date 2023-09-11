@@ -35,7 +35,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "{} module can only be loaded on SmartOS compute nodes".format(__virtualname__),
+        f"{__virtualname__} module can only be loaded on SmartOS compute nodes",
     )
 
 
@@ -86,7 +86,7 @@ def vms(nictag):
         salt '*' nictagadm.vms admin
     """
     ret = {}
-    cmd = "nictagadm vms {}".format(nictag)
+    cmd = f"nictagadm vms {nictag}"
     res = __salt__["cmd.run_all"](cmd)
     retcode = res["retcode"]
     if retcode != 0:
@@ -157,13 +157,13 @@ def add(name, mac, mtu=1500):
         res = __salt__["cmd.run_all"](cmd)
         # dladm prints '00' as '0', so account for that.
         if mac.replace("00", "0") not in res["stdout"].splitlines():
-            return {"Error": "{} is not present on this system.".format(mac)}
+            return {"Error": f"{mac} is not present on this system."}
 
     if mac == "etherstub":
-        cmd = "nictagadm add -l {}".format(name)
+        cmd = f"nictagadm add -l {name}"
         res = __salt__["cmd.run_all"](cmd)
     else:
-        cmd = "nictagadm add -p mtu={},mac={} {}".format(mtu, mac, name)
+        cmd = f"nictagadm add -p mtu={mtu},mac={mac} {name}"
         res = __salt__["cmd.run_all"](cmd)
 
     if res["retcode"] == 0:
@@ -196,7 +196,7 @@ def update(name, mac=None, mtu=None):
     ret = {}
 
     if name not in list_nictags():
-        return {"Error": "nictag {} does not exists.".format(name)}
+        return {"Error": f"nictag {name} does not exists."}
     if not mtu and not mac:
         return {"Error": "please provide either mac or/and mtu."}
     if mtu:
@@ -210,16 +210,16 @@ def update(name, mac=None, mtu=None):
             res = __salt__["cmd.run_all"](cmd)
             # dladm prints '00' as '0', so account for that.
             if mac.replace("00", "0") not in res["stdout"].splitlines():
-                return {"Error": "{} is not present on this system.".format(mac)}
+                return {"Error": f"{mac} is not present on this system."}
 
     if mac and mtu:
-        properties = "mtu={},mac={}".format(mtu, mac)
+        properties = f"mtu={mtu},mac={mac}"
     elif mac:
-        properties = "mac={}".format(mac) if mac else ""
+        properties = f"mac={mac}" if mac else ""
     elif mtu:
-        properties = "mtu={}".format(mtu) if mtu else ""
+        properties = f"mtu={mtu}" if mtu else ""
 
-    cmd = "nictagadm update -p {} {}".format(properties, name)
+    cmd = f"nictagadm update -p {properties} {name}"
     res = __salt__["cmd.run_all"](cmd)
 
     if res["retcode"] == 0:

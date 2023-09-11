@@ -169,9 +169,9 @@ def _auto(direction, name, value, source="auto", convert_to_human=True):
 
     # NOTE: convert
     if value_type == "size" and direction == "to":
-        return globals()["{}_{}".format(direction, value_type)](value, convert_to_human)
+        return globals()[f"{direction}_{value_type}"](value, convert_to_human)
 
-    return globals()["{}_{}".format(direction, value_type)](value)
+    return globals()[f"{direction}_{value_type}"](value)
 
 
 @real_memoize
@@ -335,7 +335,7 @@ def has_feature_flags():
     """
     # get man location
     man = salt.utils.path.which("man")
-    return _check_retcode("{man} zpool-features".format(man=man)) if man else False
+    return _check_retcode(f"{man} zpool-features") if man else False
 
 
 @real_memoize

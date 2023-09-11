@@ -116,10 +116,9 @@ def test_pip_non_root(shell, install_salt, test_account, extras_pypath_bin):
         install_salt.binary_paths["salt"] + ["--help"],
         preexec_fn=demote(test_account.uid, test_account.gid),
         env=test_account.env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
-        universal_newlines=True,
+        text=True,
     )
     assert ret.returncode == 0, ret.stderr
     assert "Usage" in ret.stdout
@@ -127,10 +126,9 @@ def test_pip_non_root(shell, install_salt, test_account, extras_pypath_bin):
     # Let tiamat-pip create the pypath directory for us
     ret = subprocess.run(
         install_salt.binary_paths["pip"] + ["install", "-h"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
-        universal_newlines=True,
+        text=True,
     )
     assert ret.returncode == 0, ret.stderr
 
@@ -139,19 +137,17 @@ def test_pip_non_root(shell, install_salt, test_account, extras_pypath_bin):
         install_salt.binary_paths["pip"] + ["install", "pep8"],
         preexec_fn=demote(test_account.uid, test_account.gid),
         env=test_account.env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
-        universal_newlines=True,
+        text=True,
     )
     assert ret.returncode != 0, ret.stderr
     # But we should be able to install as root
     ret = subprocess.run(
         install_salt.binary_paths["pip"] + ["install", "pep8"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
-        universal_newlines=True,
+        text=True,
     )
 
     assert check_path.exists()

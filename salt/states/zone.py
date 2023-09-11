@@ -238,7 +238,7 @@ def property_absent(name, property):
                 elif zonecfg[property] != zonecfg_new[property]:
                     ret["changes"][property] = zonecfg_new[property]
                 if ret["comment"] == "":
-                    ret["comment"] = "The property {} was cleared!".format(property)
+                    ret["comment"] = f"The property {property} was cleared!"
             elif ret["comment"] == "":
                 if ret["comment"] == "":
                     ret["comment"] = "The property {} did not get cleared!".format(
@@ -246,7 +246,7 @@ def property_absent(name, property):
                     )
         else:
             ret["result"] = True
-            ret["comment"] = "The property {} does not exist!".format(property)
+            ret["comment"] = f"The property {property} does not exist!"
     else:
         ## zone does not exist
         ret["result"] = False
@@ -336,7 +336,7 @@ def resource_present(
                         )
                         # note: something odd with ncpus property, we fix it here for now
                         if key == "ncpus" and key in kwargs:
-                            kwargs[key] = "{:.2f}".format(float(kwargs[key]))
+                            kwargs[key] = f"{float(kwargs[key]):.2f}"
 
                         if key not in resource:
                             ret["result"] = None
@@ -568,7 +568,7 @@ def booted(name, single=False):
         if zones[name]["state"] == "running":
             ## zone is running
             ret["result"] = True
-            ret["comment"] = "Zone {} already booted".format(name)
+            ret["comment"] = f"Zone {name} already booted"
         else:
             ## try and boot the zone
             if not __opts__["test"]:
@@ -576,15 +576,15 @@ def booted(name, single=False):
             if __opts__["test"] or zoneadm_res["status"]:
                 ret["result"] = True
                 ret["changes"][name] = "booted"
-                ret["comment"] = "Zone {} booted".format(name)
+                ret["comment"] = f"Zone {name} booted"
             else:
                 ret["result"] = False
-                ret["comment"] = "Failed to boot {}".format(name)
+                ret["comment"] = f"Failed to boot {name}"
     else:
         ## zone does not exist
         ret["comment"] = []
         ret["comment"].append(
-            "The zone {} is not in the installed or booted state.".format(name)
+            f"The zone {name} is not in the installed or booted state."
         )
         for zone in zones:
             if zones[zone]["uuid"] == name:
@@ -619,7 +619,7 @@ def halted(name, graceful=True):
         if zones[name]["state"] != "running":
             ## zone is not running
             ret["result"] = True
-            ret["comment"] = "Zone {} already halted".format(name)
+            ret["comment"] = f"Zone {name} already halted"
         else:
             ## try and halt the zone
             if not __opts__["test"]:
@@ -631,14 +631,14 @@ def halted(name, graceful=True):
             if __opts__["test"] or zoneadm_res["status"]:
                 ret["result"] = True
                 ret["changes"][name] = "halted"
-                ret["comment"] = "Zone {} halted".format(name)
+                ret["comment"] = f"Zone {name} halted"
             else:
                 ret["result"] = False
-                ret["comment"] = "Failed to halt {}".format(name)
+                ret["comment"] = f"Failed to halt {name}"
     else:
         ## zone does not exist
         ret["comment"] = []
-        ret["comment"].append("The zone {} is not in the installed state.".format(name))
+        ret["comment"].append(f"The zone {name} is not in the installed state.")
         for zone in zones:
             if zones[zone]["uuid"] == name:
                 ret["comment"].append(
@@ -761,7 +761,7 @@ def export(name, path, replace=False):
     else:
         ## zone does not exist
         ret["comment"] = []
-        ret["comment"].append("The zone {} does not exist.".format(name))
+        ret["comment"].append(f"The zone {name} does not exist.")
         for zone in zones:
             if zones[zone]["uuid"] == name:
                 ret["comment"].append(
@@ -820,9 +820,7 @@ def import_(name, path, mode="import", nodataset=False, brand_opts=None):
                 res_import = __salt__["zonecfg.import"](name, path)
                 if not res_import["status"]:
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] = "Unable to import zone configuration for {}!".format(name)
+                    ret["comment"] = f"Unable to import zone configuration for {name}!"
                 else:
                     ret["result"] = True
                     ret["changes"][name] = "imported"
@@ -874,9 +872,7 @@ def import_(name, path, mode="import", nodataset=False, brand_opts=None):
                             ret["comment"] = "\n".join(ret["comment"])
             else:
                 ret["result"] = False
-                ret[
-                    "comment"
-                ] = "The file {} does not exists, unable to import!".format(path)
+                ret["comment"] = f"The file {path} does not exists, unable to import!"
     else:
         ## zone exist
         ret["result"] = True
@@ -944,7 +940,7 @@ def present(name, brand, zonepath, properties=None, resources=None):
     if __opts__["test"]:
         ret["result"] = None
         ret["comment"].append(
-            "Cannot determine of changes would happen to the zone {}.".format(name)
+            f"Cannot determine of changes would happen to the zone {name}."
         )
 
     ## create zone if needed
@@ -959,7 +955,7 @@ def present(name, brand, zonepath, properties=None, resources=None):
         if res_create["status"]:
             ret["result"] = True
             ret["changes"][name] = "created"
-            ret["comment"].append("The zone {} was created.".format(name))
+            ret["comment"].append(f"The zone {name} was created.")
 
     if not __opts__["test"]:
         ret["result"] = True
@@ -1073,7 +1069,7 @@ def absent(name, uninstall=False):
         if __opts__["test"]:
             ret["result"] = True
             ret["changes"][name] = "removed"
-            ret["comment"] = "Zone {} was removed.".format(name)
+            ret["comment"] = f"Zone {name} was removed."
         else:
             ret["result"] = True
             if uninstall and zones[name]["state"] in ["running", "installed"]:
@@ -1082,10 +1078,10 @@ def absent(name, uninstall=False):
                 ret["result"] = res_uninstall["status"]
                 if ret["result"]:
                     ret["changes"][name] = "uninstalled"
-                    ret["comment"] = "The zone {} was uninstalled.".format(name)
+                    ret["comment"] = f"The zone {name} was uninstalled."
                 else:
                     ret["comment"] = []
-                    ret["comment"].append("Failed to uninstall zone {}!".format(name))
+                    ret["comment"].append(f"Failed to uninstall zone {name}!")
                     if "message" in res_uninstall:
                         ret["comment"].append(res_uninstall["message"])
                     ret["comment"] = "\n".join(ret["comment"])
@@ -1094,10 +1090,10 @@ def absent(name, uninstall=False):
                 ret["result"] = res_detach["status"]
                 if ret["result"]:
                     ret["changes"][name] = "detached"
-                    ret["comment"] = "The zone {} was detached.".format(name)
+                    ret["comment"] = f"The zone {name} was detached."
                 else:
                     ret["comment"] = []
-                    ret["comment"].append("Failed to detach zone {}!".format(name))
+                    ret["comment"].append(f"Failed to detach zone {name}!")
                     if "message" in res_detach:
                         ret["comment"].append(res_detach["message"])
                     ret["comment"] = "\n".join(ret["comment"])
@@ -1106,16 +1102,16 @@ def absent(name, uninstall=False):
                 ret["result"] = res_delete["status"]
                 if ret["result"]:
                     ret["changes"][name] = "deleted"
-                    ret["comment"] = "The zone {} was delete.".format(name)
+                    ret["comment"] = f"The zone {name} was delete."
                 else:
                     ret["comment"] = []
-                    ret["comment"].append("Failed to delete zone {}!".format(name))
+                    ret["comment"].append(f"Failed to delete zone {name}!")
                     if "message" in res_delete:
                         ret["comment"].append(res_delete["message"])
                     ret["comment"] = "\n".join(ret["comment"])
     else:
         ret["result"] = True
-        ret["comment"] = "Zone {} does not exist.".format(name)
+        ret["comment"] = f"Zone {name} does not exist."
 
     return ret
 
@@ -1142,19 +1138,19 @@ def attached(name, force=False):
             ret["result"] = res_attach["status"]
             if ret["result"]:
                 ret["changes"][name] = "attached"
-                ret["comment"] = "The zone {} was attached.".format(name)
+                ret["comment"] = f"The zone {name} was attached."
             else:
                 ret["comment"] = []
-                ret["comment"].append("Failed to attach zone {}!".format(name))
+                ret["comment"].append(f"Failed to attach zone {name}!")
                 if "message" in res_attach:
                     ret["comment"].append(res_attach["message"])
                 ret["comment"] = "\n".join(ret["comment"])
         else:
             ret["result"] = True
-            ret["comment"] = "zone {} already attached.".format(name)
+            ret["comment"] = f"zone {name} already attached."
     else:
         ret["result"] = False
-        ret["comment"] = "zone {} is not configured!".format(name)
+        ret["comment"] = f"zone {name} is not configured!"
 
     return ret
 
@@ -1179,20 +1175,20 @@ def detached(name):
             ret["result"] = res_detach["status"]
             if ret["result"]:
                 ret["changes"][name] = "detached"
-                ret["comment"] = "The zone {} was detached.".format(name)
+                ret["comment"] = f"The zone {name} was detached."
             else:
                 ret["comment"] = []
-                ret["comment"].append("Failed to detach zone {}!".format(name))
+                ret["comment"].append(f"Failed to detach zone {name}!")
                 if "message" in res_detach:
                     ret["comment"].append(res_detach["message"])
                 ret["comment"] = "\n".join(ret["comment"])
         else:
             ret["result"] = True
-            ret["comment"] = "zone {} already detached.".format(name)
+            ret["comment"] = f"zone {name} already detached."
     else:
         ## note: a non existing zone is not attached, we do not consider this a failure
         ret["result"] = True
-        ret["comment"] = "zone {} is not configured!".format(name)
+        ret["comment"] = f"zone {name} is not configured!"
 
     return ret
 
@@ -1221,19 +1217,19 @@ def installed(name, nodataset=False, brand_opts=None):
             ret["result"] = res_install["status"]
             if ret["result"]:
                 ret["changes"][name] = "installed"
-                ret["comment"] = "The zone {} was installed.".format(name)
+                ret["comment"] = f"The zone {name} was installed."
             else:
                 ret["comment"] = []
-                ret["comment"].append("Failed to install zone {}!".format(name))
+                ret["comment"].append(f"Failed to install zone {name}!")
                 if "message" in res_install:
                     ret["comment"].append(res_install["message"])
                 ret["comment"] = "\n".join(ret["comment"])
         else:
             ret["result"] = True
-            ret["comment"] = "zone {} already installed.".format(name)
+            ret["comment"] = f"zone {name} already installed."
     else:
         ret["result"] = False
-        ret["comment"] = "zone {} is not configured!".format(name)
+        ret["comment"] = f"zone {name} is not configured!"
 
     return ret
 
@@ -1258,19 +1254,19 @@ def uninstalled(name):
             ret["result"] = res_uninstall["status"]
             if ret["result"]:
                 ret["changes"][name] = "uninstalled"
-                ret["comment"] = "The zone {} was uninstalled.".format(name)
+                ret["comment"] = f"The zone {name} was uninstalled."
             else:
                 ret["comment"] = []
-                ret["comment"].append("Failed to uninstall zone {}!".format(name))
+                ret["comment"].append(f"Failed to uninstall zone {name}!")
                 if "message" in res_uninstall:
                     ret["comment"].append(res_uninstall["message"])
                 ret["comment"] = "\n".join(ret["comment"])
         else:
             ret["result"] = True
-            ret["comment"] = "zone {} already uninstalled.".format(name)
+            ret["comment"] = f"zone {name} already uninstalled."
     else:
         ## note: a non existing zone is not installed, we do not consider this a failure
         ret["result"] = True
-        ret["comment"] = "zone {} is not configured!".format(name)
+        ret["comment"] = f"zone {name} is not configured!"
 
     return ret
