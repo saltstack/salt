@@ -6,6 +6,7 @@ import pytest
 import salt.modules.ps
 import salt.modules.ps as ps
 import salt.utils.data
+import salt.utils.platform
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, Mock, call, patch
 
@@ -568,6 +569,7 @@ root     2710131  0.0  0.0  18000  1196 pts/6    Ss   Aug21   0:00 sudo -E salt-
         assert ret == expected
 
 
+@pytest.mark.skip_on_windows(reason="ss not available in Windows")
 def test_ss():
     """
     Testing ss function in the ps module
@@ -807,11 +809,34 @@ def test_proc_info():
     patch_read_status_file = patch(
         "psutil._psplatform.Process._read_status_file", return_value=status_file
     )
-    with patch_stat_file, patch_status, patch_create_time, patch_exe, patch_oneshot, patch_kinfo, patch_read_status_file:
-        expected = {"ppid": 99, "username": "root"}
-        actual_result = salt.modules.ps.proc_info(pid=99, attrs=["username", "ppid"])
-        assert actual_result == expected
+    with patch_stat_file, patch_status, patch_create_time, patch_exe, patch_oneshot, patch_kinfo:
+        if salt.utils.platform.is_windows():
+            with patch("psutil._pswindows.cext") as mock__psutil_windows:
+                with patch("psutil._pswindows.Process.ppid", return_value=99):
+                    mock__psutil_windows.proc_username.return_value = (
+                        "NT Authority",
+                        "System",
+                    )
 
-        expected = {"pid": 99, "name": "blerp"}
-        actual_result = salt.modules.ps.proc_info(pid=99, attrs=["pid", "name"])
-        assert actual_result == expected
+                    expected = {"ppid": 99, "username": r"NT Authority\System"}
+                    actual_result = salt.modules.ps.proc_info(
+                        pid=99, attrs=["username", "ppid"]
+                    )
+                    assert actual_result == expected
+
+                    expected = {"pid": 99, "name": "blerp"}
+                    actual_result = salt.modules.ps.proc_info(
+                        pid=99, attrs=["pid", "name"]
+                    )
+                    assert actual_result == expected
+        else:
+            with patch_read_status_file:
+                expected = {"ppid": 99, "username": "root"}
+                actual_result = salt.modules.ps.proc_info(
+                    pid=99, attrs=["username", "ppid"]
+                )
+                assert actual_result == expected
+
+                expected = {"pid": 99, "name": "blerp"}
+                actual_result = salt.modules.ps.proc_info(pid=99, attrs=["pid", "name"])
+                assert actual_result == expected
