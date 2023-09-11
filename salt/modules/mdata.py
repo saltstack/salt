@@ -69,7 +69,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "{} module can only be loaded on SmartOS zones".format(__virtualname__),
+        f"{__virtualname__} module can only be loaded on SmartOS zones",
     )
 
 
@@ -85,7 +85,7 @@ def list_():
     """
     mdata = _check_mdata_list()
     if mdata:
-        cmd = "{}".format(mdata)
+        cmd = f"{mdata}"
         return __salt__["cmd.run"](cmd, ignore_retcode=True).splitlines()
     return {}
 
@@ -116,7 +116,7 @@ def get_(*keyname):
 
     for k in keyname:
         if mdata:
-            cmd = "{} {}".format(mdata, k)
+            cmd = f"{mdata} {k}"
             res = __salt__["cmd.run_all"](cmd, ignore_retcode=True)
             ret[k] = res["stdout"] if res["retcode"] == 0 else ""
         else:
@@ -144,7 +144,7 @@ def put_(keyname, val):
     ret = {}
 
     if mdata:
-        cmd = "echo {2} | {0} {1}".format(mdata, keyname, val)
+        cmd = f"echo {val} | {mdata} {keyname}"
         ret = __salt__["cmd.run_all"](cmd, python_shell=True, ignore_retcode=True)
 
     return ret["retcode"] == 0
@@ -170,7 +170,7 @@ def delete_(*keyname):
 
     for k in keyname:
         if mdata and k in valid_keynames:
-            cmd = "{} {}".format(mdata, k)
+            cmd = f"{mdata} {k}"
             ret[k] = __salt__["cmd.run_all"](cmd, ignore_retcode=True)["retcode"] == 0
         else:
             ret[k] = True

@@ -52,8 +52,8 @@ def test_file_tidied_for_file_remove(fake_remove):
 
         file.tidied("/some/directory/tree")
 
-    call_root_file1 = "some root{}file1".format(os.sep)
-    call_root_file2 = "some root{}file2".format(os.sep)
+    call_root_file1 = f"some root{os.sep}file1"
+    call_root_file2 = f"some root{os.sep}file2"
     fake_remove.assert_has_calls([call(call_root_file1), call(call_root_file2)])
 
 

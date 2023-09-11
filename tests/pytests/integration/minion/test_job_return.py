@@ -76,8 +76,8 @@ def salt_minion_1(salt_master_1, salt_master_2):
     master_2_addr = salt_master_2.config["interface"]
     config_overrides = {
         "master": [
-            "{}:{}".format(master_1_addr, master_1_port),
-            "{}:{}".format(master_2_addr, master_2_port),
+            f"{master_1_addr}:{master_1_port}",
+            f"{master_2_addr}:{master_2_port}",
         ],
         "test.foo": "baz",
     }

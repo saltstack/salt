@@ -213,9 +213,9 @@ def _write_config(config):
                     if not config[prop].startswith('"') or not config[prop].endswith(
                         '"'
                     ):
-                        config[prop] = '"{}"'.format(config[prop])
+                        config[prop] = f'"{config[prop]}"'
                 config_file.write(
-                    salt.utils.stringutils.to_str("{}={}\n".format(prop, config[prop]))
+                    salt.utils.stringutils.to_str(f"{prop}={config[prop]}\n")
                 )
         log.debug("smartos.config - wrote /usbkey/config: %s", config)
     except OSError:
@@ -299,7 +299,7 @@ def _copy_lx_vars(vmconfig):
 
             for var in imgtags.get("docker:config", {}):
                 val = imgtags["docker:config"][var]
-                var = "docker:{}".format(var.lower())
+                var = f"docker:{var.lower()}"
 
                 # NOTE: skip empty values
                 if not val:
@@ -321,7 +321,7 @@ def _copy_lx_vars(vmconfig):
                     ):
                         config_env_var = config_env_var.split("=")
                         for img_env_var in val:
-                            if img_env_var.startswith("{}=".format(config_env_var[0])):
+                            if img_env_var.startswith(f"{config_env_var[0]}="):
                                 val.remove(img_env_var)
                         val.append("=".join(config_env_var))
                 elif var in vmconfig["internal_metadata"]:
@@ -362,17 +362,17 @@ def config_present(name, value):
         if str(config[name]) == str(value):
             # we're good
             ret["result"] = True
-            ret["comment"] = 'property {} already has value "{}"'.format(name, value)
+            ret["comment"] = f'property {name} already has value "{value}"'
         else:
             # update property
             ret["result"] = True
-            ret["comment"] = 'updated property {} with value "{}"'.format(name, value)
+            ret["comment"] = f'updated property {name} with value "{value}"'
             ret["changes"][name] = value
             config[name] = value
     else:
         # add property
         ret["result"] = True
-        ret["comment"] = 'added property {} with value "{}"'.format(name, value)
+        ret["comment"] = f'added property {name} with value "{value}"'
         ret["changes"][name] = value
         config[name] = value
 
@@ -407,13 +407,13 @@ def config_absent(name):
     if name in config:
         # delete property
         ret["result"] = True
-        ret["comment"] = "property {} deleted".format(name)
+        ret["comment"] = f"property {name} deleted"
         ret["changes"][name] = None
         del config[name]
     else:
         # we're good
         ret["result"] = True
-        ret["comment"] = "property {} is absent".format(name)
+        ret["comment"] = f"property {name} is absent"
 
     # apply change if needed
     if not __opts__["test"] and ret["changes"]:
@@ -436,7 +436,7 @@ def source_present(name, source_type="imgapi"):
     if name in __salt__["imgadm.sources"]():
         # source is present
         ret["result"] = True
-        ret["comment"] = "image source {} is present".format(name)
+        ret["comment"] = f"image source {name} is present"
     else:
         # add new source
         if __opts__["test"]:
@@ -447,10 +447,10 @@ def source_present(name, source_type="imgapi"):
             ret["result"] = name in res
 
         if ret["result"]:
-            ret["comment"] = "image source {} added".format(name)
+            ret["comment"] = f"image source {name} added"
             ret["changes"][name] = "added"
         else:
-            ret["comment"] = "image source {} not added".format(name)
+            ret["comment"] = f"image source {name} not added"
             if "Error" in res:
                 ret["comment"] = "{}: {}".format(ret["comment"], res["Error"])
 
@@ -469,7 +469,7 @@ def source_absent(name):
     if name not in __salt__["imgadm.sources"]():
         # source is absent
         ret["result"] = True
-        ret["comment"] = "image source {} is absent".format(name)
+        ret["comment"] = f"image source {name} is absent"
     else:
         # remove source
         if __opts__["test"]:
@@ -480,10 +480,10 @@ def source_absent(name):
             ret["result"] = name not in res
 
         if ret["result"]:
-            ret["comment"] = "image source {} deleted".format(name)
+            ret["comment"] = f"image source {name} deleted"
             ret["changes"][name] = "deleted"
         else:
-            ret["comment"] = "image source {} not deleted".format(name)
+            ret["comment"] = f"image source {name} not deleted"
             if "Error" in res:
                 ret["comment"] = "{}: {}".format(ret["comment"], res["Error"])
 
@@ -509,7 +509,7 @@ def image_present(name):
     elif name in __salt__["imgadm.list"]():
         # image was already imported
         ret["result"] = True
-        ret["comment"] = "image {} is present".format(name)
+        ret["comment"] = f"image {name} is present"
     else:
         # add image
         if _is_docker_uuid(name):
@@ -533,13 +533,13 @@ def image_present(name):
                 elif _is_docker_uuid(name):
                     ret["result"] = __salt__["imgadm.docker_to_uuid"](name) is not None
             if ret["result"]:
-                ret["comment"] = "image {} imported".format(name)
+                ret["comment"] = f"image {name} imported"
                 ret["changes"] = res
             else:
-                ret["comment"] = "image {} was unable to be imported".format(name)
+                ret["comment"] = f"image {name} was unable to be imported"
         else:
             ret["result"] = False
-            ret["comment"] = "image {} does not exists".format(name)
+            ret["comment"] = f"image {name} does not exists"
 
     return ret
 
@@ -567,12 +567,12 @@ def image_absent(name):
     if not uuid or uuid not in __salt__["imgadm.list"]():
         # image not imported
         ret["result"] = True
-        ret["comment"] = "image {} is absent".format(name)
+        ret["comment"] = f"image {name} is absent"
     else:
         # check if image in use by vm
         if uuid in __salt__["vmadm.list"](order="image_uuid"):
             ret["result"] = False
-            ret["comment"] = "image {} currently in use by a vm".format(name)
+            ret["comment"] = f"image {name} currently in use by a vm"
         else:
             # delete image
             if __opts__["test"]:
@@ -599,7 +599,7 @@ def image_absent(name):
                     name, image_count
                 )
             else:
-                ret["comment"] = "image {} deleted".format(name)
+                ret["comment"] = f"image {name} deleted"
             ret["changes"][name] = None
 
     return ret
@@ -905,7 +905,7 @@ def vm_present(name, vmconfig, config=None):
                 continue
 
             # enforcement
-            enforce = config["enforce_{}".format(collection)]
+            enforce = config[f"enforce_{collection}"]
             log.debug("smartos.vm_present::enforce_%s = %s", collection, enforce)
 
             # dockerinit handling
@@ -940,13 +940,13 @@ def vm_present(name, vmconfig, config=None):
                         continue
 
                     # create set_ dict
-                    if "set_{}".format(collection) not in vmconfig["changed"]:
-                        vmconfig["changed"]["set_{}".format(collection)] = {}
+                    if f"set_{collection}" not in vmconfig["changed"]:
+                        vmconfig["changed"][f"set_{collection}"] = {}
 
                     # add property to changeset
-                    vmconfig["changed"]["set_{}".format(collection)][prop] = vmconfig[
-                        "state"
-                    ][collection][prop]
+                    vmconfig["changed"][f"set_{collection}"][prop] = vmconfig["state"][
+                        collection
+                    ][prop]
 
             # process remove for collection
             if (
@@ -964,11 +964,11 @@ def vm_present(name, vmconfig, config=None):
                             continue
 
                     # create remove_ array
-                    if "remove_{}".format(collection) not in vmconfig["changed"]:
-                        vmconfig["changed"]["remove_{}".format(collection)] = []
+                    if f"remove_{collection}" not in vmconfig["changed"]:
+                        vmconfig["changed"][f"remove_{collection}"] = []
 
                     # remove property
-                    vmconfig["changed"]["remove_{}".format(collection)].append(prop)
+                    vmconfig["changed"][f"remove_{collection}"].append(prop)
 
         # process instances
         for instance in vmconfig_type["instance"]:
@@ -1018,28 +1018,23 @@ def vm_present(name, vmconfig, config=None):
                             # update instance
                             if update_cfg:
                                 # create update_ array
-                                if (
-                                    "update_{}".format(instance)
-                                    not in vmconfig["changed"]
-                                ):
-                                    vmconfig["changed"][
-                                        "update_{}".format(instance)
-                                    ] = []
+                                if f"update_{instance}" not in vmconfig["changed"]:
+                                    vmconfig["changed"][f"update_{instance}"] = []
 
                                 update_cfg[
                                     vmconfig_type["instance"][instance]
                                 ] = state_cfg[vmconfig_type["instance"][instance]]
-                                vmconfig["changed"][
-                                    "update_{}".format(instance)
-                                ].append(update_cfg)
+                                vmconfig["changed"][f"update_{instance}"].append(
+                                    update_cfg
+                                )
 
                     if add_instance:
                         # create add_ array
-                        if "add_{}".format(instance) not in vmconfig["changed"]:
-                            vmconfig["changed"]["add_{}".format(instance)] = []
+                        if f"add_{instance}" not in vmconfig["changed"]:
+                            vmconfig["changed"][f"add_{instance}"] = []
 
                         # add instance
-                        vmconfig["changed"]["add_{}".format(instance)].append(state_cfg)
+                        vmconfig["changed"][f"add_{instance}"].append(state_cfg)
 
             # remove instances
             if (
@@ -1067,11 +1062,11 @@ def vm_present(name, vmconfig, config=None):
 
                     if remove_instance:
                         # create remove_ array
-                        if "remove_{}".format(instance) not in vmconfig["changed"]:
-                            vmconfig["changed"]["remove_{}".format(instance)] = []
+                        if f"remove_{instance}" not in vmconfig["changed"]:
+                            vmconfig["changed"][f"remove_{instance}"] = []
 
                         # remove instance
-                        vmconfig["changed"]["remove_{}".format(instance)].append(
+                        vmconfig["changed"][f"remove_{instance}"].append(
                             current_cfg[vmconfig_type["instance"][instance]]
                         )
 
@@ -1221,7 +1216,7 @@ def vm_absent(name, archive=False):
     if name not in __salt__["vmadm.list"](order="hostname"):
         # we're good
         ret["result"] = True
-        ret["comment"] = "vm {} is absent".format(name)
+        ret["comment"] = f"vm {name} is absent"
     else:
         # delete vm
         if not __opts__["test"]:
@@ -1237,9 +1232,9 @@ def vm_absent(name, archive=False):
 
         if not isinstance(ret["result"], bool) and ret["result"].get("Error"):
             ret["result"] = False
-            ret["comment"] = "failed to delete vm {}".format(name)
+            ret["comment"] = f"failed to delete vm {name}"
         else:
-            ret["comment"] = "vm {} deleted".format(name)
+            ret["comment"] = f"vm {name} deleted"
             ret["changes"][name] = None
 
     return ret
@@ -1263,7 +1258,7 @@ def vm_running(name):
     if name in __salt__["vmadm.list"](order="hostname", search="state=running"):
         # we're good
         ret["result"] = True
-        ret["comment"] = "vm {} already running".format(name)
+        ret["comment"] = f"vm {name} already running"
     else:
         # start the vm
         ret["result"] = (
@@ -1271,10 +1266,10 @@ def vm_running(name):
         )
         if not isinstance(ret["result"], bool) and ret["result"].get("Error"):
             ret["result"] = False
-            ret["comment"] = "failed to start {}".format(name)
+            ret["comment"] = f"failed to start {name}"
         else:
             ret["changes"][name] = "running"
-            ret["comment"] = "vm {} started".format(name)
+            ret["comment"] = f"vm {name} started"
 
     return ret
 
@@ -1297,7 +1292,7 @@ def vm_stopped(name):
     if name in __salt__["vmadm.list"](order="hostname", search="state=stopped"):
         # we're good
         ret["result"] = True
-        ret["comment"] = "vm {} already stopped".format(name)
+        ret["comment"] = f"vm {name} already stopped"
     else:
         # stop the vm
         ret["result"] = (
@@ -1305,9 +1300,9 @@ def vm_stopped(name):
         )
         if not isinstance(ret["result"], bool) and ret["result"].get("Error"):
             ret["result"] = False
-            ret["comment"] = "failed to stop {}".format(name)
+            ret["comment"] = f"failed to stop {name}"
         else:
             ret["changes"][name] = "stopped"
-            ret["comment"] = "vm {} stopped".format(name)
+            ret["comment"] = f"vm {name} stopped"
 
     return ret
