@@ -26,12 +26,15 @@ In order to run the package tests, the `relenv
 <https://github.com/saltstack/relative-environment-for-python>`_ onedir and
 built packages need to be placed in the correct locations.
 
-Place all salt packages for the applicable testing version in
-``<repo-root>/pkg/artifacts/``, and the onedir must be located under
-``<repo-root>/artifacts/``. Additionally, to ensure complete parity with Salt's
-CI/CD suite, place the ``nox`` virtual environment in
-``<repo-root>/.nox/test-pkgs-onedir`` The following are a few ways this can be
-accomplished easily.
+* Place all salt packages for the applicable testing version in
+``<repo-root>/pkg/artifacts/``.
+
+* The onedir must be located under ``<repo-root>/artifacts/``.
+
+* Additionally, to ensure complete parity with Salt's CI/CD suite, place the
+  ``nox`` virtual environment in ``<repo-root>/.nox/test-pkgs-onedir``.
+
+The following are a few ways this can be accomplished easily.
 
 You can ensure parity by installing the package test suite through a few
 possible methods:
@@ -62,7 +65,7 @@ interaction with the salt repo.
 
     The most common use case is to test the packages built on a CI/CD run for a
     given PR. To see the possible options for each argument, and other ways to
-    utilize this command, use the following.
+    utilize this command, use the following:
 
     .. code-block:: bash
 
@@ -114,8 +117,7 @@ can be performed for artifacts from nightly builds.
 
 Running the tests
 =================
-You can run the test suite can now be run if all the artifacts are in the
-correct location.
+You can run the test suite run if all the artifacts are in the correct location.
 
 .. note::
 
