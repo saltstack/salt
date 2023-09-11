@@ -15,7 +15,7 @@ cryptography>=41.0.3 ; python_version >= "3.7"
 cryptography<=40.0.2 ; python_version == "3.6"
 cryptography<=3.2.1 ; python_version <= "3.5"
 gitpython>=2.1.15 ; python_version <= "3.6"
-gitpython>=3.1.30 ; python_version >= "3.7"
+gitpython>=3.1.35 ; python_version >= "3.7"
 ioloop>=0.1a0
 libnacl>=1.8.0
 lxml>=4.6.3
