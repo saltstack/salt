@@ -255,3 +255,59 @@ def plugins_install_check(name, version=None, plugins_dir=None, repo=None, user=
             ret["new_version"] = version
 
     return ret
+
+
+def plugins_install(name, version=None, plugins_dir=None, repo=None, user=None):
+    """
+    Interface with `grafana-cli plugins install`.
+
+    :param str name:
+        The ID of the plugin.
+
+    :param str version:
+        The version of the plugin.
+
+    :param str plugins_dir:
+        Overrides the path to where your local Grafana instance stores plugins.
+
+    :param str repo:
+        Allows you to download and install or update plugins from a repository other than the
+        default Grafana repo.
+
+    :param str user:
+        User name under which to run the grafana-cli command. By default, the command is run by the
+        user under which the minion is running.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grafana_cli.plugins_install foo version="2.2.0"
+    """
+    check_result = plugins_install_check(
+        name, plugins_dir=plugins_dir, repo=repo, version=version, user=user
+    )
+
+    if check_result["retcode"] != 0:
+        return check_result
+
+    if not check_result["to_install"]:
+        return {"retcode": 0, "result": False, "old": check_result["old_version"], "new": None}
+
+    options = {
+        "plugins_dir": plugins_dir,
+        "repo": repo,
+    }
+    arguments = ("install", name, check_result["new_version"])
+
+    result = _run_cmd(command="plugins", options=options, arguments=arguments, user=user)
+
+    if result["retcode"] != 0:
+        return result
+
+    return {
+        "retcode": 0,
+        "result": True,
+        "old": check_result["old_version"],
+        "new": check_result["new_version"],
+    }
