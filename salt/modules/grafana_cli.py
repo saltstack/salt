@@ -122,3 +122,34 @@ def plugins_list_versions(name, repo=None, user=None):
     arguments = ("list-versions", name)
 
     return _run_cmd(command="plugins", options=options, arguments=arguments, user=user)
+
+
+def plugins_get_latest_version(name, repo=None, user=None):
+    """
+    Get latest version of a plugin.
+
+    :param str name:
+        The ID of the plugin.
+
+    :param str repo:
+        Allows you to download and install or update plugins from a repository other than the
+        default Grafana repo.
+
+    :param str user:
+        User name under which to run the grafana-cli command. By default, the command is run by the
+        user under which the minion is running.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grafana_cli.plugins_get_latest_version foo
+    """
+    result = plugins_list_versions(name, repo=repo, user=user)
+
+    if result["retcode"] != 0:
+        return result
+
+    latest_version = result["stdout"].split("\n")[0]
+
+    return {"retcode": 0, "version": latest_version}
