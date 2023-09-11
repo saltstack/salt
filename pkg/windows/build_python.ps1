@@ -77,11 +77,8 @@ function Write-Result($result, $ForegroundColor="Green") {
 
 $yaml = Get-Content -Path "$PROJECT_DIR\cicd\shared-gh-workflows-context.yml"
 $dict_versions = @{}
-$yaml | ForEach-Object {
-    if ( $_.Name.Trim().EndsWith(":") ) { return }  # This is likely a nested structure
-    $val1, $val2 =  $_ -split ": "
-    $dict_versions[$val1] = $val2.Trim("""")
-}
+$dict_versions["python_version"]=($yaml | Select-String -Pattern "python_version: (.*)").matches.groups[1].Value.Trim("""")
+$dict_versions["relenv_version"]=($yaml | Select-String -Pattern "relenv_version: (.*)").matches.groups[1].Value.Trim("""")
 
 if ( [String]::IsNullOrEmpty($Version) ) {
     $Version = $dict_versions["python_version"]
