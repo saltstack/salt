@@ -1078,3 +1078,40 @@ def test_gpg_receive_keys_no_user_id():
             res = gpg.receive_keys(keys="abc", user="abc")
             assert res["res"] is False
             assert "no user ID" in res["message"][0]
+
+
+def test_gpg_receive_keys_keyserver_unavailable():
+    with patch("salt.modules.gpg._create_gpg") as create:
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(), "config.option": Mock()}
+        ):
+            import_result = MagicMock()
+            import_result.__bool__.return_value = False
+            for var, val in {
+                "gpg": Mock(),
+                "results": [
+                    {"fingerprint": None, "problem": "0", "text": "Other failure"}
+                ],
+                "fingerprints": [],
+                "count": 0,
+                "no_user_id": 0,
+                "imported": 0,
+                "imported_rsa": 0,
+                "unchanged": 0,
+                "n_uids": 0,
+                "n_subk": 0,
+                "n_sigs": 0,
+                "n_revoc": 0,
+                "sec_read": 0,
+                "sec_imported": 0,
+                "sec_dups": 0,
+                "not_imported": 0,
+                "data": b"",
+                "stderr": "[GNUPG:] FAILURE recv-keys 167772346\ngpg: keyserver receive failed: No keyserver available\n",
+                "returncode": 2,
+            }.items():
+                setattr(import_result, var, val)
+            create.return_value.recv_keys.return_value = import_result
+            res = gpg.receive_keys(keys="abc", user="abc")
+            assert res["res"] is False
+            assert any("No keyserver available" in x for x in res["message"])
