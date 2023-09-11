@@ -311,3 +311,42 @@ def plugins_install(name, version=None, plugins_dir=None, repo=None, user=None):
         "old": check_result["old_version"],
         "new": check_result["new_version"],
     }
+
+
+def plugins_remove(name, plugins_dir=None, user=None):
+    """
+    Interface with `grafana-cli plugins remove`.
+
+    :param str name:
+        The ID of the plugin.
+
+    :param str plugins_dir:
+        Overrides the path to where your local Grafana instance stores plugins.
+
+    :param str user:
+        User name under which to run the grafana-cli command. By default, the command is run by the
+        user under which the minion is running.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grafana_cli.plugins_remove foo
+    """
+    get_status_result = plugins_get_status(name, plugins_dir=plugins_dir, user=user)
+
+    if get_status_result["retcode"] != 0:
+        return result
+
+    if not get_status_result["installed"]:
+        return {"retcode": 0, "result": False, "old": None, "new": None}
+
+    options = {"plugins_dir": plugins_dir}
+    arguments = ("remove", name)
+
+    result = _run_cmd(command="plugins", options=options, arguments=arguments, user=user)
+
+    if result["retcode"] != 0:
+        return result
+
+    return {"retcode": 0, "result": True, "old": get_status_result["version"], "new": None}
