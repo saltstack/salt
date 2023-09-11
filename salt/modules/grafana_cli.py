@@ -190,3 +190,68 @@ def plugins_get_status(name, plugins_dir=None, user=None):
             return {"retcode": 0, "installed": True, "version": plugin_version}
 
     return {"retcode": 0, "installed": False, "version": None}
+
+
+def plugins_install_check(name, version=None, plugins_dir=None, repo=None, user=None):
+    """
+    Check if a plugin would be installed.
+
+    :param str name:
+        The ID of the plugin.
+
+    :param str version:
+        The version of the plugin.
+
+    :param str plugins_dir:
+        Overrides the path to where your local Grafana instance stores plugins.
+
+    :param str repo:
+        Allows you to download and install or update plugins from a repository other than the
+        default Grafana repo.
+
+    :param str user:
+        User name under which to run the grafana-cli command. By default, the command is run by the
+        user under which the minion is running.
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grafana_cli.plugins_install_check foo
+    """
+    get_status_result = plugins_get_status(name, plugins_dir=plugins_dir, user=user)
+
+    if get_status_result["retcode"] != 0:
+        return get_status_result
+
+    latest_version_result = plugins_get_latest_version(name, repo=repo, user=user)
+
+    if latest_version_result["retcode"] != 0:
+        return latest_version_result
+
+    is_installed = get_status_result["installed"]
+    installed_version = get_status_result["version"]
+    latest_version = latest_version_result["version"]
+
+    ret = {"retcode": 0, "to_install": False, "old_version": None, "new_version": None}
+
+    if is_installed:
+        ret["old_version"] = installed_version
+
+        if version is None:
+            if installed_version != latest_version:
+                ret["to_install"] = True
+                ret["new_version"] = latest_version
+        elif installed_version != version:
+            ret["to_install"] = True
+            ret["new_version"] = version
+    else:
+        ret["to_install"] = True
+
+        if version is None:
+            ret["new_version"] = latest_version
+        else:
+            ret["new_version"] = version
+
+    return ret
