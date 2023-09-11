@@ -17,7 +17,7 @@ dnspython
 docker
 etcd3-py==0.1.6 ; python_version >= '3.6'
 gitpython>=2.1.15 ; python_version <= "3.6"
-gitpython>=3.1.30 ; python_version >= "3.7"
+gitpython>=3.1.35 ; python_version >= "3.7"
 jmespath
 jsonschema
 junos-eznc==2.4.0; sys_platform != 'win32' and python_version <= '3.9'
