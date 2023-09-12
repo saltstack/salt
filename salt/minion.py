@@ -339,6 +339,7 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
                     # list of positional arguments. This keyword argument is
                     # invalid.
                     invalid_kwargs.append("{}={}".format(key, val))
+            arg.update({"__kwarg__": True})
             continue
 
         else:
