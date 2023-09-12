@@ -125,7 +125,19 @@ def setup_testsuite(
         )
 
     if run_id is None:
-        ctx.error("Unable to find the appropriate workflow run ID")
+        run_id = tools.utils.gh.discover_run_id(
+            ctx,
+            branch=branch,
+            nightly=nightly,
+            pr=pr,
+            completed_status=False,
+        )
+        if run_id is None:
+            ctx.error("Unable to find the appropriate workflow run ID")
+        else:
+            ctx.warn(
+                f"Looks like we found run_id {run_id} but it's not yet in the completed state"
+            )
         ctx.exit(1)
 
     exitcode = tools.utils.gh.download_onedir_artifact(

@@ -308,22 +308,25 @@ def discover_run_id(
     nightly: str = None,
     pr: int = None,
     repository: str = "saltstack/salt",
+    completed_status: bool = True,
 ) -> int | None:
     ctx.info(f"Discovering the run_id({branch=}, {nightly=}, {pr=}, {repository=})")
     run_id: int | None = None
     with ctx.web as web:
         headers = {
             "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
         }
         github_token = get_github_token(ctx)
         if github_token is not None:
             headers["Authorization"] = f"Bearer {github_token}"
         web.headers.update(headers)
 
-        params = {
+        params: dict[str, str | int] = {
             "per_page": 100,
-            "status": "completed",
         }
+        if completed_status is True:
+            params["status"] = "completed"
         if branch is not None:
             ret = web.get(
                 f"https://api.github.com/repos/{repository}/git/ref/heads/{branch}"
