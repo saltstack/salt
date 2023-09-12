@@ -22,7 +22,7 @@ filesystem. The `cluster_pki_dir`, `cache_dir`, `file_roots` and `pillar_roots`
 must all be on a shared filesystem. Most implimentations will also server the
 masters publish and request server ports via a tcp load balancer. All of the
 masters in a cluster are assumed to be running on a reliable local area
-network. 
+network.
 
 Each master in a cluster maintains it's own public and private key, and an in
 memory aes key. Each cluster peer also has access to the `cluster_pki_dir`
