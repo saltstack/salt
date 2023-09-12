@@ -24,7 +24,7 @@ def test_post_card():
     with patch("salt.utils.http.query", http_mock):
         ret = msteams.post_card("test")
         assert ret
-        assert http_mock.called_once_with(
+        assert http_mock.assert_called_once_with(
             method="POST",
             header_dict={"Content-Type": "application/json"},
             data='{"text": "test", "title": Null, "themeColor": Null}',
