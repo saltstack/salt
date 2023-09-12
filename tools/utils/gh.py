@@ -238,7 +238,7 @@ def download_artifact(
             page += 1
             params = {
                 "per_page": 100,
-                "page": 1,
+                "page": page,
             }
             ret = web.get(
                 f"https://api.github.com/repos/{repository}/actions/runs/{run_id}/artifacts",
