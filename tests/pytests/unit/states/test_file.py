@@ -87,6 +87,6 @@ def test_file_recurse_directory_test():
             "name": "/tmp/test",
             "result": False,
         }
-        assert salt_dunder["cp.list_master_dirs"].called_once_with(
+        assert salt_dunder["cp.list_master_dirs"].assert_called_once_with(
             prefix="does_not_exist/"
         )
