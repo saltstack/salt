@@ -806,9 +806,6 @@ def test_proc_info():
     patch_create_time = patch(
         "psutil._psplatform.Process.create_time", return_value=393829200
     )
-    patch_read_status_file = patch(
-        "psutil._psplatform.Process._read_status_file", return_value=status_file
-    )
     with patch_stat_file, patch_status, patch_create_time, patch_exe, patch_oneshot, patch_kinfo:
         if salt.utils.platform.is_windows():
             with patch("psutil._pswindows.cext") as mock__psutil_windows:
@@ -830,6 +827,9 @@ def test_proc_info():
                     )
                     assert actual_result == expected
         else:
+            patch_read_status_file = patch(
+                "psutil._psplatform.Process._read_status_file", return_value=status_file
+            )
             with patch_read_status_file:
                 expected = {"ppid": 99, "username": "root"}
                 actual_result = salt.modules.ps.proc_info(
