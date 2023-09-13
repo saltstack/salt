@@ -9,6 +9,7 @@ import pytest
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
+import salt.version
 from saltfactories.utils.functional import Loaders
 
 log = logging.getLogger(__name__)
@@ -39,6 +40,12 @@ def preserve_rhel_yum_conf():
 
 @pytest.fixture(autouse=True)
 def refresh_db(ctx, grains, modules):
+
+    if grains["os"] == "Debian" and grains["osmajorrelease"] == 10:
+        if salt.version.__saltstack_version__.info >= (3006, 0):
+            pytest.fail("Remove this whole Debian 10 check. It's only meant for 3005.x")
+        pytest.skip("Skipped on Debian 10 due to old AMI having issues")
+
     if "refresh" not in ctx:
         modules.pkg.refresh_db()
         ctx["refresh"] = True
@@ -210,7 +217,7 @@ def test_mod_del_repo_multiline_values(modules):
 
 @pytest.mark.flaky(max_runs=4)
 @pytest.mark.requires_salt_modules("pkg.owner")
-def test_owner(modules):
+def test_owner(modules, grains):
     """
     test finding the package owning a file
     """
