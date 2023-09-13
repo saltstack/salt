@@ -945,7 +945,7 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
                         f"Unable to add key to keychain: {result.get('text', 'No further description')}"
                     )
 
-        if not bool(recv_data):
+        if not recv_data:
             ret["res"] = False
             ret["message"].append(f"GPG reported failure: {recv_data.stderr}")
     except AttributeError:
