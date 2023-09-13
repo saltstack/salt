@@ -870,26 +870,9 @@ def _add_sub_state_run(ret, sub):
 def _file_managed(name, test=None, **kwargs):
     if test not in [None, True]:
         raise SaltInvocationError("test param can only be None or True")
-    # work around https://github.com/saltstack/salt/issues/62590
     test = test or __opts__["test"]
-    file_managed = __states__["file.managed"]
-    if test:
-        # calls via __salt__["state.single"](..., test=test)
-        # can overwrite __opts__["test"] permanently. Workaround:
-        opts = __opts__
-        if not __opts__["test"]:
-            opts = copy.copy(__opts__)
-            opts["test"] = test
-        with salt.utils.context.func_globals_inject(file_managed, __opts__=opts):
-            # The file execution module accesses __opts__["test"] as well
-            with salt.utils.context.func_globals_inject(
-                __salt__["file.check_perms"], __opts__=opts
-            ):
-                with salt.utils.context.func_globals_inject(
-                    __salt__["file.manage_file"], __opts__=opts
-                ):
-                    return file_managed(name, **kwargs)
-    return file_managed(name, **kwargs)
+    res = __salt__["state.single"]("file.managed", name, test=test, **kwargs)
+    return res[next(iter(res))]
 
 
 def _check_file_ret(fret, ret, current):
