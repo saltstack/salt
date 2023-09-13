@@ -44,7 +44,7 @@ Using ``tools``
 ---------------
 Salt has preliminary support for setting up the package test suite in the
 ``tools`` command suite that is located under ``<repo-root>/tools/testsuite/``.
-This method requires the Github CLI tool ``gh``(https://cli.github.com/) to be properly configured for
+This method requires the Github CLI tool ``gh`` (https://cli.github.com/) to be properly configured for
 interaction with the salt repo.
 
 #. Install the dependencies using this command:
@@ -152,5 +152,5 @@ You can run the test suite run if all the artifacts are in the correct location.
     .. note::
 
         If you are testing upgrades or downgrades and classic packages are
-        available for your system, append ``-classic`` to ``upgrade`` or
-        ``downgrade`` to test against those versions.
+        available for your system, replace ``upgrade`` or
+        ``downgrade`` with ``upgrade-classic`` or ``downgrade-classic`` respectively to test against those versions.
