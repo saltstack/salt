@@ -69,6 +69,12 @@ interaction with the salt repo.
 
         tools ts setup -h
 
+.. warning::
+
+    You can only download artifacts from finished workflow runs. This is something
+    imposed by the GitHub API.
+    To download artifacts from a running workflow run, you either have to wait for
+    the finish or cancel it.
 
 Downloading individually
 ------------------------
