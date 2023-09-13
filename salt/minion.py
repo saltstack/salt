@@ -73,6 +73,7 @@ from salt.template import SLS_ENCODING
 from salt.utils.ctx import RequestContext
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
+from salt.utils.extmods import sync as _sync
 from salt.utils.network import parse_host_port
 from salt.utils.odict import OrderedDict
 from salt.utils.process import ProcessManager, SignalHandlingProcess, default_signals
@@ -920,6 +921,8 @@ class SMinion(MinionBase):
         # Late setup of the opts grains, so we can log from the grains module
         import salt.loader
 
+        # need sync of custom grains as may be used in pillar compilation
+        _sync(opts, "grains")
         opts["grains"] = salt.loader.grains(opts)
         super().__init__(opts)
 
@@ -3936,6 +3939,8 @@ class SProxyMinion(SMinion):
 
             salt '*' sys.reload_modules
         """
+        # need sync of custom grains as may be used in pillar compilation
+        _sync(self.opts, "grains")
         self.opts["grains"] = salt.loader.grains(self.opts)
         self.opts["pillar"] = salt.pillar.get_pillar(
             self.opts,
