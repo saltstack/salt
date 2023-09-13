@@ -8,6 +8,7 @@ gnupglib = pytest.importorskip("gnupg", reason="Needs python-gnupg library")
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("gpg", reason="Needs gpg binary"),
+    pytest.mark.windows_whitelisted,
 ]
 
 
