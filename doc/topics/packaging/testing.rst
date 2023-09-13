@@ -44,7 +44,7 @@ Using ``tools``
 ---------------
 Salt has preliminary support for setting up the package test suite in the
 ``tools`` command suite that is located under ``<repo-root>/tools/testsuite/``.
-This method requires the Github CLI tool ``gh`` to be properly configured for
+This method requires the Github CLI tool ``gh``(https://cli.github.com/) to be properly configured for
 interaction with the salt repo.
 
 #. Install the dependencies using this command:
