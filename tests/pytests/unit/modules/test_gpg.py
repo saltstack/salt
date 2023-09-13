@@ -1047,7 +1047,7 @@ def test_gpg_decrypt_message_with_gpg_passphrase_in_pillar(gpghome):
 
 
 @pytest.fixture(params={})
-def import_result_mock(request):
+def _import_result_mock(request):
     defaults = {
         "gpg": Mock(),
         "imported": 0,
@@ -1077,7 +1077,7 @@ def import_result_mock(request):
 
 
 @pytest.mark.parametrize(
-    "import_result_mock",
+    "_import_result_mock",
     (
         {
             "count": 1,
@@ -1086,19 +1086,19 @@ def import_result_mock(request):
     ),
     indirect=True,
 )
-def test_gpg_receive_keys_no_user_id(import_result_mock):
+def test_gpg_receive_keys_no_user_id(_import_result_mock):
     with patch("salt.modules.gpg._create_gpg") as create:
         with patch.dict(
             gpg.__salt__, {"user.info": MagicMock(), "config.option": Mock()}
         ):
-            create.return_value.recv_keys.return_value = import_result_mock
+            create.return_value.recv_keys.return_value = _import_result_mock
             res = gpg.receive_keys(keys="abc", user="abc")
             assert res["res"] is False
             assert any("no user ID" in x for x in res["message"])
 
 
 @pytest.mark.parametrize(
-    "import_result_mock",
+    "_import_result_mock",
     (
         {
             "results": [{"fingerprint": None, "problem": "0", "text": "Other failure"}],
@@ -1108,12 +1108,12 @@ def test_gpg_receive_keys_no_user_id(import_result_mock):
     ),
     indirect=True,
 )
-def test_gpg_receive_keys_keyserver_unavailable(import_result_mock):
+def test_gpg_receive_keys_keyserver_unavailable(_import_result_mock):
     with patch("salt.modules.gpg._create_gpg") as create:
         with patch.dict(
             gpg.__salt__, {"user.info": MagicMock(), "config.option": Mock()}
         ):
-            create.return_value.recv_keys.return_value = import_result_mock
+            create.return_value.recv_keys.return_value = _import_result_mock
             res = gpg.receive_keys(keys="abc", user="abc")
             assert res["res"] is False
             assert any("No keyserver available" in x for x in res["message"])
