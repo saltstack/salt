@@ -748,15 +748,6 @@ def _pytest(session, coverage, cmd_args):
             check=True,
         )
 
-    if hasattr(platform, "dist"):
-        if platform.dist()[0] == "debian" and platform.dist()[1].startswith("10"):
-            subprocess.run(
-                ["sed", "-i", "/buster-backports/d", "/etc/apt/sources.list"],
-                check=True,
-            )
-            subprocess.run(["apt-get", "update"], check=True)
-            subprocess.run(["apt-get", "upgrade", "debian-keyring", "-y"], check=True)
-
     env = {"CI_RUN": "1" if CI_RUN else "0"}
 
     args = [
