@@ -12,6 +12,7 @@ import salt.modules.file as file
 import salt.modules.gpg as gpg
 import salt.utils.files
 import salt.utils.stringutils
+import salt.version
 from tests.support.mock import Mock, patch
 
 pytestmark = [
@@ -82,8 +83,12 @@ def configure_loader_modules(minion_opts):
     }
 
 
-@pytest.fixture()
-def revert_repo_file(tmp_path):
+@pytest.fixture
+def revert_repo_file(tmp_path, grains):
+    if grains["os"] == "Debian" and grains["osmajorrelease"] == 10:
+        if salt.version.__saltstack_version__.info >= (3006, 0):
+            pytest.fail("Remove this whole Debian 10 check. It's only meant for 3005.x")
+        pytest.skip("Skipped on Debian 10 due to old AMI having issues")
     try:
         repo_file = pathlib.Path("/etc") / "apt" / "sources.list"
         backup = tmp_path / "repo_backup"
@@ -270,13 +275,15 @@ def test_mod_repo_no_file(tmp_path, revert_repo_file):
         assert comp in ret
 
 
-@pytest.fixture()
+@pytest.fixture
 def add_key(request, get_key_file):
     """ """
     key = Key(request.param)
     key.add_key()
-    yield request.param
-    key.del_key()
+    try:
+        yield request.param
+    finally:
+        key.del_key()
 
 
 @pytest.mark.parametrize("get_key_file", KEY_FILES, indirect=True)
