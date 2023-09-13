@@ -34,7 +34,7 @@ distro==1.8.0
     # via -r requirements/base.txt
 gitdb==4.0.10
     # via gitpython
-gitpython==3.1.32
+gitpython==3.1.35
     # via -r requirements/windows.txt
 idna==3.4
     # via requests
@@ -44,6 +44,8 @@ importlib-metadata==6.6.0
     # via -r requirements/windows.txt
 inflect==6.0.4
     # via jaraco.text
+ioloop==0.1a0
+    # via -r requirements/windows.txt
 jaraco.collections==4.1.0
     # via cherrypy
 jaraco.context==4.3.0
@@ -79,7 +81,7 @@ packaging==23.1
     # via -r requirements/base.txt
 portend==3.1.0
     # via cherrypy
-psutil==5.8.0
+psutil==5.9.5
     # via -r requirements/base.txt
 pyasn1==0.4.8
     # via -r requirements/windows.txt

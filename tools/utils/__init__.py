@@ -217,6 +217,7 @@ def download_file(
     auth: str | None = None,
     headers: dict[str, str] | None = None,
 ) -> pathlib.Path:
+    ctx.info(f"Downloading {dest.name!r} @ {url} ...")
     curl = shutil.which("curl")
     if curl is not None:
         command = [curl, "-sS", "-L"]
@@ -243,7 +244,6 @@ def download_file(
                 ctx.exit(1)
         return dest
     # NOTE the stream=True parameter below
-    ctx.info(f"Downloading {url} ...")
     with ctx.web as web:
         web.headers.update(headers)
         with web.get(url, stream=True, auth=auth) as r:

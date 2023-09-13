@@ -31,7 +31,7 @@ def version(install_salt):
     """
     get version number from artifact
     """
-    return install_salt.get_version(version_only=True)
+    return install_salt.version
 
 
 @pytest.fixture(scope="session")
@@ -88,6 +88,12 @@ def pytest_addoption(parser):
         help="Install previous version and then upgrade then run tests",
     )
     test_selection_group.addoption(
+        "--downgrade",
+        default=False,
+        action="store_true",
+        help="Install current version and then downgrade to the previous version and run tests",
+    )
+    test_selection_group.addoption(
         "--no-install",
         default=False,
         action="store_true",
@@ -109,6 +115,11 @@ def pytest_addoption(parser):
         "--prev-version",
         action="store",
         help="Test an upgrade from the version specified.",
+    )
+    test_selection_group.addoption(
+        "--use-prev-version",
+        action="store_true",
+        help="Tells the test suite to validate the version using the previous version (for downgrades)",
     )
     test_selection_group.addoption(
         "--download-pkgs",
@@ -168,10 +179,12 @@ def install_salt(request, salt_factories_root_dir):
         conf_dir=salt_factories_root_dir / "etc" / "salt",
         system_service=request.config.getoption("--system-service"),
         upgrade=request.config.getoption("--upgrade"),
+        downgrade=request.config.getoption("--downgrade"),
         no_uninstall=request.config.getoption("--no-uninstall"),
         no_install=request.config.getoption("--no-install"),
         classic=request.config.getoption("--classic"),
         prev_version=request.config.getoption("--prev-version"),
+        use_prev_version=request.config.getoption("--use-prev-version"),
     ) as fixture:
         yield fixture
 
@@ -362,22 +375,20 @@ def salt_master(salt_factories, install_salt, state_tree, pillar_tree):
                     assert _file.owner() == "salt"
                     assert _file.group() == "salt"
 
-    if (platform.is_windows() or platform.is_darwin()) and install_salt.singlebin:
-        start_timeout = 240
-        # For every minion started we have to accept it's key.
-        # On windows, using single binary, it has to decompress it and run the command. Too slow.
-        # So, just in this scenario, use open mode
-        config_overrides["open_mode"] = True
     master_script = False
     if platform.is_windows():
         if install_salt.classic:
             master_script = True
-        # this check will need to be changed to install_salt.relenv
-        # once the package version returns 3006 and not 3005 on master
         if install_salt.relenv:
             master_script = True
         elif not install_salt.upgrade:
             master_script = True
+        if (
+            not install_salt.relenv
+            and install_salt.use_prev_version
+            and not install_salt.classic
+        ):
+            master_script = False
 
     if master_script:
         salt_factories.system_install = False
@@ -439,8 +450,6 @@ def salt_minion(salt_factories, salt_master, install_salt):
     Start up a minion
     """
     start_timeout = None
-    if (platform.is_windows() or platform.is_darwin()) and install_salt.singlebin:
-        start_timeout = 240
     minion_id = random_string("minion-")
     # Since the daemons are "packaged" with tiamat, the salt plugins provided
     # by salt-factories won't be discovered. Provide the required `*_dirs` on
@@ -531,8 +540,6 @@ def salt_api(salt_master, install_salt, extras_pypath):
     """
     shutil.rmtree(str(extras_pypath), ignore_errors=True)
     start_timeout = None
-    if platform.is_windows() and install_salt.singlebin:
-        start_timeout = 240
     factory = salt_master.salt_api_daemon()
     with factory.started(start_timeout=start_timeout):
         yield factory

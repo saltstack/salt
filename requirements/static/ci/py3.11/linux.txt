@@ -147,7 +147,7 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.10
     # via gitpython
-gitpython==3.1.31
+gitpython==3.1.35
     # via -r requirements/static/ci/common.in
 google-auth==2.19.1
     # via kubernetes
@@ -348,7 +348,7 @@ pydantic==1.10.8
     #   inflect
 pyeapi==1.0.0
     # via napalm
-pygit2==1.12.1 ; python_version >= "3.8"
+pygit2==1.12.1
     # via -r requirements/static/ci/linux.in
 pyiface==0.0.11
     # via -r requirements/static/ci/linux.in

@@ -1,14 +1,31 @@
+import subprocess
+
+from pytestskipmarkers.utils import platform
+
+
 def test_help(install_salt):
     """
     Test --help works for all salt cmds
     """
     for cmd in install_salt.binary_paths.values():
-        # TODO: add back salt-cloud and salt-ssh when its fixed
         cmd = [str(x) for x in cmd]
-        if "python" in cmd[0]:
-            ret = install_salt.proc.run(*cmd, "--version")
+
+        if len(cmd) > 1 and "shell" in cmd[1]:
+            # Singlebin build, unable to get the version
+            continue
+
+        # TODO: Remove this condition once the fixed 3005.x classic packages are released.
+        if "salt-proxy" in cmd[0] and platform.is_darwin() and install_salt.classic:
+            continue
+
+        if "python" in cmd[0] and len(cmd) == 1:
+            ret = install_salt.proc.run(
+                *cmd, "--version", stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
             assert "Python" in ret.stdout
         else:
-            ret = install_salt.proc.run(*cmd, "--help")
+            ret = install_salt.proc.run(
+                *cmd, "--help", stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
             assert "Usage" in ret.stdout
             assert ret.returncode == 0

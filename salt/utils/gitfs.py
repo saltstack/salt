@@ -566,7 +566,7 @@ class GitProvider:
         return ret
 
     def _get_lock_file(self, lock_type="update"):
-        return salt.utils.path.join(self.gitdir, lock_type + ".lk")
+        return salt.utils.path.join(self._salt_working_dir, lock_type + ".lk")
 
     @classmethod
     def add_conf_overlay(cls, name):
@@ -858,7 +858,6 @@ class GitProvider:
                     self.id,
                     desired_ssl_verify,
                 )
-                self._ssl_verfiy = self.opts.get(f"{self.role}_ssl_verify", None)
                 conf_changed = True
 
             # Write changes, if necessary

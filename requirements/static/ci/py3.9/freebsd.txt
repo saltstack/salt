@@ -33,13 +33,13 @@ bcrypt==4.0.1
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
-boto3==1.26.152
+boto3==1.21.46
     # via
     #   -r requirements/static/ci/common.in
     #   moto
 boto==2.49.0
     # via -r requirements/static/ci/common.in
-botocore==1.29.152
+botocore==1.24.46
     # via
     #   boto3
     #   moto
@@ -79,6 +79,8 @@ cherrypy==18.8.0
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/freebsd.in
+ciscoconfparse==1.7.24
+    # via napalm
 click==8.1.3
     # via geomet
 clustershell==1.9.1
@@ -99,6 +101,8 @@ cryptography==41.0.3
     #   paramiko
     #   pyopenssl
     #   vcert
+deprecat==2.1.1
+    # via ciscoconfparse
 distlib==0.3.6
     # via virtualenv
 distro==1.8.0
@@ -110,6 +114,7 @@ distro==1.8.0
 dnspython==2.3.0
     # via
     #   -r requirements/static/ci/common.in
+    #   ciscoconfparse
     #   python-etcd
 docker==6.1.3
     # via -r requirements/pytest.txt
@@ -135,7 +140,7 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.10
     # via gitpython
-gitpython==3.1.32
+gitpython==3.1.35
     # via -r requirements/static/ci/common.in
 google-auth==2.19.1
     # via kubernetes
@@ -213,6 +218,8 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
+loguru==0.6.0
+    # via ciscoconfparse
 looseversion==1.2.0
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
@@ -254,20 +261,16 @@ multidict==6.0.4
     # via
     #   aiohttp
     #   yarl
-napalm==4.1.0 ; sys_platform != "win32"
+napalm==3.1.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 ncclient==0.6.13
-    # via
-    #   junos-eznc
-    #   napalm
+    # via junos-eznc
 netaddr==0.8.0
     # via
     #   junos-eznc
     #   napalm
     #   pyeapi
 netmiko==4.2.0
-    # via napalm
-netutils==1.4.1
     # via napalm
 ntc-templates==3.4.0
     # via netmiko
@@ -288,7 +291,9 @@ paramiko==3.2.0 ; sys_platform != "win32" and sys_platform != "darwin"
     #   netmiko
     #   scp
 passlib==1.7.4
-    # via -r requirements/static/ci/common.in
+    # via
+    #   -r requirements/static/ci/common.in
+    #   ciscoconfparse
 pathspec==0.11.1
     # via yamllint
 platformdirs==3.5.3
@@ -438,7 +443,7 @@ rfc3987==1.3.8
     # via -r requirements/static/ci/common.in
 rsa==4.9
     # via google-auth
-s3transfer==0.6.1
+s3transfer==0.5.2
     # via boto3
 scp==0.14.5
     # via
@@ -491,7 +496,9 @@ timelib==0.3.0
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
     #   -r requirements/static/pkg/freebsd.in
 toml==0.10.2
-    # via -r requirements/static/ci/common.in
+    # via
+    #   -r requirements/static/ci/common.in
+    #   ciscoconfparse
 tomli==2.0.1
     # via pytest
 tornado==6.3.2 ; python_version >= "3.8"
@@ -500,18 +507,11 @@ tornado==6.3.2 ; python_version >= "3.8"
     #   -r requirements/base.txt
 transitions==0.9.0
     # via junos-eznc
-ttp-templates==0.3.5
-    # via napalm
-ttp==0.9.4
-    # via
-    #   napalm
-    #   ttp-templates
 types-pyyaml==6.0.1
     # via responses
 typing-extensions==4.6.2
     # via
     #   -c requirements/static/ci/../pkg/py3.9/freebsd.txt
-    #   napalm
     #   pydantic
     #   pytest-shell-utilities
     #   pytest-system-statistics
@@ -543,6 +543,8 @@ werkzeug==2.3.6
     # via
     #   moto
     #   pytest-httpserver
+wrapt==1.15.0
+    # via deprecat
 xmldiff==2.6.3
     # via -r requirements/static/ci/common.in
 xmltodict==0.13.0

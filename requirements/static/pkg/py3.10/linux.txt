@@ -66,7 +66,7 @@ packaging==23.1
     # via -r requirements/base.txt
 portend==3.1.0
     # via cherrypy
-psutil==5.8.0
+psutil==5.9.5
     # via -r requirements/base.txt
 pycparser==2.21
     # via cffi

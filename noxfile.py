@@ -1843,6 +1843,16 @@ def test_pkgs_onedir(session):
             "--no-uninstall",
             "pkg/tests/upgrade/",
         ],
+        "downgrade": [
+            "--downgrade",
+            "--no-uninstall",
+            "pkg/tests/downgrade/",
+        ],
+        "downgrade-classic": [
+            "--downgrade",
+            "--no-uninstall",
+            "pkg/tests/downgrade/",
+        ],
         "download-pkgs": [
             "--download-pkgs",
             "pkg/tests/download/",
@@ -1884,7 +1894,7 @@ def test_pkgs_onedir(session):
         "PKG_TEST_TYPE": chunk,
     }
 
-    if chunk == "upgrade-classic":
+    if chunk in ("upgrade-classic", "downgrade-classic"):
         cmd_args.append("--classic")
         # Workaround for installing and running classic packages from 3005.1
         # They can only run with importlib-metadata<5.0.0.
@@ -1901,6 +1911,7 @@ def test_pkgs_onedir(session):
         + session.posargs
     )
     _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
+
     if chunk not in ("install", "download-pkgs"):
         cmd_args = chunks["install"]
         pytest_args = (
@@ -1914,5 +1925,9 @@ def test_pkgs_onedir(session):
             ]
             + session.posargs
         )
+        if "downgrade" in chunk:
+            pytest_args.append("--use-prev-version")
+        if chunk in ("upgrade-classic", "downgrade-classic"):
+            pytest_args.append("--classic")
         _pytest(session, coverage=False, cmd_args=pytest_args, env=env)
     sys.exit(0)
