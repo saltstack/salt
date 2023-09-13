@@ -570,7 +570,7 @@ def test_installed_with_changes_test_true(list_pkgs):
         },
     ):
 
-        expected = {"dummy": {"new": "installed", "old": ""}}
+        expected = {"dummy": {"new": "some version here", "old": ""}}
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
             ret = pkg.installed("dummy")
