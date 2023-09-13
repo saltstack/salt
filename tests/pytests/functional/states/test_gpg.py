@@ -4,16 +4,9 @@ import subprocess
 import psutil
 import pytest
 
-try:
-    import gnupg as gnupglib
-
-    HAS_GNUPG = True
-except ImportError:
-    HAS_GNUPG = False
-
+gnupglib = pytest.importorskip("gnupg", reason="Needs python-gnupg library")
 
 pytestmark = [
-    pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library"),
     pytest.mark.skip_if_binaries_missing("gpg", reason="Needs gpg binary"),
 ]
 
@@ -98,7 +91,7 @@ def gnupg_keyring(gpghome, keyring):
 
 
 @pytest.fixture(params=["a"])
-def pubkeys_present(gnupg, request):
+def _pubkeys_present(gnupg, request):
     pubkeys = [request.getfixturevalue(f"key_{x}_pub") for x in request.param]
     fingerprints = [request.getfixturevalue(f"key_{x}_fp") for x in request.param]
     gnupg.import_keys("\n".join(pubkeys))
@@ -109,7 +102,7 @@ def pubkeys_present(gnupg, request):
     # cleanup is taken care of by gpghome and tmp_path
 
 
-@pytest.mark.usefixtures("pubkeys_present")
+@pytest.mark.usefixtures("_pubkeys_present")
 def test_gpg_present_no_changes(gpghome, gpg, gnupg, key_a_fp):
     assert gnupg.list_keys(keys=key_a_fp)
     ret = gpg.present(
@@ -119,12 +112,10 @@ def test_gpg_present_no_changes(gpghome, gpg, gnupg, key_a_fp):
     assert not ret.changes
 
 
-@pytest.mark.skip_unless_on_linux(
-    reason="Complains about deleting private keys first when they are absent"
-)
-@pytest.mark.usefixtures("pubkeys_present")
+@pytest.mark.usefixtures("_pubkeys_present")
 def test_gpg_absent(gpghome, gpg, gnupg, key_a_fp):
     assert gnupg.list_keys(keys=key_a_fp)
+    assert not gnupg.list_keys(keys=key_a_fp, secret=True)
     ret = gpg.absent(key_a_fp[-16:], gnupghome=str(gpghome))
     assert ret.result
     assert ret.changes
@@ -139,7 +130,7 @@ def test_gpg_absent_no_changes(gpghome, gpg, gnupg, key_a_fp):
     assert not ret.changes
 
 
-@pytest.mark.usefixtures("pubkeys_present")
+@pytest.mark.usefixtures("_pubkeys_present")
 def test_gpg_absent_test_mode_no_changes(gpghome, gpg, gnupg, key_a_fp):
     assert gnupg.list_keys(keys=key_a_fp)
     ret = gpg.absent(key_a_fp[-16:], gnupghome=str(gpghome), test=True)
