@@ -95,13 +95,13 @@ def test_uptodate_with_changes(pkgs):
     ):
         # Run state with test=false
         with patch.dict(pkg.__opts__, {"test": False}):
-            ret = pkg.uptodate("dummy", test=True)
+            ret = pkg.uptodate("dummy")
             assert ret["result"]
             assert ret["changes"] == pkgs
 
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg.uptodate("dummy", test=True)
+            ret = pkg.uptodate("dummy")
             assert ret["result"] is None
             assert ret["changes"] == pkgs
 
@@ -158,13 +158,13 @@ def test_uptodate_no_changes():
     ):
         # Run state with test=false
         with patch.dict(pkg.__opts__, {"test": False}):
-            ret = pkg.uptodate("dummy", test=True)
+            ret = pkg.uptodate("dummy")
             assert ret["result"]
             assert ret["changes"] == {}
 
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg.uptodate("dummy", test=True)
+            ret = pkg.uptodate("dummy")
             assert ret["result"]
             assert ret["changes"] == {}
 
@@ -573,7 +573,7 @@ def test_installed_with_changes_test_true(list_pkgs):
         expected = {"dummy": {"new": "installed", "old": ""}}
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg.installed("dummy", test=True)
+            ret = pkg.installed("dummy")
             assert ret["result"] is None
             assert ret["changes"] == expected
 
@@ -627,7 +627,7 @@ def test_removed_purged_with_changes_test_true(list_pkgs, action):
 
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg_actions[action]("pkga", test=True)
+            ret = pkg_actions[action]("pkga")
             assert ret["result"] is None
             assert ret["changes"] == expected
 
