@@ -14,7 +14,7 @@ mccabe==0.6.1
     # via pylint
 modernize==0.5
     # via saltpylint
-pycodestyle==2.5.0
+pycodestyle==2.10.0
     # via saltpylint
 pylint==2.4.4
     # via

@@ -14,7 +14,7 @@ mccabe==0.6.1
     # via pylint
 modernize==0.5
     # via saltpylint
-pycodestyle==2.5.0
+pycodestyle==2.10.0
     # via saltpylint
 pylint==2.4.4
     # via
@@ -31,6 +31,4 @@ toml==0.10.2
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/lint.in
 wrapt==1.11.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.txt
-    #   astroid
+    # via astroid

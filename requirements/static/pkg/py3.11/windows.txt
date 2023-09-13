@@ -44,8 +44,6 @@ importlib-metadata==6.6.0
     # via -r requirements/windows.txt
 inflect==6.0.4
     # via jaraco.text
-ioloop==0.1a0
-    # via -r requirements/windows.txt
 jaraco.collections==4.1.0
     # via cherrypy
 jaraco.context==4.3.0
@@ -93,7 +91,7 @@ pydantic==1.10.8
     # via inflect
 pymssql==2.2.7
     # via -r requirements/windows.txt
-pymysql==1.0.2
+pymysql==1.0.3
     # via -r requirements/windows.txt
 pyopenssl==23.2.0
     # via -r requirements/windows.txt
