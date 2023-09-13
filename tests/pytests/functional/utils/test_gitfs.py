@@ -238,3 +238,38 @@ def test_gitpython_remote_map(gitpython_gitfs_opts):
 @skipif_no_pygit2
 def test_pygit2_remote_map(pygit2_gitfs_opts):
     _test_remote_map(pygit2_gitfs_opts)
+
+
+def _test_lock(opts):
+    g = _get_gitfs(
+        opts,
+        "https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    )
+    g.fetch_remotes()
+    assert len(g.remotes) == 1
+    repo = g.remotes[0]
+    assert repo.get_salt_working_dir() in repo._get_lock_file()
+    assert repo.lock() == (
+        [
+            "Set update lock for gitfs remote 'https://github.com/saltstack/salt-test-pillar-gitfs.git'"
+        ],
+        [],
+    )
+    assert os.path.isfile(repo._get_lock_file())
+    assert repo.clear_lock() == (
+        [
+            "Removed update lock for gitfs remote 'https://github.com/saltstack/salt-test-pillar-gitfs.git'"
+        ],
+        [],
+    )
+    assert not os.path.isfile(repo._get_lock_file())
+
+
+@skipif_no_gitpython
+def test_gitpython_lock(gitpython_gitfs_opts):
+    _test_lock(gitpython_gitfs_opts)
+
+
+@skipif_no_pygit2
+def test_pygit2_lock(pygit2_gitfs_opts):
+    _test_lock(pygit2_gitfs_opts)
