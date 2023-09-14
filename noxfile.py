@@ -961,7 +961,14 @@ def docs(session, compress, update, clean):
     """
     Build Salt's Documentation
     """
-    session.notify("docs-html-{}(compress={})".format(session.python, compress))
+    session.notify(
+        find_session_runner(
+            session,
+            "docs-html-{}".format(session.python),
+            compress=compress,
+            clean=clean,
+        )
+    )
     session.notify(
         find_session_runner(
             session,
