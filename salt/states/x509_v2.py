@@ -186,7 +186,7 @@ import logging
 import os.path
 from datetime import datetime, timedelta, timezone
 
-import salt.utils.files
+import salt.utils.atomicfile
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
@@ -574,8 +574,11 @@ def certificate_managed(
                 _add_sub_state_run(ret, file_managed_ret)
                 if not _check_file_ret(file_managed_ret, ret, current):
                     return ret
-                _safe_atomic_write(
-                    real_name, base64.b64decode(cert), file_args.get("backup", "")
+                salt.utils.atomicfile.safe_atomic_write(
+                    real_name,
+                    base64.b64decode(cert),
+                    __salt__["config.backup_mode"](file_args.get("backup", "")),
+                    __opts__["cachedir"],
                 )
 
         if not changes or encoding in ["pem", "pkcs7_pem"]:
@@ -938,8 +941,11 @@ def crl_managed(
                 _add_sub_state_run(ret, file_managed_ret)
                 if not _check_file_ret(file_managed_ret, ret, current):
                     return ret
-                _safe_atomic_write(
-                    real_name, base64.b64decode(crl), file_args.get("backup", "")
+                salt.utils.atomicfile.safe_atomic_write(
+                    real_name,
+                    base64.b64decode(crl),
+                    __salt__["config.backup_mode"](file_args.get("backup", "")),
+                    __opts__["cachedir"],
                 )
 
         if not changes or encoding == "pem":
@@ -1149,8 +1155,11 @@ def csr_managed(
                 _add_sub_state_run(ret, file_managed_ret)
                 if not _check_file_ret(file_managed_ret, ret, current):
                     return ret
-                _safe_atomic_write(
-                    real_name, base64.b64decode(csr), file_args.get("backup", "")
+                salt.utils.atomicfile.safe_atomic_write(
+                    real_name,
+                    base64.b64decode(csr),
+                    __salt__["config.backup_mode"](file_args.get("backup", "")),
+                    __opts__["cachedir"],
                 )
         if not changes or encoding == "pem":
             replace = bool((encoding == "pem") and changes)
@@ -1455,8 +1464,11 @@ def private_key_managed(
                 _add_sub_state_run(ret, file_managed_ret)
                 if not _check_file_ret(file_managed_ret, ret, current):
                     return ret
-                _safe_atomic_write(
-                    real_name, base64.b64decode(pk), file_args.get("backup", "")
+                salt.utils.atomicfile.safe_atomic_write(
+                    real_name,
+                    base64.b64decode(pk),
+                    __salt__["config.backup_mode"](file_args.get("backup", "")),
+                    __opts__["cachedir"],
                 )
 
         if not changes or encoding == "pem":
@@ -1501,7 +1513,12 @@ def certificate_managed_ssh(
             contents = contents.encode()
         else:
             contents = base64.b64decode(contents)
-        _safe_atomic_write(name, contents, kwargs.get("backup", ""))
+        salt.utils.atomicfile.safe_atomic_write(
+            name,
+            contents,
+            __salt__["config.backup_mode"](kwargs.get("backup", "")),
+            __opts__["cachedir"],
+        )
     return ret
 
 
@@ -1659,17 +1676,3 @@ def _compareattr_safe(obj, attr, comp):
         return getattr(obj, attr) == comp
     except AttributeError:
         return False
-
-
-def _safe_atomic_write(dst, data, backup):
-    """
-    Create a temporary file with only user r/w perms and atomically
-    copy it to the destination, honoring ``backup``.
-    """
-    tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
-    with salt.utils.files.fopen(tmp, "wb") as tmp_:
-        tmp_.write(data)
-    salt.utils.files.copyfile(
-        tmp, dst, __salt__["config.backup_mode"](backup), __opts__["cachedir"]
-    )
-    salt.utils.files.safe_rm(tmp)
