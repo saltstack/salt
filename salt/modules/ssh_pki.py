@@ -131,6 +131,7 @@ try:
 except ImportError:
     HAS_CRYPTOGRAPHY = False
 
+import salt.utils.atomicfile
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.stringutils
@@ -368,7 +369,7 @@ def create_private_key(
 
     path
         Instead of returning the private key, write it to this file path.
-        Note that this does not use safe permissions and should be avoided.
+        The file will be written with ``0600`` permissions if it does not exist.
 
     pubkey_suffix
         If ``path`` is specified, write the corresponding pubkey to the same path
@@ -403,8 +404,7 @@ def create_private_key(
             "public_key": get_public_key(out, passphrase=passphrase),
         }
 
-    with salt.utils.files.fopen(path, "wb") as fp_:
-        fp_.write(out.encode())
+    salt.utils.atomicfile.safe_atomic_write(path, out)
     return f"Private key written to {path}"
 
 
@@ -610,12 +610,12 @@ def read_certificate(certificate):
         "key_type": key_type,
         "serial_number": x509util.dec2hex(cert.serial),
         "issuer_public_key": _encode_public_key(cert.signature_key()).decode(),
-        "not_before": datetime.datetime.fromtimestamp(cert.valid_after).strftime(
-            x509util.TIME_FMT
-        ),
-        "not_after": datetime.datetime.fromtimestamp(cert.valid_before).strftime(
-            x509util.TIME_FMT
-        ),
+        "not_before": datetime.datetime.fromtimestamp(
+            cert.valid_after, tz=datetime.timezone.utc
+        ).strftime(x509util.TIME_FMT),
+        "not_after": datetime.datetime.fromtimestamp(
+            cert.valid_before, tz=datetime.timezone.utc
+        ).strftime(x509util.TIME_FMT),
         "public_key": _encode_public_key(cert.public_key()).decode(),
         "critical_options": _parse_options(cert),
         "extensions": _parse_extensions(cert),
