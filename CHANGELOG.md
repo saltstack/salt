@@ -7,6 +7,18 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+## Salt v3005.3 (2023-09-14)
+
+### Fixed
+
+- Fix __env__ and improve cache cleaning see more info at pull #65017. (#65002)
+
+
+### Security
+
+- Update to `gitpython>=3.1.35` due to https://github.com/advisories/GHSA-wfm5-v35h-vwf4 and https://github.com/advisories/GHSA-cwvm-v4w8-q58c (#65167)
+
+
 Salt v3005.2 (2023-07-31)
 =========================
 
