@@ -1404,3 +1404,46 @@ async def test_req_chan_auth_v2_new_minion_without_master_pub(
     finally:
         client.close()
         server.close()
+
+
+async def test_req_chan_bad_payload_to_decode(
+    minion_opts, master_opts, pki_dir, io_loop
+):
+    minion_opts.update(
+        {
+            "master_uri": "tcp://127.0.0.1:4506",
+            "interface": "127.0.0.1",
+            "ret_port": 4506,
+            "ipv6": False,
+            "sock_dir": ".",
+            "pki_dir": str(pki_dir.joinpath("minion")),
+            "id": "minion",
+            "__role": "minion",
+            "keysize": 4096,
+            "max_minions": 0,
+            "auto_accept": False,
+            "open_mode": False,
+            "key_pass": None,
+            "publish_port": 4505,
+            "auth_mode": 1,
+            "acceptance_wait_time": 3,
+            "acceptance_wait_time_max": 3,
+        }
+    )
+    SMaster.secrets["aes"] = {
+        "secret": multiprocessing.Array(
+            ctypes.c_char,
+            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+        ),
+        "reload": salt.crypt.Crypticle.generate_key_string,
+    }
+    master_opts.update(dict(minion_opts, pki_dir=str(pki_dir.joinpath("master"))))
+    master_opts["master_sign_pubkey"] = False
+    server = salt.channel.server.ReqServerChannel.factory(master_opts)
+
+    with pytest.raises(salt.exceptions.SaltDeserializationError):
+        server._decode_payload(None)
+    with pytest.raises(salt.exceptions.SaltDeserializationError):
+        server._decode_payload({})
+    with pytest.raises(salt.exceptions.SaltDeserializationError):
+        server._decode_payload(12345)
