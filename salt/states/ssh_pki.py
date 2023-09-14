@@ -15,18 +15,25 @@ About
 This module can enable managing a complete SSH PKI infrastructure, including creating
 private keys, CAs and certificates. It includes the ability to generate a
 private key on a server, and have the corresponding public key sent to a remote
-CA to create a CA signed certificate. This can be done in a secure manner, where
+CA to create a CA-signed certificate. This can be done in a secure manner, where
 private keys are always generated locally and never moved across the network.
+
+.. note::
+
+    In addition to the native Salt backend (the ``ssh_pki`` execution module),
+    you can have the state module call a different (compatible) execution module
+    using the ``backend`` parameter.
 
 Example
 -------
-Here is a simple example scenario. In this example ``ca`` is the ca server,
+Here is a simple example scenario. In this example, ``ca`` is the CA server
 and ``www`` is a web server that needs a certificate signed by ``ca``.
 
 .. note::
 
-    Remote signing requires the setup of :term:`Peer Communication` and signing
-    policies. Please see the :ref:`execution module docs <sshcert-setup>`.
+    Remote signing using the native Salt backend requires the setup of
+    :term:`Peer Communication` and signing policies. Please see the
+    :ref:`execution module docs <sshcert-setup>`.
 
 
 /srv/salt/top.sls
@@ -56,7 +63,7 @@ the public key to the mine, where it can be easily retrieved by other minions.
     Create CA private key:
       ssh_pki.private_key_managed:
         - name: /etc/pki/ssh/ca.key
-        - keysize: 4096
+        - algo: ed25519
         - backup: true
         - require:
           - file: /etc/pki/ssh/issued_certs
@@ -111,7 +118,7 @@ signed by our new CA. Mind that the specifics depend on the OS.
           - file: /etc/ssh/trusted-user-ca-keys.pem
 
 This state creates a private key to use as the host key, then requests
-a certificate signed by our CA according to the www policy and configures
+a certificate signed by our CA according to the ``www_host`` policy and configures
 the SSH server to use it.
 
 .. code-block:: yaml
@@ -121,14 +128,14 @@ the SSH server to use it.
     Create host private key:
       ssh_pki.private_key_managed:
         - name: /etc/ssh/ssh_host_rsa_key
-        - keysize: 4096
+        - algo: ed25519
         - backup: true
 
     Request certificate:
       ssh_pki.certificate_managed:
         - name: /etc/ssh/ssh_host_rsa_key.pub
         - ca_server: ca
-        - signing_policy: www
+        - signing_policy: www_host
         - private_key: /etc/ssh/ssh_host_rsa_key
         - backup: true
         - require:
@@ -219,7 +226,8 @@ def certificate_managed(
         Defaults to ``30d`` for host keys and ``1h`` for user keys.
 
     ca_server
-        Request a remotely signed certificate from ca_server. For this to
+        Request a remotely signed certificate from another minion acting as
+        a CA server via the ``ssh_pki`` execution module. For this to
         work, a ``signing_policy`` must be specified, and that same policy
         must be configured on the ca_server.  Also, the Salt master must
         permit peers to call the ``ssh_pki.sign_remote_certificate`` function.
@@ -240,22 +248,12 @@ def certificate_managed(
         otherwise optional.
 
     copypath
-        Create a copy of the issued certificate in PEM format in this directory.
-        The file will be named ``<serial_number>.crt`` if prepend_cn is false.
+        Create a copy of the issued certificate in this directory.
+        The file will be named ``<serial_number>.crt``.
 
     cert_type
-        The type of certificate to create. Either ``host`` or ``user``.
+        The certificate type to generate. Either ``user`` or ``host``.
         Required if not specified in the signing policy.
-
-    signing_private_key
-        The private key corresponding to the public key in ``signing_cert``. Required.
-
-    signing_private_key_passphrase
-        If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
-
-    public_key
-        The public key the certificate should be issued for. Either this or
-        ``private_key`` is required.
 
     private_key
         The private key corresponding to the public key the certificate should
@@ -263,6 +261,16 @@ def certificate_managed(
 
     private_key_passphrase
         If ``private_key`` is specified and encrypted, the passphrase to decrypt it.
+
+    public_key
+        The public key the certificate should be issued for. Either this or
+        ``private_key`` is required.
+
+    signing_private_key
+        The private key of the CA that should be used to sign the certificate. Required.
+
+    signing_private_key_passphrase
+        If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
 
     serial_number
         A serial number to be embedded in the certificate. If unspecified, will
@@ -887,11 +895,11 @@ def _check_file_ret(fret, ret, current):
 
 
 def _build_cert(
-    ca_server=None,
-    backend=None,
-    backend_args=None,
-    signing_policy=None,
-    signing_private_key=None,
+    ca_server,
+    backend,
+    backend_args,
+    signing_policy,
+    signing_private_key,
     **kwargs,
 ):
     backend = backend or "ssh_pki"

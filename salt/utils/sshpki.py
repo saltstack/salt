@@ -244,7 +244,7 @@ def load_file_or_bytes(fob):
     if not isinstance(fob, bytes):
         raise SaltInvocationError(
             "Could not load provided source. You need to pass an existing file, "
-            "(PEM|hex|base64)-encoded string or raw bytes."
+            "string or raw bytes."
         )
     return fob
 

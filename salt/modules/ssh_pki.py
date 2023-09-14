@@ -71,7 +71,8 @@ allowed_extensions
 
 allowed_valid_principals
     A list of principals that can be requested to be set under
-    this policy. This is an alias for ``valid_principals``.
+    this policy. This is an alias for ``valid_principals`` since
+    requesting less permissions is always possible.
 
 default_critical_options
     Defines default critical options that can be overridden by the requester.
@@ -94,7 +95,7 @@ max_ttl
 
 ttl
     The default TTL that can be overridden by the requester.
-    Defaults to ``max_ttl`` if unspecified.
+    Defaults to ``max_ttl``.
 
 Restricting requesters
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -161,7 +162,7 @@ def create_certificate(
     .. note::
 
         All parameters that take a public key or private key
-        can be specified either as a OpenSSH/hex/base64 string or a path to a
+        can be specified either as a string or a path to a
         local file encoded for OpenSSH.
 
     CLI Example:
@@ -171,10 +172,10 @@ def create_certificate(
         salt '*' ssh_pki.create_certificate private_key=/root/.ssh/id_rsa signing_private_key='/etc/pki/ssh/myca.key'
 
     ca_server
-        Request a remotely signed certificate from ca_server. For this to
-        work, a ``signing_policy`` must be specified, and that same policy
-        must be configured on the ca_server. See `Signing policies`_ for
-        details. Also, the Salt master must permit peers to call the
+        Request a remotely signed certificate from another minion acting as
+        a CA server. For this to work, a ``signing_policy`` must be specified,
+        and that same policy must be configured on the ca_server. See `Signing policies`_
+        for details. Also, the Salt master must permit peers to call the
         ``sign_remote_certificate`` function, see `Peer communication`_.
 
     signing_policy
@@ -208,8 +209,8 @@ def create_certificate(
         If ``private_key`` is specified and encrypted, the passphrase to decrypt it.
 
     public_key
-        The public key the certificate should be issued for.
-        Either this or ``public_key`` is required.
+        The public key the certificate should be issued for. Either this or
+        ``private_key`` is required.
 
     signing_private_key
         The private key of the CA that should be used to sign the certificate. Required.
@@ -251,6 +252,11 @@ def create_certificate(
 
     all_principals
         Allow any principals. Defaults to false.
+
+    key_id
+        Specify a string-valued key ID for the signed public key.
+        When the certificate is used for authentication, this value will be
+        logged in plaintext.
     """
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith("_")}
     # This is supported by the x509 modules, provide a transparent translation
@@ -370,7 +376,7 @@ def create_private_key(
         writing the public key. Defaults to ``.pub``.
 
     overwrite
-        If ``path`` is specified and the file exists, do not overwrite it.
+        If ``path`` is specified and the file exists, overwrite it.
         Defaults to false.
 
     raw
@@ -481,7 +487,7 @@ def expires(certificate, ttl=0):
 
 def get_private_key_size(private_key, passphrase=None):
     """
-    Return information about the keysize of a private key (RSA/EC).
+    Return information about the key size of a private key (RSA/EC).
 
     CLI Example:
 
