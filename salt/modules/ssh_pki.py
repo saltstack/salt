@@ -260,11 +260,6 @@ def create_certificate(
         logged in plaintext.
     """
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith("_")}
-    # This is supported by the x509 modules, provide a transparent translation
-    if "days_valid" in kwargs:
-        days_valid = kwargs.pop("days_valid")
-        if days_valid is not None and not kwargs.get("ttl"):
-            kwargs["ttl"] = f"{days_valid}d"
 
     if not kwargs.get("signing_private_key") and not ca_server:
         raise SaltInvocationError(
