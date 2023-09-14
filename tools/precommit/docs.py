@@ -1,9 +1,8 @@
 """
-    tasks.docstrings
-    ~~~~~~~~~~~~~~~~
-
-    Check salt code base for for missing or wrong docstrings
+Check salt code base for for missing or wrong docs
 """
+# pylint: disable=resource-leakage,broad-except,3rd-party-module-not-gated
+from __future__ import annotations
 
 import ast
 import collections
@@ -11,21 +10,18 @@ import os
 import pathlib
 import re
 
-from invoke import task  # pylint: disable=3rd-party-module-not-gated
+from ptscripts import Context, command_group
 
-from tasks import utils
+import tools.utils
 
-CODE_DIR = pathlib.Path(__file__).resolve().parent.parent
-DOCS_DIR = CODE_DIR / "doc"
-SALT_CODE_DIR = CODE_DIR / "salt"
+DOCS_DIR = tools.utils.REPO_ROOT / "doc"
+SALT_CODE_DIR = tools.utils.REPO_ROOT / "salt"
 
-os.chdir(str(CODE_DIR))
-
-python_module_to_doc_path = {}
-doc_path_to_python_module = {}
+PYTHON_MODULE_TO_DOC_PATH = {}
+DOC_PATH_TO_PYTHON_MODULE = {}
 
 
-check_paths = (
+CHECK_PATHS = (
     "salt/auth",
     "salt/beacons",
     "salt/cache",
@@ -52,11 +48,13 @@ check_paths = (
     "salt/tops",
     "salt/wheel",
 )
-exclude_paths = (
+EXCLUDE_PATHS = (
     "salt/cloud/cli.py",
     "salt/cloud/exceptions.py",
     "salt/cloud/libcloudfuncs.py",
 )
+
+cgroup = command_group(name="docs", help=__doc__, parent="pre-commit")
 
 
 def build_path_cache():
@@ -65,13 +63,13 @@ def build_path_cache():
     """
 
     for path in SALT_CODE_DIR.rglob("*.py"):
-        path = path.resolve().relative_to(CODE_DIR)
+        path = path.resolve().relative_to(tools.utils.REPO_ROOT)
         strpath = str(path)
         if strpath.endswith("__init__.py"):
             continue
-        if not strpath.startswith(check_paths):
+        if not strpath.startswith(CHECK_PATHS):
             continue
-        if strpath.startswith(exclude_paths):
+        if strpath.startswith(EXCLUDE_PATHS):
             continue
 
         parts = list(path.parts)
@@ -113,32 +111,21 @@ def build_path_cache():
                 / "all"
                 / str(path).replace(".py", ".rst").replace(os.sep, ".")
             )
-        stub_path = stub_path.relative_to(CODE_DIR)
-        python_module_to_doc_path[path] = stub_path
+        stub_path = stub_path.relative_to(tools.utils.REPO_ROOT)
+        PYTHON_MODULE_TO_DOC_PATH[path] = stub_path
         if path.exists():
-            doc_path_to_python_module[stub_path] = path
+            DOC_PATH_TO_PYTHON_MODULE[stub_path] = path
 
 
 build_path_cache()
 
 
 def build_file_list(files, extension):
-    # Unfortunately invoke does not support nargs.
-    # We migth have been passed --files="foo.py bar.py"
-    # Turn that into a list of paths
-    _files = []
-    for path in files:
-        if not path:
-            continue
-        for spath in path.split():
-            if not spath.endswith(extension):
-                continue
-            _files.append(spath)
-    if not _files:
-        _files = CODE_DIR.rglob("*{}".format(extension))
+    if not files:
+        _files = tools.utils.REPO_ROOT.rglob("*{}".format(extension))
     else:
-        _files = [pathlib.Path(fname).resolve() for fname in _files]
-    _files = [path.relative_to(CODE_DIR) for path in _files]
+        _files = [fpath.resolve() for fpath in files if fpath.suffix == extension]
+    _files = [path.relative_to(tools.utils.REPO_ROOT) for path in _files]
     return _files
 
 
@@ -148,9 +135,9 @@ def build_python_module_paths(files):
         strpath = str(path)
         if strpath.endswith("__init__.py"):
             continue
-        if not strpath.startswith(check_paths):
+        if not strpath.startswith(CHECK_PATHS):
             continue
-        if strpath.startswith(exclude_paths):
+        if strpath.startswith(EXCLUDE_PATHS):
             continue
         _files.append(path)
     return _files
@@ -160,8 +147,7 @@ def build_docs_paths(files):
     return build_file_list(files, ".rst")
 
 
-@task(iterable=["files"], positional=["files"])
-def check_inline_markup(ctx, files):
+def check_inline_markup(ctx: Context, files: list[pathlib.Path]) -> int:
     """
     Check docstring for :doc: usage
 
@@ -174,9 +160,6 @@ def check_inline_markup(ctx, files):
 
     https://github.com/saltstack/salt/issues/12788
     """
-    # CD into Salt's repo root directory
-    ctx.cd(CODE_DIR)
-
     files = build_python_module_paths(files)
 
     exitcode = 0
@@ -188,18 +171,14 @@ def check_inline_markup(ctx, files):
             if not docstring:
                 continue
             if ":doc:" in docstring:
-                utils.error(
-                    "The {} function in {} contains ':doc:' usage", funcdef.name, path
+                ctx.error(
+                    f"The {funcdef.name} function in {path} contains ':doc:' usage"
                 )
                 exitcode += 1
     return exitcode
 
 
-@task(iterable=["files"])
-def check_stubs(ctx, files):
-    # CD into Salt's repo root directory
-    ctx.cd(CODE_DIR)
-
+def check_stubs(ctx: Context, files: list[pathlib.Path]) -> int:
     files = build_python_module_paths(files)
 
     exitcode = 0
@@ -207,21 +186,20 @@ def check_stubs(ctx, files):
         strpath = str(path)
         if strpath.endswith("__init__.py"):
             continue
-        if not strpath.startswith(check_paths):
+        if not strpath.startswith(CHECK_PATHS):
             continue
-        if strpath.startswith(exclude_paths):
+        if strpath.startswith(EXCLUDE_PATHS):
             continue
-        stub_path = python_module_to_doc_path[path]
+        stub_path = PYTHON_MODULE_TO_DOC_PATH[path]
         if not stub_path.exists():
             exitcode += 1
-            utils.error(
-                "The module at {} does not have a sphinx stub at {}", path, stub_path
+            ctx.error(
+                f"The module at {path} does not have a sphinx stub at {stub_path}"
             )
     return exitcode
 
 
-@task(iterable=["files"])
-def check_virtual(ctx, files):
+def check_virtual(ctx: Context, files: list[pathlib.Path]) -> int:
     """
     Check if .rst files for each module contains the text ".. _virtual"
     indicating it is a virtual doc page, and, in case a module exists by
@@ -235,22 +213,16 @@ def check_virtual(ctx, files):
         try:
             contents = path.read_text()
         except Exception as exc:  # pylint: disable=broad-except
-            utils.error(
-                "Error while processing '{}': {}".format(
-                    path,
-                    exc,
-                )
-            )
+            ctx.error(f"Error while processing '{path}': {exc}")
             exitcode += 1
             continue
         if ".. _virtual-" in contents:
             try:
-                python_module = doc_path_to_python_module[path]
-                utils.error(
-                    "The doc file at {} indicates that it's virtual, yet, there's a"
-                    " python module at {} that will shaddow it.",
-                    path,
-                    python_module,
+                python_module = DOC_PATH_TO_PYTHON_MODULE[path]
+                ctx.error(
+                    f"The doc file at {path} indicates that it's virtual, yet, "
+                    f"there's a python module at {python_module} that will "
+                    "shaddow it.",
                 )
                 exitcode += 1
             except KeyError:
@@ -259,8 +231,7 @@ def check_virtual(ctx, files):
     return exitcode
 
 
-@task(iterable=["files"])
-def check_module_indexes(ctx, files):
+def check_module_indexes(ctx: Context, files: list[pathlib.Path]) -> int:
     exitcode = 0
     files = build_docs_paths(files)
     for path in files:
@@ -288,9 +259,8 @@ def check_module_indexes(ctx, files):
         )
         if module_index != sorted(module_index):
             exitcode += 1
-            utils.error(
-                "The autosummary mods in {} are not properly sorted. Please sort them.",
-                path,
+            ctx.error(
+                f"The autosummary mods in {path} are not properly sorted. Please sort them.",
             )
 
         module_index_duplicates = [
@@ -298,8 +268,8 @@ def check_module_indexes(ctx, files):
         ]
         if module_index_duplicates:
             exitcode += 1
-            utils.error(
-                "Module index {} contains duplicates: {}", path, module_index_duplicates
+            ctx.error(
+                f"Module index {path} contains duplicates: {module_index_duplicates}"
             )
         # Let's check if all python modules are included in the index
         path_parts = list(path.parts)
@@ -320,7 +290,7 @@ def check_module_indexes(ctx, files):
             package = "log_handlers"
             path_parts = []
         python_package = SALT_CODE_DIR.joinpath(package, *path_parts).relative_to(
-            CODE_DIR
+            tools.utils.REPO_ROOT
         )
         modules = set()
         for module in python_package.rglob("*.py"):
@@ -358,26 +328,26 @@ def check_module_indexes(ctx, files):
         missing_modules_in_index = set(modules) - set(module_index)
         if missing_modules_in_index:
             exitcode += 1
-            utils.error(
-                "The module index at {} is missing the following modules: {}",
-                path,
-                ", ".join(missing_modules_in_index),
+            ctx.error(
+                f"The module index at {path} is missing the following modules: "
+                f"{', '.join(missing_modules_in_index)}"
             )
         extra_modules_in_index = set(module_index) - set(modules)
         if extra_modules_in_index:
             exitcode += 1
-            utils.error(
-                "The module index at {} has extra modules(non existing): {}",
-                path,
-                ", ".join(extra_modules_in_index),
+            ctx.error(
+                f"The module index at {path} has extra modules(non existing): "
+                f"{', '.join(extra_modules_in_index)}"
             )
     return exitcode
 
 
-@task(iterable=["files"])
-def check_stray(ctx, files):
+def check_stray(ctx: Context, files: list[pathlib.Path]) -> int:
     exitcode = 0
-    exclude_paths = (
+    exclude_pathlib_paths: tuple[pathlib.Path, ...]
+    exclude_paths: tuple[str, ...]
+
+    exclude_pathlib_paths = (
         DOCS_DIR / "_inc",
         DOCS_DIR / "ref" / "cli" / "_includes",
         DOCS_DIR / "ref" / "cli",
@@ -412,41 +382,50 @@ def check_stray(ctx, files):
         DOCS_DIR / "ref" / "states" / "writing.rst",
         DOCS_DIR / "topics",
     )
-    exclude_paths = tuple(str(p.relative_to(CODE_DIR)) for p in exclude_paths)
+    exclude_paths = tuple(
+        str(p.relative_to(tools.utils.REPO_ROOT)) for p in exclude_pathlib_paths
+    )
     files = build_docs_paths(files)
     for path in files:
-        if not str(path).startswith(str((DOCS_DIR / "ref").relative_to(CODE_DIR))):
+        if not str(path).startswith(
+            str((DOCS_DIR / "ref").relative_to(tools.utils.REPO_ROOT))
+        ):
             continue
         if str(path).startswith(exclude_paths):
             continue
         if path.name in ("index.rst", "glossary.rst", "faq.rst", "README.rst"):
             continue
-        try:
-            python_module = doc_path_to_python_module[path]
-        except KeyError:
+        if path not in DOC_PATH_TO_PYTHON_MODULE:
             contents = path.read_text()
             if ".. _virtual-" in contents:
                 continue
             exitcode += 1
-            utils.error(
-                "The doc at {} doesn't have a corresponding python module and is"
-                " considered a stray doc. Please remove it.",
-                path,
+            ctx.error(
+                f"The doc at {path} doesn't have a corresponding python module "
+                "and is considered a stray doc. Please remove it."
             )
     return exitcode
 
 
-@task(iterable=["files"])
-def check(ctx, files):
+@cgroup.command(
+    name="check",
+    arguments={
+        "files": {
+            "help": "List of files to check",
+            "nargs": "*",
+        }
+    },
+)
+def check(ctx: Context, files: list[pathlib.Path]) -> None:
     exitcode = 0
-    utils.info("Checking inline :doc: markup")
+    ctx.info("Checking inline :doc: markup")
     exitcode += check_inline_markup(ctx, files)
-    utils.info("Checking python module stubs")
+    ctx.info("Checking python module stubs")
     exitcode += check_stubs(ctx, files)
-    utils.info("Checking virtual modules")
+    ctx.info("Checking virtual modules")
     exitcode += check_virtual(ctx, files)
-    utils.info("Checking stray docs")
+    ctx.info("Checking stray docs")
     exitcode += check_stray(ctx, files)
-    utils.info("Checking doc module indexes")
+    ctx.info("Checking doc module indexes")
     exitcode += check_module_indexes(ctx, files)
-    utils.exit_invoke(exitcode)
+    ctx.exit(exitcode)
