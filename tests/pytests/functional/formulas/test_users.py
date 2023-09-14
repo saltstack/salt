@@ -27,7 +27,7 @@ def test_users_formula(modules):
     assert not ret.errors
     assert not ret.failed
     for staterun in ret:
-        assert staterun.result
+        assert staterun.result is True
 
     # bashrc
     ret = modules.state.sls("users.bashrc")
@@ -36,4 +36,4 @@ def test_users_formula(modules):
     assert not ret.errors
     assert not ret.failed
     for staterun in ret:
-        assert staterun.result
+        assert staterun.result is True
