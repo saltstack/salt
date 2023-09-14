@@ -153,4 +153,5 @@ You can run the test suite run if all the artifacts are in the correct location.
 
         If you are testing upgrades or downgrades and classic packages are
         available for your system, replace ``upgrade`` or
-        ``downgrade`` with ``upgrade-classic`` or ``downgrade-classic`` respectively to test against those versions.
+        ``downgrade`` with ``upgrade-classic`` or ``downgrade-classic``
+        respectively to test against those versions.
