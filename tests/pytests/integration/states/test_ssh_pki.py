@@ -374,29 +374,28 @@ R4+26CwTk8SDLHiIt2dpAAAAAAECAwQFBgc=
 @pytest.fixture(scope="module")
 def cert_exts():
     return (
-        "ssh-rsa-cert-v01@openssh.com AAAAHHNzaC1yc2EtY2VydC12MDFAb3BlbnNzaC"
-        "5jb20AAAAgkLBn5P+v6IYplxKHlGOX1MmcDeRkwFNKUumq9NqVSLIAAAADAQABAAABA"
-        "QC3XUySGj4KFeUcLfenkj4rSvbCV2sdXjxP7l8e246sc2xpHTWl6t6SYMVAy+eGAOE/"
-        "+JsUQ2sWCj/KDYweH9KV2ALp9AWpmvz24n78Trehnf4Qi9R1BaI3yOI+SApNM6UxeHY"
-        "OO489rpQLyERnCcTmWD79Q3kGOKK9kJs7T8uXz8xeU+9KTe10hqje3AcnhbApg+i1fB"
-        "notQzscWWgL/I8t+P8BCHPoY7V9PnAuhsN58HxamDZtY87TIu8qUMZtlbOfbHLt14/Z"
-        "auOpSyBMz09pQoshUESAH8CnDYVSQ2QzqUcYzVsECyJjkvchKoEiS7W6zZO/BFlEYoN"
-        "BhgibeZvA2htsw1e8lQAAAABAAAADXNhbHRzdGFja3Rlc3QAAAARAAAABHNhbHQAAAA"
-        "Fc3RhY2sAAAAAZJvNIgAAAABknR6iAAAANgAAAA1mb3JjZS1jb21tYW5kAAAAB2VjaG"
-        "8gaGkAAAASbm8tcG9ydC1mb3J3YXJkaW5nAAAAAAAAADwAAAAVcGVybWl0LVgxMS1mb"
-        "3J3YXJkaW5nAAAAAAAAABdwZXJtaXQtYWdlbnQtZm9yd2FyZGluZwAAAAAAAAAAAAAB"
-        "FwAAAAdzc2gtcnNhAAAAAwEAAQAAAQEAmRii0ZT9KoL3aC9X7I8uQmcVGa4G7qOlyIn"
-        "NxGgKPC3s5+kshIVTMQfugd1irFT7crF6Kamigq0S3uNBzpq/IxQBIRq8n7nHHFxiTg"
-        "i+SK61XXMDdlbLsdXZxh7TkTMYPp32nmKUFDddxAVQCGwFvzkV2tbtxpiRO6E/60b22"
-        "Lpt3qS0JdSgSYp9q0IFv2iNR+Yp+Kovx/I8+RySdhgecpRr16Qul+DqvEqNtXvNJv4u"
-        "A1nh34GCKBvNa8JekCYhGWpiXKvDaJREEFfVtuL0YrgDCS6JmbqMreYqzsl8+QN9gEk"
-        "t4JjDTQkEGUI7a4ZY+m69w2eN5eT0DebaNWGzkQAAARQAAAAMcnNhLXNoYTItNTEyAA"
-        "ABAEQr+2fI7WweYEdQwq1y1y9PlnO1/HtndLnz2yb42b1OW1NSdTrk0zqgB5MUlXut9"
-        "DjSF7u60ghZu2WVIInzbdBAgfimqZgYB0C30AL5MjWpcROeudHm0r3AAyA6cAbjd/hf"
-        "cFvj2NZwXY7VWofrf4WLILULtseTPKdqivDkNzU4A4MsykqdQZfrc7TaL7Kk9G2U4mZ"
-        "Trcm/H5O5uSJLhfe6tAZuaTnPcwIh4kZ+SGNjr9zslaenZpRH4ms6cbo7E3Pcq5iEdq"
-        "xsuAIVF/4Viq0hnjs69WjDJIt9X1X5ZN+bb6TX9ndwPSdoNHxb6JLlWytRdCzhESeZd"
-        "xJyPG8BRrI="
+        "ssh-rsa-cert-v01@openssh.com AAAAHHNzaC1yc2EtY2VydC12MDFAb3BlbnNzaC5"
+        "jb20AAAAgAutZE2GohcxGXD1rmPbhaLcN5uLcWjBk0KQIXOcDr5oAAAADAQABAAABAQC"
+        "3XUySGj4KFeUcLfenkj4rSvbCV2sdXjxP7l8e246sc2xpHTWl6t6SYMVAy+eGAOE/+Js"
+        "UQ2sWCj/KDYweH9KV2ALp9AWpmvz24n78Trehnf4Qi9R1BaI3yOI+SApNM6UxeHYOO48"
+        "9rpQLyERnCcTmWD79Q3kGOKK9kJs7T8uXz8xeU+9KTe10hqje3AcnhbApg+i1fBnotQz"
+        "scWWgL/I8t+P8BCHPoY7V9PnAuhsN58HxamDZtY87TIu8qUMZtlbOfbHLt14/ZauOpSy"
+        "BMz09pQoshUESAH8CnDYVSQ2QzqUcYzVsECyJjkvchKoEiS7W6zZO/BFlEYoNBhgibeZ"
+        "vA2htsw1e8lQAAAABAAAADXNhbHRzdGFja3Rlc3QAAAARAAAABHNhbHQAAAAFc3RhY2s"
+        "AAAAAZJvNIgAAAABknR6iAAAAOgAAAA1mb3JjZS1jb21tYW5kAAAACwAAAAdlY2hvIGh"
+        "pAAAAEm5vLXBvcnQtZm9yd2FyZGluZwAAAAAAAAA8AAAAFXBlcm1pdC1YMTEtZm9yd2F"
+        "yZGluZwAAAAAAAAAXcGVybWl0LWFnZW50LWZvcndhcmRpbmcAAAAAAAAAAAAAARcAAAA"
+        "Hc3NoLXJzYQAAAAMBAAEAAAEBAJkYotGU/SqC92gvV+yPLkJnFRmuBu6jpciJzcRoCjw"
+        "t7OfpLISFUzEH7oHdYqxU+3KxeimpooKtEt7jQc6avyMUASEavJ+5xxxcYk4IvkiutV1"
+        "zA3ZWy7HV2cYe05EzGD6d9p5ilBQ3XcQFUAhsBb85FdrW7caYkTuhP+tG9ti6bd6ktCX"
+        "UoEmKfatCBb9ojUfmKfiqL8fyPPkcknYYHnKUa9ekLpfg6rxKjbV7zSb+LgNZ4d+Bgig"
+        "bzWvCXpAmIRlqYlyrw2iURBBX1bbi9GK4AwkuiZm6jK3mKs7JfPkDfYBJLeCYw00JBBl"
+        "CO2uGWPpuvcNnjeXk9A3m2jVhs5EAAAEUAAAADHJzYS1zaGEyLTUxMgAAAQAUJpzjwKC"
+        "Ib2oHLo4q6v6qN37ssRmprwtAVJaV9FmAgczroMyWiL3P5O7U4TLPzluODVRSzpI1K5j"
+        "oeIheQQ24npcErmxVj3xkk4uFsaTgyAamQfnudlseltmNfzqYX6LStFco27bBM6x1V3p"
+        "TPbOfd8m1g1JZEH8yGCt8J4zpVNs6NWTJ862PqdlQKYaZcfEdDyuW0AemSug7YXBe6XU"
+        "6F5v55T8W4sGy3yLn9HWMFyvdtnH91Y8NzsC3JgQfuImPDmdH0hjg0Fr/9579EUEIiq3"
+        "IHN7S4e2vrj7lIreSxPeKnkQNvrjmrPojLD9atastKTalIriT7mtfqzOTih7V"
     )
 
 
@@ -616,6 +615,7 @@ def test_certificate_managed_different_backend(
 def test_certificate_managed_existing_different_backend(
     ssh_salt_call_cli, cert_args, rsa_privkey, ca_key, cert_exts
 ):
+    cert_args.pop("ca_server", None)
     cert_args["backend"] = "other_backend"
     cert_args["backend_args"] = {"donotfail": True}
     ret = ssh_salt_call_cli.run(
