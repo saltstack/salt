@@ -322,14 +322,6 @@ def certificate_managed(
     backend = backend or "ssh_pki"
     backend_args = backend_args or {}
 
-    # This is supported by the x509 modules, provide a transparent translation
-    days_valid = kwargs.pop("days_valid", None)
-    if days_valid is not None and ttl is None:
-        ttl = days_valid * 86400
-    days_remaining = kwargs.pop("days_remaining", None)
-    if days_remaining is not None and ttl_remaining is None:
-        ttl_remaining = days_remaining * 86400
-
     file_args, unknown_args = _split_file_kwargs(_filter_state_internal_kwargs(kwargs))
     invalid_args = [key for key in unknown_args if not key.startswith("_")]
     if invalid_args:
