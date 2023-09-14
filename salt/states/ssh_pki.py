@@ -156,8 +156,6 @@ import datetime
 import logging
 import os.path
 
-import salt.utils.context
-import salt.utils.files
 import salt.utils.timeutil as time
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
@@ -903,6 +901,7 @@ def _build_cert(
     **kwargs,
 ):
     backend = backend or "ssh_pki"
+    skip_load_signing_private_key = False
     final_kwargs = copy.deepcopy(kwargs)
     sshpki.merge_signing_policy(
         __salt__[f"{backend}.get_signing_policy"](
@@ -911,17 +910,25 @@ def _build_cert(
         final_kwargs,
     )
     signing_pubkey = final_kwargs.pop("signing_public_key", None)
-    if ca_server is None:
+    if ca_server is None and backend == "ssh_pki":
+        if not signing_private_key:
+            raise SaltInvocationError(
+                "signing_private_key is required - this is most likely a bug"
+            )
         signing_pubkey = sshpki.load_privkey(
             signing_private_key, passphrase=kwargs.get("signing_private_key_passphrase")
         )
     elif signing_pubkey is None:
-        raise SaltInvocationError("The remote CA server did not deliver the CA pubkey")
+        raise SaltInvocationError(
+            "The remote CA server or backend module did not deliver the CA pubkey"
+        )
+    else:
+        skip_load_signing_private_key = True
 
     return (
         sshpki.build_crt(
             signing_private_key,
-            skip_load_signing_private_key=ca_server is not None,
+            skip_load_signing_private_key=skip_load_signing_private_key,
             **final_kwargs,
         ),
         signing_pubkey,
@@ -1049,17 +1056,3 @@ def _getattr_safe(obj, attr):
             f"Could not get attribute {attr} from {obj.__class__.__name__}. "
             "Did the internal API of cryptography change?"
         ) from err
-
-
-def _safe_atomic_write(dst, data, backup):
-    """
-    Create a temporary file with only user r/w perms and atomically
-    copy it to the destination, honoring ``backup``.
-    """
-    tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
-    with salt.utils.files.fopen(tmp, "wb") as tmp_:
-        tmp_.write(data)
-    salt.utils.files.copyfile(
-        tmp, dst, __salt__["config.backup_mode"](backup), __opts__["cachedir"]
-    )
-    salt.utils.files.safe_rm(tmp)
