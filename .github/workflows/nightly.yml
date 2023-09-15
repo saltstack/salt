@@ -2964,6 +2964,9 @@ jobs:
           - pkg-type: rpm
             distro: amazon
             version: "2"
+            arch: arm64
+          - distro: amazon
+            version: "2"
             arch: aarch64
           - pkg-type: rpm
             distro: redhat
@@ -2971,6 +2974,9 @@ jobs:
             arch: x86_64
           - pkg-type: rpm
             distro: redhat
+            version: "7"
+            arch: arm64
+          - distro: redhat
             version: "7"
             arch: aarch64
           - pkg-type: rpm
@@ -2979,6 +2985,9 @@ jobs:
             arch: x86_64
           - pkg-type: rpm
             distro: redhat
+            version: "8"
+            arch: arm64
+          - distro: redhat
             version: "8"
             arch: aarch64
           - pkg-type: rpm
@@ -2987,6 +2996,9 @@ jobs:
             arch: x86_64
           - pkg-type: rpm
             distro: redhat
+            version: "9"
+            arch: arm64
+          - distro: redhat
             version: "9"
             arch: aarch64
           - pkg-type: rpm
@@ -2995,6 +3007,9 @@ jobs:
             arch: x86_64
           - pkg-type: rpm
             distro: fedora
+            version: "36"
+            arch: arm64
+          - distro: fedora
             version: "36"
             arch: aarch64
           - pkg-type: rpm
@@ -3003,6 +3018,9 @@ jobs:
             arch: x86_64
           - pkg-type: rpm
             distro: fedora
+            version: "37"
+            arch: arm64
+          - distro: fedora
             version: "37"
             arch: aarch64
           - pkg-type: rpm
@@ -3011,6 +3029,9 @@ jobs:
             arch: x86_64
           - pkg-type: rpm
             distro: fedora
+            version: "38"
+            arch: arm64
+          - distro: fedora
             version: "38"
             arch: aarch64
           - pkg-type: rpm
@@ -3019,6 +3040,9 @@ jobs:
             arch: x86_64
           - pkg-type: rpm
             distro: photon
+            version: "3"
+            arch: arm64
+          - distro: photon
             version: "3"
             arch: aarch64
           - pkg-type: rpm
@@ -3027,6 +3051,9 @@ jobs:
             arch: x86_64
           - pkg-type: rpm
             distro: photon
+            version: "4"
+            arch: arm64
+          - distro: photon
             version: "4"
             arch: aarch64
           - pkg-type: rpm
@@ -3058,7 +3085,7 @@ jobs:
       - name: Download RPM Packages
         uses: actions/download-artifact@v3
         with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch }}-rpm
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}-rpm
           path: artifacts/pkgs/incoming
 
       - name: Setup GnuPG
