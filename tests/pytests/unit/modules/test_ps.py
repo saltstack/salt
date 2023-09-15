@@ -227,6 +227,7 @@ class DummyProcess:
         status=None,
         username=None,
         pid=None,
+        cpu_times=None,
     ):
         self._cmdline = salt.utils.data.decode(
             cmdline if cmdline is not None else [], to_str=True
@@ -241,6 +242,12 @@ class DummyProcess:
         self._username = salt.utils.data.decode(username, to_str=True)
         self._pid = salt.utils.data.decode(
             pid if pid is not None else 12345, to_str=True
+        )
+        # dummy_cpu_times = (user=7713.79, system=1278.44,
+        #                   children_user=17114.2,
+        #                   children_system=2023.36, iowait=0.0)
+        self._cpu_times = salt.utils.data.decode(
+            cpu_times if cpu_times is not None else 12345, to_str=True
         )
 
     def __enter__(self):
@@ -267,6 +274,9 @@ class DummyProcess:
     def pid(self):
         return self._pid
 
+    def cpu_times(self):
+        return self._cpu_times
+
 
 @pytest.fixture
 def mocked_proc():
@@ -290,6 +300,114 @@ def test__get_proc_cmdline():
     cmdline = ["echo", "питон"]
     ret = ps._get_proc_cmdline(DummyProcess(cmdline=cmdline))
     assert ret == cmdline, ret
+
+    with patch.object(DummyProcess, "cmdline") as mock_cmdline:
+        mock_cmdline.side_effect = psutil.NoSuchProcess(DummyProcess(cmdline=cmdline))
+        ret = ps._get_proc_cmdline(DummyProcess(cmdline=cmdline))
+        assert ret == []
+
+    with patch.object(DummyProcess, "cmdline") as mock_cmdline:
+        mock_cmdline.side_effect = psutil.AccessDenied(DummyProcess(cmdline=cmdline))
+        ret = ps._get_proc_cmdline(DummyProcess(cmdline=cmdline))
+        assert ret == []
+
+
+@pytest.mark.skipif(not ps.PSUTIL2, reason="Only run for psutil 2.x")
+def test__get_proc_create_time():
+    cmdline = ["echo", "питон"]
+    create_time = 1694729500.1093624
+    ret = ps._get_proc_create_time(
+        DummyProcess(cmdline=cmdline, create_time=create_time)
+    )
+    assert ret == create_time
+
+    with patch.object(DummyProcess, "create_time") as mock_create_time:
+        mock_create_time.side_effect = psutil.NoSuchProcess(
+            DummyProcess(cmdline=cmdline, create_time=create_time)
+        )
+        ret = ps._get_proc_create_time(
+            DummyProcess(cmdline=cmdline, create_time=create_time)
+        )
+        assert ret is None
+
+    with patch.object(DummyProcess, "create_time") as mock_create_time:
+        mock_create_time.side_effect = psutil.AccessDenied(
+            DummyProcess(cmdline=cmdline, create_time=create_time)
+        )
+        ret = ps._get_proc_create_time(
+            DummyProcess(cmdline=cmdline, create_time=create_time)
+        )
+        assert ret is None
+
+
+@pytest.mark.skipif(not ps.PSUTIL2, reason="Only run for psutil 2.x")
+def test__get_proc_name():
+    cmdline = ["echo", "питон"]
+    proc_name = "proc_name"
+    ret = ps._get_proc_name(DummyProcess(cmdline=cmdline, name=proc_name))
+    assert ret == proc_name
+
+    with patch.object(DummyProcess, "name") as mock_name:
+        mock_name.side_effect = psutil.NoSuchProcess(
+            DummyProcess(cmdline=cmdline, name=proc_name)
+        )
+        ret = ps._get_proc_name(DummyProcess(cmdline=cmdline, name=proc_name))
+        assert ret == []
+
+    with patch.object(DummyProcess, "name") as mock_name:
+        mock_name.side_effect = psutil.AccessDenied(
+            DummyProcess(cmdline=cmdline, name=proc_name)
+        )
+        ret = ps._get_proc_name(DummyProcess(cmdline=cmdline, name=proc_name))
+        assert ret == []
+
+
+@pytest.mark.skipif(not ps.PSUTIL2, reason="Only run for psutil 2.x")
+def test__get_proc_status():
+    cmdline = ["echo", "питон"]
+    proc_status = "sleeping"
+    ret = ps._get_proc_status(DummyProcess(cmdline=cmdline, status=proc_status))
+    assert ret == proc_status
+
+    with patch.object(DummyProcess, "status") as mock_status:
+        mock_status.side_effect = psutil.NoSuchProcess(
+            DummyProcess(cmdline=cmdline, status=proc_status)
+        )
+        ret = ps._get_proc_status(DummyProcess(cmdline=cmdline, status=proc_status))
+        assert ret is None
+
+    with patch.object(DummyProcess, "status") as mock_status:
+        mock_status.side_effect = psutil.AccessDenied(
+            DummyProcess(cmdline=cmdline, status=proc_status)
+        )
+        ret = ps._get_proc_status(DummyProcess(cmdline=cmdline, status=proc_status))
+        assert ret is None
+
+
+@pytest.mark.skipif(not ps.PSUTIL2, reason="Only run for psutil 2.x")
+def test__get_proc_username():
+    cmdline = ["echo", "питон"]
+    proc_username = "root"
+    ret = ps._get_proc_username(DummyProcess(cmdline=cmdline, username=proc_username))
+    assert ret == proc_username
+
+    with patch.object(DummyProcess, "username") as mock_username:
+        mock_username.side_effect = psutil.NoSuchProcess(
+            DummyProcess(cmdline=cmdline, username=proc_username)
+        )
+        ret = ps._get_proc_username(
+            DummyProcess(cmdline=cmdline, username=proc_username)
+        )
+        assert ret is None
+
+    with patch.object(DummyProcess, "username") as mock_username:
+        mock_username.side_effect = psutil.AccessDenied(
+            DummyProcess(cmdline=cmdline, username=proc_username)
+        )
+        ret = ps._get_proc_username(
+            DummyProcess(cmdline=cmdline, username=proc_username)
+        )
+        assert ret is None
 
 
 def test_get_pid_list():
@@ -468,6 +586,12 @@ def test_top():
     # PID 1 under docker and there may only *be* one process running.
     result = ps.top(num_processes=1, interval=0)
     assert len(result) == 1
+
+    cmdline = ["echo", "питон"]
+    with patch.object(DummyProcess, "cpu_times") as mock_cpu_times:
+        mock_cpu_times.side_effect = psutil.NoSuchProcess(DummyProcess(cmdline=cmdline))
+        ret = ps.top(num_processes=1, interval=0)
+        assert ret is None
 
 
 def test_top_zombie_process():
