@@ -7,6 +7,7 @@ import time
 import pytest
 
 import salt.loader
+import salt.modules.cmdmod as cmd
 import salt.modules.config as config
 import salt.modules.grains as grains
 import salt.modules.saltutil as saltutil
@@ -37,6 +38,7 @@ def configure_loader_modules(minion_opts):
                 "config.get": config.get,
                 "saltutil.is_running": saltutil.is_running,
                 "grains.get": grains.get,
+                "cmd.run": cmd.run,
             },
             "__utils__": {"state.check_result": state_util.check_result},
         },
