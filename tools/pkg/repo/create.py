@@ -396,10 +396,6 @@ def rpm(
         ctx.error(f"Support for {display_name} is missing.")
         ctx.exit(1)
 
-    if distro_arch == "aarch64":
-        ctx.info(f"The {distro_arch} arch is an alias for 'arm64'. Adjusting.")
-        distro_arch = "arm64"
-
     ctx.info("Creating repository directory structure ...")
     create_repo_path = create_top_level_repo_path(
         ctx,
