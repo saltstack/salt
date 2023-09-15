@@ -243,12 +243,19 @@ class DummyProcess:
         self._pid = salt.utils.data.decode(
             pid if pid is not None else 12345, to_str=True
         )
-        # dummy_cpu_times = (user=7713.79, system=1278.44,
-        #                   children_user=17114.2,
-        #                   children_system=2023.36, iowait=0.0)
-        self._cpu_times = salt.utils.data.decode(
-            cpu_times if cpu_times is not None else 12345, to_str=True
-        )
+
+        if salt.utils.platform.is_windows():
+            scputimes = namedtuple(
+                "scputimes", ["user", "system", "children_user", "children_system"]
+            )
+            dummy_cpu_times = scputimes(7713.79, 1278.44, 17114.2, 2023.36)
+        else:
+            scputimes = namedtuple(
+                "scputimes",
+                ["user", "system", "children_user", "children_system", "iowait"],
+            )
+            dummy_cpu_times = scputimes(7713.79, 1278.44, 17114.2, 2023.36, 0.0)
+        self._cpu_times = cpu_times if cpu_times is not None else dummy_cpu_times
 
     def __enter__(self):
         pass
@@ -588,10 +595,104 @@ def test_top():
     assert len(result) == 1
 
     cmdline = ["echo", "питон"]
-    with patch.object(DummyProcess, "cpu_times") as mock_cpu_times:
-        mock_cpu_times.side_effect = psutil.NoSuchProcess(DummyProcess(cmdline=cmdline))
-        ret = ps.top(num_processes=1, interval=0)
-        assert ret is None
+    top_proc = DummyProcess(cmdline=cmdline)
+
+    with patch("salt.utils.psutil_compat.pids", return_value=[1]):
+        with patch("salt.utils.psutil_compat.Process") as mock_process:
+            mock_process.side_effect = psutil.NoSuchProcess(top_proc)
+            ret = ps.top(num_processes=1, interval=0)
+            assert ret == []
+
+    if salt.utils.platform.is_windows():
+        scputimes = namedtuple(
+            "scputimes", ["user", "system", "children_user", "children_system"]
+        )
+        zombie_cpu_times = scputimes(0, 0, 0, 0)
+
+        smem_info = namedtuple(
+            "pmem",
+            [
+                "rss",
+                "vms",
+                "num_page_faults",
+                "peak_wset",
+                "wset",
+                "peak_paged_pool",
+                "paged_pool",
+                "peak_nonpaged_pool",
+                "nonpaged_pool28144",
+                "pagefile",
+                "peak_pagefile",
+                "private",
+            ],
+        )
+        zombie_mem_info = smem_info(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    else:
+        scputimes = namedtuple(
+            "scputimes",
+            ["user", "system", "children_user", "children_system", "iowait"],
+        )
+        zombie_cpu_times = scputimes(0, 0, 0, 0, 0)
+
+        smem_info = namedtuple(
+            "pmem", ["rss", "vms", "shared", "text", "lib", "data", "dirty"]
+        )
+        zombie_mem_info = smem_info(0, 0, 0, 0, 0, 0, 0)
+
+    with patch("salt.utils.psutil_compat.pids", return_value=[1]):
+        with patch("salt.utils.psutil_compat.Process", return_value=top_proc):
+            with patch.object(top_proc, "cpu_times") as mock_cpu_times:
+                with patch.object(
+                    top_proc, "memory_info", return_value=zombie_mem_info, create=True
+                ):
+                    mock_cpu_times.side_effect = [
+                        psutil.ZombieProcess(top_proc),
+                        zombie_cpu_times,
+                        zombie_cpu_times,
+                    ]
+                    ret = ps.top(num_processes=1, interval=0)
+                    assert ret[0]["mem"] == {
+                        "rss": 0,
+                        "vms": 0,
+                        "shared": 0,
+                        "text": 0,
+                        "lib": 0,
+                        "data": 0,
+                        "dirty": 0,
+                    }
+
+                    assert ret[0]["cpu"] == {
+                        "user": 0,
+                        "system": 0,
+                        "children_user": 0,
+                        "children_system": 0,
+                        "iowait": 0,
+                    }
+
+    with patch("salt.utils.psutil_compat.pids", return_value=[1]):
+        with patch("salt.utils.psutil_compat.Process", return_value=top_proc):
+            with patch.object(top_proc, "cpu_times") as mock_cpu_times:
+                mock_cpu_times.side_effect = [
+                    top_proc._cpu_times,
+                    psutil.NoSuchProcess(top_proc),
+                ]
+                ret = ps.top(num_processes=1, interval=0)
+                assert ret == []
+
+    with patch("salt.utils.psutil_compat.pids", return_value=[1]):
+        with patch("salt.utils.psutil_compat.Process", return_value=top_proc):
+            with patch.object(top_proc, "cpu_times") as mock_cpu_times:
+                with patch.object(
+                    top_proc, "memory_info", create=True
+                ) as mock_memory_info:
+                    mock_memory_info.side_effect = psutil.NoSuchProcess(top_proc)
+                    mock_cpu_times.side_effect = [
+                        psutil.ZombieProcess(top_proc),
+                        zombie_cpu_times,
+                        zombie_cpu_times,
+                    ]
+                    ret = ps.top(num_processes=1, interval=0)
+                    assert ret == []
 
 
 def test_top_zombie_process():
