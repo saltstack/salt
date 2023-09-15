@@ -1542,7 +1542,7 @@ def symlink(
     atomic=False,
     disallow_copy_and_unlink=False,
     inherit_user_and_group=False,
-    follow_symlinks=False,
+    follow_symlinks=True,
     **kwargs,
 ):
     """
