@@ -8,11 +8,11 @@ apache-libcloud==3.7.0
     # via -r requirements/darwin.txt
 autocommand==2.2.2
     # via jaraco.text
-certifi==2023.5.7
+certifi==2023.07.22
     # via requests
 cffi==1.15.1
     # via cryptography
-charset-normalizer==2.1.1
+charset-normalizer==3.2.0
     # via requests
 cheroot==10.0.0
     # via cherrypy
@@ -20,7 +20,7 @@ cherrypy==18.8.0
     # via -r requirements/darwin.txt
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==41.0.1
+cryptography==41.0.3
     # via
     #   -r requirements/crypto.txt
     #   -r requirements/darwin.txt
