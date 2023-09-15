@@ -12,10 +12,8 @@ from pytestskipmarkers.utils import platform
 def pypath():
     if platform.is_windows():
         return pathlib.Path(os.getenv("ProgramFiles"), "Salt Project", "Salt")
-    elif platform.is_darwin():
-        return pathlib.Path("/opt", "salt", "bin")
     else:
-        return pathlib.Path("/opt", "saltstack", "salt", "bin")
+        return pathlib.Path("/opt", "saltstack", "salt", "pypath", "bin")
 
 
 @pytest.fixture(autouse=True)
@@ -44,7 +42,7 @@ def wipe_pydeps(shell, install_salt, extras_pypath):
             shutil.rmtree(dirname, ignore_errors=True)
 
 
-def test_pip_install(salt_call_cli):
+def test_pip_install(salt_call_cli, install_salt, shell):
     """
     Test pip.install and ensure module can use installed library
     """
@@ -68,6 +66,8 @@ def test_pip_install_extras(shell, install_salt, extras_pypath_bin):
     """
     Test salt-pip installs into the correct directory
     """
+    if not install_salt.relenv:
+        pytest.skip("The extras directory is only in relenv versions")
     dep = "pep8"
     extras_keyword = "extras-3"
     if platform.is_windows():
@@ -86,7 +86,7 @@ def test_pip_install_extras(shell, install_salt, extras_pypath_bin):
             break
     else:
         pytest.fail(
-            f"The {dep!r} package was not found installed. Packages Installed: {pkgs_installed}"
+            f"The {dep!r} package was not found installed. Packages Installed: {ret.data}"
         )
 
     show_ret = shell.run(*(install_salt.binary_paths["pip"] + ["show", dep]))
@@ -109,8 +109,12 @@ def demote(user_uid, user_gid):
 
 
 @pytest.mark.skip_on_windows(reason="We can't easily demote users on Windows")
-def test_pip_non_root(shell, install_salt, test_account, extras_pypath_bin):
+def test_pip_non_root(shell, install_salt, test_account, extras_pypath_bin, pypath):
+    if install_salt.classic:
+        pytest.skip("We can install non-root for classic packages")
     check_path = extras_pypath_bin / "pep8"
+    if not install_salt.relenv and not install_salt.classic:
+        check_path = pypath / "pep8"
     # We should be able to issue a --help without being root
     ret = subprocess.run(
         install_salt.binary_paths["salt"] + ["--help"],
@@ -154,7 +158,7 @@ def test_pip_non_root(shell, install_salt, test_account, extras_pypath_bin):
         universal_newlines=True,
     )
 
-    assert check_path.exists()
+    assert check_path.exists(), shutil.which("pep8")
 
     assert ret.returncode == 0, ret.stderr
 
@@ -164,6 +168,8 @@ def test_pip_install_salt_extension_in_extras(install_salt, extras_pypath, shell
     Test salt-pip installs into the correct directory and the salt extension
     is properly loaded.
     """
+    if not install_salt.relenv:
+        pytest.skip("The extras directory is only in relenv versions")
     dep = "salt-analytics-framework"
     dep_version = "0.1.0"
 

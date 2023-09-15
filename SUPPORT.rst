@@ -11,7 +11,7 @@ it may take a few moments for someone to reply.
 **SaltStack Slack** - Alongside IRC is our SaltStack Community Slack for the
 SaltStack Working groups. Use the following link to request an invitation.
 
-`<https://join.slack.com/t/saltstackcommunity/shared_invite/zt-1zlfxffs1-NuEH~G9TzOeuNGdsfZIl3w>`_
+`<https://via.vmw.com/salt-slack>`_
 
 **Mailing List** - The SaltStack community users mailing list is hosted by
 Google groups. Anyone can post to ask questions about SaltStack products and

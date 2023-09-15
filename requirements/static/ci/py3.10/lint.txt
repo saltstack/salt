@@ -336,7 +336,7 @@ bcrypt==3.2.0
     # via
     #   paramiko
     #   passlib
-boto3==1.21.46 ; python_version >= "3.6"
+boto3==1.21.46
     # via
     #   -r requirements/static/ci/common.in
     #   moto
@@ -413,7 +413,7 @@ dnspython==2.1.0
     #   python-etcd
 docker==5.0.0
     # via -r requirements/static/ci/common.in
-etcd3-py==0.1.6 ; python_version >= "3.6"
+etcd3-py==0.1.6
     # via -r requirements/static/ci/common.in
 filelock==3.0.12
     # via virtualenv
@@ -427,7 +427,7 @@ geomet==0.2.1.post1
     # via cassandra-driver
 gitdb==4.0.7
     # via gitpython
-gitpython==3.1.32 ; python_version >= "3.7"
+gitpython==3.1.35
     # via -r requirements/static/ci/common.in
 google-auth==2.0.1
     # via kubernetes
@@ -514,7 +514,7 @@ more-itertools==8.8.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-moto==3.0.1 ; python_version >= "3.6"
+moto==3.0.1
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via -r requirements/base.txt
@@ -671,7 +671,7 @@ pylint==2.4.4
     # via
     #   -r requirements/static/ci/lint.in
     #   saltpylint
-pymysql==1.0.2 ; python_version > "3.5"
+pymysql==1.0.2
     # via -r requirements/static/ci/linux.in
 pynacl==1.5.0
     # via
@@ -706,7 +706,7 @@ python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
-python-telegram-bot==13.7 ; python_version > "3.5"
+python-telegram-bot==13.7
     # via -r requirements/static/ci/linux.in
 pytz==2022.1
     # via

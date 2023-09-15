@@ -82,7 +82,7 @@ the certificate to the mine, where it can be easily retrieved by other minions.
         - keysize: 4096
         - backup: true
         - require:
-          - file: /etc/pki
+          - file: /etc/pki/issued_certs
 
     Create self-signed CA certificate:
       x509.certificate_managed:
@@ -1274,7 +1274,7 @@ def private_key_managed(
     keysize
         For ``rsa``, specifies the bitlength of the private key (2048, 3072, 4096).
         For ``ec``, specifies the NIST curve to use (256, 384, 521).
-        Irrelevant for Edwards-curve schemes (`ed25519``, ``ed448``).
+        Irrelevant for Edwards-curve schemes (``ed25519``, ``ed448``).
         Defaults to 2048 for RSA and 256 for EC.
 
     passphrase
@@ -1450,7 +1450,7 @@ def private_key_managed(
                 and algo in ("rsa", "ec")
                 and current.key_size != check_keysize
             ):
-                changes["keysize"] = keysize
+                changes["keysize"] = check_keysize
             if encoding != current_encoding:
                 changes["encoding"] = encoding
         elif file_exists and new:

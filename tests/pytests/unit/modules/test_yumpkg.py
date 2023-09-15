@@ -118,9 +118,10 @@ def test_list_pkgs():
         "openssh_|-(none)_|-6.6.1p1_|-33.el7_3_|-x86_64_|-(none)_|-1487838485",
         "virt-what_|-(none)_|-1.13_|-8.el7_|-x86_64_|-(none)_|-1487838486",
     ]
+    cmd_mod = MagicMock(return_value=os.linesep.join(rpm_out))
     with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
         yumpkg.__salt__,
-        {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+        {"cmd.run": cmd_mod},
     ), patch.dict(yumpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
         yumpkg.__salt__,
         {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
@@ -147,6 +148,18 @@ def test_list_pkgs():
         }.items():
             assert pkgs.get(pkg_name) is not None
             assert pkgs[pkg_name] == [pkg_version]
+        cmd_mod.assert_called_once_with(
+            [
+                "rpm",
+                "-qa",
+                "--nodigest",
+                "--nosignature",
+                "--queryformat",
+                "%{NAME}_|-%{EPOCH}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-(none)_|-%{INSTALLTIME}\n",
+            ],
+            output_loglevel="trace",
+            python_shell=False,
+        )
 
 
 def test_list_pkgs_no_context():

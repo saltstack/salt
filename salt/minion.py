@@ -327,9 +327,12 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
     invalid_kwargs = []
 
     for arg in args:
-        if isinstance(arg, dict) and arg.pop("__kwarg__", False) is True:
+        if isinstance(arg, dict) and arg.get("__kwarg__", False) is True:
             # if the arg is a dict with __kwarg__ == True, then its a kwarg
             for key, val in arg.items():
+                # Skip __kwarg__ when checking kwargs
+                if key == "__kwarg__":
+                    continue
                 if argspec.keywords or key in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
@@ -2733,8 +2736,8 @@ class Minion(MinionBase):
                     log.error("Timeout encountered while sending %r request", data)
             else:
                 log.debug(
-                    "Skipping job return for other master: jid=%s master=%s",
-                    data["jid"],
+                    "Skipping req for other master: cmd=%s master=%s",
+                    data["cmd"],
                     job_master,
                 )
         elif tag.startswith("pillar_refresh"):
