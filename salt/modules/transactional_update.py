@@ -276,6 +276,9 @@ transaction.
 """
 
 import logging
+import os.path
+import pathlib
+import sys
 
 import salt.client.ssh.state
 import salt.client.ssh.wrapper.state
@@ -941,10 +944,18 @@ def call(function, *args, **kwargs):
     activate_transaction = kwargs.pop("activate_transaction", False)
 
     try:
+        # Set default salt-call command
+        salt_call_cmd = "salt-call"
+        python_exec_dir = os.path.dirname(sys.executable)
+        if "venv-salt-minion" in pathlib.Path(python_exec_dir).parts:
+            # If the module is executed with the Salt Bundle,
+            # use salt-call from the Salt Bundle
+            salt_call_cmd = os.path.join(python_exec_dir, "salt-call")
+
         safe_kwargs = salt.utils.args.clean_kwargs(**kwargs)
         salt_argv = (
             [
-                "salt-call",
+                salt_call_cmd,
                 "--out",
                 "json",
                 "-l",
