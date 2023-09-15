@@ -6600,10 +6600,10 @@ def prepend(
     may specify a single line of text or a list of lines to append.
 
     name
-        The location of the file to append to.
+        The location of the file to prepend to.
 
     text
-        The text to be appended, which can be a single string or a list
+        The text to be prepended, which can be a single string or a list
         of strings.
 
     makedirs
@@ -6613,7 +6613,7 @@ def prepend(
         creation of the named file. Defaults to False.
 
     source
-        A single source file to append. This source file can be hosted on either
+        A single source file to prepend. This source file can be hosted on either
         the salt master server, or on an HTTP or FTP server. Both HTTPS and
         HTTP are supported as well as downloading directly from Amazon S3
         compatible URLs with both pre-configured and automatic IAM credentials
@@ -6652,7 +6652,7 @@ def prepend(
         <salt.states.file.managed>` function for more details and examples.
 
     template
-        The named templating engine will be used to render the appended-to file.
+        The named templating engine will be used to render the source file(s).
         Defaults to ``jinja``. The following templates are supported:
 
         - :mod:`cheetah<salt.renderers.cheetah>`
@@ -6663,7 +6663,7 @@ def prepend(
         - :mod:`wempy<salt.renderers.wempy>`
 
     sources
-        A list of source files to append. If the files are hosted on an HTTP or
+        A list of source files to prepend. If the files are hosted on an HTTP or
         FTP server, the source_hashes argument is also required.
 
     source_hashes
@@ -6682,6 +6682,10 @@ def prepend(
         Spaces and Tabs in text are ignored by default, when searching for the
         appending content, one space or multiple tabs are the same for salt.
         Set this option to ``False`` if you want to change this behavior.
+
+    header
+        Forces the text to be prepended if it exists in the file but not at
+        the beginning.
 
     Multi-line example:
 
