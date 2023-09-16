@@ -15,12 +15,12 @@ What are package definition files?
 ===================================
 
 A package definition file is a YAML/JINJA2 file with a ``.sls`` file extension that contains all
-the information needed to install a software using Salt. It defines:
+the information needed to install software using Salt. It defines:
 - Full name of the software package
 - The version of the software package
 - Download location of the software package
 - Command-line switches for silent install and uninstall
-- Whether or not to use the Windows task scheduler to install the package,
+- Whether or not to use the Windows task scheduler to install the package
 
 The package definition files can be hosted in one or more Git repositories.
 The ``.sls`` files used to install Windows packages are not distributed by default with Salt.
@@ -28,19 +28,16 @@ You have to initialize and clone the
 default repository - `salt-winrepo-ng<https://github.com/saltstack/salt-winrepo-ng>`_
 that is hosted on GitHub by SaltStack. The repository contains
 package definition files for many common Windows packages and is maintained by SaltStack
-and the Salt community. Anyone is welcome to submit a pull request to this
+and the Salt community. Anyone can submit a pull request to this
 repo to add new package definitions.
 
-The package definition file can be managed through either Salt or Git.
-The software packages can be downloaded from either within a git repository or from HTTP(S) or FTP URLs.
-That is, the installer defined in the package definition file can be stored anywhere as long as it is
-accessible from the host running Salt.
+You can manage the package definition file through either Salt or Git. You can download software packages from either a git repository or from HTTP(S) or FTP URLs. You can store the installer defined in the package definition file anywhere if it is accessible from the host running Salt.
 
 You can use the Salt Windows package manager like ``yum`` on Linux. You do not have to know the
 underlying command to install the software.
 
-Use ``pkg.install`` to install a package using a package manager based on the OS the system runs on.
-Use ``pkg.installed`` to check if a particular package is installed in the minion or not.
+-  Use ``pkg.install`` to install a package using a package manager based on the OS the system runs on.
+-  Use ``pkg.installed`` to check if a particular package is installed in the minion.
 
 .. note::
     The Salt Windows package manager does not automatically resolve dependencies while installing,
@@ -63,8 +60,8 @@ a Salt Git repo, install the libraries ``GitPython`` or ``pygit2``.
 Populate the local Git repository
 **********************************
 The SLS files used to install Windows packages are not distributed by default
-with Salt. Assuming no changes to the default configuration (``file_roots``).
-Initialize and clone `salt-winrepo-ng<https://github.com/saltstack/salt-winrepo-ng>`_
+with Salt. Assuming no changes to the default configuration (``file_roots``),
+initialize and clone `salt-winrepo-ng<https://github.com/saltstack/salt-winrepo-ng>`_
 repository.
 
 .. code-block:: bash
@@ -146,7 +143,7 @@ specified in the ``winrepo_dir_ng`` setting in the config. The default value of
 Master Configuration
 ====================
 
-The following are settings are available for configuring the winrepo on the
+The following settings are available for configuring the winrepo on the
 master:
 
 - :conf_master:`winrepo_dir`
@@ -621,8 +618,8 @@ Use :mod:`pkg.list_pkgs <salt.modules.win_pkg.list_pkgs>` to display a list of p
     # From the minion in masterless mode
     salt-call --local pkg.list_pkgs
 
-The above command displays the software name and the version for every package installed
-on the system irrespective of whether it was installed by Salt package manager or not.
+The  command displays the software name and the version for every package installed
+on the system irrespective of whether it was installed by the Salt package manager.
 
 .. code-block:: console
 
@@ -668,7 +665,7 @@ You can refer to the software by its ``name`` or its ``full_name`` surrounded by
     # From the minion in masterless mode
     salt-call --local pkg.list_available firefox_x64
 
-The above command lists all versions of Firefox available for installation.
+The command lists all versions of Firefox available for installation.
 
 .. code-block:: bash
 
@@ -689,7 +686,7 @@ The above command lists all versions of Firefox available for installation.
 
 .. note::
     For a Linux master, you can surround the file name with single quotes.
-    However, the ``cmd`` shell on Windows use double quotes when wrapping strings
+    However, for the ``cmd`` shell on Windows use double quotes when wrapping strings
     that may contain spaces. Powershell accepts either single quotes or double quotes.
 
 Install a package
@@ -705,7 +702,7 @@ Use :mod:`pkg.install <salt.modules.win_pkg.install>`: to install a package.
     # From the minion in masterless mode
     salt-call --local pkg.install "firefox_x64"
 
-The above command installs the latest version of Firefox.
+The command installs the latest version of Firefox.
 
 .. code-block:: bash
 
@@ -715,7 +712,7 @@ The above command installs the latest version of Firefox.
     # From the minion in masterless mode
     salt-call --local pkg.install "firefox_x64" version=74.0
 
-The above command installs version 74.0 of Firefox.
+The command installs version 74.0 of Firefox.
 
 If a different version of the package is already installed then the old version is
 replaced with the version in the winrepo (only if the package supports live updating).
@@ -867,15 +864,15 @@ Example package definition files
 ================================
 This section provides some examples of package definition files for different use cases such as:
 
-- Writing  a simple package definition file for a software
-- Writing a INJA templated package definition file
+- Writing  a simple package definition file for software
+- Writing a JINJA templated package definition file
 - Writing a package definition file to install the latest version of the software
-- Writing a package definintion file to install an MSI patch to installed software
+- Writing a package definition file to install an MSI patch
 
-These examples enables you to gain a better understanding of the usage of different file paramaters.
-To understand the examples, you require a basic `Understanding Jinja <https://docs.saltproject.io/en/latest/topics/jinja/index.html>`_
+These examples enable you to gain a better understanding of the usage of different file parameters.
+To understand the examples, you need a basic `Understanding Jinja <https://docs.saltproject.io/en/latest/topics/jinja/index.html>`_.
 For an exhaustive dive into Jinja, refer to the official
-`Jinja Template Designer documentation <https://docs.saltproject.io/en/getstarted/config/jinja.html>`_
+`Jinja Template Designer documentation <https://docs.saltproject.io/en/getstarted/config/jinja.html>`_.
 
 Example: Basic
 ==============
@@ -900,13 +897,13 @@ Here is a pure YAML example of a package definition file for Firefox:
 
 The first line is the short name of the software which is ``firefox_x64``.
 .. important::
-    The short name name must match exactly what is shown in Add/Remove Programs (``appwiz.cpl``)
+    The short name must match exactly what is shown in Add/Remove Programs (``appwiz.cpl``)
     and it must be unique across all other short names in the software repository.
     The ``full_name`` combined with the version must also be unique.
 
 The second line is the ``software version`` and is indented two spaces.
 .. important::
-    The version number must be enclosed in quotes else the YAML parser removes the trailing zeros.
+    The version number must be enclosed in quotes or the YAML parser removes the trailing zeros.
     For example, if the version number 74.0 is not enclosed within quotes then the version number
     is considered as only 74.
 
@@ -914,19 +911,19 @@ The lines following the ``version`` are indented two more spaces and contain all
 needed to install the Firefox package.
 
 .. important::
-    You can specify multiple versions for a software by specifying multiple version numbers at
+    You can specify multiple versions of software by specifying multiple version numbers at
     the same indentation level as the first with its software definition below it.
 
 Example: JINJA templated package definition file
 =================================================
 JINJA is the default templating language used in package definition files.
-You can use JINJA to add variables, expressions to package definition files
-that get replaced with values when the ``.sls`` go through Salt renderer.
+You can use JINJA to add variables and expressions to package definition files
+that get replaced with values when the ``.sls`` go through the Salt renderer.
 
-When there are tens or hundreds of versions available for a piece of software the
-definition file can become large and cumbersome to write .
+When there are tens or hundreds of versions available for a piece of software, the
+definition file can become large and cumbersome to write.
 In this scenario, Jinja can be used to add logic, variables,
-and expressions to automatically create the package definition file for a software with
+and expressions to automatically create the package definition file for software with
 multiple versions.
 
 Here is a an example of a package definition file for Firefox that uses Jinja:
@@ -949,22 +946,21 @@ Here is a an example of a package definition file for Firefox that uses Jinja:
         uninstall_flags: '/S'
       {% endfor %}
 
-In this example JINJA is used to to generate a package definition file that defines
+In this example, JINJA is used to generate a package definition file that defines
 how to install 12 versions of Firefox. Jinja is used to create a list of
 available versions. The list is iterated through a  ``for loop`` where each version is placed
 in the ``version`` variable. The version is inserted everywhere there is a
 ``{{ version }}`` marker inside the ``for loop``.
 
 The single variable (``lang``) defined at the top of the package definition identifies the language of the package.
-You can access the Salt modules using the ``salt`` keyword. In this case, the ``config.get`` function is invokedto retrieve
-the language setting. If the ``lang`` variable is not defined then the default value is ``en-US``.
+You can access the Salt modules using the ``salt`` keyword. In this case, the ``config.get`` function is invoked to retrieve the language setting. If the ``lang`` variable is not defined then the default value is ``en-US``.
 
 Example: Package definition file to install the latest version
-===============================================================
-Some software vendors that do not provide access to all versions of
-their software. Instead they provide a single URL to what is always the latest
-version. In some cases the software keeps itself up to date. One example of this
-is the `Chrome <https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi>`_
+==============================================================
+Some software vendors do not provide access to all versions of
+their software. Instead, they provide a single URL to what is always the latest
+version. In some cases, the software keeps itself up to date. One example of this
+is the `Google Chrome web browser <https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi>`_.
 
 To handle situations such as these, set the version to `latest`. Here's an
 example of a package definition file to install the latest version of Chrome.
@@ -989,7 +985,7 @@ Example: Package definition file to install an MSI patch
 For MSI installer, when the ``msiexec`` parameter is set to true ``/i`` option is used for installation,
 and ``/x`` option is used for uninstallation. However, to install an MSI patch ``/i`` and ``/x`` options cannot be combined.
 
-Here is an example of a package definition file to install an MSI patch
+Here is an example of a package definition file to install an MSI patch:
 
 .. code-block:: yaml
 
@@ -1010,35 +1006,30 @@ Here is an example of a package definition file to install an MSI patch
         msiexec: True
         cache_file: salt://win/repo-ng/MyApp/MyApp.1.1.msp
 
-In the above example:
-Version ``1.0`` of the software installs the application using the ``1.0`` MSI defined in the ``installer`` parameter.
-There is no file to be cached and the ``install_flags`` parameter does not include any special values.
+In the previous example:
+- Version ``1.0`` of the software installs the application using the ``1.0`` MSI defined in the ``installer`` parameter.
+- There is no file to be cached and the ``install_flags`` parameter does not include any special values.
 
 Version ``1.1`` of the software uses the same installer file as Version ``1.0``.
-Now to apply patch to Version 1.0, make the following changes in the package definition file:
+Now, to apply a patch to Version 1.0, make the following changes in the package definition file:
 - Place the patch file (MSP file) in the same directory as the installer file (MSI file) on the ``file_roots``
-- In the ``cache_file`` parameter, specify the path to single patch file.
-- In ``install_flags`` parameter, add the ``/update`` flag and include the path to the MSP file
-using the ``%cd%`` environment variable. ``%cd%`` resolves to the current working directory which is the location in the minion cache
-where the installer file is cached.
+- In the ``cache_file`` parameter, specify the path to a single patch file.
+- In the ``install_flags`` parameter, add the ``/update`` flag and include the path to the MSP file
+using the ``%cd%`` environment variable. ``%cd%`` resolves to the current working directory, which is the location in the minion cache where the installer file is cached.
 
-See issue `#32780 <https://github.com/saltstack/salt/issues/32780>`_ for more
-details.
+For more information, see issue `#32780 <https://github.com/saltstack/salt/issues/32780>`_.
 
-This same approach could be used for applying MST files for MSIs and answer
-files for other types of .exe based installers.
+The same approach could be used for applying MST files for MSIs and answer files for other types of .exe-based installers.
 
 Parameters
 ==========
-This section describes the parameters placed under the ``version``in the package definition file.
-Example can be found on the `Salt winrepo repository <https://github.com/saltstack/salt-winrepo-ng>`_
+This section describes the parameters placed under the ``version`` in the package definition file.
+An example can be found on the `Salt winrepo repository <https://github.com/saltstack/salt-winrepo-ng>`_.
 
 
 full_name (str)
 ---------------
-The full name for the software as shown in "Programs and Features" in
-the control panel. You can also retrieve the full name of the package by installing the package
-manually and then running ``pkg.list_pkgs``.
+The full name of the software as shown in "Programs and Features" in the control panel. You can also retrieve the full name of the package by installing the package manually and then running ``pkg.list_pkgs``.
 Here's an example of the output from ``pkg.list_pkgs``:
 
 .. code-block:: console
@@ -1076,9 +1067,9 @@ Firefox.
         salt-minion-py3:
             3001
 
-On running  ``pkg.list_pkgs``,  If any of the software installed on the machine matches the full name
+On running  ``pkg.list_pkgs``,  if any of the software installed on the machine matches the full name
 defined in any one of the software definition files in the repository, then the
-package name is displayed in the output.
+the package name is displayed in the output.
 
 .. important::
     The version number and ``full_name`` must match the output of
@@ -1087,10 +1078,10 @@ package name is displayed in the output.
 
 .. note::
     You can successfully install packages using ``pkg.install``,
-    even if the ``full_name`` or the version number don't match. The
+    even if the ``full_name`` or the version number doesn't match. The
     module will complete successfully, but continue to display the full name
     in ``pkg.list_pkgs``. If this is happening, verify that the ``full_name``
-    and the ``version`` match exactly what is displayed in Add/Remove
+    and the ``version``matches exactly what is displayed in Add/Remove
     Programs.
 
 .. tip::
@@ -1112,7 +1103,7 @@ then  the package is cached locally and then executed.
 If it is a path to a file on disk or a file share, then it is executed directly.
 
 .. note::
-    When storing software in the same location as the winrepo then
+    When storing software in the same location as the winrepo:
     - Create a sub folder named after the package.
     - Store the package definition file named ``init.sls`` and the binary installer in
     the same sub folder if you are hosting those files on the ``file_roots``.
@@ -1125,9 +1116,9 @@ install_flags (str)
 -------------------
 The flags passed to the installer for silent installation.
 
-You can find these flags by adding ``/?`` or ``/h``when running the installer from the command-line.
+You can find these flags by adding ``/?`` or ``/h`` when running the installer from the command line.
 See `WPKG project wiki <https://wpkg.org/Category:Silent_Installers>`_ for information on silent install flags.
-
+ 
 .. warning::
     Always ensure that the software has the ability to install silently since
     Salt appears to hang if the installer expects user input.
@@ -1135,9 +1126,9 @@ See `WPKG project wiki <https://wpkg.org/Category:Silent_Installers>`_ for infor
 uninstaller (str)
 -----------------
 
-The path to the program to uninstall a software.
+The path to the program to uninstall software.
 This can be the path to the same  exe or msi used to install the software.
-If you use msi to install the software then you can either use GUID of the software or the
+If you use MSI to install the software then you can either use GUID of the software or the
 same MSI to uninstall the software.
 
 You can find the uninstall information in the registry:
@@ -1158,7 +1149,7 @@ Here's an example of using the GUID to uninstall software.
         uninstall_flags: '/qn /norestart'
         msiexec: True
 
-Here's an example of using the installer MSI to uninstall software
+Here's an example of using the installer MSI to uninstall software:
 
 .. code-block:: yaml
 
@@ -1244,7 +1235,7 @@ cache_file (str)
 
 This setting requires the file to be stored on the ``file_roots`` and only
 applies to URLs that begin with ``salt://``. It indicates that only a single file specified
-is  to be copied down for use with the installer. It is copied to the same location as the
+is copied down for use with the installer. It is copied to the same location as the
 installer. This setting is useful when ``cache_dir`` is set to ``True``,
 and you want to cache only a specific file and not all files that reside in the installer directory.
 
@@ -1325,8 +1316,8 @@ ready for use.
 Troubleshooting
 ***************
 
-My software installs correctly but `pkg.installed says it failed
-===============================================================
+My software installs correctly but ``pkg.installed`` says it failed
+===================================================================
 
 If you have a package that seems to install properly, but Salt reports a failure
 then it is likely you have a ``version`` or ``full_name`` mismatch.
@@ -1334,9 +1325,9 @@ then it is likely you have a ``version`` or ``full_name`` mismatch.
 - Check the  ``full_name`` and ``version`` of the package as shown in Add/Remove Programs
 (``appwiz.cpl``).
 - Use ``pkg.list_pkgs`` to check that the ``full_name`` and
-``version`` exactly match what is installed.
+``version`` exactly matches what is installed.
 - Verify that the ``full_name`` and ``version`` of the package in the package definition file
- matches the full name and version in Add/Remove programs.
+ match the full name and version in Add/Remove programs.
 - Ensure that the ``version`` is wrapped in single quotes in the package
 definition file.
 
@@ -1402,7 +1393,7 @@ and set per-remote config settings. An example of this is:
     sets a global passphrase for winrepo that applies to all SSH-based
     remotes, unless overridden by a ``passphrase`` per-remote parameter.
 
-    See :ref:`here <gitfs-per-remote-config>` for detailed
+    See :ref:`here <gitfs-per-remote-config>` for a detailed
     explanation of how per-remote configuration works in gitfs. The same
     principles apply to winrepo.
 
