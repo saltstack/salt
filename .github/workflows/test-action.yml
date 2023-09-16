@@ -392,6 +392,29 @@ jobs:
         run: |
           tools --timestamps vm destroy --no-wait ${{ inputs.distro-slug }} || true
 
+      - name: Install Codecov CLI
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        run: |
+          python3 -m pip install codecov-cli
+
+      - name: Upload Source Code Coverage To Codecov
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        run: |
+          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+            do-upload --git-service github --sha ${{ github.sha }} \
+            --file artifacts/coverage/salt.xml \
+            --flag salt --flag ${{ inputs.distro-slug }} --flag ${{ matrix.tests-chunk }} \
+            --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
+
+      - name: Upload Tests Code Coverage To Codecov
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        run: |
+          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+            do-upload --git-service github --sha ${{ github.sha }} \
+            --file artifacts/coverage/tests.xml \
+            --flag tests --flag ${{ inputs.distro-slug }} --flag ${{ matrix.tests-chunk }} \
+            --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
+
       - name: Upload Code Coverage Test Run Artifacts
         if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         uses: actions/upload-artifact@v3

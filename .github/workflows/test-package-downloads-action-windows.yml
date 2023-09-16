@@ -282,6 +282,29 @@ jobs:
         run: |
           sudo chown -R "$(id -un)" .
 
+      - name: Install Codecov CLI
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        run: |
+          python3 -m pip install codecov-cli
+
+      - name: Upload Source Code Coverage To Codecov
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        run: |
+          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+            do-upload --git-service github --sha ${{ github.sha }} \
+            --file artifacts/coverage/salt.xml \
+            --flag salt --flag ${{ inputs.distro-slug }} --flag pkg \
+            --name ${{ inputs.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
+
+      - name: Upload Tests Code Coverage To Codecov
+        if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
+        run: |
+          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+            do-upload --git-service github --sha ${{ github.sha }} \
+            --file artifacts/coverage/tests.xml \
+            --flag tests --flag ${{ inputs.distro-slug }} --flag pkg \
+            --name ${{ inputs.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
+
       - name: Upload Test Run Artifacts
         if: always() && steps.download-artifacts-from-vm.outcome == 'success'
         uses: actions/upload-artifact@v3
