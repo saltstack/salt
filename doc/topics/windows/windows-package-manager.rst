@@ -1167,7 +1167,7 @@ uninstall_flags (str)
 
 The flags passed to the uninstaller for silent uninstallation.
 
-You can find these flags by adding ``/?`` or ``/h``when running the uninstaller from the command-line.
+You can find these flags by adding ``/?`` or ``/h`` when running the uninstaller from the command-line.
 See `WPKG project wiki <https://wpkg.org/Category:Silent_Installers>`_ for information on silent uninstall flags.
 
 .. warning::
@@ -1251,7 +1251,7 @@ software was installed successfully.
     This is used in the package definition for Salt itself. The first thing the
     Salt installer does is kill the Salt service, which then kills all child
     processes. If the Salt installer is launched via Salt, then the installer
-    itself is killed leaving Salt on the machine but not running. Use of the
+    is killed leaving Salt on the machine but not running. The use of the
     task scheduler allows an external process to launch the Salt installation so
     its processes aren't killed when the Salt service is stopped.
 
@@ -1282,7 +1282,7 @@ Here's an example using ``source_hash``:
 Not Implemented
 ---------------
 The following parameters are often seen in the software definition files hosted
-on the Git repo. However, they are not implemented and have no effect on the
+on the Git repo. However, they are not implemented and do not affect the
 installation process.
 
 :param bool reboot: Not implemented
@@ -1297,10 +1297,10 @@ Managing Windows Software on a Standalone Windows Minion
 The Windows Software Repository functions similarly in a standalone environment,
 with a few differences in the configuration.
 
-To replace the winrepo runner that is used on the Salt master, an
+To replace the winrepo runner used on the Salt master, an
 :mod:`execution module <salt.modules.win_repo>` exists to provide the same
 functionality to standalone minions. The functions are named the same as the
-ones in the runner, and are used in the same way; the only difference is that
+ones in the runner and are used in the same way; the only difference is that
 ``salt-call`` is used instead of ``salt-run``:
 
 .. code-block:: bash
@@ -1308,7 +1308,7 @@ ones in the runner, and are used in the same way; the only difference is that
     salt-call winrepo.update_git_repos
     salt-call pkg.refresh_db
 
-After executing the previous commands the repository on the standalone system is
+After executing the previous commands, the repository on the standalone system is
 ready for use.
 
 .. _winrepo-troubleshooting:
@@ -1319,14 +1319,14 @@ Troubleshooting
 My software installs correctly but ``pkg.installed`` says it failed
 ===================================================================
 
-If you have a package that seems to install properly, but Salt reports a failure
+If you have a package that seems to install properly but Salt reports a failure
 then it is likely you have a ``version`` or ``full_name`` mismatch.
 
 - Check the  ``full_name`` and ``version`` of the package as shown in Add/Remove Programs
 (``appwiz.cpl``).
 - Use ``pkg.list_pkgs`` to check that the ``full_name`` and
 ``version`` exactly matches what is installed.
-- Verify that the ``full_name`` and ``version`` of the package in the package definition file
+- Verify that the package's ``full_name`` and ``version``in the package definition file
  match the full name and version in Add/Remove programs.
 - Ensure that the ``version`` is wrapped in single quotes in the package
 definition file.
@@ -1340,7 +1340,6 @@ updating the package definintion files in the repo.
 .. code-block:: bash
 
     salt winminion pkg.refresh_db
-
 
 Winrepo upgrade issues
 ======================
