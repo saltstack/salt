@@ -347,6 +347,8 @@
         run: |
           python3 -m pip install 'nox==<{ nox_version }>'
 
+{#  We can't yet use tokenless uploads with the codecov CLI
+
       - name: Install Codecov CLI
         run: |
           python3 -m pip install codecov-cli
@@ -355,6 +357,8 @@
         run: |
           codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
             send-notifications --git-service github --sha ${{ github.sha }}
+
+#}
 
       - name: Get coverage reports
         id: get-coverage-reports

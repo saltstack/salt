@@ -9,7 +9,7 @@ codecov:
   notify:
     wait_for_ci: false        # Should Codecov wait for all CI statuses to complete before sending ours.
                               # Note: Codecov considers all non-codecov statuses to be CI statuses
-    manual_trigger: true      # We manually tell codecov to merge and process all uploaded coverage reports
+#    manual_trigger: true      # We manually tell codecov to merge and process all uploaded coverage reports
 
 
 ignore:
@@ -86,9 +86,9 @@ flags:
       - tests/pytests/integration
     carryforward: true
 
-comment:
-  layout: "header, diff, flags, files"
-  behavior: default              # Comment posting behaviour
+comment: off
+#  layout: "header, diff, flags, files"
+#  behavior: default              # Comment posting behaviour
                                  #   default: update, if exists. Otherwise post new.
                                  #   once: update, if exists. Otherwise post new. Skip if deleted.
                                  #   new: delete old and post new.
