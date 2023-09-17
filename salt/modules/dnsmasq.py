@@ -88,6 +88,21 @@ def set_config(config_file="/etc/dnsmasq.conf", follow=True, **kwargs):
         salt '*' dnsmasq.set_config follow=False domain=mydomain.com
         salt '*' dnsmasq.set_config config_file=/etc/dnsmasq.conf domain=mydomain.com
     """
+
+    def _edit_in_all_configs(before_key, after_key):
+        for config in includes:
+            __salt__["file.sed"](
+                path=config,
+                before="^{}=.*".format(key),
+                after="{}={}".format(key, kwargs[key]),
+            )
+
+    def _delete_in_all_configs(key):
+        for config in includes:
+            __salt__["file.line"](
+                config_file, match=f"^{key}(=.*|$)".format(key), mode="delete"
+            )
+
     dnsopts = get_config(config_file, follow)
     includes = [config_file]
     if follow:
@@ -103,16 +118,9 @@ def set_config(config_file="/etc/dnsmasq.conf", follow=True, **kwargs):
 
         if key in dnsopts:
             if isinstance(dnsopts[key], str):
-                for config in includes:
-                    __salt__["file.sed"](
-                        path=config,
-                        before="^{}=.*".format(key),
-                        after="{}={}".format(key, kwargs[key]),
-                    )
+                _edit_in_all_configs(key, kwargs[key])
             elif isinstance(dnsopts[key], bool) and not kwargs[key]:
-                __salt__["file.line"](
-                    config_file, match=f"^{key}(=.*|$)".format(key), mode="delete"
-                )
+                _delete_in_all_configs(key)
             elif isinstance(dnsopts[key], bool) and kwargs[key] and dnsopts[key]:
                 pass
             else:
