@@ -285,24 +285,41 @@ jobs:
       - name: Install Codecov CLI
         if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         run: |
-          python3 -m pip install codecov-cli
+          # We can't yet use tokenless uploads with the codecov CLI
+          # python3 -m pip install codecov-cli
+          #
+          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --import
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
+          shasum -a 256 -c codecov.SHA256SUM
+          chmod +x codecov
 
       - name: Upload Source Code Coverage To Codecov
         if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         run: |
-          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
-            do-upload --git-service github --sha ${{ github.sha }} \
-            --file artifacts/coverage/salt.xml \
-            --flag salt --flag ${{ inputs.distro-slug }} --flag pkg \
+          # We can't yet use tokenless uploads with the codecov CLI
+          #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+          #  do-upload --git-service github --sha ${{ github.sha }} \
+          #  --file artifacts/coverage/salt.xml \
+          #  --flag salt --flag ${{ inputs.distro-slug }} --flag pkg \
+          #  --name ${{ inputs.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
+          ./codecov --file artifacts/coverage/salt.xml \
+            --flags salt,${{ inputs.distro-slug }},pkg \
             --name ${{ inputs.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
 
       - name: Upload Tests Code Coverage To Codecov
         if: always() && inputs.skip-code-coverage == false && steps.download-artifacts-from-vm.outcome == 'success' && job.status != 'cancelled'
         run: |
-          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
-            do-upload --git-service github --sha ${{ github.sha }} \
-            --file artifacts/coverage/tests.xml \
-            --flag tests --flag ${{ inputs.distro-slug }} --flag pkg \
+          # We can't yet use tokenless uploads with the codecov CLI
+          #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
+          #  do-upload --git-service github --sha ${{ github.sha }} \
+          #  --file artifacts/coverage/tests.xml \
+          #  --flag tests --flag ${{ inputs.distro-slug }} --flag pkg \
+          #  --name ${{ inputs.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
+          ./codecov --file artifacts/coverage/tests.xml \
+            --flags tests,${{ inputs.distro-slug }},pkg \
             --name ${{ inputs.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
 
       - name: Upload Test Run Artifacts

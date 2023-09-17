@@ -22,7 +22,6 @@
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
-    secrets: inherit
 
   <%- endfor %>
 
@@ -47,7 +46,6 @@
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
-    secrets: inherit
 
   <%- endfor %>
 
@@ -90,6 +88,5 @@
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
       skip-code-coverage: <{ skip_test_coverage_check }>
       skip-junit-reports: <{ skip_junit_reports_check }>
-    secrets: inherit
 
   <%- endfor %>

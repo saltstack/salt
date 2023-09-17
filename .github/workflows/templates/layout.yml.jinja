@@ -302,6 +302,8 @@ jobs:
           name: testrun-changed-files.txt
           path: testrun-changed-files.txt
 
+{#  We can't yet use tokenless uploads with the codecov CLI
+
       - name: Install Codecov CLI
         if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
         run: |
@@ -318,6 +320,8 @@ jobs:
         run: |
           codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
             create-report --git-service github --sha ${{ github.sha }}
+
+#}
 
   <%- endblock prepare_workflow_job %>
   <%- endif %>

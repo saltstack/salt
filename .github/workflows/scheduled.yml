@@ -273,22 +273,7 @@ jobs:
           name: testrun-changed-files.txt
           path: testrun-changed-files.txt
 
-      - name: Install Codecov CLI
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
-        run: |
-          python3 -m pip install codecov-cli
 
-      - name: Save Commit Metadata In Codecov
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
-        run: |
-          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
-            create-commit --git-service github --sha ${{ github.sha }}
-
-      - name: Create Codecov Coverage Report
-        if: ${{ fromJSON(steps.define-testrun.outputs.testrun)['skip_code_coverage'] == false }}
-        run: |
-          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
-            create-report --git-service github --sha ${{ github.sha }}
   pre-commit:
     name: Pre-Commit
     if: ${{ fromJSON(needs.prepare-workflow.outputs.runners)['github-hosted'] }}
@@ -958,7 +943,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   windows-2019:
     name: Windows 2019
@@ -978,7 +962,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   windows-2022:
     name: Windows 2022
@@ -998,7 +981,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   macos-12:
     name: macOS 12
@@ -1018,7 +1000,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   almalinux-8:
     name: Alma Linux 8
@@ -1038,7 +1019,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   almalinux-9:
     name: Alma Linux 9
@@ -1058,7 +1038,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   amazonlinux-2:
     name: Amazon Linux 2
@@ -1078,7 +1057,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   archlinux-lts:
     name: Arch Linux LTS
@@ -1098,7 +1076,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   centos-7:
     name: CentOS 7
@@ -1118,7 +1095,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   centosstream-8:
     name: CentOS Stream 8
@@ -1138,7 +1114,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   centosstream-9:
     name: CentOS Stream 9
@@ -1158,7 +1133,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   debian-10:
     name: Debian 10
@@ -1178,7 +1152,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   debian-11:
     name: Debian 11
@@ -1198,7 +1171,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   debian-11-arm64:
     name: Debian 11 Arm64
@@ -1218,7 +1190,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   fedora-37:
     name: Fedora 37
@@ -1238,7 +1209,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   fedora-38:
     name: Fedora 38
@@ -1258,7 +1228,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   opensuse-15:
     name: Opensuse 15
@@ -1278,7 +1247,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   photonos-3:
     name: Photon OS 3
@@ -1298,7 +1266,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   photonos-4:
     name: Photon OS 4
@@ -1318,7 +1285,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   ubuntu-2004:
     name: Ubuntu 20.04
@@ -1338,7 +1304,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   ubuntu-2004-arm64:
     name: Ubuntu 20.04 Arm64
@@ -1358,7 +1323,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   ubuntu-2204:
     name: Ubuntu 22.04
@@ -1378,7 +1342,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   ubuntu-2204-arm64:
     name: Ubuntu 22.04 Arm64
@@ -1398,7 +1361,6 @@ jobs:
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.13
       skip-code-coverage: false
       skip-junit-reports: false
-    secrets: inherit
 
   combine-all-code-coverage:
     name: Combine Code Coverage
@@ -1442,14 +1404,7 @@ jobs:
         run: |
           python3 -m pip install 'nox==2022.8.7'
 
-      - name: Install Codecov CLI
-        run: |
-          python3 -m pip install codecov-cli
 
-      - name: Tell Codecov To Process Reports
-        run: |
-          codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
-            send-notifications --git-service github --sha ${{ github.sha }}
 
       - name: Get coverage reports
         id: get-coverage-reports
