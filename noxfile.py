@@ -1378,6 +1378,44 @@ def create_html_coverage_report(session):
     )
 
 
+@nox.session(python="3", name="create-xml-coverage-reports")
+def create_xml_coverage_reports(session):
+    _install_coverage_requirement(session)
+    env = {
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        "COVERAGE_FILE": str(COVERAGE_FILE),
+    }
+
+    # Generate report for tests code coverage
+    try:
+        session.run(
+            "coverage",
+            "xml",
+            "-o",
+            str(COVERAGE_OUTPUT_DIR.joinpath("tests.xml").relative_to(REPO_ROOT)),
+            "--omit=salt/*,artifacts/salt/*",
+            "--include=tests/*",
+            env=env,
+        )
+    except CommandFailed:
+        session_warn(session, "Failed to generate the tests XML code coverage report")
+
+    # Generate report for salt code coverage
+    try:
+        session.run(
+            "coverage",
+            "xml",
+            "-o",
+            str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
+            "--omit=tests/*",
+            "--include=salt/*,artifacts/salt/*",
+            env=env,
+        )
+    except CommandFailed:
+        session_warn(session, "Failed to generate the source XML code coverage report")
+
+
 class Tee:
     """
     Python class to mimic linux tee behaviour
