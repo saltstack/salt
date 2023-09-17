@@ -415,6 +415,11 @@ jobs:
         run: |
           nox -e combine-coverage
 
+      - name: Create XML Coverage Reports
+        if: always() && inputs.skip-code-coverage == false && job.status != 'cancelled'
+        run: |
+          nox -e create-xml-coverage-reports
+
       - name: Install Codecov CLI
         if: always() && inputs.skip-code-coverage == false && job.status != 'cancelled'
         run: |
