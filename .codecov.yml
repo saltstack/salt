@@ -4,10 +4,10 @@ codecov:
 
   max_report_age: 24          # The age you want coverage reports to expire at, or if you
                               # want to disable this check. Expired reports will not be processed by codecov.
-  require_ci_to_pass: yes     # Less spammy. Only notify on passing builds.
+  require_ci_to_pass: false
 
   notify:
-    wait_for_ci: false        # Should Codecov wait for all CI statuses to complete before sending ours.
+    wait_for_ci: true         # Should Codecov wait for all CI statuses to complete before sending ours.
                               # Note: Codecov considers all non-codecov statuses to be CI statuses
 #    manual_trigger: true      # We manually tell codecov to merge and process all uploaded coverage reports
 
@@ -86,9 +86,9 @@ flags:
       - tests/pytests/integration
     carryforward: true
 
-comment: off
-#  layout: "header, diff, flags, files"
-#  behavior: default              # Comment posting behaviour
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default              # Comment posting behaviour
                                  #   default: update, if exists. Otherwise post new.
                                  #   once: update, if exists. Otherwise post new. Skip if deleted.
                                  #   new: delete old and post new.
