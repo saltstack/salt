@@ -369,9 +369,10 @@ def _install_coverage_requirement(session):
         )
 
 
-def _run_with_coverage(session, *test_cmd, env=None):
+def _run_with_coverage(session, *test_cmd, env=None, on_rerun=False):
     _install_coverage_requirement(session)
-    session.run("coverage", "erase")
+    if on_rerun is False:
+        session.run("coverage", "erase")
 
     if env is None:
         env = {}
@@ -1013,7 +1014,7 @@ def pytest_tornado(session, coverage):
     session.notify(session_name.replace("pytest-", "test-"))
 
 
-def _pytest(session, coverage, cmd_args, env=None):
+def _pytest(session, coverage, cmd_args, env=None, on_rerun=False):
     # Create required artifacts directories
     _create_ci_directories()
 
@@ -1067,6 +1068,7 @@ def _pytest(session, coverage, cmd_args, env=None):
             "pytest",
             *args,
             env=env,
+            on_rerun=on_rerun,
         )
     else:
         session.run("python", "-m", "pytest", *args, env=env)
@@ -1159,7 +1161,13 @@ def _ci_test(session, transport, onedir=False):
             ]
             + chunk_cmd
         )
-        _pytest(session, coverage=track_code_coverage, cmd_args=pytest_args, env=env)
+        _pytest(
+            session,
+            coverage=track_code_coverage,
+            cmd_args=pytest_args,
+            env=env,
+            on_rerun=True,
+        )
 
 
 @nox.session(python=_PYTHON_VERSIONS, name="ci-test")
