@@ -215,7 +215,8 @@ def present(
         .. versionadded:: 2018.3.0
 
     kwargs
-        Additional keyword arguments to pass to :py:func:`docker.build <salt.modules.dockermod.build>`
+        Additional keyword arguments to pass to
+        :py:func:`docker.build <salt.modules.dockermod.build>`
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
