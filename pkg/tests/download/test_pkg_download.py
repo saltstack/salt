@@ -255,8 +255,6 @@ def setup_redhat_family(
     repo_subpath,
 ):
     arch = os.environ.get("SALT_REPO_ARCH") or "x86_64"
-    if arch == "aarch64":
-        arch = "arm64"
 
     if repo_subpath == "minor":
         repo_url_base = (
