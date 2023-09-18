@@ -27,7 +27,7 @@ def test_compiler_render_template(minion_opts, tmp_path):
             "cmd": "_minion_event",
             "pretag": None,
             "data": f"Minion {minion} started at Thu Sep 14 07:31:04 2023",
-            "tag": "salt/minion/{minion}/start",
+            "tag": f"salt/minion/{minion}/start",
             "_stamp": "2023-09-14T13:31:05.000316",
         },
     }
@@ -63,7 +63,7 @@ def test_compiler_render_template_doesnotexist(minion_opts, tmp_path):
             "cmd": "_minion_event",
             "pretag": None,
             "data": f"Minion {minion} started at Thu Sep 14 07:31:04 2023",
-            "tag": "salt/minion/{minion}/start",
+            "tag": f"salt/minion/{minion}/start",
             "_stamp": "2023-09-14T13:31:05.000316",
         },
     }

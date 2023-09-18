@@ -451,4 +451,4 @@ def test_requisites_mixed_illegal_req(state_tree):
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state_mod.sls("requisite")
-        assert ["Illegal requisite \"['A']\", please check your syntax.\n"] == ret
+        assert ret == ["Illegal requisite \"['A']\", please check your syntax.\n"]
