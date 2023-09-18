@@ -486,17 +486,21 @@ class Compiler:
                             fun += 1
                         for arg in body[state]:
                             if isinstance(arg, str):
-                                fun += 1
-                                if " " in arg.strip():
+                                if "." in state:
                                     errors.append(
-                                        'The function "{}" in state '
-                                        '"{}" in SLS "{}" has '
-                                        "whitespace, a function with whitespace is "
-                                        "not supported, perhaps this is an argument "
-                                        'that is missing a ":"'.format(
-                                            arg, name, body["__sls__"]
-                                        )
+                                        "Argument not formed as a dictionary in state "
+                                        f"'{name}' in SLS '{body['__sls__']}': '{arg}'"
                                     )
+                                else:
+                                    fun += 1
+                                    if " " in arg.strip():
+                                        errors.append(
+                                            f'The function "{arg}" in state '
+                                            f'"{name}" in SLS "{body["__sls__"]}" has '
+                                            "whitespace, a function with whitespace is "
+                                            "not supported, perhaps this is an argument"
+                                            ' that is missing a ":"'
+                                        )
                             elif isinstance(arg, dict):
                                 # The arg is a dict, if the arg is require or
                                 # watch, it must be a list.
@@ -597,8 +601,11 @@ class Compiler:
                             )
                         elif fun > 1:
                             errors.append(
-                                "Too many functions declared in state '{}' in "
-                                "SLS '{}'".format(state, body["__sls__"])
+                                f"Too many functions declared in state '{state}' in "
+                                f"SLS '{body['__sls__']}'. Please choose one of the following: "
+                                + ", ".join(
+                                    arg for arg in body[state] if isinstance(arg, str)
+                                )
                             )
         return errors
 
@@ -1509,14 +1516,22 @@ class State:
                         fun += 1
                     for arg in body[state]:
                         if isinstance(arg, str):
-                            fun += 1
-                            if " " in arg.strip():
+                            if "." in state:
                                 errors.append(
-                                    'The function "{}" in state "{}" in SLS "{}" has '
-                                    "whitespace, a function with whitespace is not "
-                                    "supported, perhaps this is an argument that is "
-                                    'missing a ":"'.format(arg, name, body["__sls__"])
+                                    "Argument not formed as a dictionary in state "
+                                    f"'{name}' in SLS '{body['__sls__']}': '{arg}'"
                                 )
+                            else:
+                                fun += 1
+                                if " " in arg.strip():
+                                    errors.append(
+                                        f'The function "{arg}" in state '
+                                        f'"{name}" in SLS "{body["__sls__"]}" has '
+                                        "whitespace, a function with whitespace is "
+                                        "not supported, perhaps this is an argument"
+                                        ' that is missing a ":"'
+                                    )
+
                         elif isinstance(arg, dict):
                             # The arg is a dict, if the arg is require or
                             # watch, it must be a list.
@@ -1615,8 +1630,11 @@ class State:
                         )
                     elif fun > 1:
                         errors.append(
-                            "Too many functions declared in state '{}' in "
-                            "SLS '{}'".format(state, body["__sls__"])
+                            f"Too many functions declared in state '{state}' in "
+                            f"SLS '{body['__sls__']}'. Please choose one of the following: "
+                            + ", ".join(
+                                arg for arg in body[state] if isinstance(arg, str)
+                            )
                         )
         return errors
 
