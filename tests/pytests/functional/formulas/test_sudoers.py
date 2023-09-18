@@ -23,4 +23,4 @@ def modules(loaders, _formula):
 def test_sudoers_formula(modules):
     ret = modules.state.sls("sudoers")
     for staterun in ret:
-        assert staterun.result
+        assert staterun.result is True

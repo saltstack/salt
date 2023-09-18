@@ -23,4 +23,4 @@ def modules(loaders, _formula):
 def test_vim_formula(modules):
     ret = modules.state.sls("vim")
     for staterun in ret:
-        assert staterun.result
+        assert staterun.result is True
