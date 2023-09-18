@@ -95,6 +95,9 @@ def present(
           docker_image.present:
             - tag: mytag
 
+    name
+        The name of the docker image.
+
     tag
         Tag name for the image. Required when using ``build``, ``load``, or
         ``sls`` to create the image, but optional if pulling from a repository.
@@ -140,9 +143,13 @@ def present(
         .. versionchanged:: 2018.3.0
             The ``tag`` must be manually specified using the ``tag`` argument.
 
-    force : False
+    force
         Set this parameter to ``True`` to force Salt to pull/build/load the
         image even if it is already present.
+
+    insecure_registry
+        If ``True``, the Docker client will permit the use of insecure
+        (non-HTTPS) registries.
 
     client_timeout
         Timeout in seconds for the Docker client. This is not a timeout for
@@ -206,6 +213,9 @@ def present(
             ``pillar_roots`` or an external Pillar source.
 
         .. versionadded:: 2018.3.0
+
+    kwargs
+        Additional keyword arguments to pass to :py:func:`docker.build <salt.modules.dockermod.build>`
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
@@ -369,6 +379,9 @@ def absent(name=None, images=None, force=False):
     specified either using ``repo:tag`` notation, or just the repo name (in
     which case a tag of ``latest`` is assumed).
 
+    name
+        The name of the docker image.
+
     images
         Run this state on more than one image at a time. The following two
         examples accomplish the same thing:
@@ -395,7 +408,7 @@ def absent(name=None, images=None, force=False):
         all the deletions in a single run, rather than executing the state
         separately on each image (as it would in the first example).
 
-    force : False
+    force
         Salt will fail to remove any images currently in use by a container.
         Set this option to true to remove the image even if it is already
         present.
