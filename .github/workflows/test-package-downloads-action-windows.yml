@@ -220,7 +220,7 @@ jobs:
           #  --flag salt --flag ${{ inputs.distro-slug }} --flag pkg \
           #  --name ${{ inputs.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
           ./codecov --file artifacts/coverage/salt.xml \
-            --sha ${{ github.event.pull_request.head.sha || github.sha }} \
+            --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
             --flags salt,${{ inputs.distro-slug }},pkg \
             --name ${{ inputs.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
 
@@ -234,7 +234,7 @@ jobs:
           #  --flag tests --flag ${{ inputs.distro-slug }} --flag pkg \
           #  --name ${{ inputs.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
           ./codecov --file artifacts/coverage/tests.xml \
-            --sha ${{ github.event.pull_request.head.sha || github.sha }} \
+            --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
             --flags tests,${{ inputs.distro-slug }},pkg \
             --name ${{ inputs.distro-slug }}.${{ inputs.nox-session }}.download-pkgs
 
