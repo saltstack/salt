@@ -1099,3 +1099,47 @@ def test_verify_onlyif_cmd_opts_exclude(minion_opts):
                 timeout=5,
                 success_retcodes=1,
             )
+
+
+@pytest.mark.parametrize("verifier", (salt.state.State, salt.state.Compiler))
+@pytest.mark.parametrize(
+    "high,err_msg",
+    (
+        (
+            {"/some/file": {"file.managed": ["source:salt://bla"]}},
+            "Argument not formed as a dictionary",
+        ),
+        (
+            {"/some/file": {"file": ["managed", "source:salt://bla"]}},
+            "Please choose one of the following: managed, source:salt",
+        ),
+    ),
+)
+def test_verify_high_too_many_functions_declared_error_message(
+    high, err_msg, minion_opts, verifier
+):
+    """
+    Ensure the error message when a list item of a state call is
+    accidentally passed as a string instead of a single-item dict
+    is more meaningful. Example:
+
+    /some/file:
+      file.managed:
+        - source:salt://bla
+
+    /some/file:
+      file:
+        - managed
+        - source:salt://bla
+
+    Issue #38098.
+    """
+    high[next(iter(high))]["__sls__"] = "sls"
+    with patch("salt.state.State._gather_pillar"):
+        if verifier is salt.state.Compiler:
+            state_obj = verifier(minion_opts, [])
+        else:
+            state_obj = verifier(minion_opts)
+        res = state_obj.verify_high(high)
+        assert isinstance(res, list)
+        assert any(err_msg in x for x in res)
