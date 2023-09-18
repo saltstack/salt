@@ -26,6 +26,7 @@ from datetime import datetime
 import tornado.ioloop
 
 import salt.fileserver
+import salt.syspaths
 import salt.utils.configparser
 import salt.utils.data
 import salt.utils.files
@@ -1939,6 +1940,10 @@ class Pygit2(GitProvider):
             # pruning only available in pygit2 >= 0.26.2
             pass
         try:
+            # Make sure $HOME env variable is set to prevent
+            # _pygit2.GitError: error loading known_hosts in some libgit2 versions.
+            if "HOME" not in os.environ:
+                os.environ["HOME"] = salt.syspaths.HOME_DIR
             fetch_results = origin.fetch(**fetch_kwargs)
         except GitError as exc:  # pylint: disable=broad-except
             exc_str = get_error_message(exc).lower()

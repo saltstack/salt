@@ -8,6 +8,7 @@ LimitNOFILE=100000
 Type=simple
 ExecStart=/usr/bin/salt-master
 TasksMax=infinity
+User=salt
 
 [Install]
 WantedBy=multi-user.target

@@ -8,6 +8,7 @@ import salt.config
 import salt.fileserver.gitfs
 import salt.utils.gitfs
 from salt.exceptions import FileserverConfigError
+from tests.support.helpers import patched_environ
 from tests.support.mock import MagicMock, patch
 
 try:
@@ -238,6 +239,21 @@ def test_checkout_pygit2(_prepare_provider):
     assert provider.cachedir in provider.checkout()
     provider.branch = "does_not_exist"
     assert provider.checkout() is None
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
+)
+def test_checkout_pygit2_with_home_env_unset(_prepare_provider):
+    provider = _prepare_provider
+    provider.remotecallbacks = None
+    provider.credentials = None
+    with patched_environ(__cleanup__=["HOME"]):
+        assert "HOME" not in os.environ
+        provider.init_remote()
+        provider.fetch()
+        assert "HOME" in os.environ
 
 
 @pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
