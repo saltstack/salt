@@ -343,6 +343,7 @@ jobs:
           #  --flag salt --flag ${{ inputs.distro-slug }} --flag ${{ matrix.tests-chunk }} \
           #  --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
           ./codecov --file artifacts/coverage/salt.xml \
+            --sha ${{ github.event.pull_request.head.sha || github.sha }} \
             --flags salt,${{ inputs.distro-slug }},${{ matrix.tests-chunk }} \
             --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
 
@@ -356,6 +357,7 @@ jobs:
           #  --flag tests --flag ${{ inputs.distro-slug }} --flag ${{ matrix.tests-chunk }} \
           #  --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
           ./codecov --file artifacts/coverage/tests.xml \
+            --sha ${{ github.event.pull_request.head.sha || github.sha }} \
             --flags tests,${{ inputs.distro-slug }},${{ matrix.tests-chunk }} \
             --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
 
