@@ -2297,6 +2297,7 @@ def managed(
     win_perms_reset=False,
     verify_ssl=True,
     use_etag=False,
+    contents_function=None,
     **kwargs,
 ):
     r"""
@@ -2888,6 +2889,30 @@ def managed(
         the ``source_hash`` parameter.
 
         .. versionadded:: 3005
+
+    contents_function
+        Operates like ``contents``, but draws from the output of an execution module
+        function call. This functionality works similarly to ``contents_pillar`` or
+        ``contents_grains``.
+
+        For example, the following could be used to deploy a file containing a secret:
+
+        .. code-block:: yaml
+
+            write_secret_config:
+              file.managed:
+                - name: /etc/somefile.txt
+                - show_changes: false
+                - contents_function:
+                  - fun: vault.get
+                    args:
+                      - secret/my/secret
+
+        This would populate ``/etc/somefile.txt`` file with the contents of whatever
+        happens to be in vault at the named key.
+
+        .. versionadded:: 3007.0
+
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -2929,26 +2954,30 @@ def managed(
     mode = salt.utils.files.normalize_mode(mode)
 
     contents_count = len(
-        [x for x in (contents, contents_pillar, contents_grains) if x is not None]
+        [
+            x
+            for x in (contents, contents_pillar, contents_grains, contents_function)
+            if x is not None
+        ]
     )
 
     if source and contents_count > 0:
         return _error(
             ret,
             "'source' cannot be used in combination with 'contents', "
-            "'contents_pillar', or 'contents_grains'",
+            "'contents_pillar', 'contents_grains', or 'contents_function'",
         )
     elif keep_mode and contents_count > 0:
         return _error(
             ret,
             "Mode preservation cannot be used in combination with 'contents', "
-            "'contents_pillar', or 'contents_grains'",
+            "'contents_pillar', 'contents_grains', or 'contents_function'",
         )
     elif contents_count > 1:
         return _error(
             ret,
-            "Only one of 'contents', 'contents_pillar', and "
-            "'contents_grains' is permitted",
+            "Only one of 'contents', 'contents_pillar', 'contents_grains', and "
+            "'contents_function' is permitted",
         )
 
     if source is not None and not _http_ftp_check(source) and source_hash:
@@ -2960,9 +2989,9 @@ def managed(
         replace = False
         log.warning(
             "State for file: %s - Neither 'source' nor 'contents' nor "
-            "'contents_pillar' nor 'contents_grains' was defined, yet "
-            "'replace' was set to 'True'. As there is no source to "
-            "replace the file with, 'replace' has been set to 'False' to "
+            "'contents_pillar' nor 'contents_grains' nor 'contents_function' "
+            "was defined, yet 'replace' was set to 'True'. As there is no source "
+            "to replace the file with, 'replace' has been set to 'False' to "
             "avoid reading the file unnecessarily.",
             name,
         )
@@ -3010,6 +3039,30 @@ def managed(
             if use_contents is __NOT_FOUND:
                 return _error(ret, f"Grain {contents_grains} does not exist")
 
+    elif contents_function is not None:
+        try:
+            if isinstance(contents_function, list):
+                list_contents = []
+                for nextf in contents_function:
+                    nextc = __salt__[nextf["func"]](
+                        *nextf.get("args", []), **nextf.get("kwargs", {})
+                    )
+                    if nextc is __NOT_FOUND:
+                        return _error(ret, "contents_function returned an empty object")
+                    list_contents.append(nextc)
+                use_contents = os.linesep.join(list_contents)
+            else:
+                use_contents = contents_function["func"](
+                    *contents_function.get("args", []),
+                    **contents_function("kwargs", {}),
+                )
+                if use_contents is __NOT_FOUND:
+                    return _error(ret, "contents_function returned an empty object")
+        except KeyError:
+            return _error(
+                ret, "Format of contents_function does not conform to expectations"
+            )
+
     elif contents is not None:
         use_contents = contents
 
@@ -3022,6 +3075,8 @@ def managed(
                 contents_id = f"contents_pillar {contents_pillar}"
             elif contents_grains:
                 contents_id = f"contents_grains {contents_grains}"
+            elif contents_function:
+                contents_id = f"contents_function {contents_function}"
             else:
                 contents_id = "'contents'"
             return _error(
@@ -3035,8 +3090,8 @@ def managed(
             if not validated_contents:
                 return _error(
                     ret,
-                    "Contents specified by contents/contents_pillar/"
-                    "contents_grains is not a string or list of strings, and "
+                    "Contents specified by contents/contents_pillar/contents_grains/"
+                    "contents_function is not a string or list of strings, and "
                     "is not binary data. SLS is likely malformed.",
                 )
             contents = ""
@@ -3053,10 +3108,9 @@ def managed(
             if template:
                 return _error(
                     ret,
-                    "Contents specified by contents/contents_pillar/"
-                    "contents_grains appears to be binary data, and"
-                    " as will not be able to be treated as a Jinja"
-                    " template.",
+                    "Contents specified by contents/contents_pillar/contents_grains/"
+                    "contents_functions appears to be binary data, and will not be "
+                    "able to be treated as a Jinja template.",
                 )
             contents = use_contents
         if template:
