@@ -3109,7 +3109,7 @@ def managed(
                 return _error(
                     ret,
                     "Contents specified by contents/contents_pillar/contents_grains/"
-                    "contents_functions appears to be binary data, and will not be "
+                    "contents_function appears to be binary data, and will not be "
                     "able to be treated as a Jinja template.",
                 )
             contents = use_contents
@@ -7894,6 +7894,7 @@ def serialize(
     serializer=None,
     serializer_opts=None,
     deserializer_opts=None,
+    dataset_function=None,
     **kwargs,
 ):
     """
@@ -7915,6 +7916,28 @@ def serialize(
         causing indentation mismatches.
 
         .. versionadded:: 2015.8.0
+
+    dataset_function
+        Operates like ``dataset``, but draws from the output of an execution module
+        function call. This functionality works similarly to ``dataset_pillar``.
+
+        For example, the following could be used to deploy a file containing a secret:
+
+        .. code-block:: yaml
+
+            write_secret_config:
+              file.serialize:
+                - name: /etc/somefile.json
+                - serializer: json
+                - dataset_function:
+                  - fun: vault.get
+                    args:
+                      - secret/my/secret
+
+        This would populate ``/etc/somefile.json`` file with the contents of whatever
+        happens to be in vault at the named key.
+
+        .. versionadded:: 3007.0
 
     serializer (or formatter)
         Write the data as this format. See the list of
@@ -8109,14 +8132,59 @@ def serialize(
         return _error(ret, "Only one of serializer and formatter are allowed")
     serializer = str(serializer or formatter or "yaml").lower()
 
-    if len([x for x in (dataset, dataset_pillar) if x]) > 1:
-        return _error(ret, "Only one of 'dataset' and 'dataset_pillar' is permitted")
+    if len([x for x in (dataset, dataset_pillar, dataset_function) if x]) > 1:
+        return _error(
+            ret,
+            "Only one of 'dataset', 'dataset_pillar', and 'dataset_function' is permitted",
+        )
 
     if dataset_pillar:
         dataset = __salt__["pillar.get"](dataset_pillar)
+    elif dataset_function:
+        func_dataset = None
+        try:
+            if isinstance(dataset_function, list):
+                dataset_list = []
+
+                for nextf in dataset_function:
+                    nextc = __salt__[nextf["func"]](
+                        *nextf.get("args", []), **nextf.get("kwargs", {})
+                    )
+                    if nextc is __NOT_FOUND:
+                        return _error(ret, "dataset_function returned an empty object")
+                    dataset_list.append(nextc)
+
+                dataset_list_type = salt.utils.data.type_of_list_items(dataset_list)
+
+                if dataset_list_type is dict:
+                    func_dataset = {
+                        key: val for dset in dataset_list for key, val in dset.items()
+                    }
+                elif dataset_list_type is list:
+                    func_dataset = salt.utils.data.flatten(dataset_list)
+                else:
+                    return _error(
+                        ret,
+                        "dataset_function cannot combine data structures of different types",
+                    )
+            else:
+                func_dataset = dataset_function["func"](
+                    *dataset_function.get("args", []),
+                    **dataset_function("kwargs", {}),
+                )
+                if func_dataset is __NOT_FOUND:
+                    return _error(ret, "dataset_function returned an empty object")
+        except KeyError:
+            return _error(
+                ret, "Format of dataset_function does not conform to expectations"
+            )
+        dataset = func_dataset
 
     if dataset is None:
-        return _error(ret, "Neither 'dataset' nor 'dataset_pillar' was defined")
+        return _error(
+            ret,
+            "Neither 'dataset' nor 'dataset_pillar' nor 'dataset_function' was defined",
+        )
 
     if salt.utils.platform.is_windows():
         if group is not None:

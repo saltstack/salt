@@ -1746,3 +1746,28 @@ def from_entries(entries):
                 ret[keyval] = entry.get("value")
                 break
     return ret
+
+
+def type_of_list_items(seq):
+    """
+    Determine the type of items in a sequence.
+
+    This function takes a sequence as input and checks if all the items in
+    the sequence have the same type. If they do, it returns the type of the
+    items. If the sequence is empty, it returns None. If the items have
+    different types, it returns False.
+
+    Args:
+        seq (iterable): The sequence to analyze.
+
+    Returns:
+        type or None or False: The type of items in the sequence if they are
+        all of the same type, None if the sequence is empty, or False if the
+        items have different types.
+    """
+    iseq = iter(seq)
+    try:
+        first_type = type(next(iseq))
+    except StopIteration:
+        first_type = None
+    return first_type if all((type(x) is first_type) for x in iseq) else False

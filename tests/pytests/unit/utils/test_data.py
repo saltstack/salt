@@ -107,3 +107,18 @@ def test_from_entries():
     entries = [{"key": "a", "value": 1}, {"key": "b", "value": 2}]
     data = {"a": 1, "b": 2}
     assert salt.utils.data.from_entries(entries) == data
+
+
+@pytest.mark.parametrize(
+    "seq,expected",
+    [
+        [[], None],
+        [[1, "foo"], False],
+        [[1, 2], int],
+        [["foo", "bar"], str],
+        [[["foo"], ["bar"]], list],
+        [[{"foo": "bar"}, {"bar": "baz"}], dict],
+    ],
+)
+def test_type_of_list_items(seq, expected):
+    assert salt.utils.data.type_of_list_items(seq) == expected
