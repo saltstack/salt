@@ -6,7 +6,6 @@ import asyncio
 import collections
 import copy
 import ctypes
-import functools
 import logging
 import multiprocessing
 import os
@@ -195,7 +194,9 @@ class SMaster:
             )
 
         if event:
-            event.fire_event({f"rotate_cluster_aes_key": True}, tag="rotate_cluster_aes_key")
+            event.fire_event(
+                {f"rotate_cluster_aes_key": True}, tag="rotate_cluster_aes_key"
+            )
 
         if publisher:
             publisher.send_aes_key_event()
@@ -781,7 +782,8 @@ class Master(SMaster):
                 # them as well.
                 SMaster.secrets["cluster_aes"] = {
                     "secret": multiprocessing.Array(
-                        ctypes.c_char, salt.utils.stringutils.to_bytes(self.read_or_generate_key())
+                        ctypes.c_char,
+                        salt.utils.stringutils.to_bytes(self.read_or_generate_key()),
                     ),
                     "serial": multiprocessing.Value(
                         ctypes.c_longlong,
@@ -982,7 +984,9 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
             peer_id = data.pop("__peer_id", None)
             if peer_id:
                 log.debug("Rotating AES session key")
-                SMaster.rotate_cluster_secret(self.opts, owner=False, publisher=self.ipc_publisher)
+                SMaster.rotate_cluster_secret(
+                    self.opts, owner=False, publisher=self.ipc_publisher
+                )
         else:
             log.trace("Ignore tag %s", tag)
 
