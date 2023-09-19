@@ -22,5 +22,7 @@ def modules(loaders, _formula):
 @pytest.mark.destructive_test
 def test_vim_formula(modules):
     ret = modules.state.sls("vim")
+    assert not ret.errors
+    assert ret.failed is False
     for staterun in ret:
         assert staterun.result is True
