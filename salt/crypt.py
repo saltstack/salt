@@ -16,6 +16,7 @@ import pathlib
 import random
 import stat
 import sys
+import tempfile
 import time
 import traceback
 import uuid
@@ -1620,19 +1621,21 @@ class Crypticle:
         return b64key.replace("\n", "")
 
     @classmethod
-    def read_or_generate_key(cls, path, key_size=192, remove=False):
-        if remove:
-            os.remove(path)
+    def write_key(cls, path, key_size=192):
+        directory = pathlib.Path(path).parent
+        fd, tmp = tempfile.mkstemp(dir=directory, prefix="aes")
         with salt.utils.files.set_umask(0o177):
-            try:
-                with salt.utils.files.fopen(path, "r") as fp:
-                    return fp.read()
-            except FileNotFoundError:
-                pass
-            key = cls.generate_key_string(key_size)
-            with salt.utils.files.fopen(path, "w") as fp:
-                fp.write(key)
-            return key
+            with salt.utils.files.fopen(tmp, "w") as fp:
+                fp.write(cls.generate_key_string(key_size))
+            os.rename(tmp, path)
+
+    @classmethod
+    def read_key(cls, path):
+        try:
+            with salt.utils.files.fopen(path, "r") as fp:
+                return fp.read()
+        except FileNotFoundError:
+            pass
 
     @classmethod
     def extract_keys(cls, key_string, key_size):

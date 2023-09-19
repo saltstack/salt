@@ -25,6 +25,7 @@ def test_cluster_key_rotation(
     assert len(keys) == 1
     orig_aes = keys.pop()
 
+    # Create a drop file and wait for the master to do a key rotation.
     dfpath = pathlib.Path(cluster_master_1.config["cachedir"]) / ".dfn"
     assert not dfpath.exists()
     salt.crypt.dropfile(
