@@ -13,8 +13,9 @@ def configure_loader_modules(minion_opts, grains):
         },
         yumpkg: {
             "__salt__": {
-                "cmd.run_all": cmd.run_all,
                 "cmd.run": cmd.run,
+                "cmd.run_all": cmd.run_all,
+                "cmd.run_stdout": cmd.run_stdout,
                 "pkg_resource.parse_targets": pkg_resource.parse_targets,
             },
             "__opts__": minion_opts,

@@ -65,6 +65,7 @@ def configure_loader_modules(minion_opts, grains):
                 "cp.cache_file": cp.cache_file,
                 "config.get": config.get,
                 "pkg_resource.parse_targets": pkg_resource.parse_targets,
+                "cmd.run_stdout": cmd.run_stdout,
             },
             "__opts__": minion_opts,
         },
