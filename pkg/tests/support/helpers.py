@@ -392,7 +392,13 @@ class SaltPkgInstall:
             if pkg.endswith("exe"):
                 # Install the package
                 log.debug("Installing: %s", str(pkg))
-                ret = self.proc.run(str(pkg), "/start-minion=0", "/S")
+                # ret = self.proc.run("start", "/wait", f"\"{str(pkg)} /start-minion=0 /S\"")
+                batch_file = pathlib.Path(pkg).parent / "install_nsis.cmd"
+                batch_content = f"start /wait {str(pkg)} /start-minion=0 /S"
+                with open(batch_file, "w") as fp:
+                    fp.write(batch_content)
+                # Now run the batch file
+                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
             elif pkg.endswith("msi"):
                 # Install the package
@@ -672,7 +678,13 @@ class SaltPkgInstall:
                 ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
             else:
-                ret = self.proc.run(pkg_path, "/start-minion=0", "/S")
+                # ret = self.proc.run("start", "/wait", f"\"{pkg_path} /start-minion=0 /S\"")
+                batch_file = pkg_path.parent / "install_nsis.cmd"
+                batch_content = f"start /wait {str(pkg_path)} /start-minion=0 /S"
+                with open(batch_file, "w") as fp:
+                    fp.write(batch_content)
+                # Now run the batch file
+                ret = self.proc.run("cmd.exe", "/c", str(batch_file))
                 self._check_retcode(ret)
 
             log.debug("Removing installed salt-minion service")
