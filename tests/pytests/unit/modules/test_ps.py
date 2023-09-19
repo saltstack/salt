@@ -7,7 +7,7 @@ import salt.modules.ps
 import salt.modules.ps as ps
 import salt.utils.data
 import salt.utils.platform
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, Mock, call, patch
 
 psutil = pytest.importorskip("salt.utils.psutil_compat")
@@ -144,6 +144,12 @@ HAS_PSUTIL_VERSION = False
 PSUTIL2 = psutil.version_info >= (2, 0)
 
 STUB_CPU_TIMES = namedtuple("cputimes", "user nice system idle")(1, 2, 3, 4)
+STUB_CPU_TIMES_PERCPU = [
+    namedtuple("cputimes", "user nice system idle")(1, 2, 3, 4),
+    namedtuple("cputimes", "user nice system idle")(1, 2, 3, 4),
+    namedtuple("cputimes", "user nice system idle")(1, 2, 3, 4),
+    namedtuple("cputimes", "user nice system idle")(1, 2, 3, 4),
+]
 STUB_VIRT_MEM = namedtuple("vmem", "total available percent used free")(
     1000, 500, 50, 500, 500
 )
@@ -159,9 +165,20 @@ STUB_NETWORK_IO = namedtuple(
     "iostat",
     "bytes_sent, bytes_recv, packets_sent, packets_recv, errin errout dropin dropout",
 )(1000, 2000, 500, 600, 1, 2, 3, 4)
+STUB_NETWORK_IO_PERNIC = {
+    "lo": STUB_NETWORK_IO,
+    "eth0": STUB_NETWORK_IO,
+    "eth1": STUB_NETWORK_IO,
+}
 STUB_DISK_IO = namedtuple(
     "iostat", "read_count, write_count, read_bytes, write_bytes, read_time, write_time"
 )(1000, 2000, 500, 600, 2000, 3000)
+STUB_DISK_IO_PERDISK = {
+    "nvme0n1": STUB_DISK_IO,
+    "nvme0n1p1": STUB_DISK_IO,
+    "nvme0n1p2": STUB_DISK_IO,
+    "nvme0n1p3": STUB_DISK_IO,
+}
 
 
 @pytest.fixture
@@ -423,6 +440,14 @@ def test_get_pid_list():
 
 
 def test_kill_pid():
+    cmdline = ["echo", "питон"]
+    top_proc = DummyProcess(cmdline=cmdline)
+
+    with patch("salt.utils.psutil_compat.Process") as mock_process:
+        mock_process.side_effect = psutil.NoSuchProcess(top_proc)
+        ret = ps.kill_pid(0, signal=999)
+        assert not ret
+
     with patch("salt.utils.psutil_compat.Process") as send_signal_mock:
         ps.kill_pid(0, signal=999)
         assert send_signal_mock.call_args == call(0)
@@ -432,6 +457,19 @@ def test_pkill(mocked_proc):
     mocked_proc.send_signal = MagicMock()
     test_signal = 1234
     ps.pkill(_get_proc_name(mocked_proc), signal=test_signal)
+    assert mocked_proc.send_signal.call_args == call(test_signal)
+
+    mocked_proc.send_signal = MagicMock(side_effect=psutil.NoSuchProcess(mocked_proc))
+    ret = ps.pkill(_get_proc_name(mocked_proc), signal=test_signal)
+    assert ret is None
+
+    mocked_proc.username = MagicMock(return_value="root")
+    with patch.object(ps, "_get_proc_username", return_value=None):
+        ret = ps.pkill(_get_proc_name(mocked_proc), signal=test_signal, user="root")
+    assert ret is None
+
+    mocked_proc.username = MagicMock(return_value="root")
+    ret = ps.pkill(_get_proc_name(mocked_proc), signal=test_signal, user="root")
     assert mocked_proc.send_signal.call_args == call(test_signal)
 
 
@@ -457,6 +495,14 @@ def test_cpu_percent():
     with patch("salt.utils.psutil_compat.cpu_percent", MagicMock(return_value=1)):
         assert ps.cpu_percent() == 1
 
+    with patch(
+        "salt.utils.psutil_compat.cpu_percent", MagicMock(return_value=(1, 1, 1, 1))
+    ):
+        assert ps.cpu_percent(per_cpu=True) == [1, 1, 1, 1]
+
+    with patch("salt.utils.psutil_compat.cpu_percent", MagicMock(return_value=1)):
+        assert ps.cpu_percent(per_cpu=False) == 1
+
 
 def test_cpu_times():
     with patch(
@@ -464,12 +510,31 @@ def test_cpu_times():
     ):
         assert {"idle": 4, "nice": 2, "system": 3, "user": 1} == ps.cpu_times()
 
+    with patch(
+        "salt.utils.psutil_compat.cpu_times",
+        MagicMock(return_value=STUB_CPU_TIMES_PERCPU),
+    ):
+        assert [
+            {"idle": 4, "nice": 2, "system": 3, "user": 1},
+            {"idle": 4, "nice": 2, "system": 3, "user": 1},
+            {"idle": 4, "nice": 2, "system": 3, "user": 1},
+            {"idle": 4, "nice": 2, "system": 3, "user": 1},
+        ] == ps.cpu_times(per_cpu=True)
+
 
 @pytest.mark.skipif(
     HAS_PSUTIL_VERSION is False,
     reason="psutil 0.6.0 or greater is required for this test",
 )
 def test_virtual_memory():
+    with patch("salt.modules.ps.psutil.version_info", (0, 5, 9)):
+        with pytest.raises(CommandExecutionError) as exc:
+            ps.virtual_memory()
+        assert (
+            exc.value.error
+            == "virtual_memory is only available in psutil 0.6.0 or greater"
+        )
+
     with patch(
         "salt.utils.psutil_compat.virtual_memory",
         MagicMock(return_value=STUB_VIRT_MEM),
@@ -488,6 +553,15 @@ def test_virtual_memory():
     reason="psutil 0.6.0 or greater is required for this test",
 )
 def test_swap_memory():
+
+    with patch("salt.modules.ps.psutil.version_info", (0, 5, 9)):
+        with pytest.raises(CommandExecutionError) as exc:
+            ps.swap_memory()
+        assert (
+            exc.value.error
+            == "virtual_memory is only available in psutil 0.6.0 or greater"
+        )
+
     with patch(
         "salt.utils.psutil_compat.swap_memory",
         MagicMock(return_value=STUB_SWAP_MEM),
@@ -533,12 +607,21 @@ def test_disk_partition_usage():
         "salt.utils.psutil_compat.disk_partitions",
         MagicMock(return_value=[STUB_DISK_PARTITION]),
     ):
-        assert {
-            "device": "/dev/disk0s2",
-            "mountpoint": "/",
-            "opts": "rw,local,rootfs,dovolfs,journaled,multilabel",
-            "fstype": "hfs",
-        } == ps.disk_partitions()[0]
+        with patch(
+            "salt.utils.psutil_compat.disk_usage",
+            MagicMock(return_value=STUB_DISK_USAGE),
+        ):
+            result = ps.disk_partition_usage()[0]
+            assert {
+                "device": "/dev/disk0s2",
+                "mountpoint": "/",
+                "fstype": "hfs",
+                "opts": "rw,local,rootfs,dovolfs,journaled,multilabel",
+                "total": 1000,
+                "used": 500,
+                "free": 500,
+                "percent": 50,
+            } == result
 
 
 def test_network_io_counters():
@@ -557,6 +640,23 @@ def test_network_io_counters():
             "dropin": 3,
         } == ps.network_io_counters()
 
+    with patch(
+        "salt.utils.psutil_compat.net_io_counters",
+        MagicMock(return_value=STUB_NETWORK_IO_PERNIC),
+    ):
+        assert {
+            "packets_sent": 500,
+            "packets_recv": 600,
+            "bytes_recv": 2000,
+            "dropout": 4,
+            "bytes_sent": 1000,
+            "errout": 2,
+            "errin": 1,
+            "dropin": 3,
+        } == ps.network_io_counters(interface="eth0")
+
+        assert not ps.network_io_counters(interface="eth2")
+
 
 def test_disk_io_counters():
     with patch(
@@ -572,6 +672,21 @@ def test_disk_io_counters():
             "write_count": 2000,
         } == ps.disk_io_counters()
 
+    with patch(
+        "salt.utils.psutil_compat.disk_io_counters",
+        MagicMock(return_value=STUB_DISK_IO_PERDISK),
+    ):
+        assert {
+            "read_time": 2000,
+            "write_bytes": 600,
+            "read_bytes": 500,
+            "write_time": 3000,
+            "read_count": 1000,
+            "write_count": 2000,
+        } == ps.disk_io_counters(device="nvme0n1p1")
+
+        assert not ps.disk_io_counters(device="nvme0n1p4")
+
 
 def test_get_users(stub_user):
     with patch("salt.utils.psutil_compat.users", MagicMock(return_value=[stub_user])):
@@ -581,6 +696,10 @@ def test_get_users(stub_user):
             "host": "localhost",
             "name": "bdobbs",
         } == ps.get_users()[0]
+
+    with patch("salt.utils.psutil_compat.users", side_effect=AttributeError()):
+        ret = ps.get_users()
+        assert not ret
 
 
 def test_top():
@@ -922,6 +1041,12 @@ def test_boot_time():
         ret = ps.boot_time(time_format="%m/%d/%Y")
         assert ret == expected
 
+    with patch("salt.utils.psutil_compat.boot_time") as mock_boot_time:
+        mock_boot_time.side_effect = [AttributeError(), 1691593290.0]
+        expected = 1691593290
+        ret = ps.boot_time()
+        assert ret == expected
+
 
 def test_num_cpus():
     """
@@ -944,6 +1069,14 @@ def test_total_physical_memory(stub_memory_usage):
     """
     Testing total_physical_memory function in the ps module
     """
+
+    with patch("salt.modules.ps.psutil.version_info", (0, 5, 9)):
+        with pytest.raises(CommandExecutionError) as exc:
+            ps.total_physical_memory()
+        assert (
+            exc.value.error
+            == "virtual_memory is only available in psutil 0.6.0 or greater"
+        )
 
     with patch("salt.utils.psutil_compat.virtual_memory") as mock_total_physical_memory:
         mock_total_physical_memory.side_effect = AttributeError()
@@ -1065,3 +1198,71 @@ def test_proc_info():
                 expected = {"pid": 99, "name": "blerp"}
                 actual_result = salt.modules.ps.proc_info(pid=99, attrs=["pid", "name"])
                 assert actual_result == expected
+
+
+def test_proc_info_access_denied():
+    """
+    Testing proc_info function in the ps module
+    when an AccessDenied exception occurs
+    """
+    cmdline = ["echo", "питон"]
+    dummy_proc = DummyProcess(cmdline=cmdline)
+    with patch("salt.utils.psutil_compat.Process") as mock_process:
+        mock_process.side_effect = psutil.AccessDenied(dummy_proc)
+        with pytest.raises(CommandExecutionError):
+            salt.modules.ps.proc_info(pid=99, attrs=["username", "ppid"])
+
+
+def test_proc_info_no_such_process():
+    """
+    Testing proc_info function in the ps module
+    when an NoSuchProcess exception occurs
+    """
+    cmdline = ["echo", "питон"]
+    dummy_proc = DummyProcess(cmdline=cmdline)
+    with patch("salt.utils.psutil_compat.Process") as mock_process:
+        mock_process.side_effect = psutil.NoSuchProcess(dummy_proc)
+        with pytest.raises(CommandExecutionError):
+            salt.modules.ps.proc_info(pid=99, attrs=["username", "ppid"])
+
+
+def test_proc_info_attribute_error():
+    """
+    Testing proc_info function in the ps module
+    when an AttributeError exception occurs
+    """
+    cmdline = ["echo", "питон"]
+    with patch("salt.utils.psutil_compat.Process") as mock_process:
+        mock_process.side_effect = AttributeError()
+        with pytest.raises(CommandExecutionError):
+            salt.modules.ps.proc_info(pid=99, attrs=["username", "ppid"])
+
+
+def test__virtual__no_psutil():
+    """
+    Test __virtual__ function
+    """
+    with patch.object(ps, "HAS_PSUTIL", False):
+        expected = (
+            False,
+            "The ps module cannot be loaded: python module psutil not installed.",
+        )
+        result = ps.__virtual__()
+    assert result == expected
+
+
+def test__virtual__wrong_version():
+    with patch("salt.modules.ps.psutil.version_info", (0, 2, 9)):
+        expected = (
+            False,
+            "The ps execution module cannot be loaded: the psutil python module version {}"
+            " is less than 0.3.0".format(psutil.version_info),
+        )
+        result = ps.__virtual__()
+    assert result == expected
+
+
+def test__virtual__correct_version():
+    with patch("salt.modules.ps.psutil.version_info", (0, 3, 0)):
+        result = ps.__virtual__()
+    assert result
