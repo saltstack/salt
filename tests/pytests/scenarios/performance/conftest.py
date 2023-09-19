@@ -51,8 +51,8 @@ def network():
 def host_docker_network_ip_address(network):
     sminion = create_sminion()
     network_name = network
-    network_subnet = "10.0.20.0/24"
-    network_gateway = "10.0.20.1"
+    network_subnet = "10.0.21.0/24"
+    network_gateway = "10.0.21.1"
     try:
         ret = sminion.states.docker_network.present(
             network_name,
