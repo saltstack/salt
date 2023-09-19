@@ -53,7 +53,7 @@ def get_key_file(request, state_tree, functional_files_dir):
 
 
 @pytest.fixture
-def configure_loader_modules(minion_opts):
+def configure_loader_modules(minion_opts, grains):
     return {
         aptpkg: {
             "__salt__": {
@@ -82,6 +82,9 @@ def configure_loader_modules(minion_opts):
         },
         config: {
             "__opts__": minion_opts,
+        },
+        pkg_resource: {
+            "__grains__": grains,
         },
     }
 

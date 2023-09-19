@@ -6,8 +6,11 @@ import salt.modules.yumpkg as yumpkg
 
 
 @pytest.fixture
-def configure_loader_modules(minion_opts):
+def configure_loader_modules(minion_opts, grains):
     return {
+        pkg_resource: {
+            "__grains__": grains,
+        },
         yumpkg: {
             "__salt__": {
                 "cmd.run_all": cmd.run_all,
