@@ -380,7 +380,7 @@ class AutoKey:
                             line = salt.utils.stringutils.to_unicode(line).strip()
                             if line.startswith("#"):
                                 continue
-                            if autosign_grains[grain] == line:
+                            if str(autosign_grains[grain]) == line:
                                 return True
         return False
 
