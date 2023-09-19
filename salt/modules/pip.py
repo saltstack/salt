@@ -503,7 +503,9 @@ def install(
         or one or more package names with commas between them
 
     log
-        Log file where a complete (maximum verbosity) record will be kept
+        Log file where a complete (maximum verbosity) record will be kept.
+        If this file doesn't exist and the parent directory is writeable,
+        it will be created.
 
     proxy
         Specify a proxy in the form ``user:passwd@proxy.server:port``. Note
