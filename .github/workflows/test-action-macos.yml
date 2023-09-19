@@ -339,12 +339,12 @@ jobs:
           # We can't yet use tokenless uploads with the codecov CLI
           #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
           #  do-upload --git-service github --sha ${{ github.sha }} \
-          #  --file artifacts/coverage/salt.xml \
+          #  --file artifacts/coverage/salt.xml --flag ${{ matrix.transport }} \
           #  --flag salt --flag ${{ inputs.distro-slug }} --flag ${{ matrix.tests-chunk }} \
           #  --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
           ./codecov --file artifacts/coverage/salt.xml \
             --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
-            --flags salt,${{ inputs.distro-slug }},${{ matrix.tests-chunk }} \
+            --flags salt,${{ inputs.distro-slug }},${{ matrix.transport }},${{ matrix.tests-chunk }} \
             --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
 
       - name: Upload Tests Code Coverage To Codecov
@@ -353,12 +353,12 @@ jobs:
           # We can't yet use tokenless uploads with the codecov CLI
           #codecovcli --auto-load-params-from GithubActions --verbose --token ${{ secrets.CODECOV_TOKEN }} \
           #  do-upload --git-service github --sha ${{ github.sha }} \
-          #  --file artifacts/coverage/tests.xml \
+          #  --file artifacts/coverage/tests.xml --flag ${{ matrix.transport }} \
           #  --flag tests --flag ${{ inputs.distro-slug }} --flag ${{ matrix.tests-chunk }} \
           #  --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
           ./codecov --file artifacts/coverage/tests.xml \
             --sha ${{ github.event.pull_request.head.sha || github.sha }} ${{ github.event_name == 'pull_request' && format('--parent {0}', github.event.pull_request.base.sha) }} \
-            --flags tests,${{ inputs.distro-slug }},${{ matrix.tests-chunk }} \
+            --flags tests,${{ inputs.distro-slug }},${{ matrix.transport }},${{ matrix.tests-chunk }} \
             --name ${{ inputs.distro-slug }}.${{ env.NOX_SESSION }}.${{ matrix.tests-chunk }}
 
       - name: Prepare Test Run Artifacts
