@@ -142,7 +142,6 @@ class SMaster:
     def rotate_secrets(
         cls, opts=None, event=None, use_lock=True, owner=False, publisher=None
     ):
-        log.info("Rotating master AES key")
         if opts is None:
             opts = {}
 
@@ -167,6 +166,39 @@ class SMaster:
 
             if event:
                 event.fire_event({f"rotate_{secret_key}_key": True}, tag="key")
+
+        if opts.get("ping_on_rotate"):
+            # Ping all minions to get them to pick up the new key
+            log.debug("Pinging all connected minions due to key rotation")
+            salt.utils.master.ping_all_connected_minions(opts)
+
+    @classmethod
+    def rotate_cluster_secret(
+        cls, opts=None, event=None, use_lock=True, owner=False, publisher=None
+    ):
+        log.debug("Rotating cluster AES key")
+        if opts is None:
+            opts = {}
+
+        if use_lock:
+            with cls.secrets["cluster_aes"]["secret"].get_lock():
+                cls.secrets["cluster_aes"][
+                    "secret"
+                ].value = salt.utils.stringutils.to_bytes(
+                    cls.secrets["cluster_aes"]["reload"](remove=owner)
+                )
+        else:
+            cls.secrets["cluster_aes"][
+                "secret"
+            ].value = salt.utils.stringutils.to_bytes(
+                cls.secrets["cluster_aes"]["reload"](remove=owner)
+            )
+
+        if event:
+            event.fire_event({f"rotate_cluster_aes_key": True}, tag="rotate_cluster_aes_key")
+
+        if publisher:
+            publisher.send_aes_key_event()
 
         if opts.get("ping_on_rotate"):
             # Ping all minions to get them to pick up the new key
@@ -358,7 +390,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
 
         if to_rotate:
             if self.opts.get("cluster_id", None):
-                SMaster.rotate_secrets(
+                SMaster.rotate_cluster_secret(
                     self.opts, self.event, owner=True, publisher=self.ipc_publisher
                 )
             else:
@@ -714,6 +746,20 @@ class Master(SMaster):
             log.critical("Master failed pre flight checks, exiting\n")
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
+    def read_or_generate_key(self, remove=False, fs_wait=0.1):
+        """
+        Used to manage a cluster aes session key file.
+        """
+        path = os.path.join(self.opts["cluster_pki_dir"], ".aes")
+        if remove:
+            os.remove(path)
+        key = salt.crypt.Crypticle.read_key(path)
+        if key:
+            return key
+        salt.crypt.Crypticle.write_key(path)
+        time.sleep(fs_wait)
+        return salt.crypt.Crypticle.read_key(path)
+
     def start(self):
         """
         Turn on the master server components
@@ -731,22 +777,17 @@ class Master(SMaster):
         # signal handlers
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
             if self.opts["cluster_id"]:
-                keypath = os.path.join(self.opts["cluster_pki_dir"], ".aes")
-                cluster_keygen = functools.partial(
-                    salt.crypt.Crypticle.read_or_generate_key,
-                    keypath,
-                )
                 # Setup the secrets here because the PubServerChannel may need
                 # them as well.
                 SMaster.secrets["cluster_aes"] = {
                     "secret": multiprocessing.Array(
-                        ctypes.c_char, salt.utils.stringutils.to_bytes(cluster_keygen())
+                        ctypes.c_char, salt.utils.stringutils.to_bytes(self.read_or_generate_key())
                     ),
                     "serial": multiprocessing.Value(
                         ctypes.c_longlong,
                         lock=False,  # We'll use the lock from 'secret'
                     ),
-                    "reload": cluster_keygen,
+                    "reload": self.read_or_generate_key,
                 }
 
             SMaster.secrets["aes"] = {
@@ -779,7 +820,7 @@ class Master(SMaster):
             ipc_publisher.pre_fork(self.process_manager)
             self.process_manager.add_process(
                 EventMonitor,
-                args=[self.opts],
+                args=[self.opts, ipc_publisher],
                 name="EventMonitor",
             )
 
@@ -814,7 +855,7 @@ class Master(SMaster):
             if self.opts.get("event_return"):
                 log.info("Creating master event return process")
                 self.process_manager.add_process(
-                    salt.utils.event.EventReturn, args=(self.opts,), name="EventReturn"
+                    salt.utils.event.EventReturn, args=(self.opts), name="EventReturn"
                 )
 
             ext_procs = self.opts.get("ext_processes", [])
@@ -908,19 +949,19 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
      - Handle key rotate events.
     """
 
-    def __init__(self, opts, channels=None, name="EventMonitor"):
+    def __init__(self, opts, ipc_publisher, channels=None, name="EventMonitor"):
         super().__init__(name=name)
         self.opts = opts
         if channels is None:
             channels = []
         self.channels = channels
+        self.ipc_publisher = ipc_publisher
 
     async def handle_event(self, package):
         """
         Event handler for publish forwarder
         """
         tag, data = salt.utils.event.SaltEvent.unpack(package)
-        log.debug("Event monitor got event %s %r", tag, data)
         if tag.startswith("salt/job") and tag.endswith("/publish"):
             peer_id = data.pop("__peer_id", None)
             if peer_id:
@@ -937,9 +978,13 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
                 for chan in self.channels:
                     tasks.append(asyncio.create_task(chan.publish(data)))
                 await asyncio.gather(*tasks)
-        elif tag == "rotate_aes_key":
-            log.debug("Event monitor recieved rotate aes key event, rotating key.")
-            SMaster.rotate_secrets(self.opts, owner=False)
+        elif tag == "rotate_cluster_aes_key":
+            peer_id = data.pop("__peer_id", None)
+            if peer_id:
+                log.debug("Rotating AES session key")
+                SMaster.rotate_cluster_secret(self.opts, owner=False, publisher=self.ipc_publisher)
+        else:
+            log.trace("Ignore tag %s", tag)
 
     def run(self):
         io_loop = tornado.ioloop.IOLoop()
