@@ -81,7 +81,7 @@ packaging==23.1
     # via -r requirements/base.txt
 portend==3.1.0
     # via cherrypy
-psutil==5.9.5
+psutil==5.8.0
     # via -r requirements/base.txt
 pyasn1==0.4.8
     # via -r requirements/windows.txt
